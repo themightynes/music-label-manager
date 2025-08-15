@@ -1,0 +1,138 @@
+# Complete Phase 2: Basic Turn System
+
+## 🎯 **Copy-Paste Ready Prompt for Replit Agent:**
+
+```
+Create the core turn-based game system with a premium music industry dashboard aesthetic. Build this in 3 incremental steps:
+
+STEP 1: EXECUTIVE DASHBOARD
+Create the main game dashboard with music industry executive styling:
+
+LAYOUT STRUCTURE:
+- Header: "🎵 Music Label Manager" with current month display and settings icon
+- 4 main metric cards in responsive grid:
+  * Finances Card: Current money, monthly burn rate with trend indicator
+  * Reputation Card: Global percentage, USA regional breakdown  
+  * Artists Card: Signed artists with mood/loyalty star ratings
+  * Focus Slots Card: Available vs used slots with visual progress
+- Right sidebar: Access Tiers showing playlist/press/venue badges (all "None" initially)
+
+VISUAL THEME - Music Industry Executive:
+- Dark theme: Background #0f0f0f, cards #1a1a1a, borders #333333
+- Gold accents #ffd700 for active states and highlights
+- Card hover effects: subtle gold glow on borders
+- Icons: 💰 (finances), 📈 (reputation), 🎤 (artists), ⚡ (focus), 🎯 (access)
+- Typography: Clean sans-serif, white primary text, #b3b3b3 secondary text
+
+COMPONENT PATTERNS TO USE:
+```jsx
+const MetricCard = ({ title, value, subtitle, icon }) => (
+  <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 hover:border-yellow-500 transition-colors">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-gray-400 text-sm">{title}</p>
+        <p className="text-white text-xl font-bold">{value}</p>
+        {subtitle && <p className="text-gray-500 text-xs">{subtitle}</p>}
+      </div>
+      <div className="text-yellow-500 text-2xl">{icon}</div>
+    </div>
+  </div>
+);
+```
+
+STEP 2: MONTH PLANNER INTERFACE
+Create the action selection screen with “battle card” style:
+
+LAYOUT:
+
+- Page title: “📅 Month Planner - Select up to 3 Focus Actions”
+- Industry Meetings section showing all 8 roles from roles.json as selectable cards
+- Each role card shows: name, relationship level (★★★☆☆), preview quote from first meeting
+- Projects section: “Record Single”, “Plan EP”, “Plan Mini-Tour” cards
+- Selected actions bar at bottom showing chosen actions
+- Large “🚀 ADVANCE MONTH” button
+
+ROLE CARD PATTERN:
+
+```jsx
+const RoleCard = ({ role, selected, onToggle, disabled }) => (
+  <div 
+    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+      selected 
+        ? 'border-yellow-500 bg-yellow-500/10 shadow-lg shadow-yellow-500/20' 
+        : 'border-gray-600 hover:border-gray-400'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    onClick={!disabled ? onToggle : undefined}
+  >
+    <div className="flex items-center space-x-3">
+      <input type="checkbox" checked={selected} readOnly className="text-yellow-500" />
+      <div className="flex-1">
+        <h3 className="text-white font-semibold">{role.name}</h3>
+        <div className="text-yellow-500 text-sm">{"★".repeat(Math.floor(role.relationship/20))}</div>
+        <p className="text-gray-400 text-sm italic">"{role.meetings[0]?.prompt?.slice(0, 40)}..."</p>
+      </div>
+    </div>
+  </div>
+);
+```
+
+STEP 3: MONTH ADVANCEMENT SYSTEM
+Implement the turn resolution with professional feedback:
+
+BACKEND LOGIC:
+
+- POST /api/advance-month endpoint that:
+  - Increments month number
+  - Applies monthly burn from balance.json ($3-6k range)
+  - Processes selected role meetings (mark as completed, apply immediate effects)
+  - Returns detailed summary of what happened
+- GET /api/game-state endpoint returning current state
+- POST /api/select-actions endpoint to save player choices
+
+ADVANCEMENT SUMMARY MODAL:
+
+- Show professional summary with sections:
+  - “Month 2 - Summary Report”
+  - Financial changes with icons and explanations
+  - Relationship changes from meetings
+  - New opportunities unlocked
+  - Next month preview
+- Smooth animations and transitions
+- Close button returns to dashboard with updated state
+
+TECHNICAL REQUIREMENTS:
+
+- Use game data from uploaded JSON files (roles.json, balance.json, world.json)
+- Store game state in database (month, money, reputation, selectedActions)
+- Apply seeded RNG for money variance (0.9-1.1 multiplier)
+- Validate action selection limits (max 3 focus slots)
+- Reset action selections after month advancement
+
+GAME STATE INITIALIZATION:
+
+- Starting values from world.json: $75k money, Month 1, 5% global reputation, 3 focus slots
+- Load all 8 roles with relationship starting at 50%
+- Artists loaded from artists.json with starting mood/loyalty
+
+Make this feel like a premium music industry management tool with smooth interactions, clear feedback, and professional visual design. The player should feel like a connected label executive making strategic decisions.
+
+```
+## 🎯 **Expected Deliverables:**
+
+After this prompt, you should have:
+- ✅ Professional music industry dashboard 
+- ✅ Interactive month planner with role selection
+- ✅ Working month advancement with summary
+- ✅ Game state persistence 
+- ✅ Integration with your uploaded game data
+
+## 🔄 **Follow-up Testing:**
+
+1. **Test dashboard loads** with correct starting values
+2. **Verify role cards** show data from roles.json  
+3. **Check action selection** respects 3-slot limit
+4. **Confirm month advancement** updates money and state
+5. **Validate visual theme** matches music industry aesthetic
+
+This complete prompt gives Replit Agent everything needed to build the core turn system with your premium visual direction!
+```
