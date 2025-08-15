@@ -1,0 +1,53 @@
+I need to integrate comprehensive game data files that drive all content and balance for the Music Label Manager simulation. I'm uploading 6 JSON files that contain all the game's content, balance formulas, and configuration.
+
+WHAT TO CREATE:
+
+1. CREATE /data folder in root directory with these uploaded files:
+   - artists.json (3 artist archetypes with stats and dialogue)
+   - balance.json (complete economy, formulas, difficulty settings)
+   - dialogue.json (additional artist conversation scenes)
+   - events.json (12 side story events with choices)
+   - roles.json (8 industry roles with 3 meetings each = 24 total scenes)
+   - world.json (game world configuration and settings)
+
+2. CREATE /shared/types/gameTypes.ts with TypeScript interfaces for:
+   - Artist type with archetype, stats (talent, workEthic, popularity, etc.)
+   - Role type with relationship, meetings, choices
+   - Event type with choices and effects
+   - GameState type with money, reputation, month, focusSlots
+   - Choice type with immediate and delayed effects
+   - Project type for Singles, EPs, Tours
+
+3. CREATE /shared/utils/dataLoader.ts with functions to:
+   - Load and validate all JSON files
+   - Parse balance configuration
+   - Get role meetings by roleId
+   - Get artist dialogue by archetype
+   - Get random events from pool
+
+4. CREATE /server/data/gameData.ts that:
+   - Imports all JSON files
+   - Exports typed data objects
+   - Validates data structure on startup
+
+5. UPDATE /server/db.ts to include game state tables:
+   - gameStates (id, month, money, reputation, focusSlots, artistIds)
+   - artists (id, name, archetype, signed, stats, mood, loyalty)
+   - projects (id, type, status, quality, cost, artistId)
+   - meetings (id, roleId, sceneId, choiceId, month)
+
+SPECIFIC REQUIREMENTS:
+
+- All JSON files should be imported and accessible via clean API
+- Type all data using the interfaces from the uploaded files
+- Create helper functions to get role meetings, artist data, events
+- Validate data structure matches the uploaded schemas
+- Add error handling for missing or malformed data
+- Export everything in a clean, organized way for the game systems
+
+The uploaded files contain:
+- Complete balance formulas and economic settings
+- 8 roles × 3 meetings = 24 dialogue scenes with branching choices
+- 3 artist archetypes with personality-driven stats
+- 12 side story events with consequences
+- Full game world configuration

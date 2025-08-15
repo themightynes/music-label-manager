@@ -1,0 +1,415 @@
+{
+  "version": "0.1.0",
+  "generated": "2025-08-14",
+  "events": [
+    {
+      "id": "sync_offer",
+      "role_hint": "Sync Licensing",
+      "prompt": "A blockbuster film wants your upcoming single for a key scene.",
+      "choices": [
+        {
+          "id": "take_deal",
+          "label": "Take the deal (exclusive)",
+          "effects_immediate": {
+            "money": 20000
+          },
+          "effects_delayed": {
+            "playlist_block": 1,
+            "reputation": 1
+          }
+        },
+        {
+          "id": "non_exclusive",
+          "label": "Negotiate non‑exclusive",
+          "effects_immediate": {
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "money": 8000
+          }
+        },
+        {
+          "id": "pass",
+          "label": "Pass to protect streaming plan",
+          "effects_immediate": {
+            "artist_loyalty": 2
+          },
+          "effects_delayed": {}
+        }
+      ]
+    },
+    {
+      "id": "copyright_claim",
+      "role_hint": "Copyright Lawyer",
+      "prompt": "A plagiarism claim hits on release week.",
+      "choices": [
+        {
+          "id": "fight",
+          "label": "Fight publicly",
+          "effects_immediate": {
+            "money": -7000
+          },
+          "effects_delayed": {
+            "reputation": 2
+          }
+        },
+        {
+          "id": "settle",
+          "label": "Quiet settlement",
+          "effects_immediate": {
+            "money": -3000
+          },
+          "effects_delayed": {
+            "press_bias": -1
+          }
+        },
+        {
+          "id": "counter_story",
+          "label": "Counter with a making-of story",
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "press_pickups": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "data_anomaly",
+      "role_hint": "Data Analyst",
+      "prompt": "Streams spike in a random midwest city overnight.",
+      "choices": [
+        {
+          "id": "book_popup",
+          "label": "Book a pop‑up show",
+          "effects_immediate": {
+            "money": -4000
+          },
+          "effects_delayed": {
+            "ticket_bias": 2
+          }
+        },
+        {
+          "id": "target_ads",
+          "label": "Target ads there",
+          "effects_immediate": {
+            "money": -1200
+          },
+          "effects_delayed": {
+            "conversion_bias": 1
+          }
+        },
+        {
+          "id": "observe",
+          "label": "Observe for a month",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "learning_bonus": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "critic_surprise",
+      "role_hint": "Music Critic",
+      "prompt": "A respected critic wants an early listen.",
+      "choices": [
+        {
+          "id": "invite",
+          "label": "Invite to a private session",
+          "effects_immediate": {
+            "money": -500
+          },
+          "effects_delayed": {
+            "press_pickups": 1
+          }
+        },
+        {
+          "id": "embargo",
+          "label": "Embargo until release day",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "variance_up": 1
+          }
+        },
+        {
+          "id": "decline",
+          "label": "Decline politely",
+          "effects_immediate": {
+            "reputation": -1
+          },
+          "effects_delayed": {}
+        }
+      ]
+    },
+    {
+      "id": "platform_beta",
+      "role_hint": "Platform Dev",
+      "prompt": "A platform offers a discovery beta slot.",
+      "choices": [
+        {
+          "id": "join",
+          "label": "Join the beta",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "playlist_bias": 1,
+            "variance_up": 1
+          }
+        },
+        {
+          "id": "later",
+          "label": "Ask to be considered later",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "playlist_bias_next": 1
+          }
+        },
+        {
+          "id": "decline",
+          "label": "Decline",
+          "effects_immediate": {},
+          "effects_delayed": {}
+        }
+      ]
+    },
+    {
+      "id": "royalty_discrepancy",
+      "role_hint": "Royalty Collector",
+      "prompt": "A payout report looks off.",
+      "choices": [
+        {
+          "id": "audit",
+          "label": "Audit rights and metadata",
+          "effects_immediate": {
+            "money": -1000
+          },
+          "effects_delayed": {
+            "monthly_income_bonus": 500
+          }
+        },
+        {
+          "id": "negotiate",
+          "label": "Negotiate a correction",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "money": 2000
+          }
+        },
+        {
+          "id": "ignore",
+          "label": "Ignore it",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": -1
+          }
+        }
+      ]
+    },
+    {
+      "id": "wardrobe_malfunction",
+      "role_hint": "Stylist",
+      "prompt": "Wardrobe malfunction at a televised show.",
+      "choices": [
+        {
+          "id": "lean_in",
+          "label": "Lean into humor",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "press_pickups": 1
+          }
+        },
+        {
+          "id": "cover_up",
+          "label": "Cover up quickly",
+          "effects_immediate": {
+            "money": -800
+          },
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "blame_vendor",
+          "label": "Blame the vendor",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": -1,
+            "artist_loyalty": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "ad_backlash",
+      "role_hint": "Advertiser",
+      "prompt": "Sponsorship offer from a controversial brand.",
+      "choices": [
+        {
+          "id": "take_cash",
+          "label": "Take the cash",
+          "effects_immediate": {
+            "money": 15000
+          },
+          "effects_delayed": {
+            "reputation": -2
+          }
+        },
+        {
+          "id": "negotiate_fit",
+          "label": "Negotiate for brand fit",
+          "effects_immediate": {
+            "money": 5000
+          },
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "decline",
+          "label": "Decline",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "artist_loyalty": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "lighting_blackout",
+      "role_hint": "Lighting Tech",
+      "prompt": "Blackout mid‑performance—crew improvises.",
+      "choices": [
+        {
+          "id": "acoustic",
+          "label": "Switch to acoustic moment",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "issue_refunds",
+          "label": "Issue partial refunds",
+          "effects_immediate": {
+            "money": -2000
+          },
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "blame_venue",
+          "label": "Blame the venue",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "venue_rel": -1
+          }
+        }
+      ]
+    },
+    {
+      "id": "street_team_rogue",
+      "role_hint": "Street Team",
+      "prompt": "Rogue flyers cause minor PR trouble.",
+      "choices": [
+        {
+          "id": "own_it",
+          "label": "Own it and apologize",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "discipline",
+          "label": "Discipline team",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "press_bias": -1
+          }
+        },
+        {
+          "id": "ignore",
+          "label": "Ignore",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": -1
+          }
+        }
+      ]
+    },
+    {
+      "id": "merch_fail",
+      "role_hint": "Merch Buyer",
+      "prompt": "A batch of shirts arrives misprinted before a show.",
+      "choices": [
+        {
+          "id": "discount",
+          "label": "Sell as discounted 'oops' run",
+          "effects_immediate": {
+            "money": 800
+          },
+          "effects_delayed": {
+            "reputation": -1
+          }
+        },
+        {
+          "id": "rush_reprint",
+          "label": "Rush reprint",
+          "effects_immediate": {
+            "money": -1200
+          },
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "donate",
+          "label": "Donate to charity",
+          "effects_immediate": {
+            "money": -400
+          },
+          "effects_delayed": {
+            "press_pickups": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "content_takedown",
+      "role_hint": "Content Moderator",
+      "prompt": "A false takedown hits your single.",
+      "choices": [
+        {
+          "id": "appeal",
+          "label": "Appeal with proper docs",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "streams_restored": 1
+          }
+        },
+        {
+          "id": "workaround",
+          "label": "Re-upload alt mix",
+          "effects_immediate": {
+            "money": -500
+          },
+          "effects_delayed": {
+            "playlist_bias": -1
+          }
+        },
+        {
+          "id": "legal",
+          "label": "Escalate legally",
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "reputation": 1
+          }
+        }
+      ]
+    }
+  ]
+}

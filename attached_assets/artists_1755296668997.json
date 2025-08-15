@@ -1,0 +1,42 @@
+{
+  "version": "0.1.0",
+  "generated": "2025-08-14",
+  "artists": [
+    {
+      "id": "art_visionary",
+      "name": "Nova",
+      "archetype": "Visionary",
+      "talent": 82,
+      "workEthic": 58,
+      "popularity": 20,
+      "temperament": 70,
+      "loyalty": 55,
+      "mood": 60,
+      "signed": true
+    },
+    {
+      "id": "art_workhorse",
+      "name": "Mason",
+      "archetype": "Workhorse",
+      "talent": 68,
+      "workEthic": 85,
+      "popularity": 15,
+      "temperament": 55,
+      "loyalty": 62,
+      "mood": 65,
+      "signed": false
+    },
+    {
+      "id": "art_trendsetter",
+      "name": "LunaVee",
+      "archetype": "Trendsetter",
+      "talent": 74,
+      "workEthic": 60,
+      "popularity": 28,
+      "temperament": 62,
+      "loyalty": 50,
+      "mood": 58,
+      "signed": false
+    }
+  ]
+}
