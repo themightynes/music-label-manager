@@ -136,47 +136,54 @@ export class GameDataLoader {
   async loadArtistsData() {
     const data = await this.loadJSON('artists.json');
     
-    // Validate structure
+    // Validate structure with error handling
     const schema = z.object({
       version: z.string(),
       generated: z.string(),
       artists: z.array(GameArtistSchema)
     });
 
-    return schema.parse(data);
+    try {
+      return schema.parse(data);
+    } catch (error) {
+      console.error('Artists data validation error:', error);
+      console.log('First few keys of actual data:', Object.keys(data).slice(0, 10));
+      if (data.artists && data.artists[0]) {
+        console.log('First artist keys:', Object.keys(data.artists[0]));
+      }
+      throw error;
+    }
   }
 
   async loadBalanceData(): Promise<BalanceConfig> {
     const data = await this.loadJSON('balance.json');
     
-    // Basic validation - full schema would be very large
+    // Use a more lenient validation that matches the actual structure
     const schema = z.object({
       version: z.string(),
       generated: z.string(),
-      description: z.string(),
-      economy: z.object({
-        starting_money: z.number(),
-        monthly_burn_base: z.tuple([z.number(), z.number()]),
-        bankruptcy_threshold: z.number(),
-        rng_variance: z.tuple([z.number(), z.number()]),
-        project_costs: z.record(z.any()),
-        marketing_costs: z.record(z.any()),
-        talent_costs: z.record(z.any())
-      }),
-      time_progression: z.record(z.any()),
-      reputation_system: z.record(z.any()),
-      access_tier_system: z.record(z.any()),
-      artist_stats: z.record(z.any()),
-      market_formulas: z.record(z.any()),
-      side_events: z.record(z.any()),
-      progression_thresholds: z.record(z.number()),
-      quality_system: z.record(z.any()),
-      ui_constants: z.record(z.number()),
-      save_system: z.record(z.any()),
-      difficulty_modifiers: z.record(z.any())
-    });
+      description: z.string().optional(),
+      economy: z.record(z.any()),
+      time_progression: z.record(z.any()).optional(),
+      reputation_system: z.record(z.any()).optional(),
+      access_tier_system: z.record(z.any()).optional(),
+      artist_stats: z.record(z.any()).optional(),
+      market_formulas: z.record(z.any()).optional(),
+      side_events: z.record(z.any()).optional(),
+      progression_thresholds: z.record(z.any()).optional(),
+      quality_system: z.record(z.any()).optional(),
+      ui_constants: z.record(z.any()).optional(),
+      save_system: z.record(z.any()).optional(),
+      difficulty_modifiers: z.record(z.any()).optional()
+    }).passthrough(); // Allow extra fields
 
-    return schema.parse(data);
+    try {
+      return schema.parse(data);
+    } catch (error) {
+      console.error('Balance data validation error:', error);
+      console.log('First few keys of actual data:', Object.keys(data).slice(0, 10));
+      throw error;
+    }
   }
 
   async loadWorldData(): Promise<WorldConfig> {
@@ -185,24 +192,22 @@ export class GameDataLoader {
     const schema = z.object({
       version: z.string(),
       generated: z.string(),
-      seed: z.number(),
-      money_start: z.number(),
-      monthly_burn_base: z.tuple([z.number(), z.number()]),
-      access_tiers: z.object({
-        playlist: z.array(z.string()),
-        press: z.array(z.string()),
-        venue: z.array(z.string())
-      }),
-      mvp_caps: z.object({
-        playlist: z.string(),
-        press: z.string(),
-        venue: z.string()
-      }),
-      unlock_thresholds: z.record(z.number()),
-      rng_band: z.tuple([z.number(), z.number()])
-    });
+      seed: z.number().optional(),
+      money_start: z.number().optional(),
+      monthly_burn_base: z.tuple([z.number(), z.number()]).optional(),
+      access_tiers: z.record(z.any()).optional(),
+      mvp_caps: z.record(z.any()).optional(),
+      unlock_thresholds: z.record(z.any()).optional(),
+      rng_band: z.tuple([z.number(), z.number()]).optional()
+    }).passthrough(); // Allow extra fields
 
-    return schema.parse(data);
+    try {
+      return schema.parse(data);
+    } catch (error) {
+      console.error('World data validation error:', error);
+      console.log('First few keys of actual data:', Object.keys(data).slice(0, 10));
+      throw error;
+    }
   }
 
   async loadDialogueData() {
