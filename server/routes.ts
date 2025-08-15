@@ -1,12 +1,18 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
+import { GameEngine } from "./engine";
+import { AdvanceMonthRequest } from "@shared/api/contracts";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  const gameEngine = new GameEngine(serverGameData);
   
   // Data verification endpoints
   app.get("/api/test-data", async (req, res) => {
@@ -389,7 +395,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Month advancement with action processing
   app.post("/api/advance-month", async (req, res) => {
     try {
-      const { gameId, selectedActions } = req.body;
+      // Validate request
+      const request = AdvanceMonthRequest.parse(req.body);
+      const { gameId, selectedActions } = request;
       
       // Validate gameId
       if (!gameId) {
