@@ -92,6 +92,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Demo user for game state management
+  let DEMO_USER_ID: string | null = null;
+  let DEMO_GAME_ID: string | null = null;
+
   // Game state routes
   app.get("/api/game/:id", async (req, res) => {
     try {
@@ -104,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const artists = await storage.getArtistsByGame(gameState.id);
       const projects = await storage.getProjectsByGame(gameState.id);
       const roles = await storage.getRolesByGame(gameState.id);
-      const monthlyActions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth);
+      const monthlyActions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth || 1);
       
       res.json({
         gameState,
@@ -238,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process monthly actions and update game state
-      const actions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth);
+      const actions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth || 1);
       
       // Calculate monthly outcomes (simplified for MVP)
       const monthlyOutcome = {
@@ -249,13 +253,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const updatedState = await storage.updateGameState(req.params.id, {
-        currentMonth: gameState.currentMonth + 1,
-        money: gameState.money + monthlyOutcome.revenue - monthlyOutcome.expenses,
-        reputation: Math.max(0, Math.min(100, gameState.reputation + monthlyOutcome.reputationChange)),
+        currentMonth: (gameState.currentMonth || 1) + 1,
+        money: (gameState.money || 75000) + monthlyOutcome.revenue - monthlyOutcome.expenses,
+        reputation: Math.max(0, Math.min(100, (gameState.reputation || 0) + monthlyOutcome.reputationChange)),
         usedFocusSlots: 0, // Reset for new month
         monthlyStats: {
           ...gameState.monthlyStats as object,
-          [`month${gameState.currentMonth}`]: monthlyOutcome
+          [`month${gameState.currentMonth || 1}`]: monthlyOutcome
         }
       });
 
@@ -324,14 +328,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current game state
   app.get("/api/game-state", async (req, res) => {
     try {
-      // For demo, use a default game ID
-      // In production, this would come from user authentication
-      const gameId = "demo-game-1";
-      let gameState = await storage.getGameState(gameId);
-      
-      if (!gameState) {
-        // Create default game state
+      // Create demo user if doesn't exist
+      if (!DEMO_USER_ID) {
+        try {
+          let demoUser = await storage.getUserByUsername('demo-user');
+          if (!demoUser) {
+            demoUser = await storage.createUser({
+              username: 'demo-user',
+              password: 'demo-password'
+            });
+          }
+          DEMO_USER_ID = demoUser.id;
+        } catch (error) {
+          console.error('Error creating demo user:', error);
+          return res.status(500).json({ message: "Failed to create demo user" });
+        }
+      }
+
+      // Get or create game state for demo user
+      if (!DEMO_GAME_ID) {
+        // Try to find existing game state for demo user
+        // For now, we'll create a new one each time since we don't have a getUserGameStates method
         const defaultState = {
+          userId: DEMO_USER_ID,
           currentMonth: 1,
           money: 75000,
           reputation: 5,
@@ -347,7 +366,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           monthlyStats: {}
         };
         
-        gameState = await storage.createGameState(defaultState);
+        const gameState = await storage.createGameState(defaultState);
+        DEMO_GAME_ID = gameState.id;
+        return res.json(gameState);
+      }
+      
+      // Get existing game state
+      const gameState = await storage.getGameState(DEMO_GAME_ID);
+      if (!gameState) {
+        // Reset demo game ID and try again
+        DEMO_GAME_ID = null;
+        return res.status(404).json({ message: "Game state not found, please refresh" });
       }
       
       res.json(gameState);
@@ -362,11 +391,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { gameId, selectedActions } = req.body;
       
+      // Validate gameId
+      if (!gameId) {
+        return res.status(400).json({ message: "Game ID is required" });
+      }
+      
       // Get balance config for calculations
       const balanceConfig = await serverGameData.getBalanceConfig();
       
       // Get current game state  
-      const gameState = await storage.getGameState(gameId || "demo-game-1");
+      const gameState = await storage.getGameState(gameId);
       if (!gameState) {
         return res.status(404).json({ message: "Game not found" });
       }
@@ -399,7 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newReputation = Math.max(0, Math.min(100, (gameState.reputation || 5) + reputationChange));
       
       // Update game state
-      const updatedState = await storage.updateGameState(gameId || "demo-game-1", {
+      const updatedState = await storage.updateGameState(gameId, {
         currentMonth: (gameState.currentMonth || 1) + 1,
         money: newMoney,
         reputation: newReputation,
@@ -443,8 +477,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid action selection - maximum 3 actions allowed" });
       }
       
+      // Validate gameId
+      if (!gameId) {
+        return res.status(400).json({ message: "Game ID is required" });
+      }
+      
       // Update game state with selected actions
-      const gameState = await storage.updateGameState(gameId || "demo-game-1", {
+      const gameState = await storage.updateGameState(gameId, {
         usedFocusSlots: selectedActions.length,
         flags: {
           selectedActions: selectedActions
