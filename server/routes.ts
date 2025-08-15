@@ -3,8 +3,94 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema } from "@shared/schema";
 import { z } from "zod";
+import { serverGameData } from "./data/gameData";
+import { gameDataLoader } from "@shared/utils/dataLoader";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Data verification endpoints
+  app.get("/api/test-data", async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      
+      const [allRoles, allArtists, allEvents] = await Promise.all([
+        serverGameData.getAllRoles(),
+        serverGameData.getAllArtists(), 
+        serverGameData.getAllEvents()
+      ]);
+
+      const sampleRole = allRoles[0];
+      
+      res.json({
+        counts: {
+          roles: allRoles.length,
+          artists: allArtists.length,
+          events: allEvents.length
+        },
+        sample: {
+          role: {
+            name: sampleRole?.name || 'No role found',
+            relationship: sampleRole?.relationship || 0
+          }
+        },
+        status: 'Data loaded successfully'
+      });
+    } catch (error) {
+      console.error('Test data loading error:', error);
+      res.status(500).json({ 
+        message: "Failed to load test data", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get("/api/validate-types", async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      
+      const [sampleRole, sampleArtist] = await Promise.all([
+        serverGameData.getRoleById('manager'),
+        serverGameData.getArtistsByArchetype('Visionary')
+      ]);
+      
+      const validationResults = {
+        role: {
+          found: !!sampleRole,
+          data: sampleRole || null,
+          hasValidStructure: sampleRole ? (
+            typeof sampleRole.id === 'string' &&
+            typeof sampleRole.name === 'string' &&
+            typeof sampleRole.relationship === 'number' &&
+            Array.isArray(sampleRole.meetings)
+          ) : false
+        },
+        artist: {
+          found: sampleArtist && sampleArtist.length > 0,
+          data: sampleArtist?.[0] || null,
+          hasValidStructure: sampleArtist?.[0] ? (
+            typeof sampleArtist[0].id === 'string' &&
+            typeof sampleArtist[0].name === 'string' &&
+            typeof sampleArtist[0].archetype === 'string' &&
+            typeof sampleArtist[0].talent === 'number'
+          ) : false
+        }
+      };
+      
+      const dataIntegrityCheck = await serverGameData.validateDataIntegrity();
+      
+      res.json({
+        validation: validationResults,
+        integrity: dataIntegrityCheck,
+        status: 'Type validation complete'
+      });
+    } catch (error) {
+      console.error('Type validation error:', error);
+      res.status(500).json({ 
+        message: "Failed to validate types", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
   
   // Game state routes
   app.get("/api/game/:id", async (req, res) => {
