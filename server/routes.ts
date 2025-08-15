@@ -319,6 +319,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Phase 2: Turn System Endpoints
+  
+  // Get current game state
+  app.get("/api/game-state", async (req, res) => {
+    try {
+      // For demo, use a default game ID
+      // In production, this would come from user authentication
+      const gameId = "demo-game-1";
+      let gameState = await storage.getGameState(gameId);
+      
+      if (!gameState) {
+        // Create default game state
+        const defaultState = {
+          currentMonth: 1,
+          money: 75000,
+          reputation: 5,
+          creativeCapital: 10,
+          focusSlots: 3,
+          usedFocusSlots: 0,
+          playlistAccess: "none",
+          pressAccess: "none",
+          venueAccess: "none",
+          campaignType: "standard",
+          rngSeed: Math.random().toString(36).substring(7),
+          flags: {},
+          monthlyStats: {}
+        };
+        
+        gameState = await storage.createGameState(defaultState);
+      }
+      
+      res.json(gameState);
+    } catch (error) {
+      console.error('Get game state error:', error);
+      res.status(500).json({ message: "Failed to fetch game state" });
+    }
+  });
+
+  // Month advancement with action processing
+  app.post("/api/advance-month", async (req, res) => {
+    try {
+      const { gameId, selectedActions } = req.body;
+      
+      // Get balance config for calculations
+      const balanceConfig = await serverGameData.getBalanceConfig();
+      
+      // Get current game state  
+      const gameState = await storage.getGameState(gameId || "demo-game-1");
+      if (!gameState) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      // Calculate monthly burn from balance.json
+      const burnRange = balanceConfig.economy.monthly_burn_base;
+      const baseBurn = burnRange[0] + Math.random() * (burnRange[1] - burnRange[0]);
+      
+      // Apply RNG variance
+      const variance = balanceConfig.economy.rng_variance;
+      const rngFactor = variance[0] + Math.random() * (variance[1] - variance[0]);
+      const monthlyBurn = Math.floor(baseBurn * rngFactor);
+
+      // Process selected actions (simplified for MVP)
+      let actionRevenue = 0;
+      let actionExpenses = 0;
+      let reputationChange = 0;
+      
+      if (selectedActions && selectedActions.length > 0) {
+        // Each action has potential for revenue/reputation gain
+        actionRevenue = selectedActions.length * (Math.random() * 5000 + 2000);
+        actionExpenses = selectedActions.length * (Math.random() * 2000 + 1000);
+        reputationChange = selectedActions.length * (Math.random() * 2 - 0.5);
+      }
+
+      const totalRevenue = Math.floor(actionRevenue);
+      const totalExpenses = Math.floor(monthlyBurn + actionExpenses);
+      const netChange = totalRevenue - totalExpenses;
+      const newMoney = (gameState.money || 75000) + netChange;
+      const newReputation = Math.max(0, Math.min(100, (gameState.reputation || 5) + reputationChange));
+      
+      // Update game state
+      const updatedState = await storage.updateGameState(gameId || "demo-game-1", {
+        currentMonth: (gameState.currentMonth || 1) + 1,
+        money: newMoney,
+        reputation: newReputation,
+        usedFocusSlots: 0, // Reset for new month
+        monthlyStats: {
+          ...(gameState.monthlyStats as object || {}),
+          [`month${gameState.currentMonth}`]: {
+            revenue: totalRevenue,
+            expenses: totalExpenses,
+            netChange: netChange,
+            reputationChange: Math.round(reputationChange * 10) / 10,
+            actions: selectedActions || []
+          }
+        }
+      });
+
+      // Return summary
+      const summary = {
+        month: gameState.currentMonth,
+        revenue: totalRevenue,
+        expenses: totalExpenses,
+        netChange: netChange,
+        reputationChange: Math.round(reputationChange * 10) / 10,
+        gameState: updatedState,
+        actions: selectedActions || []
+      };
+
+      res.json(summary);
+    } catch (error) {
+      console.error('Advance month error:', error);
+      res.status(500).json({ message: "Failed to advance month" });
+    }
+  });
+
+  // Save player action selections
+  app.post("/api/select-actions", async (req, res) => {
+    try {
+      const { gameId, selectedActions } = req.body;
+      
+      if (!selectedActions || selectedActions.length > 3) {
+        return res.status(400).json({ message: "Invalid action selection - maximum 3 actions allowed" });
+      }
+      
+      // Update game state with selected actions
+      const gameState = await storage.updateGameState(gameId || "demo-game-1", {
+        usedFocusSlots: selectedActions.length,
+        flags: {
+          selectedActions: selectedActions
+        }
+      });
+      
+      res.json({ success: true, gameState });
+    } catch (error) {
+      console.error('Select actions error:', error);
+      res.status(500).json({ message: "Failed to save action selection" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

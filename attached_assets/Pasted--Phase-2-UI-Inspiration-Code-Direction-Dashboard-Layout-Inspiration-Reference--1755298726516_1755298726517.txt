@@ -1,0 +1,156 @@
+# Phase 2: UI Inspiration & Code Direction
+
+## 🎯 **Dashboard Layout Inspiration**
+
+### **Reference Style: “Music Industry Executive Dashboard”**
+
+```
+Think Spotify for Artists dashboard meets Football Manager interface:
+- Clean, professional cards showing key metrics
+- Industry-appropriate color scheme (dark mode with gold/platinum accents)
+- Card-based layout with clear hierarchy
+- Modern, sleek typography that feels "music industry"
+```
+
+## 📱 **Specific Dashboard Wireframe**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  🎵 MUSIC LABEL MANAGER           Month 1    [Settings] │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  💰 FINANCES          📈 REPUTATION       🎯 ACCESS     │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────┐ │
+│  │ $75,000         │  │ 5% Global       │  │ Playlist │ │
+│  │ Monthly: -$4.5k │  │ 10% USA         │  │ ○ None   │ │
+│  └─────────────────┘  └─────────────────┘  │ Press    │ │
+│                                            │ ○ None   │ │
+│  🎤 ARTISTS           ⚡ FOCUS SLOTS       │ Venue    │ │
+│  ┌─────────────────┐  ┌─────────────────┐  │ ○ None   │ │
+│  │ Nova (Signed)   │  │ 3 Available     │  └──────────┘ │
+│  │ Visionary       │  │ 0 Used          │              │
+│  │ Mood: 60% ★★★☆  │  └─────────────────┘              │
+│  └─────────────────┘                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+## 🎵 **Month Planner Layout**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  📅 MONTH PLANNER - Select up to 3 Focus Actions       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  🤝 INDUSTRY MEETINGS                                   │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────┐│
+│  │ □ Manager       │ │ □ A&R Rep       │ │ □ Producer  ││
+│  │ Relationship: 50│ │ Relationship: 50│ │ Access: Local││
+│  │ "Let's discuss  │ │ "I found some   │ │ "Ready for  ││
+│  │ priorities..."  │ │ fresh talent"   │ │ your sound?"││
+│  └─────────────────┘ └─────────────────┘ └─────────────┘│
+│                                                         │
+│  🎵 PROJECTS                                            │
+│  ┌─────────────────┐ ┌─────────────────┐               │
+│  │ □ Record Single │ │ □ Plan Mini-Tour│               │
+│  │ Cost: $3-12k    │ │ Cost: $5-15k    │               │
+│  │ Duration: 2-4wks│ │ Duration: 2-6wks│               │
+│  └─────────────────┘ └─────────────────┘               │
+│                                                         │
+│  SELECTED: [Manager] [A&R Rep] [ Empty ]               │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │            🚀 ADVANCE MONTH                         ││
+│  └─────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────┘
+```
+
+## 💻 **Specific Code Patterns to Use**
+
+### **Card Component Pattern:**
+
+```jsx
+// Use this pattern for metric cards
+const MetricCard = ({ title, value, subtitle, icon }) => (
+  <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 hover:border-yellow-500 transition-colors">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-gray-400 text-sm">{title}</p>
+        <p className="text-white text-xl font-bold">{value}</p>
+        {subtitle && <p className="text-gray-500 text-xs">{subtitle}</p>}
+      </div>
+      <div className="text-yellow-500 text-2xl">{icon}</div>
+    </div>
+  </div>
+);
+```
+
+### **Action Selection Pattern:**
+
+```jsx
+// Use this for role meeting cards
+const ActionCard = ({ title, description, selected, onToggle, disabled }) => (
+  <div 
+    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+      selected 
+        ? 'border-yellow-500 bg-yellow-500/10' 
+        : 'border-gray-600 hover:border-gray-400'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    onClick={!disabled ? onToggle : undefined}
+  >
+    <div className="flex items-center space-x-3">
+      <input 
+        type="checkbox" 
+        checked={selected} 
+        readOnly 
+        className="text-yellow-500" 
+      />
+      <div>
+        <h3 className="text-white font-semibold">{title}</h3>
+        <p className="text-gray-400 text-sm">{description}</p>
+      </div>
+    </div>
+  </div>
+);
+```
+
+## 🎨 **Color Scheme Direction**
+
+```css
+/* Music Industry Theme */
+:root {
+  --bg-primary: #0f0f0f;      /* Deep black */
+  --bg-secondary: #1a1a1a;    /* Card backgrounds */
+  --border: #333333;          /* Default borders */
+  --border-active: #ffd700;   /* Gold accent (like Grammy) */
+  --text-primary: #ffffff;    /* Pure white text */
+  --text-secondary: #b3b3b3;  /* Muted text */
+  --text-accent: #ffd700;     /* Gold highlights */
+  --success: #1db954;         /* Spotify green for positive */
+  --warning: #ff6b35;         /* Orange for warnings */
+}
+```
+
+## 🎯 **Enhanced Phase 2A Prompt**
+
+```
+Create the dashboard with a music industry executive aesthetic:
+
+LAYOUT: Use a dark theme with card-based layout showing:
+- Header: "🎵 Music Label Manager" with month and basic nav
+- 4 main metric cards in a grid:
+  * Finances card (money, monthly burn with trend)
+  * Reputation card (global %, regional breakdown)  
+  * Artists card (signed artists with mood indicators)
+  * Focus Slots card (available/used with visual indicator)
+- Access Tiers sidebar showing playlist/press/venue badges
+
+STYLING: 
+- Dark background (#0f0f0f) with gold accents (#ffd700)
+- Cards with subtle borders that glow gold on hover
+- Use the provided Card and MetricCard component patterns
+- Icons: 💰💎📈🎤⚡🎯 for visual hierarchy
+- Typography: Clean, modern sans-serif
+
+Make it feel like a premium music industry tool, not a generic admin dashboard.
+```
+
+This gives Agent **specific visual direction** while building on the solid data foundation!
