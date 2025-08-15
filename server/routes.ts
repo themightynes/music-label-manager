@@ -430,7 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalExpenses = Math.floor(monthlyBurn + actionExpenses);
       const netChange = totalRevenue - totalExpenses;
       const newMoney = (gameState.money || 75000) + netChange;
-      const newReputation = Math.max(0, Math.min(100, (gameState.reputation || 5) + reputationChange));
+      const newReputation = Math.floor(Math.max(0, Math.min(100, (gameState.reputation || 5) + reputationChange)));
       
       // Update game state
       const updatedState = await storage.updateGameState(gameId, {
