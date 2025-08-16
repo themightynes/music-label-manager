@@ -1,0 +1,482 @@
+
+Execute a comprehensive refactoring of the Music Label Manager codebase to establish proper architecture and separation of concerns. Follow these specific directives:
+
+### **1. CREATE GAME ENGINE ARCHITECTURE**
+
+Create a new server-side game engine that extracts ALL business logic from API routes:
+
+```typescript
+// Create: server/src/engine/GameEngine.ts
+import { ServerGameData } from '../data/ServerGameData';
+import { GameState, Artist, Project, MonthlyAction } from '@shared/types';
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
+
+export class GameEngine {
+  constructor(private gameData: ServerGameData) {}
+
+  async advanceMonth(
+    gameState: GameState,
+    selectedActions: MonthlyAction[]
+  ): Promise<{
+    updatedState: GameState;
+    revenue: number;
+    expenses: number;
+    events: any[];
+  }> {
+    // Move ALL logic from /api/advance-month here
+    // Include balance.json calculations
+    const balance = this.gameData.getBalance();
+    
+    // Calculate revenue using balance formulas
+    let revenue = 0;
+    for (const action of selectedActions) {
+      if (action.actionType === 'project') {
+        // Use actual balance.json values
+        const projectConfig = balance.projects[action.targetId] || balance.projects.default;
+        revenue += projectConfig.baseRevenue * (1 + Math.random() * projectConfig.varianceMultiplier);
+      }
+    }
+    
+    // Calculate expenses
+    const expenses = this.calculateMonthlyExpenses(gameState, balance);
+    
+    // Update game state
+    const newMonth = gameState.currentMonth + 1;
+    const newCash = gameState.cash + revenue - expenses;
+    
+    return {
+      updatedState: {
+        ...gameState,
+        currentMonth: newMonth,
+        currentQuarter: Math.floor((newMonth - 1) / 3) + 1,
+        cash: newCash,
+        monthlyStats: {
+          month: newMonth,
+          revenue,
+          expenses,
+          netIncome: revenue - expenses,
+          endingCash: newCash
+        }
+      },
+      revenue,
+      expenses,
+      events: []
+    };
+  }
+
+  private calculateMonthlyExpenses(gameState: GameState, balance: any): number {
+    // Implement expense calculations from balance.json
+    const baseExpenses = balance.economy.monthlyExpenses.base;
+    const perArtist = balance.economy.monthlyExpenses.perArtist;
+    const artistCount = gameState.artists?.length || 0;
+    return baseExpenses + (perArtist * artistCount);
+  }
+
+  async signArtist(gameState: GameState, artistData: any): Promise<Artist> {
+    // Move artist signing logic here
+  }
+
+  async startProject(gameState: GameState, projectData: any): Promise<Project> {
+    // Move project creation logic here
+  }
+}
+
+// Create: server/src/engine/index.ts
+export { GameEngine } from './GameEngine';
+```
+
+### **2. REFACTOR API ROUTES WITH TRANSACTIONS**
+
+Update ALL API endpoints to use the game engine with proper database transactions:
+
+```typescript
+// Update: server/src/index.ts
+import { GameEngine } from './engine';
+
+const gameEngine = new GameEngine(serverGameData);
+
+app.post("/api/advance-month", async (req, res) => {
+  try {
+    const { gameId, selectedActions } = req.body;
+    
+    // Wrap EVERYTHING in a transaction
+    const result = await db.transaction(async (tx) => {
+      // Get current game state
+      const [gameState] = await tx
+        .select()
+        .from(gameStates)
+        .where(eq(gameStates.id, gameId));
+      
+      if (!gameState) {
+        throw new Error('Game not found');
+      }
+      
+      // Use game engine for business logic
+      const monthResult = await gameEngine.advanceMonth(
+        gameState,
+        selectedActions
+      );
+      
+      // Update database
+      await tx
+        .update(gameStates)
+        .set({
+          currentMonth: monthResult.updatedState.currentMonth,
+          currentQuarter: monthResult.updatedState.currentQuarter,
+          cash: monthResult.updatedState.cash,
+          monthlyStats: monthResult.updatedState.monthlyStats,
+          updatedAt: new Date()
+        })
+        .where(eq(gameStates.id, gameId));
+      
+      // Save monthly actions
+      if (selectedActions.length > 0) {
+        await tx.insert(monthlyActions).values(
+          selectedActions.map(action => ({
+            id: crypto.randomUUID(),
+            gameId,
+            month: monthResult.updatedState.currentMonth,
+            actionType: action.actionType,
+            targetId: action.targetId,
+            metadata: action.metadata || {},
+            createdAt: new Date()
+          }))
+        );
+      }
+      
+      return monthResult;
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Advance month error:', error);
+    res.status(500).json({ 
+      error: 'Failed to advance month',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+```
+
+### **3. BREAK UP GAMEPAGE.TSX INTO FEATURE MODULES**
+
+Create a proper feature-based structure for the client:
+
+```typescript
+// Create: client/src/features/game-state/hooks/useGameState.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { GameState } from '@shared/types';
+
+export function useGameState(gameId: string) {
+  return useQuery({
+    queryKey: ['gameState', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/game/${gameId}`);
+      if (!response.ok) throw new Error('Failed to fetch game state');
+      return response.json() as Promise<GameState>;
+    },
+    refetchInterval: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export function useAdvanceMonth(gameId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (selectedActions: any[]) => {
+      const response = await fetch('/api/advance-month', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, selectedActions })
+      });
+      if (!response.ok) throw new Error('Failed to advance month');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gameState', gameId] });
+    }
+  });
+}
+
+// Create: client/src/features/game-state/components/GameHeader.tsx
+import React from 'react';
+import { GameState } from '@shared/types';
+
+interface GameHeaderProps {
+  gameState: GameState;
+}
+
+export function GameHeader({ gameState }: GameHeaderProps) {
+  return (
+    <div className="bg-white shadow-sm border-b">
+      <div className="px-6 py-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">{gameState.labelName}</h1>
+          <div className="flex gap-6">
+            <div>
+              <span className="text-gray-500">Cash:</span>
+              <span className="ml-2 font-semibold">
+                ${gameState.cash.toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-500">Month:</span>
+              <span className="ml-2 font-semibold">{gameState.currentMonth}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Quarter:</span>
+              <span className="ml-2 font-semibold">Q{gameState.currentQuarter}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Create: client/src/features/artists/components/ArtistList.tsx
+import React from 'react';
+import { Artist } from '@shared/types';
+
+interface ArtistListProps {
+  artists: Artist[];
+  onArtistSelect?: (artist: Artist) => void;
+}
+
+export function ArtistList({ artists, onArtistSelect }: ArtistListProps) {
+  return (
+    <div className="space-y-2">
+      {artists.map(artist => (
+        <div
+          key={artist.id}
+          onClick={() => onArtistSelect?.(artist)}
+          className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+        >
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="font-semibold">{artist.name}</h3>
+              <p className="text-sm text-gray-500">{artist.genre}</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Popularity</div>
+              <div className="font-semibold">{artist.popularity}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Create: client/src/features/projects/components/ProjectList.tsx
+// Similar structure for projects
+
+// Create: client/src/pages/GamePage.tsx (REFACTORED - now under 150 lines)
+import React from 'react';
+import { useParams } from 'react-router-dom';
+import { useGameState, useAdvanceMonth } from '../features/game-state/hooks/useGameState';
+import { GameHeader } from '../features/game-state/components/GameHeader';
+import { ArtistList } from '../features/artists/components/ArtistList';
+import { ProjectList } from '../features/projects/components/ProjectList';
+import { MonthSummary } from '../features/game-state/components/MonthSummary';
+
+export function GamePage() {
+  const { gameId } = useParams<{ gameId: string }>();
+  const { data: gameState, isLoading } = useGameState(gameId!);
+  const advanceMonth = useAdvanceMonth(gameId!);
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (!gameState) return <div>Game not found</div>;
+  
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <GameHeader gameState={gameState} />
+      
+      <div className="container mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Artists</h2>
+            <ArtistList artists={gameState.artists} />
+          </div>
+          
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Projects</h2>
+            <ProjectList projects={gameState.projects} />
+          </div>
+          
+          <div>
+            <MonthSummary 
+              monthlyStats={gameState.monthlyStats}
+              onAdvanceMonth={() => advanceMonth.mutate([])}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### **4. CREATE TYPE-SAFE API CONTRACTS**
+
+Create shared API types for complete type safety:
+
+```typescript
+// Create: shared/src/api/contracts.ts
+import { z } from 'zod';
+import { GameState, Artist, Project } from '../types';
+
+// Request/Response schemas
+export const AdvanceMonthRequest = z.object({
+  gameId: z.string().uuid(),
+  selectedActions: z.array(z.object({
+    actionType: z.enum(['project', 'marketing', 'dialogue']),
+    targetId: z.string(),
+    metadata: z.record(z.any()).optional()
+  }))
+});
+
+export const AdvanceMonthResponse = z.object({
+  updatedState: z.custom<GameState>(),
+  revenue: z.number(),
+  expenses: z.number(),
+  events: z.array(z.any())
+});
+
+export type AdvanceMonthRequest = z.infer<typeof AdvanceMonthRequest>;
+export type AdvanceMonthResponse = z.infer<typeof AdvanceMonthResponse>;
+
+// Create: shared/src/api/client.ts
+export class APIClient {
+  constructor(private baseURL: string = '') {}
+  
+  async advanceMonth(request: AdvanceMonthRequest): Promise<AdvanceMonthResponse> {
+    const response = await fetch(`${this.baseURL}/api/advance-month`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return AdvanceMonthResponse.parse(data);
+  }
+}
+
+// Update server to use these contracts:
+// server/src/index.ts
+app.post("/api/advance-month", async (req, res) => {
+  try {
+    const request = AdvanceMonthRequest.parse(req.body);
+    // ... rest of implementation
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request', details: error.errors });
+    }
+    // ... handle other errors
+  }
+});
+```
+
+### **5. ADD COMPREHENSIVE ERROR HANDLING**
+
+Create error boundaries and proper error states:
+
+```typescript
+// Create: client/src/components/ErrorBoundary.tsx
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+interface Props {
+  children: ReactNode;
+  fallback?: (error: Error) => ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError && this.state.error) {
+      if (this.props.fallback) {
+        return this.props.fallback(this.state.error);
+      }
+      
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">
+              Something went wrong
+            </h1>
+            <p className="text-gray-600 mb-4">{this.state.error.message}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Wrap your app:
+// client/src/App.tsx
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        {/* ... rest of app */}
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}
+```
+
+### **EXECUTION CHECKLIST**
+
+1. ✅ Create `server/src/engine/` directory with GameEngine class
+1. ✅ Move ALL business logic from API routes to GameEngine methods
+1. ✅ Wrap ALL database operations in transactions
+1. ✅ Create `client/src/features/` directory structure
+1. ✅ Break GamePage.tsx into smaller feature components (each <150 lines)
+1. ✅ Create shared API contracts in `shared/src/api/`
+1. ✅ Add ErrorBoundary component and wrap App
+1. ✅ Update all API endpoints to use Zod validation
+1. ✅ Ensure all async operations have proper error handling
+1. ✅ Test that the game still works after refactoring
+
+### **CRITICAL REQUIREMENTS**
+
+- **DO NOT** break existing functionality - test after each change
+- **DO** maintain backward compatibility with existing database
+- **DO** keep all existing game features working
+- **DO NOT** add new features yet - only refactor existing code
+- **DO** commit changes incrementally with clear messages
+
+Start with creating the GameEngine class and moving the advance-month logic. Test that it works before proceeding to the next step. This systematic approach will give you a solid foundation for Phase 2 and 3.​​​​​​​​​​​​​​​​

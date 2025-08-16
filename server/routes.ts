@@ -6,7 +6,14 @@ import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
 import { GameEngine } from "./engine";
-import { AdvanceMonthRequest } from "@shared/api/contracts";
+import { 
+  AdvanceMonthRequest, 
+  AdvanceMonthResponse,
+  SelectActionsRequest,
+  SelectActionsResponse,
+  validateRequest,
+  createErrorResponse 
+} from "@shared/api/contracts";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -392,116 +399,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Month advancement with action processing
+  // Month advancement with action processing using GameEngine and transactions
   app.post("/api/advance-month", async (req, res) => {
     try {
-      // Validate request
-      const request = AdvanceMonthRequest.parse(req.body);
+      // Validate request using shared contract
+      const request = validateRequest(AdvanceMonthRequest, req.body);
       const { gameId, selectedActions } = request;
       
-      // Validate gameId
-      if (!gameId) {
-        return res.status(400).json({ message: "Game ID is required" });
-      }
-      
-      // Get balance config for calculations
-      const balanceConfig = await serverGameData.getBalanceConfig();
-      
-      // Get current game state  
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        return res.status(404).json({ message: "Game not found" });
-      }
-
-      // Calculate monthly burn from balance.json
-      const burnRange = balanceConfig.economy.monthly_burn_base;
-      const baseBurn = burnRange[0] + Math.random() * (burnRange[1] - burnRange[0]);
-      
-      // Apply RNG variance
-      const variance = balanceConfig.economy.rng_variance;
-      const rngFactor = variance[0] + Math.random() * (variance[1] - variance[0]);
-      const monthlyBurn = Math.floor(baseBurn * rngFactor);
-
-      // Process selected actions (simplified for MVP)
-      let actionRevenue = 0;
-      let actionExpenses = 0;
-      let reputationChange = 0;
-      
-      if (selectedActions && selectedActions.length > 0) {
-        // Each action has potential for revenue/reputation gain
-        actionRevenue = selectedActions.length * (Math.random() * 5000 + 2000);
-        actionExpenses = selectedActions.length * (Math.random() * 2000 + 1000);
-        reputationChange = selectedActions.length * (Math.random() * 2 - 0.5);
-      }
-
-      const totalRevenue = Math.floor(actionRevenue);
-      const totalExpenses = Math.floor(monthlyBurn + actionExpenses);
-      const netChange = totalRevenue - totalExpenses;
-      const newMoney = (gameState.money || 75000) + netChange;
-      const newReputation = Math.floor(Math.max(0, Math.min(100, (gameState.reputation || 5) + reputationChange)));
-      
-      // Update game state
-      const updatedState = await storage.updateGameState(gameId, {
-        currentMonth: (gameState.currentMonth || 1) + 1,
-        money: newMoney,
-        reputation: newReputation,
-        usedFocusSlots: 0, // Reset for new month
-        monthlyStats: {
-          ...(gameState.monthlyStats as object || {}),
-          [`month${gameState.currentMonth}`]: {
-            revenue: totalRevenue,
-            expenses: totalExpenses,
-            netChange: netChange,
-            reputationChange: Math.round(reputationChange * 10) / 10,
-            actions: selectedActions || []
-          }
+      // Wrap everything in a database transaction
+      const result = await db.transaction(async (tx) => {
+        // Get current game state
+        const [gameState] = await tx
+          .select()
+          .from(gameStates)
+          .where(eq(gameStates.id, gameId));
+        
+        if (!gameState) {
+          throw new Error('Game not found');
         }
+        
+        // Convert database gameState to proper GameState type
+        const gameStateForEngine = {
+          ...gameState,
+          currentMonth: gameState.currentMonth || 1,
+          money: gameState.money || 75000,
+          reputation: gameState.reputation || 5,
+          creativeCapital: gameState.creativeCapital || 10,
+          focusSlots: gameState.focusSlots || 3,
+          usedFocusSlots: gameState.usedFocusSlots || 0,
+          playlistAccess: gameState.playlistAccess || 'none',
+          pressAccess: gameState.pressAccess || 'none',
+          venueAccess: gameState.venueAccess || 'none',
+          campaignType: gameState.campaignType || 'standard',
+          rngSeed: gameState.rngSeed || Math.random().toString(36).substring(7),
+          flags: gameState.flags || {},
+          monthlyStats: gameState.monthlyStats || {}
+        };
+        
+        // Use GameEngine for business logic
+        const monthResult = await gameEngine.advanceMonth(
+          gameStateForEngine,
+          selectedActions
+        );
+        
+        // Update game state in database
+        await tx
+          .update(gameStates)
+          .set({
+            currentMonth: monthResult.updatedState.currentMonth,
+            money: monthResult.updatedState.money,
+            reputation: monthResult.updatedState.reputation,
+            usedFocusSlots: monthResult.updatedState.usedFocusSlots,
+            monthlyStats: monthResult.updatedState.monthlyStats,
+            updatedAt: new Date()
+          })
+          .where(eq(gameStates.id, gameId));
+        
+        // Save monthly actions
+        if (selectedActions.length > 0) {
+          await tx.insert(monthlyActions).values(
+            selectedActions.map(action => ({
+              id: crypto.randomUUID(),
+              gameId,
+              month: monthResult.updatedState.currentMonth - 1, // Previous month
+              actionType: action.actionType,
+              targetId: action.targetId,
+              results: {
+                revenue: monthResult.revenue / selectedActions.length,
+                expenses: monthResult.expenses / selectedActions.length
+              },
+              createdAt: new Date()
+            }))
+          );
+        }
+        
+        return {
+          gameState: monthResult.updatedState,
+          revenue: monthResult.revenue,
+          expenses: monthResult.expenses,
+          reputationChange: monthResult.reputationChange,
+          monthlyOutcome: monthResult.monthlyOutcome,
+          events: monthResult.events
+        };
       });
-
-      // Return summary
-      const summary = {
-        month: gameState.currentMonth,
-        revenue: totalRevenue,
-        expenses: totalExpenses,
-        netChange: netChange,
-        reputationChange: Math.round(reputationChange * 10) / 10,
-        gameState: updatedState,
-        actions: selectedActions || []
-      };
-
-      res.json(summary);
+      
+      res.json(result);
     } catch (error) {
       console.error('Advance month error:', error);
-      res.status(500).json({ message: "Failed to advance month" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(createErrorResponse(
+          'VALIDATION_ERROR',
+          'Invalid request data',
+          error.errors
+        ));
+      }
+      res.status(500).json(createErrorResponse(
+        'ADVANCE_MONTH_ERROR',
+        error instanceof Error ? error.message : 'Failed to advance month'
+      ));
     }
   });
 
-  // Save player action selections
+  // Save player action selections with transactions
   app.post("/api/select-actions", async (req, res) => {
     try {
-      const { gameId, selectedActions } = req.body;
+      // Validate request using shared contract
+      const request = validateRequest(SelectActionsRequest, req.body);
+      const { gameId, selectedActions } = request;
       
-      if (!selectedActions || selectedActions.length > 3) {
-        return res.status(400).json({ message: "Invalid action selection - maximum 3 actions allowed" });
-      }
-      
-      // Validate gameId
-      if (!gameId) {
-        return res.status(400).json({ message: "Game ID is required" });
-      }
-      
-      // Update game state with selected actions
-      const gameState = await storage.updateGameState(gameId, {
-        usedFocusSlots: selectedActions.length,
-        flags: {
-          selectedActions: selectedActions
+      // Wrap in transaction
+      const result = await db.transaction(async (tx) => {
+        // Get current game state
+        const [gameState] = await tx
+          .select()
+          .from(gameStates)
+          .where(eq(gameStates.id, gameId));
+        
+        if (!gameState) {
+          throw new Error('Game not found');
         }
+        
+        // Convert database gameState to proper GameState type
+        const gameStateForEngine = {
+          ...gameState,
+          currentMonth: gameState.currentMonth || 1,
+          money: gameState.money || 75000,
+          reputation: gameState.reputation || 5,
+          creativeCapital: gameState.creativeCapital || 10,
+          focusSlots: gameState.focusSlots || 3,
+          usedFocusSlots: gameState.usedFocusSlots || 0,
+          playlistAccess: gameState.playlistAccess || 'none',
+          pressAccess: gameState.pressAccess || 'none',
+          venueAccess: gameState.venueAccess || 'none',
+          campaignType: gameState.campaignType || 'standard',
+          rngSeed: gameState.rngSeed || Math.random().toString(36).substring(7),
+          flags: gameState.flags || {},
+          monthlyStats: gameState.monthlyStats || {}
+        };
+        
+        // Use GameEngine to validate and update action selection
+        const updatedGameState = await gameEngine.updateActionSelection(
+          gameStateForEngine,
+          selectedActions
+        );
+        
+        // Update in database
+        await tx
+          .update(gameStates)
+          .set({
+            usedFocusSlots: updatedGameState.usedFocusSlots,
+            flags: updatedGameState.flags,
+            updatedAt: new Date()
+          })
+          .where(eq(gameStates.id, gameId));
+        
+        return {
+          success: true,
+          gameState: updatedGameState
+        };
       });
       
-      res.json({ success: true, gameState });
+      res.json(result);
     } catch (error) {
       console.error('Select actions error:', error);
-      res.status(500).json({ message: "Failed to save action selection" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(createErrorResponse(
+          'VALIDATION_ERROR',
+          'Invalid request data',
+          error.errors
+        ));
+      }
+      res.status(500).json(createErrorResponse(
+        'SELECT_ACTIONS_ERROR',
+        error instanceof Error ? error.message : 'Failed to save action selection'
+      ));
     }
   });
 
