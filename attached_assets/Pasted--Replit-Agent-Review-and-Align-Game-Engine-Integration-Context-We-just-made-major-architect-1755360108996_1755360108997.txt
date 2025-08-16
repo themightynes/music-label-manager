@@ -1,0 +1,112 @@
+# Replit Agent: Review and Align Game Engine Integration
+
+## Context
+We just made major architectural changes to unify the game engine and eliminate code duplication. Please review and fix any import/integration issues.
+
+## Files Just Created/Modified:
+
+### 1. NEW FILE CREATED:
+**`shared/engine/game-engine.ts`**
+- This is now the SINGLE SOURCE OF TRUTH for all game calculations
+- Contains the unified `GameEngine` class with all game logic
+- Includes methods: `advanceMonth()`, `calculateStreamingOutcome()`, `calculatePressPickups()`, `calculateTourRevenue()`
+- Uses formulas from `data/balance.json`
+
+### 2. NEW FILE CREATED:
+**`AI_INSTRUCTIONS.md`** (in project root)
+- Documentation for AI assistants
+- Explains the architecture and current state
+- Lists key files and their purposes
+
+### 3. FILES TO DELETE (if they still exist):
+- `client/src/lib/gameEngine.ts` - OLD client engine (DELETE THIS)
+- `server/engine/GameEngine.ts` - OLD server engine (DELETE THIS)
+
+## Required Changes:
+
+### Fix All Imports
+Please search the entire codebase and update ANY import statements that reference the old GameEngine locations:
+
+**OLD imports to find and replace:**
+```typescript
+// Find these:
+import { GameEngine } from './engine/GameEngine';
+import { GameEngine } from '../lib/gameEngine';
+import { GameEngine } from '../../lib/gameEngine';
+import { calculateStreamingOutcome } from '../lib/gameEngine';
+
+// Replace with:
+import { GameEngine } from '../shared/engine/game-engine';
+// Or adjust the path based on where the importing file is located
+```
+
+### Files That Likely Need Import Updates:
+1. **`server/routes.ts`** - Update GameEngine import to use the shared version
+2. **`server/data/gameData.ts`** - If it imports GameEngine, update it
+3. **`client/src/store/gameStore.ts`** - Should NOT import GameEngine anymore (client doesn't calculate)
+4. Any test files that reference GameEngine
+
+### Check for Broken References
+After updating imports, please:
+1. Ensure TypeScript compiles without errors
+2. Check that the dev server starts properly
+3. Look for any red squiggly lines in the editor
+4. Verify that advancing a month still works in the game
+
+### Specific Verification Steps:
+1. **In `server/routes.ts`**, find the `/api/games/:id/advance-month` endpoint and ensure it:
+   - Creates a new GameEngine instance using the shared version
+   - Passes the gameState and gameData correctly
+   - Calls `engine.advanceMonth(monthlyActions)`
+
+2. **In `client/src/store/gameStore.ts`**, ensure:
+   - It does NOT calculate game outcomes anymore
+   - It only manages UI state
+   - Any calculation logic is removed or commented with "// TODO: Remove after server integration"
+
+3. **Check that these types are properly imported**:
+   - `GameState`, `Artist`, `Project`, `Role`, `MonthlyAction` from `shared/types/gameTypes`
+   - These should be imported in the new game-engine.ts file
+
+### Additional Cleanup:
+1. Remove any duplicate calculation functions that might exist in:
+   - Client-side React components
+   - Server route handlers
+   - Store files
+
+2. Ensure the server is the ONLY place that:
+   - Modifies game state
+   - Calculates outcomes
+   - Applies effects
+
+3. The client should ONLY:
+   - Display data from the server
+   - Send actions to the server
+   - Show previews (but not save results)
+
+## Test After Changes:
+Please run these commands and report any errors:
+```bash
+# Check TypeScript compilation
+npx tsc --noEmit
+
+# Start the dev server
+npm run dev
+
+# Try to advance a month in the game UI and check console for errors
+```
+
+## Report Back:
+Please let me know:
+1. ✅ Which imports were updated
+2. ❌ Any errors encountered
+3. 🤔 Any files where you're unsure about the changes
+4. 📝 Any TODOs or issues discovered
+
+## Important Notes:
+- The new `game-engine.ts` file uses hyphen (not camelCase)
+- The class name is still `GameEngine` (capital G, capital E)
+- ServerGameData might need to be imported - if so, the path is `../../server/data/gameData`
+- The game engine now uses seedrandom for deterministic random numbers
+
+Please make these changes carefully and report back with the results!
