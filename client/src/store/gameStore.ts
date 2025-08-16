@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { GameState, Artist, Project, Role, MonthlyAction } from '@shared/schema';
-import { gameEngine } from '@/lib/gameEngine';
+// Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest } from '@/lib/queryClient';
 
 interface GameStore {

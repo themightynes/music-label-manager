@@ -5,7 +5,7 @@ import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insert
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
-import { GameEngine } from "./engine";
+import { GameEngine } from "../shared/engine/game-engine";
 import { 
   AdvanceMonthRequest, 
   AdvanceMonthResponse,
