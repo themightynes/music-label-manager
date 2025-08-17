@@ -3,6 +3,7 @@ import { useGameState, useAdvanceMonth } from '../features/game-state/hooks/useG
 import { GameHeader } from '../features/game-state/components/GameHeader';
 import { GameDashboard } from '../features/game-state/components/GameDashboard';
 import { MonthPlanner } from '../features/game-state/components/MonthPlanner';
+import { MonthSummary } from '../features/game-state/components/MonthSummary';
 import { CampaignResultsModal } from '../components/CampaignResultsModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useGameStore } from '../store/gameStore';
