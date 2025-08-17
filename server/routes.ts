@@ -477,6 +477,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           monthlyStats: gameState.monthlyStats || {}
         };
         
+        // Check if campaign is already completed before creating engine
+        if (gameState.campaignCompleted) {
+          // Return campaign results without advancing month
+          const balanceConfig = await serverGameData.getBalanceConfig();
+          const campaignResults = {
+            campaignCompleted: true,
+            finalScore: Math.max(0, Math.floor((gameState.money || 0) / 1000)) + Math.max(0, Math.floor((gameState.reputation || 0) / 5)),
+            scoreBreakdown: {
+              money: Math.max(0, Math.floor((gameState.money || 0) / 1000)),
+              reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 5)),
+              artistsSuccessful: 0,
+              projectsCompleted: 0,
+              accessTierBonus: 0
+            },
+            victoryType: gameState.money && gameState.money > 0 ? 'Survival' : 'Failure',
+            summary: 'Your 12-month campaign has ended. Time to start fresh!',
+            achievements: ['📅 Campaign Completed']
+          };
+          
+          return {
+            gameState: gameStateForEngine,
+            summary: {
+              month: gameState.currentMonth || 14,
+              changes: [],
+              revenue: 0,
+              expenses: 0,
+              reputationChanges: {},
+              events: []
+            },
+            campaignResults
+          };
+        }
+
         // Create GameEngine instance for this game state
         const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
         
