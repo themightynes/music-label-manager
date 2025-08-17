@@ -51,15 +51,15 @@ export default function GamePage() {
     try {
       const newGameState = await createNewGame('standard');
       
-      // Update React Query cache with the new game state immediately
-      queryClient.setQueryData(['gameState', null], newGameState);
-      queryClient.invalidateQueries({ queryKey: ['gameState'] });
+      // Update the game context with the new game ID
+      setGameId(newGameState.id);
+      
+      // Clear all React Query cache and set new game state
+      queryClient.clear();
+      queryClient.setQueryData(['gameState', newGameState.id], newGameState);
       
       setShowCampaignResults(false);
       setView('dashboard');
-      
-      // Force a page refresh to ensure clean state
-      window.location.reload();
     } catch (error) {
       console.error('Failed to create new game:', error);
     }

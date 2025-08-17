@@ -16,8 +16,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const idFromUrl = urlParams.get('gameId');
     const idFromStorage = localStorage.getItem('currentGameId');
     
-    const id = idFromUrl || idFromStorage || '5d0f61cb-0461-46af-9e47-bf8971223890';
-    setGameId(id);
+    // Only fallback to the hardcoded game if no storage or URL game ID exists
+    const id = idFromUrl || idFromStorage;
+    if (id) {
+      setGameId(id);
+    } else {
+      // If no game ID is found, we'll let the game state hook handle creating a new game
+      setGameId('5d0f61cb-0461-46af-9e47-bf8971223890');
+    }
   }, []);
 
   const updateGameId = (id: string) => {
