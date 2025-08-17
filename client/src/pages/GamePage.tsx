@@ -6,14 +6,18 @@ import { MonthPlanner } from '../features/game-state/components/MonthPlanner';
 import { CampaignResultsModal } from '../components/CampaignResultsModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useGameStore } from '../store/gameStore';
+import { useQueryClient } from '@tanstack/react-query';
+import { useGameContext } from '../contexts/GameContext';
 
 export default function GamePage() {
   const [view, setView] = useState<'dashboard' | 'planner'>('dashboard');
   const [showCampaignResults, setShowCampaignResults] = useState(false);
   
-  const { data: gameState, isLoading, error } = useGameState();
+  const { data: gameState, isLoading, error, refetch } = useGameState();
   const advanceMonth = useAdvanceMonth();
   const { createNewGame } = useGameStore();
+  const queryClient = useQueryClient();
+  const { setGameId } = useGameContext();
   
   // Check for campaign results from advance month mutation
   useEffect(() => {
@@ -45,9 +49,17 @@ export default function GamePage() {
 
   const handleNewGame = async () => {
     try {
-      await createNewGame('standard');
+      const newGameState = await createNewGame('standard');
+      
+      // Update React Query cache with the new game state immediately
+      queryClient.setQueryData(['gameState', null], newGameState);
+      queryClient.invalidateQueries({ queryKey: ['gameState'] });
+      
       setShowCampaignResults(false);
       setView('dashboard');
+      
+      // Force a page refresh to ensure clean state
+      window.location.reload();
     } catch (error) {
       console.error('Failed to create new game:', error);
     }
