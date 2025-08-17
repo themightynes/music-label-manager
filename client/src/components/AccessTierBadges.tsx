@@ -1,9 +1,13 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useGameStore } from '@/store/gameStore';
+import { GameState } from '@shared/types/gameTypes';
+import { Key, Music, Megaphone, Building } from 'lucide-react';
 
-export function AccessTierBadges() {
-  const { gameState } = useGameStore();
+interface AccessTierBadgesProps {
+  gameState: GameState;
+}
+
+export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
 
   if (!gameState) return null;
 
@@ -24,66 +28,68 @@ export function AccessTierBadges() {
 
   const getAccessBadgeClass = (tier: string) => {
     switch (tier) {
-      case 'None': return 'bg-slate-400 text-white';
+      case 'None': return 'bg-gray-600 text-gray-300';
       case 'Niche':
       case 'Blogs':
-      case 'Clubs': return 'bg-success text-white';
+      case 'Clubs': return 'bg-green-600 text-white';
       case 'Mid':
-      case 'Mid-Tier': return 'bg-warning text-white';
+      case 'Mid-Tier': return 'bg-yellow-600 text-white';
       case 'Flagship':
       case 'Major':
-      case 'Theaters': return 'bg-primary text-white';
-      default: return 'bg-slate-400 text-white';
+      case 'Theaters': return 'bg-purple-600 text-white';
+      default: return 'bg-gray-600 text-gray-300';
     }
   };
 
   return (
-    <Card className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
-      <CardContent className="p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-          <i className="fas fa-key text-primary mr-2"></i>
+    <Card className="bg-gray-900 border-gray-700">
+      <CardHeader>
+        <CardTitle className="text-yellow-500 flex items-center">
+          <Key className="w-5 h-5 mr-2" />
           Access Tiers
-        </h3>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Playlist Access */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
             <div className="flex items-center space-x-3">
-              <i className="fas fa-list-ul text-primary"></i>
+              <Music className="w-5 h-5 text-yellow-500" />
               <div>
-                <div className="text-sm font-medium text-slate-900">Playlist Access</div>
-                <div className="text-xs text-slate-600">Streaming platforms</div>
+                <div className="text-sm font-medium text-white">Playlist Access</div>
+                <div className="text-xs text-gray-400">Streaming platforms</div>
               </div>
             </div>
-            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.playlistAccess || 'none')}`}>
-              {gameState.playlistAccess || 'none'}
+            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.playlistAccess || 'None')}`}>
+              {gameState.playlistAccess || 'None'}
             </Badge>
           </div>
 
           {/* Press Access */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
             <div className="flex items-center space-x-3">
-              <i className="fas fa-newspaper text-warning"></i>
+              <Megaphone className="w-5 h-5 text-yellow-500" />
               <div>
-                <div className="text-sm font-medium text-slate-900">Press Access</div>
-                <div className="text-xs text-slate-600">Media coverage</div>
+                <div className="text-sm font-medium text-white">Press Access</div>
+                <div className="text-xs text-gray-400">Media coverage</div>
               </div>
             </div>
-            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.pressAccess || 'none')}`}>
-              {gameState.pressAccess || 'none'}
+            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.pressAccess || 'None')}`}>
+              {gameState.pressAccess || 'None'}
             </Badge>
           </div>
 
           {/* Venue Access */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
             <div className="flex items-center space-x-3">
-              <i className="fas fa-building text-secondary"></i>
+              <Building className="w-5 h-5 text-yellow-500" />
               <div>
-                <div className="text-sm font-medium text-slate-900">Venue Access</div>
-                <div className="text-xs text-slate-600">Live performances</div>
+                <div className="text-sm font-medium text-white">Venue Access</div>
+                <div className="text-xs text-gray-400">Live performances</div>
               </div>
             </div>
-            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.venueAccess || 'none')}`}>
-              {gameState.venueAccess || 'none'}
+            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.venueAccess || 'None')}`}>
+              {gameState.venueAccess || 'None'}
             </Badge>
           </div>
         </div>
