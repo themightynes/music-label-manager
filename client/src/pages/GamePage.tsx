@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameState, useAdvanceMonth } from '../features/game-state/hooks/useGameState';
 import { GameHeader } from '../features/game-state/components/GameHeader';
 import { GameDashboard } from '../features/game-state/components/GameDashboard';
 import { MonthPlanner } from '../features/game-state/components/MonthPlanner';
+import { CampaignResultsModal } from '../components/CampaignResultsModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useGameStore } from '../store/gameStore';
 
 export default function GamePage() {
   const [view, setView] = useState<'dashboard' | 'planner'>('dashboard');
+  const [showCampaignResults, setShowCampaignResults] = useState(false);
   
   const { data: gameState, isLoading, error } = useGameState();
   const advanceMonth = useAdvanceMonth();
+  const { createNewGame } = useGameStore();
+  
+  // Check for campaign results from advance month mutation
+  useEffect(() => {
+    if (advanceMonth.data?.campaignResults?.campaignCompleted) {
+      setShowCampaignResults(true);
+    }
+  }, [advanceMonth.data]);
   
   if (isLoading) {
     return (
@@ -30,6 +41,16 @@ export default function GamePage() {
   const handleAdvanceMonth = (selectedActions: string[]) => {
     advanceMonth.mutate(selectedActions);
     setView('dashboard');
+  };
+
+  const handleNewGame = async () => {
+    try {
+      await createNewGame('standard');
+      setShowCampaignResults(false);
+      setView('dashboard');
+    } catch (error) {
+      console.error('Failed to create new game:', error);
+    }
   };
 
   if (view === 'planner') {
@@ -57,6 +78,15 @@ export default function GamePage() {
           onPlanMonth={() => setView('planner')}
           isAdvancing={advanceMonth.isPending}
         />
+        
+        {/* Campaign Results Modal */}
+        {showCampaignResults && advanceMonth.data?.campaignResults && (
+          <CampaignResultsModal
+            campaignResults={advanceMonth.data.campaignResults}
+            onClose={() => setShowCampaignResults(false)}
+            onNewGame={handleNewGame}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );

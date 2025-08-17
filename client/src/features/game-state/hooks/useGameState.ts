@@ -51,6 +51,10 @@ export function useAdvanceMonth() {
       // Update the game state cache with the new data
       queryClient.setQueryData(['gameState', gameId], data.gameState);
       queryClient.invalidateQueries({ queryKey: ['gameState', gameId] });
+    },
+    onError: (error: any) => {
+      console.error('Failed to advance month:', error);
+      // Don't throw here, let the UI handle the error display
     }
   });
 }
