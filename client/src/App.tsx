@@ -5,11 +5,27 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GameProvider } from "@/contexts/GameContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 import GamePage from "@/pages/GamePage";
 import TestDataPage from "@/pages/TestData";
+import LoginPage from "@/pages/LoginPage";
 
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-yellow-500 text-xl">🎵 Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
   return (
     <Switch>
       <Route path="/" component={GamePage} />
@@ -22,14 +38,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <GameProvider>
-        <TooltipProvider>
-          <ErrorBoundary>
-            <Toaster />
-            <Router />
-          </ErrorBoundary>
-        </TooltipProvider>
-      </GameProvider>
+      <AuthProvider>
+        <GameProvider>
+          <TooltipProvider>
+            <ErrorBoundary>
+              <Toaster />
+              <Router />
+            </ErrorBoundary>
+          </TooltipProvider>
+        </GameProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

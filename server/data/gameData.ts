@@ -18,6 +18,7 @@ export class ServerGameData {
   private static instance: ServerGameData;
   private dataLoader = gameDataLoader;
   private initialized = false;
+  private balanceData: BalanceConfig | null = null;
 
   static getInstance(): ServerGameData {
     if (!ServerGameData.instance) {
@@ -34,6 +35,10 @@ export class ServerGameData {
       const startTime = Date.now();
       
       await this.dataLoader.loadAllData();
+      
+      // Cache balance data for sync methods
+      const fullData = await this.dataLoader.loadAllData();
+      this.balanceData = fullData.balance;
       
       const loadTime = Date.now() - startTime;
       console.log(`Game data loaded successfully in ${loadTime}ms`);
@@ -343,82 +348,219 @@ export class ServerGameData {
 
   // Synchronous versions for GameEngine compatibility
   getStreamingConfigSync() {
-    // For synchronous access - will need balance data pre-loaded
+    if (!this.balanceData) {
+      // Fallback values if balance not loaded yet
+      return {
+        quality_weight: 0.35,
+        playlist_weight: 0.25,
+        reputation_weight: 0.20,
+        marketing_weight: 0.20,
+        first_week_multiplier: 2.5,
+        base_streams_per_point: 1000
+      };
+    }
+    
+    const streaming = this.balanceData.market_formulas.streaming_calculation;
     return {
-      quality_weight: 0.35,
-      playlist_weight: 0.25,
-      reputation_weight: 0.20,
-      marketing_weight: 0.20,
-      first_week_multiplier: 2.5,
+      quality_weight: streaming.quality_weight,
+      playlist_weight: streaming.playlist_weight,
+      reputation_weight: streaming.reputation_weight,
+      marketing_weight: streaming.marketing_weight,
+      first_week_multiplier: streaming.first_week_multiplier,
       base_streams_per_point: 1000
     };
   }
 
   getPressConfigSync() {
+    if (!this.balanceData) {
+      return {
+        base_chance: 0.15,
+        pr_spend_modifier: 0.001,
+        reputation_modifier: 0.008,
+        story_flag_bonus: 0.30,
+        max_pickups_per_release: 8
+      };
+    }
+    
+    const press = this.balanceData.market_formulas.press_coverage;
     return {
-      base_chance: 0.15,
-      pr_spend_modifier: 0.001,
-      reputation_modifier: 0.008,
-      story_flag_bonus: 0.30,
-      max_pickups_per_release: 8
+      base_chance: press.base_chance,
+      pr_spend_modifier: press.pr_spend_modifier,
+      reputation_modifier: press.reputation_modifier,
+      story_flag_bonus: press.story_flag_bonus,
+      max_pickups_per_release: press.max_pickups_per_release
     };
   }
 
   getTourConfigSync() {
+    if (!this.balanceData) {
+      return {
+        sell_through_base: 0.60,
+        reputation_modifier: 0.003,
+        local_popularity_weight: 0.40,
+        merch_percentage: 0.15,
+        ticket_price_base: 30,
+        ticket_price_per_capacity: 0.01
+      };
+    }
+    
+    const tour = this.balanceData.market_formulas.tour_revenue;
     return {
-      sell_through_base: 0.60,
-      reputation_modifier: 0.003,
-      local_popularity_weight: 0.40,
-      merch_percentage: 0.15,
+      sell_through_base: tour.sell_through_base,
+      reputation_modifier: tour.reputation_modifier,
+      local_popularity_weight: tour.local_popularity_weight,
+      merch_percentage: tour.merch_percentage,
       ticket_price_base: 30,
       ticket_price_per_capacity: 0.01
     };
   }
 
   getAccessTiersSync() {
+    if (!this.balanceData) {
+      // Fallback data if balance not loaded yet
+      return {
+        playlist_access: {
+          none: { threshold: 0, reach_multiplier: 0.1, description: "No playlist access" },
+          niche: { threshold: 10, reach_multiplier: 0.4, description: "Niche playlist access" },
+          mid: { threshold: 30, reach_multiplier: 0.8, description: "Mid-tier playlist access" },
+          major: { threshold: 60, reach_multiplier: 1.5, description: "Major playlist access" }
+        },
+        press_access: {
+          none: { threshold: 0, pickup_chance: 0.05, description: "No press contacts" },
+          blogs: { threshold: 8, pickup_chance: 0.25, description: "Music blog access" },
+          mid_tier: { threshold: 25, pickup_chance: 0.60, description: "Mid-tier publication access" },
+          major: { threshold: 50, pickup_chance: 0.85, description: "Major publication access" }
+        },
+        venue_access: {
+          clubs: { threshold: 5, capacity_range: [50, 500], description: "Small clubs and bars" },
+          theaters: { threshold: 20, capacity_range: [500, 2000], description: "Theaters and mid-size venues" },
+          arenas: { threshold: 45, capacity_range: [2000, 20000], description: "Arenas and large venues" },
+          stadiums: { threshold: 80, capacity_range: [15000, 50000], description: "Stadiums and festivals" }
+        }
+      };
+    }
+    
+    // Use real balance data
+    const access = this.balanceData.access_tier_system;
     return {
       playlist_access: {
-        none: { threshold: 0, reach_multiplier: 0.1, description: "No playlist access" },
-        niche: { threshold: 10, reach_multiplier: 0.4, description: "Niche playlist access" },
-        mid: { threshold: 30, reach_multiplier: 0.8, description: "Mid-tier playlist access" },
-        major: { threshold: 60, reach_multiplier: 1.5, description: "Major playlist access" }
+        none: { 
+          threshold: access.playlist_access.none.threshold, 
+          reach_multiplier: access.playlist_access.none.reach_multiplier, 
+          description: "No playlist access" 
+        },
+        niche: { 
+          threshold: access.playlist_access.niche.threshold, 
+          reach_multiplier: access.playlist_access.niche.reach_multiplier, 
+          description: "Niche playlist access" 
+        },
+        mid: { 
+          threshold: access.playlist_access.mid.threshold, 
+          reach_multiplier: access.playlist_access.mid.reach_multiplier, 
+          description: "Mid-tier playlist access" 
+        },
+        flagship: { 
+          threshold: access.playlist_access.flagship.threshold, 
+          reach_multiplier: access.playlist_access.flagship.reach_multiplier, 
+          description: "Flagship playlist access" 
+        }
       },
       press_access: {
-        none: { threshold: 0, pickup_chance: 0.05, description: "No press contacts" },
-        blogs: { threshold: 8, pickup_chance: 0.25, description: "Music blog access" },
-        mid_tier: { threshold: 25, pickup_chance: 0.60, description: "Mid-tier publication access" },
-        major: { threshold: 50, pickup_chance: 0.85, description: "Major publication access" }
+        none: { 
+          threshold: access.press_access.none.threshold, 
+          pickup_chance: access.press_access.none.pickup_chance, 
+          description: "No press contacts" 
+        },
+        blogs: { 
+          threshold: access.press_access.blogs.threshold, 
+          pickup_chance: access.press_access.blogs.pickup_chance, 
+          description: "Music blog access" 
+        },
+        mid_tier: { 
+          threshold: access.press_access.mid_tier.threshold, 
+          pickup_chance: access.press_access.mid_tier.pickup_chance, 
+          description: "Mid-tier publication access" 
+        },
+        national: { 
+          threshold: access.press_access.national.threshold, 
+          pickup_chance: access.press_access.national.pickup_chance, 
+          description: "National publication access" 
+        }
       },
       venue_access: {
-        clubs: { threshold: 5, capacity_range: [50, 500], description: "Small clubs and bars" },
-        theaters: { threshold: 20, capacity_range: [500, 2000], description: "Theaters and mid-size venues" },
-        arenas: { threshold: 45, capacity_range: [2000, 20000], description: "Arenas and large venues" },
-        stadiums: { threshold: 80, capacity_range: [15000, 50000], description: "Stadiums and festivals" }
+        none: {
+          threshold: access.venue_access.none.threshold,
+          capacity_range: access.venue_access.none.capacity_range,
+          description: "No venue access"
+        },
+        clubs: { 
+          threshold: access.venue_access.clubs.threshold, 
+          capacity_range: access.venue_access.clubs.capacity_range, 
+          description: "Small clubs and bars" 
+        },
+        theaters: { 
+          threshold: access.venue_access.theaters.threshold, 
+          capacity_range: access.venue_access.theaters.capacity_range, 
+          description: "Theaters and mid-size venues" 
+        },
+        arenas: { 
+          threshold: access.venue_access.arenas.threshold, 
+          capacity_range: access.venue_access.arenas.capacity_range, 
+          description: "Arenas and large venues" 
+        }
       }
     };
   }
 
   getEventConfigSync() {
+    if (!this.balanceData) {
+      return {
+        monthly_chance: 0.20,
+        cooldown_months: 2,
+        max_per_year: 12
+      };
+    }
+    
+    const events = this.balanceData.side_events;
     return {
-      monthly_chance: 0.20,
-      cooldown_months: 2,
-      max_per_year: 12
+      monthly_chance: events.monthly_chance,
+      cooldown_months: events.event_cooldown,
+      max_per_year: events.max_events_per_month * 12
     };
   }
 
   getMonthlyBurnRangeSync(): [number, number] {
-    return [3000, 6000];
+    if (!this.balanceData) {
+      return [3000, 6000];
+    }
+    
+    const burnRange = this.balanceData.economy.monthly_burn_base;
+    return [burnRange[0], burnRange[1]];
   }
 
   getProgressionThresholdsSync() {
+    if (!this.balanceData) {
+      return {
+        second_artist_reputation: 10,
+        fourth_focus_slot_reputation: 18,
+        label_size_thresholds: {
+          local: 0,
+          regional: 25,
+          national: 50,
+          global: 75
+        }
+      };
+    }
+    
+    const thresholds = this.balanceData.progression_thresholds;
     return {
-      second_artist_reputation: 10,
-      fourth_focus_slot_reputation: 18,
+      second_artist_reputation: thresholds.second_artist_reputation,
+      fourth_focus_slot_reputation: thresholds.fourth_focus_slot_reputation,
       label_size_thresholds: {
         local: 0,
         regional: 25,
         national: 50,
-        global: 75
+        global: thresholds.global_label_reputation
       }
     };
   }

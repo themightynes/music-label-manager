@@ -54,8 +54,8 @@ export function AccessTierBadges() {
                 <div className="text-xs text-slate-600">Streaming platforms</div>
               </div>
             </div>
-            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.playlistAccess)}`}>
-              {gameState.playlistAccess}
+            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.playlistAccess || 'none')}`}>
+              {gameState.playlistAccess || 'none'}
             </Badge>
           </div>
 
@@ -68,8 +68,8 @@ export function AccessTierBadges() {
                 <div className="text-xs text-slate-600">Media coverage</div>
               </div>
             </div>
-            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.pressAccess)}`}>
-              {gameState.pressAccess}
+            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.pressAccess || 'none')}`}>
+              {gameState.pressAccess || 'none'}
             </Badge>
           </div>
 
@@ -82,8 +82,8 @@ export function AccessTierBadges() {
                 <div className="text-xs text-slate-600">Live performances</div>
               </div>
             </div>
-            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.venueAccess)}`}>
-              {gameState.venueAccess}
+            <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getAccessBadgeClass(gameState.venueAccess || 'none')}`}>
+              {gameState.venueAccess || 'none'}
             </Badge>
           </div>
         </div>

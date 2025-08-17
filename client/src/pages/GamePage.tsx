@@ -8,7 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 export default function GamePage() {
   const [view, setView] = useState<'dashboard' | 'planner'>('dashboard');
   
-  const { data: gameState, isLoading, error } = useGameState('demo-game');
+  const { data: gameState, isLoading, error } = useGameState();
   const advanceMonth = useAdvanceMonth();
   
   if (isLoading) {

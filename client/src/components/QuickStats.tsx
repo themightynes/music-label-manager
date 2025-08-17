@@ -8,7 +8,8 @@ export function QuickStats() {
 
   const getMonthlyStats = () => {
     const monthlyStats = gameState.monthlyStats as any;
-    const currentMonthKey = `month${gameState.currentMonth - 1}`;
+    const currentMonth = gameState.currentMonth || 1;
+    const currentMonthKey = `month${currentMonth - 1}`;
     const stats = monthlyStats?.[currentMonthKey] || {};
     
     return {

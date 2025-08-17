@@ -14,6 +14,20 @@ import { GameState, Artist, Project, Role, MonthlyAction } from '../schema';
 import { ServerGameData } from '../../server/data/gameData';
 import seedrandom from 'seedrandom';
 
+// Extended MonthlyAction interface for game engine
+interface GameEngineAction {
+  actionType: 'role_meeting' | 'start_project' | 'marketing' | 'artist_dialogue';
+  targetId: string | null;
+  metadata?: Record<string, any>;
+  details?: {
+    meetingId?: string;
+    choiceId?: string;
+    projectType?: string;
+    title?: string;
+    marketingType?: string;
+  };
+}
+
 /**
  * Configuration for random number generation
  */
@@ -52,12 +66,12 @@ export class GameEngine {
    * @param monthlyActions - Actions selected by the player this month
    * @returns Updated game state and summary of changes
    */
-  async advanceMonth(monthlyActions: MonthlyAction[]): Promise<{
+  async advanceMonth(monthlyActions: GameEngineAction[]): Promise<{
     gameState: GameState;
     summary: MonthSummary;
   }> {
     const summary: MonthSummary = {
-      month: this.gameState.currentMonth + 1,
+      month: (this.gameState.currentMonth || 0) + 1,
       changes: [],
       revenue: 0,
       expenses: 0,
@@ -67,7 +81,7 @@ export class GameEngine {
 
     // Reset monthly values
     this.gameState.usedFocusSlots = 0;
-    this.gameState.currentMonth = (this.gameState.currentMonth || 1) + 1;
+    this.gameState.currentMonth = (this.gameState.currentMonth || 0) + 1;
 
     // Process each action
     for (const action of monthlyActions) {
@@ -111,7 +125,7 @@ export class GameEngine {
   /**
    * Processes a single player action
    */
-  private async processAction(action: MonthlyAction, summary: MonthSummary): Promise<void> {
+  private async processAction(action: GameEngineAction, summary: MonthSummary): Promise<void> {
     switch (action.actionType) {
       case 'role_meeting':
         await this.processRoleMeeting(action, summary);
@@ -128,16 +142,17 @@ export class GameEngine {
     }
     
     // Consume focus slot
-    this.gameState.usedFocusSlots++;
+    this.gameState.usedFocusSlots = (this.gameState.usedFocusSlots || 0) + 1;
   }
 
   /**
    * Processes a role meeting and applies effects
    */
-  private async processRoleMeeting(action: MonthlyAction, summary: MonthSummary): Promise<void> {
-    // Note: Roles are managed separately from gameState
-    // TODO: Pass roles array to engine constructor or get from gameData
-    const role = null; // this.gameState.roles.find(r => r.id === action.targetId);
+  private async processRoleMeeting(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+    if (!action.targetId) return;
+    
+    // Get role data from serverGameData
+    const role = await this.gameData.getRoleById(action.targetId);
     if (!role) return;
 
     const meeting = role.meetings?.find(m => m.id === action.details?.meetingId);
@@ -148,16 +163,25 @@ export class GameEngine {
 
     // Apply immediate effects
     if (choice.effects_immediate) {
-      this.applyEffects(choice.effects_immediate, summary);
+      // Convert to Record<string, number> for applyEffects
+      const effects: Record<string, number> = {};
+      for (const [key, value] of Object.entries(choice.effects_immediate)) {
+        if (typeof value === 'number') {
+          effects[key] = value;
+        }
+      }
+      this.applyEffects(effects, summary);
     }
 
-    // Queue delayed effects
+    // Queue delayed effects  
     if (choice.effects_delayed) {
-      this.gameState.flags.push({
-        id: `${action.id}-delayed`,
-        triggerMonth: this.gameState.currentMonth + 1,
+      const flags = this.gameState.flags || {};
+      const delayedKey = `${action.targetId}-${action.details?.choiceId}-delayed`;
+      (flags as any)[delayedKey] = {
+        triggerMonth: (this.gameState.currentMonth || 0) + 1,
         effects: choice.effects_delayed
-      });
+      };
+      this.gameState.flags = flags;
     }
 
     summary.changes.push({
@@ -174,7 +198,7 @@ export class GameEngine {
     for (const [key, value] of Object.entries(effects)) {
       switch (key) {
         case 'money':
-          this.gameState.money += value;
+          this.gameState.money = (this.gameState.money || 0) + value;
           if (value > 0) {
             summary.revenue += value;
           } else {
@@ -182,24 +206,21 @@ export class GameEngine {
           }
           break;
         case 'reputation':
-          this.gameState.reputation = Math.max(0, Math.min(100, this.gameState.reputation + value));
+          this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + value));
           summary.reputationChanges.global = (summary.reputationChanges.global || 0) + value;
           break;
         case 'creative_capital':
-          this.gameState.creativeCapital = Math.max(0, this.gameState.creativeCapital + value);
+          this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + value);
           break;
         case 'artist_mood':
-          // Note: Artists are managed separately from gameState
-          // TODO: Pass artists array to engine constructor or get from gameData
-          // this.gameState.artists.forEach(artist => {
-          //   artist.mood = Math.max(0, Math.min(100, artist.mood + value));
-          // });
+          // Store artist mood changes in the summary for database update
+          if (!summary.artistChanges) summary.artistChanges = {};
+          summary.artistChanges.mood = (summary.artistChanges.mood || 0) + value;
           break;
         case 'artist_loyalty':
-          // TODO: Implement artist loyalty changes
-          // this.gameState.artists.forEach(artist => {
-          //   artist.loyalty = Math.max(0, Math.min(100, artist.loyalty + value));
-          // });
+          // Store artist loyalty changes in the summary for database update
+          if (!summary.artistChanges) summary.artistChanges = {};
+          summary.artistChanges.loyalty = (summary.artistChanges.loyalty || 0) + value;
           break;
       }
     }
@@ -215,25 +236,23 @@ export class GameEngine {
     reputation: number,
     adSpend: number
   ): number {
-    // TODO: Add getStreamingConfig method to ServerGameData
-    // const config = await this.gameData.getStreamingConfig();
-    const config = { quality_weight: 0.3, playlist_weight: 0.4, reputation_weight: 0.2, marketing_weight: 0.1, first_week_multiplier: 1.5 };
+    const config = this.gameData.getStreamingConfigSync();
     
-    // Get playlist multiplier
+    // Get playlist multiplier from real access tiers
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
     
-    // Calculate base streams
+    // Calculate base streams using proper formula
     const baseStreams = 
       (quality * config.quality_weight) +
       (playlistMultiplier * config.playlist_weight * 100) +
       (reputation * config.reputation_weight) +
       (Math.sqrt(adSpend / 1000) * config.marketing_weight * 50);
     
-    // Apply RNG variance
+    // Apply RNG variance from balance config
     const variance = this.getRandom(0.9, 1.1);
     
-    // Apply first week multiplier if applicable
-    const streams = baseStreams * variance * config.first_week_multiplier * 10000;
+    // Apply first week multiplier
+    const streams = baseStreams * variance * config.first_week_multiplier * config.base_streams_per_point;
     
     return Math.round(streams);
   }
@@ -247,9 +266,7 @@ export class GameEngine {
     reputation: number,
     hasStoryFlag: boolean
   ): number {
-    // TODO: Add getPressConfig method to ServerGameData
-    // const config = await this.gameData.getPressConfig();
-    const config = { base_chance: 0.1, pr_spend_modifier: 0.0001, reputation_modifier: 0.002, story_flag_bonus: 0.15, max_pickups_per_release: 5 };
+    const config = this.gameData.getPressConfigSync();
     
     // Get base chance from access tier
     const accessChance = this.getAccessChance('press', pressAccess);
@@ -283,9 +300,7 @@ export class GameEngine {
     localReputation: number,
     cities: number
   ): number {
-    // TODO: Add getTourConfig method to ServerGameData
-    // const config = await this.gameData.getTourConfig();
-    const config = { sell_through_base: 0.6, reputation_modifier: 0.003, local_popularity_weight: 0.5, merch_percentage: 0.15 };
+    const config = this.gameData.getTourConfigSync();
     const venueCapacity = this.getVenueCapacity(venueTier);
     
     // Calculate sell-through rate
@@ -294,8 +309,8 @@ export class GameEngine {
     sellThrough *= (1 + (artistPopularity / 100) * config.local_popularity_weight);
     sellThrough = Math.min(1, sellThrough);
     
-    // Calculate revenue per show
-    const ticketPrice = 30 + (venueCapacity / 100); // Dynamic pricing
+    // Calculate revenue per show using real config
+    const ticketPrice = config.ticket_price_base + (venueCapacity * config.ticket_price_per_capacity);
     const ticketRevenue = venueCapacity * sellThrough * ticketPrice;
     const merchRevenue = ticketRevenue * config.merch_percentage;
     
@@ -316,10 +331,14 @@ export class GameEngine {
    * Helper to get access tier multipliers
    */
   private getAccessMultiplier(type: string, tier: string): number {
-    // TODO: Add getAccessTiers method to ServerGameData
-    // const tiers = await this.gameData.getAccessTiers();
-    // const tierConfig = tiers[type]?.[tier];
-    // return tierConfig?.reach_multiplier || 0.1;
+    const tiers = this.gameData.getAccessTiersSync();
+    
+    if (type === 'playlist') {
+      const tierData = tiers.playlist_access as any;
+      return tierData[tier]?.reach_multiplier || 0.1;
+    }
+    
+    // Default fallback
     return 0.1;
   }
 
@@ -327,10 +346,14 @@ export class GameEngine {
    * Helper to get access tier chances
    */
   private getAccessChance(type: string, tier: string): number {
-    // TODO: Add getAccessTiers method to ServerGameData
-    // const tiers = await this.gameData.getAccessTiers();
-    // const tierConfig = tiers[type]?.[tier];
-    // return tierConfig?.pickup_chance || 0.05;
+    const tiers = this.gameData.getAccessTiersSync();
+    
+    if (type === 'press') {
+      const tierData = tiers.press_access as any;
+      return tierData[tier]?.pickup_chance || 0.05;
+    }
+    
+    // Default fallback
     return 0.05;
   }
 
@@ -338,13 +361,29 @@ export class GameEngine {
    * Helper to get venue capacity
    */
   private getVenueCapacity(tier: string): number {
-    const tiers = this.gameData.getAccessTiers();
-    const venueConfig = tiers.venue_access?.[tier];
+    const tiers = this.gameData.getAccessTiersSync();
+    const venueData = tiers.venue_access as any;
+    const venueConfig = venueData[tier];
     if (venueConfig?.capacity_range) {
       const [min, max] = venueConfig.capacity_range;
       return Math.round(this.getRandom(min, max));
     }
     return 100;
+  }
+  
+  /**
+   * Helper to get project duration from balance config
+   */
+  private getProjectDuration(projectType: string): number {
+    // Default durations based on project type
+    const durations = {
+      'single': 2,
+      'ep': 4, 
+      'mini-tour': 1,
+      'mini_tour': 1
+    };
+    
+    return durations[projectType.toLowerCase() as keyof typeof durations] || 2;
   }
 
   /**
@@ -359,7 +398,9 @@ export class GameEngine {
    * Processes ongoing projects (recordings, tours, etc)
    */
   private async processOngoingProjects(summary: MonthSummary): Promise<void> {
-    const projects = this.gameState.projects as any || [];
+    // Projects are now managed via flags since they're not part of database gameState
+    const flags = this.gameState.flags || {};
+    const projects = (flags as any)['active_projects'] || [];
     for (const project of projects) {
       if (project.status === 'in_progress') {
         project.monthsRemaining = (project.monthsRemaining || 0) - 1;
@@ -430,8 +471,12 @@ export class GameEngine {
     const thresholds = this.gameData.getProgressionThresholdsSync();
     
     // Check for second artist unlock
-    if (this.gameState.reputation! >= thresholds.second_artist_reputation) {
-      if ((this.gameState.artists || []).length < 2) {
+    const reputation = this.gameState.reputation || 0;
+    if (reputation >= thresholds.second_artist_reputation) {
+      const flags = this.gameState.flags || {};
+      if (!(flags as any)['second_artist_unlocked']) {
+        (flags as any)['second_artist_unlocked'] = true;
+        this.gameState.flags = flags;
         summary.changes.push({
           type: 'unlock',
           description: 'Second artist slot unlocked!'
@@ -440,8 +485,9 @@ export class GameEngine {
     }
     
     // Check for fourth focus slot
-    if (this.gameState.reputation! >= thresholds.fourth_focus_slot_reputation) {
-      if (this.gameState.focusSlots! < 4) {
+    if (reputation >= thresholds.fourth_focus_slot_reputation) {
+      const currentSlots = this.gameState.focusSlots || 3;
+      if (currentSlots < 4) {
         this.gameState.focusSlots = 4;
         summary.changes.push({
           type: 'unlock',
@@ -456,38 +502,192 @@ export class GameEngine {
    */
   private updateAccessTiers(): void {
     const tiers = this.gameData.getAccessTiersSync();
+    const reputation = this.gameState.reputation || 0;
     
-    // Check each access type
-    for (const accessType of ['playlist_access', 'press_access', 'venue_access'] as const) {
-      const accessKey = `${accessType}` as keyof typeof tiers;
-      const tierConfig = tiers[accessKey];
-      const currentAccess = this.gameState[accessType] || 'none';
-      
-      // Find highest tier we qualify for
-      let bestTier = 'none';
-      for (const [tierName, config] of Object.entries(tierConfig)) {
-        if (this.gameState.reputation! >= config.threshold) {
-          bestTier = tierName;
+    // Update playlist access
+    const playlistTiers = Object.entries(tiers.playlist_access)
+      .sort(([,a], [,b]) => b.threshold - a.threshold); // Sort by threshold descending
+    
+    for (const [tierName, config] of playlistTiers) {
+      if (reputation >= config.threshold) {
+        if (this.gameState.playlistAccess !== tierName) {
+          this.gameState.playlistAccess = tierName;
         }
+        break;
       }
-      
-      if (bestTier !== currentAccess) {
-        this.gameState[accessType] = bestTier;
+    }
+    
+    // Update press access
+    const pressTiers = Object.entries(tiers.press_access)
+      .sort(([,a], [,b]) => b.threshold - a.threshold);
+    
+    for (const [tierName, config] of pressTiers) {
+      if (reputation >= config.threshold) {
+        if (this.gameState.pressAccess !== tierName) {
+          this.gameState.pressAccess = tierName;
+        }
+        break;
+      }
+    }
+    
+    // Update venue access
+    const venueTiers = Object.entries(tiers.venue_access)
+      .sort(([,a], [,b]) => b.threshold - a.threshold);
+    
+    for (const [tierName, config] of venueTiers) {
+      if (reputation >= config.threshold) {
+        if (this.gameState.venueAccess !== tierName) {
+          this.gameState.venueAccess = tierName;
+        }
+        break;
       }
     }
   }
 
-  // Stub methods for features not yet implemented
-  private async processProjectStart(action: MonthlyAction, summary: MonthSummary): Promise<void> {
-    // TODO: Implement project start logic
+  /**
+   * Processes starting a new project (Single, EP, Mini-Tour)
+   */
+  private async processProjectStart(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+    if (!action.targetId || !action.details?.projectType) return;
+    
+    const projectType = action.details.projectType;
+    const projectCosts = await this.gameData.getProjectCosts(projectType);
+    const baseCost = projectCosts.min + ((projectCosts.max - projectCosts.min) * 0.5); // Average cost
+    
+    // Check if we have enough money
+    if ((this.gameState.money || 0) < baseCost) {
+      summary.changes.push({
+        type: 'expense',
+        description: `Cannot afford ${projectType} - insufficient funds`,
+        amount: 0
+      });
+      return;
+    }
+    
+    // Deduct project cost
+    this.gameState.money = (this.gameState.money || 0) - baseCost;
+    summary.expenses += baseCost;
+    
+    // Add project to game state (would normally be handled by database)
+    const newProject = {
+      id: `project-${Date.now()}`,
+      title: action.details.title || `New ${projectType}`,
+      type: projectType,
+      artistId: action.targetId,
+      stage: 'production',
+      quality: 40 + Math.floor(this.getRandom(0, 20)), // Base quality
+      budget: baseCost,
+      budgetUsed: baseCost * 0.3, // Initial investment
+      startMonth: this.gameState.currentMonth || 1,
+      dueMonth: (this.gameState.currentMonth || 1) + this.getProjectDuration(projectType)
+    };
+    
+    // Store in projects array (this would be handled by database in real implementation)
+    if (!this.gameState.projects) this.gameState.projects = [];
+    (this.gameState.projects as any[]).push(newProject);
+    
+    summary.changes.push({
+      type: 'project_complete',
+      description: `Started ${projectType}: ${newProject.title}`,
+      projectId: newProject.id,
+      amount: -baseCost
+    });
   }
 
-  private async processMarketing(action: MonthlyAction, summary: MonthSummary): Promise<void> {
-    // TODO: Implement marketing campaign logic
+  /**
+   * Processes marketing campaigns (PR, Digital Ads, etc.)
+   */
+  private async processMarketing(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+    if (!action.details?.marketingType) return;
+    
+    const marketingType = action.details.marketingType;
+    const marketingCosts = await this.gameData.getMarketingCosts(marketingType);
+    const campaignCost = marketingCosts.min + ((marketingCosts.max - marketingCosts.min) * 0.6); // Above-average spend
+    
+    // Check if we have enough money
+    if ((this.gameState.money || 0) < campaignCost) {
+      summary.changes.push({
+        type: 'expense',
+        description: `Cannot afford ${marketingType} campaign - insufficient funds`,
+        amount: 0
+      });
+      return;
+    }
+    
+    // Deduct campaign cost
+    this.gameState.money = (this.gameState.money || 0) - campaignCost;
+    summary.expenses += campaignCost;
+    
+    // Apply marketing effects based on type
+    let effectDescription = '';
+    
+    switch (marketingType) {
+      case 'pr_push':
+        // PR campaigns improve press pickup chances
+        const pressPickups = this.calculatePressPickups(
+          this.gameState.pressAccess || 'none',
+          campaignCost,
+          this.gameState.reputation || 0,
+          false
+        );
+        if (pressPickups > 0) {
+          this.gameState.reputation = Math.min(100, (this.gameState.reputation || 0) + pressPickups);
+          effectDescription = `PR campaign generated ${pressPickups} press mentions`;
+        } else {
+          effectDescription = 'PR campaign completed - limited media pickup';
+        }
+        break;
+        
+      case 'digital_ads':
+        // Digital ads improve streaming potential
+        const streamingBoost = Math.floor(campaignCost / 1000); // $1k = 1 reputation point
+        this.gameState.reputation = Math.min(100, (this.gameState.reputation || 0) + streamingBoost);
+        effectDescription = `Digital campaign boosted online presence (+${streamingBoost} reputation)`;
+        break;
+        
+      default:
+        effectDescription = `${marketingType} campaign completed`;
+    }
+    
+    summary.changes.push({
+      type: 'expense',
+      description: effectDescription,
+      amount: -campaignCost
+    });
   }
 
-  private async processArtistDialogue(action: MonthlyAction, summary: MonthSummary): Promise<void> {
-    // TODO: Implement artist dialogue logic
+  /**
+   * Processes artist dialogue interactions
+   */
+  private async processArtistDialogue(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+    if (!action.targetId || !action.details?.choiceId) return;
+    
+    // Get artist archetype for dialogue content
+    const artistId = action.targetId;
+    
+    // For now, simulate artist dialogue effects
+    // In full implementation, this would load from dialogue.json additional_scenes
+    const dialogueEffects = {
+      mood: this.getRandom(-2, 3),
+      loyalty: this.getRandom(-1, 2),
+      creativity: this.getRandom(0, 2)
+    };
+    
+    // Apply artist-specific effects
+    if (!summary.artistChanges) summary.artistChanges = {};
+    summary.artistChanges.mood = (summary.artistChanges.mood || 0) + dialogueEffects.mood;
+    summary.artistChanges.loyalty = (summary.artistChanges.loyalty || 0) + dialogueEffects.loyalty;
+    
+    // Some dialogue choices might affect creative capital
+    if (dialogueEffects.creativity > 0) {
+      this.gameState.creativeCapital = Math.min(100, (this.gameState.creativeCapital || 0) + dialogueEffects.creativity);
+    }
+    
+    summary.changes.push({
+      type: 'meeting',
+      description: `Artist conversation completed`,
+      roleId: artistId
+    });
   }
 }
 
@@ -501,6 +701,7 @@ export interface MonthSummary {
   expenses: number;
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
+  artistChanges?: Record<string, number>;
 }
 
 export interface GameChange {

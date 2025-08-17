@@ -47,7 +47,7 @@ export function Dashboard() {
               </div>
               <div className="hidden md:flex items-center space-x-2 text-sm text-slate-600">
                 <span>Month</span>
-                <span className="font-mono font-semibold text-primary">{gameState.currentMonth}</span>
+                <span className="font-mono font-semibold text-primary">{gameState.currentMonth || 1}</span>
                 <span>of 12</span>
               </div>
             </div>
@@ -55,7 +55,7 @@ export function Dashboard() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 bg-slate-100 px-3 py-1 rounded-lg">
                 <i className="fas fa-dollar-sign text-success"></i>
-                <span className="font-mono font-semibold">${gameState.money.toLocaleString()}</span>
+                <span className="font-mono font-semibold">${(gameState.money || 0).toLocaleString()}</span>
               </div>
               
               <Button
@@ -91,7 +91,7 @@ export function Dashboard() {
       </main>
 
       {/* Modals */}
-      <DialogueModal />
+      {/* DialogueModal now requires props - will be rendered conditionally */}
       <SaveGameModal open={showSaveModal} onOpenChange={setShowSaveModal} />
       <ToastNotification />
     </div>

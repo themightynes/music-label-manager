@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import passport from 'passport';
 import { storage } from "./storage";
 import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions } from "@shared/schema";
 import { z } from "zod";
@@ -16,8 +17,69 @@ import {
 } from "@shared/api/contracts";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Authentication endpoints
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const user = await registerUser(req.body.username, req.body.password);
+      res.json({ 
+        success: true, 
+        user: { id: user.id, username: user.username } 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: 'Invalid input', errors: error.errors });
+      } else {
+        res.status(400).json({ message: error instanceof Error ? error.message : 'Registration failed' });
+      }
+    }
+  });
+
+  app.post('/api/auth/login', (req, res, next) => {
+    passport.authenticate('local', (err: any, user: any, info: any) => {
+      if (err) {
+        return res.status(500).json({ message: 'Authentication error' });
+      }
+      if (!user) {
+        return res.status(401).json({ message: info?.message || 'Login failed' });
+      }
+      
+      req.logIn(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Login session error' });
+        }
+        return res.json({ 
+          success: true, 
+          user: { id: user.id, username: user.username } 
+        });
+      });
+    })(req, res, next);
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Logout error' });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  app.get('/api/auth/me', (req, res) => {
+    if (req.user) {
+      res.json({ 
+        user: { 
+          id: (req.user as any).id, 
+          username: (req.user as any).username 
+        } 
+      });
+    } else {
+      res.status(401).json({ message: 'Not authenticated' });
+    }
+  });
   
   // Data verification endpoints
   app.get("/api/test-data", async (req, res) => {
@@ -103,12 +165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Demo user for game state management
-  let DEMO_USER_ID: string | null = null;
-  let DEMO_GAME_ID: string | null = null;
 
   // Game state routes
-  app.get("/api/game/:id", async (req, res) => {
+  app.get("/api/game/:id", getUserId, async (req, res) => {
     try {
       const gameState = await storage.getGameState(req.params.id);
       if (!gameState) {
@@ -133,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/game", async (req, res) => {
+  app.post("/api/game", getUserId, async (req, res) => {
     try {
       const validatedData = insertGameStateSchema.parse(req.body);
       const gameState = await storage.createGameState(validatedData);
@@ -163,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/game/:id", async (req, res) => {
+  app.patch("/api/game/:id", getUserId, async (req, res) => {
     try {
       const gameState = await storage.updateGameState(req.params.id, req.body);
       res.json(gameState);
@@ -173,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Artist routes
-  app.post("/api/game/:gameId/artists", async (req, res) => {
+  app.post("/api/game/:gameId/artists", getUserId, async (req, res) => {
     try {
       const validatedData = insertArtistSchema.parse({
         ...req.body,
@@ -190,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/artists/:id", async (req, res) => {
+  app.patch("/api/artists/:id", getUserId, async (req, res) => {
     try {
       const artist = await storage.updateArtist(req.params.id, req.body);
       res.json(artist);
@@ -200,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project routes
-  app.post("/api/game/:gameId/projects", async (req, res) => {
+  app.post("/api/game/:gameId/projects", getUserId, async (req, res) => {
     try {
       const validatedData = insertProjectSchema.parse({
         ...req.body,
@@ -217,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/projects/:id", async (req, res) => {
+  app.patch("/api/projects/:id", getUserId, async (req, res) => {
     try {
       const project = await storage.updateProject(req.params.id, req.body);
       res.json(project);
@@ -227,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Monthly action routes
-  app.post("/api/game/:gameId/actions", async (req, res) => {
+  app.post("/api/game/:gameId/actions", getUserId, async (req, res) => {
     try {
       const validatedData = insertMonthlyActionSchema.parse({
         ...req.body,
@@ -245,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Turn advancement
-  app.post("/api/game/:id/advance-month", async (req, res) => {
+  app.post("/api/game/:id/advance-month", getUserId, async (req, res) => {
     try {
       const gameState = await storage.getGameState(req.params.id);
       if (!gameState) {
@@ -285,18 +344,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save game routes
-  app.get("/api/saves", async (req, res) => {
+  app.get("/api/saves", getUserId, async (req, res) => {
     try {
-      // For demo purposes, using a mock user ID
-      // In production, this would come from authentication
-      const saves = await storage.getGameSaves("demo-user-id");
+      const saves = await storage.getGameSaves(req.userId!);
       res.json(saves);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch saves" });
     }
   });
 
-  app.post("/api/saves", async (req, res) => {
+  app.post("/api/saves", getUserId, async (req, res) => {
     try {
       const validatedData = insertGameSaveSchema.parse(req.body);
       const save = await storage.createGameSave(validatedData);
@@ -310,7 +367,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dialogue choices
+  // Role endpoints for dialogue system
+  app.get("/api/roles/:roleId", async (req, res) => {
+    try {
+      const role = await serverGameData.getRoleById(req.params.roleId);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      res.json(role);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch role data" });
+    }
+  });
+
+  app.get("/api/roles/:roleId/meetings/:meetingId", async (req, res) => {
+    try {
+      const meeting = await serverGameData.getRoleMeetingById(req.params.roleId, req.params.meetingId);
+      if (!meeting) {
+        return res.status(404).json({ message: "Meeting not found" });
+      }
+      res.json(meeting);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch meeting data" });
+    }
+  });
+
+  // Artist dialogue endpoints
+  app.get("/api/artists/:archetype/dialogue", async (req, res) => {
+    try {
+      const dialogues = await serverGameData.getArtistDialogue(req.params.archetype);
+      res.json(dialogues);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch artist dialogue" });
+    }
+  });
+
+  // Dialogue choices (legacy endpoint - kept for backwards compatibility)
   app.get("/api/dialogue/:roleType", async (req, res) => {
     try {
       const { sceneId } = req.query;
@@ -336,32 +428,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Phase 2: Turn System Endpoints
   
-  // Get current game state
-  app.get("/api/game-state", async (req, res) => {
+  // Get current game state  
+  app.get("/api/game-state", getUserId, async (req, res) => {
     try {
-      // Create demo user if doesn't exist
-      if (!DEMO_USER_ID) {
-        try {
-          let demoUser = await storage.getUserByUsername('demo-user');
-          if (!demoUser) {
-            demoUser = await storage.createUser({
-              username: 'demo-user',
-              password: 'demo-password'
-            });
-          }
-          DEMO_USER_ID = demoUser.id;
-        } catch (error) {
-          console.error('Error creating demo user:', error);
-          return res.status(500).json({ message: "Failed to create demo user" });
-        }
+      const userId = req.userId!;
+      
+      // Try to find existing game state for this user
+      const [existingGame] = await db
+        .select()
+        .from(gameStates)
+        .where(eq(gameStates.userId, userId))
+        .orderBy(gameStates.currentMonth)
+        .limit(1);
+
+      if (existingGame) {
+        return res.json(existingGame);
       }
 
-      // Get or create game state for demo user
-      if (!DEMO_GAME_ID) {
-        // Try to find existing game state for demo user
-        // For now, we'll create a new one each time since we don't have a getUserGameStates method
-        const defaultState = {
-          userId: DEMO_USER_ID,
+      // Create new game state for user
+      const defaultState = {
+        userId: userId,
           currentMonth: 1,
           money: 75000,
           reputation: 5,
@@ -378,19 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         const gameState = await storage.createGameState(defaultState);
-        DEMO_GAME_ID = gameState.id;
         return res.json(gameState);
-      }
-      
-      // Get existing game state
-      const gameState = await storage.getGameState(DEMO_GAME_ID);
-      if (!gameState) {
-        // Reset demo game ID and try again
-        DEMO_GAME_ID = null;
-        return res.status(404).json({ message: "Game state not found, please refresh" });
-      }
-      
-      res.json(gameState);
     } catch (error) {
       console.error('Get game state error:', error);
       res.status(500).json({ message: "Failed to fetch game state" });
@@ -398,7 +472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Month advancement with action processing using GameEngine and transactions
-  app.post("/api/advance-month", async (req, res) => {
+  app.post("/api/advance-month", getUserId, async (req, res) => {
     try {
       // Validate request using shared contract
       const request = validateRequest(AdvanceMonthRequest, req.body);
@@ -441,7 +515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const formattedActions = selectedActions.map(action => ({
           actionType: action.actionType,
           targetId: action.targetId,
-          metadata: action.metadata || {}
+          metadata: action.metadata || {},
+          details: action.metadata || {} // Convert metadata to details for compatibility
         }));
         const monthResult = await gameEngine.advanceMonth(formattedActions);
         
