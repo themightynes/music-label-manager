@@ -29,8 +29,20 @@ export function MonthPlanner({
     // Check if this is a role meeting action
     const role = industryRoles.find(r => r.id === actionId);
     if (role) {
-      // Open dialogue modal for role meeting
-      setCurrentDialogue({ roleId: actionId, meetingId: 'monthly_check_in' });
+      // Map role IDs to their first available meeting ID from roles.json
+      const meetingMap: { [key: string]: string } = {
+        'manager': 'mgr_priorities',
+        'anr': 'anr_single_choice',
+        'producer': 'prod_timeline',
+        'pr': 'pr_angle',
+        'digital': 'ads_split',
+        'streaming': 'pitch_strategy',
+        'booking': 'tour_scale',
+        'ops': 'release_ops'
+      };
+      
+      const meetingId = meetingMap[actionId] || 'mgr_priorities'; // fallback to manager meeting
+      setCurrentDialogue({ roleId: actionId, meetingId });
       setShowDialogue(true);
       return;
     }
