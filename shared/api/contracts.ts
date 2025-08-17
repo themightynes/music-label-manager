@@ -1,10 +1,38 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
 
+// API Response schemas
+const ApiResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.any().optional(),
+  error: z.string().optional(),
+});
+
+// Game endpoints
+export const gameEndpoints = {
+  // Game state
+  getGame: '/api/games/:gameId',
+  createGame: '/api/games',
+  saveGame: '/api/games/:gameId',
+  
+  // Game actions
+  advanceMonth: '/api/games/:gameId/advance-month',
+  selectActions: '/api/games/:gameId/actions',
+  
+  // Game resources
+  getArtists: '/api/games/:gameId/artists',
+  getProjects: '/api/games/:gameId/projects',
+  getRoles: '/api/games/:gameId/roles',
+  
+  // Dialogues
+  getDialogue: '/api/games/:gameId/dialogues/:dialogueId',
+  selectChoice: '/api/games/:gameId/dialogues/:dialogueId/choices/:choiceId',
+};
+
 // Action schema for consistency
 export const ActionSchema = z.object({
-  actionType: z.enum(['project', 'marketing', 'dialogue', 'meeting']),
-  targetId: z.string(),
+  actionType: z.enum(['role_meeting', 'start_project', 'marketing', 'artist_dialogue']),
+  targetId: z.string().nullable(), // Can be role type, project ID, or artist ID
   metadata: z.record(z.any()).optional()
 });
 
@@ -24,34 +52,25 @@ export const GetGameStateResponse = z.object({
 // Month advancement schemas
 export const AdvanceMonthRequest = z.object({
   gameId: z.string().uuid(),
-  selectedActions: z.array(z.object({
-    actionType: z.string(),
-    targetId: z.string(),
-    metadata: z.record(z.any()).optional()
-  }))
+  selectedActions: z.array(ActionSchema)
 });
 
 export const AdvanceMonthResponse = z.object({
   gameState: z.custom<GameState>(),
-  revenue: z.number(),
-  expenses: z.number(),
-  reputationChange: z.number(),
-  monthlyOutcome: z.object({
+  summary: z.object({
     month: z.number(),
+    changes: z.array(z.any()),
     revenue: z.number(),
     expenses: z.number(),
-    netChange: z.number(),
-    reputationChange: z.number(),
-    actions: z.array(z.any()),
-    endingCash: z.number()
+    reputationChanges: z.record(z.number()),
+    events: z.array(z.any()),
   }),
-  events: z.array(z.any())
 });
 
 // Action selection schemas
 export const SelectActionsRequest = z.object({
   gameId: z.string().uuid(),
-  selectedActions: z.array(z.string()).max(3)
+  selectedActions: z.array(ActionSchema).max(3)
 });
 
 export const SelectActionsResponse = z.object({
@@ -120,8 +139,9 @@ export type SignArtistResponse = z.infer<typeof SignArtistResponse>;
 export type StartProjectRequest = z.infer<typeof StartProjectRequest>;
 export type StartProjectResponse = z.infer<typeof StartProjectResponse>;
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
+export type GameEndpoints = typeof gameEndpoints;
 
-// API route constants
+// Backward compatibility - keep existing routes for now
 export const API_ROUTES = {
   GAME_STATE: '/api/game-state',
   ADVANCE_MONTH: '/api/advance-month',

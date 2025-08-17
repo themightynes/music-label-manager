@@ -11,12 +11,61 @@ import {
   ErrorResponse,
   validateRequest,
   createErrorResponse,
-  API_ROUTES
+  API_ROUTES,
+  gameEndpoints
 } from './contracts';
 
-export class APIClient {
-  constructor(private baseURL: string = '') {}
+class APIClient {
+  private baseURL: string;
+  private gameId: string | null = null;
+
+  constructor(baseURL: string = '') {
+    this.baseURL = baseURL;
+  }
+
+  setGameId(gameId: string) {
+    this.gameId = gameId;
+  }
+
+  private replaceParams(endpoint: string, params: Record<string, string> = {}): string {
+    let url = endpoint;
+    
+    // Auto-inject gameId if available
+    if (this.gameId && url.includes(':gameId')) {
+      params.gameId = this.gameId;
+    }
+    
+    // Replace all :param with actual values
+    Object.entries(params).forEach(([key, value]) => {
+      url = url.replace(`:${key}`, value);
+    });
+    
+    return url;
+  }
+
+  async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+    const url = this.replaceParams(endpoint, params);
+    const response = await fetch(`${this.baseURL}${url}`);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async post<T>(endpoint: string, data: any, params?: Record<string, string>): Promise<T> {
+    const url = this.replaceParams(endpoint, params);
+    const response = await fetch(`${this.baseURL}${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+    return response.json();
+  }
   
+  // Legacy methods for backward compatibility
   private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${this.baseURL}${url}`, {
       headers: {
@@ -77,5 +126,4 @@ export class APIClient {
   }
 }
 
-// Create a default client instance
 export const apiClient = new APIClient();

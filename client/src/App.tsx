@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GameProvider } from "@/contexts/GameContext";
 import NotFound from "@/pages/not-found";
 import GamePage from "@/pages/GamePage";
 import TestDataPage from "@/pages/TestData";
@@ -21,12 +22,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <ErrorBoundary>
-          <Toaster />
-          <Router />
-        </ErrorBoundary>
-      </TooltipProvider>
+      <GameProvider>
+        <TooltipProvider>
+          <ErrorBoundary>
+            <Toaster />
+            <Router />
+          </ErrorBoundary>
+        </TooltipProvider>
+      </GameProvider>
     </QueryClientProvider>
   );
 }
