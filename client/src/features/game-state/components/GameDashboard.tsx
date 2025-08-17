@@ -6,6 +6,7 @@ import { ArtistList } from '../../artists/components/ArtistList';
 import { ProjectList } from '../../projects/components/ProjectList';
 import { MonthSummary } from './MonthSummary';
 import { AccessTierBadges } from '@/components/AccessTierBadges';
+import { ProjectCreationModal } from '@/components/ProjectCreationModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface GameDashboardProps {
@@ -39,8 +40,17 @@ export function GameDashboard({ gameState, onPlanMonth, isAdvancing }: GameDashb
                 <CardHeader>
                   <CardTitle className="text-yellow-500">Projects</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <ProjectList projects={gameState.projects || []} />
+                  <ProjectCreationModal 
+                    gameState={gameState}
+                    artists={gameState.artists || []}
+                    onCreateProject={(projectData) => {
+                      console.log('Creating project:', projectData);
+                      // TODO: Integrate with project creation API
+                    }}
+                    isCreating={false}
+                  />
                 </CardContent>
               </Card>
             </div>
