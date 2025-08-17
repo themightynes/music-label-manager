@@ -8,6 +8,8 @@ import { MonthSummary } from './MonthSummary';
 import { AccessTierBadges } from '@/components/AccessTierBadges';
 import { ProjectCreationModal } from '@/components/ProjectCreationModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 interface GameDashboardProps {
   gameState: GameState & { artists?: any[]; projects?: any[] };
@@ -16,6 +18,22 @@ interface GameDashboardProps {
 }
 
 export function GameDashboard({ gameState, onPlanMonth, isAdvancing }: GameDashboardProps) {
+  const queryClient = useQueryClient();
+  
+  const createProject = useMutation({
+    mutationFn: async (projectData: any) => {
+      const response = await apiRequest('POST', '/api/advance-month', [{
+        actionType: 'start_project',
+        targetId: 'project_creation',
+        details: projectData
+      }]);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/game', gameState.id] });
+    }
+  });
+
   return (
     <ErrorBoundary>
       <div className="container mx-auto px-6 py-8">
@@ -46,10 +64,9 @@ export function GameDashboard({ gameState, onPlanMonth, isAdvancing }: GameDashb
                     gameState={gameState}
                     artists={gameState.artists || []}
                     onCreateProject={(projectData) => {
-                      console.log('Creating project:', projectData);
-                      // TODO: Integrate with project creation API
+                      createProject.mutate(projectData);
                     }}
-                    isCreating={false}
+                    isCreating={createProject.isPending}
                   />
                 </CardContent>
               </Card>
