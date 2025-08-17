@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArtistList } from '../../artists/components/ArtistList';
 import { ProjectList } from '../../projects/components/ProjectList';
 import { MonthSummary } from './MonthSummary';
+import { AccessTierBadges } from '@/components/AccessTierBadges';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface GameDashboardProps {
@@ -17,6 +18,11 @@ export function GameDashboard({ gameState, onPlanMonth, isAdvancing }: GameDashb
   return (
     <ErrorBoundary>
       <div className="container mx-auto px-6 py-8">
+        {/* Access Tier Badges */}
+        <div className="mb-8">
+          <AccessTierBadges gameState={gameState} />
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
