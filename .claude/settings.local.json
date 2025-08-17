@@ -8,7 +8,9 @@
       "Bash(fuser:*)",
       "Bash(curl:*)",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(timeout:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
