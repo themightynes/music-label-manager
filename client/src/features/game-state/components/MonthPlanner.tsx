@@ -3,6 +3,8 @@ import { GameState } from '@shared/types/gameTypes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { DialogueModal } from '@/components/DialogueModal';
+import { useGameStore } from '@/store/gameStore';
 
 interface MonthPlannerProps {
   gameState: GameState & { artists?: any[]; projects?: any[] };
@@ -18,21 +20,71 @@ export function MonthPlanner({
   isAdvancing 
 }: MonthPlannerProps) {
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
+  const [dialogueState, setDialogueState] = useState<{
+    isOpen: boolean;
+    roleId: string | null;
+    meetingId: string | null;
+  }>({ isOpen: false, roleId: null, meetingId: null });
 
-  const handleActionToggle = (actionId: string) => {
-    setSelectedActions(prev => {
-      if (prev.includes(actionId)) {
-        return prev.filter(id => id !== actionId);
-      } else if (prev.length < 3) {
-        return [...prev, actionId];
-      }
-      return prev;
-    });
+  const handleActionToggle = (actionId: string, actionType: 'role' | 'project' = 'project') => {
+    if (actionType === 'role') {
+      // Open dialogue for role meetings instead of just selecting
+      const roleId = actionId;
+      // Map role IDs to their default meeting IDs based on roles.json structure
+      const meetingMap: Record<string, string> = {
+        'manager': 'mgr_priorities',
+        'anr': 'anr_single_choice',
+        'producer': 'producer_expertise',
+        'pr': 'pr_angle',
+        'digital': 'digital_viral_moment',
+        'streaming': 'streaming_playlist_politics',
+        'booking': 'booking_venue_politics',
+        'ops': 'release_ops'
+      };
+      
+      const meetingId = meetingMap[roleId] || `${roleId}_priorities`;
+      setDialogueState({
+        isOpen: true,
+        roleId,
+        meetingId
+      });
+    } else {
+      // Handle project actions normally
+      setSelectedActions(prev => {
+        if (prev.includes(actionId)) {
+          return prev.filter(id => id !== actionId);
+        } else if (prev.length < 3) {
+          return [...prev, actionId];
+        }
+        return prev;
+      });
+    }
   };
 
   const handleAdvanceMonth = () => {
     onAdvanceMonth(selectedActions);
     setSelectedActions([]);
+  };
+
+  const handleDialogueClose = () => {
+    setDialogueState({ isOpen: false, roleId: null, meetingId: null });
+  };
+
+  const handleChoiceSelect = async (choiceId: string, effects: any) => {
+    // Add the role meeting action to selected actions
+    const roleActionId = `${dialogueState.roleId}_meeting`;
+    setSelectedActions(prev => {
+      if (!prev.includes(roleActionId) && prev.length < 3) {
+        return [...prev, roleActionId];
+      }
+      return prev;
+    });
+    
+    // Close dialogue
+    setDialogueState({ isOpen: false, roleId: null, meetingId: null });
+    
+    // Here you could also show immediate effects as toast notifications
+    console.log('Dialogue choice selected:', { choiceId, effects });
   };
 
   const industryRoles = [
@@ -75,8 +127,9 @@ export function MonthPlanner({
                     id={role.id}
                     name={role.name}
                     description={`Relationship: ${role.relationship}%`}
-                    isSelected={selectedActions.includes(role.id)}
-                    onToggle={handleActionToggle}
+                    isSelected={selectedActions.includes(`${role.id}_meeting`)}
+                    onToggle={(id) => handleActionToggle(id, 'role')}
+                    actionType="role"
                   />
                 ))}
               </div>
@@ -92,7 +145,8 @@ export function MonthPlanner({
                     name={project.name}
                     description={project.cost}
                     isSelected={selectedActions.includes(project.id)}
-                    onToggle={handleActionToggle}
+                    onToggle={(id) => handleActionToggle(id, 'project')}
+                    actionType="project"
                   />
                 ))}
               </div>
@@ -112,6 +166,17 @@ export function MonthPlanner({
             </div>
           </div>
         </div>
+        
+        {/* Dialogue Modal */}
+        {dialogueState.isOpen && dialogueState.roleId && dialogueState.meetingId && (
+          <DialogueModal
+            roleId={dialogueState.roleId}
+            meetingId={dialogueState.meetingId}
+            gameId={gameState.id}
+            onClose={handleDialogueClose}
+            onChoiceSelect={handleChoiceSelect}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );
@@ -123,9 +188,10 @@ interface ActionCardProps {
   description: string;
   isSelected: boolean;
   onToggle: (id: string) => void;
+  actionType?: 'role' | 'project';
 }
 
-function ActionCard({ id, name, description, isSelected, onToggle }: ActionCardProps) {
+function ActionCard({ id, name, description, isSelected, onToggle, actionType = 'project' }: ActionCardProps) {
   return (
     <div
       onClick={() => onToggle(id)}
@@ -141,7 +207,7 @@ function ActionCard({ id, name, description, isSelected, onToggle }: ActionCardP
           <p className="text-sm text-gray-400">{description}</p>
         </div>
         <Badge variant={isSelected ? 'default' : 'secondary'}>
-          {isSelected ? 'Selected' : 'Available'}
+          {actionType === 'role' ? (isSelected ? 'Meeting Planned' : 'Meet') : (isSelected ? 'Selected' : 'Available')}
         </Badge>
       </div>
     </div>

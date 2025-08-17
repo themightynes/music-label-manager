@@ -6,7 +6,11 @@
       "Bash(pkill:*)",
       "Bash(true)",
       "Bash(fuser:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(timeout:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
