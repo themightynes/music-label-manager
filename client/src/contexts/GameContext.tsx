@@ -16,7 +16,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const idFromUrl = urlParams.get('gameId');
     const idFromStorage = localStorage.getItem('currentGameId');
     
-    const id = idFromUrl || idFromStorage || 'demo-game';
+    const id = idFromUrl || idFromStorage || '5d0f61cb-0461-46af-9e47-bf8971223890';
     setGameId(id);
   }, []);
 
