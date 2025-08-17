@@ -21,7 +21,7 @@ interface GameStore {
   
   // Actions
   loadGame: (gameId: string) => Promise<void>;
-  createNewGame: (campaignType: string) => Promise<void>;
+  createNewGame: (campaignType: string) => Promise<GameState>;
   updateGameState: (updates: Partial<GameState>) => Promise<void>;
   
   // Monthly actions
