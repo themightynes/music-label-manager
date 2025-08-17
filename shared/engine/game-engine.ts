@@ -67,7 +67,7 @@ export class GameEngine {
 
     // Reset monthly values
     this.gameState.usedFocusSlots = 0;
-    this.gameState.currentMonth++;
+    this.gameState.currentMonth = (this.gameState.currentMonth || 1) + 1;
 
     // Process each action
     for (const action of monthlyActions) {
@@ -85,7 +85,7 @@ export class GameEngine {
 
     // Apply monthly burn (operational costs)
     const monthlyBurn = this.calculateMonthlyBurn();
-    this.gameState.money -= monthlyBurn;
+    this.gameState.money = (this.gameState.money || 75000) - monthlyBurn;
     summary.expenses += monthlyBurn;
     summary.changes.push({
       type: 'expense',
@@ -100,7 +100,7 @@ export class GameEngine {
     this.updateAccessTiers();
 
     // Apply final calculations
-    this.gameState.money += summary.revenue - summary.expenses;
+    this.gameState.money = (this.gameState.money || 75000) + summary.revenue - summary.expenses;
     
     return {
       gameState: this.gameState,
@@ -351,9 +351,7 @@ export class GameEngine {
    * Calculates monthly operational costs
    */
   private calculateMonthlyBurn(): number {
-    // TODO: Add getMonthlyBurnRange method to ServerGameData
-    // const [min, max] = await this.gameData.getMonthlyBurnRange();
-    const [min, max] = [8000, 12000];
+    const [min, max] = this.gameData.getMonthlyBurnRangeSync();
     return Math.round(this.getRandom(min, max));
   }
 
@@ -361,7 +359,8 @@ export class GameEngine {
    * Processes ongoing projects (recordings, tours, etc)
    */
   private async processOngoingProjects(summary: MonthSummary): Promise<void> {
-    for (const project of this.gameState.projects) {
+    const projects = this.gameState.projects as any || [];
+    for (const project of projects) {
       if (project.status === 'in_progress') {
         project.monthsRemaining = (project.monthsRemaining || 0) - 1;
         
@@ -381,8 +380,14 @@ export class GameEngine {
    * Processes delayed effects from previous months
    */
   private async processDelayedEffects(summary: MonthSummary): Promise<void> {
-    const triggeredFlags = this.gameState.flags.filter(
-      f => f.triggerMonth === this.gameState.currentMonth
+    // Initialize flags as array if it's not already
+    if (!Array.isArray(this.gameState.flags)) {
+      this.gameState.flags = [] as any;
+    }
+    
+    const flags = this.gameState.flags as any[];
+    const triggeredFlags = flags.filter(
+      (f: any) => f.triggerMonth === this.gameState.currentMonth
     );
     
     for (const flag of triggeredFlags) {
@@ -394,20 +399,20 @@ export class GameEngine {
     }
     
     // Remove triggered flags
-    this.gameState.flags = this.gameState.flags.filter(
-      f => f.triggerMonth !== this.gameState.currentMonth
-    );
+    this.gameState.flags = flags.filter(
+      (f: any) => f.triggerMonth !== this.gameState.currentMonth
+    ) as any;
   }
 
   /**
    * Checks for random events based on probability
    */
   private async checkForEvents(summary: MonthSummary): Promise<void> {
-    const eventConfig = this.gameData.getEventConfig();
+    const eventConfig = this.gameData.getEventConfigSync();
     
     if (this.getRandom(0, 1) < eventConfig.monthly_chance) {
       // Trigger an event
-      const event = this.gameData.getRandomEvent();
+      const event = await this.gameData.getRandomEvent();
       if (event) {
         summary.events.push({
           id: event.id,
@@ -422,11 +427,11 @@ export class GameEngine {
    * Checks and applies progression gates
    */
   private async checkProgressionGates(summary: MonthSummary): Promise<void> {
-    const thresholds = this.gameData.getProgressionThresholds();
+    const thresholds = this.gameData.getProgressionThresholdsSync();
     
     // Check for second artist unlock
-    if (this.gameState.reputation >= thresholds.second_artist_reputation) {
-      if (this.gameState.artists.length < 2) {
+    if (this.gameState.reputation! >= thresholds.second_artist_reputation) {
+      if ((this.gameState.artists || []).length < 2) {
         summary.changes.push({
           type: 'unlock',
           description: 'Second artist slot unlocked!'
@@ -435,8 +440,8 @@ export class GameEngine {
     }
     
     // Check for fourth focus slot
-    if (this.gameState.reputation >= thresholds.fourth_focus_slot_reputation) {
-      if (this.gameState.focusSlots < 4) {
+    if (this.gameState.reputation! >= thresholds.fourth_focus_slot_reputation) {
+      if (this.gameState.focusSlots! < 4) {
         this.gameState.focusSlots = 4;
         summary.changes.push({
           type: 'unlock',
@@ -450,26 +455,26 @@ export class GameEngine {
    * Updates access tiers based on current reputation
    */
   private updateAccessTiers(): void {
-    const tiers = this.gameData.getAccessTiers();
+    const tiers = this.gameData.getAccessTiersSync();
     
     // Check each access type
-    ['playlist', 'press', 'venue'].forEach(type => {
-      const typeTiers = tiers[`${type}_access`];
-      if (!typeTiers) return;
+    for (const accessType of ['playlist_access', 'press_access', 'venue_access'] as const) {
+      const accessKey = `${accessType}` as keyof typeof tiers;
+      const tierConfig = tiers[accessKey];
+      const currentAccess = this.gameState[accessType] || 'none';
       
       // Find highest tier we qualify for
-      let highestTier = 'none';
-      for (const [tierName, tierConfig] of Object.entries(typeTiers)) {
-        if (this.gameState.reputation >= tierConfig.threshold) {
-          highestTier = tierName;
+      let bestTier = 'none';
+      for (const [tierName, config] of Object.entries(tierConfig)) {
+        if (this.gameState.reputation! >= config.threshold) {
+          bestTier = tierName;
         }
       }
       
-      // Update game state
-      if (type === 'playlist') this.gameState.playlistAccess = highestTier;
-      if (type === 'press') this.gameState.pressAccess = highestTier;
-      if (type === 'venue') this.gameState.venueAccess = highestTier;
-    });
+      if (bestTier !== currentAccess) {
+        this.gameState[accessType] = bestTier;
+      }
+    }
   }
 
   // Stub methods for features not yet implemented
