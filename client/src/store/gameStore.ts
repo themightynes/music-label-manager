@@ -17,6 +17,7 @@ interface GameStore {
   isAdvancingMonth: boolean;
   currentDialogue: any | null;
   monthlyOutcome: any | null;
+  campaignResults: any | null;
   
   // Actions
   loadGame: (gameId: string) => Promise<void>;
@@ -58,6 +59,7 @@ export const useGameStore = create<GameStore>()(
       isAdvancingMonth: false,
       currentDialogue: null,
       monthlyOutcome: null,
+      campaignResults: null,
 
       // Load existing game
       loadGame: async (gameId: string) => {
@@ -153,22 +155,23 @@ export const useGameStore = create<GameStore>()(
         set({ isAdvancingMonth: true });
 
         try {
-          // Submit selected actions
-          for (const actionId of selectedActions) {
-            await apiRequest('POST', `/api/game/${gameState.id}/actions`, {
-              month: gameState.currentMonth,
-              actionType: actionId,
-              results: {} // Placeholder for action results
-            });
-          }
+          // Use the NEW API endpoint with campaign completion logic
+          const advanceRequest = {
+            gameId: gameState.id,
+            selectedActions: selectedActions.map(actionId => ({
+              actionType: 'role_meeting' as const,
+              targetId: actionId,
+              metadata: {}
+            }))
+          };
 
-          // Advance the month
-          const response = await apiRequest('POST', `/api/game/${gameState.id}/advance-month`);
+          const response = await apiRequest('POST', '/api/advance-month', advanceRequest);
           const result = await response.json();
           
           set({
             gameState: result.gameState,
-            monthlyOutcome: result.monthlyOutcome,
+            monthlyOutcome: result.summary,
+            campaignResults: result.campaignResults,
             selectedActions: [],
             isAdvancingMonth: false
           });

@@ -1,0 +1,41 @@
+# Dependency directories
+node_modules/
+npm-debug.log*
+
+# Build outputs
+dist/
+.cache/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.cursor/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Replit specific
+.replit
+.config/
+.local/
+
+# Development files
+scripts/start-server.sh
+*.md
+docs/
+
+# Cache directories
+.cache/
+.tmp/

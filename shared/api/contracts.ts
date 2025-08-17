@@ -55,6 +55,21 @@ export const AdvanceMonthRequest = z.object({
   selectedActions: z.array(ActionSchema)
 });
 
+export const CampaignResultsSchema = z.object({
+  campaignCompleted: z.boolean(),
+  finalScore: z.number(),
+  scoreBreakdown: z.object({
+    money: z.number(),
+    reputation: z.number(),
+    artistsSuccessful: z.number(),
+    projectsCompleted: z.number(),
+    accessTierBonus: z.number(),
+  }),
+  victoryType: z.enum(['Commercial Success', 'Critical Acclaim', 'Balanced Growth', 'Survival', 'Failure']),
+  summary: z.string(),
+  achievements: z.array(z.string()),
+});
+
 export const AdvanceMonthResponse = z.object({
   gameState: z.custom<GameState>(),
   summary: z.object({
@@ -65,6 +80,7 @@ export const AdvanceMonthResponse = z.object({
     reputationChanges: z.record(z.number()),
     events: z.array(z.any()),
   }),
+  campaignResults: CampaignResultsSchema.optional(),
 });
 
 // Action selection schemas

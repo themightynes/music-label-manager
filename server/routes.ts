@@ -303,45 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Turn advancement
-  app.post("/api/game/:id/advance-month", getUserId, async (req, res) => {
-    try {
-      const gameState = await storage.getGameState(req.params.id);
-      if (!gameState) {
-        return res.status(404).json({ message: "Game not found" });
-      }
-
-      // Process monthly actions and update game state
-      const actions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth || 1);
-      
-      // Calculate monthly outcomes (simplified for MVP)
-      const monthlyOutcome = {
-        revenue: Math.floor(Math.random() * 10000),
-        expenses: Math.floor(Math.random() * 5000),
-        reputationChange: Math.floor(Math.random() * 10 - 5),
-        streams: Math.floor(Math.random() * 50000 + 10000)
-      };
-
-      const updatedState = await storage.updateGameState(req.params.id, {
-        currentMonth: (gameState.currentMonth || 1) + 1,
-        money: (gameState.money || 75000) + monthlyOutcome.revenue - monthlyOutcome.expenses,
-        reputation: Math.max(0, Math.min(100, (gameState.reputation || 0) + monthlyOutcome.reputationChange)),
-        usedFocusSlots: 0, // Reset for new month
-        monthlyStats: {
-          ...gameState.monthlyStats as object,
-          [`month${gameState.currentMonth || 1}`]: monthlyOutcome
-        }
-      });
-
-      res.json({ 
-        gameState: updatedState, 
-        monthlyOutcome,
-        actions 
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to advance month" });
-    }
-  });
+  // OLD ENDPOINT REMOVED - Use /api/advance-month instead
+  // This endpoint did not have 12-month campaign completion logic
 
   // Save game routes
   app.get("/api/saves", getUserId, async (req, res) => {
@@ -538,6 +501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             playlistAccess: monthResult.gameState.playlistAccess,
             pressAccess: monthResult.gameState.pressAccess,
             venueAccess: monthResult.gameState.venueAccess,
+            campaignCompleted: monthResult.gameState.campaignCompleted,
             flags: monthResult.gameState.flags,
             monthlyStats: monthResult.gameState.monthlyStats,
             updatedAt: new Date()
@@ -565,7 +529,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           gameState: updatedGameState,
-          summary: monthResult.summary
+          summary: monthResult.summary,
+          campaignResults: monthResult.campaignResults
         };
       });
       
