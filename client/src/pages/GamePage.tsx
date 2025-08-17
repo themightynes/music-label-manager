@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useGameContext } from '../contexts/GameContext';
 
 export default function GamePage() {
-  const [view, setView] = useState<'dashboard' | 'planner'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'planner' | 'summary'>('dashboard');
   const [showCampaignResults, setShowCampaignResults] = useState(false);
   
   const { data: gameState, isLoading, error, refetch } = useGameState();
@@ -43,8 +43,16 @@ export default function GamePage() {
   }
 
   const handleAdvanceMonth = (selectedActions: string[]) => {
-    advanceMonth.mutate(selectedActions);
-    setView('dashboard');
+    advanceMonth.mutate(selectedActions, {
+      onSuccess: (data) => {
+        if (data.campaignResults) {
+          setShowCampaignResults(true);
+        } else {
+          // Show month summary with advancement results
+          setView('summary');
+        }
+      }
+    });
   };
 
   const handleNewGame = async () => {
@@ -76,6 +84,26 @@ export default function GamePage() {
             onBackToDashboard={() => setView('dashboard')}
             isAdvancing={advanceMonth.isPending}
           />
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  if (view === 'summary' && advanceMonth.data) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-black text-white">
+          <GameHeader gameState={gameState} />
+          <div className="container mx-auto px-6 py-8">
+            <div className="max-w-2xl mx-auto">
+              <MonthSummary 
+                monthlyStats={advanceMonth.data.summary}
+                onAdvanceMonth={() => setView('dashboard')}
+                isAdvancing={false}
+                isMonthResults={true}
+              />
+            </div>
+          </div>
         </div>
       </ErrorBoundary>
     );
