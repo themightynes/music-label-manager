@@ -69,7 +69,13 @@ export class GameEngine {
   async advanceMonth(monthlyActions: GameEngineAction[]): Promise<{
     gameState: GameState;
     summary: MonthSummary;
+    campaignResults?: CampaignResults;
   }> {
+    // Check if campaign is already completed
+    if (this.gameState.campaignCompleted) {
+      throw new Error('Campaign has already been completed. Start a new game to continue playing.');
+    }
+
     const summary: MonthSummary = {
       month: (this.gameState.currentMonth || 0) + 1,
       changes: [],
@@ -116,9 +122,13 @@ export class GameEngine {
     // Apply final calculations
     this.gameState.money = (this.gameState.money || 75000) + summary.revenue - summary.expenses;
     
+    // Check for campaign completion
+    const campaignResults = await this.checkCampaignCompletion(summary);
+    
     return {
       gameState: this.gameState,
-      summary
+      summary,
+      campaignResults
     };
   }
 
@@ -582,9 +592,8 @@ export class GameEngine {
       dueMonth: (this.gameState.currentMonth || 1) + this.getProjectDuration(projectType)
     };
     
-    // Store in projects array (this would be handled by database in real implementation)
-    if (!this.gameState.projects) this.gameState.projects = [];
-    (this.gameState.projects as any[]).push(newProject);
+    // TODO: Store project in database via ServerGameData
+    // Projects are handled separately in the database, not stored in gameState
     
     summary.changes.push({
       type: 'project_complete',
@@ -689,6 +698,173 @@ export class GameEngine {
       roleId: artistId
     });
   }
+
+  /**
+   * Check if the 12-month campaign has been completed and calculate final results
+   */
+  private async checkCampaignCompletion(summary: MonthSummary): Promise<CampaignResults | undefined> {
+    const currentMonth = this.gameState.currentMonth || 0;
+    const balanceConfig = await this.gameData.getBalanceConfig();
+    const campaignLength = balanceConfig.time_progression.campaign_length_months;
+    
+    // Only complete campaign if we've reached the final month
+    if (currentMonth < campaignLength) {
+      return undefined;
+    }
+
+    // Mark campaign as completed
+    this.gameState.campaignCompleted = true;
+
+    // Calculate final score based on multiple factors
+    const scoreBreakdown = {
+      money: Math.max(0, Math.floor((this.gameState.money || 0) / 1000)), // 1 point per $1k
+      reputation: Math.max(0, Math.floor((this.gameState.reputation || 0) / 5)), // 1 point per 5 reputation
+      artistsSuccessful: 0, // TODO: Calculate based on artist success metrics
+      projectsCompleted: 0, // TODO: Calculate based on completed projects
+      accessTierBonus: this.calculateAccessTierBonus()
+    };
+
+    const finalScore = Object.values(scoreBreakdown).reduce((total, score) => total + score, 0);
+    
+    // Determine victory type based on game state
+    const victoryType = this.determineVictoryType(finalScore, scoreBreakdown);
+    
+    // Generate achievements
+    const achievements = this.calculateAchievements(scoreBreakdown);
+    
+    // Create summary based on victory type
+    const campaignSummary = this.generateCampaignSummary(victoryType, finalScore, scoreBreakdown);
+
+    const campaignResults: CampaignResults = {
+      campaignCompleted: true,
+      finalScore,
+      scoreBreakdown,
+      victoryType,
+      summary: campaignSummary,
+      achievements
+    };
+
+    // Add campaign completion to summary
+    summary.changes.push({
+      type: 'unlock',
+      description: `🎉 Campaign Completed! Final Score: ${finalScore}`,
+      amount: finalScore
+    });
+
+    return campaignResults;
+  }
+
+  /**
+   * Calculate bonus points for access tier progression
+   */
+  private calculateAccessTierBonus(): number {
+    let bonus = 0;
+    
+    // Playlist access bonus
+    if (this.gameState.playlistAccess === 'Mid') bonus += 20;
+    else if (this.gameState.playlistAccess === 'Niche') bonus += 10;
+    
+    // Press access bonus  
+    if (this.gameState.pressAccess === 'Mid-Tier') bonus += 20;
+    else if (this.gameState.pressAccess === 'Blogs') bonus += 10;
+    
+    // Venue access bonus
+    if (this.gameState.venueAccess === 'Clubs') bonus += 15;
+    
+    return bonus;
+  }
+
+  /**
+   * Determine victory type based on final performance
+   */
+  private determineVictoryType(
+    finalScore: number, 
+    scoreBreakdown: CampaignResults['scoreBreakdown']
+  ): CampaignResults['victoryType'] {
+    // Check for failure conditions
+    if ((this.gameState.money || 0) < 0 || finalScore < 50) {
+      return 'Failure';
+    }
+    
+    // Survival if barely making it
+    if (finalScore < 100) {
+      return 'Survival';
+    }
+    
+    // Determine primary victory type based on strongest area
+    const moneyScore = scoreBreakdown.money;
+    const reputationScore = scoreBreakdown.reputation;
+    const balanceThreshold = 0.7;
+    
+    if (moneyScore > reputationScore * 1.5) {
+      return 'Commercial Success';
+    } else if (reputationScore > moneyScore * 1.5) {
+      return 'Critical Acclaim';
+    } else if (Math.min(moneyScore, reputationScore) / Math.max(moneyScore, reputationScore) >= balanceThreshold) {
+      return 'Balanced Growth';
+    } else {
+      return 'Commercial Success'; // Default to commercial
+    }
+  }
+
+  /**
+   * Calculate achievements based on performance
+   */
+  private calculateAchievements(scoreBreakdown: CampaignResults['scoreBreakdown']): string[] {
+    const achievements: string[] = [];
+    
+    // Money achievements
+    if (scoreBreakdown.money >= 100) achievements.push('💰 Big Money - Ended with $100k+');
+    else if (scoreBreakdown.money >= 50) achievements.push('💵 Profitable - Ended with $50k+');
+    
+    // Reputation achievements
+    if (scoreBreakdown.reputation >= 40) achievements.push('⭐ Industry Legend - 200+ Reputation');
+    else if (scoreBreakdown.reputation >= 20) achievements.push('🌟 Well Known - 100+ Reputation');
+    
+    // Access tier achievements
+    if (this.gameState.playlistAccess === 'Mid' && this.gameState.pressAccess === 'Mid-Tier') {
+      achievements.push('🎵 Media Mogul - Maximum playlist and press access');
+    }
+    
+    // Survival achievements
+    if ((this.gameState.money || 0) >= 0 && achievements.length === 0) {
+      achievements.push('🛡️ Survivor - Made it through 12 months');
+    }
+    
+    return achievements;
+  }
+
+  /**
+   * Generate a narrative summary of the campaign
+   */
+  private generateCampaignSummary(
+    victoryType: CampaignResults['victoryType'],
+    finalScore: number,
+    scoreBreakdown: CampaignResults['scoreBreakdown']
+  ): string {
+    const money = this.gameState.money || 0;
+    const reputation = this.gameState.reputation || 0;
+    
+    switch (victoryType) {
+      case 'Commercial Success':
+        return `Your label became a commercial powerhouse! With $${(money/1000).toFixed(0)}k in the bank and ${reputation} reputation, you've proven that great music and smart business can go hand in hand.`;
+      
+      case 'Critical Acclaim':
+        return `Your label earned critical acclaim throughout the industry! With ${reputation} reputation points, you've built a respected brand that artists dream of joining, even if the bank account shows $${(money/1000).toFixed(0)}k.`;
+      
+      case 'Balanced Growth':
+        return `Your label achieved remarkable balanced growth! With $${(money/1000).toFixed(0)}k and ${reputation} reputation, you've built a sustainable business that excels in both artistic integrity and commercial success.`;
+      
+      case 'Survival':
+        return `Against all odds, your label survived the challenging first year! With $${(money/1000).toFixed(0)}k remaining and ${reputation} reputation, you've laid the foundation for future growth.`;
+      
+      case 'Failure':
+        return `The music industry proved challenging, and your label struggled to find its footing. With financial difficulties and limited industry recognition, this campaign serves as a learning experience for your next venture.`;
+      
+      default:
+        return `Your 12-month journey in the music industry has concluded with a final score of ${finalScore} points.`;
+    }
+  }
 }
 
 /**
@@ -716,4 +892,22 @@ export interface EventOccurrence {
   id: string;
   title: string;
   occurred: boolean;
+}
+
+/**
+ * Campaign completion results and scoring
+ */
+export interface CampaignResults {
+  campaignCompleted: boolean;
+  finalScore: number;
+  scoreBreakdown: {
+    money: number;
+    reputation: number;
+    artistsSuccessful: number;
+    projectsCompleted: number;
+    accessTierBonus: number;
+  };
+  victoryType: 'Commercial Success' | 'Critical Acclaim' | 'Balanced Growth' | 'Survival' | 'Failure';
+  summary: string;
+  achievements: string[];
 }

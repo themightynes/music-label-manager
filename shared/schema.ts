@@ -100,6 +100,7 @@ export const gameStates = pgTable("game_states", {
   venueAccess: text("venue_access").default("None"), // None, Clubs
   campaignType: text("campaign_type").default("Balanced"), // Commercial, Critical, Balanced
   rngSeed: text("rng_seed"),
+  campaignCompleted: boolean("campaign_completed").default(false),
   flags: jsonb("flags").default('{}'), // Game flags for delayed effects
   monthlyStats: jsonb("monthly_stats").default('{}'), // Track monthly performance
   createdAt: timestamp("created_at").defaultNow(),
