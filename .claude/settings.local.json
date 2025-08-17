@@ -10,7 +10,12 @@
       "Bash(rm:*)",
       "Bash(mv:*)",
       "Bash(timeout:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(docker:*)",
+      "Bash(./scripts/isolated-dev.sh:*)",
+      "Bash(bash:*)",
+      "Bash(npm run:*)",
+      "Bash(npm start)"
     ],
     "deny": [],
     "ask": []
