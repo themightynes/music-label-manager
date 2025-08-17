@@ -83,7 +83,7 @@ export const useGameStore = create<GameStore>()(
       createNewGame: async (campaignType: string) => {
         try {
           const newGameData = {
-            userId: 'demo-user-id', // Replace with actual user authentication
+            // userId will be set by the server from authentication
             currentMonth: 1,
             money: 75000,
             reputation: 0,
@@ -319,7 +319,7 @@ export const useGameStore = create<GameStore>()(
 
         try {
           const saveData = {
-            userId: gameState.userId || 'demo-user-id',
+            // userId will be set by the server from authentication
             name,
             gameState: {
               gameState,

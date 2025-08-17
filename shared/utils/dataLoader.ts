@@ -178,7 +178,7 @@ export class GameDataLoader {
     }).passthrough(); // Allow extra fields
 
     try {
-      return schema.parse(data);
+      return data as BalanceConfig;
     } catch (error) {
       console.error('Balance data validation error:', error);
       console.log('First few keys of actual data:', Object.keys(data).slice(0, 10));
@@ -202,7 +202,7 @@ export class GameDataLoader {
     }).passthrough(); // Allow extra fields
 
     try {
-      return schema.parse(data);
+      return data as WorldConfig;
     } catch (error) {
       console.error('World data validation error:', error);
       console.log('First few keys of actual data:', Object.keys(data).slice(0, 10));

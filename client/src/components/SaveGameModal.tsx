@@ -73,7 +73,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
         <div className="p-6 space-y-4">
           {/* Existing saves */}
-          {saves.map((save: any) => (
+          {(saves as any[]).map((save: any) => (
             <div key={save.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 cursor-pointer">
               <div className="flex items-center justify-between">
                 <div>
@@ -91,7 +91,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           ))}
 
           {/* Empty slots */}
-          {Array.from({ length: Math.max(0, 3 - saves.length) }).map((_, index) => (
+          {Array.from({ length: Math.max(0, 3 - (saves as any[]).length) }).map((_, index) => (
             <div key={`empty-${index}`} className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
               <i className="fas fa-plus text-slate-400 text-xl mb-2"></i>
               <p className="text-sm text-slate-500">Empty Slot</p>

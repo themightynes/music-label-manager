@@ -18,34 +18,40 @@ export function ToastNotification() {
     const current = gameState;
 
     // Check for money changes
-    if (prev.money !== current.money) {
-      const change = current.money - prev.money;
+    const prevMoney = prev.money || 0;
+    const currentMoney = current.money || 0;
+    if (prevMoney !== currentMoney) {
+      const change = currentMoney - prevMoney;
       const icon = change > 0 ? '💰' : '💸';
       toast({
         title: `${icon} Money ${change > 0 ? '+' : ''}${change.toLocaleString()}`,
-        description: `Current balance: $${current.money.toLocaleString()}`,
+        description: `Current balance: $${currentMoney.toLocaleString()}`,
         duration: 3000,
       });
     }
 
     // Check for reputation changes
-    if (prev.reputation !== current.reputation) {
-      const change = current.reputation - prev.reputation;
+    const prevRep = prev.reputation || 0;
+    const currentRep = current.reputation || 0;
+    if (prevRep !== currentRep) {
+      const change = currentRep - prevRep;
       const icon = change > 0 ? '⭐' : '📉';
       toast({
         title: `${icon} Reputation ${change > 0 ? '+' : ''}${change}`,
-        description: `Current reputation: ${current.reputation}`,
+        description: `Current reputation: ${currentRep}`,
         duration: 3000,
       });
     }
 
     // Check for creative capital changes
-    if (prev.creativeCapital !== current.creativeCapital) {
-      const change = current.creativeCapital - prev.creativeCapital;
+    const prevCC = prev.creativeCapital || 0;
+    const currentCC = current.creativeCapital || 0;
+    if (prevCC !== currentCC) {
+      const change = currentCC - prevCC;
       const icon = change > 0 ? '💡' : '🔥';
       toast({
         title: `${icon} Creative Capital ${change > 0 ? '+' : ''}${change}`,
-        description: `Current creative capital: ${current.creativeCapital}`,
+        description: `Current creative capital: ${currentCC}`,
         duration: 3000,
       });
     }
