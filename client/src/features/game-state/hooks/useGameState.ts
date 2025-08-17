@@ -10,12 +10,18 @@ export function useGameState() {
   return useQuery({
     queryKey: ['gameState', gameId],
     queryFn: async () => {
-      if (!gameId) throw new Error('No game ID available');
-      const response = await fetch('/api/game-state');
-      if (!response.ok) throw new Error('Failed to fetch game state');
-      return response.json() as Promise<GameState>;
+      if (!gameId) {
+        const response = await fetch('/api/game-state');
+        if (!response.ok) throw new Error('Failed to fetch game state');
+        return response.json() as Promise<GameState>;
+      } else {
+        const response = await fetch(`/api/game/${gameId}`);
+        if (!response.ok) throw new Error('Failed to fetch game state');
+        const data = await response.json();
+        return data.gameState as GameState;
+      }
     },
-    enabled: !!gameId,
+    enabled: true,
     refetchInterval: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -26,15 +32,17 @@ export function useAdvanceMonth() {
   const { gameId } = useGameContext();
   
   return useMutation({
-    mutationFn: async (selectedActions: any[]) => {
-      if (!gameId) throw new Error('No game ID available');
+    mutationFn: async (selectedActions: string[]) => {
+      // Get the current game state to get the actual game ID
+      const gameState = queryClient.getQueryData(['gameState', gameId]) as GameState;
+      if (!gameState) throw new Error('No game state available');
       
       const request: AdvanceMonthRequest = {
-        gameId,
-        selectedActions: selectedActions.map(action => ({
-          actionType: action.actionType || 'role_meeting',
-          targetId: action.targetId || null,
-          metadata: action.metadata
+        gameId: gameState.id,
+        selectedActions: selectedActions.map(actionId => ({
+          actionType: 'role_meeting' as const,
+          targetId: actionId,
+          metadata: {}
         }))
       };
       return apiClient.advanceMonth(request);

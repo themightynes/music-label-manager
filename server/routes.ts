@@ -16,7 +16,7 @@ import {
   createErrorResponse 
 } from "@shared/api/contracts";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -433,16 +433,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.userId!;
       
-      // Try to find existing game state for this user
-      const [existingGame] = await db
+      // Debug: Get all games for this user to see what's happening
+      const allGames = await db
         .select()
         .from(gameStates)
         .where(eq(gameStates.userId, userId))
-        .orderBy(gameStates.currentMonth)
-        .limit(1);
+        .orderBy(desc(gameStates.currentMonth), desc(gameStates.updatedAt));
 
-      if (existingGame) {
-        return res.json(existingGame);
+      console.log('All games for user:', allGames.map(g => ({ 
+        id: g.id.substring(0, 8), 
+        month: g.currentMonth, 
+        money: g.money,
+        updatedAt: g.updatedAt 
+      })));
+
+      if (allGames.length > 0) {
+        return res.json(allGames[0]);
       }
 
       // Create new game state for user
@@ -521,18 +527,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const monthResult = await gameEngine.advanceMonth(formattedActions);
         
         // Update game state in database
-        await tx
+        const [updatedGameState] = await tx
           .update(gameStates)
           .set({
             currentMonth: monthResult.gameState.currentMonth,
             money: monthResult.gameState.money,
             reputation: monthResult.gameState.reputation,
+            creativeCapital: monthResult.gameState.creativeCapital,
             usedFocusSlots: monthResult.gameState.usedFocusSlots,
+            playlistAccess: monthResult.gameState.playlistAccess,
+            pressAccess: monthResult.gameState.pressAccess,
+            venueAccess: monthResult.gameState.venueAccess,
             flags: monthResult.gameState.flags,
             monthlyStats: monthResult.gameState.monthlyStats,
             updatedAt: new Date()
           })
-          .where(eq(gameStates.id, gameId));
+          .where(eq(gameStates.id, gameId))
+          .returning();
         
         // Save monthly actions
         if (selectedActions.length > 0) {
@@ -553,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         return {
-          gameState: monthResult.gameState,
+          gameState: updatedGameState,
           summary: monthResult.summary
         };
       });
