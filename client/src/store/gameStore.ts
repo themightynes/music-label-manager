@@ -98,20 +98,27 @@ export const useGameStore = create<GameStore>()(
             campaignType,
             rngSeed: Math.random().toString(36),
             flags: {},
-            monthlyStats: {}
+            monthlyStats: {},
+            campaignCompleted: false
           };
 
           const response = await apiRequest('POST', '/api/game', newGameData);
           const gameState = await response.json();
           
+          // Clear campaign results
           set({
             gameState,
             artists: [],
             projects: [],
             roles: [],
             monthlyActions: [],
-            selectedActions: []
+            selectedActions: [],
+            campaignResults: null,
+            monthlyOutcome: null
           });
+
+          // Return the new game state so the UI can update
+          return gameState;
         } catch (error) {
           console.error('Failed to create game:', error);
           throw error;
