@@ -8,6 +8,16 @@ Music Label Manager is a browser-based turn-based simulation game where players 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### August 17, 2025 - Application Startup Fix
+- **Issue**: App failed to run due to workflow configuration problems
+- **Root Cause**: Workflow configuration was commented out in .replit file, preventing proper application startup
+- **Solution**: Successfully ran application using direct server command (NODE_ENV=development tsx server/index.ts)
+- **Status**: Express server now running on port 5000, API endpoints responding correctly
+- **Database**: PostgreSQL connection verified and working
+- **Next Steps**: User to specify what features to work on next
+
 ## System Architecture
 
 ### Frontend Architecture
