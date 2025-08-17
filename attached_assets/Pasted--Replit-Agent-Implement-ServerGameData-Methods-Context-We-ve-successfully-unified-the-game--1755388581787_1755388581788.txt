@@ -1,0 +1,181 @@
+# Replit Agent: Implement ServerGameData Methods
+
+## Context
+We've successfully unified the game engine, but the GameEngine needs several methods from ServerGameData to work properly. These methods bridge the gap between our `balance.json` configuration and the game engine calculations.
+
+## Task: Add Missing Methods to ServerGameData
+
+Please add the following methods to the `ServerGameData` class in `server/data/gameData.ts`:
+
+### 1. getStreamingConfig()
+This method should return streaming calculation configuration from balance.json:
+```typescript
+getStreamingConfig() {
+  const balance = this.getBalanceConfig();
+  return {
+    quality_weight: balance.streaming?.quality_weight || 0.4,
+    playlist_weight: balance.streaming?.playlist_weight || 0.3,
+    reputation_weight: balance.streaming?.reputation_weight || 0.2,
+    marketing_weight: balance.streaming?.marketing_weight || 0.1,
+    first_week_multiplier: balance.streaming?.first_week_multiplier || 1.5,
+    base_streams_per_point: balance.streaming?.base_streams_per_point || 1000
+  };
+}
+```
+
+### 2. getPressConfig()
+Returns press coverage calculation settings:
+```typescript
+getPressConfig() {
+  const balance = this.getBalanceConfig();
+  return {
+    base_chance: balance.press?.base_chance || 0.1,
+    pr_spend_modifier: balance.press?.pr_spend_modifier || 0.00001,
+    reputation_modifier: balance.press?.reputation_modifier || 0.002,
+    story_flag_bonus: balance.press?.story_flag_bonus || 0.2,
+    max_pickups_per_release: balance.press?.max_pickups_per_release || 5
+  };
+}
+```
+
+### 3. getTourConfig()
+Returns tour revenue calculation settings:
+```typescript
+getTourConfig() {
+  const balance = this.getBalanceConfig();
+  return {
+    sell_through_base: balance.tours?.sell_through_base || 0.3,
+    reputation_modifier: balance.tours?.reputation_modifier || 0.005,
+    local_popularity_weight: balance.tours?.local_popularity_weight || 0.5,
+    merch_percentage: balance.tours?.merch_percentage || 0.15,
+    ticket_price_base: balance.tours?.ticket_price_base || 30,
+    ticket_price_per_capacity: balance.tours?.ticket_price_per_capacity || 0.01
+  };
+}
+```
+
+### 4. getAccessTiers()
+Returns the access tier thresholds and multipliers for playlists, press, and venues:
+```typescript
+getAccessTiers() {
+  const balance = this.getBalanceConfig();
+  return {
+    playlist_access: {
+      none: { threshold: 0, reach_multiplier: 0.1, description: "No playlist access" },
+      niche: { threshold: 10, reach_multiplier: 0.3, description: "Niche playlist access" },
+      mid: { threshold: 30, reach_multiplier: 0.6, description: "Mid-tier playlist access" },
+      major: { threshold: 60, reach_multiplier: 1.0, description: "Major playlist access" }
+    },
+    press_access: {
+      none: { threshold: 0, pickup_chance: 0.05, description: "No press contacts" },
+      blogs: { threshold: 15, pickup_chance: 0.15, description: "Music blog access" },
+      mid_tier: { threshold: 35, pickup_chance: 0.30, description: "Mid-tier publication access" },
+      major: { threshold: 65, pickup_chance: 0.50, description: "Major publication access" }
+    },
+    venue_access: {
+      clubs: { threshold: 0, capacity_range: [100, 300], description: "Small clubs and bars" },
+      theaters: { threshold: 20, capacity_range: [500, 1500], description: "Theaters and mid-size venues" },
+      arenas: { threshold: 50, capacity_range: [3000, 10000], description: "Arenas and large venues" },
+      stadiums: { threshold: 80, capacity_range: [15000, 50000], description: "Stadiums and festivals" }
+    }
+  };
+}
+```
+
+### 5. getEventConfig()
+Returns event triggering configuration:
+```typescript
+getEventConfig() {
+  const balance = this.getBalanceConfig();
+  return {
+    monthly_chance: balance.events?.monthly_chance || 0.15,
+    cooldown_months: balance.events?.cooldown_months || 3,
+    max_per_year: balance.events?.max_per_year || 6
+  };
+}
+```
+
+### 6. getMonthlyBurnRange()
+Returns the min/max range for monthly operational costs:
+```typescript
+getMonthlyBurnRange(): [number, number] {
+  const balance = this.getBalanceConfig();
+  const min = balance.monthly_burn?.min || 3000;
+  const max = balance.monthly_burn?.max || 6000;
+  return [min, max];
+}
+```
+
+### 7. getRandomEvent()
+Returns a random event from the events list:
+```typescript
+getRandomEvent() {
+  const events = this.getEvents();
+  const availableEvents = events.filter(event => {
+    // TODO: Check against game state for cooldown
+    return true; // For now, all events are available
+  });
+  
+  if (availableEvents.length === 0) return null;
+  
+  const randomIndex = Math.floor(Math.random() * availableEvents.length);
+  return availableEvents[randomIndex];
+}
+```
+
+### 8. getProgressionThresholds()
+Returns reputation thresholds for unlocking features:
+```typescript
+getProgressionThresholds() {
+  const balance = this.getBalanceConfig();
+  return {
+    second_artist_reputation: balance.progression?.second_artist_reputation || 10,
+    fourth_focus_slot_reputation: balance.progression?.fourth_focus_slot_reputation || 18,
+    label_size_thresholds: {
+      local: 0,
+      regional: 25,
+      national: 50,
+      global: 75
+    }
+  };
+}
+```
+
+## Also Update balance.json
+
+Please also check if `data/balance.json` has the necessary structure. If not, add these sections with the default values shown in the methods above:
+
+```json
+{
+  "streaming": { ... },
+  "press": { ... },
+  "tours": { ... },
+  "events": { ... },
+  "monthly_burn": { ... },
+  "progression": { ... },
+  "access_tiers": { ... }
+}
+```
+
+## Verification Steps
+
+After adding these methods:
+1. Check that TypeScript compiles without errors: `npx tsc --noEmit`
+2. Ensure the server still runs: `npm run dev`
+3. Test that the GameEngine can now call these methods without errors
+4. Check that balance.json has the required sections
+
+## Expected Outcome
+
+Once complete:
+- The GameEngine will have access to all configuration data
+- Calculations for streaming, press, and tours will work
+- Progression gates will function
+- Random events can be triggered
+- The game will be ready for actual gameplay testing
+
+Please report:
+- ✅ Which methods were successfully added
+- 📝 Any adjustments made to balance.json
+- ❌ Any TypeScript errors encountered
+- 🎮 Whether the game still runs after changes

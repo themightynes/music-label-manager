@@ -19,8 +19,6 @@ import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  const gameEngine = new GameEngine(serverGameData);
-  
   // Data verification endpoints
   app.get("/api/test-data", async (req, res) => {
     try {
@@ -436,21 +434,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           monthlyStats: gameState.monthlyStats || {}
         };
         
+        // Create GameEngine instance for this game state
+        const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+        
         // Use GameEngine for business logic
-        const monthResult = await gameEngine.advanceMonth(
-          gameStateForEngine,
-          selectedActions
-        );
+        const monthResult = await gameEngine.advanceMonth(selectedActions);
         
         // Update game state in database
         await tx
           .update(gameStates)
           .set({
-            currentMonth: monthResult.updatedState.currentMonth,
-            money: monthResult.updatedState.money,
-            reputation: monthResult.updatedState.reputation,
-            usedFocusSlots: monthResult.updatedState.usedFocusSlots,
-            monthlyStats: monthResult.updatedState.monthlyStats,
+            currentMonth: monthResult.gameState.currentMonth,
+            money: monthResult.gameState.money,
+            reputation: monthResult.gameState.reputation,
+            usedFocusSlots: monthResult.gameState.usedFocusSlots,
+            flags: monthResult.gameState.flags,
+            monthlyStats: monthResult.gameState.monthlyStats,
             updatedAt: new Date()
           })
           .where(eq(gameStates.id, gameId));
@@ -461,12 +460,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             selectedActions.map(action => ({
               id: crypto.randomUUID(),
               gameId,
-              month: monthResult.updatedState.currentMonth - 1, // Previous month
+              month: monthResult.gameState.currentMonth - 1, // Previous month
               actionType: action.actionType,
               targetId: action.targetId,
               results: {
-                revenue: monthResult.revenue / selectedActions.length,
-                expenses: monthResult.expenses / selectedActions.length
+                revenue: monthResult.summary.revenue / selectedActions.length,
+                expenses: monthResult.summary.expenses / selectedActions.length
               },
               createdAt: new Date()
             }))
@@ -474,11 +473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         return {
-          gameState: monthResult.updatedState,
-          revenue: monthResult.revenue,
-          expenses: monthResult.expenses,
-          reputationChange: monthResult.reputationChange,
-          monthlyOutcome: monthResult.monthlyOutcome,
+          gameState: monthResult.gameState,
+          summary: monthResult.summary,
           events: monthResult.events
         };
       });

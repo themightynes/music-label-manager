@@ -24,12 +24,15 @@ Preferred communication style: Simple, everyday language.
 - **Drizzle ORM**: Type-safe database interactions with PostgreSQL dialect
 - **Session-based Storage**: Game state persistence with multiple save slots
 
-### Game Engine Design
+### Game Engine Design (Unified Architecture)
+- **Unified Game Engine**: Single source of truth for all game calculations in `shared/engine/game-engine.ts`
+- **Server-Authoritative**: All game state modifications handled server-side through GameEngine class
 - **Turn-based Progression**: Monthly advancement system with 3-action slots per turn
 - **Resource Management**: Money, reputation, and creative capital as core currencies
 - **Dialogue System**: Role-based meetings with branching choices and immediate/delayed effects
 - **Project Lifecycle**: Singles, EPs, and tours with quality, budget, and timeline tracking
 - **Market Simulation**: Seeded RNG for consistent outcomes based on quality, access tiers, and marketing
+- **ServerGameData Integration**: Unified data access layer providing balance configuration and game content
 
 ### Database Schema
 - **Game States**: Core game progression with monthly statistics tracking
