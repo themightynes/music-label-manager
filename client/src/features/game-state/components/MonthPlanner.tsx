@@ -3,6 +3,8 @@ import { GameState } from '@shared/types/gameTypes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { DialogueModal } from '@/components/DialogueModal';
+import { useGameStore } from '@/store/gameStore';
 
 interface MonthPlannerProps {
   gameState: GameState & { artists?: any[]; projects?: any[] };
@@ -18,8 +20,22 @@ export function MonthPlanner({
   isAdvancing 
 }: MonthPlannerProps) {
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
+  const [showDialogue, setShowDialogue] = useState(false);
+  const [currentDialogue, setCurrentDialogue] = useState<{ roleId: string; meetingId: string } | null>(null);
+  
+  const { selectDialogueChoice } = useGameStore();
 
   const handleActionToggle = (actionId: string) => {
+    // Check if this is a role meeting action
+    const role = industryRoles.find(r => r.id === actionId);
+    if (role) {
+      // Open dialogue modal for role meeting
+      setCurrentDialogue({ roleId: actionId, meetingId: 'monthly_check_in' });
+      setShowDialogue(true);
+      return;
+    }
+    
+    // Handle regular action selection for non-role actions
     setSelectedActions(prev => {
       if (prev.includes(actionId)) {
         return prev.filter(id => id !== actionId);
@@ -33,6 +49,27 @@ export function MonthPlanner({
   const handleAdvanceMonth = () => {
     onAdvanceMonth(selectedActions);
     setSelectedActions([]);
+  };
+
+  const handleDialogueChoice = async (choiceId: string, effects: any) => {
+    try {
+      await selectDialogueChoice(choiceId, effects);
+      
+      // Add the role meeting to selected actions after dialogue completes
+      if (currentDialogue) {
+        setSelectedActions(prev => {
+          if (!prev.includes(currentDialogue.roleId) && prev.length < 3) {
+            return [...prev, currentDialogue.roleId];
+          }
+          return prev;
+        });
+      }
+      
+      setShowDialogue(false);
+      setCurrentDialogue(null);
+    } catch (error) {
+      console.error('Failed to handle dialogue choice:', error);
+    }
   };
 
   const industryRoles = [
@@ -112,6 +149,20 @@ export function MonthPlanner({
             </div>
           </div>
         </div>
+        
+        {/* Dialogue Modal */}
+        {showDialogue && currentDialogue && (
+          <DialogueModal
+            roleId={currentDialogue.roleId}
+            meetingId={currentDialogue.meetingId}
+            gameId={gameState.id}
+            onClose={() => {
+              setShowDialogue(false);
+              setCurrentDialogue(null);
+            }}
+            onChoiceSelect={handleDialogueChoice}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );
