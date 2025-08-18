@@ -2,11 +2,6 @@
   "version": "0.1.0",
   "generated": "2025-08-14",
   "seed": 12345,
-
-  "monthly_burn_base": [
-    3000,
-    6000
-  ],
   "access_tiers": {
     "playlist": [
       "none",
