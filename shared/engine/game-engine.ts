@@ -247,10 +247,17 @@ export class GameEngine {
     adSpend: number
   ): number {
     const config = this.gameData.getStreamingConfigSync();
-    console.log(`[DEBUG] Streaming config:`, config);
+    console.log(`[DEBUG] Streaming config loaded:`, {
+      hasConfig: !!config,
+      quality_weight: config?.quality_weight,
+      playlist_weight: config?.playlist_weight,
+      base_streams_per_point: config?.base_streams_per_point,
+      first_week_multiplier: config?.first_week_multiplier
+    });
     
     // Get playlist multiplier from real access tiers
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
+    console.log(`[DEBUG] Access multiplier for ${playlistAccess}:`, playlistMultiplier);
     
     // Calculate base streams using proper formula
     const baseStreams = 
@@ -259,11 +266,28 @@ export class GameEngine {
       (reputation * config.reputation_weight) +
       (Math.sqrt(adSpend / 1000) * config.marketing_weight * 50);
     
+    console.log(`[DEBUG] Stream calculation components:`, {
+      quality: quality,
+      qualityComponent: quality * config.quality_weight,
+      playlistComponent: playlistMultiplier * config.playlist_weight * 100,
+      reputationComponent: reputation * config.reputation_weight,
+      marketingComponent: Math.sqrt(adSpend / 1000) * config.marketing_weight * 50,
+      baseStreams: baseStreams
+    });
+    
     // Apply RNG variance from balance config
     const variance = this.getRandom(0.9, 1.1);
     
     // Apply first week multiplier
     const streams = baseStreams * variance * config.first_week_multiplier * config.base_streams_per_point;
+    
+    console.log(`[DEBUG] Final stream calculation:`, {
+      baseStreams,
+      variance,
+      firstWeekMultiplier: config.first_week_multiplier,
+      baseStreamsPerPoint: config.base_streams_per_point,
+      finalStreams: Math.round(streams)
+    });
     
     return Math.round(streams);
   }
