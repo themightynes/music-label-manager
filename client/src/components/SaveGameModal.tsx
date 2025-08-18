@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useGameStore } from '@/store/gameStore';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useGameContext } from '@/contexts/GameContext';
 
 interface SaveGameModalProps {
   open: boolean;
@@ -11,13 +12,19 @@ interface SaveGameModalProps {
 }
 
 export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
-  const { gameState, saveGame, loadGame } = useGameStore();
+  const { gameState, saveGame, loadGameFromSave } = useGameStore();
+  const { setGameId } = useGameContext();
   const [newSaveName, setNewSaveName] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { data: saves = [] } = useQuery({
-    queryKey: ['/api/saves'],
+  const { data: saves = [], refetch: refetchSaves } = useQuery({
+    queryKey: ['api', 'saves'],
+    queryFn: async () => {
+      const response = await fetch('/api/saves', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch saves');
+      return response.json();
+    },
     enabled: open
   });
 
@@ -28,9 +35,19 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     try {
       await saveGame(newSaveName);
       setNewSaveName('');
-      onOpenChange(false);
+      refetchSaves(); // Refresh saves list
+      // Show success feedback
+      alert('Game saved successfully!');
     } catch (error) {
       console.error('Failed to save game:', error);
+      // Try to show more specific error message
+      let errorMessage = 'Failed to save game. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = `Save failed: ${error.message}`;
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        errorMessage = `Save failed: ${(error as any).message}`;
+      }
+      alert(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -39,10 +56,24 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   const handleLoad = async (saveId: string) => {
     setLoading(true);
     try {
-      await loadGame(saveId);
+      await loadGameFromSave(saveId);
+      
+      // Update the game context with the loaded game's ID
+      // We need to get the game ID from the loaded state
+      const { gameState: loadedState } = useGameStore.getState();
+      if (loadedState?.id) {
+        setGameId(loadedState.id);
+      }
+      
       onOpenChange(false);
+      alert('Game loaded successfully!');
     } catch (error) {
       console.error('Failed to load game:', error);
+      let errorMessage = 'Failed to load game. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = `Load failed: ${error.message}`;
+      }
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

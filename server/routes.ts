@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import passport from 'passport';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -351,12 +351,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/saves", getUserId, async (req, res) => {
     try {
       const validatedData = insertGameSaveSchema.parse(req.body);
-      const save = await storage.createGameSave(validatedData);
+      // Add userId from middleware
+      const saveDataWithUserId = {
+        ...validatedData,
+        userId: req.userId!
+      };
+      const save = await storage.createGameSave(saveDataWithUserId);
       res.json(save);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid save data", errors: error.errors });
       } else {
+        console.error('Save creation error:', error);
         res.status(500).json({ message: "Failed to create save" });
       }
     }
@@ -590,6 +596,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
               createdAt: new Date()
             }))
           );
+        }
+
+        // Advance projects progress
+        const currentProjects = await tx
+          .select()
+          .from(projects)
+          .where(eq(projects.gameId, gameId));
+
+        for (const project of currentProjects) {
+          const currentMonth = monthResult.gameState.currentMonth || 1;
+          const stages = ['planning', 'production', 'marketing', 'released'];
+          const currentStageIndex = stages.indexOf(project.stage || 'planning');
+          
+          // Advance project stage if not yet completed and due date passed
+          if (currentStageIndex < stages.length - 1 && 
+              currentMonth >= (project.startMonth || 1) + 1) {
+            
+            let newStageIndex = currentStageIndex;
+            
+            // Advance stage based on months elapsed
+            const monthsElapsed = currentMonth - (project.startMonth || 1);
+            if (monthsElapsed >= 1 && currentStageIndex === 0) { // planning -> production
+              newStageIndex = 1;
+            } else if (monthsElapsed >= 2 && currentStageIndex === 1) { // production -> marketing
+              newStageIndex = 2;
+            } else if (monthsElapsed >= 3 && currentStageIndex === 2) { // marketing -> released
+              newStageIndex = 3;
+            }
+            
+            if (newStageIndex > currentStageIndex) {
+              await tx
+                .update(projects)
+                .set({ 
+                  stage: stages[newStageIndex],
+                  quality: Math.min(100, (project.quality || 0) + 25) // Increase quality each stage
+                })
+                .where(eq(projects.id, project.id));
+            }
+          }
         }
         
         return {

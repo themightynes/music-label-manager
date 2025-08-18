@@ -16,7 +16,11 @@
       "Bash(bash:*)",
       "Bash(npm run:*)",
       "Bash(npm start)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(npx tsc:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

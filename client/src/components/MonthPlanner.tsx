@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGameStore } from '@/store/gameStore';
 import { MONTHLY_ACTIONS } from '@/lib/gameData';
+import { useState } from 'react';
 
 interface MonthPlannerProps {
   onAdvanceMonth: () => Promise<void>;
@@ -10,6 +11,7 @@ interface MonthPlannerProps {
 
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
   const { gameState, selectedActions, selectAction, removeAction, openDialogue } = useGameStore();
+  const [showActionSelection, setShowActionSelection] = useState(false);
 
   if (!gameState) return null;
 
@@ -20,9 +22,36 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
     if (!action) return;
 
     if (action.type === 'role_meeting') {
-      // Extract role type from action ID (e.g., 'meet_manager' -> 'Manager')
-      const roleType = action.id.replace('meet_', '').replace(/^./, str => str.toUpperCase());
-      await openDialogue(roleType, 'monthly_check_in');
+      // Map action IDs to actual role IDs in roles.json
+      const roleMapping: Record<string, string> = {
+        'meet_manager': 'manager',
+        'meet_ar': 'anr',              // Fix: ar -> anr
+        'meet_producer': 'producer',
+        'meet_pr': 'pr',
+        'meet_digital': 'digital',
+        'meet_streaming': 'streaming',
+        'meet_booking': 'booking',
+        'meet_operations': 'ops'       // Fix: operations -> ops
+      };
+      
+      // Map roles to their first available meeting
+      const defaultMeetings: Record<string, string> = {
+        'manager': 'mgr_priorities',
+        'anr': 'anr_single_choice',
+        'producer': 'prod_timeline', 
+        'pr': 'pr_angle',
+        'digital': 'ads_split',
+        'streaming': 'pitch_strategy',
+        'booking': 'tour_scale',
+        'ops': 'release_ops'
+      };
+      
+      const roleId = roleMapping[action.id] || 'manager';
+      const meetingId = defaultMeetings[roleId] || 'mgr_priorities';
+      
+      // CRITICAL FIX: Add action to slot AND open dialogue
+      selectAction(actionId);
+      await openDialogue(roleId, meetingId);
     } else {
       selectAction(actionId);
     }
@@ -69,6 +98,7 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
           size="sm"
           className="text-primary hover:text-indigo-700"
           disabled={availableActions.length === 0}
+          onClick={() => setShowActionSelection(true)}
         >
           <i className="fas fa-plus"></i>
         </Button>
@@ -103,16 +133,29 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
         </div>
 
         {/* Available Actions */}
-        {availableActions.length > 0 && (
+        {(availableActions.length > 0 && showActionSelection) && (
           <div className="border-t border-slate-200 pt-4">
-            <h4 className="text-sm font-medium text-slate-700 mb-3">Available Actions</h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-slate-700">Available Actions</h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowActionSelection(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <i className="fas fa-times"></i>
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {availableActions.map(action => (
                 <Button
                   key={action.id}
                   variant="outline"
                   className="text-left p-3 justify-start hover:bg-slate-50"
-                  onClick={() => handleActionClick(action.id)}
+                  onClick={() => {
+                    handleActionClick(action.id);
+                    setShowActionSelection(false);
+                  }}
                   disabled={selectedActions.length >= 3}
                 >
                   <div className="flex items-center space-x-2">

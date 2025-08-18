@@ -1,0 +1,713 @@
+# Backend Architecture
+
+**Music Label Manager - Node.js Server Design**  
+*Version: 1.0 (MVP Complete)*
+
+---
+
+## 🚀 Backend Overview
+
+The Music Label Manager backend is a **Node.js** application built with **Express.js**, **TypeScript**, and **PostgreSQL**. The architecture emphasizes type safety, transaction integrity, and separation of concerns.
+
+**Technology Stack**:
+- **Node.js 18+** with TypeScript
+- **Express.js** web framework
+- **PostgreSQL** with Drizzle ORM
+- **Passport.js** for authentication
+- **Zod** for validation
+- **Shared types** between client and server
+
+---
+
+## 📁 Server Structure
+
+```
+server/
+├── index.ts              # Server entry point and configuration
+├── routes.ts             # All API endpoints and route handlers
+├── auth.ts               # Authentication system (Passport.js)
+├── db.ts                 # Database connection and configuration
+├── storage.ts            # Data access layer abstraction
+├── vite.ts               # Vite integration for development
+└── data/
+    └── gameData.ts       # Game content server interface
+
+shared/
+├── engine/
+│   └── game-engine.ts    # Unified game logic engine
+├── api/
+│   ├── client.ts         # API client for frontend
+│   └── contracts.ts      # API request/response types
+├── schema.ts             # Database schema and Zod validation
+├── types/
+│   └── gameTypes.ts      # Shared TypeScript types
+└── utils/
+    └── dataLoader.ts     # Content loading utilities
+```
+
+---
+
+## 🔧 Core Architecture Patterns
+
+### **1. Unified Game Engine Pattern**
+All game logic is centralized in a single `GameEngine` class:
+
+```typescript
+// shared/engine/game-engine.ts
+export class GameEngine {
+  private rng: seedrandom.PRNG;
+  private gameData: ServerGameData;
+  
+  constructor(
+    private gameState: GameState,
+    gameData: ServerGameData,
+    seed?: string
+  ) {
+    this.gameData = gameData;
+    this.rng = seedrandom(seed || `${gameState.id}-${gameState.currentMonth}`);
+  }
+
+  async advanceMonth(monthlyActions: GameEngineAction[]): Promise<{
+    gameState: GameState;
+    summary: MonthSummary;
+    campaignResults?: CampaignResults;
+  }> {
+    // Process all actions, calculate outcomes, update state
+    // Single source of truth for all game calculations
+  }
+}
+```
+
+**Benefits**:
+- Deterministic gameplay through seeded RNG
+- Consistent calculations between environments
+- Easy testing and balance modifications
+- Clear separation from API layer
+
+### **2. Transaction-Safe Database Operations**
+All game state changes use database transactions:
+
+```typescript
+// server/routes.ts - Month advancement endpoint
+app.post("/api/advance-month", getUserId, async (req, res) => {
+  try {
+    const result = await db.transaction(async (tx) => {
+      // 1. Get current game state
+      const [gameState] = await tx
+        .select()
+        .from(gameStates)
+        .where(eq(gameStates.id, gameId));
+      
+      // 2. Process actions through GameEngine
+      const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+      const monthResult = await gameEngine.advanceMonth(formattedActions);
+      
+      // 3. Update database atomically
+      const [updatedGameState] = await tx
+        .update(gameStates)
+        .set({
+          currentMonth: monthResult.gameState.currentMonth,
+          money: monthResult.gameState.money,
+          reputation: monthResult.gameState.reputation,
+          // ... all game state updates
+        })
+        .where(eq(gameStates.id, gameId))
+        .returning();
+      
+      // 4. Save action history
+      await tx.insert(monthlyActions).values(actionRecords);
+      
+      // 5. Update related entities
+      await updateProjectProgression(tx, gameId, monthResult);
+      
+      return { gameState: updatedGameState, summary: monthResult.summary };
+    });
+    
+    res.json(result);
+  } catch (error) {
+    // Transaction automatically rolls back on error
+    res.status(500).json({ message: 'Failed to advance month' });
+  }
+});
+```
+
+**Benefits**:
+- Atomic operations prevent partial updates
+- Consistent data state even on errors
+- Safe concurrent access
+- Professional-grade data integrity
+
+### **3. Type-Safe API Contracts**
+Shared types ensure consistency between client and server:
+
+```typescript
+// shared/api/contracts.ts
+export const AdvanceMonthRequest = z.object({
+  gameId: z.string().uuid(),
+  selectedActions: z.array(z.object({
+    actionType: z.enum(['role_meeting', 'start_project', 'marketing']),
+    targetId: z.string(),
+    metadata: z.record(z.any()).default({})
+  }))
+});
+
+export const AdvanceMonthResponse = z.object({
+  gameState: GameStateSchema,
+  summary: MonthSummarySchema,
+  campaignResults: CampaignResultsSchema.optional()
+});
+
+export type AdvanceMonthRequest = z.infer<typeof AdvanceMonthRequest>;
+export type AdvanceMonthResponse = z.infer<typeof AdvanceMonthResponse>;
+
+// Usage in route handler
+const request = validateRequest(AdvanceMonthRequest, req.body);
+const response: AdvanceMonthResponse = await processAdvanceMonth(request);
+res.json(response);
+```
+
+**Benefits**:
+- Compile-time type checking
+- Runtime validation with descriptive errors
+- Self-documenting API contracts
+- Reduced integration bugs
+
+### **4. Content Management System**
+Game content separated from code for easy modification:
+
+```typescript
+// server/data/gameData.ts
+export class ServerGameData {
+  private balanceConfig: any = null;
+  private rolesData: any = null;
+  private artistsData: any = null;
+
+  async initialize() {
+    // Load all JSON content files
+    this.balanceConfig = await this.loadJSON('balance.json');
+    this.rolesData = await this.loadJSON('roles.json');
+    this.artistsData = await this.loadJSON('artists.json');
+  }
+
+  async getRoleById(roleId: string): Promise<Role | null> {
+    if (!this.rolesData) await this.initialize();
+    return this.rolesData.roles.find((role: any) => role.id === roleId);
+  }
+
+  async getBalanceConfig(): Promise<any> {
+    if (!this.balanceConfig) await this.initialize();
+    return this.balanceConfig;
+  }
+
+  // Content access methods for GameEngine
+  getStreamingConfigSync(): any { return this.balanceConfig.streaming; }
+  getPressConfigSync(): any { return this.balanceConfig.press; }
+  getAccessTiersSync(): any { return this.balanceConfig.access_tiers; }
+}
+```
+
+**Benefits**:
+- Non-developers can modify game content
+- Version control for game balance
+- A/B testing capability
+- Separation of data from logic
+
+---
+
+## 🛣️ API Design
+
+### **RESTful Endpoint Structure**
+```typescript
+// Core game operations
+GET    /api/game/:id              // Get complete game state with related data
+POST   /api/game                  // Create new game session
+PATCH  /api/game/:id              // Update specific game state fields
+POST   /api/advance-month         // Process monthly turn (primary game loop)
+
+// Entity management
+POST   /api/game/:gameId/artists  // Sign new artist with economic validation
+POST   /api/game/:gameId/projects // Create new project with budget validation
+POST   /api/game/:gameId/actions  // Record player action for analytics
+
+// Content system
+GET    /api/roles/:roleId                    // Get role data for dialogue system
+GET    /api/roles/:roleId/meetings/:meetingId // Get specific meeting content
+GET    /api/dialogue/:roleType              // Legacy dialogue endpoint
+GET    /api/artists/:archetype/dialogue     // Artist-specific conversations
+
+// Save system
+GET    /api/saves                 // List user's save games
+POST   /api/saves                 // Create new save with complete game state
+
+// Authentication
+POST   /api/auth/register         // User registration
+POST   /api/auth/login            // User login with session creation
+POST   /api/auth/logout           // Session termination
+GET    /api/auth/me               // Get current user information
+
+// Development/debugging
+GET    /api/test-data             // Verify game content loading
+GET    /api/validate-types        // Validate data structure integrity
+```
+
+### **Authentication & Authorization**
+Session-based authentication with Passport.js:
+
+```typescript
+// server/auth.ts
+export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: 'Authentication required' });
+};
+
+export const getUserId = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user) {
+    req.userId = (req.user as any).id;
+    return next();
+  }
+  res.status(401).json({ message: 'User not authenticated' });
+};
+
+// Usage in routes
+app.get('/api/game/:id', getUserId, async (req, res) => {
+  // req.userId automatically available
+  const gameState = await storage.getGameState(req.params.id);
+  
+  // Verify user owns this game state
+  if (gameState.userId !== req.userId) {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+  
+  res.json(gameState);
+});
+```
+
+### **Input Validation Pattern**
+All endpoints use Zod validation:
+
+```typescript
+// Validation helper
+export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): T {
+  try {
+    return schema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`);
+    }
+    throw error;
+  }
+}
+
+// Route handler example
+app.post('/api/game/:gameId/artists', getUserId, async (req, res) => {
+  try {
+    // Validate input against schema
+    const validatedData = insertArtistSchema.parse({
+      ...req.body,
+      gameId: req.params.gameId
+    });
+    
+    // Process request with validated data
+    const artist = await storage.createArtist(validatedData);
+    res.json(artist);
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ 
+        message: 'Invalid artist data', 
+        errors: error.errors 
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to create artist' });
+    }
+  }
+});
+```
+
+---
+
+## 💾 Data Access Layer
+
+### **Storage Abstraction**
+The storage layer provides clean abstraction over database operations:
+
+```typescript
+// server/storage.ts
+export class Storage {
+  constructor(private db: Database) {}
+
+  async getGameState(gameId: string): Promise<GameState | null> {
+    const [gameState] = await this.db
+      .select()
+      .from(gameStates)
+      .where(eq(gameStates.id, gameId));
+    
+    return gameState || null;
+  }
+
+  async createGameState(data: Omit<GameState, 'id'>): Promise<GameState> {
+    const [gameState] = await this.db
+      .insert(gameStates)
+      .values({
+        id: crypto.randomUUID(),
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    
+    return gameState;
+  }
+
+  async updateGameState(gameId: string, updates: Partial<GameState>): Promise<GameState> {
+    const [gameState] = await this.db
+      .update(gameStates)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(gameStates.id, gameId))
+      .returning();
+    
+    return gameState;
+  }
+
+  // Related data fetching for complete game state
+  async getGameStateWithRelated(gameId: string): Promise<{
+    gameState: GameState;
+    artists: Artist[];
+    projects: Project[];
+    roles: Role[];
+    monthlyActions: MonthlyAction[];
+  }> {
+    const [gameState, artists, projects, roles, monthlyActions] = await Promise.all([
+      this.getGameState(gameId),
+      this.getArtistsByGame(gameId),
+      this.getProjectsByGame(gameId),
+      this.getRolesByGame(gameId),
+      this.getMonthlyActions(gameId, currentMonth)
+    ]);
+    
+    return { gameState, artists, projects, roles, monthlyActions };
+  }
+}
+```
+
+### **Database Connection Management**
+Efficient connection handling with Drizzle ORM:
+
+```typescript
+// server/db.ts
+import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
+import * as schema from '@shared/schema';
+
+const client = neon(process.env.DATABASE_URL!);
+export const db = drizzle(client, { schema });
+
+// Connection pooling configured automatically by Neon
+// Supports concurrent connections for multiple users
+```
+
+### **Error Handling Strategy**
+Comprehensive error handling with proper HTTP status codes:
+
+```typescript
+// Error response helper
+export function createErrorResponse(
+  errorCode: string,
+  message: string,
+  details?: any
+) {
+  return {
+    error: {
+      code: errorCode,
+      message,
+      details,
+      timestamp: new Date().toISOString()
+    }
+  };
+}
+
+// Usage in route handlers
+app.post('/api/advance-month', getUserId, async (req, res) => {
+  try {
+    const request = validateRequest(AdvanceMonthRequest, req.body);
+    const result = await processAdvanceMonth(request);
+    res.json(result);
+    
+  } catch (error) {
+    console.error('Advance month error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json(createErrorResponse(
+        'VALIDATION_ERROR',
+        'Invalid request data',
+        error.errors
+      ));
+    }
+    
+    if (error.message.includes('Game not found')) {
+      return res.status(404).json(createErrorResponse(
+        'GAME_NOT_FOUND',
+        'Game session not found'
+      ));
+    }
+    
+    res.status(500).json(createErrorResponse(
+      'ADVANCE_MONTH_ERROR',
+      'Failed to advance month'
+    ));
+  }
+});
+```
+
+---
+
+## 🔐 Security Implementation
+
+### **Authentication System**
+```typescript
+// server/auth.ts
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import bcrypt from 'bcryptjs';
+
+// Configure Passport Local Strategy
+passport.use(new LocalStrategy(
+  { usernameField: 'username' },
+  async (username: string, password: string, done) => {
+    try {
+      const user = await findUserByUsername(username);
+      if (!user) {
+        return done(null, false, { message: 'Invalid username or password' });
+      }
+      
+      const isValid = await bcrypt.compare(password, user.passwordHash);
+      if (!isValid) {
+        return done(null, false, { message: 'Invalid username or password' });
+      }
+      
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  }
+));
+
+// Session serialization
+passport.serializeUser((user: any, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id: string, done) => {
+  try {
+    const user = await findUserById(id);
+    done(null, user);
+  } catch (error) {
+    done(error);
+  }
+});
+```
+
+### **Data Protection**
+```typescript
+// SQL injection protection through Drizzle ORM
+await db
+  .select()
+  .from(gameStates)
+  .where(eq(gameStates.id, gameId)); // Parameterized query
+
+// Input sanitization through Zod schemas
+const sanitizedData = GameStateSchema.parse(userInput);
+
+// Access control
+if (gameState.userId !== req.userId) {
+  return res.status(403).json({ message: 'Access denied' });
+}
+```
+
+### **Environment Configuration**
+```typescript
+// Environment variables for security
+const config = {
+  DATABASE_URL: process.env.DATABASE_URL,
+  SESSION_SECRET: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: parseInt(process.env.PORT || '5000')
+};
+
+// HTTPS enforcement in production
+if (config.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect(`https://${req.header('host')}${req.url}`);
+    } else {
+      next();
+    }
+  });
+}
+```
+
+---
+
+## 📊 Performance Optimizations
+
+### **Database Query Optimization**
+```typescript
+// Batch related data fetching
+async getGameStateWithRelated(gameId: string) {
+  // Use Promise.all for parallel queries
+  const [gameState, artists, projects] = await Promise.all([
+    this.getGameState(gameId),
+    this.getArtistsByGame(gameId),
+    this.getProjectsByGame(gameId)
+  ]);
+  
+  return { gameState, artists, projects };
+}
+
+// Indexed queries for performance
+// Database indexes created on:
+// - game_states.user_id
+// - artists.game_id
+// - projects.game_id
+// - monthly_actions.game_id
+```
+
+### **Caching Strategy**
+```typescript
+// Content caching (game data files)
+class ServerGameData {
+  private static instance: ServerGameData;
+  private balanceConfig: any = null;
+  
+  // Singleton pattern for content caching
+  static getInstance(): ServerGameData {
+    if (!ServerGameData.instance) {
+      ServerGameData.instance = new ServerGameData();
+    }
+    return ServerGameData.instance;
+  }
+  
+  // Lazy loading with memory cache
+  async getBalanceConfig(): Promise<any> {
+    if (!this.balanceConfig) {
+      this.balanceConfig = await this.loadJSON('balance.json');
+    }
+    return this.balanceConfig;
+  }
+}
+```
+
+### **Request/Response Optimization**
+```typescript
+// Response compression
+import compression from 'compression';
+app.use(compression());
+
+// Request size limits
+app.use(express.json({ limit: '1mb' }));
+
+// Response caching headers for static content
+app.use('/api/data', (req, res, next) => {
+  res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+  next();
+});
+```
+
+---
+
+## 🧪 Testing Strategy
+
+### **Unit Testing**
+```typescript
+// Example: GameEngine test
+describe('GameEngine', () => {
+  let gameEngine: GameEngine;
+  let mockGameData: ServerGameData;
+  
+  beforeEach(() => {
+    const gameState = createTestGameState();
+    mockGameData = createMockGameData();
+    gameEngine = new GameEngine(gameState, mockGameData, 'test-seed');
+  });
+  
+  it('should calculate monthly burn correctly', async () => {
+    const actions = [{ actionType: 'role_meeting', targetId: 'manager' }];
+    const result = await gameEngine.advanceMonth(actions);
+    
+    expect(result.summary.expenses).toBeGreaterThan(3000);
+    expect(result.summary.expenses).toBeLessThan(6000);
+  });
+  
+  it('should complete campaign at month 12', async () => {
+    gameEngine.gameState.currentMonth = 11;
+    const result = await gameEngine.advanceMonth([]);
+    
+    expect(result.campaignResults).toBeDefined();
+    expect(result.campaignResults.campaignCompleted).toBe(true);
+  });
+});
+```
+
+### **Integration Testing**
+```typescript
+// Example: API endpoint test
+describe('POST /api/advance-month', () => {
+  it('should advance month and return updated game state', async () => {
+    const response = await request(app)
+      .post('/api/advance-month')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        gameId: testGameId,
+        selectedActions: [
+          { actionType: 'role_meeting', targetId: 'manager', metadata: {} }
+        ]
+      });
+    
+    expect(response.status).toBe(200);
+    expect(response.body.gameState.currentMonth).toBe(2);
+    expect(response.body.summary).toBeDefined();
+  });
+});
+```
+
+---
+
+## 🚀 Deployment Considerations
+
+### **Production Configuration**
+```typescript
+// Production environment setup
+const productionConfig = {
+  // Database connection pooling
+  DATABASE_URL: process.env.DATABASE_URL,
+  DATABASE_POOL_SIZE: parseInt(process.env.DATABASE_POOL_SIZE || '10'),
+  
+  // Session configuration
+  SESSION_SECRET: process.env.SESSION_SECRET, // Required in production
+  SESSION_STORE: 'redis', // For multi-instance deployment
+  
+  // Security headers
+  CORS_ORIGIN: process.env.CORS_ORIGIN,
+  RATE_LIMIT_REQUESTS: parseInt(process.env.RATE_LIMIT_REQUESTS || '100'),
+  
+  // Monitoring
+  LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+  ENABLE_METRICS: process.env.ENABLE_METRICS === 'true'
+};
+```
+
+### **Scaling Considerations**
+- **Horizontal scaling**: Stateless server design allows multiple instances
+- **Database scaling**: Read replicas for analytics, connection pooling
+- **Content delivery**: CDN for static JSON files
+- **Session storage**: Redis for distributed session management
+- **Load balancing**: Nginx or cloud load balancer for traffic distribution
+
+---
+
+This backend architecture provides a robust, scalable foundation that handles the current MVP requirements and is designed to grow with the application's needs.

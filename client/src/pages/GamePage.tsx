@@ -16,12 +16,13 @@ export default function GamePage() {
   const queryClient = useQueryClient();
   const { setGameId } = useGameContext();
   
-  // Check for campaign results from advance month mutation
+  // Check for campaign results from Zustand store
+  const { campaignResults } = useGameStore();
   useEffect(() => {
-    if (advanceMonth.data?.campaignResults?.campaignCompleted) {
+    if (campaignResults?.campaignCompleted) {
       setShowCampaignResults(true);
     }
-  }, [advanceMonth.data]);
+  }, [campaignResults]);
   
   if (isLoading) {
     return (
@@ -62,9 +63,9 @@ export default function GamePage() {
         <Dashboard />
         
         {/* Campaign Results Modal */}
-        {showCampaignResults && advanceMonth.data?.campaignResults && (
+        {showCampaignResults && campaignResults && (
           <CampaignResultsModal
-            campaignResults={advanceMonth.data.campaignResults}
+            campaignResults={campaignResults}
             onClose={() => setShowCampaignResults(false)}
             onNewGame={handleNewGame}
           />

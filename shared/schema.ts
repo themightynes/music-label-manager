@@ -153,6 +153,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export const insertGameSaveSchema = createInsertSchema(gameSaves).omit({
   id: true,
+  userId: true, // Will be set by middleware
   createdAt: true,
   updatedAt: true,
 });

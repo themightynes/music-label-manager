@@ -21,6 +21,7 @@ interface GameStore {
   
   // Actions
   loadGame: (gameId: string) => Promise<void>;
+  loadGameFromSave: (saveId: string) => Promise<void>;
   createNewGame: (campaignType: string) => Promise<GameState>;
   updateGameState: (updates: Partial<GameState>) => Promise<void>;
   
@@ -77,6 +78,45 @@ export const useGameStore = create<GameStore>()(
           });
         } catch (error) {
           console.error('Failed to load game:', error);
+          throw error;
+        }
+      },
+
+      // Load game from save
+      loadGameFromSave: async (saveId: string) => {
+        try {
+          // First, get the specific save data
+          const response = await apiRequest('GET', `/api/saves`);
+          const saves = await response.json();
+          
+          // Find the save by ID
+          const save = saves.find((s: any) => s.id === saveId);
+          if (!save) {
+            throw new Error('Save not found');
+          }
+          
+          // Extract the game state from the save
+          const savedGameData = save.gameState;
+          
+          if (!savedGameData || !savedGameData.gameState) {
+            throw new Error('Invalid save data format');
+          }
+          
+          set({
+            gameState: savedGameData.gameState,
+            artists: savedGameData.artists || [],
+            projects: savedGameData.projects || [],
+            roles: savedGameData.roles || [],
+            monthlyActions: [], // Reset monthly actions
+            selectedActions: [],
+            campaignResults: null,
+            monthlyOutcome: null
+          });
+          
+          // Update the game context with the loaded game's ID
+          // Note: This might need to be done from the component using GameContext
+        } catch (error) {
+          console.error('Failed to load game from save:', error);
           throw error;
         }
       },
@@ -175,8 +215,13 @@ export const useGameStore = create<GameStore>()(
           const response = await apiRequest('POST', '/api/advance-month', advanceRequest);
           const result = await response.json();
           
+          // Reload game data to get updated projects
+          const gameResponse = await apiRequest('GET', `/api/game/${gameState.id}`);
+          const gameData = await gameResponse.json();
+          
           set({
             gameState: result.gameState,
+            projects: gameData.projects || [], // Update projects with current state
             monthlyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],
@@ -270,17 +315,14 @@ export const useGameStore = create<GameStore>()(
       },
 
       // Dialogue system
-      openDialogue: async (roleType: string, sceneId?: string) => {
+      openDialogue: async (roleId: string, meetingId?: string) => {
         try {
-          const url = sceneId ? `/api/dialogue/${roleType}?sceneId=${sceneId}` : `/api/dialogue/${roleType}`;
-          const response = await apiRequest('GET', url);
-          const choices = await response.json();
-          
+          // Set the dialogue state for the DialogueModal to pick up
           set({
             currentDialogue: {
-              roleType,
-              sceneId,
-              choices
+              roleType: roleId,  // DialogueModal expects this field name
+              sceneId: meetingId || 'monthly_check_in',
+              choices: []  // Will be loaded by DialogueModal
             }
           });
         } catch (error) {
@@ -314,9 +356,13 @@ export const useGameStore = create<GameStore>()(
           await apiRequest('POST', `/api/game/${gameState.id}/actions`, {
             month: gameState.currentMonth,
             actionType: 'dialogue',
-            targetId: currentDialogue.roleType,
-            choiceId,
-            results: effects
+            // targetId and choiceId are optional UUIDs, but we have string IDs
+            // Store the dialogue details in results instead
+            results: {
+              ...effects,
+              roleType: currentDialogue.roleType,
+              choiceId: choiceId
+            }
           });
 
           set({ currentDialogue: null });

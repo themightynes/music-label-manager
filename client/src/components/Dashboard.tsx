@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
 export function Dashboard() {
-  const { gameState, isAdvancingMonth, advanceMonth } = useGameStore();
+  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue } = useGameStore();
   const [showSaveModal, setShowSaveModal] = useState(false);
 
   if (!gameState) {
@@ -92,7 +92,17 @@ export function Dashboard() {
       </main>
 
       {/* Modals */}
-      {/* DialogueModal now requires props - will be rendered conditionally */}
+      {currentDialogue && (
+        <DialogueModal
+          roleId={currentDialogue.roleType}
+          meetingId={currentDialogue.sceneId || 'monthly_check_in'}
+          gameId={gameState.id}
+          onClose={closeDialogue}
+          onChoiceSelect={async (choiceId: string, effects: any) => {
+            await selectDialogueChoice(choiceId, effects);
+          }}
+        />
+      )}
       <SaveGameModal open={showSaveModal} onOpenChange={setShowSaveModal} />
       <ToastNotification />
     </div>
