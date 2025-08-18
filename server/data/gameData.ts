@@ -392,6 +392,11 @@ export class ServerGameData {
     };
   }
 
+  // Alias for GameEngine compatibility
+  getPressCoverageConfigSync() {
+    return this.getPressConfigSync();
+  }
+
   getTourConfigSync() {
     if (!this.balanceData) {
       return {

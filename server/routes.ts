@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import passport from 'passport';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -234,17 +234,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Artist routes
   app.post("/api/game/:gameId/artists", getUserId, async (req, res) => {
     try {
+      const gameId = req.params.gameId;
+      const signingCost = req.body.signingCost || 0;
+      
+      // Get current game state to check money
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // Check if player has enough money
+      if ((gameState.money || 0) < signingCost) {
+        return res.status(400).json({ message: "Insufficient funds to sign artist" });
+      }
+      
+      // Prepare artist data
       const validatedData = insertArtistSchema.parse({
         ...req.body,
-        gameId: req.params.gameId
+        gameId: gameId
       });
+      
+      // Create artist and deduct money in a transaction-like operation
       const artist = await storage.createArtist(validatedData);
+      
+      // Update game state to deduct signing cost and track artist count
+      if (signingCost > 0) {
+        await storage.updateGameState(gameId, {
+          money: Math.max(0, (gameState.money || 0) - signingCost)
+        });
+      }
+      
+      // Update artist count flag for GameEngine monthly costs
+      const currentArtists = await storage.getArtistsByGame(gameId);
+      const flags = gameState.flags || {};
+      (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
+      await storage.updateGameState(gameId, { flags });
+      
       res.json(artist);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid artist data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to create artist" });
+        console.error('Artist signing error:', error);
+        res.status(500).json({ message: "Failed to sign artist" });
       }
     }
   });
@@ -319,12 +351,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/saves", getUserId, async (req, res) => {
     try {
       const validatedData = insertGameSaveSchema.parse(req.body);
-      const save = await storage.createGameSave(validatedData);
+      // Add userId from middleware
+      const saveDataWithUserId = {
+        ...validatedData,
+        userId: req.userId!
+      };
+      const save = await storage.createGameSave(saveDataWithUserId);
       res.json(save);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid save data", errors: error.errors });
       } else {
+        console.error('Save creation error:', error);
         res.status(500).json({ message: "Failed to create save" });
       }
     }
@@ -510,6 +548,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
 
+        // Initialize game data to load balance configuration
+        await serverGameData.initialize();
+        
         // Create GameEngine instance for this game state
         const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
         
@@ -558,6 +599,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
               createdAt: new Date()
             }))
           );
+        }
+
+        // Advance projects progress
+        const currentProjects = await tx
+          .select()
+          .from(projects)
+          .where(eq(projects.gameId, gameId));
+
+        for (const project of currentProjects) {
+          const currentMonth = monthResult.gameState.currentMonth || 1;
+          const stages = ['planning', 'production', 'marketing', 'released'];
+          const currentStageIndex = stages.indexOf(project.stage || 'planning');
+          
+          // Advance project stage if not yet completed and due date passed
+          if (currentStageIndex < stages.length - 1 && 
+              currentMonth >= (project.startMonth || 1) + 1) {
+            
+            let newStageIndex = currentStageIndex;
+            
+            // Advance stage based on months elapsed
+            const monthsElapsed = currentMonth - (project.startMonth || 1);
+            if (monthsElapsed >= 1 && currentStageIndex === 0) { // planning -> production
+              newStageIndex = 1;
+            } else if (monthsElapsed >= 2 && currentStageIndex === 1) { // production -> marketing
+              newStageIndex = 2;
+            } else if (monthsElapsed >= 3 && currentStageIndex === 2) { // marketing -> released
+              newStageIndex = 3;
+            }
+            
+            if (newStageIndex > currentStageIndex) {
+              // If project is reaching "released" stage, calculate completion outcomes first
+              if (stages[newStageIndex] === 'released') {
+                const projectForEngine = {
+                  id: project.id,
+                  name: project.title,
+                  type: project.type,
+                  quality: Math.min(100, (project.quality || 0) + 25),
+                  marketingSpend: 0, // TODO: Track marketing spend
+                  artistPopularity: 50, // TODO: Get from artist data
+                  cities: 3 // Default for mini-tours
+                };
+                
+                const outcomes = await gameEngine.calculateProjectOutcomes(projectForEngine, monthResult.summary);
+                
+                // Create revenue metadata to store with project
+                const currentMetadata = project.metadata as any || {};
+                const updatedMetadata = {
+                  ...currentMetadata,
+                  revenue: Math.round(outcomes.revenue),
+                  streams: outcomes.streams || 0,
+                  pressPickups: outcomes.pressPickups || 0,
+                  releaseMonth: monthResult.gameState.currentMonth,
+                  roi: (project.budget || 0) > 0 ? Math.round(((outcomes.revenue - (project.budget || 0)) / (project.budget || 0)) * 100) : 0
+                };
+                
+                // Update project with new stage, quality, and revenue metadata
+                await tx
+                  .update(projects)
+                  .set({ 
+                    stage: stages[newStageIndex],
+                    quality: Math.min(100, (project.quality || 0) + 25),
+                    metadata: updatedMetadata
+                  })
+                  .where(eq(projects.id, project.id));
+                
+                // Add project completion to summary
+                monthResult.summary.changes.push({
+                  type: 'project_complete',
+                  description: `🎉 Released ${project.type}: ${project.title} - ${outcomes.description}`,
+                  amount: outcomes.revenue,
+                  projectId: project.id
+                });
+                
+                // Update game state money with revenue
+                monthResult.gameState.money = (monthResult.gameState.money || 0) + outcomes.revenue;
+              } else {
+                // Regular stage progression without revenue calculation
+                await tx
+                  .update(projects)
+                  .set({ 
+                    stage: stages[newStageIndex],
+                    quality: Math.min(100, (project.quality || 0) + 25) // Increase quality each stage
+                  })
+                  .where(eq(projects.id, project.id));
+              }
+            }
+          }
         }
         
         return {

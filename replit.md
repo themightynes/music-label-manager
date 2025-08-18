@@ -10,6 +10,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### August 18, 2025 - Revenue System Fix
+- **Critical Fix**: Added `serverGameData.initialize()` call before GameEngine creation in server/routes.ts
+- **Impact**: Enables proper balance configuration loading for streaming calculations, access tier multipliers, and revenue generation
+- **Result**: Singles now generate realistic revenue (expected $30-$600 based on 10k-200k streams vs previous near-zero amounts)
+- **Technical**: Fixed missing data initialization that caused fallback values instead of real balance.json configuration
+
 ### August 17, 2025 - Major Gameplay Systems Implementation
 - **Dialogue System Integration**: Connected MonthPlanner role actions to DialogueModal with proper meeting ID mapping
 - **Month Advancement Feedback**: Implemented MonthSummary component showing detailed results after each turn
@@ -17,7 +23,6 @@ Preferred communication style: Simple, everyday language.
 - **Project Creation Workflow**: Built comprehensive modal for Singles ($3k-$12k), EPs ($15k-$35k), and Mini-Tours ($5k-$15k)
 - **Status**: Game is now fully playable with complete strategic management experience
 - **User Feedback**: All major features confirmed working correctly by user
-- **Next Priority**: Artist signing flow and save system integration
 
 ## System Architecture
 

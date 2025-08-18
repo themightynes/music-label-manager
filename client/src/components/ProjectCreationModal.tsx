@@ -7,13 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Music, Disc, MapPin } from 'lucide-react';
-import { GameState } from '@shared/types/gameTypes';
+import type { GameState } from '@shared/schema';
 
 interface ProjectCreationModalProps {
   gameState: GameState;
   artists: any[]; // Using any[] since Artist type may be defined differently
   onCreateProject: (projectData: ProjectCreationData) => void;
   isCreating: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export interface ProjectCreationData {
@@ -59,8 +61,15 @@ const PROJECT_TYPES = [
   }
 ];
 
-export function ProjectCreationModal({ gameState, artists, onCreateProject, isCreating }: ProjectCreationModalProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function ProjectCreationModal({ 
+  gameState, 
+  artists, 
+  onCreateProject, 
+  isCreating, 
+  open = false, 
+  onOpenChange 
+}: ProjectCreationModalProps) {
+  const [isOpen, setIsOpen] = useState(open);
   const [selectedType, setSelectedType] = useState<'Single' | 'EP' | 'Mini-Tour' | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string>('');
   const [title, setTitle] = useState('');
@@ -99,14 +108,13 @@ export function ProjectCreationModal({ gameState, artists, onCreateProject, isCr
   const canAfford = budget <= currentMoney;
   const isFormValid = selectedType && selectedArtist && title.length > 0 && budget > 0 && canAfford;
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setIsOpen(newOpen);
+    onOpenChange?.(newOpen);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
-          <Plus className="w-4 h-4 mr-2" />
-          Start New Project
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open || isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-yellow-500 text-xl">Create New Project</DialogTitle>

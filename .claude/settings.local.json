@@ -15,7 +15,14 @@
       "Bash(./scripts/isolated-dev.sh:*)",
       "Bash(bash:*)",
       "Bash(npm run:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(npx tsc:*)",
+      "Bash(mkdir:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "ask": []
