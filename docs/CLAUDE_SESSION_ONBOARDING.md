@@ -11,11 +11,11 @@
 
 This project now has **comprehensive documentation** organized for different audiences and purposes:
 
-### **Strategic Planning Documentation** (`01-planning/`)
-- **Original Product Vision** - Market positioning and game concept
-- **Product Requirements Document** - MVP specifications and technical requirements  
-- **MVP Content Scope** - Content requirements and writing targets
-- **UI Workflow Documentation** - Original UI analysis and user flows
+### **Strategic Planning Documentation** 
+- **Primary Roadmap**: `docs/01-planning/development_roadmap_2025.md` - 12-week implementation roadmap
+- **Interactive System Map**: `docs/01-planning/music_game_system_map.html` - Visual feature interconnections
+- **Archived MVP Planning**: `docs/99-legacy/01-mvp-planning/` - Original MVP specifications (completed)
+- **Development Status**: `DEVELOPMENT_STATUS.md` - Current sprint status and priorities
 
 ### **Technical Implementation Documentation** (`02-07/`)
 - **System Architecture** - Complete technical design and component relationships
@@ -35,8 +35,8 @@ This project now has **comprehensive documentation** organized for different aud
 ```bash
 # REQUIRED READING ORDER:
 1. Read docs/HANDOFF_SUMMARY.md          # Project status & next steps
-2. Read MVP_STATUS.md                    # Detailed completion status (98% complete!)
-3. Read docs/01-planning/prd.md          # Original product requirements
+2. Read DEVELOPMENT_STATUS.md            # Current development phase status (Post-MVP)
+3. Read docs/99-legacy/01-mvp-planning/prd.md  # Original MVP requirements (archived)
 4. Read docs/02-architecture/system-architecture.md  # Technical foundation
 ```
 
