@@ -548,6 +548,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
 
+        // Initialize game data to load balance configuration
+        await serverGameData.initialize();
+        
         // Create GameEngine instance for this game state
         const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
         
