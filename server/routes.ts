@@ -641,7 +641,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   cities: 3 // Default for mini-tours
                 };
                 
+                console.log(`[DEBUG] Project completing:`, {
+                  projectType: project.type,
+                  projectTitle: project.title,
+                  quality: projectForEngine.quality,
+                  gameStateAccess: {
+                    playlist: monthResult.gameState.playlistAccess,
+                    press: monthResult.gameState.pressAccess,
+                    reputation: monthResult.gameState.reputation
+                  }
+                });
+                
                 const outcomes = await gameEngine.calculateProjectOutcomes(projectForEngine, monthResult.summary);
+                
+                console.log(`[DEBUG] Project outcomes:`, outcomes);
                 
                 // Create revenue metadata to store with project
                 const currentMetadata = project.metadata as any || {};

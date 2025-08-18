@@ -889,6 +889,12 @@ export class GameEngine {
     pressPickups?: number;
     description: string;
   }> {
+    console.log(`[DEBUG] calculateProjectOutcomes called with project:`, {
+      type: project.type,
+      name: project.name,
+      quality: project.quality
+    });
+    
     let revenue = 0;
     let streams = 0;
     let pressPickups = 0;
@@ -918,6 +924,7 @@ export class GameEngine {
         
         // Revenue = streams × revenue per stream
         revenue = streams * 0.003;
+        console.log(`[DEBUG] Revenue calculation: ${streams} * 0.003 = ${revenue}`);
         
         // Calculate press coverage
         pressPickups = this.calculatePressPickups(
