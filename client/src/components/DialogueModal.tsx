@@ -37,6 +37,9 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
     return (
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Loading Dialogue</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-center p-8">
             <div className="text-slate-500">Loading dialogue...</div>
           </div>
@@ -49,6 +52,9 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
     return (
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Dialogue Unavailable</DialogTitle>
+          </DialogHeader>
           <div className="text-center py-8">
             <p className="text-slate-500">Dialogue content not available.</p>
             <Button

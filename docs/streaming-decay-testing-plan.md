@@ -2,7 +2,8 @@
 
 ## Status: Ready for Testing
 **Implementation Date**: August 18, 2025
-**Features**: Streaming revenue decay system with 15% monthly decline over 24 months
+**Features**: Configurable streaming revenue decay system (default: 15% monthly decline over 24 months)
+**Configuration**: Fully customizable via `/data/balance.json`
 
 ---
 
@@ -14,12 +15,52 @@ The streaming revenue decay system simulates realistic music industry revenue pa
 
 1. **Fresh Game Setup**
    - Start a new campaign or load a save before Month 1
-   - Ensure you have starting funds ($75,000)
+   - Ensure you have starting funds ($500,000)
    - Have at least 1 artist signed or be ready to sign one
 
 2. **Server Running**
    - Development server should be running (`npm run dev`)
    - Watch browser console and server logs for debugging output
+
+3. **Balance Configuration** *(New Feature)*
+   - Streaming decay parameters are now configurable via `/data/balance.json`
+   - Default settings: 15% monthly decay, $0.003 per stream, 24-month limit
+   - Game designers can modify these values for different game balance
+
+---
+
+## Balance.json Configuration
+
+### **Configurable Streaming Decay Parameters**
+
+The streaming revenue decay system now reads all settings from `/data/balance.json` under `market_formulas.streaming_calculation.ongoing_streams`:
+
+```json
+"ongoing_streams": {
+  "monthly_decay_rate": 0.85,           // 15% monthly decline (0.85 = 85% retention)
+  "revenue_per_stream": 0.003,          // $0.003 per stream (industry standard)
+  "ongoing_factor": 0.1,                // 10% of initial peak becomes ongoing base
+  "reputation_bonus_factor": 0.002,     // Reputation impact on ongoing revenue
+  "access_tier_bonus_factor": 0.1,      // Playlist access impact on ongoing revenue  
+  "minimum_revenue_threshold": 1,       // Stop generating revenue below $1
+  "max_decay_months": 24                // Revenue stops after 24 months
+}
+```
+
+### **Customization Examples**
+
+**Slower Decay** (more forgiving):
+- Set `monthly_decay_rate` to `0.90` (10% monthly decline)
+- Set `max_decay_months` to `36` (3 years of revenue)
+
+**Higher Revenue** (more profitable):
+- Set `revenue_per_stream` to `0.005` ($0.005 per stream)
+- Set `ongoing_factor` to `0.15` (15% of initial peak)
+
+**Reputation Matters More**:
+- Set `reputation_bonus_factor` to `0.005` (stronger reputation impact)
+
+*Note: Changes to balance.json require server restart to take effect.*
 
 ---
 
@@ -153,10 +194,15 @@ The streaming revenue decay system simulates realistic music industry revenue pa
 
 **Server Console (npm run dev terminal):**
 ```
+Game data loaded successfully in XXXms
 [DEBUG] Creating GameEngine instance...
 [DEBUG] GameEngine created successfully
 [DEBUG] Processing month advancement...
-[DEBUG] Found X processed released projects
+[STREAMING DECAY] === Processing Released Projects ===
+[STREAMING DECAY] Found X released projects
+[REVENUE CALC] === Calculating for [Project Name] ===
+[REVENUE CALC] Decay rate: 0.85, Base decay: 0.XXXX
+[REVENUE CALC] Final revenue: $XXX
 [DEBUG] Updating metadata for project [ID] with revenue $XXX
 ```
 
@@ -216,6 +262,13 @@ Summary: { revenue: XXX, changes: [...] }
 2. **Check Month Count**: Ongoing revenue starts the month AFTER release
 3. **Console Debugging**: Look for "Found X processed released projects" in server logs
 4. **Project Metadata**: Released projects need proper metadata (revenue, streams, releaseMonth)
+5. **Balance Configuration**: Verify balance.json loads properly (see "Game data loaded successfully" in server console)
+
+### If Balance Configuration Fails
+1. **Check JSON Syntax**: Ensure balance.json is valid JSON (no trailing commas, proper quotes)
+2. **Verify Structure**: Confirm `market_formulas.streaming_calculation.ongoing_streams` exists
+3. **Server Restart**: Changes to balance.json require server restart (`kill port 5000`, then `npm run dev`)
+4. **Fallback Values**: If balance fails to load, system uses hardcoded fallback values (85% decay, $0.003/stream)
 
 ### Performance Issues
 1. **Multiple Projects**: System should handle 5-10+ released projects efficiently

@@ -356,7 +356,16 @@ export class ServerGameData {
         reputation_weight: 0.20,
         marketing_weight: 0.20,
         first_week_multiplier: 2.5,
-        base_streams_per_point: 1000
+        base_streams_per_point: 1000,
+        ongoing_streams: {
+          monthly_decay_rate: 0.85,
+          revenue_per_stream: 0.003,
+          ongoing_factor: 0.1,
+          reputation_bonus_factor: 0.002,
+          access_tier_bonus_factor: 0.1,
+          minimum_revenue_threshold: 1,
+          max_decay_months: 24
+        }
       };
     }
     
@@ -367,7 +376,8 @@ export class ServerGameData {
       reputation_weight: streaming.reputation_weight,
       marketing_weight: streaming.marketing_weight,
       first_week_multiplier: streaming.first_week_multiplier,
-      base_streams_per_point: 1000
+      base_streams_per_point: 1000,
+      ongoing_streams: streaming.ongoing_streams
     };
   }
 
@@ -390,6 +400,13 @@ export class ServerGameData {
       story_flag_bonus: press.story_flag_bonus,
       max_pickups_per_release: press.max_pickups_per_release
     };
+  }
+
+  getBalanceConfigSync(): BalanceConfig {
+    if (!this.balanceData) {
+      throw new Error('Balance data not loaded. Call initialize() first.');
+    }
+    return this.balanceData;
   }
 
   // Alias for GameEngine compatibility
