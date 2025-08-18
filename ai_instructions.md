@@ -3,7 +3,8 @@
 ## Quick Context
 You're working on **Top Roles: Music Label Manager**, a browser-based music industry simulation game. This is a monorepo with React (Vite) frontend, Express backend, PostgreSQL database (via Neon on Replit), and shared TypeScript code.
 
-## Current State (Updated: August 18, 2025)
+## Current State (Updated: August 18, 2025 - Session End)
+**Latest Session**: Streaming revenue decay system analysis and documentation
 - **Tech Stack**: React + Vite, Express, PostgreSQL (Neon), TypeScript, Zustand, React Query
 - **Architecture**: Unified monorepo with clean separation (client/, server/, shared/)
 - **Game Content**: 8 roles, 24 meetings, 6 artists, 12 events (all in JSON files under /data)
