@@ -247,6 +247,7 @@ export class GameEngine {
     adSpend: number
   ): number {
     const config = this.gameData.getStreamingConfigSync();
+    console.log(`[DEBUG] Streaming config:`, config);
     
     // Get playlist multiplier from real access tiers
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
@@ -894,15 +895,26 @@ export class GameEngine {
     let description = '';
 
     switch (project.type) {
+      case 'Single':
       case 'single':
+      case 'EP':
       case 'ep':
         // Calculate streaming outcome
+        console.log(`[DEBUG] Calculating streams for ${project.type} project:`, {
+          quality: project.quality || 40,
+          playlistAccess: this.gameState.playlistAccess || 'none',
+          reputation: this.gameState.reputation || 5,
+          marketingSpend: project.marketingSpend || 0
+        });
+        
         streams = this.calculateStreamingOutcome(
           project.quality || 40,
           this.gameState.playlistAccess || 'none',
           this.gameState.reputation || 5,
           project.marketingSpend || 0
         );
+        
+        console.log(`[DEBUG] Calculated ${streams} streams for project ${project.name}`);
         
         // Revenue = streams × revenue per stream
         revenue = streams * 0.003;
@@ -922,6 +934,7 @@ export class GameEngine {
         description = `${streams.toLocaleString()} streams, $${Math.round(revenue).toLocaleString()} revenue`;
         break;
         
+      case 'Mini-Tour':
       case 'mini_tour':
         // Calculate tour revenue
         revenue = this.calculateTourRevenue(
