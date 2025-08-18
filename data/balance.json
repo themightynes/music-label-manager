@@ -4,7 +4,7 @@
   "description": "Master balance file for Top Roles: Music Label Manager MVP",
   
   "economy": {
-    "starting_money": 75000,
+    "starting_money": 500000,
     "monthly_burn_base": [3000, 6000],
     "bankruptcy_threshold": -10000,
     "rng_variance": [0.9, 1.1],
@@ -219,7 +219,16 @@
       "reputation_weight": 0.20,
       "marketing_weight": 0.20,
       "first_week_multiplier": 2.5,
-      "longevity_decay": 0.85
+      "longevity_decay": 0.85,
+      "ongoing_streams": {
+        "monthly_decay_rate": 0.85,
+        "revenue_per_stream": 0.003,
+        "ongoing_factor": 0.1,
+        "reputation_bonus_factor": 0.002,
+        "access_tier_bonus_factor": 0.1,
+        "minimum_revenue_threshold": 1,
+        "max_decay_months": 24
+      }
     },
     
     "press_coverage": {

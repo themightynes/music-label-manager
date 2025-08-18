@@ -22,7 +22,9 @@
       "Bash(npx tsc:*)",
       "Bash(mkdir:*)",
       "WebFetch(domain:docs.anthropic.com)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(PORT=3001 npm run dev)",
+      "Bash(kill:*)"
     ],
     "deny": [],
     "ask": []

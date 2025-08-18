@@ -105,7 +105,8 @@ export class GameEngine {
 
     // Apply monthly burn (operational costs)
     const monthlyBurn = this.calculateMonthlyBurn();
-    this.gameState.money = (this.gameState.money || 75000) - monthlyBurn;
+    const startingMoney = this.gameData.getBalanceConfigSync().economy.starting_money;
+    this.gameState.money = (this.gameState.money || startingMoney) - monthlyBurn;
     summary.expenses += monthlyBurn;
     summary.changes.push({
       type: 'expense',
@@ -119,8 +120,8 @@ export class GameEngine {
     // Update access tiers based on reputation
     this.updateAccessTiers();
 
-    // Apply final calculations
-    this.gameState.money = (this.gameState.money || 75000) + summary.revenue - summary.expenses;
+    // Apply final calculations  
+    this.gameState.money = (this.gameState.money || startingMoney) + summary.revenue - summary.expenses;
     
     // Check for campaign completion
     const campaignResults = await this.checkCampaignCompletion(summary);
@@ -463,7 +464,148 @@ export class GameEngine {
         }
       }
     }
+    
+    // Process ongoing revenue from released projects
+    await this.processReleasedProjects(summary);
   }
+
+  /**
+   * Processes ongoing revenue from released projects (streaming decay)
+   * This simulates realistic revenue patterns where releases generate declining revenue over time
+   */
+  private async processReleasedProjects(summary: MonthSummary): Promise<void> {
+    // Get released projects passed from the server
+    const releasedProjects = (this.gameState.flags as any)?.['released_projects'] || [];
+    
+    console.log('[STREAMING DECAY] === Processing Released Projects ===');
+    console.log(`[STREAMING DECAY] Current month: ${this.gameState.currentMonth}`);
+    console.log(`[STREAMING DECAY] Found ${releasedProjects.length} released projects`);
+    console.log(`[STREAMING DECAY] Projects:`, releasedProjects.map(p => ({
+      id: p.id,
+      title: p.title,
+      type: p.type,
+      releaseMonth: p.metadata?.releaseMonth,
+      initialStreams: p.metadata?.streams,
+      initialRevenue: p.metadata?.revenue
+    })));
+    
+    for (const project of releasedProjects) {
+      console.log(`[STREAMING DECAY] Processing project: ${project.title}`);
+      const ongoingRevenue = this.calculateOngoingRevenue(project);
+      console.log(`[STREAMING DECAY] Calculated ongoing revenue: $${ongoingRevenue}`);
+      
+      if (ongoingRevenue > 0) {
+        // Add to monthly revenue
+        summary.revenue += ongoingRevenue;
+        console.log(`[STREAMING DECAY] Added $${ongoingRevenue} to summary, new total: $${summary.revenue}`);
+        
+        // Track in changes for transparency
+        summary.changes.push({
+          type: 'ongoing_revenue',
+          description: `Ongoing streams: ${project.title}`,
+          amount: ongoingRevenue
+        });
+        console.log(`[STREAMING DECAY] Added change to summary: "Ongoing streams: ${project.title}" - $${ongoingRevenue}`);
+        
+        // Update project metadata for tracking
+        if (!project.metadata) project.metadata = {};
+        project.metadata.lastMonthRevenue = ongoingRevenue;
+        project.metadata.cumulativeRevenue = (project.metadata.cumulativeRevenue || 0) + ongoingRevenue;
+        project.metadata.totalMonthsActive = (project.metadata.totalMonthsActive || 0) + 1;
+        console.log(`[STREAMING DECAY] Updated project metadata:`, {
+          lastMonthRevenue: project.metadata.lastMonthRevenue,
+          cumulativeRevenue: project.metadata.cumulativeRevenue,
+          totalMonthsActive: project.metadata.totalMonthsActive
+        });
+      } else {
+        console.log(`[STREAMING DECAY] No ongoing revenue for ${project.title} (revenue = 0 or project too old)`);
+      }
+    }
+    
+    console.log(`[STREAMING DECAY] Summary after processing:`, {
+      totalRevenue: summary.revenue,
+      changesCount: summary.changes.length,
+      ongoingRevenueChanges: summary.changes.filter(c => c.type === 'ongoing_revenue').length
+    });
+    console.log('[STREAMING DECAY] === End Processing ===');
+  }
+
+  /**
+   * Calculates ongoing revenue for a released project using streaming decay formula
+   * Revenue naturally decreases over time, simulating real music industry patterns
+   */
+  private calculateOngoingRevenue(project: any): number {
+    const metadata = project.metadata || {};
+    const initialStreams = metadata.streams || 0;
+    const releaseMonth = metadata.releaseMonth || 1;
+    const currentMonth = this.gameState.currentMonth || 1;
+    const monthsSinceRelease = currentMonth - releaseMonth;
+    
+    console.log(`[REVENUE CALC] === Calculating for ${project.title} ===`);
+    console.log(`[REVENUE CALC] Initial streams: ${initialStreams}`);
+    console.log(`[REVENUE CALC] Release month: ${releaseMonth}`);
+    console.log(`[REVENUE CALC] Current month: ${currentMonth}`);
+    console.log(`[REVENUE CALC] Months since release: ${monthsSinceRelease}`);
+    
+    // No revenue if just released this month or no initial streams
+    if (monthsSinceRelease <= 0) {
+      console.log(`[REVENUE CALC] No revenue - just released or future release (monthsSinceRelease: ${monthsSinceRelease})`);
+      return 0;
+    }
+    
+    if (initialStreams === 0) {
+      console.log(`[REVENUE CALC] No revenue - no initial streams`);
+      return 0;
+    }
+    
+    // Get streaming decay configuration from balance.json
+    const streamingConfig = this.gameData.getStreamingConfigSync();
+    const ongoingConfig = streamingConfig.ongoing_streams;
+    
+    const decayRate = ongoingConfig.monthly_decay_rate;
+    const maxDecayMonths = ongoingConfig.max_decay_months;
+    const revenuePerStream = ongoingConfig.revenue_per_stream;
+    const ongoingFactor = ongoingConfig.ongoing_factor;
+    const reputationBonusFactor = ongoingConfig.reputation_bonus_factor;
+    const accessTierBonusFactor = ongoingConfig.access_tier_bonus_factor;
+    const minimumThreshold = ongoingConfig.minimum_revenue_threshold;
+    
+    // Stop generating revenue after max decay period
+    if (monthsSinceRelease > maxDecayMonths) {
+      console.log(`[REVENUE CALC] Project too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
+      return 0;
+    }
+    
+    // Decay formula: starts high, gradually decreases
+    const baseDecay = Math.pow(decayRate, monthsSinceRelease);
+    console.log(`[REVENUE CALC] Decay rate: ${decayRate}, Base decay: ${baseDecay.toFixed(4)}`);
+    
+    // Apply current reputation and access tier bonuses
+    const reputation = this.gameState.reputation || 0;
+    const reputationBonus = 1 + (reputation - 50) * reputationBonusFactor;
+    const playlistMultiplier = this.getAccessMultiplier('playlist', this.gameState.playlistAccess || 'none');
+    const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
+    console.log(`[REVENUE CALC] Reputation: ${reputation}, Reputation bonus: ${reputationBonus.toFixed(4)}`);
+    console.log(`[REVENUE CALC] Playlist access: ${this.gameState.playlistAccess}, Multiplier: ${playlistMultiplier}, Access bonus: ${accessBonus.toFixed(4)}`);
+    
+    // Calculate monthly streams with decay
+    const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
+    console.log(`[REVENUE CALC] Monthly streams calculation: ${initialStreams} * ${baseDecay.toFixed(4)} * ${reputationBonus.toFixed(4)} * ${accessBonus.toFixed(4)} * ${ongoingFactor} = ${monthlyStreams.toFixed(2)}`);
+    
+    // Convert to revenue
+    const revenue = Math.max(0, Math.round(monthlyStreams * revenuePerStream));
+    console.log(`[REVENUE CALC] Revenue calculation: ${monthlyStreams.toFixed(2)} streams * $${revenuePerStream} = $${revenue}`);
+    
+    // Apply minimum threshold
+    if (revenue < minimumThreshold) {
+      console.log(`[REVENUE CALC] Revenue below threshold ($${revenue} < $${minimumThreshold}), returning $0`);
+      return 0;
+    }
+    
+    console.log(`[REVENUE CALC] Final revenue: $${revenue}`);
+    return revenue;
+  }
+
 
   /**
    * Processes delayed effects from previous months

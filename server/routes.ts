@@ -16,7 +16,7 @@ import {
   createErrorResponse 
 } from "@shared/api/contracts";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -195,7 +195,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/game", getUserId, async (req, res) => {
     try {
       const validatedData = insertGameStateSchema.parse(req.body);
-      const gameState = await storage.createGameState(validatedData);
+      
+      // Set starting money from balance.json configuration
+      const startingMoney = await serverGameData.getStartingMoney();
+      const gameDataWithBalance = {
+        ...validatedData,
+        money: startingMoney
+      };
+      
+      const gameState = await storage.createGameState(gameDataWithBalance);
       
       // Initialize default roles for new game
       const defaultRoles = [
@@ -368,6 +376,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+
+
+
   // Role endpoints for dialogue system
   app.get("/api/roles/:roleId", async (req, res) => {
     try {
@@ -481,6 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   // Month advancement with action processing using GameEngine and transactions
   app.post("/api/advance-month", getUserId, async (req, res) => {
     try {
@@ -500,11 +513,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('Game not found');
         }
         
+        // Get starting money from balance configuration
+        const startingMoney = await serverGameData.getStartingMoney();
+        
         // Convert database gameState to proper GameState type
         const gameStateForEngine = {
           ...gameState,
           currentMonth: gameState.currentMonth || 1,
-          money: gameState.money || 75000,
+          money: gameState.money || startingMoney,
           reputation: gameState.reputation || 5,
           creativeCapital: gameState.creativeCapital || 10,
           focusSlots: gameState.focusSlots || 3,
@@ -554,17 +570,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Initialize game data to load balance configuration
         await serverGameData.initialize();
         
+        // Query released projects for ongoing revenue calculation
+        const releasedProjects = await tx
+          .select()
+          .from(projects)
+          .where(and(
+            eq(projects.gameId, gameId),
+            eq(projects.stage, 'released')
+          ));
+        
+        // Add released projects to game state flags for the engine
+        if (!gameStateForEngine.flags) gameStateForEngine.flags = {};
+        (gameStateForEngine.flags as any)['released_projects'] = releasedProjects.map(p => ({
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          metadata: p.metadata || {}
+        }));
+        
         // Create GameEngine instance for this game state
-        const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+        let gameEngine: GameEngine;
+        try {
+          console.log('[DEBUG] Creating GameEngine instance...');
+          gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+          console.log('[DEBUG] GameEngine created successfully');
+        } catch (error) {
+          console.error('[ERROR] Failed to create GameEngine:', error);
+          throw new Error(`GameEngine initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
         
         // Use GameEngine for business logic - convert selectedActions to proper format
-        const formattedActions = selectedActions.map(action => ({
-          actionType: action.actionType,
-          targetId: action.targetId,
-          metadata: action.metadata || {},
-          details: action.metadata || {} // Convert metadata to details for compatibility
-        }));
-        const monthResult = await gameEngine.advanceMonth(formattedActions);
+        let monthResult;
+        try {
+          console.log('[DEBUG] Processing month advancement...');
+          const formattedActions = selectedActions.map(action => ({
+            actionType: action.actionType,
+            targetId: action.targetId,
+            metadata: action.metadata || {},
+            details: action.metadata || {} // Convert metadata to details for compatibility
+          }));
+          console.log('[DEBUG] Formatted actions:', JSON.stringify(formattedActions, null, 2));
+          
+          monthResult = await gameEngine.advanceMonth(formattedActions);
+          console.log('[DEBUG] Month advancement completed successfully');
+        } catch (error) {
+          console.error('[ERROR] Failed during month advancement:', error);
+          throw new Error(`Month advancement failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
         
         // Update game state in database
         const [updatedGameState] = await tx
@@ -704,6 +756,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        // Update released projects with ongoing revenue metadata
+        try {
+          console.log('[DEBUG] Updating released projects with ongoing revenue metadata...');
+          const processedReleasedProjects = (monthResult.gameState.flags as any)?.['released_projects'] || [];
+          console.log('[DEBUG] Found', processedReleasedProjects.length, 'processed released projects');
+          
+          for (const processedProject of processedReleasedProjects) {
+            if (processedProject.metadata?.lastMonthRevenue && processedProject.metadata.lastMonthRevenue > 0) {
+              console.log(`[DEBUG] Updating metadata for project ${processedProject.id} with revenue ${processedProject.metadata.lastMonthRevenue}`);
+              
+              try {
+                // Update the project metadata in the database
+                await tx
+                  .update(projects)
+                  .set({
+                    metadata: {
+                      ...processedProject.metadata
+                    }
+                  })
+                  .where(eq(projects.id, processedProject.id));
+                console.log(`[DEBUG] Successfully updated project ${processedProject.id} metadata`);
+              } catch (projectUpdateError) {
+                console.error(`[ERROR] Failed to update project ${processedProject.id} metadata:`, projectUpdateError);
+                throw new Error(`Failed to update project metadata: ${projectUpdateError instanceof Error ? projectUpdateError.message : 'Unknown error'}`);
+              }
+            }
+          }
+          console.log('[DEBUG] Completed updating released projects metadata');
+        } catch (error) {
+          console.error('[ERROR] Failed during released projects metadata update:', error);
+          throw new Error(`Released projects update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        
         return {
           gameState: updatedGameState,
           summary: monthResult.summary,
@@ -713,17 +798,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(result);
     } catch (error) {
-      console.error('Advance month error:', error);
+      console.error('=== ADVANCE MONTH ERROR ===');
+      console.error('Error type:', typeof error);
+      console.error('Error instance:', error?.constructor?.name);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('Error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      console.error('========================');
+      
       if (error instanceof z.ZodError) {
+        console.error('Zod validation errors:', error.errors);
         return res.status(400).json(createErrorResponse(
           'VALIDATION_ERROR',
           'Invalid request data',
           error.errors
         ));
       }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to advance month';
+      console.error('Sending error response:', errorMessage);
+      
       res.status(500).json(createErrorResponse(
         'ADVANCE_MONTH_ERROR',
-        error instanceof Error ? error.message : 'Failed to advance month'
+        errorMessage
       ));
     }
   });
@@ -747,11 +844,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('Game not found');
         }
         
+        // Get starting money from balance configuration
+        const startingMoney = await serverGameData.getStartingMoney();
+        
         // Convert database gameState to proper GameState type
         const gameStateForEngine = {
           ...gameState,
           currentMonth: gameState.currentMonth || 1,
-          money: gameState.money || 75000,
+          money: gameState.money || startingMoney,
           reputation: gameState.reputation || 5,
           creativeCapital: gameState.creativeCapital || 10,
           focusSlots: gameState.focusSlots || 3,
