@@ -3,30 +3,20 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
-import { SAMPLE_ARTISTS } from '@/lib/gameData';
+import { ArtistDiscoveryModal } from './ArtistDiscoveryModal';
 import { useState } from 'react';
 
 export function ArtistRoster() {
-  const { artists, signArtist, openDialogue } = useGameStore();
-  const [signingArtist, setSigningArtist] = useState(false);
+  const { gameState, artists, signArtist, openDialogue } = useGameStore();
+  const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
 
-  const handleSignArtist = async () => {
-    if (signingArtist || artists.length >= 3) return;
 
-    setSigningArtist(true);
+  const handleSignArtist = async (artistData: any) => {
     try {
-      // Find an available artist to sign
-      const availableArtist = SAMPLE_ARTISTS.find(
-        sample => !artists.some(signed => signed.name === sample.name)
-      );
-
-      if (availableArtist) {
-        await signArtist(availableArtist);
-      }
+      await signArtist(artistData);
     } catch (error) {
       console.error('Failed to sign artist:', error);
-    } finally {
-      setSigningArtist(false);
+      throw error; // Re-throw so modal can handle it
     }
   };
 
@@ -43,7 +33,25 @@ export function ArtistRoster() {
         </h3>
 
         <div className="space-y-4">
-          {artists.map(artist => (
+
+          {/* Empty state when no artists */}
+          {(!artists || artists.length === 0) && (
+            <div className="text-center text-slate-500 py-8">
+              <i className="fas fa-microphone text-slate-300 text-4xl mb-4"></i>
+              <p className="text-lg font-medium text-slate-600 mb-2">No Artists Signed</p>
+              <p className="text-sm text-slate-500 mb-6">Start building your roster by discovering new talent</p>
+              <Button
+                onClick={() => setShowDiscoveryModal(true)}
+                className="bg-primary text-white hover:bg-primary/90"
+              >
+                <i className="fas fa-search mr-2"></i>
+                Discover Artists
+              </Button>
+            </div>
+          )}
+
+          {/* Existing artists */}
+          {artists && artists.length > 0 && artists.map(artist => (
             <div key={artist.id} className="border border-slate-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -82,24 +90,24 @@ export function ArtistRoster() {
             </div>
           ))}
 
-          {/* Empty slots for additional artists */}
-          {artists.length < 3 && (
+          {/* Browse Talent slot for additional artists (only show if we have artists but room for more) */}
+          {artists && artists.length > 0 && artists.length < 3 && (
             <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
               <i className="fas fa-plus text-slate-400 text-2xl mb-2"></i>
               <p className="text-sm text-slate-500 mb-2">Sign New Artist</p>
               <Button
                 variant="ghost"
                 className="text-primary hover:text-indigo-700 text-sm font-medium"
-                onClick={handleSignArtist}
-                disabled={signingArtist || artists.length >= 3}
+                onClick={() => setShowDiscoveryModal(true)}
+                disabled={artists.length >= 3}
               >
-                {signingArtist ? 'Signing...' : 'Browse Talent'}
+                {artists.length >= 3 ? 'Roster Full' : 'Browse Talent'}
               </Button>
             </div>
           )}
 
-          {/* Fill remaining empty slots */}
-          {Array.from({ length: Math.max(0, 3 - artists.length - 1) }).map((_, index) => (
+          {/* Fill remaining empty slots (only show if we have artists) */}
+          {artists && artists.length > 0 && Array.from({ length: Math.max(0, 2 - artists.length) }).map((_, index) => (
             <div key={`empty-${index}`} className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center opacity-50">
               <i className="fas fa-plus text-slate-400 text-xl mb-2"></i>
               <p className="text-xs text-slate-500">Available Slot</p>
@@ -107,6 +115,17 @@ export function ArtistRoster() {
           ))}
         </div>
       </CardContent>
+
+      {/* Artist Discovery Modal */}
+      {gameState && (
+        <ArtistDiscoveryModal
+          open={showDiscoveryModal}
+          onOpenChange={setShowDiscoveryModal}
+          gameState={gameState}
+          signedArtists={artists as any[]}
+          onSignArtist={handleSignArtist}
+        />
+      )}
     </Card>
   );
 }

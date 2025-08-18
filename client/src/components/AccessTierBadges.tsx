@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { GameState } from '@shared/types/gameTypes';
+import type { GameState } from '@shared/schema';
 import { Key, Music, Megaphone, Building } from 'lucide-react';
 
 interface AccessTierBadgesProps {

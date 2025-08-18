@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Music, Disc, MapPin } from 'lucide-react';
-import { GameState } from '@shared/types/gameTypes';
+import type { GameState } from '@shared/schema';
 
 interface ProjectCreationModalProps {
   gameState: GameState;

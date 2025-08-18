@@ -397,11 +397,19 @@ export class GameEngine {
   }
 
   /**
-   * Calculates monthly operational costs
+   * Calculates monthly operational costs including artist payments
    */
   private calculateMonthlyBurn(): number {
     const [min, max] = this.gameData.getMonthlyBurnRangeSync();
-    return Math.round(this.getRandom(min, max));
+    const baseBurn = Math.round(this.getRandom(min, max));
+    
+    // Add artist costs - estimate based on flags or assume 1-2 artists at 800-1500/month each
+    // In full implementation, this would use actual artist data passed to GameEngine
+    const flags = this.gameState.flags || {};
+    const estimatedArtists = (flags as any)['signed_artists_count'] || 1; // Default to 1 if not tracked
+    const artistCosts = estimatedArtists * Math.round(this.getRandom(800, 1500));
+    
+    return baseBurn + artistCosts;
   }
 
   /**

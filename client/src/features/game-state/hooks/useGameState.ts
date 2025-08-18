@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { GameState } from '@shared/types/gameTypes';
+import type { GameState } from '@shared/schema';
 import { apiClient } from '@shared/api/client';
 import { AdvanceMonthRequest, SelectActionsRequest } from '@shared/api/contracts';
 import { useGameContext } from '../../../contexts/GameContext';

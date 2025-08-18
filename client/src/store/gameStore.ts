@@ -202,7 +202,15 @@ export const useGameStore = create<GameStore>()(
           });
           const newArtist = await response.json();
           
-          set({ artists: [...artists, newArtist] });
+          // Update both artists and game state (to reflect money deduction)
+          const signingCost = artistData.signingCost || 0;
+          set({ 
+            artists: [...artists, newArtist],
+            gameState: {
+              ...gameState,
+              money: Math.max(0, (gameState.money || 0) - signingCost)
+            }
+          });
         } catch (error) {
           console.error('Failed to sign artist:', error);
           throw error;

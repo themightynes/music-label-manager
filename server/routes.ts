@@ -234,17 +234,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Artist routes
   app.post("/api/game/:gameId/artists", getUserId, async (req, res) => {
     try {
+      const gameId = req.params.gameId;
+      const signingCost = req.body.signingCost || 0;
+      
+      // Get current game state to check money
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // Check if player has enough money
+      if ((gameState.money || 0) < signingCost) {
+        return res.status(400).json({ message: "Insufficient funds to sign artist" });
+      }
+      
+      // Prepare artist data
       const validatedData = insertArtistSchema.parse({
         ...req.body,
-        gameId: req.params.gameId
+        gameId: gameId
       });
+      
+      // Create artist and deduct money in a transaction-like operation
       const artist = await storage.createArtist(validatedData);
+      
+      // Update game state to deduct signing cost and track artist count
+      if (signingCost > 0) {
+        await storage.updateGameState(gameId, {
+          money: Math.max(0, (gameState.money || 0) - signingCost)
+        });
+      }
+      
+      // Update artist count flag for GameEngine monthly costs
+      const currentArtists = await storage.getArtistsByGame(gameId);
+      const flags = gameState.flags || {};
+      (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
+      await storage.updateGameState(gameId, { flags });
+      
       res.json(artist);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid artist data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to create artist" });
+        console.error('Artist signing error:', error);
+        res.status(500).json({ message: "Failed to sign artist" });
       }
     }
   });

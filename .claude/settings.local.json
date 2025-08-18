@@ -15,7 +15,8 @@
       "Bash(./scripts/isolated-dev.sh:*)",
       "Bash(bash:*)",
       "Bash(npm run:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

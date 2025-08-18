@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameState } from '@shared/types/gameTypes';
+import type { GameState } from '@shared/schema';
 import { Settings } from 'lucide-react';
 
 interface GameHeaderProps {

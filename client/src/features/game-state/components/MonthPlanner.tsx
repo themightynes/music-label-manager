@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameState } from '@shared/types/gameTypes';
+import type { GameState } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ErrorBoundary } from '@/components/ErrorBoundary';

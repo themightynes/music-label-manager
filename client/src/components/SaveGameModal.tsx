@@ -11,9 +11,10 @@ interface SaveGameModalProps {
 }
 
 export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
-  const { gameState, saveGame } = useGameStore();
+  const { gameState, saveGame, loadGame } = useGameStore();
   const [newSaveName, setNewSaveName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const { data: saves = [] } = useQuery({
     queryKey: ['/api/saves'],
@@ -32,6 +33,18 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       console.error('Failed to save game:', error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLoad = async (saveId: string) => {
+    setLoading(true);
+    try {
+      await loadGame(saveId);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to load game:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -55,6 +68,31 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const importData = JSON.parse(text);
+        
+        if (importData.gameState) {
+          // TODO: Implement import to game store
+          console.log('Import data:', importData);
+          alert('Import functionality coming soon!');
+        }
+      } catch (error) {
+        console.error('Failed to import save:', error);
+        alert('Invalid save file format');
+      }
+    };
+    input.click();
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -68,15 +106,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader className="border-b border-slate-200 pb-4">
-          <DialogTitle className="text-lg font-semibold text-slate-900">Save Game</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-slate-900">Save & Load Game</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-4">
           {/* Existing saves */}
           {(saves as any[]).map((save: any) => (
-            <div key={save.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 cursor-pointer">
+            <div key={save.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <div className="font-medium text-slate-900">{save.name}</div>
                   <div className="text-xs text-slate-600">
                     Month {save.month} • ${gameState?.money?.toLocaleString() || '0'}
@@ -85,7 +123,18 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                     Saved {formatDate(save.updatedAt)}
                   </div>
                 </div>
-                <i className="fas fa-save text-slate-400"></i>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleLoad(save.id)}
+                    disabled={loading}
+                    className="text-xs"
+                  >
+                    {loading ? 'Loading...' : 'Load'}
+                  </Button>
+                  <i className="fas fa-save text-slate-400"></i>
+                </div>
               </div>
             </div>
           ))}
@@ -117,13 +166,22 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         </div>
 
         <div className="p-6 border-t border-slate-200 flex justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleExport}
-            className="text-primary hover:text-indigo-700 font-medium"
-          >
-            Export JSON
-          </Button>
+          <div className="flex space-x-3">
+            <Button
+              variant="ghost"
+              onClick={handleExport}
+              className="text-primary hover:text-indigo-700 font-medium"
+            >
+              Export JSON
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleImport}
+              className="text-slate-600 hover:text-slate-900 font-medium"
+            >
+              Import JSON
+            </Button>
+          </div>
           <div className="space-x-3">
             <Button
               variant="ghost"

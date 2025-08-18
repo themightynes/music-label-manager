@@ -63,6 +63,7 @@ export function Dashboard() {
                 size="sm"
                 onClick={() => setShowSaveModal(true)}
                 className="p-2 text-slate-600 hover:text-slate-900"
+                title="Save & Load Game"
               >
                 <i className="fas fa-save"></i>
               </Button>
@@ -77,7 +78,7 @@ export function Dashboard() {
           {/* Main Content */}
           <div className="lg:col-span-8">
             <KPICards />
-            <AccessTierBadges />
+            <AccessTierBadges gameState={gameState} />
             <MonthPlanner onAdvanceMonth={handleAdvanceMonth} isAdvancing={isAdvancingMonth} />
           </div>
 
