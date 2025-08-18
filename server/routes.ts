@@ -453,10 +453,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create new game state for user
+      // Get starting money from balance configuration
+      const startingMoney = await serverGameData.getStartingMoney();
+      
       const defaultState = {
         userId: userId,
           currentMonth: 1,
-          money: 75000,
+          money: startingMoney,
           reputation: 5,
           creativeCapital: 10,
           focusSlots: 3,
