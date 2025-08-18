@@ -8,17 +8,42 @@ argument-hint: [optional: focus area]
 
 Welcome! I'll get you up to speed on the Music Label Manager project using our comprehensive onboarding documentation.
 
-First, let me read the complete project onboarding document:
+First, let me read ALL the comprehensive documentation:
 
+## Core Project Documents
 !Read /home/runner/workspace/docs/CLAUDE_SESSION_ONBOARDING.md
-
-Based on the onboarding document, let me provide you with the current project status:
-
 !Read /home/runner/workspace/MVP_STATUS.md
-
-Let me also check the current technical state:
-
 !Read /home/runner/workspace/ai_instructions.md
+
+## 01 - Strategic Planning Documentation
+!Read /home/runner/workspace/docs/01-planning/Concept_Vision.md
+!Read /home/runner/workspace/docs/01-planning/mpv_content_scope.md
+!Read /home/runner/workspace/docs/01-planning/prd.md
+!Read /home/runner/workspace/docs/01-planning/ui/ui_workflow_documentation.md
+
+## 02 - Architecture Documentation
+!Read /home/runner/workspace/docs/02-architecture/api-design.md
+!Read /home/runner/workspace/docs/02-architecture/database-design.md
+!Read /home/runner/workspace/docs/02-architecture/system-architecture.md
+
+## 03 - Workflow Documentation
+!Read /home/runner/workspace/docs/03-workflows/game-mechanics.md
+!Read /home/runner/workspace/docs/03-workflows/user-workflows.md
+
+## 04 - Frontend Documentation
+!Read /home/runner/workspace/docs/04-frontend/frontend-architecture.md
+
+## 05 - Backend Documentation
+!Read /home/runner/workspace/docs/05-backend/backend-architecture.md
+
+## 06 - Development Documentation
+!Read /home/runner/workspace/docs/06-development/setup.md
+
+## 07 - Content System Documentation
+!Read /home/runner/workspace/docs/07-content/content-system.md
+
+## Legacy and Additional Documentation
+!Read /home/runner/workspace/docs/99-legacy/ClaudeCodeInstructions.md
 
 Now I'll perform a quick project health check:
 
