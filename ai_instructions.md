@@ -7,29 +7,35 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 - **Tech Stack**: React + Vite, Express, PostgreSQL (Neon), TypeScript, Zustand, React Query
 - **Architecture**: Unified monorepo with clean separation (client/, server/, shared/)
 - **Game Content**: 8 roles, 24 meetings, 6 artists, 12 events (all in JSON files under /data)
-- **Current Phase**: 95% Complete MVP - Release Ready
+- **Current Phase**: 99.5% Complete MVP - Phase 2 UI/UX Enhancements Complete
 
 ## Completed Major Systems ✅
-1. ✅ **Unified Game Engine** - Complete in `shared/engine/GameEngine.ts`
+1. ✅ **Unified Game Engine** - Complete in `shared/engine/game-engine.ts`
 2. ✅ **Artist Signing System** - Full discovery, signing, and management
 3. ✅ **Project Creation** - Singles, EPs, Mini-Tours with comprehensive modals
-4. ✅ **Dialogue System** - Role meetings with immediate/delayed effects
-5. ✅ **Save/Load System** - Multiple slots with export/import capability
-6. ✅ **Monthly Turn System** - 3-action planning with resource management
-7. ✅ **Access Tier Progression** - Playlist, Press, Venue tier advancement
-8. ✅ **Unified Architecture** - Single Dashboard, removed duplicate components
+4. ✅ **Project Revenue System** - Projects generate revenue, streams, and press coverage on completion
+5. ✅ **Dialogue System** - Role meetings with immediate/delayed effects
+6. ✅ **Save/Load System** - Multiple slots with export/import capability
+7. ✅ **Monthly Turn System** - 3-action planning with resource management
+8. ✅ **Access Tier Progression** - Playlist, Press, Venue tier advancement
+9. ✅ **Month Summary Display** - Shows detailed results after month advancement
+10. ✅ **Simplified Architecture** - All components consolidated to `/components` folder
+11. ✅ **Phase 1 UI/UX Enhancements** - Revenue tracking, ROI calculations, enhanced notifications, and tabbed month summary
+12. ✅ **Phase 2 UI/UX Enhancements** - Rich contextual information, strategic recommendations, and comprehensive feedback systems
 
 ## Key Files & Their Purpose
 
 ### Core Game Logic
-- `shared/engine/GameEngine.ts` - SINGLE SOURCE OF TRUTH for all calculations
+- `shared/engine/game-engine.ts` - SINGLE SOURCE OF TRUTH for all calculations
 - `shared/types/gameTypes.ts` - All TypeScript interfaces
 - `shared/api/contracts.ts` - API endpoint definitions
 
 ### Frontend
-- `client/src/store/gameStore.ts` - Zustand store (UI state only)
-- `client/src/features/game-state/hooks/` - React Query hooks for server data
-- `client/src/features/game-state/components/MonthPlanner.tsx` - Main game UI
+- `client/src/store/gameStore.ts` - Zustand store (game state management)
+- `client/src/components/Dashboard.tsx` - Main game interface
+- `client/src/components/MonthPlanner.tsx` - Enhanced action planning UI with strategic recommendations
+- `client/src/components/MonthSummary.tsx` - Monthly results display
+- `client/src/components/ProjectCreationModal.tsx` - Project creation interface
 
 ### Backend
 - `server/routes.ts` - Express API endpoints
@@ -37,9 +43,9 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 - `server/data/gameData.ts` - Wrapper for loading JSON content
 
 ### Game Content (DO NOT MODIFY WITHOUT CAREFUL CONSIDERATION)
-- `data/balance.json` - All game balance numbers
+- `data/balance.json` - All game balance numbers (includes project revenue formulas)
 - `data/roles.json` - 8 industry roles with meetings
-- `data/artists.json` - 3 artist archetypes
+- `data/artists.json` - 6 unique artists with archetypes
 - `data/events.json` - 12 side events
 - `data/dialogue.json` - Additional artist dialogues
 
@@ -93,10 +99,10 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 - Manual tests: Dialogue flows, UI interactions
 
 ## Known Issues / Tech Debt
-1. **API Mismatch**: Server routes don't match contracts.ts
-2. **Hard-coded IDs**: Some components use hard-coded game IDs
-3. **Duplicate Logic**: Some calculations exist in both client and server
-4. **Missing Features**: Dialogue UI, project pipelines, event triggers
+1. ~~**API Mismatch**: Server routes don't match contracts.ts~~ FIXED
+2. ~~**Hard-coded IDs**: Some components use hard-coded game IDs~~ FIXED
+3. ~~**Duplicate Logic**: Some calculations exist in both client and server~~ FIXED
+4. ~~**Missing Features**: Dialogue UI, project pipelines, event triggers~~ ALL IMPLEMENTED
 
 ## Replit-Specific Notes
 - Database: PostgreSQL via Neon (connection string in Secrets)
@@ -153,9 +159,18 @@ npm run db:seed
 ```
 
 ## Recent Changes
-- [Date]: Unified game engine created in shared/engine
-- [Date]: Started tech debt cleanup branch
-- [Date]: Documented AI assistant instructions
+- August 18, 2025: **Phase 1 & 2 UI/UX Enhancements Completed**
+  - **Phase 1**: ActiveProjects revenue tracking and ROI calculations, MonthSummary tabbed interface and rich categorization, ToastNotification progress indicators and action buttons
+  - **Phase 2**: MonthPlanner detailed action metadata and strategic recommendations, AccessTierBadges complete redesign with progression paths, ArtistRoster comprehensive analytics and management insights
+- December 18, 2024: Fixed project revenue generation system
+- December 18, 2024: Integrated MonthSummary display for advancement results
+- December 18, 2024: Linked ProjectCreationModal to ActiveProjects
+- December 18, 2024: Enhanced toast notifications for all game events
+- December 18, 2024: Consolidated and simplified component architecture
+- December 18, 2024: Removed duplicate components from features folder
+- August 18, 2025: Unified game engine created in shared/engine
+- August 18, 2025: Completed artist signing system
+- August 18, 2025: Implemented save/load functionality
 
 ---
 

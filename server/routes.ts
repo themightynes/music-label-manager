@@ -626,13 +626,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             if (newStageIndex > currentStageIndex) {
-              await tx
-                .update(projects)
-                .set({ 
-                  stage: stages[newStageIndex],
-                  quality: Math.min(100, (project.quality || 0) + 25) // Increase quality each stage
-                })
-                .where(eq(projects.id, project.id));
+              // If project is reaching "released" stage, calculate completion outcomes first
+              if (stages[newStageIndex] === 'released') {
+                const projectForEngine = {
+                  id: project.id,
+                  name: project.title,
+                  type: project.type,
+                  quality: Math.min(100, (project.quality || 0) + 25),
+                  marketingSpend: 0, // TODO: Track marketing spend
+                  artistPopularity: 50, // TODO: Get from artist data
+                  cities: 3 // Default for mini-tours
+                };
+                
+                const outcomes = await gameEngine.calculateProjectOutcomes(projectForEngine, monthResult.summary);
+                
+                // Create revenue metadata to store with project
+                const currentMetadata = project.metadata as any || {};
+                const updatedMetadata = {
+                  ...currentMetadata,
+                  revenue: Math.round(outcomes.revenue),
+                  streams: outcomes.streams || 0,
+                  pressPickups: outcomes.pressPickups || 0,
+                  releaseMonth: monthResult.gameState.currentMonth,
+                  roi: (project.budget || 0) > 0 ? Math.round(((outcomes.revenue - (project.budget || 0)) / (project.budget || 0)) * 100) : 0
+                };
+                
+                // Update project with new stage, quality, and revenue metadata
+                await tx
+                  .update(projects)
+                  .set({ 
+                    stage: stages[newStageIndex],
+                    quality: Math.min(100, (project.quality || 0) + 25),
+                    metadata: updatedMetadata
+                  })
+                  .where(eq(projects.id, project.id));
+                
+                // Add project completion to summary
+                monthResult.summary.changes.push({
+                  type: 'project_complete',
+                  description: `🎉 Released ${project.type}: ${project.title} - ${outcomes.description}`,
+                  amount: outcomes.revenue,
+                  projectId: project.id
+                });
+                
+                // Update game state money with revenue
+                monthResult.gameState.money = (monthResult.gameState.money || 0) + outcomes.revenue;
+              } else {
+                // Regular stage progression without revenue calculation
+                await tx
+                  .update(projects)
+                  .set({ 
+                    stage: stages[newStageIndex],
+                    quality: Math.min(100, (project.quality || 0) + 25) // Increase quality each stage
+                  })
+                  .where(eq(projects.id, project.id));
+              }
             }
           }
         }

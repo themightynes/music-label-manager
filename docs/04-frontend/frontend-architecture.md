@@ -26,15 +26,16 @@ The Music Label Manager frontend is a **React 18** application built with **Type
 client/src/
 ├── components/           # Shared UI components
 │   ├── Dashboard.tsx     # Main game dashboard
-│   ├── MonthPlanner.tsx  # Turn-based action planner
+│   ├── MonthPlanner.tsx  # Enhanced action planner with strategic recommendations
 │   ├── DialogueModal.tsx # Role conversation system
 │   ├── SaveGameModal.tsx # Save/load system
 │   ├── ArtistDiscoveryModal.tsx  # Artist signing
 │   ├── ProjectCreationModal.tsx  # Project creation
 │   ├── CampaignResultsModal.tsx  # Game completion
 │   ├── KPICards.tsx      # Resource display
-│   ├── ArtistRoster.tsx  # Artist management
-│   ├── ActiveProjects.tsx # Project tracking
+│   ├── ArtistRoster.tsx  # Enhanced artist management with analytics and insights
+│   ├── ActiveProjects.tsx # Enhanced project tracking with revenue analytics and ROI calculations
+│   ├── AccessTierBadges.tsx # Detailed progression system with requirements
 │   └── ui/               # Base UI components (Shadcn)
 │       ├── button.tsx
 │       ├── dialog.tsx
@@ -69,9 +70,10 @@ App.tsx
         ├── ErrorBoundary
         ├── Dashboard.tsx (Main Game Interface)
         │   ├── Header (KPIs, Save Button)
-        │   ├── MonthPlanner.tsx (Action Selection)
-        │   ├── ArtistRoster.tsx (Artist Management)
-        │   ├── ActiveProjects.tsx (Project Tracking)
+        │   ├── MonthPlanner.tsx (Enhanced Action Selection with Recommendations)
+        │   ├── AccessTierBadges.tsx (Detailed Progression System)
+        │   ├── ArtistRoster.tsx (Enhanced Artist Management with Analytics)
+        │   ├── ActiveProjects.tsx (Enhanced Project Tracking with Revenue Analytics)
         │   └── QuickStats.tsx (Summary Info)
         └── Modals (Conditional Rendering)
             ├── DialogueModal.tsx
@@ -139,7 +141,7 @@ export function Dashboard() {
 - Game state display
 - Action coordination between components
 
-#### **MonthPlanner.tsx** - Turn-Based Action System
+#### **MonthPlanner.tsx** - Enhanced Turn-Based Action System with Strategic Recommendations
 ```typescript
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
   const { gameState, selectedActions, selectAction, removeAction, openDialogue } = useGameStore();
@@ -206,7 +208,11 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
 ```
 
 **Responsibilities**:
-- Action selection UI (up to 3 focus slots)
+- Enhanced action selection UI with detailed metadata (costs, durations, outcomes)
+- Strategic recommendation system based on current game state
+- Project pipeline visualization with progress indicators
+- Interactive action details with hover-based information
+- Intelligent action categorization (urgent, recommended, situational)
 - Role meeting triggers
 - Project creation workflow
 - Month advancement initiation
@@ -367,6 +373,203 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 - Display save slots with metadata
 - Load game state from saves
 - Export/import functionality
+
+#### **AccessTierBadges.tsx** - Enhanced Progression System
+```typescript
+export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
+  const [expandedTier, setExpandedTier] = useState<string | null>(null);
+
+  const accessTiers = {
+    playlist: { /* detailed tier definitions with requirements and benefits */ },
+    press: { /* comprehensive progression paths */ },
+    venue: { /* access requirements and unlocks */ }
+  };
+
+  const getCurrentTier = (tierType: keyof typeof accessTiers) => {
+    // Calculate current tier based on game state
+  };
+
+  const getProgressToNextTier = (tierType: keyof typeof accessTiers) => {
+    // Calculate progress percentage to next unlock
+  };
+
+  return (
+    <Card>
+      {/* Detailed progression visualization with:
+          - Current tier badges with requirements
+          - Progress bars to next tier
+          - Expandable sections showing full progression paths
+          - Industry standing summary
+          - Benefits and requirements for each tier */}
+    </Card>
+  );
+}
+```
+
+**Responsibilities**:
+- Comprehensive access tier progression visualization
+- Detailed requirements and benefits for each tier level
+- Progress tracking with visual indicators
+- Expandable progression paths showing full unlock sequences
+- Industry standing metrics (reputation, access level, total unlocks)
+
+#### **ArtistRoster.tsx** - Enhanced Artist Management with Analytics
+```typescript
+export function ArtistRoster() {
+  const { gameState, artists, projects } = useGameStore();
+  const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
+
+  const getArtistInsights = (artist: any) => {
+    // Calculate comprehensive analytics: projects, revenue, ROI, mood, loyalty
+    // Artist archetype analysis with strengths and preferences
+    // Performance metrics and relationship status
+  };
+
+  const getArtistRecommendations = (artist: any, insights: any) => {
+    // Generate intelligent management recommendations
+    // Based on artist archetype, current mood/loyalty, and project history
+  };
+
+  return (
+    <Card>
+      {/* Enhanced artist cards with:
+          - Comprehensive performance analytics
+          - Archetype-specific management insights
+          - Mood and loyalty tracking with progress bars
+          - Management recommendations based on current state
+          - Expandable details with relationship factors
+          - Artist-specific management tips and strategies */}
+    </Card>
+  );
+}
+```
+
+**Responsibilities**:
+- Comprehensive artist analytics (projects, revenue, ROI calculations)
+- Archetype-specific insights with strengths, preferences, and traits
+- Mood and loyalty tracking with visual progress indicators
+- Intelligent management recommendations based on artist state
+- Relationship status indicators with actionable guidance
+- Expandable artist details with management tips and factors affecting mood/loyalty
+
+#### **ActiveProjects.tsx** - Enhanced Project Tracking with Revenue Analytics
+```typescript
+export function ActiveProjects() {
+  const { projects, artists, createProject, gameState } = useGameStore();
+
+  const calculateProjectROI = (project: any) => {
+    // Calculate comprehensive ROI based on investment vs revenue
+    const metadata = project.metadata || {};
+    const revenue = metadata.revenue || 0;
+    const investment = project.budget || 0;
+    const roi = investment > 0 ? ((revenue - investment) / investment) * 100 : 0;
+    return { roi, revenue, investment };
+  };
+
+  const calculatePortfolioStats = () => {
+    // Portfolio-wide analytics for revenue, ROI, and performance
+    let totalRevenue = 0;
+    let totalInvestment = 0;
+    let totalStreams = 0;
+    let successfulProjects = 0;
+
+    projects.forEach(project => {
+      // Aggregate metrics across all projects
+    });
+
+    return { totalRevenue, portfolioROI, totalStreams, successfulProjects };
+  };
+
+  return (
+    <Card>
+      {/* Enhanced project cards with:
+          - Revenue tracking and ROI calculations
+          - Portfolio-wide performance metrics
+          - Individual project analytics (streams, revenue, investment)
+          - Progress indicators with financial context
+          - Success metrics and performance badges */}
+    </Card>
+  );
+}
+```
+
+**Responsibilities**:
+- Comprehensive revenue tracking for individual projects and portfolio
+- ROI calculations with investment vs. return analysis
+- Portfolio-wide performance metrics and success indicators
+- Project-specific analytics including streams, revenue, and progress
+- Financial performance visualization with color-coded indicators
+
+#### **MonthSummary.tsx** - Enhanced Monthly Results Display
+```typescript
+export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMonthResults }: MonthSummaryProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'events'>('overview');
+
+  const categorizeChanges = (changes: any[]) => {
+    // Intelligent categorization of monthly events
+    const categories = {
+      revenue: [], // Project completions, streaming revenue
+      expenses: [], // Operational costs, project investments
+      achievements: [], // Unlocks, tier upgrades
+      other: [] // Miscellaneous events
+    };
+    return categories;
+  };
+
+  return (
+    <Card>
+      {/* Enhanced month summary with:
+          - Tabbed interface for different event categories
+          - Rich categorization of revenue/expenses/achievements
+          - Visual progress indicators and trend analysis
+          - Detailed financial breakdown with context
+          - Achievement highlighting and celebration */}
+    </Card>
+  );
+}
+```
+
+**Responsibilities**:
+- Rich categorization of monthly events and changes
+- Tabbed interface for organizing complex monthly data
+- Financial analysis with revenue/expense breakdown
+- Achievement and milestone highlighting
+- Visual progress indicators and trend analysis
+
+#### **ToastNotification.tsx** - Enhanced Notification System
+```typescript
+export function ToastNotification() {
+  const showEnhancedToast = (options: {
+    title: string;
+    description: string;
+    type: 'success' | 'info' | 'warning' | 'achievement';
+    duration?: number;
+    action?: { label: string; onClick: () => void };
+    progress?: number;
+  }) => {
+    // Enhanced toast with progress indicators and action buttons
+  };
+
+  useEffect(() => {
+    // Intelligent notification system that:
+    // - Tracks all game state changes
+    // - Provides contextual information and actions
+    // - Shows progress indicators for metrics
+    // - Prevents notification spam with debouncing
+    // - Categorizes notifications by importance and type
+  }, [gameState, monthlyOutcome]);
+
+  return <Toaster />;
+}
+```
+
+**Responsibilities**:
+- Intelligent real-time notifications for all game state changes
+- Progress indicators for reputation, creative capital, and other metrics
+- Action buttons for relevant follow-up actions
+- Contextual information with financial and strategic context
+- Achievement celebrations with detailed benefits
+- Debounced notifications to prevent spam
 
 ---
 

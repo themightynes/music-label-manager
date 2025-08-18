@@ -235,7 +235,9 @@
       "sell_through_base": 0.60,
       "reputation_modifier": 0.003,
       "local_popularity_weight": 0.40,
-      "merch_percentage": 0.15
+      "merch_percentage": 0.15,
+      "ticket_price_base": 25,
+      "ticket_price_per_capacity": 0.05
     }
   },
   

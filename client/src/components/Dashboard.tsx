@@ -7,13 +7,15 @@ import { QuickStats } from './QuickStats';
 import { DialogueModal } from './DialogueModal';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
+import { MonthSummary } from './MonthSummary';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
 export function Dashboard() {
-  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue } = useGameStore();
+  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, monthlyOutcome } = useGameStore();
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showMonthSummary, setShowMonthSummary] = useState(false);
 
   if (!gameState) {
     return (
@@ -29,9 +31,15 @@ export function Dashboard() {
   const handleAdvanceMonth = async () => {
     try {
       await advanceMonth();
+      // Show month summary after advancing
+      setShowMonthSummary(true);
     } catch (error) {
       console.error('Failed to advance month:', error);
     }
+  };
+
+  const handleCloseSummary = () => {
+    setShowMonthSummary(false);
   };
 
   return (
@@ -103,6 +111,21 @@ export function Dashboard() {
           }}
         />
       )}
+      
+      {/* Month Summary Modal */}
+      {showMonthSummary && monthlyOutcome && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <MonthSummary 
+              monthlyStats={monthlyOutcome} 
+              onAdvanceMonth={handleCloseSummary}
+              isAdvancing={false}
+              isMonthResults={true}
+            />
+          </div>
+        </div>
+      )}
+      
       <SaveGameModal open={showSaveModal} onOpenChange={setShowSaveModal} />
       <ToastNotification />
     </div>

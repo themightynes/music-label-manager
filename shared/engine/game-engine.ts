@@ -425,10 +425,15 @@ export class GameEngine {
         
         if (project.monthsRemaining <= 0) {
           project.status = 'completed';
+          
+          // Calculate project outcomes based on type
+          const outcomes = await this.calculateProjectOutcomes(project, summary);
+          
           summary.changes.push({
             type: 'project_complete',
-            description: `Completed ${project.type}: ${project.name}`,
-            projectId: project.id
+            description: `Completed ${project.type}: ${project.name} - ${outcomes.description}`,
+            projectId: project.id,
+            amount: outcomes.revenue
           });
         }
       }
@@ -873,6 +878,85 @@ export class GameEngine {
         return `Your 12-month journey in the music industry has concluded with a final score of ${finalScore} points.`;
     }
   }
+
+  /**
+   * Calculates outcomes when a project completes
+   */
+  async calculateProjectOutcomes(project: any, summary: MonthSummary): Promise<{
+    revenue: number;
+    streams?: number;
+    pressPickups?: number;
+    description: string;
+  }> {
+    let revenue = 0;
+    let streams = 0;
+    let pressPickups = 0;
+    let description = '';
+
+    switch (project.type) {
+      case 'single':
+      case 'ep':
+        // Calculate streaming outcome
+        streams = this.calculateStreamingOutcome(
+          project.quality || 40,
+          this.gameState.playlistAccess || 'none',
+          this.gameState.reputation || 5,
+          project.marketingSpend || 0
+        );
+        
+        // Revenue = streams × revenue per stream
+        revenue = streams * 0.003;
+        
+        // Calculate press coverage
+        pressPickups = this.calculatePressPickups(
+          this.gameState.pressAccess || 'none',
+          project.marketingSpend || 0,
+          this.gameState.reputation || 5,
+          false // No story flag for basic project completion
+        );
+        
+        // Update reputation based on success
+        const reputationGain = Math.floor(streams / 10000); // 1 rep per 10k streams
+        this.gameState.reputation = Math.min(100, (this.gameState.reputation || 0) + reputationGain);
+        
+        description = `${streams.toLocaleString()} streams, $${Math.round(revenue).toLocaleString()} revenue`;
+        break;
+        
+      case 'mini_tour':
+        // Calculate tour revenue
+        revenue = this.calculateTourRevenue(
+          this.gameState.venueAccess || 'none',
+          project.artistPopularity || 50,
+          this.gameState.reputation || 5,
+          project.cities || 3
+        );
+        
+        description = `$${Math.round(revenue).toLocaleString()} tour revenue`;
+        break;
+    }
+    
+    // Add revenue to summary
+    summary.revenue += revenue;
+    
+    // Add detailed changes
+    if (streams > 0) {
+      summary.changes.push({
+        type: 'revenue',
+        description: `Streaming: ${streams.toLocaleString()} streams`,
+        amount: Math.round(revenue)
+      });
+    }
+    
+    if (pressPickups > 0) {
+      summary.changes.push({
+        type: 'unlock',
+        description: `Press coverage: ${pressPickups} pickup${pressPickups > 1 ? 's' : ''}`
+      });
+    }
+    
+    return { revenue, streams, pressPickups, description };
+  }
+
 }
 
 /**

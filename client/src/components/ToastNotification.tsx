@@ -1,12 +1,86 @@
 import { Toaster } from '@/components/ui/toaster';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import { useGameStore } from '@/store/gameStore';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function ToastNotification() {
-  const { toast } = useToast();
-  const { gameState } = useGameStore();
+  const { toast, dismiss } = useToast();
+  const { gameState, monthlyOutcome, projects } = useGameStore();
   const prevGameState = useRef(gameState);
+  const prevMonthlyOutcome = useRef(monthlyOutcome);
+  const [recentToasts, setRecentToasts] = useState<Set<string>>(new Set());
+
+  // Helper function to format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Debounce function to prevent duplicate toasts
+  const shouldShowToast = (key: string, ttl: number = 2000) => {
+    if (recentToasts.has(key)) return false;
+    
+    setRecentToasts(prev => new Set(prev).add(key));
+    setTimeout(() => {
+      setRecentToasts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }, ttl);
+    
+    return true;
+  };
+
+  // Enhanced toast with progress and actions
+  const showEnhancedToast = (options: {
+    title: string;
+    description: string;
+    type: 'success' | 'info' | 'warning' | 'achievement';
+    duration?: number;
+    action?: {
+      label: string;
+      onClick: () => void;
+    };
+    progress?: number;
+  }) => {
+    const { title, description, type, duration = 4000, action, progress } = options;
+    
+    // Enhanced description with progress if provided
+    const enhancedDescription = progress !== undefined 
+      ? `${description}\n\nProgress: ${Math.round(progress)}%`
+      : description;
+
+    const toastConfig: any = {
+      title,
+      description: enhancedDescription,
+      duration,
+      className: type === 'achievement' ? 'border-yellow-200 bg-yellow-50' : 
+                 type === 'success' ? 'border-green-200 bg-green-50' :
+                 type === 'warning' ? 'border-orange-200 bg-orange-50' : 
+                 'border-blue-200 bg-blue-50'
+    };
+
+    // Add action button if provided
+    if (action) {
+      toastConfig.action = (
+        <ToastAction 
+          altText={action.label}
+          onClick={action.onClick}
+          className="bg-white hover:bg-slate-50 border-slate-300"
+        >
+          {action.label}
+        </ToastAction>
+      );
+    }
+
+    return toast(toastConfig);
+  };
 
   useEffect(() => {
     if (!gameState || !prevGameState.current) {
@@ -17,30 +91,55 @@ export function ToastNotification() {
     const prev = prevGameState.current;
     const current = gameState;
 
-    // Check for money changes
+    // Check for money changes with enhanced notifications
     const prevMoney = prev.money || 0;
     const currentMoney = current.money || 0;
     if (prevMoney !== currentMoney) {
       const change = currentMoney - prevMoney;
-      const icon = change > 0 ? '💰' : '💸';
-      toast({
-        title: `${icon} Money ${change > 0 ? '+' : ''}${change.toLocaleString()}`,
-        description: `Current balance: $${currentMoney.toLocaleString()}`,
-        duration: 3000,
-      });
+      const isPositive = change > 0;
+      const key = `money-${currentMoney}`;
+      
+      if (shouldShowToast(key)) {
+        showEnhancedToast({
+          title: `${isPositive ? '💰' : '💸'} ${isPositive ? 'Revenue' : 'Expense'} ${formatCurrency(Math.abs(change))}`,
+          description: `Current balance: ${formatCurrency(currentMoney)}${currentMoney < 10000 ? ' ⚠️ Low funds' : ''}`,
+          type: isPositive ? 'success' : currentMoney < 10000 ? 'warning' : 'info',
+          duration: 3000,
+          ...(currentMoney < 5000 && {
+            action: {
+              label: 'View Budget',
+              onClick: () => {
+                // Could navigate to budget view or show financial summary
+                console.log('View budget clicked');
+              }
+            }
+          })
+        });
+      }
     }
 
-    // Check for reputation changes
+    // Check for reputation changes with tier information
     const prevRep = prev.reputation || 0;
     const currentRep = current.reputation || 0;
     if (prevRep !== currentRep) {
       const change = currentRep - prevRep;
-      const icon = change > 0 ? '⭐' : '📉';
-      toast({
-        title: `${icon} Reputation ${change > 0 ? '+' : ''}${change}`,
-        description: `Current reputation: ${currentRep}`,
-        duration: 3000,
-      });
+      const isPositive = change > 0;
+      const reputationTier = currentRep >= 80 ? 'Elite' : 
+                           currentRep >= 60 ? 'Established' : 
+                           currentRep >= 40 ? 'Rising' : 
+                           currentRep >= 20 ? 'Emerging' : 'Unknown';
+      
+      const key = `reputation-${currentRep}`;
+      
+      if (shouldShowToast(key)) {
+        showEnhancedToast({
+          title: `${isPositive ? '⭐' : '📉'} Reputation ${isPositive ? '+' : ''}${change}`,
+          description: `Current reputation: ${currentRep} (${reputationTier} tier)`,
+          type: isPositive ? 'success' : 'warning',
+          duration: 3000,
+          progress: currentRep
+        });
+      }
     }
 
     // Check for creative capital changes
@@ -48,41 +147,168 @@ export function ToastNotification() {
     const currentCC = current.creativeCapital || 0;
     if (prevCC !== currentCC) {
       const change = currentCC - prevCC;
-      const icon = change > 0 ? '💡' : '🔥';
-      toast({
-        title: `${icon} Creative Capital ${change > 0 ? '+' : ''}${change}`,
-        description: `Current creative capital: ${currentCC}`,
-        duration: 3000,
-      });
+      const isPositive = change > 0;
+      const key = `cc-${currentCC}`;
+      
+      if (shouldShowToast(key)) {
+        showEnhancedToast({
+          title: `${isPositive ? '💡' : '🔥'} Creative Capital ${isPositive ? '+' : ''}${change}`,
+          description: `Current creative capital: ${currentCC}${currentCC >= 80 ? ' 🌟 Highly creative!' : ''}`,
+          type: isPositive ? 'success' : 'warning',
+          duration: 3000,
+          progress: currentCC
+        });
+      }
     }
 
-    // Check for access tier upgrades
+    // Enhanced access tier upgrades with actions
     if (prev.playlistAccess !== current.playlistAccess) {
-      toast({
+      showEnhancedToast({
         title: '🎵 Playlist Access Upgraded!',
-        description: `You now have ${current.playlistAccess} playlist access`,
-        duration: 4000,
+        description: `You now have ${current.playlistAccess} playlist access. This opens new opportunities for your releases.`,
+        type: 'achievement',
+        duration: 6000,
+        action: {
+          label: 'Learn More',
+          onClick: () => {
+            // Could show detailed benefits of the new access tier
+            console.log('Playlist access details');
+          }
+        }
       });
     }
 
     if (prev.pressAccess !== current.pressAccess) {
-      toast({
+      showEnhancedToast({
         title: '📰 Press Access Upgraded!',
-        description: `You now have ${current.pressAccess} press access`,
-        duration: 4000,
+        description: `You now have ${current.pressAccess} press access. Your projects will get better media coverage.`,
+        type: 'achievement',
+        duration: 6000,
+        action: {
+          label: 'View Benefits',
+          onClick: () => {
+            console.log('Press access details');
+          }
+        }
       });
     }
 
     if (prev.venueAccess !== current.venueAccess) {
-      toast({
+      showEnhancedToast({
         title: '🏟️ Venue Access Upgraded!',
-        description: `You now have ${current.venueAccess} venue access`,
-        duration: 4000,
+        description: `You now have ${current.venueAccess} venue access. Your artists can now perform at bigger venues.`,
+        type: 'achievement',
+        duration: 6000,
+        action: {
+          label: 'Plan Tour',
+          onClick: () => {
+            console.log('Tour planning');
+          }
+        }
       });
     }
 
     prevGameState.current = gameState;
-  }, [gameState, toast]);
+    prevMonthlyOutcome.current = monthlyOutcome;
+  }, [gameState, monthlyOutcome, toast]);
+
+  // Enhanced monthly outcome notifications
+  useEffect(() => {
+    if (!monthlyOutcome || monthlyOutcome === prevMonthlyOutcome.current) {
+      return;
+    }
+
+    // Group and process changes more intelligently
+    if (monthlyOutcome.changes) {
+      const projectCompletions = monthlyOutcome.changes.filter((c: any) => c.type === 'project_complete');
+      const revenueChanges = monthlyOutcome.changes.filter((c: any) => c.type === 'revenue');
+      const achievements = monthlyOutcome.changes.filter((c: any) => c.type === 'unlock');
+
+      // Enhanced project completion notifications
+      projectCompletions.forEach((change: any, index: number) => {
+        setTimeout(() => {
+          const projectTitle = change.description.match(/: (.*?) - /)?.[1] || 'Unknown Project';
+          const revenue = change.amount || 0;
+          
+          showEnhancedToast({
+            title: '🎉 Project Released!',
+            description: `${projectTitle} is now live! Generated ${formatCurrency(revenue)} in initial revenue.`,
+            type: 'achievement',
+            duration: 7000,
+            action: {
+              label: 'View Details',
+              onClick: () => {
+                // Could navigate to the specific project
+                console.log('View project details:', change.projectId);
+              }
+            }
+          });
+        }, index * 1500); // Stagger multiple project completions
+      });
+
+      // Consolidated revenue notifications
+      if (revenueChanges.length > 0) {
+        const totalRevenue = revenueChanges.reduce((sum: number, change: any) => sum + (change.amount || 0), 0);
+        const streamingRevenue = revenueChanges.filter((c: any) => c.description.includes('Streaming'));
+        
+        if (streamingRevenue.length > 0) {
+          setTimeout(() => {
+            showEnhancedToast({
+              title: '💿 Streaming Success!',
+              description: `Your releases generated ${formatCurrency(totalRevenue)} from streaming this month!`,
+              type: 'success',
+              duration: 5000,
+              action: {
+                label: 'View Analytics',
+                onClick: () => {
+                  console.log('View streaming analytics');
+                }
+              }
+            });
+          }, projectCompletions.length * 1500 + 500);
+        }
+      }
+
+      // Achievement notifications
+      achievements.forEach((change: any, index: number) => {
+        setTimeout(() => {
+          showEnhancedToast({
+            title: '🏆 New Achievement!',
+            description: change.description,
+            type: 'achievement',
+            duration: 5000,
+            action: {
+              label: 'Celebrate',
+              onClick: () => {
+                console.log('Achievement celebrated');
+              }
+            }
+          });
+        }, (projectCompletions.length + revenueChanges.length) * 1500 + index * 1000);
+      });
+
+      // Show month summary action if significant activity
+      if (monthlyOutcome.changes.length >= 3) {
+        setTimeout(() => {
+          showEnhancedToast({
+            title: '📊 Busy Month!',
+            description: `${monthlyOutcome.changes.length} significant events occurred this month.`,
+            type: 'info',
+            duration: 6000,
+            action: {
+              label: 'View Summary',
+              onClick: () => {
+                // Could trigger month summary modal
+                console.log('Show month summary');
+              }
+            }
+          });
+        }, 5000);
+      }
+    }
+
+    prevMonthlyOutcome.current = monthlyOutcome;
+  }, [monthlyOutcome, toast]);
 
   return <Toaster />;
 }

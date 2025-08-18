@@ -21,7 +21,8 @@
       "Bash(sed:*)",
       "Bash(npx tsc:*)",
       "Bash(mkdir:*)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "ask": []
