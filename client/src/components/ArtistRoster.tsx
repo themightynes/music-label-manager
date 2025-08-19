@@ -172,25 +172,31 @@ export function ArtistRoster() {
 
   return (
     <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
-      <CardContent className="p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-          <i className="fas fa-microphone text-secondary mr-2"></i>
-          Artist Roster
+      <CardContent className="p-4">
+        <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center justify-between">
+          <div className="flex items-center">
+            <i className="fas fa-microphone text-secondary mr-2"></i>
+            Artist Roster
+          </div>
+          <Badge variant="secondary" className="text-xs">
+            {artists?.length || 0}/3
+          </Badge>
         </h3>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
 
           {/* Empty state when no artists */}
           {(!artists || artists.length === 0) && (
-            <div className="text-center text-slate-500 py-8">
-              <i className="fas fa-microphone text-slate-300 text-4xl mb-4"></i>
-              <p className="text-lg font-medium text-slate-600 mb-2">No Artists Signed</p>
-              <p className="text-sm text-slate-500 mb-6">Start building your roster by discovering new talent</p>
+            <div className="text-center text-slate-500 py-6">
+              <i className="fas fa-microphone text-slate-300 text-3xl mb-3"></i>
+              <p className="text-sm font-medium text-slate-600 mb-2">No Artists Signed</p>
+              <p className="text-xs text-slate-500 mb-4">Discover talent to build your roster</p>
               <Button
                 onClick={() => setShowDiscoveryModal(true)}
+                size="sm"
                 className="bg-primary text-white hover:bg-primary/90"
               >
-                <i className="fas fa-search mr-2"></i>
+                <i className="fas fa-search mr-1"></i>
                 Discover Artists
               </Button>
             </div>
@@ -206,104 +212,68 @@ export function ArtistRoster() {
             const StatusIcon = relationship.statusIcon;
 
             return (
-              <div key={artist.id} className="border border-slate-200 rounded-lg p-4">
-                {/* Artist Header */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div>
-                      <h4 className="font-medium text-slate-900 flex items-center">
-                        {artist.name}
-                        <StatusIcon className={`w-4 h-4 ml-2 ${relationship.statusColor}`} />
-                      </h4>
-                      <div className="flex items-center space-x-2 text-xs text-slate-600">
-                        <span>{artist.archetype}</span>
-                        <span>•</span>
-                        <span className={relationship.statusColor}>{relationship.statusText}</span>
-                      </div>
+              <div key={artist.id} className="border border-slate-200 rounded-lg p-3">
+                {/* Condensed Artist Header */}
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h4 className="font-medium text-slate-900 text-sm flex items-center">
+                      {artist.name}
+                      <StatusIcon className={`w-3 h-3 ml-1 ${relationship.statusColor}`} />
+                    </h4>
+                    <div className="flex items-center space-x-1 text-xs text-slate-600">
+                      <span>{artist.archetype}</span>
+                      <span>•</span>
+                      <span className={relationship.statusColor}>{relationship.statusText}</span>
+                      <span>•</span>
+                      <span>${insights.totalRevenue.toLocaleString()}</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="secondary" className="bg-secondary/10 text-secondary text-xs">
-                      {artist.isSigned ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setExpandedArtist(isExpanded ? null : artist.id)}
-                      className="text-slate-500 hover:text-slate-700"
-                    >
-                      <Info className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setExpandedArtist(isExpanded ? null : artist.id)}
+                    className="text-slate-400 hover:text-slate-600 p-1"
+                  >
+                    <Info className="w-3 h-3" />
+                  </Button>
                 </div>
 
-                {/* Performance Summary */}
-                <div className="grid grid-cols-3 gap-3 mb-3 text-center">
-                  <div className="p-2 bg-slate-50 rounded">
-                    <div className="text-xs text-slate-500">Projects</div>
-                    <div className="font-bold text-slate-900">{insights.projects}</div>
+                {/* Condensed Metrics */}
+                <div className="grid grid-cols-4 gap-2 mb-2 text-center">
+                  <div className="p-1 bg-slate-50 rounded text-xs">
+                    <div className="font-medium text-slate-900">{insights.projects}</div>
+                    <div className="text-slate-500">Projects</div>
                   </div>
-                  <div className="p-2 bg-green-50 rounded">
-                    <div className="text-xs text-slate-500">Revenue</div>
-                    <div className="font-bold text-green-700">${insights.totalRevenue.toLocaleString()}</div>
-                  </div>
-                  <div className="p-2 bg-blue-50 rounded">
-                    <div className="text-xs text-slate-500">Avg ROI</div>
-                    <div className={`font-bold ${insights.avgROI >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                  <div className="p-1 bg-slate-50 rounded text-xs">
+                    <div className={`font-medium ${insights.avgROI >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {insights.releasedProjects > 0 ? `${insights.avgROI > 0 ? '+' : ''}${insights.avgROI.toFixed(0)}%` : '--'}
                     </div>
+                    <div className="text-slate-500">ROI</div>
+                  </div>
+                  <div className="p-1 bg-slate-50 rounded text-xs">
+                    <div className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {artist.mood || 50}%
+                    </div>
+                    <div className="text-slate-500">Mood</div>
+                  </div>
+                  <div className="p-1 bg-slate-50 rounded text-xs">
+                    <div className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {artist.loyalty || 50}%
+                    </div>
+                    <div className="text-slate-500">Loyalty</div>
                   </div>
                 </div>
 
-                {/* Mood & Loyalty Progress */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-slate-500">Mood</span>
-                      <span className={`font-medium ${
-                        (artist.mood || 50) >= 70 ? 'text-green-600' : 
-                        (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {artist.mood || 50}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={artist.mood || 50} 
-                      className="h-2"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-slate-500">Loyalty</span>
-                      <span className={`font-medium ${
-                        (artist.loyalty || 50) >= 70 ? 'text-green-600' : 
-                        (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {artist.loyalty || 50}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={artist.loyalty || 50} 
-                      className="h-2"
-                    />
-                  </div>
-                </div>
-
-                {/* Recommendations */}
+                {/* Priority Recommendation */}
                 {recommendations.length > 0 && (
-                  <div className="mb-3">
-                    <div className="text-xs font-medium text-slate-700 mb-1">Recommendations</div>
-                    <div className="space-y-1">
-                      {recommendations.slice(0, 2).map((rec, index) => (
-                        <div key={index} className={`text-xs p-2 rounded flex items-center space-x-2 ${
-                          rec.type === 'urgent' ? 'bg-red-50 text-red-700' :
-                          rec.type === 'action' ? 'bg-blue-50 text-blue-700' :
-                          'bg-yellow-50 text-yellow-700'
-                        }`}>
-                          <span>{rec.icon}</span>
-                          <span>{rec.text}</span>
-                        </div>
-                      ))}
+                  <div className="mb-2">
+                    <div className={`text-xs p-2 rounded flex items-center space-x-2 ${
+                      recommendations[0].type === 'urgent' ? 'bg-red-50 text-red-700' :
+                      recommendations[0].type === 'action' ? 'bg-blue-50 text-blue-700' :
+                      'bg-yellow-50 text-yellow-700'
+                    }`}>
+                      <span>{recommendations[0].icon}</span>
+                      <span className="flex-1 truncate">{recommendations[0].text}</span>
                     </div>
                   </div>
                 )}
@@ -393,14 +363,16 @@ export function ArtistRoster() {
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="flex space-x-2 mt-3">
+                {/* Compact Action Buttons */}
+                <div className="flex space-x-1">
                   <Button
                     variant="outline"
-                    className="flex-1 text-sm text-primary hover:text-indigo-700 font-medium"
+                    size="sm"
+                    className="flex-1 text-xs"
                     onClick={() => handleArtistMeeting(artist)}
                   >
-                    Schedule Meeting
+                    <i className="fas fa-handshake mr-1"></i>
+                    Meet
                   </Button>
                   {insights.projects === 0 && (
                     <Button
@@ -408,11 +380,11 @@ export function ArtistRoster() {
                       size="sm"
                       className="text-xs text-green-600 hover:text-green-700"
                       onClick={() => {
-                        // Could trigger project creation modal with this artist pre-selected
                         console.log('Start project for', artist.name);
                       }}
                     >
-                      Start Project
+                      <i className="fas fa-plus mr-1"></i>
+                      Project
                     </Button>
                   )}
                 </div>
@@ -420,29 +392,20 @@ export function ArtistRoster() {
             );
           })}
 
-          {/* Browse Talent slot for additional artists (only show if we have artists but room for more) */}
+          {/* Browse Talent - Compact */}
           {artists && artists.length > 0 && artists.length < 3 && (
-            <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
-              <i className="fas fa-plus text-slate-400 text-2xl mb-2"></i>
-              <p className="text-sm text-slate-500 mb-2">Sign New Artist</p>
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center">
               <Button
                 variant="ghost"
-                className="text-primary hover:text-indigo-700 text-sm font-medium"
+                size="sm"
+                className="text-primary hover:text-indigo-700 text-xs font-medium w-full"
                 onClick={() => setShowDiscoveryModal(true)}
-                disabled={artists.length >= 3}
               >
+                <i className="fas fa-plus mr-1"></i>
                 {artists.length >= 3 ? 'Roster Full' : 'Browse Talent'}
               </Button>
             </div>
           )}
-
-          {/* Fill remaining empty slots (only show if we have artists) */}
-          {artists && artists.length > 0 && Array.from({ length: Math.max(0, 2 - artists.length) }).map((_, index) => (
-            <div key={`empty-${index}`} className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center opacity-50">
-              <i className="fas fa-plus text-slate-400 text-xl mb-2"></i>
-              <p className="text-xs text-slate-500">Available Slot</p>
-            </div>
-          ))}
         </div>
       </CardContent>
 

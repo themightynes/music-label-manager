@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Music, Calendar, TrendingUp } from 'lucide-react';
+import { Music, Calendar, TrendingUp, DollarSign, PlayCircle } from 'lucide-react';
 
 interface Song {
   id: string;
@@ -15,6 +15,14 @@ interface Song {
   isReleased: boolean;
   releaseId?: string | null;
   metadata?: any;
+  
+  // Individual song revenue and streaming metrics
+  initialStreams?: number;
+  totalStreams?: number;
+  totalRevenue?: number;
+  monthlyStreams?: number;
+  lastMonthRevenue?: number;
+  releaseMonth?: number;
 }
 
 interface SongCatalogProps {
@@ -192,6 +200,11 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   const recordedSongs = songs.filter(s => s.isRecorded);
   const releasedSongs = songs.filter(s => s.isReleased);
   const readyToReleaseSongs = songs.filter(s => s.isRecorded && !s.isReleased);
+  
+  // Calculate aggregate metrics
+  const totalRevenue = releasedSongs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
+  const totalStreams = releasedSongs.reduce((sum, song) => sum + (song.totalStreams || 0), 0);
+  const lastMonthRevenue = releasedSongs.reduce((sum, song) => sum + (song.lastMonthRevenue || 0), 0);
 
   return (
     <div className={className}>
@@ -201,24 +214,50 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
           <span>{recordedSongs.length} recorded</span>
           <span>•</span>
           <span>{releasedSongs.length} released</span>
+          {totalRevenue > 0 && (
+            <>
+              <span>•</span>
+              <span className="text-green-600">${totalRevenue.toLocaleString()}</span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
+      {/* Enhanced Summary Stats */}
+      <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
         <div className="p-2 bg-slate-50 rounded text-center">
           <div className="font-medium text-slate-900">{songs.length}</div>
           <div className="text-slate-500">Total Songs</div>
         </div>
-        <div className="p-2 bg-green-50 rounded text-center">
-          <div className="font-medium text-green-700">{readyToReleaseSongs.length}</div>
-          <div className="text-slate-500">Ready to Release</div>
-        </div>
         <div className="p-2 bg-blue-50 rounded text-center">
           <div className="font-medium text-blue-700">{releasedSongs.length}</div>
-          <div className="text-slate-500">In Market</div>
+          <div className="text-slate-500">Released</div>
         </div>
       </div>
+      
+      {/* Revenue & Streams Stats - Only show if there are released songs with metrics */}
+      {releasedSongs.length > 0 && (totalRevenue > 0 || totalStreams > 0) && (
+        <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+          <div className="p-2 bg-green-50 rounded text-center">
+            <div className="font-medium text-green-700">${totalRevenue.toLocaleString()}</div>
+            <div className="text-slate-500">Total Revenue</div>
+          </div>
+          <div className="p-2 bg-purple-50 rounded text-center">
+            <div className="font-medium text-purple-700">{totalStreams.toLocaleString()}</div>
+            <div className="text-slate-500">Total Streams</div>
+          </div>
+        </div>
+      )}
+      
+      {/* Last Month Performance - Only show if there was recent activity */}
+      {lastMonthRevenue > 0 && (
+        <div className="p-2 bg-gradient-to-r from-green-50 to-blue-50 rounded mb-3">
+          <div className="text-xs text-center">
+            <div className="font-medium text-slate-700">Last Month: +${lastMonthRevenue.toLocaleString()}</div>
+            <div className="text-slate-500">Recent Performance</div>
+          </div>
+        </div>
+      )}
 
       {/* Song List */}
       <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -235,7 +274,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                 {getStatusBadge(song)}
               </div>
 
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-xs mb-2">
                 <div className="flex items-center space-x-3 text-slate-500">
                   {song.genre && (
                     <span className="capitalize">{song.genre}</span>
@@ -259,6 +298,56 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                   {song.quality}
                 </Badge>
               </div>
+
+              {/* Individual Song Metrics - Only show for released songs */}
+              {song.isReleased && (song.totalStreams || song.totalRevenue) && (
+                <div className="pt-2 border-t border-slate-100 space-y-1">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {song.totalStreams && (
+                      <div className="flex items-center space-x-1">
+                        <PlayCircle className="w-3 h-3 text-blue-500" />
+                        <span className="text-slate-500">Streams:</span>
+                        <span className="font-mono text-blue-600">
+                          {song.totalStreams.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {song.totalRevenue && (
+                      <div className="flex items-center space-x-1">
+                        <DollarSign className="w-3 h-3 text-green-500" />
+                        <span className="text-slate-500">Revenue:</span>
+                        <span className="font-mono text-green-600">
+                          ${song.totalRevenue.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {song.lastMonthRevenue && song.lastMonthRevenue > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Last Month:</span>
+                      <div className="flex items-center space-x-1">
+                        <span className="font-mono text-green-600">
+                          +${song.lastMonthRevenue.toLocaleString()}
+                        </span>
+                        {song.monthlyStreams && (
+                          <span className="text-slate-400">
+                            ({song.monthlyStreams.toLocaleString()} streams)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {song.releaseMonth && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Released:</span>
+                      <span className="font-mono text-slate-600">Month {song.releaseMonth}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

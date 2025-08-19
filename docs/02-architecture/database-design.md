@@ -222,8 +222,16 @@ CREATE TABLE songs (
   is_released BOOLEAN DEFAULT FALSE,
   release_id UUID REFERENCES releases(id) ON DELETE SET NULL,
   
+  -- Individual Revenue & Streaming Metrics (NEW: Phase 1 Enhancement)
+  initial_streams INTEGER DEFAULT 0,      -- Streams when first released
+  total_streams INTEGER DEFAULT 0,        -- Cumulative streams over time
+  total_revenue INTEGER DEFAULT 0,        -- Cumulative revenue over time  
+  monthly_streams INTEGER DEFAULT 0,      -- Current month stream count
+  last_month_revenue INTEGER DEFAULT 0,   -- Previous month revenue
+  release_month INTEGER,                  -- Month when song was released
+  
   -- Flexible Data
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}', -- decay data, project associations, etc.
   
   -- Audit
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -234,10 +242,17 @@ CREATE INDEX idx_songs_artist_id ON songs(artist_id);
 CREATE INDEX idx_songs_game_id ON songs(game_id);
 CREATE INDEX idx_songs_is_recorded ON songs(is_recorded);
 CREATE INDEX idx_songs_is_released ON songs(is_released);
+CREATE INDEX idx_songs_revenue ON songs(total_revenue) WHERE is_released = true;
+CREATE INDEX idx_songs_release_month ON songs(release_month) WHERE is_released = true;
 ```
 
 **Purpose**: Individual song tracking with quality scoring and status progression  
-**Key Features**: Automatic generation during recording projects, quality system (20-100), status badges
+**Key Features**: 
+- **Automatic generation** during recording projects
+- **Quality-based performance**: Each song's streams/revenue based on individual quality
+- **Individual revenue tracking**: Separate metrics per song enable hit song mechanics
+- **Monthly decay simulation**: Realistic streaming patterns with 15% monthly decline
+- **Project aggregation**: Recording sessions display sum of individual song performance
 
 #### **releases** - Singles, EPs, Albums (PHASE 1 ADDITION)
 ```sql

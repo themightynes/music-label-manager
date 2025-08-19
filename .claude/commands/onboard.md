@@ -39,6 +39,11 @@ First, let me read ALL the comprehensive documentation:
 ## 07 - Content System Documentation
 !Read /home/runner/workspace/docs/07-content/content-system.md
 
+## 08 - Future Features Documentation
+!Read /home/runner/workspace/docs/08-future-features-and-fixes/CORE_FEATURES.md
+!Read /home/runner/workspace/docs/08-future-features-and-fixes/planned-features-analysis.md
+!Read /home/runner/workspace/docs/08-future-features-and-fixes/comprehensive-roadmap.md
+
 ## Legacy and Additional Documentation
 !Read /home/runner/workspace/docs/99-legacy/ClaudeCodeInstructions.md
 
@@ -73,9 +78,10 @@ Based on the comprehensive onboarding documentation I've just processed, here's 
 
 ## 📁 Key Documentation Locations
 - **Strategic Planning**: `docs/01-planning/` - Original vision and requirements
-- **Technical Implementation**: `docs/02-07/` - Complete architecture and workflows  
+- **Technical Implementation**: `docs/02-07/` - Complete architecture and workflows
+- **Future Features**: `docs/08-future-features-and-fixes/` - Planned enhancements and roadmap
 - **Session Rules**: `docs/99-legacy/ClaudeCodeInstructions.md`
-- **Current Status**: `MVP_STATUS.md` - Detailed completion assessment
+- **Current Status**: `DEVELOPMENT_STATUS.md` - Detailed completion assessment
 
 ## 🎯 Role-Based Quick Starts
 

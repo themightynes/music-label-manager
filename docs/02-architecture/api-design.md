@@ -879,6 +879,120 @@ GET /api/validate-types
 
 ---
 
+## 🎵 Song Management Endpoints
+
+### **Get All Songs for Game**
+```http
+GET /api/game/:gameId/songs
+Authorization: Required (session)
+```
+
+**Response (200 OK)**:
+```json
+[
+  {
+    "id": "uuid",
+    "title": "Midnight Dreams",
+    "artistId": "uuid",
+    "gameId": "uuid",
+    "quality": 67,
+    "genre": "pop",
+    "mood": "melancholic",
+    "createdMonth": 3,
+    "producerTier": "local",
+    "timeInvestment": "standard",
+    "isRecorded": true,
+    "isReleased": true,
+    "releaseId": "uuid",
+    
+    // Individual Revenue & Streaming Metrics
+    "initialStreams": 3350,
+    "totalStreams": 3350,
+    "totalRevenue": 1675,
+    "monthlyStreams": 3350,
+    "lastMonthRevenue": 1675,
+    "releaseMonth": 5,
+    
+    "metadata": {
+      "projectId": "uuid",
+      "artistMood": 60,
+      "releasedAt": "2025-08-18T10:00:00Z"
+    },
+    "createdAt": "2025-08-18T09:30:00Z"
+  }
+]
+```
+
+### **Get Songs for Specific Artist**
+```http
+GET /api/game/:gameId/artists/:artistId/songs
+Authorization: Required (session)
+```
+
+**Response (200 OK)**:
+```json
+[
+  {
+    "id": "uuid",
+    "title": "City Lights", 
+    "artistId": "uuid",
+    "gameId": "uuid",
+    "quality": 58,
+    "genre": "pop",
+    "mood": "upbeat",
+    "createdMonth": 4,
+    "isRecorded": true,
+    "isReleased": true,
+    "initialStreams": 2900,
+    "totalStreams": 2900,
+    "totalRevenue": 1450,
+    "monthlyStreams": 2900,
+    "lastMonthRevenue": 1450,
+    "releaseMonth": 5,
+    "metadata": {
+      "projectId": "uuid"
+    },
+    "createdAt": "2025-08-18T09:45:00Z"
+  }
+]
+```
+
+### **Get Released Songs for Revenue Processing**
+```http
+GET /api/game/:gameId/songs/released
+Authorization: Required (session)
+```
+
+**Response (200 OK)**:
+```json
+[
+  {
+    "id": "uuid",
+    "title": "Hearts on Fire",
+    "artistId": "uuid", 
+    "quality": 64,
+    "initialStreams": 3200,
+    "totalStreams": 3200,
+    "totalRevenue": 1600,
+    "monthlyStreams": 3200,
+    "lastMonthRevenue": 1600,
+    "releaseMonth": 5,
+    "metadata": {
+      "projectId": "uuid"
+    }
+  }
+]
+```
+
+**Key Features**:
+- **Individual song tracking**: Each song has separate revenue and streaming metrics
+- **Quality-based performance**: Initial streams calculated from individual song quality
+- **Monthly decay processing**: Individual songs processed for ongoing revenue
+- **Project aggregation**: Recording sessions show sum of individual song metrics
+- **Real-time updates**: Song metrics updated monthly during advance-month processing
+
+---
+
 ## 🔒 Security Considerations
 
 ### **Input Validation**

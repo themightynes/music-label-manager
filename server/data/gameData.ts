@@ -658,6 +658,32 @@ export class ServerGameData {
     return storage.getReleasesByGame(gameId);
   }
 
+  async getReleasedSongs(gameId: string) {
+    console.log('[ServerGameData] getReleasedSongs called with gameId:', gameId);
+    try {
+      const { storage } = await import('../storage');
+      const releasedSongs = await storage.getReleasedSongs(gameId);
+      console.log('[ServerGameData] getReleasedSongs returned:', releasedSongs?.length || 0, 'released songs');
+      return releasedSongs;
+    } catch (error) {
+      console.error('[ServerGameData] getReleasedSongs error:', error);
+      throw error;
+    }
+  }
+
+  async updateSongs(songUpdates: any[]) {
+    console.log('[ServerGameData] updateSongs called with:', songUpdates.length, 'updates');
+    try {
+      const { storage } = await import('../storage');
+      const result = await storage.updateSongs(songUpdates);
+      console.log('[ServerGameData] updateSongs completed');
+      return result;
+    } catch (error) {
+      console.error('[ServerGameData] updateSongs error:', error);
+      throw error;
+    }
+  }
+
   async createReleaseSong(releaseSong: any) {
     const { storage } = await import('../storage');
     return storage.createReleaseSong(releaseSong);

@@ -895,53 +895,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   console.log(`[DEBUG] Marked ${updatedSongs.length} songs as released for artist when project ${project.title} completed:`, 
                     updatedSongs.map(s => s.title));
 
-                  // PHASE 1: Calculate initial revenue for released songs
+                  // PHASE 1: Calculate individual revenue for each released song
                   if (updatedSongs.length > 0) {
-                    // Get song details for revenue calculation
+                    // Get song details for individual revenue calculation
+                    const projectIdCondition = sql`${songs.metadata}->>'projectId' = ${project.id}`;
                     const projectSongs = await tx.select().from(songs)
                       .where(and(
                         eq(songs.gameId, gameId),
                         eq(songs.artistId, project.artistId),
                         eq(songs.isRecorded, true),
-                        sql`${songs.metadata}->>'projectId' = ${project.id}`
+                        projectIdCondition
                       ));
                     
                     if (projectSongs.length > 0) {
-                      // Calculate initial revenue based on song quality and count
+                      console.log(`[INDIVIDUAL REVENUE] Processing ${projectSongs.length} songs from ${project.title}`);
+                      
+                      let totalProjectStreams = 0;
+                      let totalProjectRevenue = 0;
+                      const songMetrics = [];
+                      
+                      // Calculate individual revenue for each song
+                      for (const song of projectSongs) {
+                        // Individual song revenue formula
+                        const songQuality = song.quality;
+                        const baseStreamsPerQuality = 50;
+                        const qualityBonus = Math.max(0, (songQuality - 40) / 60);
+                        
+                        // Each song gets streams based on its individual quality
+                        const songInitialStreams = Math.round(songQuality * baseStreamsPerQuality * (1 + qualityBonus));
+                        const songInitialRevenue = Math.round(songInitialStreams * 0.5); // $0.50 per stream
+                        
+                        console.log(`[INDIVIDUAL REVENUE] Song "${song.title}": Q${songQuality} → ${songInitialStreams} streams → $${songInitialRevenue}`);
+                        
+                        // Update individual song with revenue metrics
+                        await tx
+                          .update(songs)
+                          .set({
+                            initialStreams: songInitialStreams,
+                            totalStreams: songInitialStreams,
+                            totalRevenue: songInitialRevenue,
+                            monthlyStreams: songInitialStreams,
+                            lastMonthRevenue: songInitialRevenue,
+                            releaseMonth: monthResult.gameState.currentMonth,
+                            metadata: {
+                              ...((song.metadata as any) || {}),
+                              projectId: project.id,
+                              releasedAt: new Date().toISOString()
+                            }
+                          })
+                          .where(eq(songs.id, song.id));
+                        
+                        totalProjectStreams += songInitialStreams;
+                        totalProjectRevenue += songInitialRevenue;
+                        songMetrics.push({
+                          title: song.title,
+                          quality: songQuality,
+                          streams: songInitialStreams,
+                          revenue: songInitialRevenue
+                        });
+                      }
+                      
+                      console.log(`[INDIVIDUAL REVENUE] Project ${project.title} totals: ${totalProjectStreams} streams, $${totalProjectRevenue}`);
+                      
+                      // Update project metadata with aggregated metrics (for compatibility)
                       const averageQuality = projectSongs.reduce((sum, song) => sum + song.quality, 0) / projectSongs.length;
-                      const songCount = projectSongs.length;
-                      
-                      // Revenue formula: Base streams per quality point * song count
-                      const baseStreamsPerQuality = 50;
-                      const songCountMultiplier = Math.sqrt(songCount);
-                      const qualityBonus = Math.max(0, (averageQuality - 40) / 60);
-                      const initialStreams = Math.round(averageQuality * baseStreamsPerQuality * songCountMultiplier * (1 + qualityBonus));
-                      const initialRevenue = Math.round(initialStreams * 0.5); // $0.50 per stream
-                      
-                      console.log(`[DEBUG] Setting initial revenue for ${project.title}: ${initialStreams} streams, $${initialRevenue}`);
-                      
-                      // Update project metadata with initial revenue
                       await tx
                         .update(projects)
                         .set({
                           metadata: {
-                            streams: initialStreams,
-                            revenue: initialRevenue,
-                            songCount: songCount,
+                            streams: totalProjectStreams,
+                            revenue: totalProjectRevenue,
+                            songCount: projectSongs.length,
                             averageQuality: Math.round(averageQuality),
+                            songMetrics: songMetrics,
                             releasedAt: new Date().toISOString()
                           }
                         })
                         .where(eq(projects.id, project.id));
                       
                       // Add revenue to monthly summary
-                      monthResult.summary.revenue += initialRevenue;
+                      monthResult.summary.revenue += totalProjectRevenue;
                       monthResult.summary.changes.push({
                         type: 'project_complete',
-                        description: `💰 ${project.title} generated ${initialStreams} streams (${songCount} songs, avg quality ${Math.round(averageQuality)})`,
-                        amount: initialRevenue,
+                        description: `💰 ${project.title} released ${projectSongs.length} songs → ${totalProjectStreams.toLocaleString()} total streams`,
+                        amount: totalProjectRevenue,
                         projectId: project.id
                       });
+                      
+                      // Add individual song entries to summary for transparency
+                      for (const metric of songMetrics) {
+                        monthResult.summary.changes.push({
+                          type: 'song_release',
+                          description: `🎵 "${metric.title}" (Q${metric.quality}) → ${metric.streams.toLocaleString()} streams`,
+                          amount: metric.revenue,
+                          projectId: project.id
+                        });
+                      }
                     }
                   }
                 } else {
@@ -958,86 +1007,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 console.log(`[DEBUG] Project ${project.title} completed with ${project.songsCreated || 0} songs`);
                 
-                // PHASE 1: NEW SONG-BASED REVENUE CALCULATION
-                const { sql } = await import('drizzle-orm');
-                
-                // Get total quality of all songs from this project
-                // Only proceed if project has an artistId
-                if (!project.artistId) {
-                  console.log(`[REVENUE] Project ${project.title} has no artistId, skipping revenue calculation`);
-                } else {
-                  const projectSongs = await tx
-                    .select()
-                    .from(songs)
-                    .where(and(
-                      eq(songs.gameId, gameId),
-                      eq(songs.artistId, project.artistId),
-                      eq(songs.isRecorded, true),
-                      sql`${songs.metadata}->>'projectId' = ${project.id}`
-                    ));
-                
-                console.log(`[REVENUE] Found ${projectSongs.length} songs for revenue calculation`);
-                
-                if (projectSongs.length > 0) {
-                  // Calculate initial revenue based on song quality
-                  const totalQuality = projectSongs.reduce((sum, song) => sum + (song.quality || 0), 0);
-                  const averageQuality = totalQuality / projectSongs.length;
-                  const songCount = projectSongs.length;
-                  
-                  // Revenue formula: Base streams per quality point * song count
-                  const baseStreamsPerQuality = 50; // 50 streams per quality point
-                  const songCountMultiplier = Math.sqrt(songCount); // Diminishing returns for multiple songs
-                  const qualityBonus = Math.max(0, (averageQuality - 40) / 60); // Quality above 40 gives bonus
-                  
-                  const initialStreams = Math.round(
-                    averageQuality * baseStreamsPerQuality * songCountMultiplier * (1 + qualityBonus)
-                  );
-                  const revenuePerStream = 0.5; // $0.50 per stream
-                  const initialRevenue = Math.round(initialStreams * revenuePerStream);
-                  
-                  console.log(`[REVENUE] Calculation details:`, {
-                    songCount,
-                    totalQuality,
-                    averageQuality,
-                    songCountMultiplier,
-                    qualityBonus,
-                    initialStreams,
-                    initialRevenue
-                  });
-                  
-                  // Update project metadata for decay system
-                  const currentMetadata = (project.metadata as any) || {};
-                  await tx
-                    .update(projects)
-                    .set({
-                      metadata: {
-                        ...currentMetadata,
-                        streams: initialStreams,
-                        revenue: initialRevenue,
-                        releaseMonth: monthResult.gameState.currentMonth,
-                        songCount: songCount,
-                        averageQuality: averageQuality
-                      }
-                    })
-                    .where(eq(projects.id, project.id));
-                  
-                  // Add initial revenue to game state
-                  monthResult.gameState.money = (monthResult.gameState.money || 0) + initialRevenue;
-                  
-                  // Add to monthly summary
-                  monthResult.summary.revenue += initialRevenue;
-                  monthResult.summary.changes.push({
-                    type: 'revenue',
-                    description: `🎵 Release revenue: ${project.title} (${songCount} songs, avg quality ${Math.round(averageQuality)})`,
-                    amount: initialRevenue,
-                    projectId: project.id
-                  });
-                  
-                  console.log(`[REVENUE] Project ${project.title} generated $${initialRevenue} initial revenue`);
-                  } else {
-                    console.log(`[REVENUE] No songs found for project ${project.title}, no revenue generated`);
-                  }
-                }
               } else {
                 // Regular stage progression without revenue calculation
                 await tx

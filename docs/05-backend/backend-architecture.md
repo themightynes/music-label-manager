@@ -84,6 +84,63 @@ export class GameEngine {
 - Easy testing and balance modifications
 - Clear separation from API layer
 
+### **1.1 Individual Song Revenue System (NEW: Phase 1 Enhancement)**
+Enhanced GameEngine with individual song tracking for realistic music industry simulation:
+
+```typescript
+// GameEngine processes individual songs instead of aggregate projects
+class GameEngine {
+  // Enhanced monthly processing with individual song revenue
+  private async processReleasedProjects(summary: MonthSummary): Promise<void> {
+    try {
+      // Get all released songs for this game (not projects)
+      const releasedSongs = await this.gameData.getReleasedSongs(this.gameState.id);
+      
+      for (const song of releasedSongs) {
+        // Calculate individual song ongoing revenue
+        const ongoingRevenue = this.calculateOngoingSongRevenue(song);
+        
+        if (ongoingRevenue > 0) {
+          // Update individual song metrics
+          await this.gameData.updateSongs([{
+            songId: song.id,
+            monthlyStreams: Math.round(ongoingRevenue / 0.05),
+            lastMonthRevenue: ongoingRevenue,
+            totalRevenue: (song.totalRevenue || 0) + ongoingRevenue,
+            totalStreams: (song.totalStreams || 0) + Math.round(ongoingRevenue / 0.05)
+          }]);
+          
+          summary.revenue += ongoingRevenue;
+          summary.changes.push({
+            type: 'ongoing_revenue',
+            description: `🎵 "${song.title}" ongoing streams`,
+            amount: ongoingRevenue
+          });
+        }
+      }
+    } catch (error) {
+      // Graceful fallback to legacy project-based processing
+      await this.processReleasedProjectsLegacy(summary);
+    }
+  }
+
+  // Individual song revenue calculation
+  private calculateOngoingSongRevenue(song: any): number {
+    const monthsSinceRelease = this.gameState.currentMonth - song.releaseMonth;
+    const baseDecay = Math.pow(0.85, monthsSinceRelease); // 15% monthly decline
+    const monthlyStreams = song.initialStreams * baseDecay * reputationBonus * accessBonus * 0.8;
+    return Math.round(monthlyStreams * 0.05); // $0.05 per ongoing stream
+  }
+}
+```
+
+**Key Features**:
+- **Individual song processing**: Each song has separate decay and revenue calculation
+- **Quality-based performance**: Initial streams based on individual song quality
+- **Monthly updates**: Individual song metrics updated each month
+- **Aggregated display**: Projects show sum of individual song performance
+- **Backward compatibility**: Graceful fallback for legacy project-based data
+
 ### **2. Transaction-Safe Database Operations**
 All game state changes use database transactions:
 
@@ -391,6 +448,41 @@ export class Storage {
     ]);
     
     return { gameState, artists, projects, roles, monthlyActions };
+  }
+
+  // Individual Song Management (NEW: Phase 1 Enhancement)
+  async getSongsByArtist(artistId: string, gameId: string): Promise<Song[]> {
+    return await this.db.select().from(songs)
+      .where(and(eq(songs.artistId, artistId), eq(songs.gameId, gameId)))
+      .orderBy(desc(songs.createdAt));
+  }
+
+  async getReleasedSongs(gameId: string): Promise<Song[]> {
+    return await this.db.select().from(songs)
+      .where(and(
+        eq(songs.gameId, gameId),
+        eq(songs.isReleased, true)
+      ))
+      .orderBy(desc(songs.releaseMonth));
+  }
+
+  async updateSongs(songUpdates: { songId: string; [key: string]: any }[]): Promise<void> {
+    // Batch update individual songs with new revenue/streaming metrics
+    for (const update of songUpdates) {
+      const { songId, ...updateData } = update;
+      await this.db.update(songs)
+        .set(updateData)
+        .where(eq(songs.id, songId));
+    }
+  }
+
+  async createSong(song: InsertSong): Promise<Song> {
+    const [newSong] = await this.db.insert(songs).values({
+      id: crypto.randomUUID(),
+      ...song,
+      createdAt: new Date()
+    }).returning();
+    return newSong;
   }
 }
 ```

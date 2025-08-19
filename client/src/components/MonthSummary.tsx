@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TrendingUp, TrendingDown, DollarSign, Calendar, Music, Trophy, Zap } from 'lucide-react';
 
 interface MonthSummaryProps {
   monthlyStats: any;
@@ -23,11 +25,15 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
     }).format(amount);
   };
 
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('en-US').format(num);
+  };
+
   const getChangeIcon = (type: string) => {
     switch (type) {
       case 'project_complete': return '🎉';
       case 'revenue': return '💰';
-      case 'ongoing_revenue': return '📻'; // Radio icon for streaming revenue
+      case 'ongoing_revenue': return '📻';
       case 'expense': return '💸';
       case 'unlock': return '🔓';
       case 'artist': return '🎤';
@@ -65,240 +71,341 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
   const categorizedChanges = categorizeChanges(changes);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-200 max-w-4xl w-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-purple-50">
+    <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-7xl mx-auto">
+      {/* Header Section - Clean and prominent */}
+      <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-8 py-6 border-b border-slate-200">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
+            <h1 className="text-xl font-bold text-slate-900">
               {isMonthResults ? `Month ${monthlyStats?.month || ''} Results` : 'Month Summary'}
-            </h2>
+            </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Review your monthly performance and key metrics
+              Your financial performance and key achievements
             </p>
           </div>
+          
+          {/* Big prominent net income display */}
           <div className="text-right">
-            <div className="text-2xl font-bold font-mono text-slate-900">
-              {formatCurrency(netIncome)}
+            <div className="flex items-center space-x-2">
+              <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                {netIncome >= 0 ? (
+                  <TrendingUp className={`h-5 w-5 ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                ) : (
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                )}
+              </div>
+              <div>
+                <div className={`text-2xl font-bold font-mono ${
+                  netIncome >= 0 ? 'text-green-700' : 'text-red-700'
+                }`}>
+                  {netIncome >= 0 ? '+' : ''}{formatCurrency(netIncome)}
+                </div>
+                <div className="text-sm text-slate-500 font-medium">Net Income</div>
+              </div>
             </div>
-            <div className="text-xs text-slate-500">Net Income</div>
           </div>
         </div>
       </div>
 
-      {/* Financial Overview */}
-      <div className="px-6 py-4">
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">Revenue</p>
-                  <p className="text-lg font-bold text-green-900">{formatCurrency(revenue)}</p>
+      {/* Financial Summary Bar - Horizontal layout for easy scanning */}
+      <div className="px-8 py-6 bg-slate-50 border-b border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Revenue Card */}
+          <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="text-2xl text-green-600">📈</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-red-50 border-red-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-700">Expenses</p>
-                  <p className="text-lg font-bold text-red-900">{formatCurrency(expenses)}</p>
+                  <h3 className="text-sm font-semibold text-green-700">Revenue</h3>
+                  <p className="text-xs text-slate-500">Income earned</p>
                 </div>
-                <div className="text-2xl text-red-600">📉</div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className={`${netIncome >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-yellow-50 border-yellow-200'}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Net Income</p>
-                  <p className={`text-lg font-bold ${netIncome >= 0 ? 'text-blue-900' : 'text-yellow-900'}`}>
-                    {formatCurrency(netIncome)}
-                  </p>
+              <div className="text-right">
+                <div className="text-lg font-bold text-green-700">
+                  {formatCurrency(revenue)}
                 </div>
-                <div className="text-2xl">{netIncome >= 0 ? '💰' : '⚠️'}</div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress Bar for Revenue vs Expenses */}
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-slate-700">Financial Breakdown</span>
-            <span className="text-xs text-slate-500">
-              {revenue > 0 ? `${((revenue / (revenue + expenses)) * 100).toFixed(0)}% revenue` : 'No revenue'}
-            </span>
+            </div>
           </div>
-          <div className="relative">
-            <Progress 
-              value={revenue > 0 ? (revenue / (revenue + expenses)) * 100 : 0} 
-              className="h-3 bg-red-100"
-            />
-            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-slate-700">
-              {revenue > 0 && expenses > 0 && `${formatCurrency(revenue)} / ${formatCurrency(revenue + expenses)}`}
+
+          {/* Expenses Card */}
+          <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-red-700">Expenses</h3>
+                  <p className="text-xs text-slate-500">Costs incurred</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold text-red-700">
+                  {formatCurrency(expenses)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Profit Margin Card */}
+          <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-blue-100' : 'bg-orange-100'}`}>
+                  <DollarSign className={`h-5 w-5 ${netIncome >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+                </div>
+                <div>
+                  <h3 className={`text-sm font-semibold ${netIncome >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                    Profit Margin
+                  </h3>
+                  <p className="text-xs text-slate-500">Performance ratio</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold ${netIncome >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                  {revenue > 0 ? `${((netIncome / revenue) * 100).toFixed(1)}%` : '0%'}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        {isMonthResults && changes.length > 0 && (
-          <>
-            <div className="flex space-x-1 mb-4 bg-slate-100 p-1 rounded-lg">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'overview'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                📊 Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('projects')}
-                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'projects'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                🎵 Projects
-              </button>
-              <button
-                onClick={() => setActiveTab('events')}
-                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === 'events'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                🎯 Events
-              </button>
+        {/* Visual breakdown bar */}
+        <div className="mt-6">
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="text-xs font-semibold text-slate-700">Financial Breakdown</h4>
+            <div className="text-xs text-slate-500">
+              Revenue vs Expenses
             </div>
+          </div>
+          
+          <div className="relative bg-slate-200 rounded-full h-4 overflow-hidden">
+            {revenue > 0 && (
+              <div 
+                className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${(revenue / (revenue + expenses)) * 100}%` }}
+              />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-medium text-slate-700">
+                {revenue > 0 ? `${formatCurrency(revenue)} earned` : 'No revenue'}
+                {expenses > 0 && ` • ${formatCurrency(expenses)} spent`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Tab Content */}
-            <div className="min-h-[200px]">
-              {activeTab === 'overview' && (
-                <div className="space-y-4">
-                  {categorizedChanges.revenue.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-green-700 mb-2 flex items-center">
-                        💰 Revenue Sources
-                      </h4>
-                      <div className="space-y-2">
-                        {categorizedChanges.revenue.map((change: any, index: number) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg">{getChangeIcon(change.type)}</span>
-                              <span className="text-sm text-green-800">{change.description}</span>
-                            </div>
-                            <Badge variant="outline" className="text-green-700 border-green-300">
-                              +{formatCurrency(change.amount || 0)}
-                            </Badge>
+      {/* Main Content Area */}
+      <div className="px-8 py-6">
+        {isMonthResults && changes.length > 0 ? (
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="overview" className="flex items-center space-x-2">
+                <Trophy className="h-4 w-4" />
+                <span>Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="projects" className="flex items-center space-x-2">
+                <Music className="h-4 w-4" />
+                <span>Projects</span>
+              </TabsTrigger>
+              <TabsTrigger value="events" className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span>Events</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Revenue Sources */}
+                {categorizedChanges.revenue.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-green-700 text-sm">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Revenue Sources</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {categorizedChanges.revenue.map((change: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm">{getChangeIcon(change.type)}</span>
+                            <span className="text-sm font-medium text-green-800">{change.description}</span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                          <Badge variant="outline" className="text-xs text-green-700 border-green-300 font-semibold">
+                            +{formatCurrency(change.amount || 0)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {categorizedChanges.achievements.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center">
-                        🏆 Achievements
-                      </h4>
-                      <div className="space-y-2">
-                        {categorizedChanges.achievements.map((change: any, index: number) => (
-                          <div key={index} className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
-                            <span className="text-lg">{getChangeIcon(change.type)}</span>
-                            <span className="text-sm text-blue-800">{change.description}</span>
-                          </div>
-                        ))}
-                      </div>
+                {/* Achievements */}
+                {categorizedChanges.achievements.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-blue-700 text-sm">
+                        <Trophy className="h-4 w-4" />
+                        <span>Achievements</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {categorizedChanges.achievements.map((change: any, index: number) => (
+                        <div key={index} className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                          <span className="text-sm">{getChangeIcon(change.type)}</span>
+                          <span className="text-sm font-medium text-blue-800">{change.description}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              
+              {/* Performance Summary */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <div className={`inline-flex items-center space-x-2 p-4 rounded-xl ${
+                      netIncome >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    }`}>
+                      {netIncome >= 0 ? (
+                        <Zap className="h-5 w-5" />
+                      ) : (
+                        <TrendingDown className="h-5 w-5" />
+                      )}
+                      <span className="text-sm font-semibold">
+                        {netIncome >= 0 ? 
+                          `Excellent! You generated ${formatCurrency(netIncome)} in profit this month.` :
+                          `Focus needed: You had a ${formatCurrency(Math.abs(netIncome))} loss this month.`
+                        }
+                      </span>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              {activeTab === 'projects' && (
-                <div className="space-y-3">
+            <TabsContent value="projects" className="space-y-4">
+              {changes.filter((c: any) => c.type === 'project_complete').length > 0 ? (
+                <div className="grid gap-4">
                   {changes.filter((c: any) => c.type === 'project_complete').map((change: any, index: number) => (
-                    <Card key={index} className="border-slate-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <h4 className="font-medium text-slate-900">{change.description}</h4>
-                            <div className="flex items-center space-x-4 text-xs text-slate-500">
-                              <span>Revenue: {formatCurrency(change.amount || 0)}</span>
-                              {change.projectId && <span>Project ID: {change.projectId}</span>}
+                    <Card key={index} className="border-slate-200 hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-green-100 rounded-full">
+                              <Music className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold text-slate-900">{change.description}</h4>
+                              <div className="flex items-center space-x-4 text-xs text-slate-500 mt-1">
+                                <span>Revenue: {formatCurrency(change.amount || 0)}</span>
+                                {change.projectId && <span>Project ID: {change.projectId}</span>}
+                              </div>
                             </div>
                           </div>
-                          <Badge className="bg-green-100 text-green-800">Released</Badge>
+                          <Badge className="bg-green-100 text-green-800 px-2 py-1 text-xs">Released</Badge>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
-                  {changes.filter((c: any) => c.type === 'project_complete').length === 0 && (
-                    <div className="text-center py-8 text-slate-500">
-                      <div className="text-4xl mb-2">🎵</div>
-                      <p>No projects completed this month</p>
-                    </div>
-                  )}
                 </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <Music className="h-10 w-10 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-sm font-semibold text-slate-600 mb-2">No Projects Completed</h3>
+                    <p className="text-xs text-slate-500">No projects were completed this month</p>
+                  </CardContent>
+                </Card>
               )}
+            </TabsContent>
 
-              {activeTab === 'events' && (
-                <div className="space-y-3">
-                  {monthlyStats?.events?.map((event: any, index: number) => (
+            <TabsContent value="events" className="space-y-4">
+              {monthlyStats?.events?.length > 0 ? (
+                <div className="grid gap-4">
+                  {monthlyStats.events.map((event: any, index: number) => (
                     <Card key={index} className="border-slate-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="text-2xl">📅</div>
+                      <CardContent className="p-6">
+                        <div className="flex items-start space-x-4">
+                          <div className="p-3 bg-blue-100 rounded-full">
+                            <Calendar className="h-5 w-5 text-blue-600" />
+                          </div>
                           <div>
-                            <h4 className="font-medium text-slate-900">{event.title || 'Event'}</h4>
-                            <p className="text-sm text-slate-600 mt-1">{event.description}</p>
+                            <h4 className="text-sm font-semibold text-slate-900">{event.title || 'Event'}</h4>
+                            <p className="text-xs text-slate-600 mt-1">{event.description}</p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  )) || (
-                    <div className="text-center py-8 text-slate-500">
-                      <div className="text-4xl mb-2">📅</div>
-                      <p>No special events this month</p>
-                    </div>
-                  )}
+                  ))}
                 </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <Calendar className="h-10 w-10 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-sm font-semibold text-slate-600 mb-2">No Special Events</h3>
+                    <p className="text-xs text-slate-500">No special events occurred this month</p>
+                  </CardContent>
+                </Card>
               )}
-            </div>
-          </>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          /* Empty state for no results */
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="p-4 bg-slate-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-600 mb-2">No Results Available</h3>
+              <p className="text-sm text-slate-500">No detailed results are available for this month</p>
+            </CardContent>
+          </Card>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
-        <Button
-          onClick={onAdvanceMonth}
-          disabled={isAdvancing}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-        >
-          {isAdvancing ? (
-            <span className="flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Advancing...
-            </span>
-          ) : (
-            isMonthResults ? '📊 Back to Dashboard' : '🚀 Continue to Next Month'
-          )}
-        </Button>
+      <div className="px-8 py-6 border-t border-slate-200 bg-slate-50">
+        <div className="max-w-md mx-auto">
+          <Button
+            onClick={onAdvanceMonth}
+            disabled={isAdvancing}
+            size="lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+          >
+            {isAdvancing ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Advancing...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center space-x-2">
+                {isMonthResults ? (
+                  <>
+                    <DollarSign className="h-5 w-5" />
+                    <span>Back to Dashboard</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-5 w-5" />
+                    <span>Continue to Next Month</span>
+                  </>
+                )}
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

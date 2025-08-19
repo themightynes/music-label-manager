@@ -34,7 +34,8 @@ client/src/
 │   ├── CampaignResultsModal.tsx  # Game completion
 │   ├── KPICards.tsx      # Resource display
 │   ├── ArtistRoster.tsx  # Enhanced artist management with analytics and insights
-│   ├── ActiveProjects.tsx # Enhanced project tracking with revenue analytics and ROI calculations
+│   ├── SongCatalog.tsx   # Individual song tracking with revenue and streaming metrics
+│   ├── ActiveProjects.tsx # Enhanced project tracking with aggregated song analytics and ROI calculations
 │   ├── AccessTierBadges.tsx # Detailed progression system with requirements
 │   └── ui/               # Base UI components (Shadcn)
 │       ├── button.tsx
@@ -452,53 +453,124 @@ export function ArtistRoster() {
 - Relationship status indicators with actionable guidance
 - Expandable artist details with management tips and factors affecting mood/loyalty
 
-#### **ActiveProjects.tsx** - Enhanced Project Tracking with Revenue Analytics
+#### **SongCatalog.tsx** - Individual Song Tracking (NEW: Phase 1 Enhancement)
+```typescript
+interface Song {
+  id: string;
+  title: string;
+  quality: number;
+  genre?: string;
+  mood?: string;
+  isRecorded: boolean;
+  isReleased: boolean;
+  
+  // Individual song revenue metrics
+  initialStreams?: number;
+  totalStreams?: number;
+  totalRevenue?: number;
+  monthlyStreams?: number;
+  lastMonthRevenue?: number;
+  releaseMonth?: number;
+}
+
+export function SongCatalog({ artistId, gameId }: SongCatalogProps) {
+  const [songs, setSongs] = useState<Song[]>([]);
+  
+  // Calculate aggregate metrics from individual songs
+  const totalRevenue = songs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
+  const totalStreams = songs.reduce((sum, song) => sum + (song.totalStreams || 0), 0);
+  const lastMonthRevenue = songs.reduce((sum, song) => sum + (song.lastMonthRevenue || 0), 0);
+
+  return (
+    <div>
+      {/* Enhanced summary stats with revenue aggregation */}
+      {/* Individual song cards with:
+          - Quality indicators and status badges
+          - Individual streams and revenue metrics
+          - Monthly performance tracking
+          - Release month and creation details
+          - Visual quality scoring (color-coded)
+          - Recent performance highlights */}
+    </div>
+  );
+}
+```
+
+**Responsibilities**:
+- **Individual song display** with quality, status, and performance metrics
+- **Revenue tracking per song** showing streams, revenue, and monthly changes
+- **Aggregated statistics** displaying total revenue, streams across all artist songs
+- **Performance monitoring** with last month revenue and trend indicators
+- **Quality visualization** with color-coded quality indicators
+- **Status progression** showing recording → ready → released workflow
+- **Strategic insights** enabling song-by-song performance analysis
+
+#### **ActiveProjects.tsx** - Enhanced Project Tracking with Aggregated Song Analytics
 ```typescript
 export function ActiveProjects() {
-  const { projects, artists, createProject, gameState } = useGameStore();
+  const { projects, artists, createProject, gameState, songs } = useGameStore();
 
-  const calculateProjectROI = (project: any) => {
-    // Calculate comprehensive ROI based on investment vs revenue
+  // Get songs for a specific project and calculate aggregated metrics
+  const getProjectSongs = (projectId: string) => {
+    return songs.filter((song: any) => {
+      const metadata = song.metadata as any;
+      return metadata?.projectId === projectId;
+    });
+  };
+
+  const calculateProjectMetrics = (project: any) => {
+    const projectSongs = getProjectSongs(project.id);
+    
+    if (projectSongs.length > 0) {
+      // Calculate aggregated metrics from individual songs
+      const totalRevenue = projectSongs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
+      const totalStreams = projectSongs.reduce((sum, song) => sum + (song.totalStreams || 0), 0);
+      const lastMonthRevenue = projectSongs.reduce((sum, song) => sum + (song.lastMonthRevenue || 0), 0);
+      
+      const investment = project.budget || 0;
+      const roi = investment > 0 ? ((totalRevenue - investment) / investment) * 100 : 0;
+      
+      return { 
+        roi, 
+        revenue: totalRevenue, 
+        investment, 
+        streams: totalStreams, 
+        songCount: projectSongs.length,
+        lastMonthRevenue,
+        individual: true // Using individual song tracking
+      };
+    }
+    
+    // Fallback to legacy project metadata if no individual songs
     const metadata = project.metadata || {};
     const revenue = metadata.revenue || 0;
     const investment = project.budget || 0;
     const roi = investment > 0 ? ((revenue - investment) / investment) * 100 : 0;
-    return { roi, revenue, investment };
-  };
-
-  const calculatePortfolioStats = () => {
-    // Portfolio-wide analytics for revenue, ROI, and performance
-    let totalRevenue = 0;
-    let totalInvestment = 0;
-    let totalStreams = 0;
-    let successfulProjects = 0;
-
-    projects.forEach(project => {
-      // Aggregate metrics across all projects
-    });
-
-    return { totalRevenue, portfolioROI, totalStreams, successfulProjects };
+    return { roi, revenue, investment, streams: metadata.streams || 0, individual: false };
   };
 
   return (
     <Card>
       {/* Enhanced project cards with:
-          - Revenue tracking and ROI calculations
-          - Portfolio-wide performance metrics
-          - Individual project analytics (streams, revenue, investment)
-          - Progress indicators with financial context
-          - Success metrics and performance badges */}
+          - Aggregated revenue from individual songs
+          - Individual song tracking indicators
+          - Backward compatibility with legacy projects
+          - "🎵 Individual song tracking active" status
+          - Real-time aggregation of song performance
+          - Last month revenue from individual songs */}
     </Card>
   );
 }
 ```
 
 **Responsibilities**:
-- Comprehensive revenue tracking for individual projects and portfolio
-- ROI calculations with investment vs. return analysis
-- Portfolio-wide performance metrics and success indicators
-- Project-specific analytics including streams, revenue, and progress
-- Financial performance visualization with color-coded indicators
+- **Aggregated song metrics** calculated from individual song performance
+- **Individual song tracking indicator** showing when new system is active
+- **Backward compatibility** with legacy project-based revenue data
+- **Real-time project totals** summing individual song streams and revenue
+- **ROI calculations** using aggregated revenue vs project investment
+- **Portfolio-wide analytics** across all projects with individual song foundation
+- **Last month performance** showing recent individual song contributions
 
 #### **MonthSummary.tsx** - Enhanced Monthly Results Display
 ```typescript

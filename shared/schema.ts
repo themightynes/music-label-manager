@@ -81,7 +81,16 @@ export const songs = pgTable("songs", {
   isRecorded: boolean("is_recorded").default(false),
   isReleased: boolean("is_released").default(false),
   releaseId: uuid("release_id").references(() => releases.id, { onDelete: "set null" }),
-  metadata: jsonb("metadata").default('{}'), // hooks, features, special attributes
+  
+  // Individual song revenue and streaming metrics
+  initialStreams: integer("initial_streams").default(0),
+  totalStreams: integer("total_streams").default(0),
+  totalRevenue: integer("total_revenue").default(0),
+  monthlyStreams: integer("monthly_streams").default(0),
+  lastMonthRevenue: integer("last_month_revenue").default(0),
+  releaseMonth: integer("release_month"),
+  
+  metadata: jsonb("metadata").default('{}'), // hooks, features, special attributes, decay data
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -48,6 +48,8 @@ export interface IStorage {
   getSong(id: string): Promise<Song | undefined>;
   createSong(song: InsertSong): Promise<Song>;
   updateSong(id: string, song: Partial<InsertSong>): Promise<Song>;
+  getReleasedSongs(gameId: string): Promise<Song[]>;
+  updateSongs(songUpdates: { songId: string; [key: string]: any }[]): Promise<void>;
 
   // Releases
   getReleasesByGame(gameId: string): Promise<Release[]>;
@@ -254,6 +256,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(songs.id, id))
       .returning();
     return updatedSong;
+  }
+
+  async getReleasedSongs(gameId: string): Promise<Song[]> {
+    return await db.select().from(songs)
+      .where(and(
+        eq(songs.gameId, gameId),
+        eq(songs.isReleased, true)
+      ))
+      .orderBy(desc(songs.releaseMonth));
+  }
+
+  async updateSongs(songUpdates: { songId: string; [key: string]: any }[]): Promise<void> {
+    // Batch update songs with their new metrics
+    for (const update of songUpdates) {
+      const { songId, ...updateData } = update;
+      await db.update(songs)
+        .set(updateData)
+        .where(eq(songs.id, songId));
+    }
   }
 
   // Releases

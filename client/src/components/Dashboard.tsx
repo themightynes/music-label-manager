@@ -1,9 +1,8 @@
-import { KPICards } from './KPICards';
+import { MetricsDashboard } from './MetricsDashboard';
 import { AccessTierBadges } from './AccessTierBadges';
 import { MonthPlanner } from './MonthPlanner';
 import { ArtistRoster } from './ArtistRoster';
 import { ActiveProjects } from './ActiveProjects';
-import { QuickStats } from './QuickStats';
 import { DialogueModal } from './DialogueModal';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
@@ -62,68 +61,83 @@ export function Dashboard() {
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans">
-      {/* Header */}
+      {/* Header - Responsive */}
       <header className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 md:space-x-4">
               <div className="flex items-center space-x-2">
-                <i className="fas fa-music text-primary text-2xl"></i>
-                <h1 className="text-xl font-bold text-slate-900">Music Label Manager</h1>
+                <i className="fas fa-music text-primary text-xl md:text-2xl"></i>
+                <h1 className="text-lg md:text-xl font-bold text-slate-900 hidden sm:block">Music Label Manager</h1>
+                <h1 className="text-lg font-bold text-slate-900 sm:hidden">MLM</h1>
               </div>
-              <div className="hidden md:flex items-center space-x-2 text-sm text-slate-600">
-                <span>Month</span>
+              <div className="flex items-center space-x-1 md:space-x-2 text-xs md:text-sm text-slate-600">
+                <span className="hidden md:inline">Month</span>
+                <span className="md:hidden">M</span>
                 <span className="font-mono font-semibold text-primary">{gameState.currentMonth || 1}</span>
-                <span>of 12</span>
+                <span className="hidden md:inline">of 12</span>
+                <span className="md:hidden">/12</span>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 bg-slate-100 px-3 py-1 rounded-lg">
-                <i className="fas fa-dollar-sign text-success"></i>
-                <span className="font-mono font-semibold">${(gameState.money || 0).toLocaleString()}</span>
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <div className="flex items-center space-x-1 md:space-x-2 bg-slate-100 px-2 md:px-3 py-1 rounded-lg">
+                <i className="fas fa-dollar-sign text-success text-sm"></i>
+                <span className="font-mono font-semibold text-sm md:text-base">${(gameState.money || 0).toLocaleString()}</span>
               </div>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleNewGame}
-                className="p-2 text-slate-600 hover:text-slate-900"
-                title="Start New Game"
-              >
-                <i className="fas fa-plus"></i>
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSaveModal(true)}
-                className="p-2 text-slate-600 hover:text-slate-900"
-                title="Save & Load Game"
-              >
-                <i className="fas fa-save"></i>
-              </Button>
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleNewGame}
+                  className="p-2 text-slate-600 hover:text-slate-900"
+                  title="Start New Game"
+                >
+                  <i className="fas fa-plus text-sm"></i>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSaveModal(true)}
+                  className="p-2 text-slate-600 hover:text-slate-900"
+                  title="Save & Load Game"
+                >
+                  <i className="fas fa-save text-sm"></i>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Floating Metrics Dashboard */}
+      <MetricsDashboard />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 md:py-2">
+        {/* Hero Section - Month Planner */}
+        <div className="mb-6 md:mb-8">
+          <MonthPlanner onAdvanceMonth={handleAdvanceMonth} isAdvancing={isAdvancingMonth} />
+        </div>
+
+        {/* Supporting Information Grid - Responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
           
-          {/* Main Content */}
-          <div className="lg:col-span-8">
-            <KPICards />
-            <AccessTierBadges gameState={gameState} />
-            <MonthPlanner onAdvanceMonth={handleAdvanceMonth} isAdvancing={isAdvancingMonth} />
+          {/* Artist Management */}
+          <div className="lg:col-span-1">
+            <ArtistRoster />
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
-            <ArtistRoster />
+          {/* Project Management */}
+          <div className="lg:col-span-1">
             <ActiveProjects />
-            <QuickStats />
           </div>
+        </div>
+
+        {/* Access Tiers - Full Width Horizontal */}
+        <div className="mb-6">
+          <AccessTierBadges gameState={gameState} />
         </div>
       </main>
 
@@ -142,15 +156,13 @@ export function Dashboard() {
       
       {/* Month Summary Modal */}
       {showMonthSummary && monthlyOutcome && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <MonthSummary 
-              monthlyStats={monthlyOutcome} 
-              onAdvanceMonth={handleCloseSummary}
-              isAdvancing={false}
-              isMonthResults={true}
-            />
-          </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <MonthSummary 
+            monthlyStats={monthlyOutcome} 
+            onAdvanceMonth={handleCloseSummary}
+            isAdvancing={false}
+            isMonthResults={true}
+          />
         </div>
       )}
       

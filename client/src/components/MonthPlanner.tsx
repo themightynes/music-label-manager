@@ -179,64 +179,117 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
 
     if (action) {
       return (
-        <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-medium">
-              {slotNumber}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 shadow-md">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-lg">
+                {slotNumber}
+              </div>
+              <div>
+                <div className="text-base font-semibold text-slate-900">{action.name}</div>
+                <div className="text-sm text-slate-600 capitalize">{action.type.replace('_', ' ')}</div>
+              </div>
             </div>
-            <div>
-              <div className="text-sm font-medium text-slate-900">{action.name}</div>
-              <div className="text-xs text-slate-600">{action.type.replace('_', ' ')}</div>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeAction(actionId)}
+              className="text-slate-400 hover:text-red-500 transition-colors"
+            >
+              <i className="fas fa-times text-lg"></i>
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => removeAction(actionId)}
-            className="text-slate-400 hover:text-slate-600"
-          >
-            <i className="fas fa-times"></i>
-          </Button>
         </div>
       );
     }
 
     return (
-      <div className="flex items-center justify-between p-3 border-2 border-dashed border-slate-300 rounded-lg">
-        <div className="flex items-center space-x-3">
-          <div className="w-6 h-6 bg-slate-300 text-white rounded-full flex items-center justify-center text-xs font-medium">
-            {slotNumber}
+      <div className="border-3 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50 hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-slate-300 text-white rounded-xl flex items-center justify-center text-lg font-bold">
+              {slotNumber}
+            </div>
+            <div className="text-base text-slate-500">Choose Action #{slotNumber}</div>
           </div>
-          <div className="text-sm text-slate-500">Select an action...</div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-primary hover:text-indigo-700"
-          disabled={availableActions.length === 0}
-          onClick={() => setShowActionSelection(true)}
-        >
-          <i className="fas fa-plus"></i>
-        </Button>
+        
+        {/* Quick Action Grid for this slot */}
+        {availableActions.length > 0 && (
+          <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+            {availableActions.slice(0, 3).map(action => {
+              const recommendation = getActionRecommendation(action.id);
+              return (
+                <button
+                  key={action.id}
+                  onClick={() => {
+                    if (selectedActions.length < 3) {
+                      handleActionClick(action.id);
+                    }
+                  }}
+                  className="text-left p-2 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-xs group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <i className={`${action.icon} text-sm ${
+                        recommendation === 'urgent' ? 'text-red-600' :
+                        recommendation === 'recommended' ? 'text-green-600' :
+                        recommendation === 'limited' ? 'text-yellow-600' :
+                        'text-slate-600'
+                      }`}></i>
+                      <span className="font-medium text-slate-700 group-hover:text-blue-700">{action.name}</span>
+                    </div>
+                    {recommendation === 'urgent' && <span className="bg-red-100 text-red-700 px-1 py-0.5 rounded text-xs">Urgent</span>}
+                    {recommendation === 'recommended' && <span className="bg-green-100 text-green-700 px-1 py-0.5 rounded text-xs">Rec</span>}
+                  </div>
+                </button>
+              );
+            })}
+            {availableActions.length > 3 && (
+              <button
+                onClick={() => setShowActionSelection(true)}
+                className="text-center p-2 text-blue-600 hover:text-blue-700 text-xs font-medium"
+              >
+                +{availableActions.length - 3} more actions...
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-            <i className="fas fa-calendar-alt text-primary mr-2"></i>
-            Month {gameState.currentMonth} Action Planner
-          </h3>
-          <Button
-            onClick={onAdvanceMonth}
-            disabled={selectedActions.length === 0 || isAdvancing}
-            className="bg-primary text-white hover:bg-indigo-700"
-          >
-            {isAdvancing ? 'Processing...' : 'Advance Month'}
-          </Button>
+    <Card className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 rounded-2xl shadow-lg border-2 border-blue-200/50">
+      <CardContent className="p-4 md:p-6 lg:p-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-4">
+          <div className="flex items-center space-x-3 md:space-x-4">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <i className="fas fa-calendar-alt text-white text-xl md:text-2xl"></i>
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-slate-900">Month {gameState.currentMonth} Strategy</h2>
+              <p className="text-sm md:text-base text-slate-600 hidden sm:block">Choose your 3 strategic actions for this month</p>
+              <p className="text-sm text-slate-600 sm:hidden">Choose 3 actions</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 md:space-x-4 w-full sm:w-auto">
+            <div className="text-center sm:text-right">
+              <div className="text-xs md:text-sm text-slate-500">Actions Selected</div>
+              <div className="text-xl md:text-2xl font-bold text-blue-600">{selectedActions.length}/3</div>
+            </div>
+            <Button
+              onClick={onAdvanceMonth}
+              disabled={selectedActions.length === 0 || isAdvancing}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 px-4 md:px-8 py-2 md:py-3 text-sm md:text-lg font-medium shadow-lg flex-1 sm:flex-initial"
+            >
+              {isAdvancing ? (
+                <><i className="fas fa-spinner fa-spin mr-1 md:mr-2"></i>Processing...</>
+              ) : (
+                <><i className="fas fa-rocket mr-1 md:mr-2"></i>Advance Month</>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Project Status Overview */}
@@ -307,20 +360,30 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
           </div>
         )}
 
-        {/* Selected Actions */}
-        <div className="space-y-3 mb-4">
-          {[1, 2, 3].map(slotNumber => (
-            <div key={slotNumber}>
-              {renderActionSlot(slotNumber)}
-            </div>
-          ))}
+        {/* Action Slots - Hero Section */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-white/50 shadow-sm mb-4 md:mb-6">
+          <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4 flex items-center">
+            <i className="fas fa-chess text-blue-600 mr-2"></i>
+            <span className="hidden sm:inline">Strategic Action Selection</span>
+            <span className="sm:hidden">Action Selection</span>
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {[1, 2, 3].map(slotNumber => (
+              <div key={slotNumber} className="col-span-1">
+                {renderActionSlot(slotNumber)}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Enhanced Available Actions */}
-        {(availableActions.length > 0 && showActionSelection) && (
-          <div className="border-t border-slate-200 pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-slate-700">Available Actions</h4>
+        {/* All Available Actions - Expanded View */}
+        {showActionSelection && (
+          <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/50 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-slate-900 flex items-center">
+                <i className="fas fa-list text-blue-600 mr-2"></i>
+                All Available Actions
+              </h4>
               <Button
                 variant="ghost"
                 size="sm"
@@ -331,36 +394,20 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
               </Button>
             </div>
             
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {availableActions.map(action => {
                 const actionDetails = getActionDetails(action.id);
                 const recommendation = getActionRecommendation(action.id);
                 
-                const getRecommendationBadge = (rec: string) => {
-                  switch (rec) {
-                    case 'urgent':
-                      return <Badge className="bg-red-100 text-red-700 text-xs">Urgent</Badge>;
-                    case 'recommended':
-                      return <Badge className="bg-green-100 text-green-700 text-xs">Recommended</Badge>;
-                    case 'limited':
-                      return <Badge className="bg-yellow-100 text-yellow-700 text-xs">Limited Access</Badge>;
-                    case 'situational':
-                      return <Badge className="bg-blue-100 text-blue-700 text-xs">Situational</Badge>;
-                    default:
-                      return null;
-                  }
-                };
-
                 return (
                   <div
                     key={action.id}
-                    className={`border rounded-lg p-3 cursor-pointer transition-all duration-200 ${
-                      hoveredAction === action.id 
-                        ? 'border-blue-300 bg-blue-50 shadow-md' 
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    className={`border rounded-lg p-3 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                      recommendation === 'urgent' ? 'border-red-200 bg-red-50' :
+                      recommendation === 'recommended' ? 'border-green-200 bg-green-50' :
+                      recommendation === 'limited' ? 'border-yellow-200 bg-yellow-50' :
+                      'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50'
                     } ${selectedActions.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onMouseEnter={() => setHoveredAction(action.id)}
-                    onMouseLeave={() => setHoveredAction(null)}
                     onClick={() => {
                       if (selectedActions.length < 3) {
                         handleActionClick(action.id);
@@ -368,50 +415,31 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                       }
                     }}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-3">
-                        <i className={`${action.icon} text-lg ${
-                          recommendation === 'urgent' ? 'text-red-600' :
-                          recommendation === 'recommended' ? 'text-green-600' :
-                          recommendation === 'limited' ? 'text-yellow-600' :
-                          'text-slate-600'
-                        }`}></i>
-                        <div>
-                          <h5 className="font-medium text-slate-900">{action.name}</h5>
-                          <p className="text-xs text-slate-600">{actionDetails?.description}</p>
-                        </div>
+                    <div className="flex items-center space-x-3 mb-2">
+                      <i className={`${action.icon} text-lg ${
+                        recommendation === 'urgent' ? 'text-red-600' :
+                        recommendation === 'recommended' ? 'text-green-600' :
+                        recommendation === 'limited' ? 'text-yellow-600' :
+                        'text-slate-600'
+                      }`}></i>
+                      <div className="flex-1">
+                        <h5 className="font-medium text-slate-900 text-sm">{action.name}</h5>
+                        <p className="text-xs text-slate-600">{actionDetails?.cost}</p>
                       </div>
-                      {getRecommendationBadge(recommendation)}
                     </div>
                     
-                    {hoveredAction === action.id && actionDetails && (
-                      <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <span className="font-medium text-slate-700">Cost: </span>
-                            <span className="text-slate-600">{actionDetails.cost}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-slate-700">Duration: </span>
-                            <span className="text-slate-600">{actionDetails.duration}</span>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <span className="font-medium text-slate-700 text-xs">Expected Outcomes: </span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {actionDetails.outcomes?.map((outcome: string, index: number) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {outcome}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <span className="font-medium text-slate-700 text-xs">Prerequisites: </span>
-                          <span className="text-xs text-slate-600">{actionDetails.prerequisites}</span>
-                        </div>
+                    {recommendation !== 'good' && (
+                      <div className="mt-2">
+                        <Badge className={`text-xs ${
+                          recommendation === 'urgent' ? 'bg-red-100 text-red-700' :
+                          recommendation === 'recommended' ? 'bg-green-100 text-green-700' :
+                          recommendation === 'limited' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {recommendation === 'urgent' ? 'Urgent' :
+                           recommendation === 'recommended' ? 'Recommended' :
+                           recommendation === 'limited' ? 'Limited Access' : 'Situational'}
+                        </Badge>
                       </div>
                     )}
                   </div>

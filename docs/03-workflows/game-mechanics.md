@@ -148,11 +148,19 @@ interface ArtistRelationship {
 #### **Single Release**
 - **Budget**: $3,000-$12,000
 - **Timeline**: 2 months (planning → production → marketing → released)
-- **Revenue Potential**: $5,000-$25,000 based on quality and marketing
-- **Streaming Formula**:
+- **Revenue Potential**: $5,000-$25,000 based on individual song quality
+- **Individual Song Revenue Formula** (NEW: Phase 1 Enhancement):
   ```typescript
-  const streams = (quality * 0.8) + (playlistAccess * 100) + (reputation * 0.5) + (marketingSpend * 0.3);
-  const revenue = streams * 0.003; // $0.003 per stream
+  // Each song calculated individually
+  const songInitialStreams = songQuality * 50 * (1 + Math.max(0, (songQuality - 40) / 60));
+  const songInitialRevenue = songInitialStreams * 0.5; // $0.50 per stream on release
+  
+  // Monthly ongoing revenue (with 15% decay)
+  const monthlyStreams = initialStreams * Math.pow(0.85, monthsSinceRelease) * 0.8;
+  const monthlyRevenue = monthlyStreams * 0.05; // $0.05 per ongoing stream
+  
+  // Project total = sum of all individual songs
+  const projectRevenue = songs.reduce((sum, song) => sum + song.totalRevenue, 0);
   ```
 
 #### **EP Release**
@@ -406,6 +414,81 @@ if (finalReputation >= 200) achievements.push('⭐ Industry Legend - 200+ Reputa
 if (playlistAccess === 'Mid') achievements.push('🎵 Playlist Master - Maximum playlist access');
 if (finalMoney >= 0) achievements.push('🛡️ Survivor - Made it through 12 months');
 ```
+
+---
+
+## 🎵 Individual Song System (Phase 1 Enhancement)
+
+### **Core Concept**
+Each song in recording projects (Singles, EPs) is tracked individually with its own quality, streams, and revenue metrics. This enables realistic music industry mechanics where individual songs can become hits and carry entire projects.
+
+### **Song Generation Process**
+1. **During Recording Projects**: 2-3 songs created per month in production stage
+2. **Quality Assignment**: Each song gets individual quality score (20-100) based on:
+   - Artist talent level
+   - Producer tier effects  
+   - Random variation for diversity
+3. **Song Properties**: Title, genre, mood, creation month
+4. **Project Association**: Songs linked to their recording session via metadata
+
+### **Individual Revenue Calculation**
+
+#### **Release Revenue (Month Released)**
+```typescript
+// Each song calculated separately
+const qualityBonus = Math.max(0, (songQuality - 40) / 60);
+const initialStreams = Math.round(songQuality * 50 * (1 + qualityBonus));
+const initialRevenue = Math.round(initialStreams * 0.5); // $0.50 per initial stream
+
+// Example: Quality 67 song
+// qualityBonus = (67 - 40) / 60 = 0.45
+// initialStreams = 67 * 50 * (1 + 0.45) = 4,858 streams  
+// initialRevenue = 4,858 * 0.5 = $2,429
+```
+
+#### **Ongoing Revenue (Each Month After Release)**
+```typescript
+// Individual monthly decay calculation
+const monthsSinceRelease = currentMonth - song.releaseMonth;
+const baseDecay = Math.pow(0.85, monthsSinceRelease); // 15% monthly decline
+const monthlyStreams = song.initialStreams * baseDecay * reputationBonus * accessBonus * 0.8;
+const monthlyRevenue = Math.round(monthlyStreams * 0.05); // $0.05 per ongoing stream
+
+// Revenue stops when below $1 threshold or after 24 months
+```
+
+### **Project Aggregation**
+Recording projects display **sum of individual song metrics**:
+- **Total Revenue**: Sum of all song revenues
+- **Total Streams**: Sum of all song streams  
+- **Song Count**: Number of songs in the project
+- **Last Month Revenue**: Sum of all song monthly revenues
+
+### **UI Display**
+
+#### **Song Catalog (Artist Info)**
+- **Individual song cards** with quality, streams, revenue
+- **Monthly performance** tracking per song
+- **Release month** and total metrics
+- **Aggregated artist totals** across all songs
+
+#### **Project Boxes (Active Projects)**
+- **Project-level aggregates** calculated from individual songs
+- **"Individual song tracking active"** indicator
+- **Backward compatibility** with legacy project-based data
+
+### **Strategic Implications**
+- **Hit Song Effect**: High-quality individual songs can make projects highly profitable
+- **Quality Distribution**: Projects with mixed quality create realistic revenue patterns  
+- **Long-term Revenue**: Individual songs continue generating revenue with natural decay
+- **Song-by-Song Analysis**: Players can identify which songs perform best
+- **Portfolio Management**: Build catalog of consistently performing individual tracks
+
+### **Technical Benefits**
+- **Realistic Simulation**: Matches actual music industry economics
+- **Granular Tracking**: Detailed analytics for strategic decisions
+- **Scalable System**: Foundation for advanced features (remixes, re-releases, compilations)
+- **Data Rich**: Comprehensive metrics for complex business decisions
 
 ---
 

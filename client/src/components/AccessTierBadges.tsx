@@ -176,15 +176,18 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
   };
 
   return (
-    <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
-      <CardHeader>
-        <CardTitle className="text-slate-900 flex items-center">
-          <Key className="w-5 h-5 mr-2 text-primary" />
-          Industry Access Tiers
-        </CardTitle>
-        <p className="text-sm text-slate-600">Build reputation to unlock new opportunities</p>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="bg-gradient-to-r from-white via-slate-50 to-blue-50 rounded-2xl shadow-lg border-2 border-slate-200/50 p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+            <Key className="w-5 h-5 mr-2 text-primary" />
+            Industry Access Tiers
+          </h3>
+          <p className="text-sm text-slate-600">Build reputation to unlock new opportunities</p>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {(Object.keys(accessTiers) as Array<keyof typeof accessTiers>).map(tierType => {
           const tierData = accessTiers[tierType];
           const currentTier = getCurrentTier(tierType);
@@ -194,13 +197,13 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           const isExpanded = expandedTier === tierType;
 
           return (
-            <div key={tierType} className="border border-slate-200 rounded-lg p-4">
+            <div key={tierType} className="bg-white/60 rounded-xl p-4 border border-white/50">
               {/* Header */}
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <IconComponent className="w-5 h-5 text-primary" />
+                <div className="flex items-center space-x-2">
+                  <IconComponent className="w-4 h-4 text-primary" />
                   <div>
-                    <h4 className="font-medium text-slate-900">{tierData.name}</h4>
+                    <h4 className="text-sm font-medium text-slate-900">{tierData.name}</h4>
                     <p className="text-xs text-slate-600">{tierData.description}</p>
                   </div>
                 </div>
@@ -212,32 +215,27 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setExpandedTier(isExpanded ? null : tierType)}
-                    className="text-slate-500 hover:text-slate-700"
+                    className="text-slate-400 hover:text-slate-600 p-1"
                   >
-                    <Info className="w-4 h-4" />
+                    <Info className="w-3 h-3" />
                   </Button>
                 </div>
               </div>
 
               {/* Progress to Next Tier */}
               {nextTier && (
-                <div className="mb-3">
+                <div className="mb-2">
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-slate-600">Progress to {nextTier.name}</span>
                     <span className="font-medium text-slate-700">{Math.round(progress)}%</span>
                   </div>
-                  <Progress value={progress} className="h-2" />
-                  <div className="flex items-center justify-between text-xs mt-1 text-slate-500">
-                    <span>Current: {currentTier.name}</span>
-                    <ArrowRight className="w-3 h-3" />
-                    <span>Next: {nextTier.name}</span>
-                  </div>
+                  <Progress value={progress} className="h-1.5" />
                 </div>
               )}
 
-              {/* Current Tier Benefits */}
-              <div className="text-xs text-slate-600 mb-2">
-                <span className="font-medium">Current Benefits: </span>
+              {/* Current Benefits */}
+              <div className="text-xs text-slate-600">
+                <span className="font-medium">Current: </span>
                 {currentTier.level === 0 ? 'No special access' : currentTier.description}
               </div>
 
@@ -293,32 +291,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
             </div>
           );
         })}
-
-        {/* Overall Progress Summary */}
-        <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-          <h5 className="text-sm font-semibold text-slate-800 mb-2">Your Industry Standing</h5>
-          <div className="grid grid-cols-3 gap-3 text-xs">
-            <div className="text-center">
-              <div className="font-medium text-slate-700">Reputation</div>
-              <div className="text-lg font-bold text-blue-600">{gameState.reputation || 0}</div>
-            </div>
-            <div className="text-center">
-              <div className="font-medium text-slate-700">Access Level</div>
-              <div className="text-lg font-bold text-purple-600">
-                {getCurrentTier('playlist').level + getCurrentTier('press').level + getCurrentTier('venue').level}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="font-medium text-slate-700">Total Unlocks</div>
-              <div className="text-lg font-bold text-green-600">
-                {accessTiers.playlist.tiers.filter(t => t.level <= getCurrentTier('playlist').level).length +
-                 accessTiers.press.tiers.filter(t => t.level <= getCurrentTier('press').level).length +
-                 accessTiers.venue.tiers.filter(t => t.level <= getCurrentTier('venue').level).length - 3}
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

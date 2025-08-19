@@ -8,7 +8,7 @@ import { ProjectCreationModal, type ProjectCreationData } from './ProjectCreatio
 import { useState } from 'react';
 
 export function ActiveProjects() {
-  const { projects, artists, createProject, gameState } = useGameStore();
+  const { projects, artists, createProject, gameState, songs } = useGameStore();
   const [creatingProject, setCreatingProject] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
 
@@ -62,15 +62,57 @@ export function ActiveProjects() {
     }
   };
 
-  const calculateProjectROI = (project: any) => {
+  // Get songs for a specific project
+  const getProjectSongs = (projectId: string) => {
+    return songs.filter((song: any) => {
+      const metadata = song.metadata as any;
+      return metadata?.projectId === projectId;
+    });
+  };
+
+  // Calculate aggregated metrics from individual songs
+  const calculateProjectMetrics = (project: any) => {
     if (project.stage !== 'released') return null;
-    const metadata = project.metadata as any || {};
-    const revenue = metadata.revenue || 0;
-    if (!revenue) return null;
+    
+    const projectSongs = getProjectSongs(project.id);
+    if (projectSongs.length === 0) {
+      // Fallback to legacy project metadata if no individual songs found
+      const metadata = project.metadata as any || {};
+      const revenue = metadata.revenue || 0;
+      const streams = metadata.streams || 0;
+      const songCount = metadata.songCount || 0;
+      
+      if (!revenue) return null;
+      
+      const investment = project.budget || 0;
+      const roi = investment > 0 ? ((revenue - investment) / investment) * 100 : 0;
+      return { roi, revenue, investment, streams, songCount, individual: false };
+    }
+    
+    // Calculate aggregated metrics from individual songs
+    const totalRevenue = projectSongs.reduce((sum: number, song: any) => sum + (song.totalRevenue || 0), 0);
+    const totalStreams = projectSongs.reduce((sum: number, song: any) => sum + (song.totalStreams || 0), 0);
+    const lastMonthRevenue = projectSongs.reduce((sum: number, song: any) => sum + (song.lastMonthRevenue || 0), 0);
+    
+    if (!totalRevenue) return null;
     
     const investment = project.budget || 0;
-    const roi = investment > 0 ? ((revenue - investment) / investment) * 100 : 0;
-    return { roi, revenue, investment };
+    const roi = investment > 0 ? ((totalRevenue - investment) / investment) * 100 : 0;
+    
+    return { 
+      roi, 
+      revenue: totalRevenue, 
+      investment, 
+      streams: totalStreams, 
+      songCount: projectSongs.length,
+      lastMonthRevenue,
+      individual: true,
+      songs: projectSongs
+    };
+  };
+
+  const calculateProjectROI = (project: any) => {
+    return calculateProjectMetrics(project);
   };
 
   const formatROI = (roi: number) => {
@@ -91,19 +133,19 @@ export function ActiveProjects() {
     let totalInvestment = 0;
     let totalStreams = 0;
     let profitableProjects = 0;
+    let totalSongs = 0;
     
     releasedProjects.forEach(project => {
-      const metadata = project.metadata as any || {};
-      const revenue = metadata.revenue || 0;
-      const investment = project.budget || 0;
-      const streams = metadata.streams || 0;
-      
-      totalRevenue += revenue;
-      totalInvestment += investment;
-      totalStreams += streams;
-      
-      if (revenue > investment) {
-        profitableProjects++;
+      const metrics = calculateProjectMetrics(project);
+      if (metrics) {
+        totalRevenue += metrics.revenue;
+        totalInvestment += metrics.investment;
+        totalStreams += metrics.streams;
+        totalSongs += metrics.songCount;
+        
+        if (metrics.revenue > metrics.investment) {
+          profitableProjects++;
+        }
       }
     });
     
@@ -114,6 +156,7 @@ export function ActiveProjects() {
       totalRevenue,
       totalInvestment,
       totalStreams,
+      totalSongs,
       portfolioROI,
       successRate,
       releasedCount: releasedProjects.length,
@@ -123,46 +166,33 @@ export function ActiveProjects() {
 
   return (
     <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
-      <CardContent className="p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-          <i className="fas fa-tasks text-primary mr-2"></i>
-          Active Projects
+      <CardContent className="p-4">
+        <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center justify-between">
+          <div className="flex items-center">
+            <i className="fas fa-tasks text-primary mr-2"></i>
+            Active Projects
+          </div>
+          <Badge variant="secondary" className="text-xs">
+            {projects.length}
+          </Badge>
         </h3>
 
-        {/* Portfolio Performance Summary */}
+        {/* Compact Portfolio Summary */}
         {(() => {
           const stats = calculatePortfolioStats();
           if (stats) {
             return (
-              <div className="mb-6 p-4 bg-slate-50 rounded-lg border">
-                <h4 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
-                  <i className="fas fa-chart-line text-slate-500 mr-2"></i>
-                  Portfolio Performance
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Total Revenue</span>
-                    <span className="font-mono font-medium text-green-600">
-                      ${stats.totalRevenue.toLocaleString()}
-                    </span>
+              <div className="mb-3 p-3 bg-slate-50 rounded-lg border">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="text-center">
+                    <div className="font-medium text-green-600">${stats.totalRevenue.toLocaleString()}</div>
+                    <div className="text-slate-500">Revenue</div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Portfolio ROI</span>
-                    <span className={`font-mono font-medium ${stats.portfolioROI >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  <div className="text-center">
+                    <div className={`font-medium ${stats.portfolioROI >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {formatROI(stats.portfolioROI)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Released Projects</span>
-                    <span className="font-mono text-slate-700">
-                      {stats.releasedCount}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Success Rate</span>
-                    <span className="font-mono text-blue-600">
-                      {stats.successRate.toFixed(0)}%
-                    </span>
+                    </div>
+                    <div className="text-slate-500">ROI</div>
                   </div>
                 </div>
               </div>
@@ -171,69 +201,92 @@ export function ActiveProjects() {
           return null;
         })()}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {projects.map(project => (
-            <div key={project.id} className="border border-slate-200 rounded-lg p-4">
+            <div key={project.id} className="border border-slate-200 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-slate-900">{project.title}</h4>
-                <Badge className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusBadgeClass(project.stage || 'planning')}`}>
+                <div>
+                  <h4 className="font-medium text-slate-900 text-sm">{project.title}</h4>
+                  <div className="text-xs text-slate-600">{getArtistName(project.artistId || '')}</div>
+                </div>
+                <Badge className={`text-xs px-2 py-1 ${getStatusBadgeClass(project.stage || 'planning')}`}>
                   {getStatusText(project.stage || 'planning')}
                 </Badge>
               </div>
               
-              <div className="text-xs text-slate-600 mb-3">{getArtistName(project.artistId || '')}</div>
-              
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500">Progress</span>
                   <span className="font-mono">{Math.round(getProjectProgress(project))}%</span>
                 </div>
-                <Progress value={getProjectProgress(project)} className="w-full h-2" />
+                <Progress value={getProjectProgress(project)} className="w-full h-1.5" />
                 
-                <div className="flex items-center justify-between text-xs pt-2">
-                  <span className="text-slate-500">Budget Used</span>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Budget</span>
                   <span className="font-mono">
                     ${(project.budgetUsed || 0).toLocaleString()} / ${(project.budget || 0).toLocaleString()}
                   </span>
                 </div>
 
-                {/* Revenue Information for Released Projects */}
+                {/* Enhanced Revenue Information for Released Projects */}
                 {project.stage === 'released' && (() => {
-                  const roiData = calculateProjectROI(project);
-                  if (roiData) {
+                  const metrics = calculateProjectMetrics(project);
+                  if (metrics) {
                     return (
                       <div className="pt-2 border-t border-slate-200 space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">Revenue</span>
+                          <span className="text-slate-500">Total Revenue</span>
                           <span className="font-mono text-green-600">
-                            ${roiData.revenue.toLocaleString()}
+                            ${metrics.revenue.toLocaleString()}
                           </span>
                         </div>
                         
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-500">ROI</span>
-                          <span className={`font-mono font-medium ${roiData.roi >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {formatROI(roiData.roi)}
+                          <span className={`font-mono font-medium ${metrics.roi >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {formatROI(metrics.roi)}
                           </span>
                         </div>
 
-                        {(() => {
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Total Streams</span>
+                          <span className="font-mono text-blue-600">
+                            {metrics.streams.toLocaleString()}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Songs Released</span>
+                          <span className="font-mono text-purple-600">
+                            {metrics.songCount} song{metrics.songCount > 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        {/* Show last month revenue if using individual tracking */}
+                        {metrics.individual && metrics.lastMonthRevenue > 0 && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-500">Last Month</span>
+                            <span className="font-mono text-green-600">
+                              +${metrics.lastMonthRevenue.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Show individual tracking indicator */}
+                        {metrics.individual && (
+                          <div className="text-xs text-center text-slate-400 mt-1">
+                            🎵 Individual song tracking active
+                          </div>
+                        )}
+
+                        {/* Legacy metadata fallback */}
+                        {!metrics.individual && (() => {
                           const metadata = project.metadata as any || {};
-                          const streams = metadata.streams;
                           const pressPickups = metadata.pressPickups;
                           const releaseMonth = metadata.releaseMonth;
                           
                           return (
                             <>
-                              {streams && (
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-500">Streams</span>
-                                  <span className="font-mono text-blue-600">
-                                    {streams.toLocaleString()}
-                                  </span>
-                                </div>
-                              )}
-
                               {pressPickups && pressPickups > 0 && (
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-slate-500">Press Coverage</span>
@@ -263,19 +316,15 @@ export function ActiveProjects() {
             </div>
           ))}
 
-          {/* Add Project Button */}
+          {/* Add Project Button - Compact */}
           <Button
             variant="outline"
-            className="w-full border-2 border-dashed border-slate-300 p-4 text-center hover:border-primary hover:bg-primary/5 group"
+            className="w-full border-2 border-dashed border-slate-300 p-3 text-center hover:border-primary hover:bg-primary/5 text-xs"
             onClick={() => setShowProjectModal(true)}
             disabled={creatingProject || artists.length === 0}
           >
-            <div className="text-center">
-              <i className="fas fa-plus text-slate-400 group-hover:text-primary text-xl mb-2 transition-colors"></i>
-              <p className="text-sm text-slate-500 group-hover:text-primary transition-colors">
-                {creatingProject ? 'Creating...' : 'Start New Project'}
-              </p>
-            </div>
+            <i className="fas fa-plus mr-1"></i>
+            {creatingProject ? 'Creating...' : 'Start New Project'}
           </Button>
 
           {/* Project Creation Modal */}

@@ -476,64 +476,96 @@ export class GameEngine {
   }
 
   /**
-   * Processes ongoing revenue from released projects (streaming decay)
-   * This simulates realistic revenue patterns where releases generate declining revenue over time
+   * Processes ongoing revenue from individual released songs (streaming decay)
+   * This simulates realistic revenue patterns where each song generates declining revenue over time
    */
   private async processReleasedProjects(summary: MonthSummary): Promise<void> {
-    // Get released projects passed from the server
+    console.log('[INDIVIDUAL SONG DECAY] === Processing Released Songs ===');
+    console.log(`[INDIVIDUAL SONG DECAY] Current month: ${this.gameState.currentMonth}`);
+    
+    try {
+      // Get all released songs for this game
+      const releasedSongs = await this.gameData.getReleasedSongs?.(this.gameState.id) || [];
+      console.log(`[INDIVIDUAL SONG DECAY] Found ${releasedSongs.length} released songs`);
+      
+      if (releasedSongs.length === 0) {
+        console.log('[INDIVIDUAL SONG DECAY] No released songs found, skipping ongoing revenue processing');
+        return;
+      }
+      
+      let totalOngoingRevenue = 0;
+      const songUpdates = [];
+      
+      for (const song of releasedSongs) {
+        console.log(`[INDIVIDUAL SONG DECAY] Processing song: "${song.title}" (Quality: ${song.quality})`);
+        
+        const ongoingRevenue = this.calculateOngoingSongRevenue(song);
+        console.log(`[INDIVIDUAL SONG DECAY] Calculated ongoing revenue for "${song.title}": $${ongoingRevenue}`);
+        
+        if (ongoingRevenue > 0) {
+          totalOngoingRevenue += ongoingRevenue;
+          
+          // Track song updates for batch processing
+          songUpdates.push({
+            songId: song.id,
+            monthlyStreams: Math.round(ongoingRevenue / 0.05), // Reverse calculate streams
+            lastMonthRevenue: ongoingRevenue,
+            totalRevenue: (song.totalRevenue || 0) + ongoingRevenue,
+            totalStreams: (song.totalStreams || 0) + Math.round(ongoingRevenue / 0.05)
+          });
+          
+          // Add to summary changes for transparency
+          summary.changes.push({
+            type: 'ongoing_revenue',
+            description: `🎵 "${song.title}" ongoing streams`,
+            amount: ongoingRevenue
+          });
+        } else {
+          console.log(`[INDIVIDUAL SONG DECAY] No ongoing revenue for "${song.title}" (too old or below threshold)`);
+        }
+      }
+      
+      // Update songs in batch if available
+      if (songUpdates.length > 0 && this.gameData.updateSongs) {
+        console.log(`[INDIVIDUAL SONG DECAY] Updating ${songUpdates.length} songs with new metrics`);
+        await this.gameData.updateSongs(songUpdates);
+      }
+      
+      // Add total ongoing revenue to summary
+      if (totalOngoingRevenue > 0) {
+        summary.revenue += totalOngoingRevenue;
+        console.log(`[INDIVIDUAL SONG DECAY] Total ongoing revenue: $${totalOngoingRevenue}`);
+      }
+      
+    } catch (error) {
+      console.error('[INDIVIDUAL SONG DECAY] Error processing released songs:', error);
+      // Fallback to legacy project-based processing if song-based fails
+      await this.processReleasedProjectsLegacy(summary);
+    }
+    
+    console.log('[INDIVIDUAL SONG DECAY] === End Processing ===');
+  }
+  
+  /**
+   * Legacy project-based ongoing revenue processing (fallback)
+   */
+  private async processReleasedProjectsLegacy(summary: MonthSummary): Promise<void> {
+    console.log('[LEGACY DECAY] Falling back to project-based ongoing revenue');
+    
     const releasedProjects = (this.gameState.flags as any)?.['released_projects'] || [];
     
-    console.log('[STREAMING DECAY] === Processing Released Projects ===');
-    console.log(`[STREAMING DECAY] Current month: ${this.gameState.currentMonth}`);
-    console.log(`[STREAMING DECAY] Found ${releasedProjects.length} released projects`);
-    console.log(`[STREAMING DECAY] Projects:`, releasedProjects.map((p: any) => ({
-      id: p.id,
-      title: p.title,
-      type: p.type,
-      releaseMonth: p.metadata?.releaseMonth,
-      initialStreams: p.metadata?.streams,
-      initialRevenue: p.metadata?.revenue
-    })));
-    
     for (const project of releasedProjects) {
-      console.log(`[STREAMING DECAY] Processing project: ${project.title}`);
       const ongoingRevenue = this.calculateOngoingRevenue(project);
-      console.log(`[STREAMING DECAY] Calculated ongoing revenue: $${ongoingRevenue}`);
       
       if (ongoingRevenue > 0) {
-        // Add to monthly revenue
         summary.revenue += ongoingRevenue;
-        console.log(`[STREAMING DECAY] Added $${ongoingRevenue} to summary, new total: $${summary.revenue}`);
-        
-        // Track in changes for transparency
         summary.changes.push({
           type: 'ongoing_revenue',
           description: `Ongoing streams: ${project.title}`,
           amount: ongoingRevenue
         });
-        console.log(`[STREAMING DECAY] Added change to summary: "Ongoing streams: ${project.title}" - $${ongoingRevenue}`);
-        
-        // Update project metadata for tracking
-        if (!project.metadata) project.metadata = {};
-        project.metadata.lastMonthRevenue = ongoingRevenue;
-        project.metadata.cumulativeRevenue = (project.metadata.cumulativeRevenue || 0) + ongoingRevenue;
-        project.metadata.totalMonthsActive = (project.metadata.totalMonthsActive || 0) + 1;
-        console.log(`[STREAMING DECAY] Updated project metadata:`, {
-          lastMonthRevenue: project.metadata.lastMonthRevenue,
-          cumulativeRevenue: project.metadata.cumulativeRevenue,
-          totalMonthsActive: project.metadata.totalMonthsActive
-        });
-      } else {
-        console.log(`[STREAMING DECAY] No ongoing revenue for ${project.title} (revenue = 0 or project too old)`);
       }
     }
-    
-    console.log(`[STREAMING DECAY] Summary after processing:`, {
-      totalRevenue: summary.revenue,
-      changesCount: summary.changes.length,
-      ongoingRevenueChanges: summary.changes.filter(c => c.type === 'ongoing_revenue').length
-    });
-    console.log('[STREAMING DECAY] === End Processing ===');
   }
 
   /**
@@ -846,7 +878,78 @@ export class GameEngine {
     console.log(`[REVENUE CALC] Final revenue: $${revenue}`);
     return revenue;
   }
-
+  
+  /**
+   * Calculates ongoing revenue for an individual released song using streaming decay formula
+   * Each song has its own decay pattern based on individual quality and release timing
+   */
+  private calculateOngoingSongRevenue(song: any): number {
+    const currentMonth = this.gameState.currentMonth || 1;
+    const releaseMonth = song.releaseMonth || 1;
+    const monthsSinceRelease = currentMonth - releaseMonth;
+    const initialStreams = song.initialStreams || 0;
+    
+    console.log(`[SONG REVENUE CALC] === Calculating for "${song.title}" ===`);
+    console.log(`[SONG REVENUE CALC] Quality: ${song.quality}, Initial streams: ${initialStreams}`);
+    console.log(`[SONG REVENUE CALC] Release month: ${releaseMonth}, Current month: ${currentMonth}`);
+    console.log(`[SONG REVENUE CALC] Months since release: ${monthsSinceRelease}`);
+    
+    // No revenue if just released this month or no initial streams
+    if (monthsSinceRelease <= 0) {
+      console.log(`[SONG REVENUE CALC] No revenue - just released or future release`);
+      return 0;
+    }
+    
+    if (initialStreams === 0) {
+      console.log(`[SONG REVENUE CALC] No revenue - no initial streams`);
+      return 0;
+    }
+    
+    // Get streaming decay configuration from balance.json
+    const streamingConfig = this.gameData.getStreamingConfigSync();
+    const ongoingConfig = streamingConfig.ongoing_streams;
+    
+    const decayRate = ongoingConfig.monthly_decay_rate;
+    const maxDecayMonths = ongoingConfig.max_decay_months;
+    const revenuePerStream = ongoingConfig.revenue_per_stream;
+    const ongoingFactor = ongoingConfig.ongoing_factor;
+    const reputationBonusFactor = ongoingConfig.reputation_bonus_factor;
+    const accessTierBonusFactor = ongoingConfig.access_tier_bonus_factor;
+    const minimumThreshold = ongoingConfig.minimum_revenue_threshold;
+    
+    // Stop generating revenue after max decay period
+    if (monthsSinceRelease > maxDecayMonths) {
+      console.log(`[SONG REVENUE CALC] Song too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
+      return 0;
+    }
+    
+    // Individual song decay formula
+    const baseDecay = Math.pow(decayRate, monthsSinceRelease);
+    console.log(`[SONG REVENUE CALC] Base decay: ${baseDecay.toFixed(4)}`);
+    
+    // Apply current reputation and access tier bonuses
+    const reputation = this.gameState.reputation || 0;
+    const reputationBonus = 1 + (reputation - 50) * reputationBonusFactor;
+    const playlistMultiplier = this.getAccessMultiplier('playlist', this.gameState.playlistAccess || 'none');
+    const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
+    
+    // Calculate monthly streams for this individual song
+    const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
+    console.log(`[SONG REVENUE CALC] Monthly streams: ${initialStreams} * ${baseDecay.toFixed(4)} * ${reputationBonus.toFixed(4)} * ${accessBonus.toFixed(4)} * ${ongoingFactor} = ${monthlyStreams.toFixed(2)}`);
+    
+    // Convert to revenue
+    const revenue = Math.max(0, Math.round(monthlyStreams * revenuePerStream));
+    console.log(`[SONG REVENUE CALC] Revenue: ${monthlyStreams.toFixed(2)} streams * $${revenuePerStream} = $${revenue}`);
+    
+    // Apply minimum threshold
+    if (revenue < minimumThreshold) {
+      console.log(`[SONG REVENUE CALC] Revenue below threshold ($${revenue} < $${minimumThreshold}), returning $0`);
+      return 0;
+    }
+    
+    console.log(`[SONG REVENUE CALC] Final revenue for "${song.title}": $${revenue}`);
+    return revenue;
+  }
 
   /**
    * Processes delayed effects from previous months
@@ -1400,7 +1503,7 @@ export interface MonthSummary {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release';
   description: string;
   amount?: number;
   roleId?: string;

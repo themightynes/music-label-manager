@@ -222,8 +222,8 @@
       "longevity_decay": 0.85,
       "ongoing_streams": {
         "monthly_decay_rate": 0.85,
-        "revenue_per_stream": 0.003,
-        "ongoing_factor": 0.1,
+        "revenue_per_stream": 0.05,
+        "ongoing_factor": 0.8,
         "reputation_bonus_factor": 0.002,
         "access_tier_bonus_factor": 0.1,
         "minimum_revenue_threshold": 1,
