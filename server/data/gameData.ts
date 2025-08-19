@@ -356,7 +356,16 @@ export class ServerGameData {
         reputation_weight: 0.20,
         marketing_weight: 0.20,
         first_week_multiplier: 2.5,
-        base_streams_per_point: 1000
+        base_streams_per_point: 1000,
+        ongoing_streams: {
+          monthly_decay_rate: 0.85,
+          revenue_per_stream: 0.003,
+          ongoing_factor: 0.1,
+          reputation_bonus_factor: 0.002,
+          access_tier_bonus_factor: 0.1,
+          minimum_revenue_threshold: 1,
+          max_decay_months: 24
+        }
       };
     }
     
@@ -367,7 +376,8 @@ export class ServerGameData {
       reputation_weight: streaming.reputation_weight,
       marketing_weight: streaming.marketing_weight,
       first_week_multiplier: streaming.first_week_multiplier,
-      base_streams_per_point: 1000
+      base_streams_per_point: 1000,
+      ongoing_streams: streaming.ongoing_streams
     };
   }
 
@@ -390,6 +400,13 @@ export class ServerGameData {
       story_flag_bonus: press.story_flag_bonus,
       max_pickups_per_release: press.max_pickups_per_release
     };
+  }
+
+  getBalanceConfigSync(): BalanceConfig {
+    if (!this.balanceData) {
+      throw new Error('Balance data not loaded. Call initialize() first.');
+    }
+    return this.balanceData;
   }
 
   // Alias for GameEngine compatibility
@@ -574,6 +591,86 @@ export class ServerGameData {
   getEvents() {
     // This should return the loaded events
     return this.dataLoader.loadAllData().then(data => data.events.events);
+  }
+
+  // Phase 1: Song and Release Management Bridge Methods
+  async getActiveRecordingProjects(gameId: string) {
+    console.log('[ServerGameData] getActiveRecordingProjects called with gameId:', gameId);
+    try {
+      const { storage } = await import('../storage');
+      const projects = await storage.getActiveRecordingProjects(gameId);
+      console.log('[ServerGameData] Found active recording projects:', projects?.length || 0);
+      if (projects && projects.length > 0) {
+        console.log('[ServerGameData] Projects:', projects.map(p => ({
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          stage: p.stage,
+          songCount: p.songCount,
+          songsCreated: p.songsCreated
+        })));
+      }
+      return projects;
+    } catch (error) {
+      console.error('[ServerGameData] getActiveRecordingProjects error:', error);
+      throw error;
+    }
+  }
+
+  async createSong(song: any) {
+    console.log('[ServerGameData] createSong called with:', song);
+    try {
+      const { storage } = await import('../storage');
+      const createdSong = await storage.createSong(song);
+      console.log('[ServerGameData] Song created successfully:', createdSong.id);
+      return createdSong;
+    } catch (error) {
+      console.error('[ServerGameData] createSong error:', error);
+      throw error;
+    }
+  }
+
+  async getSongsByGame(gameId: string) {
+    const { storage } = await import('../storage');
+    return storage.getSongsByGame(gameId);
+  }
+
+  async getSongsByArtist(artistId: string, gameId: string) {
+    console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId });
+    try {
+      const { storage } = await import('../storage');
+      const songs = await storage.getSongsByArtist(artistId, gameId);
+      console.log('[ServerGameData] getSongsByArtist returned:', songs?.length || 0, 'songs');
+      return songs;
+    } catch (error) {
+      console.error('[ServerGameData] getSongsByArtist error:', error);
+      throw error;
+    }
+  }
+
+  async createRelease(release: any) {
+    const { storage } = await import('../storage');
+    return storage.createRelease(release);
+  }
+
+  async getReleasesByGame(gameId: string) {
+    const { storage } = await import('../storage');
+    return storage.getReleasesByGame(gameId);
+  }
+
+  async createReleaseSong(releaseSong: any) {
+    const { storage } = await import('../storage');
+    return storage.createReleaseSong(releaseSong);
+  }
+
+  async getArtistById(artistId: string) {
+    const { storage } = await import('../storage');
+    return storage.getArtist(artistId);
+  }
+
+  async updateProject(projectId: string, updates: any) {
+    const { storage } = await import('../storage');
+    return storage.updateProject(projectId, updates);
   }
 
   // Validation helpers

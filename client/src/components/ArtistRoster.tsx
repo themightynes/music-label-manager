@@ -6,6 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 import { ArtistDiscoveryModal } from './ArtistDiscoveryModal';
 import { useState } from 'react';
 import { TrendingUp, TrendingDown, Heart, Star, Info, DollarSign } from 'lucide-react';
+import { SongCatalog } from './SongCatalog';
 
 export function ArtistRoster() {
   const { gameState, artists, signArtist, openDialogue, projects } = useGameStore();
@@ -382,6 +383,13 @@ export function ArtistRoster() {
                         </div>
                       </div>
                     )}
+
+                    {/* Song Catalog */}
+                    <SongCatalog 
+                      artistId={artist.id} 
+                      gameId={gameState?.id || ''} 
+                      className="mt-4"
+                    />
                   </div>
                 )}
 

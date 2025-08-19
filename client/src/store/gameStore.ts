@@ -11,6 +11,8 @@ interface GameStore {
   projects: Project[];
   roles: Role[];
   monthlyActions: MonthlyAction[];
+  songs: any[];
+  releases: any[];
   
   // UI state
   selectedActions: string[];
@@ -56,6 +58,8 @@ export const useGameStore = create<GameStore>()(
       projects: [],
       roles: [],
       monthlyActions: [],
+      songs: [],
+      releases: [],
       selectedActions: [],
       isAdvancingMonth: false,
       currentDialogue: null,
@@ -65,8 +69,15 @@ export const useGameStore = create<GameStore>()(
       // Load existing game
       loadGame: async (gameId: string) => {
         try {
-          const response = await apiRequest('GET', `/api/game/${gameId}`);
-          const data = await response.json();
+          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+            apiRequest('GET', `/api/game/${gameId}`),
+            apiRequest('GET', `/api/game/${gameId}/songs`),
+            apiRequest('GET', `/api/game/${gameId}/releases`)
+          ]);
+          
+          const data = await gameResponse.json();
+          const songs = await songsResponse.json();
+          const releases = await releasesResponse.json();
           
           set({
             gameState: data.gameState,
@@ -74,6 +85,8 @@ export const useGameStore = create<GameStore>()(
             projects: data.projects,
             roles: data.roles,
             monthlyActions: data.monthlyActions,
+            songs,
+            releases,
             selectedActions: []
           });
         } catch (error) {
@@ -127,7 +140,7 @@ export const useGameStore = create<GameStore>()(
           const newGameData = {
             // userId will be set by the server from authentication
             currentMonth: 1,
-            money: 75000,
+            // money will be set by server from balance.json
             reputation: 0,
             creativeCapital: 0,
             focusSlots: 3,
@@ -228,9 +241,47 @@ export const useGameStore = create<GameStore>()(
             isAdvancingMonth: false
           });
         } catch (error) {
-          console.error('Failed to advance month:', error);
+          console.error('=== ADVANCE MONTH ERROR ===');
+          console.error('Error occurred during month advancement');
+          console.error('Error type:', typeof error);
+          console.error('Error constructor:', error?.constructor?.name);
+          console.error('Error instanceof Error:', error instanceof Error);
+          console.error('Error message:', error instanceof Error ? error.message : 'No message');
+          console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+          
+          // Try to extract additional error details
+          if (error && typeof error === 'object') {
+            console.error('Error properties:', Object.getOwnPropertyNames(error));
+            console.error('Error status:', (error as any).status);
+            console.error('Error statusText:', (error as any).statusText);
+            console.error('Error url:', (error as any).url);
+            console.error('Error details:', (error as any).details);
+          }
+          
+          // Create a more descriptive error for the UI
+          let displayError;
+          if (error instanceof Error) {
+            // Extract meaningful error information
+            const status = (error as any).status;
+            const statusText = (error as any).statusText;
+            const details = (error as any).details;
+            
+            if (status && statusText) {
+              displayError = new Error(`HTTP ${status}: ${statusText}. ${error.message}`);
+            } else if (details && details.message) {
+              displayError = new Error(`Server Error: ${details.message}`);
+            } else {
+              displayError = new Error(`Advance Month Failed: ${error.message}`);
+            }
+          } else {
+            displayError = new Error(`Advance Month Failed: ${JSON.stringify(error)}`);
+          }
+          
+          console.error('Final display error:', displayError.message);
+          console.error('========================');
+          
           set({ isAdvancingMonth: false });
-          throw error;
+          throw displayError;
         }
       },
 
@@ -409,6 +460,8 @@ export const useGameStore = create<GameStore>()(
         artists: state.artists,
         projects: state.projects,
         roles: state.roles,
+        songs: state.songs,
+        releases: state.releases,
         selectedActions: state.selectedActions
       })
     }

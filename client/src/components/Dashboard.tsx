@@ -13,9 +13,10 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
 export function Dashboard() {
-  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, monthlyOutcome } = useGameStore();
+  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, monthlyOutcome, createNewGame } = useGameStore();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showMonthSummary, setShowMonthSummary] = useState(false);
+  const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
 
   if (!gameState) {
     return (
@@ -42,6 +43,23 @@ export function Dashboard() {
     setShowMonthSummary(false);
   };
 
+  const handleNewGame = async () => {
+    if (gameState.currentMonth && gameState.currentMonth > 1) {
+      setShowNewGameConfirm(true);
+    } else {
+      await confirmNewGame();
+    }
+  };
+
+  const confirmNewGame = async () => {
+    try {
+      await createNewGame('standard');
+      setShowNewGameConfirm(false);
+    } catch (error) {
+      console.error('Failed to create new game:', error);
+    }
+  };
+
   return (
     <div className="bg-slate-50 min-h-screen font-sans">
       {/* Header */}
@@ -65,6 +83,16 @@ export function Dashboard() {
                 <i className="fas fa-dollar-sign text-success"></i>
                 <span className="font-mono font-semibold">${(gameState.money || 0).toLocaleString()}</span>
               </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleNewGame}
+                className="p-2 text-slate-600 hover:text-slate-900"
+                title="Start New Game"
+              >
+                <i className="fas fa-plus"></i>
+              </Button>
               
               <Button
                 variant="ghost"
@@ -122,6 +150,37 @@ export function Dashboard() {
               isAdvancing={false}
               isMonthResults={true}
             />
+          </div>
+        </div>
+      )}
+      
+      {/* New Game Confirmation Modal */}
+      {showNewGameConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="text-4xl mb-4">⚠️</div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Start New Game?</h3>
+              <p className="text-sm text-slate-600 mb-6">
+                This will permanently delete your current progress (Month {gameState.currentMonth}). Are you sure you want to continue?
+              </p>
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowNewGameConfirm(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmNewGame}
+                  className="flex-1"
+                >
+                  Start New Game
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

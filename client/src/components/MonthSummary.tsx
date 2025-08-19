@@ -27,6 +27,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
     switch (type) {
       case 'project_complete': return '🎉';
       case 'revenue': return '💰';
+      case 'ongoing_revenue': return '📻'; // Radio icon for streaming revenue
       case 'expense': return '💸';
       case 'unlock': return '🔓';
       case 'artist': return '🎤';
@@ -43,7 +44,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
     };
 
     changes.forEach(change => {
-      if (change.type === 'revenue' || change.type === 'project_complete') {
+      if (change.type === 'revenue' || change.type === 'project_complete' || change.type === 'ongoing_revenue') {
         categories.revenue.push(change);
       } else if (change.type === 'expense') {
         categories.expenses.push(change);
