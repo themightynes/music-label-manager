@@ -25,6 +25,11 @@ interface GameEngineAction {
     projectType?: string;
     title?: string;
     marketingType?: string;
+    // Enhanced project creation fields
+    producerTier?: string;
+    timeInvestment?: string;
+    budget?: number;
+    songCount?: number;
   };
 }
 
@@ -66,7 +71,7 @@ export class GameEngine {
    * @param monthlyActions - Actions selected by the player this month
    * @returns Updated game state and summary of changes
    */
-  async advanceMonth(monthlyActions: GameEngineAction[]): Promise<{
+  async advanceMonth(monthlyActions: GameEngineAction[], dbTransaction?: any): Promise<{
     gameState: GameState;
     summary: MonthSummary;
     campaignResults?: CampaignResults;
@@ -98,7 +103,7 @@ export class GameEngine {
     await this.processReleasedProjects(summary);
     
     // Process song generation for recording projects
-    await this.processRecordingProjects(summary);
+    await this.processRecordingProjects(summary, dbTransaction);
 
     // Apply delayed effects from previous months
     await this.processDelayedEffects(summary);
@@ -123,8 +128,14 @@ export class GameEngine {
     // Update access tiers based on reputation
     this.updateAccessTiers();
 
+    // Check for producer tier unlocks
+    this.checkProducerTierUnlocks(summary);
+
     // Apply final calculations  
     this.gameState.money = (this.gameState.money || startingMoney) + summary.revenue - summary.expenses;
+    
+    // Generate economic insights for the month
+    this.generateEconomicInsights(summary);
     
     // Check for campaign completion
     const campaignResults = await this.checkCampaignCompletion(summary);
@@ -472,7 +483,7 @@ export class GameEngine {
     await this.processReleasedProjects(summary);
     
     // Process song generation for recording projects
-    await this.processRecordingProjects(summary);
+    await this.processRecordingProjects(summary, dbTransaction);
   }
 
   /**
@@ -572,14 +583,14 @@ export class GameEngine {
    * Processes song generation for recording projects
    * This is called during monthly processing to create songs for active recording projects
    */
-  private async processRecordingProjects(summary: MonthSummary): Promise<void> {
+  private async processRecordingProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
     console.log('[SONG GENERATION] === Processing Recording Projects ===');
     console.log(`[SONG GENERATION] Game ID: ${this.gameState.id}`);
     
     try {
       // Get recording projects from database via ServerGameData
       // Note: This assumes the server will provide recording projects
-      const recordingProjects = await this.gameData.getActiveRecordingProjects?.(this.gameState.id || '');
+      const recordingProjects = await this.gameData.getActiveRecordingProjects?.(this.gameState.id || '', dbTransaction);
       
       console.log(`[SONG GENERATION] Found ${recordingProjects?.length || 0} recording projects`);
       console.log('[SONG GENERATION] Projects:', recordingProjects?.map(p => ({
@@ -689,13 +700,16 @@ export class GameEngine {
         project.songsCreated = (project.songsCreated || 0) + 1;
         console.log(`[SONG GENERATION] Updated project songsCreated to: ${project.songsCreated}`);
         
+        // Enhanced summary with economic insights
+        const economicInsight = this.generateSongEconomicInsight(song, project);
+        
         summary.changes.push({
           type: 'project_complete', // Using existing type for now
-          description: `Created song: "${song.title}" for ${project.title}`,
+          description: `Created song: "${song.title}" for ${project.title} - ${economicInsight}`,
           projectId: project.id,
           amount: 0
         });
-        console.log(`[SONG GENERATION] Added summary change for song creation`);
+        console.log(`[SONG GENERATION] Added enhanced summary change for song creation`);
       }
 
       // Update project in database
@@ -707,9 +721,12 @@ export class GameEngine {
 
       // Check if project completed all songs
       if (project.songsCreated >= project.songCount) {
+        // Calculate project completion economic summary
+        const completionSummary = this.generateProjectCompletionSummary(project);
+        
         summary.changes.push({
           type: 'project_complete',
-          description: `Recording completed for ${project.title} (${project.songsCreated}/${project.songCount} songs)`,
+          description: `Recording completed for ${project.title} (${project.songsCreated}/${project.songCount} songs) - ${completionSummary}`,
           projectId: project.id,
           amount: 0
         });
@@ -732,7 +749,7 @@ export class GameEngine {
   }
 
   /**
-   * Generates a single song for a recording project
+   * Generates a single song for a recording project with enhanced quality calculation
    */
   private generateSong(project: any, artist: any): any {
     const currentMonth = this.gameState.currentMonth || 1;
@@ -747,25 +764,76 @@ export class GameEngine {
     
     const randomName = songNames[Math.floor(this.getRandom(0, songNames.length))];
     
-    // Calculate song quality based on artist mood and project quality
-    const baseQuality = 40 + Math.floor(this.getRandom(0, 20)); // 40-60 base
-    const artistMoodBonus = Math.floor(((artist.mood || 50) - 50) * 0.2); // -10 to +10 based on mood
-    const projectQualityBonus = Math.floor((project.quality || 50) * 0.1); // Based on project quality
+    // Get producer tier and time investment from project metadata (with defaults)
+    const metadata = project.metadata || {};
+    const producerTier = project.producerTier || metadata.producerTier || 'local';
+    const timeInvestment = project.timeInvestment || metadata.timeInvestment || 'standard';
     
-    const finalQuality = Math.max(20, Math.min(100, 
-      baseQuality + artistMoodBonus + projectQualityBonus
-    ));
+    console.log('[GENERATE SONG] Project budget data analysis:', {
+      projectId: project.id,
+      projectTitle: project.title,
+      directBudgetPerSong: project.budgetPerSong,
+      directTotalCost: project.totalCost,
+      projectBudget: project.budget,
+      projectSongCount: project.songCount,
+      producerTier,
+      timeInvestment,
+      hasMetadata: !!metadata,
+      metadataKeys: Object.keys(metadata)
+    });
+    
+    // Extract economic decision data if available
+    const economicDecisions = metadata.economicDecisions || {};
+    const projectBudget = project.budgetPerSong ? (project.budgetPerSong * (project.songCount || 1)) : 
+                          (project.totalCost || project.budget || economicDecisions.finalBudget || 0);
+    const budgetQualityBonus = economicDecisions.budgetQualityBonus || 0;
+    const songCountQualityImpact = economicDecisions.songCountQualityImpact || 1.0;
+    
+    console.log('[GENERATE SONG] Budget calculation resolved:', {
+      finalProjectBudget: projectBudget,
+      calculationMethod: project.budgetPerSong ? 'budgetPerSong * songCount' : 
+                          (project.totalCost ? 'totalCost' :
+                          (project.budget ? 'budget' : 
+                          (economicDecisions.finalBudget ? 'economicDecisions.finalBudget' : 'default 0'))),
+      budgetQualityBonus,
+      songCountQualityImpact
+    });
+    
+    // Calculate enhanced song quality using new stacking formula with budget and song count
+    const finalQuality = this.calculateEnhancedSongQuality(
+      artist, 
+      project, 
+      producerTier, 
+      timeInvestment,
+      projectBudget,
+      project.songCount
+    );
 
     // CRITICAL FIX: Ensure gameId and artistId are properly set
     // Use project.artistId consistently (this is the ID used in the UI)
     const gameId = project.gameId || this.gameState.id;
     const artistId = project.artistId; // Always use project's artistId, not the fetched artist.id
     
-    console.log('[SONG GENERATION] Creating song with:', { 
+    // Calculate per-song budget allocation for tracking
+    const perSongBudget = project.songCount > 1 ? Math.round(projectBudget / project.songCount) : projectBudget;
+    
+    console.log('[SONG GENERATION] Creating enhanced song with economic factors:', { 
       gameId, 
       artistId, 
       projectId: project.id,
-      artistName: artist?.name || 'Unknown'
+      projectTitle: project.title,
+      artistName: artist?.name || 'Unknown',
+      artistMood: artist?.mood || 50,
+      producerTier,
+      timeInvestment,
+      finalQuality,
+      projectBudget,
+      perSongBudget,
+      songCount: project.songCount,
+      budgetQualityBonus,
+      songCountQualityImpact,
+      hasMetadata: !!metadata,
+      hasEconomicDecisions: !!economicDecisions.finalBudget
     });
     
     if (!gameId || !artistId) {
@@ -773,26 +841,208 @@ export class GameEngine {
       throw new Error(`Cannot create song: missing gameId (${gameId}) or artistId (${artistId})`);
     }
 
+    // Enhanced metadata with economic factors
+    const baseQuality = 40 + Math.floor(this.getRandom(0, 20));
+    const producerBonus = this.gameData.getProducerTierSystemSync()[producerTier]?.quality_bonus || 0;
+    const timeBonus = this.gameData.getTimeInvestmentSystemSync()[timeInvestment]?.quality_bonus || 0;
+    
     // Don't include 'id' field - let database generate it
     return {
       title: randomName,
       artistId: artistId,
       gameId: gameId,
-      quality: finalQuality,
+      quality: Math.round(finalQuality),
       genre: artist.genre || 'pop', // Would come from artist data
       mood: this.generateSongMood(),
       createdMonth: currentMonth,
-      producerTier: 'local', // Phase 1: only local producers
-      timeInvestment: 'standard', // Phase 1: only standard time
+      producerTier: producerTier,
+      timeInvestment: timeInvestment,
       isRecorded: true,
       isReleased: false,
       releaseId: null,
       metadata: {
         projectId: project.id,
         artistMood: artist.mood || 50,
-        generatedAt: new Date().toISOString()
+        baseQuality: baseQuality,
+        producerBonus: producerBonus,
+        timeBonus: timeBonus,
+        budgetQualityBonus: budgetQualityBonus,
+        songCountQualityImpact: songCountQualityImpact,
+        perSongBudget: perSongBudget,
+        totalProjectBudget: projectBudget,
+        economicEfficiency: perSongBudget > 0 ? (finalQuality / (perSongBudget / 1000)).toFixed(2) : 0,
+        producerTier: producerTier,
+        timeInvestment: timeInvestment,
+        generatedAt: new Date().toISOString(),
+        qualityCalculation: {
+          base: baseQuality,
+          artistMoodBonus: Math.floor(((artist.mood || 50) - 50) * 0.2),
+          producerBonus: producerBonus,
+          timeBonus: timeBonus,
+          budgetBonus: budgetQualityBonus,
+          songCountImpact: songCountQualityImpact,
+          final: finalQuality
+        }
       }
     };
+  }
+
+  /**
+   * Calculates enhanced song quality using producer tier, time investment, and budget stacking formula
+   */
+  private calculateEnhancedSongQuality(
+    artist: any, 
+    project: any, 
+    producerTier: string, 
+    timeInvestment: string,
+    budgetAmount?: number,
+    songCount?: number
+  ): number {
+    // Base quality (40-60 range with RNG variance)
+    const baseQuality = 40 + Math.floor(this.getRandom(0, 20));
+    
+    // Artist mood bonus (-10 to +10 based on mood)
+    const artistMoodBonus = Math.floor(((artist.mood || 50) - 50) * 0.2);
+    
+    // Producer tier quality bonus
+    const producerSystem = this.gameData.getProducerTierSystemSync();
+    const producerBonus = producerSystem[producerTier]?.quality_bonus || 0;
+    
+    // Time investment quality bonus
+    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
+    const timeBonus = timeSystem[timeInvestment]?.quality_bonus || 0;
+    
+    // NEW: Budget quality bonus with diminishing returns (per-song basis)
+    const totalBudget = budgetAmount || project.totalCost || project.budgetPerSong || 0;
+    const perSongBudget = totalBudget / (songCount || 1);
+    const budgetBonus = this.calculateBudgetQualityBonus(
+      perSongBudget,
+      project.type || 'single',
+      producerTier,
+      timeInvestment,
+      songCount
+    );
+    
+    // NEW: Song count impact on individual song quality
+    const songCountImpact = this.calculateSongCountQualityImpact(songCount || project.songCount || 1);
+    
+    // Quality stacking formula: finalQuality = (baseQuality + artistMoodBonus + producerBonus + timeBonus + budgetBonus) * songCountImpact
+    const preCountQuality = baseQuality + artistMoodBonus + producerBonus + timeBonus + budgetBonus;
+    const rawQuality = preCountQuality * songCountImpact;
+    const finalQuality = Math.max(20, Math.min(100, rawQuality));
+    
+    console.log(`[QUALITY CALC] Enhanced song quality calculation:`, {
+      baseQuality,
+      artistMoodBonus,
+      producerTier,
+      producerBonus,
+      timeInvestment,
+      timeBonus,
+      budgetBonus,
+      songCountImpact,
+      preCountQuality,
+      rawQuality,
+      finalQuality
+    });
+    
+    return finalQuality;
+  }
+
+  /**
+   * Calculates budget bonus for song quality using diminishing returns
+   * Now works with per-song budget amounts for clearer understanding
+   */
+  calculateBudgetQualityBonus(
+    budgetPerSong: number,
+    projectType: string,
+    producerTier: string,
+    timeInvestment: string,
+    songCount: number = 1
+  ): number {
+    const balance = this.gameData.getBalanceConfigSync();
+    const budgetSystem = balance.quality_system.budget_quality_system;
+    
+    if (!budgetSystem?.enabled) {
+      return 0;
+    }
+    
+    // Calculate minimum viable per-song cost for this configuration
+    const minTotalCost = this.gameData.calculateEnhancedProjectCost(projectType, producerTier, timeInvestment, 30, songCount);
+    const minPerSongCost = minTotalCost / songCount;
+    
+    // Calculate budget ratio relative to minimum viable per-song cost
+    const budgetRatio = budgetPerSong / minPerSongCost;
+    
+    let budgetBonus = 0;
+    const breakpoints = budgetSystem.efficiency_breakpoints;
+    const maxBonus = budgetSystem.max_budget_bonus;
+    
+    if (budgetRatio < breakpoints.minimum_viable) {
+      // Below minimum viable - penalty
+      budgetBonus = -5;
+    } else if (budgetRatio <= breakpoints.optimal_efficiency) {
+      // Linear scaling from 0 to 40% of max bonus in optimal range
+      budgetBonus = ((budgetRatio - breakpoints.minimum_viable) / (breakpoints.optimal_efficiency - breakpoints.minimum_viable)) * (maxBonus * 0.4);
+    } else if (budgetRatio <= breakpoints.luxury_threshold) {
+      // Linear scaling from 40% to 80% of max bonus in luxury range
+      const baseBonus = maxBonus * 0.4;
+      const luxuryBonus = ((budgetRatio - breakpoints.optimal_efficiency) / (breakpoints.luxury_threshold - breakpoints.optimal_efficiency)) * (maxBonus * 0.4);
+      budgetBonus = baseBonus + luxuryBonus;
+    } else if (budgetRatio <= breakpoints.diminishing_threshold) {
+      // Linear scaling from 80% to 100% of max bonus before diminishing returns
+      const baseBonus = maxBonus * 0.8;
+      const highEndBonus = ((budgetRatio - breakpoints.luxury_threshold) / (breakpoints.diminishing_threshold - breakpoints.luxury_threshold)) * (maxBonus * 0.2);
+      budgetBonus = baseBonus + highEndBonus;
+    } else {
+      // Diminishing returns beyond threshold
+      const excessRatio = budgetRatio - breakpoints.diminishing_threshold;
+      const diminishingBonus = Math.log(1 + excessRatio) * budgetSystem.diminishing_returns_factor * maxBonus * 0.1;
+      budgetBonus = maxBonus + diminishingBonus;
+    }
+    
+    console.log(`[BUDGET CALC] Per-song budget quality bonus calculation:`, {
+      budgetPerSong: budgetPerSong.toFixed(0),
+      minPerSongCost: minPerSongCost.toFixed(0),
+      songCount,
+      budgetRatio: budgetRatio.toFixed(2),
+      budgetBonus: budgetBonus.toFixed(2),
+      projectType,
+      producerTier,
+      timeInvestment
+    });
+    
+    return Math.round(budgetBonus * 100) / 100; // Round to 2 decimal places
+  }
+
+  /**
+   * Calculates song count impact on individual song quality
+   */
+  calculateSongCountQualityImpact(songCount: number): number {
+    const balance = this.gameData.getBalanceConfigSync();
+    const songCountSystem = balance.economy.song_count_cost_system?.quality_per_song_impact;
+    
+    if (!songCountSystem?.enabled || songCount <= 1) {
+      return 1.0; // No impact for single songs
+    }
+    
+    // Quality decreases slightly for each additional song due to divided attention
+    const baseQualityPerSong = songCountSystem.base_quality_per_song;
+    const minMultiplier = songCountSystem.min_quality_multiplier;
+    
+    // Exponential decay: quality = baseQualityPerSong^(songCount-1)
+    const qualityImpact = Math.pow(baseQualityPerSong, songCount - 1);
+    
+    // Ensure it doesn't go below minimum
+    const finalImpact = Math.max(minMultiplier, qualityImpact);
+    
+    console.log(`[SONG COUNT IMPACT] Quality impact calculation:`, {
+      songCount,
+      baseQualityPerSong,
+      qualityImpact: qualityImpact.toFixed(3),
+      finalImpact: finalImpact.toFixed(3)
+    });
+    
+    return finalImpact;
   }
 
   /**
@@ -801,6 +1051,84 @@ export class GameEngine {
   private generateSongMood(): string {
     const moods = ['upbeat', 'melancholic', 'aggressive', 'chill'];
     return moods[Math.floor(this.getRandom(0, moods.length))];
+  }
+  
+  /**
+   * Generates economic insight summary for song creation
+   */
+  private generateSongEconomicInsight(song: any, project: any): string {
+    const metadata = song.metadata || {};
+    const qualityCalc = metadata.qualityCalculation || {};
+    
+    let insight = `Quality: ${song.quality}/100`;
+    
+    // Add producer tier insight
+    if (song.producerTier && song.producerTier !== 'local') {
+      insight += ` (${song.producerTier} producer`;
+      if (qualityCalc.producerBonus > 0) {
+        insight += ` +${qualityCalc.producerBonus}`;
+      }
+      insight += ')';
+    }
+    
+    // Add budget efficiency insight
+    if (metadata.perSongBudget > 0) {
+      const efficiency = parseFloat(metadata.economicEfficiency) || 0;
+      insight += `, $${metadata.perSongBudget.toLocaleString()}/song`;
+      if (efficiency > 0) {
+        insight += ` (${efficiency} quality/$1k)`;
+      }
+    }
+    
+    // Add multi-song impact insight
+    if (metadata.songCountQualityImpact && metadata.songCountQualityImpact !== 1.0) {
+      const impactPercent = (metadata.songCountQualityImpact - 1.0) * 100;
+      insight += `, Multi-song: ${impactPercent > 0 ? '+' : ''}${impactPercent.toFixed(1)}%`;
+    }
+    
+    return insight;
+  }
+  
+  /**
+   * Generates economic summary for project completion
+   */
+  private generateProjectCompletionSummary(project: any): string {
+    const metadata = project.metadata || {};
+    const economicDecisions = metadata.economicDecisions || {};
+    
+    let summary = `Total investment: $${(project.budget || 0).toLocaleString()}`;
+    
+    if (project.songCount > 1) {
+      const perSongCost = Math.round((project.budget || 0) / project.songCount);
+      summary += ` ($${perSongCost.toLocaleString()}/song)`;
+    }
+    
+    // Add producer tier insight
+    if (project.producerTier && project.producerTier !== 'local') {
+      summary += `, ${project.producerTier} producer`;
+    }
+    
+    // Add time investment insight
+    if (project.timeInvestment && project.timeInvestment !== 'standard') {
+      summary += `, ${project.timeInvestment} timeline`;
+    }
+    
+    // Add expected quality range if available
+    if (economicDecisions.expectedQuality) {
+      summary += `, Target quality: ${economicDecisions.expectedQuality.toFixed(1)}/100`;
+    }
+    
+    // Add budget efficiency insight
+    if (economicDecisions.budgetRatio) {
+      const ratio = economicDecisions.budgetRatio;
+      if (ratio > 1.5) {
+        summary += `, Premium budget (${ratio.toFixed(1)}x minimum)`;
+      } else if (ratio < 1.0) {
+        summary += `, Tight budget (${ratio.toFixed(1)}x minimum)`;
+      }
+    }
+    
+    return summary;
   }
 
   /**
@@ -1032,7 +1360,7 @@ export class GameEngine {
   }
 
   /**
-   * Updates access tiers based on current reputation
+   * Updates access tiers based on current reputation and checks for producer tier unlocks
    */
   private updateAccessTiers(): void {
     const tiers = this.gameData.getAccessTiersSync();
@@ -1079,52 +1407,266 @@ export class GameEngine {
   }
 
   /**
-   * Processes starting a new project (Single, EP, Mini-Tour)
+   * Checks for producer tier unlocks and adds progression notifications
+   */
+  private checkProducerTierUnlocks(summary: MonthSummary): void {
+    const reputation = this.gameState.reputation || 0;
+    const producerSystem = this.gameData.getProducerTierSystemSync();
+    
+    // Track which tiers were previously unlocked
+    const flags = this.gameState.flags || {};
+    const unlockedTiers = (flags as any)['unlocked_producer_tiers'] || ['local'];
+    
+    let newUnlocks = false;
+    const availableTiers = this.gameData.getAvailableProducerTiers(reputation);
+    
+    for (const tierName of availableTiers) {
+      if (!unlockedTiers.includes(tierName)) {
+        unlockedTiers.push(tierName);
+        newUnlocks = true;
+        
+        const tierData = producerSystem[tierName];
+        summary.changes.push({
+          type: 'unlock',
+          description: `🎛️ Producer Tier Unlocked: ${tierName.charAt(0).toUpperCase() + tierName.slice(1)} - ${tierData.description}`,
+          amount: 0
+        });
+        
+        console.log(`[PROGRESSION] Producer tier unlocked: ${tierName} (reputation: ${reputation})`);
+      }
+    }
+    
+    if (newUnlocks) {
+      (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
+      this.gameState.flags = flags;
+    }
+  }
+
+  /**
+   * Processes starting a new project (Single, EP, Mini-Tour) with enhanced producer tier and time investment support
    */
   private async processProjectStart(action: GameEngineAction, summary: MonthSummary): Promise<void> {
     if (!action.targetId || !action.details?.projectType) return;
     
-    const projectType = action.details.projectType;
-    const projectCosts = await this.gameData.getProjectCosts(projectType);
-    const baseCost = projectCosts.min + ((projectCosts.max - projectCosts.min) * 0.5); // Average cost
+    // Validate project creation parameters first
+    const validation = this.validateProjectCreation(action, this.gameState);
+    if (!validation.valid) {
+      for (const error of validation.errors) {
+        summary.changes.push({
+          type: 'expense',
+          description: `Project creation failed: ${error}`,
+          amount: 0
+        });
+      }
+      return;
+    }
     
-    // Check if we have enough money
-    if ((this.gameState.money || 0) < baseCost) {
+    const projectType = action.details.projectType;
+    const producerTier = action.details.producerTier || 'local';
+    const timeInvestment = action.details.timeInvestment || 'standard';
+    const currentReputation = this.gameState.reputation || 0;
+    
+    // Validate producer tier availability
+    const availableTiers = this.gameData.getAvailableProducerTiers(currentReputation);
+    if (!availableTiers.includes(producerTier)) {
       summary.changes.push({
         type: 'expense',
-        description: `Cannot afford ${projectType} - insufficient funds`,
+        description: `Producer tier '${producerTier}' not available (requires ${this.gameData.getProducerTierSystemSync()[producerTier]?.unlock_rep || 0} reputation)`,
         amount: 0
       });
       return;
     }
     
-    // Deduct project cost
-    this.gameState.money = (this.gameState.money || 0) - baseCost;
-    summary.expenses += baseCost;
+    // Calculate enhanced project cost with producer tier, time investment, and song count
+    const projectSongCount = action.details.songCount || this.getDefaultSongCount(projectType);
+    let projectCost: number;
+    let minBudgetForQuality: number;
     
-    // Add project to game state (would normally be handled by database)
+    try {
+      projectCost = this.gameData.calculateEnhancedProjectCost(
+        projectType, 
+        producerTier, 
+        timeInvestment, 
+        50, // Average quality for cost calculation
+        projectSongCount
+      );
+      
+      // Calculate minimum budget for meaningful quality bonus
+      minBudgetForQuality = this.gameData.calculateEnhancedProjectCost(
+        projectType, 
+        producerTier, 
+        timeInvestment, 
+        30, // Minimum quality for budget calculation
+        projectSongCount
+      );
+    } catch (error) {
+      console.error('[PROJECT START] Cost calculation failed:', error);
+      summary.changes.push({
+        type: 'expense',
+        description: `Failed to start ${projectType}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        amount: 0
+      });
+      return;
+    }
+    
+    // Enhanced budget validation and quality impact calculation
+    const customBudget = action.details.budget;
+    let finalBudget: number;
+    let budgetQualityBonus: number = 0;
+    
+    if (customBudget && customBudget >= projectCost) {
+      finalBudget = customBudget;
+      // Calculate budget quality bonus for custom budget (per-song)
+      const perSongBudget = customBudget / projectSongCount;
+      budgetQualityBonus = this.calculateBudgetQualityBonus(
+        perSongBudget,
+        projectType,
+        producerTier,
+        timeInvestment,
+        projectSongCount
+      );
+    } else {
+      finalBudget = projectCost;
+      // Calculate budget quality bonus for minimum cost (per-song)
+      const perSongBudget = projectCost / projectSongCount;
+      budgetQualityBonus = this.calculateBudgetQualityBonus(
+        perSongBudget,
+        projectType,
+        producerTier,
+        timeInvestment,
+        projectSongCount
+      );
+    }
+    
+    // Validate budget vs. song count efficiency
+    const songCountCostEfficiency = this.validateSongCountBudgetEfficiency(
+      finalBudget,
+      projectSongCount,
+      projectType,
+      producerTier,
+      timeInvestment
+    );
+    
+    if (!songCountCostEfficiency.valid) {
+      summary.changes.push({
+        type: 'expense',
+        description: `Budget allocation inefficient: ${songCountCostEfficiency.warning}`,
+        amount: 0
+      });
+      // Continue with warning but don't block creation
+    }
+    
+    if ((this.gameState.money || 0) < finalBudget) {
+      const missingAmount = finalBudget - (this.gameState.money || 0);
+      summary.changes.push({
+        type: 'expense',
+        description: `Cannot afford ${projectType} with ${producerTier} producer - need $${missingAmount.toLocaleString()} more`,
+        amount: 0
+      });
+      return;
+    }
+    
+    // Calculate song count quality impact for project planning
+    const songCountQualityImpact = this.calculateSongCountQualityImpact(projectSongCount);
+    
+    // Deduct project cost
+    this.gameState.money = (this.gameState.money || 0) - finalBudget;
+    summary.expenses += finalBudget;
+    
+    // Calculate project duration with time investment modifier
+    const baseDuration = this.getProjectDuration(projectType);
+    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
+    const durationModifier = timeSystem[timeInvestment]?.duration_modifier || 1.0;
+    const adjustedDuration = Math.ceil(baseDuration * durationModifier);
+    
+    // Calculate expected quality range for feedback
+    const baseQuality = 40 + Math.floor(this.getRandom(0, 20));
+    const producerBonus = this.gameData.getProducerTierSystemSync()[producerTier]?.quality_bonus || 0;
+    const timeBonus = timeSystem[timeInvestment]?.quality_bonus || 0;
+    const expectedQuality = Math.min(100, Math.max(20, 
+      (baseQuality + producerBonus + timeBonus + budgetQualityBonus) * songCountQualityImpact
+    ));
+    
+    // Add enhanced project to game state (would normally be handled by database)
     const newProject = {
       id: `project-${Date.now()}`,
       title: action.details.title || `New ${projectType}`,
       type: projectType,
       artistId: action.targetId,
+      gameId: this.gameState.id,
       stage: 'production',
-      quality: 40 + Math.floor(this.getRandom(0, 20)), // Base quality
-      budget: baseCost,
-      budgetUsed: baseCost * 0.3, // Initial investment
+      quality: expectedQuality, // Enhanced quality calculation
+      budgetPerSong: Math.floor(finalBudget / projectSongCount),
+      totalCost: finalBudget,
+      costUsed: Math.floor(finalBudget * 0.3), // Initial investment
       startMonth: this.gameState.currentMonth || 1,
-      dueMonth: (this.gameState.currentMonth || 1) + this.getProjectDuration(projectType)
+      dueMonth: (this.gameState.currentMonth || 1) + adjustedDuration,
+      songCount: projectSongCount,
+      songsCreated: 0,
+      // Enhanced project metadata with economic tracking
+      producerTier: producerTier,
+      timeInvestment: timeInvestment,
+      metadata: {
+        enhancedProject: true,
+        economicDecisions: {
+          originalCost: projectCost,
+          finalBudget: finalBudget,
+          budgetRatio: finalBudget / minBudgetForQuality,
+          budgetQualityBonus: budgetQualityBonus,
+          songCountQualityImpact: songCountQualityImpact,
+          expectedQuality: expectedQuality,
+          costEfficiency: songCountCostEfficiency
+        },
+        producerCostMultiplier: this.gameData.getProducerTierSystemSync()[producerTier]?.multiplier || 1.0,
+        timeCostMultiplier: timeSystem[timeInvestment]?.multiplier || 1.0,
+        qualityBonuses: {
+          producer: producerBonus,
+          time: timeBonus,
+          budget: budgetQualityBonus
+        }
+      }
     };
     
-    // TODO: Store project in database via ServerGameData
+    // TODO: Store enhanced project in database via ServerGameData
     // Projects are handled separately in the database, not stored in gameState
+    
+    console.log('[PROJECT START] Enhanced project created:', {
+      title: newProject.title,
+      type: newProject.type,
+      producerTier,
+      timeInvestment,
+      finalBudget,
+      songCount: projectSongCount,
+      adjustedDuration,
+      expectedQuality,
+      budgetQualityBonus,
+      songCountQualityImpact,
+      qualityBonuses: newProject.metadata.qualityBonuses
+    });
+    
+    // Enhanced summary with economic insights
+    const costBreakdown = `${producerTier} producer (${producerBonus > 0 ? '+' + producerBonus + ' quality' : 'standard'}), ${timeInvestment} timeline (${timeBonus > 0 ? '+' + timeBonus + ' quality' : timeBonus < 0 ? timeBonus + ' quality' : 'standard'})`;
+    const budgetInsight = budgetQualityBonus > 0 ? ` +${budgetQualityBonus.toFixed(1)} quality from budget` : '';
+    const songCountInsight = projectSongCount > 1 ? ` (${projectSongCount} songs, ${(songCountQualityImpact * 100 - 100).toFixed(1)}% individual quality)` : '';
     
     summary.changes.push({
       type: 'project_complete',
-      description: `Started ${projectType}: ${newProject.title}`,
+      description: `Started ${projectType}: ${newProject.title} - $${finalBudget.toLocaleString()} (${costBreakdown}${budgetInsight})${songCountInsight}`,
       projectId: newProject.id,
-      amount: -baseCost
+      amount: -finalBudget
     });
+  }
+
+  /**
+   * Gets default song count for project types
+   */
+  private getDefaultSongCount(projectType: string): number {
+    switch (projectType.toLowerCase()) {
+      case 'single': return 1;
+      case 'ep': return 5;
+      case 'album': return 12;
+      default: return 1;
+    }
   }
 
   /**
@@ -1391,6 +1933,195 @@ export class GameEngine {
   }
 
   /**
+   * Validates producer tier and time investment combinations for state consistency
+   */
+  validateProducerTierAndTimeInvestment(
+    producerTier: string, 
+    timeInvestment: string, 
+    reputation: number
+  ): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    // Validate producer tier exists and is unlocked
+    const producerSystem = this.gameData.getProducerTierSystemSync();
+    if (!producerSystem[producerTier]) {
+      errors.push(`Unknown producer tier: ${producerTier}`);
+    } else {
+      const requiredRep = producerSystem[producerTier].unlock_rep;
+      if (reputation < requiredRep) {
+        errors.push(`Producer tier '${producerTier}' requires ${requiredRep} reputation (current: ${reputation})`);
+      }
+    }
+    
+    // Validate time investment exists
+    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
+    if (!timeSystem[timeInvestment]) {
+      errors.push(`Unknown time investment: ${timeInvestment}`);
+    }
+    
+    // Check for incompatible combinations (business rules)
+    if (producerTier === 'legendary' && timeInvestment === 'rushed') {
+      errors.push('Legendary producers refuse rushed timeline projects');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Validates project creation parameters before processing
+   */
+  validateProjectCreation(action: GameEngineAction, currentGameState: GameState): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    if (!action.details?.projectType) {
+      errors.push('Project type is required');
+      return { valid: false, errors };
+    }
+    
+    const producerTier = action.details.producerTier || 'local';
+    const timeInvestment = action.details.timeInvestment || 'standard';
+    const reputation = currentGameState.reputation || 0;
+    const projectType = action.details.projectType;
+    const songCount = action.details.songCount || this.getDefaultSongCount(projectType);
+    
+    // Validate song count for project type
+    const songCountValidation = this.validateSongCountForProjectType(projectType, songCount);
+    if (!songCountValidation.valid) {
+      errors.push(...songCountValidation.errors);
+    }
+    
+    // Validate producer tier and time investment
+    const tierValidation = this.validateProducerTierAndTimeInvestment(
+      producerTier, 
+      timeInvestment, 
+      reputation
+    );
+    
+    if (!tierValidation.valid) {
+      errors.push(...tierValidation.errors);
+    }
+    
+    // Enhanced budget validation with economic efficiency checks
+    if (action.details.budget) {
+      try {
+        const minCost = this.gameData.calculateEnhancedProjectCost(
+          projectType,
+          producerTier,
+          timeInvestment,
+          30, // Minimum quality for cost calculation
+          songCount
+        );
+        
+        if (action.details.budget < minCost) {
+          errors.push(`Budget too low: minimum $${minCost.toLocaleString()} required for ${producerTier} producer with ${timeInvestment} timeline and ${songCount} song${songCount > 1 ? 's' : ''}`);
+        }
+        
+        if (action.details.budget > (currentGameState.money || 0)) {
+          errors.push(`Insufficient funds: budget $${action.details.budget.toLocaleString()} exceeds available money $${(currentGameState.money || 0).toLocaleString()}`);
+        }
+        
+        // Check for budget exploitation attempts
+        const maxReasonableBudget = minCost * 5; // 5x minimum is reasonable upper bound
+        if (action.details.budget > maxReasonableBudget) {
+          errors.push(`Budget excessive: $${action.details.budget.toLocaleString()} is beyond reasonable spending for this project type (max recommended: $${maxReasonableBudget.toLocaleString()})`);
+        }
+        
+      } catch (error) {
+        errors.push(`Cost calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+  
+  /**
+   * Validates song count is appropriate for project type
+   */
+  private validateSongCountForProjectType(projectType: string, songCount: number): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    switch (projectType.toLowerCase()) {
+      case 'single':
+        if (songCount < 1 || songCount > 3) {
+          errors.push('Singles must have 1-3 songs');
+        }
+        break;
+      case 'ep':
+        if (songCount < 3 || songCount > 8) {
+          errors.push('EPs must have 3-8 songs');
+        }
+        break;
+      case 'album':
+        if (songCount < 8 || songCount > 20) {
+          errors.push('Albums must have 8-20 songs');
+        }
+        break;
+      default:
+        // For non-recording projects like tours, song count is not relevant
+        break;
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+  
+  /**
+   * Validates budget efficiency relative to song count to prevent exploits
+   */
+  private validateSongCountBudgetEfficiency(
+    budget: number,
+    songCount: number,
+    projectType: string,
+    producerTier: string,
+    timeInvestment: string
+  ): { valid: boolean; warning?: string; efficiency?: number } {
+    try {
+      const minBudget = this.gameData.calculateEnhancedProjectCost(
+        projectType,
+        producerTier,
+        timeInvestment,
+        30,
+        songCount
+      );
+      
+      const efficiency = budget / minBudget;
+      
+      // Flag potentially exploitative budget allocations
+      if (efficiency > 4.0) {
+        return {
+          valid: false,
+          warning: `Budget ${efficiency.toFixed(1)}x minimum cost may be inefficient for ${songCount} song${songCount > 1 ? 's' : ''}`,
+          efficiency
+        };
+      }
+      
+      if (efficiency < 0.8) {
+        return {
+          valid: false,
+          warning: `Budget too low for quality production (${efficiency.toFixed(1)}x minimum)`,
+          efficiency
+        };
+      }
+      
+      return { valid: true, efficiency };
+      
+    } catch (error) {
+      return {
+        valid: false,
+        warning: `Budget efficiency calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
    * Calculates outcomes when a project completes
    */
   async calculateProjectOutcomes(project: any, summary: MonthSummary): Promise<{
@@ -1485,6 +2216,126 @@ export class GameEngine {
     }
     
     return { revenue, streams, pressPickups, description };
+  }
+
+  /**
+   * Tests the producer tier and time investment integration systems
+   * Used for debugging and validation of the complete integration
+   */
+  testProducerTierIntegration(): {
+    systemsLoaded: boolean;
+    availableTiers: string[];
+    availableTimeInvestments: string[];
+    costCalculations: Record<string, any>;
+    qualityCalculations: Record<string, any>;
+    validationTests: Record<string, any>;
+  } {
+    const reputation = this.gameState.reputation || 0;
+    
+    // Test system loading
+    const producerSystem = this.gameData.getProducerTierSystemSync();
+    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
+    
+    // Test tier availability
+    const availableTiers = this.gameData.getAvailableProducerTiers(reputation);
+    const availableTimeInvestments = Object.keys(timeSystem);
+    
+    // Test cost calculations
+    const costCalculations: Record<string, any> = {};
+    for (const tier of availableTiers) {
+      for (const time of availableTimeInvestments) {
+        try {
+          const cost = this.gameData.calculateEnhancedProjectCost('single', tier, time, 50);
+          costCalculations[`${tier}_${time}`] = { cost, success: true };
+        } catch (error) {
+          costCalculations[`${tier}_${time}`] = { error: error instanceof Error ? error.message : 'Unknown error', success: false };
+        }
+      }
+    }
+    
+    // Test quality calculations
+    const qualityCalculations: Record<string, any> = {};
+    const mockArtist = { mood: 70, archetype: 'workhorse' };
+    const mockProject = { quality: 50, producerTier: 'regional', timeInvestment: 'extended' };
+    
+    try {
+      const quality = this.calculateEnhancedSongQuality(mockArtist, mockProject, 'regional', 'extended');
+      qualityCalculations.enhanced = { quality, success: true };
+    } catch (error) {
+      qualityCalculations.enhanced = { error: error instanceof Error ? error.message : 'Unknown error', success: false };
+    }
+    
+    // Test validation systems
+    const validationTests: Record<string, any> = {};
+    
+    // Test valid combination
+    const validTest = this.validateProducerTierAndTimeInvestment('local', 'standard', reputation);
+    validationTests.valid_combination = validTest;
+    
+    // Test invalid reputation
+    const invalidRepTest = this.validateProducerTierAndTimeInvestment('legendary', 'standard', 5);
+    validationTests.invalid_reputation = invalidRepTest;
+    
+    // Test business rule violation
+    const businessRuleTest = this.validateProducerTierAndTimeInvestment('legendary', 'rushed', 100);
+    validationTests.business_rule_violation = businessRuleTest;
+    
+    return {
+      systemsLoaded: Object.keys(producerSystem).length > 0 && Object.keys(timeSystem).length > 0,
+      availableTiers,
+      availableTimeInvestments,
+      costCalculations,
+      qualityCalculations,
+      validationTests
+    };
+  }
+  
+  /**
+   * Enhanced monthly summary generation with economic insights
+   */
+  private generateEconomicInsights(summary: MonthSummary): void {
+    // Track budget efficiency and strategic decisions for the month
+    const projectStartChanges = summary.changes.filter(change => 
+      change.type === 'project_complete' && change.description.includes('Started')
+    );
+    
+    if (projectStartChanges.length > 0) {
+      const totalProjectSpend = projectStartChanges.reduce((total, change) => 
+        total + Math.abs(change.amount || 0), 0
+      );
+      
+      summary.changes.push({
+        type: 'unlock',
+        description: `💰 Monthly project investment: $${totalProjectSpend.toLocaleString()} across ${projectStartChanges.length} project${projectStartChanges.length > 1 ? 's' : ''}`,
+        amount: 0
+      });
+    }
+    
+    // Add economic efficiency reporting for ongoing projects
+    const ongoingRevenue = summary.changes.filter(change => 
+      change.type === 'ongoing_revenue'
+    ).reduce((total, change) => total + (change.amount || 0), 0);
+    
+    if (ongoingRevenue > 0) {
+      summary.changes.push({
+        type: 'unlock',
+        description: `📈 Catalog revenue efficiency: $${ongoingRevenue.toLocaleString()} from released content`,
+        amount: 0
+      });
+    }
+    
+    // Track reputation-to-money efficiency this month
+    const reputationGain = Object.values(summary.reputationChanges).reduce((total, change) => total + change, 0);
+    const netCashFlow = summary.revenue - summary.expenses;
+    
+    if (reputationGain > 0 && netCashFlow !== 0) {
+      const efficiency = Math.abs(netCashFlow) / reputationGain;
+      summary.changes.push({
+        type: 'unlock',
+        description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point this month`,
+        amount: 0
+      });
+    }
   }
 
 }

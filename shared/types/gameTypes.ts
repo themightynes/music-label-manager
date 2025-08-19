@@ -97,6 +97,20 @@ export interface GameProject {
   metadata?: Record<string, any>;
 }
 
+export interface ProducerTierData {
+  multiplier: number;
+  unlock_rep: number;
+  quality_bonus: number;
+  description: string;
+}
+
+export interface TimeInvestmentData {
+  multiplier: number;
+  duration_modifier: number;
+  quality_bonus: number;
+  description: string;
+}
+
 export interface BalanceConfig {
   version: string;
   economy: {
@@ -105,6 +119,7 @@ export interface BalanceConfig {
     bankruptcy_threshold: number;
     rng_variance: [number, number];
     project_costs: Record<string, any>;
+    song_count_cost_system: Record<string, any>;
     marketing_costs: Record<string, any>;
     talent_costs: Record<string, any>;
   };
@@ -132,6 +147,8 @@ export interface BalanceConfig {
   side_events: Record<string, any>;
   progression_thresholds: Record<string, number>;
   quality_system: Record<string, any>;
+  producer_tier_system: Record<string, ProducerTierData>;
+  time_investment_system: Record<string, TimeInvestmentData>;
   ui_constants: Record<string, number>;
   save_system: Record<string, any>;
   difficulty_modifiers: Record<string, Record<string, number>>;

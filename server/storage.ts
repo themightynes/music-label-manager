@@ -188,13 +188,50 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveRecordingProjects(gameId: string): Promise<Project[]> {
-    return await db.select().from(projects)
+    console.log('[DEBUG] getActiveRecordingProjects query conditions:', {
+      gameId,
+      expectedStage: 'production',
+      expectedTypes: ['Single', 'EP']
+    });
+    
+    // First, let's check what projects exist at all for this game
+    const allProjects = await db.select().from(projects)
+      .where(eq(projects.gameId, gameId));
+    
+    console.log('[DEBUG] All projects for game:', allProjects.length);
+    allProjects.forEach(project => {
+      console.log('[DEBUG] Found project:', {
+        title: project.title,
+        type: project.type,
+        stage: project.stage,
+        gameId: project.gameId
+      });
+    });
+    
+    const result = await db.select().from(projects)
       .where(and(
         eq(projects.gameId, gameId),
         eq(projects.stage, 'production'),
         // Only recording projects (Singles and EPs create songs)
         inArray(projects.type, ['Single', 'EP'])
       ));
+      
+    console.log('[DEBUG] getActiveRecordingProjects found projects:', result.length);
+    result.forEach(project => {
+      console.log('[DEBUG] Active project:', {
+        title: project.title,
+        type: project.type,
+        stage: project.stage,
+        gameId: project.gameId,
+        songCount: project.songCount,
+        songsCreated: project.songsCreated,
+        producerTier: project.producerTier,
+        timeInvestment: project.timeInvestment,
+        budgetPerSong: project.budgetPerSong
+      });
+    });
+    
+    return result;
   }
 
   // Songs

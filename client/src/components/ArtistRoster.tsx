@@ -47,7 +47,7 @@ export function ArtistRoster() {
     const avgROI = releasedProjects.length > 0 ? 
       releasedProjects.reduce((sum, project) => {
         const metadata = project.metadata as any || {};
-        const budget = project.budget || 0;
+        const budget = project.totalCost || project.budgetPerSong || 0;
         const revenue = metadata.revenue || 0;
         return sum + (budget > 0 ? ((revenue - budget) / budget) * 100 : 0);
       }, 0) / releasedProjects.length : 0;

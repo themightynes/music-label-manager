@@ -21,12 +21,19 @@ export function ActiveProjects() {
         title: projectData.title,
         type: projectData.type,
         artistId: projectData.artistId,
-        budget: projectData.budget,
-        budgetUsed: 0,
+        budgetPerSong: projectData.budgetPerSong,
+        totalCost: projectData.totalCost || 0,
+        costUsed: 0,
         quality: 0,
         dueMonth: (gameState?.currentMonth || 1) + 3, // Due in 3 months
         songCount: projectData.songCount || 1, // Include song count for recording projects
-        songsCreated: 0 // Initialize songs created counter
+        songsCreated: 0, // Initialize songs created counter
+        metadata: {
+          producerTier: projectData.producerTier,
+          timeInvestment: projectData.timeInvestment,
+          enhancedProject: true,
+          createdAt: new Date().toISOString()
+        }
       });
       setShowProjectModal(false);
     } catch (error) {
@@ -84,7 +91,7 @@ export function ActiveProjects() {
       
       if (!revenue) return null;
       
-      const investment = project.budget || 0;
+      const investment = project.totalCost || project.budgetPerSong || 0;
       const roi = investment > 0 ? ((revenue - investment) / investment) * 100 : 0;
       return { roi, revenue, investment, streams, songCount, individual: false };
     }
@@ -96,7 +103,7 @@ export function ActiveProjects() {
     
     if (!totalRevenue) return null;
     
-    const investment = project.budget || 0;
+    const investment = project.totalCost || project.budgetPerSong || 0;
     const roi = investment > 0 ? ((totalRevenue - investment) / investment) * 100 : 0;
     
     return { 
@@ -222,9 +229,14 @@ export function ActiveProjects() {
                 <Progress value={getProjectProgress(project)} className="w-full h-1.5" />
                 
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Budget</span>
+                  <span className="text-slate-500">
+                    {(project.songCount || 1) > 1 ? 'Budget per song' : 'Budget'}
+                  </span>
                   <span className="font-mono">
-                    ${(project.budgetUsed || 0).toLocaleString()} / ${(project.budget || 0).toLocaleString()}
+                    {(project.songCount || 1) > 1 
+                      ? `$${(project.budgetPerSong || 0).toLocaleString()} × ${project.songCount || 1} = $${(project.totalCost || 0).toLocaleString()}`
+                      : `$${(project.costUsed || 0).toLocaleString()} / $${(project.totalCost || project.budgetPerSong || 0).toLocaleString()}`
+                    }
                   </span>
                 </div>
 

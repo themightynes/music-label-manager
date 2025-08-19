@@ -55,8 +55,9 @@ export const projects = pgTable("projects", {
   artistId: uuid("artist_id").references(() => artists.id),
   stage: text("stage").default("planning"), // planning, production, marketing, released
   quality: integer("quality").default(0),
-  budget: integer("budget").default(0),
-  budgetUsed: integer("budget_used").default(0),
+  budgetPerSong: integer("budget_per_song").default(0),
+  totalCost: integer("total_cost").default(0),
+  costUsed: integer("cost_used").default(0),
   dueMonth: integer("due_month"),
   startMonth: integer("start_month"),
   gameId: uuid("game_id"),
@@ -64,6 +65,9 @@ export const projects = pgTable("projects", {
   // NEW FIELDS for multi-song support
   songCount: integer("song_count").default(1),
   songsCreated: integer("songs_created").default(0),
+  // Project-level economic decision fields
+  producerTier: text("producer_tier").default("local"), // local, regional, national, legendary  
+  timeInvestment: text("time_investment").default("standard"), // rushed, standard, extended, perfectionist
 });
 
 // Songs (Individual tracks)
@@ -92,7 +96,16 @@ export const songs = pgTable("songs", {
   
   metadata: jsonb("metadata").default('{}'), // hooks, features, special attributes, decay data
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Performance-optimized indexes for producer tier and time investment systems
+  portfolioAnalysisIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_portfolio_analysis" ON ${table} ("game_id", "is_recorded", "producer_tier", "time_investment")`,
+  monthlyProcessingIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_monthly_processing" ON ${table} ("game_id", "created_month") WHERE "created_month" IS NOT NULL`,
+  artistHistoryIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_artist_history" ON ${table} ("artist_id", "is_released", "created_month" DESC) WHERE "is_released" = true`,
+  tierPerformanceIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_tier_performance" ON ${table} ("game_id", "is_released", "producer_tier", "total_revenue", "total_streams") WHERE "is_released" = true`,
+  recordedQualityIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_recorded_quality" ON ${table} ("game_id", "quality", "producer_tier") WHERE "is_recorded" = true`,
+  revenueTrackingIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_revenue_tracking" ON ${table} ("game_id", "is_released", "total_revenue" DESC, "total_streams" DESC) WHERE "is_released" = true AND "total_revenue" > 0`,
+  monthlyRevenueIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_monthly_revenue" ON ${table} ("release_month", "last_month_revenue") WHERE "release_month" IS NOT NULL`,
+}));
 
 // Releases (Singles, EPs, Albums, Compilations)
 export const releases = pgTable("releases", {
@@ -164,7 +177,11 @@ export const gameStates = pgTable("game_states", {
   monthlyStats: jsonb("monthly_stats").default('{}'), // Track monthly performance
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // Indexes for producer tier performance optimization
+  reputationLookupIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_reputation_lookup" ON ${table} ("id", "reputation")`,
+  userReputationIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_user_reputation" ON ${table} ("user_id", "reputation", "current_month")`,
+}));
 
 // Monthly actions (for tracking player choices)
 export const monthlyActions = pgTable("monthly_actions", {

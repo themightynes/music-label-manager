@@ -28,7 +28,10 @@
       "Bash(npx drizzle-kit:*)",
       "Bash(node:*)",
       "Bash(npx tsx:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(npm test)",
+      "Bash(PORT=5001 npm run dev)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": []

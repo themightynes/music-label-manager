@@ -587,6 +587,168 @@ export class ServerGameData {
     };
   }
 
+  // Producer Tier System Access
+  getProducerTierSystemSync() {
+    if (!this.balanceData) {
+      return {
+        local: { multiplier: 1.0, unlock_rep: 0, quality_bonus: 0, description: "Local producers" },
+        regional: { multiplier: 1.8, unlock_rep: 15, quality_bonus: 5, description: "Regional producers" },
+        national: { multiplier: 3.2, unlock_rep: 35, quality_bonus: 12, description: "National producers" },
+        legendary: { multiplier: 5.5, unlock_rep: 60, quality_bonus: 20, description: "Legendary producers" }
+      };
+    }
+    
+    return this.balanceData.producer_tier_system;
+  }
+
+  // Time Investment System Access
+  getTimeInvestmentSystemSync() {
+    if (!this.balanceData) {
+      return {
+        rushed: { multiplier: 0.7, duration_modifier: 0.8, quality_bonus: -10, description: "Rushed production" },
+        standard: { multiplier: 1.0, duration_modifier: 1.0, quality_bonus: 0, description: "Standard production" },
+        extended: { multiplier: 1.4, duration_modifier: 1.3, quality_bonus: 8, description: "Extended production" },
+        perfectionist: { multiplier: 2.1, duration_modifier: 1.6, quality_bonus: 15, description: "Perfectionist production" }
+      };
+    }
+    
+    return this.balanceData.time_investment_system;
+  }
+
+  // Producer Tier Validation
+  getAvailableProducerTiers(reputation: number): string[] {
+    const producerSystem = this.getProducerTierSystemSync();
+    const availableTiers: string[] = [];
+    
+    for (const [tierName, tierData] of Object.entries(producerSystem)) {
+      if (reputation >= tierData.unlock_rep) {
+        availableTiers.push(tierName);
+      }
+    }
+    
+    return availableTiers;
+  }
+
+  // Project Cost Calculation with Producer, Time Investment, and Song Count
+  calculateEnhancedProjectCost(
+    projectType: string, 
+    producerTier: string, 
+    timeInvestment: string, 
+    quality: number = 50,
+    songCount?: number
+  ): number {
+    const producerSystem = this.getProducerTierSystemSync();
+    const timeSystem = this.getTimeInvestmentSystemSync();
+    
+    // Get base cost
+    const balance = this.getBalanceConfigSync();
+    const projectCosts = balance.economy.project_costs[projectType.toLowerCase()];
+    if (!projectCosts) {
+      throw new Error(`Unknown project type: ${projectType}`);
+    }
+    
+    // Determine actual song count
+    const actualSongCount = songCount || projectCosts.song_count_default || 1;
+    
+    // Calculate base cost per song
+    const songCountSystem = balance.economy.song_count_cost_system;
+    let totalBaseCost: number;
+    
+    if (songCountSystem?.enabled && actualSongCount > 1) {
+      // Use per-song cost system
+      const baseCostPerSong = songCountSystem.base_per_song_cost[projectType.toLowerCase()] || projectCosts.min;
+      
+      // Calculate economies of scale
+      const economiesMultiplier = this.calculateEconomiesOfScale(actualSongCount, songCountSystem.economies_of_scale);
+      
+      totalBaseCost = baseCostPerSong * actualSongCount * economiesMultiplier;
+    } else {
+      // Use traditional single-song cost
+      totalBaseCost = projectCosts.min + ((projectCosts.max - projectCosts.min) * (quality / 100));
+    }
+    
+    // Apply multipliers
+    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
+    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
+    const qualityMultiplier = projectCosts.quality_multiplier || 1.0;
+    
+    const finalCost = Math.floor(totalBaseCost * producerMultiplier * timeMultiplier * qualityMultiplier);
+    
+    console.log(`[COST CALC] Enhanced project cost for ${projectType}:`, {
+      projectType,
+      actualSongCount,
+      totalBaseCost,
+      producerTier,
+      producerMultiplier,
+      timeInvestment,
+      timeMultiplier,
+      qualityMultiplier,
+      finalCost
+    });
+    
+    return finalCost;
+  }
+
+  /**
+   * Calculates enhanced project cost with per-song budget semantics
+   * Returns the total project cost, taking per-song budgets and multipliers into account
+   */
+  calculatePerSongProjectCost(
+    budgetPerSong: number,
+    songCount: number,
+    producerTier: string,
+    timeInvestment: string
+  ): { baseCost: number; totalCost: number; breakdown: any } {
+    const producerSystem = this.getProducerTierSystemSync();
+    const timeSystem = this.getTimeInvestmentSystemSync();
+    
+    // Calculate base cost: budgetPerSong × songCount
+    const baseCost = budgetPerSong * songCount;
+    
+    // Apply multipliers
+    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
+    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
+    
+    const totalCost = Math.round(baseCost * producerMultiplier * timeMultiplier);
+    
+    const breakdown = {
+      budgetPerSong,
+      songCount,
+      baseCost,
+      producerTier,
+      producerMultiplier,
+      timeInvestment,
+      timeMultiplier,
+      totalCost
+    };
+    
+    console.log('[PER-SONG COST CALC]', breakdown);
+    
+    return { baseCost, totalCost, breakdown };
+  }
+
+  /**
+   * Calculates economies of scale multiplier for song count
+   */
+  private calculateEconomiesOfScale(songCount: number, economiesConfig: any): number {
+    if (!economiesConfig?.enabled) {
+      return 1.0;
+    }
+    
+    const breakpoints = economiesConfig.breakpoints;
+    const thresholds = economiesConfig.thresholds;
+    
+    if (songCount >= thresholds.large_project) {
+      return breakpoints.large_project;
+    } else if (songCount >= thresholds.medium_project) {
+      return breakpoints.medium_project;
+    } else if (songCount >= thresholds.small_project) {
+      return breakpoints.small_project;
+    } else {
+      return breakpoints.single_song;
+    }
+  }
+
   // Events access
   getEvents() {
     // This should return the loaded events
@@ -594,23 +756,85 @@ export class ServerGameData {
   }
 
   // Phase 1: Song and Release Management Bridge Methods
-  async getActiveRecordingProjects(gameId: string) {
+  async getActiveRecordingProjects(gameId: string, dbConnection: any = null) {
     console.log('[ServerGameData] getActiveRecordingProjects called with gameId:', gameId);
     try {
-      const { storage } = await import('../storage');
-      const projects = await storage.getActiveRecordingProjects(gameId);
-      console.log('[ServerGameData] Found active recording projects:', projects?.length || 0);
-      if (projects && projects.length > 0) {
-        console.log('[ServerGameData] Projects:', projects.map(p => ({
+      // Use provided transaction context or fall back to fresh connection
+      let dbToUse;
+      let projects, eq, and, inArray;
+      
+      if (dbConnection) {
+        console.log('[ServerGameData] Using provided transaction context');
+        dbToUse = dbConnection;
+        // Import schema items directly for transaction context
+        const schema = await import('../../shared/schema');
+        const drizzle = await import('drizzle-orm');
+        projects = schema.projects;
+        eq = drizzle.eq;
+        and = drizzle.and;
+        inArray = drizzle.inArray;
+      } else {
+        console.log('[ServerGameData] Using fresh database connection');
+        const { db } = await import('../db');
+        const { projects: projectsSchema } = await import('../../shared/schema');
+        const { eq: eqOp, and: andOp, inArray: inArrayOp } = await import('drizzle-orm');
+        dbToUse = db;
+        projects = projectsSchema;
+        eq = eqOp;
+        and = andOp;
+        inArray = inArrayOp;
+      }
+      
+      console.log('[ServerGameData] Direct query for active recording projects...');
+      
+      // First check all projects for debugging
+      const allProjects = await dbToUse.select().from(projects).where(eq(projects.gameId, gameId));
+      console.log('[ServerGameData] Found', allProjects.length, 'total projects for game');
+      allProjects.forEach(p => {
+        console.log('[ServerGameData] Project details:', {
+          title: p.title, 
+          type: p.type, 
+          stage: p.stage,
+          songCount: p.songCount,
+          songsCreated: p.songsCreated,
+          producerTier: p.producerTier,
+          timeInvestment: p.timeInvestment,
+          budgetPerSong: p.budgetPerSong,
+          isProduction: p.stage === 'production',
+          isRecordingType: ['Single', 'EP'].includes(p.type)
+        });
+      });
+      
+      // Debug the exact query conditions
+      console.log('[ServerGameData] Query conditions for active recording projects:');
+      console.log('  - gameId:', gameId);
+      console.log('  - stage should be: "production"');
+      console.log('  - type should be in: ["Single", "EP"]');
+      
+      // Now the actual query for active recording projects
+      const activeProjects = await dbToUse.select().from(projects)
+        .where(and(
+          eq(projects.gameId, gameId),
+          eq(projects.stage, 'production'),
+          inArray(projects.type, ['Single', 'EP'])
+        ));
+      
+      console.log('[ServerGameData] Direct query found active recording projects:', activeProjects.length);
+      activeProjects.forEach(p => {
+        console.log('[ServerGameData] Active project details:', {
           id: p.id,
           title: p.title,
           type: p.type,
           stage: p.stage,
           songCount: p.songCount,
-          songsCreated: p.songsCreated
-        })));
-      }
-      return projects;
+          songsCreated: p.songsCreated,
+          producerTier: p.producerTier,
+          timeInvestment: p.timeInvestment,
+          budgetPerSong: p.budgetPerSong
+        });
+      });
+      
+      return activeProjects;
     } catch (error) {
       console.error('[ServerGameData] getActiveRecordingProjects error:', error);
       throw error;
