@@ -91,9 +91,9 @@ export async function apiRequest(
   console.log('[REQUEST] URL:', url);
   console.log('[REQUEST] Data:', data);
   
-  const requestConfig = {
+  const requestConfig: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: data ? { "Content-Type": "application/json" } : undefined,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include" as RequestCredentials,
   };

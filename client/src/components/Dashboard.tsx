@@ -44,7 +44,7 @@ export function Dashboard() {
   };
 
   const handleNewGame = async () => {
-    if (gameState.currentMonth > 1) {
+    if (gameState.currentMonth && gameState.currentMonth > 1) {
       setShowNewGameConfirm(true);
     } else {
       await confirmNewGame();

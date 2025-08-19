@@ -593,6 +593,86 @@ export class ServerGameData {
     return this.dataLoader.loadAllData().then(data => data.events.events);
   }
 
+  // Phase 1: Song and Release Management Bridge Methods
+  async getActiveRecordingProjects(gameId: string) {
+    console.log('[ServerGameData] getActiveRecordingProjects called with gameId:', gameId);
+    try {
+      const { storage } = await import('../storage');
+      const projects = await storage.getActiveRecordingProjects(gameId);
+      console.log('[ServerGameData] Found active recording projects:', projects?.length || 0);
+      if (projects && projects.length > 0) {
+        console.log('[ServerGameData] Projects:', projects.map(p => ({
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          stage: p.stage,
+          songCount: p.songCount,
+          songsCreated: p.songsCreated
+        })));
+      }
+      return projects;
+    } catch (error) {
+      console.error('[ServerGameData] getActiveRecordingProjects error:', error);
+      throw error;
+    }
+  }
+
+  async createSong(song: any) {
+    console.log('[ServerGameData] createSong called with:', song);
+    try {
+      const { storage } = await import('../storage');
+      const createdSong = await storage.createSong(song);
+      console.log('[ServerGameData] Song created successfully:', createdSong.id);
+      return createdSong;
+    } catch (error) {
+      console.error('[ServerGameData] createSong error:', error);
+      throw error;
+    }
+  }
+
+  async getSongsByGame(gameId: string) {
+    const { storage } = await import('../storage');
+    return storage.getSongsByGame(gameId);
+  }
+
+  async getSongsByArtist(artistId: string, gameId: string) {
+    console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId });
+    try {
+      const { storage } = await import('../storage');
+      const songs = await storage.getSongsByArtist(artistId, gameId);
+      console.log('[ServerGameData] getSongsByArtist returned:', songs?.length || 0, 'songs');
+      return songs;
+    } catch (error) {
+      console.error('[ServerGameData] getSongsByArtist error:', error);
+      throw error;
+    }
+  }
+
+  async createRelease(release: any) {
+    const { storage } = await import('../storage');
+    return storage.createRelease(release);
+  }
+
+  async getReleasesByGame(gameId: string) {
+    const { storage } = await import('../storage');
+    return storage.getReleasesByGame(gameId);
+  }
+
+  async createReleaseSong(releaseSong: any) {
+    const { storage } = await import('../storage');
+    return storage.createReleaseSong(releaseSong);
+  }
+
+  async getArtistById(artistId: string) {
+    const { storage } = await import('../storage');
+    return storage.getArtist(artistId);
+  }
+
+  async updateProject(projectId: string, updates: any) {
+    const { storage } = await import('../storage');
+    return storage.updateProject(projectId, updates);
+  }
+
   // Validation helpers
   async validateChoiceEffects(effects: ChoiceEffect): Promise<boolean> {
     await this.initialize();

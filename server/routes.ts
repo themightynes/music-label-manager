@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import passport from 'passport';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -16,7 +16,7 @@ import {
   createErrorResponse 
 } from "@shared/api/contracts";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -439,6 +439,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Phase 1: Song and Release Management API Routes
+  
+  // Get songs for a game
+  app.get("/api/game/:gameId/songs", getUserId, async (req, res) => {
+    try {
+      const songs = await serverGameData.getSongsByGame(req.params.gameId);
+      res.json(songs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch songs" });
+    }
+  });
+
+  // Get songs for a specific artist
+  app.get("/api/game/:gameId/artists/:artistId/songs", getUserId, async (req, res) => {
+    try {
+      const { gameId, artistId } = req.params;
+      
+      // Validate parameters
+      if (!gameId || !artistId) {
+        return res.status(400).json({ 
+          message: "Missing required parameters", 
+          error: "gameId and artistId are required" 
+        });
+      }
+      
+      // Validate UUID format (basic check)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(gameId) || !uuidRegex.test(artistId)) {
+        return res.status(400).json({ 
+          message: "Invalid parameter format", 
+          error: "gameId and artistId must be valid UUIDs" 
+        });
+      }
+      
+      console.log('[API] Fetching songs for artist:', artistId, 'game:', gameId);
+      const songs = await serverGameData.getSongsByArtist(artistId, gameId);
+      console.log('[API] Found songs:', songs?.length || 0);
+      
+      // Ensure we always return an array, even if no songs found
+      const songArray = Array.isArray(songs) ? songs : [];
+      res.json(songArray);
+      
+    } catch (error) {
+      console.error('[API] Error fetching artist songs:', error);
+      res.status(500).json({ 
+        message: "Failed to fetch artist songs", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // Get releases for a game
+  app.get("/api/game/:gameId/releases", getUserId, async (req, res) => {
+    try {
+      const releases = await serverGameData.getReleasesByGame(req.params.gameId);
+      res.json(releases);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch releases" });
+    }
+  });
+
+  // Create a new release (Single/EP/Album)
+  app.post("/api/game/:gameId/releases", getUserId, async (req, res) => {
+    try {
+      const releaseData = {
+        ...req.body,
+        gameId: req.params.gameId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const release = await serverGameData.createRelease(releaseData);
+      
+      // If songs are provided, create the release-song relationships
+      if (req.body.songIds && req.body.songIds.length > 0) {
+        for (let i = 0; i < req.body.songIds.length; i++) {
+          await serverGameData.createReleaseSong({
+            releaseId: release.id,
+            songId: req.body.songIds[i],
+            trackNumber: i + 1
+          });
+        }
+      }
+      
+      res.json(release);
+    } catch (error) {
+      console.error("Failed to create release:", error);
+      res.status(500).json({ message: "Failed to create release" });
+    }
+  });
+
+
+  // DEBUG: Check project and song revenue status
+  app.get("/api/debug/game/:gameId/revenue", async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      
+      // Get all projects for this game
+      const allProjects = await db.select().from(projects).where(eq(projects.gameId, gameId));
+      
+      // Get all songs for this game
+      const allSongs = await db.select().from(songs).where(eq(songs.gameId, gameId));
+      
+      // Get released projects specifically
+      const releasedProjects = await db.select().from(projects)
+        .where(and(eq(projects.gameId, gameId), eq(projects.stage, 'released')));
+      
+      res.json({
+        summary: {
+          totalProjects: allProjects.length,
+          releasedProjects: releasedProjects.length,
+          totalSongs: allSongs.length,
+          releasedSongs: allSongs.filter(s => s.isReleased).length
+        },
+        projects: allProjects.map(p => ({
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          stage: p.stage,
+          artistId: p.artistId,
+          songCount: p.songCount,
+          songsCreated: p.songsCreated,
+          startMonth: p.startMonth,
+          metadata: p.metadata
+        })),
+        songs: allSongs.map(s => ({
+          id: s.id,
+          title: s.title,
+          artistId: s.artistId,
+          quality: s.quality,
+          isRecorded: s.isRecorded,
+          isReleased: s.isReleased,
+          createdMonth: s.createdMonth,
+          metadata: s.metadata
+        })),
+        releasedProjects: releasedProjects.map(p => ({
+          id: p.id,
+          title: p.title,
+          metadata: p.metadata,
+          hasRevenue: !!(p.metadata as any)?.revenue,
+          hasStreams: !!(p.metadata as any)?.streams
+        }))
+      });
+    } catch (error) {
+      console.error('[DEBUG] Error fetching revenue debug status:', error);
+      res.status(500).json({ message: "Failed to fetch revenue debug status" });
+    }
+  });
+
   // Phase 2: Turn System Endpoints
   
   // Get current game state  
@@ -673,75 +822,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             let newStageIndex = currentStageIndex;
             
-            // Advance stage based on months elapsed
+            // Advance stage based on months elapsed AND song creation progress
             const monthsElapsed = currentMonth - (project.startMonth || 1);
+            const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
+            const songCount = project.songCount || 1;
+            const songsCreated = project.songsCreated || 0;
+            const allSongsCreated = songsCreated >= songCount;
+            
+            console.log(`[DEBUG] Project ${project.title} stage advancement check:`, {
+              currentStageIndex,
+              monthsElapsed,
+              isRecordingProject,
+              songCount,
+              songsCreated,
+              allSongsCreated
+            });
+            
             if (monthsElapsed >= 1 && currentStageIndex === 0) { // planning -> production
               newStageIndex = 1;
-            } else if (monthsElapsed >= 2 && currentStageIndex === 1) { // production -> marketing
-              newStageIndex = 2;
+            } else if (currentStageIndex === 1) { // production -> marketing
+              // For recording projects: wait until all songs are created OR minimum 2 months
+              // For non-recording projects: advance after 2 months
+              if (!isRecordingProject) {
+                if (monthsElapsed >= 2) newStageIndex = 2;
+              } else {
+                if (allSongsCreated && monthsElapsed >= 2) {
+                  newStageIndex = 2;
+                } else if (monthsElapsed >= 4) { // Max 4 months in production for any project
+                  newStageIndex = 2;
+                  console.log(`[DEBUG] Forcing ${project.title} to marketing after 4 months (${songsCreated}/${songCount} songs created)`);
+                }
+              }
             } else if (monthsElapsed >= 3 && currentStageIndex === 2) { // marketing -> released
               newStageIndex = 3;
             }
             
             if (newStageIndex > currentStageIndex) {
-              // If project is reaching "released" stage, calculate completion outcomes first
+              // Phase 1: Projects create songs, not direct revenue
+              // Commenting out old revenue logic - will be replaced with release-based revenue in Phase 2
               if (stages[newStageIndex] === 'released') {
-                const projectForEngine = {
-                  id: project.id,
-                  name: project.title,
-                  type: project.type,
-                  quality: Math.min(100, (project.quality || 0) + 25),
-                  marketingSpend: 0, // TODO: Track marketing spend
-                  artistPopularity: 50, // TODO: Get from artist data
-                  cities: 3 // Default for mini-tours
-                };
+                // For Phase 1: Just mark project as released, no revenue calculation
+                console.log(`[DEBUG] Project reaching released stage: ${project.title}`);
+                console.log(`[DEBUG] Phase 1: Projects create songs, not direct revenue`);
                 
-                console.log(`[DEBUG] Project completing:`, {
-                  projectType: project.type,
-                  projectTitle: project.title,
-                  quality: projectForEngine.quality,
-                  gameStateAccess: {
-                    playlist: monthResult.gameState.playlistAccess,
-                    press: monthResult.gameState.pressAccess,
-                    reputation: monthResult.gameState.reputation
-                  }
-                });
-                
-                const outcomes = await gameEngine.calculateProjectOutcomes(projectForEngine, monthResult.summary);
-                
-                console.log(`[DEBUG] Project outcomes:`, outcomes);
-                
-                // Create revenue metadata to store with project
-                const currentMetadata = project.metadata as any || {};
-                const updatedMetadata = {
-                  ...currentMetadata,
-                  revenue: Math.round(outcomes.revenue),
-                  streams: outcomes.streams || 0,
-                  pressPickups: outcomes.pressPickups || 0,
-                  releaseMonth: monthResult.gameState.currentMonth,
-                  roi: (project.budget || 0) > 0 ? Math.round(((outcomes.revenue - (project.budget || 0)) / (project.budget || 0)) * 100) : 0
-                };
-                
-                // Update project with new stage, quality, and revenue metadata
+                // Update project to released stage
                 await tx
                   .update(projects)
                   .set({ 
                     stage: stages[newStageIndex],
-                    quality: Math.min(100, (project.quality || 0) + 25),
-                    metadata: updatedMetadata
+                    quality: Math.min(100, (project.quality || 0) + 25)
                   })
                   .where(eq(projects.id, project.id));
+                
+                // PHASE 1 FIX: Mark songs from this specific project as released
+                const { songs } = await import('../shared/schema');
+                
+                // Update songs to be released
+                if (project.artistId) {
+                  // For Phase 1, mark all recorded but unreleased songs for this artist as released
+                  // This ensures any songs from recording projects get marked as released
+                  const updatedSongs = await tx
+                    .update(songs)
+                    .set({ isReleased: true })
+                    .where(and(
+                      eq(songs.gameId, gameId),
+                      eq(songs.artistId, project.artistId),
+                      eq(songs.isRecorded, true),
+                      eq(songs.isReleased, false)
+                    ))
+                    .returning({ id: songs.id, title: songs.title });
+                  
+                  console.log(`[DEBUG] Marked ${updatedSongs.length} songs as released for artist when project ${project.title} completed:`, 
+                    updatedSongs.map(s => s.title));
+
+                  // PHASE 1: Calculate initial revenue for released songs
+                  if (updatedSongs.length > 0) {
+                    // Get song details for revenue calculation
+                    const projectSongs = await tx.select().from(songs)
+                      .where(and(
+                        eq(songs.gameId, gameId),
+                        eq(songs.artistId, project.artistId),
+                        eq(songs.isRecorded, true),
+                        sql`${songs.metadata}->>'projectId' = ${project.id}`
+                      ));
+                    
+                    if (projectSongs.length > 0) {
+                      // Calculate initial revenue based on song quality and count
+                      const averageQuality = projectSongs.reduce((sum, song) => sum + song.quality, 0) / projectSongs.length;
+                      const songCount = projectSongs.length;
+                      
+                      // Revenue formula: Base streams per quality point * song count
+                      const baseStreamsPerQuality = 50;
+                      const songCountMultiplier = Math.sqrt(songCount);
+                      const qualityBonus = Math.max(0, (averageQuality - 40) / 60);
+                      const initialStreams = Math.round(averageQuality * baseStreamsPerQuality * songCountMultiplier * (1 + qualityBonus));
+                      const initialRevenue = Math.round(initialStreams * 0.5); // $0.50 per stream
+                      
+                      console.log(`[DEBUG] Setting initial revenue for ${project.title}: ${initialStreams} streams, $${initialRevenue}`);
+                      
+                      // Update project metadata with initial revenue
+                      await tx
+                        .update(projects)
+                        .set({
+                          metadata: {
+                            streams: initialStreams,
+                            revenue: initialRevenue,
+                            songCount: songCount,
+                            averageQuality: Math.round(averageQuality),
+                            releasedAt: new Date().toISOString()
+                          }
+                        })
+                        .where(eq(projects.id, project.id));
+                      
+                      // Add revenue to monthly summary
+                      monthResult.summary.revenue += initialRevenue;
+                      monthResult.summary.changes.push({
+                        type: 'project_complete',
+                        description: `💰 ${project.title} generated ${initialStreams} streams (${songCount} songs, avg quality ${Math.round(averageQuality)})`,
+                        amount: initialRevenue,
+                        projectId: project.id
+                      });
+                    }
+                  }
+                } else {
+                  console.log(`[DEBUG] Project ${project.title} has no artistId, skipping song release`);
+                }
                 
                 // Add project completion to summary
                 monthResult.summary.changes.push({
                   type: 'project_complete',
-                  description: `🎉 Released ${project.type}: ${project.title} - ${outcomes.description}`,
-                  amount: outcomes.revenue,
+                  description: `✅ Completed ${project.type}: ${project.title} (${project.songsCreated || 0} songs created)`,
+                  amount: 0, // Revenue calculated separately based on songs
                   projectId: project.id
                 });
                 
-                // Update game state money with revenue
-                monthResult.gameState.money = (monthResult.gameState.money || 0) + outcomes.revenue;
+                console.log(`[DEBUG] Project ${project.title} completed with ${project.songsCreated || 0} songs`);
+                
+                // PHASE 1: NEW SONG-BASED REVENUE CALCULATION
+                const { sql } = await import('drizzle-orm');
+                
+                // Get total quality of all songs from this project
+                // Only proceed if project has an artistId
+                if (!project.artistId) {
+                  console.log(`[REVENUE] Project ${project.title} has no artistId, skipping revenue calculation`);
+                } else {
+                  const projectSongs = await tx
+                    .select()
+                    .from(songs)
+                    .where(and(
+                      eq(songs.gameId, gameId),
+                      eq(songs.artistId, project.artistId),
+                      eq(songs.isRecorded, true),
+                      sql`${songs.metadata}->>'projectId' = ${project.id}`
+                    ));
+                
+                console.log(`[REVENUE] Found ${projectSongs.length} songs for revenue calculation`);
+                
+                if (projectSongs.length > 0) {
+                  // Calculate initial revenue based on song quality
+                  const totalQuality = projectSongs.reduce((sum, song) => sum + (song.quality || 0), 0);
+                  const averageQuality = totalQuality / projectSongs.length;
+                  const songCount = projectSongs.length;
+                  
+                  // Revenue formula: Base streams per quality point * song count
+                  const baseStreamsPerQuality = 50; // 50 streams per quality point
+                  const songCountMultiplier = Math.sqrt(songCount); // Diminishing returns for multiple songs
+                  const qualityBonus = Math.max(0, (averageQuality - 40) / 60); // Quality above 40 gives bonus
+                  
+                  const initialStreams = Math.round(
+                    averageQuality * baseStreamsPerQuality * songCountMultiplier * (1 + qualityBonus)
+                  );
+                  const revenuePerStream = 0.5; // $0.50 per stream
+                  const initialRevenue = Math.round(initialStreams * revenuePerStream);
+                  
+                  console.log(`[REVENUE] Calculation details:`, {
+                    songCount,
+                    totalQuality,
+                    averageQuality,
+                    songCountMultiplier,
+                    qualityBonus,
+                    initialStreams,
+                    initialRevenue
+                  });
+                  
+                  // Update project metadata for decay system
+                  const currentMetadata = (project.metadata as any) || {};
+                  await tx
+                    .update(projects)
+                    .set({
+                      metadata: {
+                        ...currentMetadata,
+                        streams: initialStreams,
+                        revenue: initialRevenue,
+                        releaseMonth: monthResult.gameState.currentMonth,
+                        songCount: songCount,
+                        averageQuality: averageQuality
+                      }
+                    })
+                    .where(eq(projects.id, project.id));
+                  
+                  // Add initial revenue to game state
+                  monthResult.gameState.money = (monthResult.gameState.money || 0) + initialRevenue;
+                  
+                  // Add to monthly summary
+                  monthResult.summary.revenue += initialRevenue;
+                  monthResult.summary.changes.push({
+                    type: 'revenue',
+                    description: `🎵 Release revenue: ${project.title} (${songCount} songs, avg quality ${Math.round(averageQuality)})`,
+                    amount: initialRevenue,
+                    projectId: project.id
+                  });
+                  
+                  console.log(`[REVENUE] Project ${project.title} generated $${initialRevenue} initial revenue`);
+                  } else {
+                    console.log(`[REVENUE] No songs found for project ${project.title}, no revenue generated`);
+                  }
+                }
               } else {
                 // Regular stage progression without revenue calculation
                 await tx

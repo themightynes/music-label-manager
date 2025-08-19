@@ -61,7 +61,57 @@ export const projects = pgTable("projects", {
   startMonth: integer("start_month"),
   gameId: uuid("game_id"),
   metadata: jsonb("metadata"), // Additional project-specific data
+  // NEW FIELDS for multi-song support
+  songCount: integer("song_count").default(1),
+  songsCreated: integer("songs_created").default(0),
 });
+
+// Songs (Individual tracks)
+export const songs = pgTable("songs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  artistId: uuid("artist_id").references(() => artists.id, { onDelete: "cascade" }).notNull(),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
+  quality: integer("quality").notNull(), // 20-100
+  genre: text("genre"),
+  mood: text("mood"), // upbeat, melancholic, aggressive, chill
+  createdMonth: integer("created_month"),
+  producerTier: text("producer_tier").default("local"), // local, regional, national, legendary
+  timeInvestment: text("time_investment").default("standard"), // rushed, standard, extended, perfectionist
+  isRecorded: boolean("is_recorded").default(false),
+  isReleased: boolean("is_released").default(false),
+  releaseId: uuid("release_id").references(() => releases.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").default('{}'), // hooks, features, special attributes
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Releases (Singles, EPs, Albums, Compilations)
+export const releases = pgTable("releases", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  type: text("type").notNull(), // single, ep, album, compilation
+  artistId: uuid("artist_id").references(() => artists.id, { onDelete: "cascade" }).notNull(),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
+  releaseMonth: integer("release_month"),
+  totalQuality: integer("total_quality").default(0), // aggregate of song qualities
+  marketingBudget: integer("marketing_budget").default(0),
+  status: text("status").default("planned"), // planned, released, catalog
+  revenueGenerated: integer("revenue_generated").default(0),
+  streamsGenerated: integer("streams_generated").default(0),
+  peakChartPosition: integer("peak_chart_position"),
+  metadata: jsonb("metadata").default('{}'), // track listing, bonus content, etc
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Junction table for release-song relationships
+export const releaseSongs = pgTable("release_songs", {
+  releaseId: uuid("release_id").references(() => releases.id, { onDelete: "cascade" }).notNull(),
+  songId: uuid("song_id").references(() => songs.id, { onDelete: "cascade" }).notNull(),
+  trackNumber: integer("track_number").notNull(),
+  isSingle: boolean("is_single").default(false), // was this pushed as a single?
+}, (table) => ({
+  pk: sql`PRIMARY KEY (${table.releaseId}, ${table.songId})`,
+}));
 
 // Dialogue choices and effects
 export const dialogueChoices = pgTable("dialogue_choices", {
@@ -129,12 +179,54 @@ export const gameSavesRelations = relations(gameSaves, ({ one }) => ({
 
 export const artistsRelations = relations(artists, ({ many }) => ({
   projects: many(projects),
+  songs: many(songs),
+  releases: many(releases),
 }));
 
 export const projectsRelations = relations(projects, ({ one }) => ({
   artist: one(artists, {
     fields: [projects.artistId],
     references: [artists.id],
+  }),
+}));
+
+export const songsRelations = relations(songs, ({ one, many }) => ({
+  artist: one(artists, {
+    fields: [songs.artistId],
+    references: [artists.id],
+  }),
+  gameState: one(gameStates, {
+    fields: [songs.gameId],
+    references: [gameStates.id],
+  }),
+  release: one(releases, {
+    fields: [songs.releaseId],
+    references: [releases.id],
+  }),
+  releaseSongs: many(releaseSongs),
+}));
+
+export const releasesRelations = relations(releases, ({ one, many }) => ({
+  artist: one(artists, {
+    fields: [releases.artistId],
+    references: [artists.id],
+  }),
+  gameState: one(gameStates, {
+    fields: [releases.gameId],
+    references: [gameStates.id],
+  }),
+  songs: many(songs),
+  releaseSongs: many(releaseSongs),
+}));
+
+export const releaseSongsRelations = relations(releaseSongs, ({ one }) => ({
+  release: one(releases, {
+    fields: [releaseSongs.releaseId],
+    references: [releases.id],
+  }),
+  song: one(songs, {
+    fields: [releaseSongs.songId],
+    references: [songs.id],
   }),
 }));
 
@@ -166,6 +258,18 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
 });
 
+export const insertSongSchema = createInsertSchema(songs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReleaseSchema = createInsertSchema(releases).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReleaseSongSchema = createInsertSchema(releaseSongs);
+
 export const insertGameStateSchema = createInsertSchema(gameStates).omit({
   id: true,
   createdAt: true,
@@ -191,6 +295,15 @@ export type Role = typeof roles.$inferSelect;
 
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
+
+export type Song = typeof songs.$inferSelect;
+export type InsertSong = z.infer<typeof insertSongSchema>;
+
+export type Release = typeof releases.$inferSelect;
+export type InsertRelease = z.infer<typeof insertReleaseSchema>;
+
+export type ReleaseSong = typeof releaseSongs.$inferSelect;
+export type InsertReleaseSong = z.infer<typeof insertReleaseSongSchema>;
 
 export type DialogueChoice = typeof dialogueChoices.$inferSelect;
 

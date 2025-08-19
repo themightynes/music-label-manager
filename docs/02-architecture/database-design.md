@@ -199,6 +199,101 @@ CREATE INDEX idx_monthly_actions_action_type ON monthly_actions(action_type);
 **Purpose**: Complete action history and analytics  
 **Key Features**: Flexible action types, JSONB results for varied outcomes
 
+#### **songs** - Individual Track Records (PHASE 1 ADDITION)
+```sql
+CREATE TABLE songs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  artist_id UUID NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
+  game_id UUID NOT NULL REFERENCES game_states(id) ON DELETE CASCADE,
+  
+  -- Song Properties
+  quality INTEGER NOT NULL, -- 20-100 quality score
+  genre VARCHAR(100),
+  mood VARCHAR(100), -- 'upbeat', 'melancholic', 'aggressive', 'chill'
+  
+  -- Production Data
+  created_month INTEGER,
+  producer_tier VARCHAR(50) DEFAULT 'local',
+  time_investment VARCHAR(50) DEFAULT 'standard',
+  
+  -- Status Tracking
+  is_recorded BOOLEAN DEFAULT FALSE,
+  is_released BOOLEAN DEFAULT FALSE,
+  release_id UUID REFERENCES releases(id) ON DELETE SET NULL,
+  
+  -- Flexible Data
+  metadata JSONB DEFAULT '{}',
+  
+  -- Audit
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_songs_artist_id ON songs(artist_id);
+CREATE INDEX idx_songs_game_id ON songs(game_id);
+CREATE INDEX idx_songs_is_recorded ON songs(is_recorded);
+CREATE INDEX idx_songs_is_released ON songs(is_released);
+```
+
+**Purpose**: Individual song tracking with quality scoring and status progression  
+**Key Features**: Automatic generation during recording projects, quality system (20-100), status badges
+
+#### **releases** - Singles, EPs, Albums (PHASE 1 ADDITION)
+```sql
+CREATE TABLE releases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL, -- 'single', 'ep', 'album', 'compilation'
+  artist_id UUID NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
+  game_id UUID NOT NULL REFERENCES game_states(id) ON DELETE CASCADE,
+  
+  -- Release Data
+  release_month INTEGER,
+  total_quality INTEGER DEFAULT 0,
+  marketing_budget INTEGER DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'planned',
+  
+  -- Performance Tracking
+  revenue_generated INTEGER DEFAULT 0,
+  streams_generated INTEGER DEFAULT 0,
+  peak_chart_position INTEGER,
+  
+  -- Flexible Data
+  metadata JSONB DEFAULT '{}',
+  
+  -- Audit
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_releases_artist_id ON releases(artist_id);
+CREATE INDEX idx_releases_game_id ON releases(game_id);
+CREATE INDEX idx_releases_status ON releases(status);
+```
+
+**Purpose**: Release compilation tracking (foundation for Phase 2 strategic releases)  
+**Key Features**: Multi-format support, aggregate quality calculation, performance metrics
+
+#### **release_songs** - Song-Release Relationships (PHASE 1 ADDITION)
+```sql
+CREATE TABLE release_songs (
+  release_id UUID NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+  song_id UUID NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+  track_number INTEGER NOT NULL,
+  is_single BOOLEAN DEFAULT FALSE,
+  
+  PRIMARY KEY (release_id, song_id)
+);
+
+-- Indexes
+CREATE INDEX idx_release_songs_release_id ON release_songs(release_id);
+CREATE INDEX idx_release_songs_song_id ON release_songs(song_id);
+```
+
+**Purpose**: Many-to-many relationship enabling complex release strategies  
+**Key Features**: Track ordering, single designation, foundation for Phase 2 release planning
+
 #### **game_saves** - Save Game System
 ```sql
 CREATE TABLE game_saves (
@@ -234,17 +329,30 @@ CREATE INDEX idx_game_saves_created_at ON game_saves(created_at DESC);
 ```
 users (1) ──────────────── (many) game_states
   │                              │
-  └──── (many) game_saves        ├── (many) artists
-                                 ├── (many) projects  
-                                 └── (many) monthly_actions
-                                 
-artists (1) ─────── (many) projects (via artist_id)
+  └──── (many) game_saves        ├── (many) artists ─────── (many) songs
+                                 ├── (many) projects        │
+                                 └── (many) monthly_actions │
+                                                           │
+artists (1) ─────── (many) projects (via artist_id)       │
+  │                                                        │
+  └─────── (many) releases ─── (many) release_songs ──────┘
+           
+-- PHASE 1 ADDITIONS:
+songs (many) ──── (1) artists (via artist_id)
+songs (many) ──── (1) game_states (via game_id)  
+songs (many) ──── (0..1) releases (via release_id)
+
+releases (many) ── (1) artists (via artist_id)
+releases (many) ── (1) game_states (via game_id)
+releases (many) ── (many) songs (via release_songs junction table)
 ```
 
 ### **Cascade Behavior**
 - **User deletion**: All game states, saves, and related data deleted (CASCADE)
-- **Game state deletion**: All artists, projects, actions deleted (CASCADE)  
-- **Artist deletion**: Projects keep reference but artist_id set to NULL (SET NULL)
+- **Game state deletion**: All artists, projects, actions, songs, releases deleted (CASCADE)  
+- **Artist deletion**: Songs and releases deleted (CASCADE), projects keep reference but artist_id set to NULL (SET NULL)
+- **Release deletion**: Release-song relationships deleted (CASCADE), songs keep reference but release_id set to NULL (SET NULL)
+- **Song deletion**: Release-song relationships deleted (CASCADE)
 
 ### **Data Integrity Rules**
 1. **Foreign Key Constraints**: Enforced at database level

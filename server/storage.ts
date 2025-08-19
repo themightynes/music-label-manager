@@ -1,13 +1,15 @@
 import { 
   users, gameSaves, artists, roles, projects, dialogueChoices, 
-  gameEvents, gameStates, monthlyActions,
+  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs,
   type User, type InsertUser, type GameSave, type InsertGameSave,
   type Artist, type InsertArtist, type Project, type InsertProject,
   type GameState, type InsertGameState, type MonthlyAction, type InsertMonthlyAction,
-  type DialogueChoice, type GameEvent, type Role
+  type DialogueChoice, type GameEvent, type Role,
+  type Song, type InsertSong, type Release, type InsertRelease, 
+  type ReleaseSong, type InsertReleaseSong
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User management
@@ -18,7 +20,7 @@ export interface IStorage {
   // Game saves
   getGameSaves(userId: string): Promise<GameSave[]>;
   getGameSave(id: string): Promise<GameSave | undefined>;
-  createGameSave(gameSave: InsertGameSave): Promise<GameSave>;
+  createGameSave(gameSave: InsertGameSave & { userId: string }): Promise<GameSave>;
   updateGameSave(id: string, gameSave: Partial<InsertGameSave>): Promise<GameSave>;
   deleteGameSave(id: string): Promise<void>;
 
@@ -38,6 +40,26 @@ export interface IStorage {
   getProject(id: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
+  getActiveRecordingProjects(gameId: string): Promise<Project[]>;
+
+  // Songs 
+  getSongsByGame(gameId: string): Promise<Song[]>;
+  getSongsByArtist(artistId: string, gameId: string): Promise<Song[]>;
+  getSong(id: string): Promise<Song | undefined>;
+  createSong(song: InsertSong): Promise<Song>;
+  updateSong(id: string, song: Partial<InsertSong>): Promise<Song>;
+
+  // Releases
+  getReleasesByGame(gameId: string): Promise<Release[]>;
+  getReleasesByArtist(artistId: string, gameId: string): Promise<Release[]>;
+  getRelease(id: string): Promise<Release | undefined>;
+  createRelease(release: InsertRelease): Promise<Release>;
+  updateRelease(id: string, release: Partial<InsertRelease>): Promise<Release>;
+
+  // Release Songs (junction)
+  getReleaseSongs(releaseId: string): Promise<ReleaseSong[]>;
+  createReleaseSong(releaseSong: InsertReleaseSong): Promise<ReleaseSong>;
+  deleteReleaseSong(releaseId: string, songId: string): Promise<void>;
 
   // Roles
   getRolesByGame(gameId: string): Promise<Role[]>;
@@ -81,7 +103,7 @@ export class DatabaseStorage implements IStorage {
     return save || undefined;
   }
 
-  async createGameSave(gameSave: InsertGameSave): Promise<GameSave> {
+  async createGameSave(gameSave: InsertGameSave & { userId: string }): Promise<GameSave> {
     const [save] = await db.insert(gameSaves).values(gameSave).returning();
     return save;
   }
@@ -161,6 +183,126 @@ export class DatabaseStorage implements IStorage {
       .where(eq(projects.id, id))
       .returning();
     return updatedProject;
+  }
+
+  async getActiveRecordingProjects(gameId: string): Promise<Project[]> {
+    return await db.select().from(projects)
+      .where(and(
+        eq(projects.gameId, gameId),
+        eq(projects.stage, 'production'),
+        // Only recording projects (Singles and EPs create songs)
+        inArray(projects.type, ['Single', 'EP'])
+      ));
+  }
+
+  // Songs
+  async getSongsByGame(gameId: string): Promise<Song[]> {
+    return await db.select().from(songs).where(eq(songs.gameId, gameId));
+  }
+
+  async getSongsByArtist(artistId: string, gameId: string): Promise<Song[]> {
+    console.log('[DatabaseStorage] getSongsByArtist query:', { artistId, gameId });
+    const result = await db.select().from(songs)
+      .where(and(eq(songs.artistId, artistId), eq(songs.gameId, gameId)))
+      .orderBy(desc(songs.createdAt));
+    console.log('[DatabaseStorage] getSongsByArtist found:', result.length, 'songs');
+    
+    // Also try a simpler query to debug
+    if (result.length === 0) {
+      console.log('[DatabaseStorage] DEBUG: Checking all songs for this game...');
+      const allGameSongs = await db.select().from(songs)
+        .where(eq(songs.gameId, gameId));
+      console.log('[DatabaseStorage] DEBUG: Total songs in game:', allGameSongs.length);
+      if (allGameSongs.length > 0) {
+        console.log('[DatabaseStorage] DEBUG: Sample song:', {
+          id: allGameSongs[0].id,
+          title: allGameSongs[0].title,
+          artistId: allGameSongs[0].artistId,
+          gameId: allGameSongs[0].gameId
+        });
+      }
+    }
+    
+    return result;
+  }
+
+  async getSong(id: string): Promise<Song | undefined> {
+    const [song] = await db.select().from(songs).where(eq(songs.id, id));
+    return song || undefined;
+  }
+
+  async createSong(song: InsertSong): Promise<Song> {
+    console.log('[DatabaseStorage] createSong called with:', {
+      title: song.title,
+      artistId: song.artistId,
+      gameId: song.gameId,
+      quality: song.quality
+    });
+    const [newSong] = await db.insert(songs).values(song).returning();
+    console.log('[DatabaseStorage] Song created in DB:', {
+      id: newSong.id,
+      title: newSong.title,
+      artistId: newSong.artistId,
+      gameId: newSong.gameId
+    });
+    return newSong;
+  }
+
+  async updateSong(id: string, song: Partial<InsertSong>): Promise<Song> {
+    const [updatedSong] = await db.update(songs)
+      .set(song)
+      .where(eq(songs.id, id))
+      .returning();
+    return updatedSong;
+  }
+
+  // Releases
+  async getReleasesByGame(gameId: string): Promise<Release[]> {
+    return await db.select().from(releases).where(eq(releases.gameId, gameId));
+  }
+
+  async getReleasesByArtist(artistId: string, gameId: string): Promise<Release[]> {
+    return await db.select().from(releases)
+      .where(and(eq(releases.artistId, artistId), eq(releases.gameId, gameId)))
+      .orderBy(desc(releases.createdAt));
+  }
+
+  async getRelease(id: string): Promise<Release | undefined> {
+    const [release] = await db.select().from(releases).where(eq(releases.id, id));
+    return release || undefined;
+  }
+
+  async createRelease(release: InsertRelease): Promise<Release> {
+    const [newRelease] = await db.insert(releases).values(release).returning();
+    return newRelease;
+  }
+
+  async updateRelease(id: string, release: Partial<InsertRelease>): Promise<Release> {
+    const [updatedRelease] = await db.update(releases)
+      .set(release)
+      .where(eq(releases.id, id))
+      .returning();
+    return updatedRelease;
+  }
+
+  // Release Songs (junction)
+  async getReleaseSongs(releaseId: string): Promise<ReleaseSong[]> {
+    return await db.select().from(releaseSongs)
+      .where(eq(releaseSongs.releaseId, releaseId))
+      .orderBy(releaseSongs.trackNumber);
+  }
+
+  async createReleaseSong(releaseSong: InsertReleaseSong): Promise<ReleaseSong> {
+    const [newReleaseSong] = await db.insert(releaseSongs).values(releaseSong).returning();
+    return newReleaseSong;
+  }
+
+  async deleteReleaseSong(releaseId: string, songId: string): Promise<void> {
+    await db.delete(releaseSongs)
+      .where(and(
+        eq(releaseSongs.releaseId, releaseId),
+        eq(releaseSongs.songId, songId)
+      ));
   }
 
   // Roles

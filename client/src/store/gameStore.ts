@@ -11,6 +11,8 @@ interface GameStore {
   projects: Project[];
   roles: Role[];
   monthlyActions: MonthlyAction[];
+  songs: any[];
+  releases: any[];
   
   // UI state
   selectedActions: string[];
@@ -56,6 +58,8 @@ export const useGameStore = create<GameStore>()(
       projects: [],
       roles: [],
       monthlyActions: [],
+      songs: [],
+      releases: [],
       selectedActions: [],
       isAdvancingMonth: false,
       currentDialogue: null,
@@ -65,8 +69,15 @@ export const useGameStore = create<GameStore>()(
       // Load existing game
       loadGame: async (gameId: string) => {
         try {
-          const response = await apiRequest('GET', `/api/game/${gameId}`);
-          const data = await response.json();
+          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+            apiRequest('GET', `/api/game/${gameId}`),
+            apiRequest('GET', `/api/game/${gameId}/songs`),
+            apiRequest('GET', `/api/game/${gameId}/releases`)
+          ]);
+          
+          const data = await gameResponse.json();
+          const songs = await songsResponse.json();
+          const releases = await releasesResponse.json();
           
           set({
             gameState: data.gameState,
@@ -74,6 +85,8 @@ export const useGameStore = create<GameStore>()(
             projects: data.projects,
             roles: data.roles,
             monthlyActions: data.monthlyActions,
+            songs,
+            releases,
             selectedActions: []
           });
         } catch (error) {
@@ -447,6 +460,8 @@ export const useGameStore = create<GameStore>()(
         artists: state.artists,
         projects: state.projects,
         roles: state.roles,
+        songs: state.songs,
+        releases: state.releases,
         selectedActions: state.selectedActions
       })
     }

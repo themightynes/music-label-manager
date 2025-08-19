@@ -24,7 +24,11 @@
       "WebFetch(domain:docs.anthropic.com)",
       "Bash(cp:*)",
       "Bash(PORT=3001 npm run dev)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(node:*)",
+      "Bash(npx tsx:*)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []

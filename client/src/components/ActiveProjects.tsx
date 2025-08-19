@@ -24,7 +24,9 @@ export function ActiveProjects() {
         budget: projectData.budget,
         budgetUsed: 0,
         quality: 0,
-        dueMonth: (gameState?.currentMonth || 1) + 3 // Due in 3 months
+        dueMonth: (gameState?.currentMonth || 1) + 3, // Due in 3 months
+        songCount: projectData.songCount || 1, // Include song count for recording projects
+        songsCreated: 0 // Initialize songs created counter
       });
       setShowProjectModal(false);
     } catch (error) {

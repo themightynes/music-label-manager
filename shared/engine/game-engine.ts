@@ -10,7 +10,7 @@
  * @module shared/engine/GameEngine
  */
 
-import { GameState, Artist, Project, Role, MonthlyAction } from '../schema';
+import { GameState, Artist, Project, Role, MonthlyAction, Song, Release, ReleaseSong } from '../schema';
 import { ServerGameData } from '../../server/data/gameData';
 import seedrandom from 'seedrandom';
 
@@ -94,8 +94,11 @@ export class GameEngine {
       await this.processAction(action, summary);
     }
 
-    // Process ongoing projects
-    await this.processOngoingProjects(summary);
+    // Process ongoing revenue from released projects
+    await this.processReleasedProjects(summary);
+    
+    // Process song generation for recording projects
+    await this.processRecordingProjects(summary);
 
     // Apply delayed effects from previous months
     await this.processDelayedEffects(summary);
@@ -467,6 +470,9 @@ export class GameEngine {
     
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary);
+    
+    // Process song generation for recording projects
+    await this.processRecordingProjects(summary);
   }
 
   /**
@@ -480,7 +486,7 @@ export class GameEngine {
     console.log('[STREAMING DECAY] === Processing Released Projects ===');
     console.log(`[STREAMING DECAY] Current month: ${this.gameState.currentMonth}`);
     console.log(`[STREAMING DECAY] Found ${releasedProjects.length} released projects`);
-    console.log(`[STREAMING DECAY] Projects:`, releasedProjects.map(p => ({
+    console.log(`[STREAMING DECAY] Projects:`, releasedProjects.map((p: any) => ({
       id: p.id,
       title: p.title,
       type: p.type,
@@ -528,6 +534,241 @@ export class GameEngine {
       ongoingRevenueChanges: summary.changes.filter(c => c.type === 'ongoing_revenue').length
     });
     console.log('[STREAMING DECAY] === End Processing ===');
+  }
+
+  /**
+   * Processes song generation for recording projects
+   * This is called during monthly processing to create songs for active recording projects
+   */
+  private async processRecordingProjects(summary: MonthSummary): Promise<void> {
+    console.log('[SONG GENERATION] === Processing Recording Projects ===');
+    console.log(`[SONG GENERATION] Game ID: ${this.gameState.id}`);
+    
+    try {
+      // Get recording projects from database via ServerGameData
+      // Note: This assumes the server will provide recording projects
+      const recordingProjects = await this.gameData.getActiveRecordingProjects?.(this.gameState.id || '');
+      
+      console.log(`[SONG GENERATION] Found ${recordingProjects?.length || 0} recording projects`);
+      console.log('[SONG GENERATION] Projects:', recordingProjects?.map(p => ({
+        id: p.id,
+        title: p.title,
+        type: p.type,
+        stage: p.stage,
+        songCount: p.songCount,
+        songsCreated: p.songsCreated
+      })));
+      
+      if (!recordingProjects || recordingProjects.length === 0) {
+        console.log('[SONG GENERATION] No active recording projects found');
+        return;
+      }
+
+      for (const project of recordingProjects) {
+        console.log(`[SONG GENERATION] Checking project: ${project.title} (${project.type})`);
+        if (this.shouldGenerateProjectSongs(project)) {
+          console.log(`[SONG GENERATION] Project ${project.title} should generate songs`);
+          await this.generateMonthlyProjectSongs(project, summary);
+        } else {
+          console.log(`[SONG GENERATION] Project ${project.title} should NOT generate songs - stage: ${project.stage}, songCount: ${project.songCount}, songsCreated: ${project.songsCreated}`);
+        }
+      }
+    } catch (error) {
+      console.error('[SONG GENERATION] Error processing recording projects:', error);
+    }
+    
+    console.log('[SONG GENERATION] === End Processing ===');
+  }
+
+  /**
+   * Determines if a project should generate songs this month
+   */
+  private shouldGenerateProjectSongs(project: any): boolean {
+    // Only generate songs for recording projects (Singles, EPs) in production stage
+    if (!['Single', 'EP'].includes(project.type) || project.stage !== 'production') {
+      return false;
+    }
+
+    // Check if project still needs to create songs
+    const songCount = project.songCount || 1;
+    const songsCreated = project.songsCreated || 0;
+    
+    return songsCreated < songCount;
+  }
+
+  /**
+   * Generates songs for a recording project during monthly processing
+   */
+  private async generateMonthlyProjectSongs(project: any, summary: MonthSummary): Promise<void> {
+    console.log(`[SONG GENERATION] Generating songs for project: ${project.title}`);
+    console.log(`[SONG GENERATION] Project details:`, {
+      id: project.id,
+      artistId: project.artistId,
+      songCount: project.songCount,
+      songsCreated: project.songsCreated,
+      type: project.type,
+      stage: project.stage
+    });
+    
+    try {
+      const artist = await this.gameData.getArtistById(project.artistId);
+      if (!artist) {
+        console.error(`[SONG GENERATION] Artist not found for project ${project.id}`);
+        return;
+      }
+      console.log(`[SONG GENERATION] Found artist: ${artist.name}`);
+
+      // Determine how many songs to generate this month
+      const remainingSongs = (project.songCount || 1) - (project.songsCreated || 0);
+      const songsPerMonth = this.getSongsPerMonth(project.type);
+      const songsToGenerate = Math.min(remainingSongs, songsPerMonth);
+
+      console.log(`[SONG GENERATION] Calculation:`, {
+        remainingSongs,
+        songsPerMonth,
+        songsToGenerate
+      });
+
+      for (let i = 0; i < songsToGenerate; i++) {
+        console.log(`[SONG GENERATION] Creating song ${i + 1}/${songsToGenerate} for project ${project.title}`);
+        const song = this.generateSong(project, artist);
+        console.log(`[SONG GENERATION] Generated song:`, {
+          title: song.title,
+          quality: song.quality,
+          genre: song.genre,
+          mood: song.mood
+        });
+        
+        // Store song via ServerGameData (if available)
+        if (this.gameData.createSong) {
+          console.log(`[SONG GENERATION] Saving song to database via createSong...`);
+          try {
+            const savedSong = await this.gameData.createSong(song);
+            console.log(`[SONG GENERATION] Song saved successfully:`, savedSong.id);
+          } catch (songError) {
+            console.error(`[SONG GENERATION] Failed to save song:`, songError);
+            continue; // Skip updating project progress if song save failed
+          }
+        } else {
+          console.warn(`[SONG GENERATION] createSong method not available on gameData`);
+        }
+
+        // Update project progress
+        project.songsCreated = (project.songsCreated || 0) + 1;
+        console.log(`[SONG GENERATION] Updated project songsCreated to: ${project.songsCreated}`);
+        
+        summary.changes.push({
+          type: 'project_complete', // Using existing type for now
+          description: `Created song: "${song.title}" for ${project.title}`,
+          projectId: project.id,
+          amount: 0
+        });
+        console.log(`[SONG GENERATION] Added summary change for song creation`);
+      }
+
+      // Update project in database
+      if (this.gameData.updateProject) {
+        await this.gameData.updateProject(project.id, {
+          songsCreated: project.songsCreated
+        });
+      }
+
+      // Check if project completed all songs
+      if (project.songsCreated >= project.songCount) {
+        summary.changes.push({
+          type: 'project_complete',
+          description: `Recording completed for ${project.title} (${project.songsCreated}/${project.songCount} songs)`,
+          projectId: project.id,
+          amount: 0
+        });
+      }
+
+    } catch (error) {
+      console.error(`[SONG GENERATION] Error generating songs for project ${project.id}:`, error);
+    }
+  }
+
+  /**
+   * Determines how many songs to generate per month based on project type
+   */
+  private getSongsPerMonth(projectType: string): number {
+    switch (projectType) {
+      case 'Single': return 2; // Singles can generate up to 2 songs per month
+      case 'EP': return 3;     // EPs can generate up to 3 songs per month  
+      default: return 2;
+    }
+  }
+
+  /**
+   * Generates a single song for a recording project
+   */
+  private generateSong(project: any, artist: any): any {
+    const currentMonth = this.gameState.currentMonth || 1;
+    
+    // Generate song name from predefined pools (would come from balance.json in full implementation)
+    const songNames = [
+      'Midnight Dreams', 'City Lights', 'Hearts on Fire', 'Thunder Road', 
+      'Broken Chains', 'Rebel Soul', 'Digital Love', 'Neon Nights',
+      'System Override', 'Golden Hour', 'Starlight', 'Electric Pulse',
+      'Velvet Sky', 'Crimson Dawn', 'Silver Lining', 'Ocean Waves'
+    ];
+    
+    const randomName = songNames[Math.floor(this.getRandom(0, songNames.length))];
+    
+    // Calculate song quality based on artist mood and project quality
+    const baseQuality = 40 + Math.floor(this.getRandom(0, 20)); // 40-60 base
+    const artistMoodBonus = Math.floor(((artist.mood || 50) - 50) * 0.2); // -10 to +10 based on mood
+    const projectQualityBonus = Math.floor((project.quality || 50) * 0.1); // Based on project quality
+    
+    const finalQuality = Math.max(20, Math.min(100, 
+      baseQuality + artistMoodBonus + projectQualityBonus
+    ));
+
+    // CRITICAL FIX: Ensure gameId and artistId are properly set
+    // Use project.artistId consistently (this is the ID used in the UI)
+    const gameId = project.gameId || this.gameState.id;
+    const artistId = project.artistId; // Always use project's artistId, not the fetched artist.id
+    
+    console.log('[SONG GENERATION] Creating song with:', { 
+      gameId, 
+      artistId, 
+      projectId: project.id,
+      artistName: artist?.name || 'Unknown'
+    });
+    
+    if (!gameId || !artistId) {
+      console.error('[SONG GENERATION] MISSING REQUIRED FIELDS:', { gameId, artistId });
+      throw new Error(`Cannot create song: missing gameId (${gameId}) or artistId (${artistId})`);
+    }
+
+    // Don't include 'id' field - let database generate it
+    return {
+      title: randomName,
+      artistId: artistId,
+      gameId: gameId,
+      quality: finalQuality,
+      genre: artist.genre || 'pop', // Would come from artist data
+      mood: this.generateSongMood(),
+      createdMonth: currentMonth,
+      producerTier: 'local', // Phase 1: only local producers
+      timeInvestment: 'standard', // Phase 1: only standard time
+      isRecorded: true,
+      isReleased: false,
+      releaseId: null,
+      metadata: {
+        projectId: project.id,
+        artistMood: artist.mood || 50,
+        generatedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  /**
+   * Generates a random mood for a song
+   */
+  private generateSongMood(): string {
+    const moods = ['upbeat', 'melancholic', 'aggressive', 'chill'];
+    return moods[Math.floor(this.getRandom(0, moods.length))];
   }
 
   /**
@@ -1159,7 +1400,7 @@ export interface MonthSummary {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue';
   description: string;
   amount?: number;
   roleId?: string;
