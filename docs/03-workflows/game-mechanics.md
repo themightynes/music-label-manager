@@ -195,9 +195,50 @@ if (monthsElapsed >= 3 && stage === 'marketing') stage = 'released';
 quality = Math.min(100, quality + 25);
 ```
 
+### **Economic Decision System** ✅ NEW - PHASE 2
+Players make three strategic economic decisions when creating projects that directly impact song quality and costs:
+
+#### **Budget Per Song Allocation**
+- **Range**: $1,000 - $50,000 per song
+- **Quality Impact**: Efficiency breakpoints determine budget effectiveness
+  ```typescript
+  const budgetRatio = budgetPerSong / minViableCost;
+  const budgetBonus = budgetRatio < 0.5 ? -5 :     // Under-funded penalty
+                      budgetRatio < 0.75 ? 0 :      // Minimal budget
+                      budgetRatio < 1.0 ? 3 :       // Adequate budget  
+                      budgetRatio < 1.5 ? 7 :       // Strong budget
+                                         5;         // Diminishing returns
+  ```
+- **Strategic Consideration**: Diminishing returns above 150% of minimum viable cost
+
+#### **Producer Tier Selection**
+- **Local**: No bonus, 1.0x cost multiplier
+- **Regional**: +5 quality bonus, 1.8x cost multiplier  
+- **National**: +12 quality bonus, 3.2x cost multiplier
+- **Legendary**: +20 quality bonus, 5.5x cost multiplier
+- **Availability**: Higher tiers unlock based on label reputation
+
+#### **Time Investment Approach**
+- **Rushed**: -10 quality, 0.7x cost, 0.8x duration (fast but lower quality)
+- **Standard**: No modifiers (baseline approach)
+- **Extended**: +8 quality, 1.4x cost, 1.3x duration (high quality investment)
+- **Perfectionist**: +15 quality, 2.1x cost, 1.6x duration (maximum quality focus)
+
+#### **Quality Calculation Formula**
+```typescript
+const finalQuality = Math.min(100, 
+  baseQuality +                    // Random base (40-60)
+  artistMoodBonus +                // Artist happiness (+0 to +20)
+  producerBonus +                  // Producer tier bonus (+0 to +20)
+  timeBonus +                      // Time investment bonus (-10 to +15)
+  budgetBonus +                    // Budget efficiency bonus (-5 to +7)
+  songCountImpact                  // Multi-song project impact (0.85x to 1.0x)
+);
+```
+
 ### **Project Success Factors**
 - **Artist Talent**: Base multiplier for all calculations
-- **Budget Investment**: Higher budgets improve quality and marketing reach
+- **Economic Decisions**: Budget, producer, and time choices directly affect song quality ✅ NEW
 - **Label Reputation**: Affects playlist placement and press coverage
 - **Access Tiers**: Multiplicative bonuses to reach and success rates
 - **Timing**: Market conditions and seasonal factors (future feature)

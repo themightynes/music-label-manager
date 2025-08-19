@@ -141,11 +141,11 @@ class GameEngine {
 - **Aggregated display**: Projects show sum of individual song performance
 - **Backward compatibility**: Graceful fallback for legacy project-based data
 
-### **2. Transaction-Safe Database Operations**
-All game state changes use database transactions:
+### **2. Transaction-Safe Database Operations** ✅ ENHANCED
+All game state changes use database transactions with proper context handling for complex operations:
 
 ```typescript
-// server/routes.ts - Month advancement endpoint
+// server/routes.ts - Month advancement with transaction context
 app.post("/api/advance-month", getUserId, async (req, res) => {
   try {
     const result = await db.transaction(async (tx) => {
@@ -155,11 +155,26 @@ app.post("/api/advance-month", getUserId, async (req, res) => {
         .from(gameStates)
         .where(eq(gameStates.id, gameId));
       
-      // 2. Process actions through GameEngine
-      const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
-      const monthResult = await gameEngine.advanceMonth(formattedActions);
+      // 2. Pre-advance projects within transaction context ✅ NEW
+      const projectsToAdvance = await tx
+        .select()
+        .from(projects)
+        .where(eq(projects.gameId, gameId));
       
-      // 3. Update database atomically
+      for (const project of projectsToAdvance) {
+        if (shouldAdvanceStage(project)) {
+          await tx
+            .update(projects)
+            .set({ stage: 'production', quality: project.quality + 25 })
+            .where(eq(projects.id, project.id));
+        }
+      }
+      
+      // 3. Process actions through GameEngine with transaction context ✅ ENHANCED
+      const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+      const monthResult = await gameEngine.advanceMonth(formattedActions, tx);
+      
+      // 4. Update database atomically
       const [updatedGameState] = await tx
         .update(gameStates)
         .set({
@@ -171,10 +186,8 @@ app.post("/api/advance-month", getUserId, async (req, res) => {
         .where(eq(gameStates.id, gameId))
         .returning();
       
-      // 4. Save action history
+      // 5. Save action history and update related entities
       await tx.insert(monthlyActions).values(actionRecords);
-      
-      // 5. Update related entities
       await updateProjectProgression(tx, gameId, monthResult);
       
       return { gameState: updatedGameState, summary: monthResult.summary };
@@ -188,11 +201,42 @@ app.post("/api/advance-month", getUserId, async (req, res) => {
 });
 ```
 
+#### **Transaction Context Integration** ✅ NEW - PHASE 2 
+GameEngine now accepts transaction context to see uncommitted changes:
+
+```typescript
+// shared/engine/game-engine.ts
+async advanceMonth(
+  monthlyActions: GameEngineAction[], 
+  dbTransaction?: any  // ✅ NEW: Optional transaction context
+): Promise<GameEngineResult> {
+  // Pass transaction to database operations
+  await this.processRecordingProjects(summary, dbTransaction);
+}
+
+// server/data/gameData.ts  
+async getActiveRecordingProjects(
+  gameId: string, 
+  dbConnection: any = null  // ✅ NEW: Optional transaction context
+) {
+  const dbToUse = dbConnection || db;  // Use transaction or fallback
+  
+  return await dbToUse.select()
+    .from(projects)
+    .where(and(
+      eq(projects.gameId, gameId),
+      eq(projects.stage, 'production'),  // ✅ Can see uncommitted changes
+      inArray(projects.type, ['Single', 'EP'])
+    ));
+}
+```
+
 **Benefits**:
-- Atomic operations prevent partial updates
-- Consistent data state even on errors
-- Safe concurrent access
-- Professional-grade data integrity
+- **Transaction Isolation Fix**: GameEngine can see project updates within same transaction ✅ NEW
+- **Atomic Operations**: All month advancement changes succeed or fail together
+- **Data Consistency**: No partial updates during complex multi-step processes  
+- **Error Recovery**: Automatic rollback prevents corrupted game states
+- **Professional-grade data integrity**: Safe concurrent access
 
 ### **3. Type-Safe API Contracts**
 Shared types ensure consistency between client and server:

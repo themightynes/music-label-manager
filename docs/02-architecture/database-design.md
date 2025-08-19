@@ -141,6 +141,14 @@ CREATE TABLE projects (
   budget INTEGER DEFAULT 0,
   budget_used INTEGER DEFAULT 0,
   
+  -- Economic Decision Fields ✅ NEW
+  budget_per_song INTEGER DEFAULT 0,       -- Budget allocation per individual song
+  producer_tier TEXT DEFAULT 'local',     -- local|regional|national|legendary  
+  time_investment TEXT DEFAULT 'standard', -- rushed|standard|extended|perfectionist
+  total_cost INTEGER DEFAULT 0,           -- Calculated total project cost
+  song_count INTEGER DEFAULT 1,           -- Number of songs in project
+  songs_created INTEGER DEFAULT 0,        -- Songs generated so far
+  
   -- Timeline
   start_month INTEGER NOT NULL,
   due_month INTEGER,
@@ -166,8 +174,9 @@ CREATE INDEX idx_projects_stage ON projects(stage);
 CREATE INDEX idx_projects_start_month ON projects(start_month);
 ```
 
-**Purpose**: Music production lifecycle management  
-**Key Features**: Multi-stage progression, budget tracking, performance metrics
+**Purpose**: Music production lifecycle management with economic decisions  
+**Key Features**: Multi-stage progression, budget tracking, performance metrics, economic decision integration  
+**Economic Integration**: Budget-per-song system, producer tier selection, time investment options affect song quality and project costs
 
 #### **monthly_actions** - Player Action History
 ```sql
@@ -231,7 +240,7 @@ CREATE TABLE songs (
   release_month INTEGER,                  -- Month when song was released
   
   -- Flexible Data
-  metadata JSONB DEFAULT '{}', -- decay data, project associations, etc.
+  metadata JSONB DEFAULT '{}', -- ✅ ENHANCED: economic decisions, quality calculations, decay data, project associations
   
   -- Audit
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -248,8 +257,9 @@ CREATE INDEX idx_songs_release_month ON songs(release_month) WHERE is_released =
 
 **Purpose**: Individual song tracking with quality scoring and status progression  
 **Key Features**: 
-- **Automatic generation** during recording projects
-- **Quality-based performance**: Each song's streams/revenue based on individual quality
+- **Automatic generation** during recording projects with economic decision integration ✅ ENHANCED
+- **Quality-based performance**: Each song's streams/revenue based on individual quality including budget bonuses
+- **Economic metadata storage**: Complete quality calculation breakdown, budget efficiency, and decision history
 - **Individual revenue tracking**: Separate metrics per song enable hit song mechanics
 - **Monthly decay simulation**: Realistic streaming patterns with 15% monthly decline
 - **Project aggregation**: Recording sessions display sum of individual song performance

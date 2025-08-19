@@ -375,6 +375,152 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 - Load game state from saves
 - Export/import functionality
 
+#### **ProjectCreationModal.tsx** - Economic Decision System ✅ ENHANCED
+```typescript
+interface ProjectCreationModalProps {
+  open: boolean;
+  onClose: () => void;
+  artistId: string;
+  gameId: string;
+}
+
+export function ProjectCreationModal({ open, onClose, artistId, gameId }: ProjectCreationModalProps) {
+  const [projectType, setProjectType] = useState<'Single' | 'EP' | 'Album'>('Single');
+  const [budgetPerSong, setBudgetPerSong] = useState(3000);
+  const [producerTier, setProducerTier] = useState<'local' | 'regional' | 'national' | 'legendary'>('local');
+  const [timeInvestment, setTimeInvestment] = useState<'rushed' | 'standard' | 'extended' | 'perfectionist'>('standard');
+  const [songCount, setSongCount] = useState(1);
+
+  // ✅ NEW: Real-time quality preview calculation
+  const calculateQualityPreview = () => {
+    const baseQuality = 50; // Average base
+    const artistMoodBonus = artist?.mood ? Math.floor((artist.mood - 50) / 5) : 0;
+    const producerBonus = getProducerTierSystemSync()[producerTier]?.quality_bonus || 0;
+    const timeBonus = getTimeInvestmentSystemSync()[timeInvestment]?.quality_bonus || 0;
+    const budgetBonus = calculateBudgetQualityBonus(budgetPerSong, projectType);
+    const songCountImpact = calculateSongCountQualityImpact(songCount);
+    
+    return Math.min(100, Math.round(
+      (baseQuality + artistMoodBonus + producerBonus + timeBonus + budgetBonus) * songCountImpact
+    ));
+  };
+
+  // ✅ NEW: Total cost calculation with multipliers
+  const calculateTotalCost = () => {
+    const baseCost = budgetPerSong * songCount;
+    const producerMultiplier = getProducerTierSystemSync()[producerTier]?.multiplier || 1.0;
+    const timeMultiplier = getTimeInvestmentSystemSync()[timeInvestment]?.multiplier || 1.0;
+    
+    return Math.round(baseCost * producerMultiplier * timeMultiplier);
+  };
+
+  const qualityPreview = calculateQualityPreview();
+  const totalCost = calculateTotalCost();
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New Project - {artist?.name}</DialogTitle>
+          <DialogDescription>
+            Make strategic economic decisions that will impact your music quality and project costs
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column: Economic Decisions */}
+          <div className="space-y-6">
+            <ProjectTypeSelector 
+              value={projectType} 
+              onChange={setProjectType}
+              onSongCountChange={setSongCount}
+            />
+            
+            {/* ✅ NEW: Budget Per Song Slider */}
+            <BudgetSlider
+              budgetPerSong={budgetPerSong}
+              onChange={setBudgetPerSong}
+              projectType={projectType}
+              showEfficiencyBreakpoints={true}
+            />
+
+            {/* ✅ NEW: Producer Tier Selection */}
+            <ProducerTierSelector
+              selectedTier={producerTier}
+              onChange={setProducerTier}
+              labelReputation={gameState?.reputation || 0}
+              showCostMultipliers={true}
+            />
+
+            {/* ✅ NEW: Time Investment Options */}
+            <TimeInvestmentSelector
+              selectedOption={timeInvestment}
+              onChange={setTimeInvestment}
+              showQualityImpact={true}
+            />
+          </div>
+
+          {/* Right Column: Quality Preview & Cost Breakdown */}
+          <div className="space-y-4">
+            {/* ✅ NEW: Real-time Quality Preview */}
+            <QualityPreviewCard
+              estimatedQuality={qualityPreview}
+              breakdown={{
+                base: 50,
+                artistMood: artistMoodBonus,
+                producer: producerBonus,
+                timeInvestment: timeBonus,
+                budget: budgetBonus,
+                songCount: songCountImpact
+              }}
+            />
+
+            {/* ✅ NEW: Cost Breakdown Display */}
+            <CostBreakdownCard
+              budgetPerSong={budgetPerSong}
+              songCount={songCount}
+              producerMultiplier={getProducerTierSystemSync()[producerTier]?.multiplier}
+              timeMultiplier={getTimeInvestmentSystemSync()[timeInvestment]?.multiplier}
+              totalCost={totalCost}
+            />
+
+            {/* ✅ NEW: Economic Efficiency Indicators */}
+            <EfficiencyIndicators
+              budgetEfficiency={calculateBudgetEfficiency(budgetPerSong, projectType)}
+              producerEfficiency={calculateProducerEfficiency(producerTier)}
+              timeEfficiency={calculateTimeEfficiency(timeInvestment)}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="pt-6">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleCreateProject}
+            disabled={totalCost > (gameState?.money || 0)}
+          >
+            Create Project (${totalCost.toLocaleString()})
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+**Responsibilities**:
+- **Economic Decision Interface**: Budget per song, producer tier, and time investment selection ✅ NEW
+- **Real-time Quality Preview**: Live calculation showing expected song quality with breakdown ✅ NEW
+- **Cost Calculation**: Dynamic total cost with economic decision multipliers ✅ NEW
+- **Efficiency Indicators**: Visual feedback on budget efficiency and strategic choices ✅ NEW
+- **Interactive Sliders**: Responsive controls with immediate feedback and validation ✅ NEW
+- **Strategic Information**: Tooltips and guidance for optimal economic decisions ✅ NEW
+- Project type selection and song count configuration
+- Artist mood and relationship factor integration
+- Comprehensive form validation and error handling
+
 #### **AccessTierBadges.tsx** - Enhanced Progression System
 ```typescript
 export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {

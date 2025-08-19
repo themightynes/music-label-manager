@@ -31,7 +31,8 @@
       "Bash(psql:*)",
       "Bash(npm test)",
       "Bash(PORT=5001 npm run dev)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

@@ -478,7 +478,7 @@ Content-Type: application/json
 
 ## 🎵 Project Management
 
-### **Create New Project**
+### **Create New Project with Economic Decisions** ✅ ENHANCED
 ```http
 POST /api/game/:gameId/projects
 Authorization: Required (session)
@@ -486,18 +486,25 @@ Content-Type: application/json
 
 {
   "title": "Midnight Dreams",
-  "type": "single",
-  "genre": "Experimental Pop",
+  "type": "EP",
   "artistId": "uuid",
+  "songCount": 3,
+  
+  // Economic Decision Parameters ✅ NEW
+  "budgetPerSong": 5000,              // Budget allocation per song
+  "producerTier": "regional",         // local|regional|national|legendary
+  "timeInvestment": "extended",       // rushed|standard|extended|perfectionist
+  "totalCost": 21000,                 // Calculated total project cost
+  
+  // Optional Legacy Parameters
   "stage": "planning",
-  "quality": 45,
-  "budget": 7500,
-  "budgetUsed": 0,
-  "startMonth": 5,
-  "dueMonth": 7,
   "metadata": {
-    "collaborators": ["Producer X"],
-    "marketing_approach": "streaming_first"
+    "expectedQuality": 72,            // UI quality preview estimate
+    "costBreakdown": {
+      "baseCost": 15000,
+      "producerMultiplier": 1.8,
+      "timeMultiplier": 1.4
+    }
   }
 }
 ```
@@ -509,26 +516,43 @@ Content-Type: application/json
   "gameId": "uuid",
   "artistId": "uuid",
   "title": "Midnight Dreams",
-  "type": "single",
-  "genre": "Experimental Pop",
+  "type": "EP",
   "stage": "planning",
-  "quality": 45,
-  "budget": 7500,
-  "budgetUsed": 0,
-  "startMonth": 5,
-  "dueMonth": 7,
+  "quality": 0,
+  
+  // Economic Decision Fields ✅ NEW
+  "budgetPerSong": 5000,
+  "producerTier": "regional",
+  "timeInvestment": "extended",
+  "totalCost": 21000,
+  "costUsed": 0,
+  "songCount": 3,
+  "songsCreated": 0,
+  
+  // Legacy Fields
+  "startMonth": null,
+  "dueMonth": null,
   "completedMonth": null,
   "streams": 0,
   "revenue": 0,
   "pressPickups": 0,
-  "metadata": {
-    "collaborators": ["Producer X"],
-    "marketing_approach": "streaming_first"
-  },
-  "createdAt": "2025-08-18T10:00:00Z",
-  "updatedAt": "2025-08-18T10:00:00Z"
+  "metadata": null,
+  "createdAt": "2025-01-19T10:00:00Z",
+  "updatedAt": "2025-01-19T10:00:00Z"
 }
 ```
+
+**Validation Rules for Economic Parameters**:
+- `budgetPerSong`: Integer, minimum 1000, maximum 50000
+- `producerTier`: Must be one of: `"local"`, `"regional"`, `"national"`, `"legendary"`
+- `timeInvestment`: Must be one of: `"rushed"`, `"standard"`, `"extended"`, `"perfectionist"`
+- `songCount`: Integer, minimum 1, maximum 5 (varies by project type)
+- `totalCost`: Calculated automatically from economic decisions
+
+**Economic Impact**:
+- Budget affects song quality through efficiency breakpoints
+- Producer tier adds quality bonus (+0 to +20) and cost multiplier (1.0x to 5.5x)
+- Time investment affects quality (-10 to +15) and cost multiplier (0.7x to 2.1x)
 
 ### **Update Project**
 ```http
