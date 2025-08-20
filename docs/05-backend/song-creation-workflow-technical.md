@@ -9,6 +9,8 @@
 
 This document provides comprehensive technical documentation for the **Music Creation & Release Cycle** backend implementation - the foundation feature that transforms the game from project management to music industry simulation.
 
+**CRITICAL ARCHITECTURAL UPDATE**: GameEngine is now the SINGLE source of truth for ALL song revenue processing. Duplicate logic removed from routes.ts to eliminate conflicts and ensure consistent calculations.
+
 **Key Components:**
 - **Database Schema**: Songs, releases, and relationship tables
 - **Game Engine Integration**: Monthly processing and song generation
@@ -139,7 +141,10 @@ async advanceMonth(monthlyActions: GameEngineAction[]): Promise<{
 }> {
   // ... process actions ...
   
-  // Process ongoing revenue from released projects
+  // 🎵 CONSOLIDATION: Process newly released projects (when projects advance to "released")
+  await this.processNewlyReleasedProjects(summary);
+  
+  // 🎵 CONSOLIDATION: Process individual song revenue decay (15% monthly using balance.json)
   await this.processReleasedProjects(summary);
   
   // 🎵 CRITICAL: Process song generation for recording projects
@@ -165,6 +170,49 @@ private async processRecordingProjects(summary: MonthSummary): Promise<void> {
     }
   } catch (error) {
     console.error('[SONG GENERATION] Error processing recording projects:', error);
+  }
+}
+```
+
+### **2.1 Newly Released Projects Processing (NEW CONSOLIDATION METHOD)**
+```typescript
+async processNewlyReleasedProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  // Get projects that just advanced to "released" stage this month
+  const newlyReleasedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id, dbTransaction);
+  
+  for (const project of newlyReleasedProjects) {
+    await this.processProjectSongReleases(project, summary, dbTransaction);
+  }
+}
+
+async processProjectSongReleases(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  // Get all recorded songs for this project
+  const projectSongs = await this.gameData.getProjectSongs(project.id, dbTransaction);
+  
+  for (const song of projectSongs) {
+    // Calculate initial streams and revenue using balance.json configuration
+    const streamingConfig = this.gameData.getStreamingConfigSync();
+    const initialStreams = this.calculateInitialSongStreams(song);
+    const initialRevenue = Math.round(initialStreams * 0.5); // $0.50 per initial stream
+    
+    // Update song with release metrics
+    await this.gameData.updateSong({
+      songId: song.id,
+      initialStreams,
+      totalStreams: initialStreams,
+      totalRevenue: initialRevenue,
+      monthlyStreams: initialStreams,
+      lastMonthRevenue: initialRevenue,
+      releaseMonth: this.gameState.currentMonth,
+      isReleased: true
+    }, dbTransaction);
+    
+    summary.revenue += initialRevenue;
+    summary.changes.push({
+      type: 'song_release',
+      description: `🎵 "${song.title}" released - ${initialStreams} streams, $${initialRevenue}`,
+      amount: initialRevenue
+    });
   }
 }
 ```

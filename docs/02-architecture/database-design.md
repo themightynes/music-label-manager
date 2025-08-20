@@ -231,13 +231,15 @@ CREATE TABLE songs (
   is_released BOOLEAN DEFAULT FALSE,
   release_id UUID REFERENCES releases(id) ON DELETE SET NULL,
   
-  -- Individual Revenue & Streaming Metrics (NEW: Phase 1 Enhancement)
+  -- Individual Revenue & Streaming Metrics (CONSOLIDATED SYSTEM)
   initial_streams INTEGER DEFAULT 0,      -- Streams when first released
   total_streams INTEGER DEFAULT 0,        -- Cumulative streams over time
   total_revenue INTEGER DEFAULT 0,        -- Cumulative revenue over time  
   monthly_streams INTEGER DEFAULT 0,      -- Current month stream count
   last_month_revenue INTEGER DEFAULT 0,   -- Previous month revenue
   release_month INTEGER,                  -- Month when song was released
+  
+  -- CRITICAL: All revenue processing handled by GameEngine ONLY using balance.json configuration
   
   -- Flexible Data
   metadata JSONB DEFAULT '{}', -- ✅ ENHANCED: economic decisions, quality calculations, decay data, project associations
@@ -257,12 +259,13 @@ CREATE INDEX idx_songs_release_month ON songs(release_month) WHERE is_released =
 
 **Purpose**: Individual song tracking with quality scoring and status progression  
 **Key Features**: 
-- **Automatic generation** during recording projects with economic decision integration ✅ ENHANCED
+- **Automatic generation** during recording projects with economic decision integration
 - **Quality-based performance**: Each song's streams/revenue based on individual quality including budget bonuses
 - **Economic metadata storage**: Complete quality calculation breakdown, budget efficiency, and decision history
 - **Individual revenue tracking**: Separate metrics per song enable hit song mechanics
-- **Monthly decay simulation**: Realistic streaming patterns with 15% monthly decline
+- **Monthly decay simulation**: Realistic streaming patterns with 15% monthly decline (balance.json: monthly_decay_rate: 0.85)
 - **Project aggregation**: Recording sessions display sum of individual song performance
+- **CRITICAL CONSOLIDATION**: All revenue processing handled by GameEngine ONLY - NO duplicate logic in routes.ts
 
 #### **releases** - Singles, EPs, Albums (PHASE 1 ADDITION)
 ```sql

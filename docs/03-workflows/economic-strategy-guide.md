@@ -279,24 +279,42 @@ finalQuality = Math.min(100,
 
 ---
 
-## 📈 Expected Returns
+## 📈 Expected Returns (UPDATED: Configuration-Driven)
 
 ### **Quality vs. Revenue Correlation**
+**CRITICAL UPDATE**: All revenue calculations now use balance.json configuration:  
+- **Revenue per stream**: `ongoing_streams.revenue_per_stream: 0.05` (NOT 0.003)  
+- **Monthly decay rate**: `monthly_decay_rate: 0.85` (15% loss per month)  
+
 ```
-Quality 40-50: $3,000-8,000 potential revenue
-Quality 50-60: $8,000-15,000 potential revenue  
-Quality 60-70: $15,000-25,000 potential revenue
-Quality 70-80: $25,000-40,000 potential revenue
-Quality 80-90: $40,000-65,000 potential revenue
-Quality 90-100: $65,000+ potential revenue
+// Individual Song Revenue (using balance.json configuration)
+Quality 40-50: $2,000-6,000 initial + ongoing monthly revenue with 15% decay
+Quality 50-60: $6,000-12,000 initial + ongoing monthly revenue with 15% decay
+Quality 60-70: $12,000-20,000 initial + ongoing monthly revenue with 15% decay
+Quality 70-80: $20,000-32,000 initial + ongoing monthly revenue with 15% decay
+Quality 80-90: $32,000-50,000 initial + ongoing monthly revenue with 15% decay
+Quality 90-100: $50,000+ initial + ongoing monthly revenue with 15% decay
 ```
 
-### **ROI Optimization Formula**
+### **ROI Optimization Formula (UPDATED: Configuration-Driven)**
 ```typescript
-expectedROI = (qualityBonus * streamingMultiplier) / costIncrease;
+// ALL calculations use balance.json via getStreamingConfigSync()
+const streamingConfig = getStreamingConfigSync();
+const revenuePerStream = streamingConfig.revenue_per_stream; // 0.05
+const decayRate = streamingConfig.monthly_decay_rate; // 0.85
 
-// Regional Producer Example:
-expectedROI = (5 * 1.2) / 1.8 = 3.33x return
+// Individual Song Revenue Calculation
+const initialStreams = songQuality * 50 * (1 + qualityBonus);
+const initialRevenue = initialStreams * 0.5; // Initial release bonus
+
+// Monthly Ongoing Revenue (15% decay)
+const monthlyDecay = Math.pow(decayRate, monthsSinceRelease);
+const ongoingRevenue = initialStreams * monthlyDecay * revenuePerStream;
+
+// Regional Producer Example (using actual balance.json values):
+const qualityBonus = 5; // +5 quality from regional producer
+const costMultiplier = 1.8; // 1.8x cost increase
+expectedROI = (qualityBonus * expectedStreams * 0.05) / costMultiplier;
 ```
 
 ---

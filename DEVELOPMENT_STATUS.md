@@ -1,6 +1,29 @@
 # Music Label Manager - Development Status Report
 **Primary Development Status Document**  
-*Updated: January 19, 2025 - PHASE 2 Budget-Quality Integration COMPLETED*
+*Updated: August 20, 2025 - ARCHITECTURAL CONSOLIDATION COMPLETED*
+
+---
+
+## 🚨 CRITICAL ARCHITECTURAL REFACTORING COMPLETED
+
+**SONG REVENUE SYSTEM CONSOLIDATION - COMPLETE** ✅  
+**Completed**: August 20, 2025  
+**Status**: Major architectural consolidation eliminating duplicate processing logic
+
+### ⚠️ Critical System Changes
+**Problem Solved**: Duplicate song processing logic existed in both routes.ts AND GameEngine, causing conflicts and inconsistent calculations.
+
+**Solution Implemented**:
+- **Removed ALL song processing logic from routes.ts** (lines 917-941 eliminated)
+- **GameEngine now SINGLE source of truth** for all song revenue processing
+- **Routes.ts responsibility**: ONLY project stage advancement (planning → production → marketing → released)
+- **GameEngine responsibility**: ALL song releases, revenue calculations, monthly decay processing
+- **New GameEngine Methods**: `processNewlyReleasedProjects()`, `processProjectSongReleases()`
+- **Configuration-driven**: ALL calculations use balance.json values (ongoing_streams.revenue_per_stream: 0.05)
+
+**Architecture Impact**: No more conflicting systems - single consolidated processing pipeline
+
+---
 
 ---
 

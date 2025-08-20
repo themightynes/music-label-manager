@@ -149,17 +149,22 @@ interface ArtistRelationship {
 - **Budget**: $3,000-$12,000
 - **Timeline**: 2 months (planning → production → marketing → released)
 - **Revenue Potential**: $5,000-$25,000 based on individual song quality
-- **Individual Song Revenue Formula** (NEW: Phase 1 Enhancement):
+- **Individual Song Revenue Formula** (CONSOLIDATION: Processed ONLY by GameEngine using balance.json):
   ```typescript
-  // Each song calculated individually
+  // CRITICAL: All processing moved to GameEngine - NO duplicate logic in routes.ts
+  // Configuration-driven calculations using balance.json
+  const streamingConfig = getStreamingConfigSync();
+  
+  // Each song calculated individually by GameEngine
   const songInitialStreams = songQuality * 50 * (1 + Math.max(0, (songQuality - 40) / 60));
   const songInitialRevenue = songInitialStreams * 0.5; // $0.50 per stream on release
   
-  // Monthly ongoing revenue (with 15% decay)
-  const monthlyStreams = initialStreams * Math.pow(0.85, monthsSinceRelease) * 0.8;
-  const monthlyRevenue = monthlyStreams * 0.05; // $0.05 per ongoing stream
+  // Monthly ongoing revenue (15% decay using balance.json configuration)
+  const monthlyDecay = Math.pow(streamingConfig.monthly_decay_rate, monthsSinceRelease); // 0.85 from balance.json
+  const monthlyStreams = initialStreams * monthlyDecay * reputationBonus * accessBonus * 0.8;
+  const monthlyRevenue = monthlyStreams * streamingConfig.revenue_per_stream; // 0.05 from balance.json
   
-  // Project total = sum of all individual songs
+  // Project total = sum of all individual songs (calculated by GameEngine only)
   const projectRevenue = songs.reduce((sum, song) => sum + song.totalRevenue, 0);
   ```
 
@@ -180,19 +185,23 @@ interface ArtistRelationship {
   const revenue = venueCapacity * sellThrough * ticketPrice * numberOfCities;
   ```
 
-### **Project Progression**
-Projects automatically advance through stages each month:
+### **Project Progression (ARCHITECTURAL SEPARATION)**
+Projects advance through stages with CLEAR separation of responsibilities:
 
 ```typescript
 const stages = ['planning', 'production', 'marketing', 'released'];
 
-// Progression logic (in GameEngine)
+// ROUTES.TS RESPONSIBILITY: Stage advancement only
 if (monthsElapsed >= 1 && stage === 'planning') stage = 'production';
 if (monthsElapsed >= 2 && stage === 'production') stage = 'marketing';  
 if (monthsElapsed >= 3 && stage === 'marketing') stage = 'released';
 
-// Quality increases each stage
+// Quality increases each stage (routes.ts)
 quality = Math.min(100, quality + 25);
+
+// GAMEENGINE RESPONSIBILITY: Song revenue processing when projects reach "released"
+// GameEngine.processNewlyReleasedProjects() handles all song releases
+// GameEngine.processProjectSongReleases() processes individual songs
 ```
 
 ### **Economic Decision System** ✅ NEW - PHASE 2
@@ -350,8 +359,8 @@ interface DialogueChoice {
 
 ## ⚖️ Game Balance System
 
-### **Economic Balance**
-All economic calculations are driven by `/data/balance.json`:
+### **Economic Balance (UPDATED: Configuration-Driven Consolidation)**
+**CRITICAL**: All economic calculations are driven by `/data/balance.json` and processed ONLY by GameEngine:
 
 ```json
 {
@@ -371,14 +380,15 @@ All economic calculations are driven by `/data/balance.json`:
     "ep": { "min": 15000, "max": 35000 },
     "mini_tour": { "min": 5000, "max": 15000 }
   },
-  "revenue_formulas": {
-    "streaming": {
-      "base_streams_per_point": 1000,
-      "quality_weight": 0.8,
-      "playlist_weight": 1.0,
-      "reputation_weight": 0.5,
-      "revenue_per_stream": 0.003
-    }
+  "ongoing_streams": {
+    "revenue_per_stream": 0.05,
+    "monthly_decay_rate": 0.85
+  },
+  "streaming": {
+    "base_streams_per_point": 50,
+    "quality_weight": 0.8,
+    "playlist_weight": 1.0,
+    "reputation_weight": 0.5
   }
 }
 ```

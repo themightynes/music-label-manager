@@ -43,6 +43,9 @@ The Music Label Manager is a **strategic simulation game** built as a full-stack
 **Key Responsibilities**:
 - Month advancement and turn processing
 - Resource calculations (money, reputation, creative capital)
+- **Song revenue processing and release management** (CONSOLIDATION: All song revenue logic moved from routes.ts)
+- **Individual song revenue decay calculations** (15% monthly decline using balance.json configuration)
+- **Project song release processing** when projects advance to "released" stage
 - Project progression and completion
 - Artist relationship management
 - Access tier progression
@@ -59,6 +62,10 @@ class GameEngine {
     summary: MonthSummary;
     campaignResults?: CampaignResults;
   }>
+  
+  // NEW: Consolidated song revenue processing methods
+  processNewlyReleasedProjects(summary: MonthSummary, dbTransaction?: any)
+  processProjectSongReleases(project: any, summary: MonthSummary, dbTransaction?: any)
 }
 ```
 
@@ -67,6 +74,9 @@ class GameEngine {
 - Consistent calculations between client preview and server execution
 - Easy to test and modify game balance
 - Clear separation of game logic from UI and API layers
+- **Single source of truth for ALL song revenue processing** (no duplicate logic)
+- **Configuration-driven calculations** using balance.json for all revenue formulas
+- **Transaction-safe song processing** with database context integration
 
 ### **2. Database Layer (`/shared/schema.ts`, `/server/storage.ts`)**
 **Purpose**: Persistent game state and user data management
@@ -119,6 +129,7 @@ game_saves (id, user_id, name, game_state, month, created_at)
 - **Database transactions**: Atomic operations for game state changes
 - **Error boundaries**: Consistent error handling and user feedback
 - **Authentication middleware**: Session-based user management
+- **CRITICAL ARCHITECTURAL PRINCIPLE**: Routes.ts handles ONLY project stage advancement; GameEngine processes ALL song revenue logic
 
 **Key Endpoints**:
 ```typescript
@@ -147,7 +158,7 @@ POST   /api/saves                 // Create new save
 ## 🔄 Data Flow Architecture
 
 ### **Monthly Turn Cycle**
-The core game loop follows this pattern:
+The core game loop follows this CONSOLIDATED pattern:
 
 ```
 1. Player selects actions (up to 3) in MonthPlanner
@@ -158,16 +169,24 @@ The core game loop follows this pattern:
    ↓
 4. Server creates database transaction
    ↓
-5. GameEngine processes actions and calculates outcomes
+5. Routes.ts advances project stages (planning → production → marketing → released)
    ↓
-6. Database updates: game state, projects, monthly actions
+6. GameEngine processes actions and calculates outcomes
    ↓
-7. Response returns: updated game state, summary, campaign results
+7. GameEngine processes newly released projects (song releases)
    ↓
-8. Zustand store updates state and sets campaignResults if month 12
+8. GameEngine calculates individual song revenue decay (15% monthly using balance.json)
    ↓
-9. GamePage detects campaignResults and shows completion modal
+9. Database updates: game state, projects, monthly actions, individual song metrics
+   ↓
+10. Response returns: updated game state, summary, campaign results
+   ↓
+11. Zustand store updates state and sets campaignResults if month 12
+   ↓
+12. GamePage detects campaignResults and shows completion modal
 ```
+
+**KEY ARCHITECTURAL CHANGE**: All song revenue processing consolidated into GameEngine ONLY.
 
 ### **Dialogue System Flow**
 Role-based conversations follow this pattern:
@@ -248,6 +267,24 @@ Load Flow:
 - Prevents partial updates that could corrupt game state
 - Enables atomic rollback on errors
 - Professional-grade data integrity
+
+### **6. Song Revenue System Consolidation (CRITICAL CHANGE)**
+**Decision**: GameEngine is the SINGLE source of truth for all song revenue processing  
+**Previous Problem**: Duplicate song processing in both routes.ts and GameEngine caused conflicts and inconsistent calculations  
+**Solution**: Removed ALL song processing logic from routes.ts (lines 917-941 removed)  
+**New Architecture**:
+- Routes.ts handles ONLY: Project stage advancement and release month tracking
+- GameEngine handles ALL: Song releases, revenue calculations, monthly decay processing
+
+**Revenue Decay Formula (Using balance.json configuration)**:
+```typescript
+// Individual song monthly decay calculation
+const baseDecay = Math.pow(0.85, monthsSinceRelease);  // 15% loss per month
+const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * 0.8;
+const revenue = monthlyStreams * 0.05;  // $0.05 per stream (from balance.json)
+```
+
+**Configuration-Driven Calculations**: ALL revenue calculations use balance.json values via `getStreamingConfigSync()`
 
 ---
 

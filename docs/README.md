@@ -191,6 +191,21 @@ Claude-specific instruction files preserved for reference.
 - **Type Safety**: TypeScript + Zod validation throughout the stack
 - **Transaction Safety**: Database consistency through proper transaction usage
 
+## ⚠️ CRITICAL ARCHITECTURAL CONSOLIDATION
+
+**Major Refactoring Completed**: Song Revenue System Consolidation
+
+**Previous Problem**: Duplicate song processing existed in both routes.ts and GameEngine, causing conflicts and inconsistent calculations.
+
+**Solution**: All song revenue processing consolidated into GameEngine ONLY:
+- **Routes.ts**: Handles ONLY project stage advancement (planning → production → marketing → released)
+- **GameEngine**: Handles ALL song releases, revenue calculations, monthly decay processing
+- **Configuration-Driven**: All calculations use balance.json values (ongoing_streams.revenue_per_stream: 0.05)
+- **Individual Song Tracking**: Songs have separate revenue streams with 15% monthly decay
+- **New Methods**: `processNewlyReleasedProjects()`, `processProjectSongReleases()`
+
+**Result**: Single source of truth architecture with no conflicting systems.
+
 ---
 
 ## 📚 Documentation Philosophy
