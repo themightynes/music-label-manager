@@ -894,54 +894,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (newStageIndex > currentStageIndex) {
               console.log(`[DEBUG] Post-engine advancement: ${project.title} ${stages[currentStageIndex]} -> ${stages[newStageIndex]}`);
+              
+              // Prepare update data
+              const updateData: any = { 
+                stage: stages[newStageIndex],
+                quality: Math.min(100, (project.quality || 0) + 25)
+              };
+              
+              // If advancing to released stage, track release month in metadata
+              if (stages[newStageIndex] === 'released') {
+                const existingMetadata = project.metadata || {};
+                updateData.metadata = {
+                  ...existingMetadata,
+                  releaseMonth: monthResult.gameState.currentMonth,
+                  releasedAt: new Date().toISOString()
+                };
+                console.log(`[PROJECT STAGE] Marking project "${project.title}" as released in month ${monthResult.gameState.currentMonth}`);
+              }
+              
               await tx
                 .update(projects)
-                .set({ 
-                  stage: stages[newStageIndex],
-                  quality: Math.min(100, (project.quality || 0) + 25)
-                })
+                .set(updateData)
                 .where(eq(projects.id, project.id));
               
-              // If advancing to released stage, process song releases
-              console.log(`[SONG RELEASE CONDITIONS] Checking release conditions:`, {
-                projectId: project.id,
-                projectTitle: project.title,
-                newStageIndex,
-                isAdvancingToReleased: newStageIndex === 3,
-                hasArtistId: !!project.artistId,
-                artistId: project.artistId,
-                hasGameEngine: !!gameEngine,
-                allConditionsMet: newStageIndex === 3 && project.artistId && gameEngine
-              });
-              
-              if (newStageIndex === 3 && project.artistId && gameEngine) {
-                console.log(`[SONG RELEASE POST] ✅ ALL CONDITIONS MET - Processing songs for newly released project: ${project.title}`);
-                
-                // First, let's check how many songs we expect to find
-                console.log(`[SONG RELEASE POST] Checking for songs with projectId: ${project.id}`);
-                const testSongs = await tx.select().from(songs)
-                  .where(sql`metadata->>'projectId' = ${project.id}`);
-                console.log(`[SONG RELEASE POST] Found ${testSongs.length} songs for project ${project.id}:`, 
-                  testSongs.map(s => ({ id: s.id, title: s.title, isReleased: s.isReleased })));
-                
-                try {
-                  const releaseResult = await gameEngine.processProjectSongsRelease(project, 0);
-                  console.log(`[SONG RELEASE POST] ✅ SUCCESS - Released ${releaseResult.totalSongsReleased} songs from "${project.title}"`);
-                  console.log(`[SONG RELEASE POST] Release details:`, releaseResult);
-                  
-                  // Verify the updates worked
-                  const verifyUpdates = await tx.select().from(songs)
-                    .where(sql`metadata->>'projectId' = ${project.id}`);
-                  console.log(`[SONG RELEASE POST] Verification - Updated song states:`, 
-                    verifyUpdates.map(s => ({ id: s.id, title: s.title, isReleased: s.isReleased, initialStreams: s.initialStreams })));
-                    
-                } catch (error) {
-                  console.error(`[SONG RELEASE POST] ❌ FAILED to process songs for project ${project.title}:`, error);
-                  console.error(`[SONG RELEASE POST] Error stack:`, error.stack);
-                }
-              } else {
-                console.log(`[SONG RELEASE POST] ❌ CONDITIONS NOT MET - Skipping song release processing`);
-              }
+              // Project stage advancement completed - GameEngine will handle song releases during monthly advancement
+              console.log(`[PROJECT STAGE] Project "${project.title}" advanced to stage: ${stages[newStageIndex]} - GameEngine will process songs during monthly advancement`);
             }
           }
           console.log('[DEBUG] === POST-GAMEENGINE PROJECT ADVANCEMENT COMPLETE ===');
@@ -1004,98 +981,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
 
-        // POST-PROCESSING: Handle song releases for projects that are released but have unreleased songs
-        console.log('[DEBUG] === POST-PROCESSING: CHECKING FOR UNRELEASED SONGS IN RELEASED PROJECTS ===');
-        
-        // Collect song release changes for the summary
-        const songReleaseChanges: Array<{type: string, description: string, amount: number}> = [];
-        let totalSongReleaseRevenue = 0;
-        
-        // Find released projects with unreleased songs
-        const releasedProjectsWithUnreleasedSongs = await tx
-          .select({
-            project: projects,
-            songs: sql`array_agg(
-              json_build_object(
-                'id', ${songs.id},
-                'title', ${songs.title},
-                'quality', ${songs.quality},
-                'isReleased', ${songs.isReleased}
-              ) ORDER BY ${songs.createdAt}
-            )`.as('songs')
-          })
-          .from(projects)
-          .leftJoin(songs, and(
-            eq(songs.gameId, projects.gameId),
-            sql`${songs.metadata}->>'projectId' = ${projects.id}::text`
-          ))
-          .where(and(
-            eq(projects.gameId, gameId),
-            eq(projects.stage, 'released')
-          ))
-          .groupBy(projects.id)
-          .having(sql`COUNT(CASE WHEN ${songs.isReleased} = false THEN 1 END) > 0`);
-
-        console.log(`[DEBUG] Found ${releasedProjectsWithUnreleasedSongs.length} released projects with unreleased songs`);
-        
-        for (const projectData of releasedProjectsWithUnreleasedSongs) {
-          const project = projectData.project;
-          const unreleasedSongs = (projectData.songs || []).filter((s: any) => !s.isReleased);
-          
-          console.log(`[DEBUG] Processing song releases for project "${project.title}" (${unreleasedSongs.length} unreleased songs)`);
-          
-          for (const song of unreleasedSongs) {
-            try {
-              console.log(`[DEBUG] Releasing song "${song.title}" (quality: ${song.quality})`);
-              
-              // Calculate initial streams for this song
-              const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
-              const initialStreams = gameEngine.calculateStreamingOutcome(
-                song.quality || 40,
-                gameStateForEngine.playlistAccess || 'none',
-                gameStateForEngine.reputation || 5,
-                0
-              );
-              
-              const initialRevenue = Math.floor(initialStreams * 0.003); // $0.003 per stream
-              
-              console.log(`[DEBUG] Song "${song.title}" calculated streams: ${initialStreams}, revenue: ${initialRevenue}`);
-              
-              // Update the song as released
-              await tx
-                .update(songs)
-                .set({
-                  isReleased: true,
-                  initialStreams: initialStreams,
-                  totalStreams: initialStreams,
-                  totalRevenue: initialRevenue,
-                  lastMonthRevenue: initialRevenue,
-                  monthlyStreams: initialStreams,
-                  releaseMonth: gameStateForEngine.currentMonth,
-                  updatedAt: new Date()
-                })
-                .where(eq(songs.id, song.id));
-              
-              console.log(`[DEBUG] ✅ Successfully released song "${song.title}"`);
-              
-              // Collect song release change for summary
-              songReleaseChanges.push({
-                type: 'revenue',
-                description: `🎵 "${song.title}" released - ${initialStreams.toLocaleString()} streams`,
-                amount: initialRevenue
-              });
-              
-              totalSongReleaseRevenue += initialRevenue;
-              
-            } catch (songError) {
-              console.error(`[ERROR] Failed to release song "${song.title}":`, songError);
-            }
-          }
-        }
-        
-        // Store song release changes to add to summary later
-        (tx as any)._songReleaseChanges = songReleaseChanges;
-        (tx as any)._totalSongReleaseRevenue = totalSongReleaseRevenue;
+        // POST-PROCESSING: Song releases now handled entirely by GameEngine
+        console.log('[DEBUG] === POST-PROCESSING: SONG RELEASES HANDLED BY GAMEENGINE ===');
+        console.log('[DEBUG] Routes.ts no longer processes individual song releases - GameEngine handles all song revenue processing');
         
         // Update released projects with ongoing revenue metadata
         try {
@@ -1178,15 +1066,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           console.log('[DEBUG] Comprehensive debug info:', JSON.stringify(debugInfo, null, 2));
 
-          // Add song release changes to the monthly summary
-          const storedSongReleaseChanges = (tx as any)._songReleaseChanges || [];
-          const storedTotalSongReleaseRevenue = (tx as any)._totalSongReleaseRevenue || 0;
-          
-          if (storedSongReleaseChanges.length > 0) {
-            console.log(`[DEBUG] Adding ${storedSongReleaseChanges.length} song release changes to monthly summary`);
-            monthResult.summary.changes.push(...storedSongReleaseChanges);
-            monthResult.summary.revenue = (monthResult.summary.revenue || 0) + storedTotalSongReleaseRevenue;
-          }
+          // Song release changes now handled by GameEngine during monthly processing
+          console.log('[DEBUG] Song release revenue now processed by GameEngine, not routes.ts');
 
           return {
             gameState: updatedGameState,

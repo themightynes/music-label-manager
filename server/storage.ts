@@ -9,7 +9,7 @@ import {
   type ReleaseSong, type InsertReleaseSong
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User management

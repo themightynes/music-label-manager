@@ -102,6 +102,9 @@ export class GameEngine {
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary);
     
+    // Process newly released projects (projects that became "released" this month)
+    await this.processNewlyReleasedProjects(summary, dbTransaction);
+    
     // Process song generation for recording projects
     await this.processRecordingProjects(summary, dbTransaction);
 
@@ -143,8 +146,8 @@ export class GameEngine {
     // Save monthly summary to gameState.monthlyStats for UI display
     const currentMonth = this.gameState.currentMonth || 1;
     const monthKey = `month${currentMonth - 1}`;  // UI expects month0, month1, etc.
-    this.gameState.monthlyStats = this.gameState.monthlyStats || {};
-    this.gameState.monthlyStats[monthKey] = {
+    (this.gameState as any).monthlyStats = (this.gameState as any).monthlyStats || {};
+    (this.gameState as any).monthlyStats[monthKey] = {
       revenue: summary.revenue,
       streams: summary.streams || 0,
       expenses: summary.expenses,
@@ -538,13 +541,17 @@ export class GameEngine {
         if (ongoingRevenue > 0) {
           totalOngoingRevenue += ongoingRevenue;
           
+          // Get revenue per stream from balance.json configuration
+          const streamingConfig = this.gameData.getStreamingConfigSync();
+          const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
+          
           // Track song updates for batch processing
           songUpdates.push({
             songId: song.id,
-            monthlyStreams: Math.round(ongoingRevenue / 0.05), // Reverse calculate streams
+            monthlyStreams: Math.round(ongoingRevenue / revenuePerStream), // Reverse calculate streams
             lastMonthRevenue: ongoingRevenue,
             totalRevenue: (song.totalRevenue || 0) + ongoingRevenue,
-            totalStreams: (song.totalStreams || 0) + Math.round(ongoingRevenue / 0.05)
+            totalStreams: (song.totalStreams || 0) + Math.round(ongoingRevenue / revenuePerStream)
           });
           
           // Add to summary changes for transparency
@@ -568,7 +575,10 @@ export class GameEngine {
       if (totalOngoingRevenue > 0) {
         summary.revenue += totalOngoingRevenue;
         // Calculate total streams from revenue (reverse calculation)
-        const totalStreams = Math.round(totalOngoingRevenue / 0.003); // revenue_per_stream = 0.003
+        // Get revenue per stream from balance.json configuration
+        const streamingConfig = this.gameData.getStreamingConfigSync();
+        const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
+        const totalStreams = Math.round(totalOngoingRevenue / revenuePerStream);
         summary.streams = (summary.streams || 0) + totalStreams;
         console.log(`[INDIVIDUAL SONG DECAY] Total ongoing revenue: $${totalOngoingRevenue}, streams: ${totalStreams}`);
       }
@@ -596,7 +606,9 @@ export class GameEngine {
       if (ongoingRevenue > 0) {
         summary.revenue += ongoingRevenue;
         // Calculate streams from revenue for legacy projects
-        const projectStreams = Math.round(ongoingRevenue / 0.003);
+        const streamingConfig = this.gameData.getStreamingConfigSync();
+        const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
+        const projectStreams = Math.round(ongoingRevenue / revenuePerStream);
         summary.streams = (summary.streams || 0) + projectStreams;
         summary.changes.push({
           type: 'ongoing_revenue',
@@ -604,6 +616,130 @@ export class GameEngine {
           amount: ongoingRevenue
         });
       }
+    }
+  }
+
+  /**
+   * Processes newly released projects - projects that became "released" this month
+   * This handles the initial song release revenue calculations using balance.json configuration
+   */
+  private async processNewlyReleasedProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    console.log('[NEWLY RELEASED] === Processing Newly Released Projects ===');
+    console.log(`[NEWLY RELEASED] Current month: ${this.gameState.currentMonth}`);
+    
+    try {
+      // Check if we have a method to get newly released projects
+      if (!this.gameData.getNewlyReleasedProjects && !this.gameData.getProjectsByStage) {
+        console.log('[NEWLY RELEASED] No method available to get newly released projects, checking gameState flags');
+        
+        // Check if there are released projects in gameState flags that need processing
+        const releasedProjects = (this.gameState.flags as any)?.['released_projects'] || [];
+        console.log(`[NEWLY RELEASED] Found ${releasedProjects.length} released projects in flags`);
+        
+        for (const project of releasedProjects) {
+          await this.processProjectSongReleases(project, summary, dbTransaction);
+        }
+        return;
+      }
+      
+      // Get all projects in "released" stage
+      let releasedProjects: any[] = [];
+      if (this.gameData.getProjectsByStage) {
+        releasedProjects = await this.gameData.getProjectsByStage(this.gameState.id || '', 'released', dbTransaction);
+      } else if (this.gameData.getNewlyReleasedProjects) {
+        releasedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id || '', this.gameState.currentMonth || 1, dbTransaction);
+      }
+      
+      console.log(`[NEWLY RELEASED] Found ${releasedProjects.length} released projects`);
+      
+      if (releasedProjects.length === 0) {
+        console.log('[NEWLY RELEASED] No released projects found, skipping song release processing');
+        return;
+      }
+      
+      // Process song releases for each project
+      for (const project of releasedProjects) {
+        await this.processProjectSongReleases(project, summary, dbTransaction);
+      }
+      
+    } catch (error) {
+      console.error('[NEWLY RELEASED] Error processing newly released projects:', error);
+    }
+    
+    console.log('[NEWLY RELEASED] === End Processing ===');
+  }
+
+  /**
+   * Process song releases for a specific project
+   * This ensures all songs from a released project get proper initial revenue using balance.json values
+   */
+  private async processProjectSongReleases(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    console.log(`[PROJECT SONG RELEASE] Processing project "${project.title}" (ID: ${project.id})`);
+    
+    try {
+      // Get songs for this project
+      const projectSongs = await this.gameData.getSongsByProject?.(project.id) || [];
+      console.log(`[PROJECT SONG RELEASE] Found ${projectSongs.length} songs for project`);
+      
+      // Filter to only unreleased songs
+      const unreleasedSongs = projectSongs.filter((song: any) => !song.isReleased);
+      console.log(`[PROJECT SONG RELEASE] ${unreleasedSongs.length} songs need to be released`);
+      
+      if (unreleasedSongs.length === 0) {
+        console.log(`[PROJECT SONG RELEASE] All songs already released for project "${project.title}"`);
+        return;
+      }
+      
+      // Process each unreleased song
+      for (const song of unreleasedSongs) {
+        console.log(`[PROJECT SONG RELEASE] Releasing song "${song.title}" (quality: ${song.quality})`);
+        
+        // Calculate initial streams and revenue using balance.json configuration
+        const initialStreams = this.calculateStreamingOutcome(
+          song.quality || 40,
+          this.gameState.playlistAccess || 'none',
+          this.gameState.reputation || 5,
+          0
+        );
+        
+        // Get revenue per stream from balance.json configuration
+        const streamingConfig = this.gameData.getStreamingConfigSync();
+        const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
+        const initialRevenue = Math.floor(initialStreams * revenuePerStream);
+        
+        console.log(`[PROJECT SONG RELEASE] Song "${song.title}": ${initialStreams} streams, $${initialRevenue} revenue (rate: $${revenuePerStream}/stream)`);
+        
+        // Update song in database
+        if (this.gameData.updateSong) {
+          const songUpdate = {
+            isReleased: true,
+            initialStreams: initialStreams,
+            totalStreams: initialStreams,
+            totalRevenue: initialRevenue,
+            lastMonthRevenue: initialRevenue,
+            monthlyStreams: initialStreams,
+            releaseMonth: this.gameState.currentMonth,
+            updatedAt: new Date()
+          };
+          
+          await this.gameData.updateSong(song.id, songUpdate, dbTransaction);
+          console.log(`[PROJECT SONG RELEASE] ✅ Updated song "${song.title}" in database`);
+        }
+        
+        // Add to monthly summary
+        summary.revenue += initialRevenue;
+        summary.streams = (summary.streams || 0) + initialStreams;
+        summary.changes.push({
+          type: 'revenue',
+          description: `🎵 "${song.title}" released - ${initialStreams.toLocaleString()} streams`,
+          amount: initialRevenue
+        });
+        
+        console.log(`[PROJECT SONG RELEASE] Added to summary: $${initialRevenue} revenue, ${initialStreams} streams`);
+      }
+      
+    } catch (error) {
+      console.error(`[PROJECT SONG RELEASE] Error processing project "${project.title}":`, error);
     }
   }
 
@@ -1340,8 +1476,9 @@ export class GameEngine {
       0 // For now, marketing spend is at project level; future enhancement for per-song marketing
     );
     
-    // Calculate initial revenue from streams
-    const revenuePerStream = 0.003; // From balance.json ongoing_streams.revenue_per_stream
+    // Calculate initial revenue from streams using balance.json configuration
+    const streamingConfig = this.gameData.getStreamingConfigSync();
+    const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
     const initialRevenue = initialStreams * revenuePerStream;
     
     console.log(`[SONG RELEASE] Calculated for "${song.title}": ${initialStreams} streams, $${Math.round(initialRevenue)} revenue`);
@@ -1370,7 +1507,7 @@ export class GameEngine {
         console.log(`[SONG RELEASE] Update result:`, updateResult);
       } catch (error) {
         console.error(`[SONG RELEASE] ❌ Failed to update song "${song.title}" in database:`, error);
-        console.error(`[SONG RELEASE] Error stack:`, error.stack);
+        console.error(`[SONG RELEASE] Error stack:`, (error as Error).stack);
         throw error;
       }
     } else {
@@ -1473,7 +1610,7 @@ export class GameEngine {
         console.log(`[PROJECT SONG RELEASE] 📊 Updated totals - Streams: ${totalStreamsDistributed}, Revenue: $${totalRevenueGenerated}`);
       } catch (error) {
         console.error(`[PROJECT SONG RELEASE] ❌ Failed to release song "${song.title}":`, error);
-        console.error(`[PROJECT SONG RELEASE] Error details:`, error.stack);
+        console.error(`[PROJECT SONG RELEASE] Error details:`, (error as Error).stack);
         // Continue with other songs rather than failing entire project
       }
     }
@@ -2372,9 +2509,11 @@ export class GameEngine {
         
         console.log(`[DEBUG] Calculated ${streams} streams for project ${project.name}`);
         
-        // Revenue = streams × revenue per stream
-        revenue = streams * 0.003;
-        console.log(`[DEBUG] Revenue calculation: ${streams} * 0.003 = ${revenue}`);
+        // Revenue = streams × revenue per stream using balance.json configuration
+        const streamingConfig = this.gameData.getStreamingConfigSync();
+        const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
+        revenue = streams * revenuePerStream;
+        console.log(`[DEBUG] Revenue calculation: ${streams} * ${revenuePerStream} = ${revenue}`);
         
         // Calculate press coverage
         pressPickups = this.calculatePressPickups(

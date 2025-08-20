@@ -896,17 +896,6 @@ export class ServerGameData {
     }
   }
 
-  async updateSong(songId: string, songUpdates: any) {
-    console.log('[ServerGameData] updateSong called for:', songId, 'with updates:', Object.keys(songUpdates));
-    try {
-      const result = await storage.updateSong(songId, songUpdates);
-      console.log('[ServerGameData] updateSong completed');
-      return result;
-    } catch (error) {
-      console.error('[ServerGameData] updateSong error:', error);
-      throw error;
-    }
-  }
 
   async getSongsByProject(projectId: string) {
     console.log('[ServerGameData] getSongsByProject called for project:', projectId);
@@ -947,6 +936,65 @@ export class ServerGameData {
       }
     } catch (error) {
       console.error('[ServerGameData] updateProject error:', error);
+      throw error;
+    }
+  }
+
+  async getProjectsByStage(gameId: string, stage: string, dbConnection: any = null): Promise<any[]> {
+    console.log(`[ServerGameData] Getting projects by stage: ${stage} for game: ${gameId}`);
+    try {
+      const dbContext = dbConnection || db;
+      const stageProjects = await dbContext.select()
+        .from(projects)
+        .where(and(eq(projects.gameId, gameId), eq(projects.stage, stage)));
+      
+      console.log(`[ServerGameData] Found ${stageProjects.length} projects in ${stage} stage`);
+      return stageProjects;
+    } catch (error) {
+      console.error('[ServerGameData] getProjectsByStage error:', error);
+      throw error;
+    }
+  }
+
+  async getNewlyReleasedProjects(gameId: string, currentMonth: number, dbConnection: any = null): Promise<any[]> {
+    console.log(`[ServerGameData] Getting newly released projects for game: ${gameId}, month: ${currentMonth}`);
+    try {
+      const dbContext = dbConnection || db;
+      
+      // Get all projects in "released" stage and check metadata for release month
+      const releasedProjects = await dbContext.select()
+        .from(projects)
+        .where(and(eq(projects.gameId, gameId), eq(projects.stage, 'released')));
+      
+      // Filter to only projects that were released this month
+      // Projects track their release month in metadata
+      const newlyReleased = releasedProjects.filter((project: any) => {
+        const metadata = project.metadata as any;
+        const releaseMonth = metadata?.releaseMonth || metadata?.release_month;
+        return releaseMonth === currentMonth;
+      });
+      
+      console.log(`[ServerGameData] Found ${newlyReleased.length} newly released projects for month ${currentMonth}`);
+      return newlyReleased;
+    } catch (error) {
+      console.error('[ServerGameData] getNewlyReleasedProjects error:', error);
+      throw error;
+    }
+  }
+
+  async updateSong(songId: string, updates: any, dbConnection: any = null) {
+    console.log('[ServerGameData] updateSong called with:', { songId, updates });
+    try {
+      const dbContext = dbConnection || db;
+      const [updatedSong] = await dbContext.update(songs)
+        .set(updates)
+        .where(eq(songs.id, songId))
+        .returning();
+      
+      console.log('[ServerGameData] Song updated successfully');
+      return updatedSong;
+    } catch (error) {
+      console.error('[ServerGameData] updateSong error:', error);
       throw error;
     }
   }
