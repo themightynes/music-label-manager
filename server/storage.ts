@@ -49,6 +49,7 @@ export interface IStorage {
   createSong(song: InsertSong): Promise<Song>;
   updateSong(id: string, song: Partial<InsertSong>): Promise<Song>;
   getReleasedSongs(gameId: string): Promise<Song[]>;
+  getSongsByProject(projectId: string): Promise<Song[]>;
   updateSongs(songUpdates: { songId: string; [key: string]: any }[]): Promise<void>;
 
   // Releases
@@ -302,6 +303,12 @@ export class DatabaseStorage implements IStorage {
         eq(songs.isReleased, true)
       ))
       .orderBy(desc(songs.releaseMonth));
+  }
+
+  async getSongsByProject(projectId: string): Promise<Song[]> {
+    return await db.select().from(songs)
+      .where(sql`metadata->>'projectId' = ${projectId}`)
+      .orderBy(songs.createdAt);
   }
 
   async updateSongs(songUpdates: { songId: string; [key: string]: any }[]): Promise<void> {

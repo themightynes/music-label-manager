@@ -776,6 +776,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           metadata: p.metadata || {}
         }));
         
+        // DEBUGGING: Log current state before processing
+        console.log('='.repeat(80));
+        console.log('[ADVANCE MONTH] Starting month advancement processing');
+        console.log('[ADVANCE MONTH] Current month:', gameStateForEngine.currentMonth);
+        console.log('='.repeat(80));
+
         // Create GameEngine instance for this game state
         let gameEngine: GameEngine;
         try {
@@ -788,7 +794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Use GameEngine for business logic - convert selectedActions to proper format
-        let monthResult;
+        let monthResult: Awaited<ReturnType<GameEngine['advanceMonth']>> | undefined;
         try {
           console.log('[DEBUG] Processing month advancement...');
           const formattedActions = selectedActions.map(action => ({
@@ -799,8 +805,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
           console.log('[DEBUG] Formatted actions:', JSON.stringify(formattedActions, null, 2));
           
-          // CRITICAL FIX: Advance projects BEFORE GameEngine processes them for song generation
-          console.log('[DEBUG] === ADVANCING PROJECTS BEFORE GAME ENGINE ===');
+          // PRE-PROCESSING: Only handle basic planning -> production advancement
+          console.log('[DEBUG] === PROJECT PRE-ADVANCEMENT (BASIC) ===');
           const currentMonth = (gameStateForEngine.currentMonth || 1) + 1; // Next month after advancement
           const projectsToAdvance = await tx
             .select()
@@ -810,73 +816,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const project of projectsToAdvance) {
             const stages = ['planning', 'production', 'marketing', 'released'];
             const currentStageIndex = stages.indexOf(project.stage || 'planning');
+            const monthsElapsed = currentMonth - (project.startMonth || 1);
             
-            // Advance project stage if not yet completed and due date passed
-            if (currentStageIndex < stages.length - 1 && 
-                currentMonth >= (project.startMonth || 1) + 1) {
-              
-              let newStageIndex = currentStageIndex;
-              
-              // Advance stage based on months elapsed AND song creation progress
-              const monthsElapsed = currentMonth - (project.startMonth || 1);
-              const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
-              const songCount = project.songCount || 1;
-              const songsCreated = project.songsCreated || 0;
-              const allSongsCreated = songsCreated >= songCount;
-              
-              console.log(`[DEBUG] Project ${project.title} pre-advancement check:`, {
-                currentStageIndex,
-                monthsElapsed,
-                isRecordingProject,
-                songCount,
-                songsCreated,
-                allSongsCreated,
-                currentStage: stages[currentStageIndex]
-              });
-              
-              if (monthsElapsed >= 1 && currentStageIndex === 0) { // planning -> production
-                newStageIndex = 1;
-                console.log(`[DEBUG] Advancing ${project.title} to production for song generation`);
-              } else if (currentStageIndex === 1) { // production -> marketing
-                // For recording projects: DON'T advance out of production until songs are done
-                // For non-recording projects: advance after 2 months
-                if (!isRecordingProject) {
-                  if (monthsElapsed >= 2) newStageIndex = 2;
-                } else {
-                  // Keep recording projects in production so GameEngine can generate songs
-                  // Only advance when all songs are created AND minimum time elapsed
-                  if (allSongsCreated && monthsElapsed >= 2) {
-                    newStageIndex = 2;
-                    console.log(`[DEBUG] Recording project ${project.title} completed all songs, advancing to marketing`);
-                  } else if (monthsElapsed >= 4) { // Max 4 months in production
-                    newStageIndex = 2;
-                    console.log(`[DEBUG] Forcing ${project.title} to marketing after 4 months (${songsCreated}/${songCount} songs created)`);
-                  } else {
-                    console.log(`[DEBUG] Keeping ${project.title} in production for song generation (${songsCreated}/${songCount} songs, ${monthsElapsed} months)`);
-                  }
-                }
-              } else if (monthsElapsed >= 3 && currentStageIndex === 2) { // marketing -> released
-                newStageIndex = 3;
-              }
-              
-              if (newStageIndex > currentStageIndex) {
-                console.log(`[DEBUG] Pre-advancement: ${project.title} ${stages[currentStageIndex]} -> ${stages[newStageIndex]}`);
-                await tx
-                  .update(projects)
-                  .set({ 
-                    stage: stages[newStageIndex],
-                    quality: Math.min(100, (project.quality || 0) + 25)
-                  })
-                  .where(eq(projects.id, project.id));
-              }
+            // Only handle planning -> production (doesn't depend on songsCreated)
+            if (currentStageIndex === 0 && monthsElapsed >= 1) {
+              console.log(`[DEBUG] Advancing ${project.title} from planning to production`);
+              await tx
+                .update(projects)
+                .set({ 
+                  stage: 'production',
+                  quality: Math.min(100, (project.quality || 0) + 25)
+                })
+                .where(eq(projects.id, project.id));
             }
           }
-          console.log('[DEBUG] === PROJECT PRE-ADVANCEMENT COMPLETE ===');
+          console.log('[DEBUG] === PROJECT PRE-ADVANCEMENT (BASIC) COMPLETE ===');
+          
+          // Song release processing moved to post-GameEngine advancement (below)
+          console.log('[DEBUG] === SONG RELEASE PROCESSING MOVED TO POST-ENGINE ===');
           
           // Now execute GameEngine with the updated project states within the same transaction
           console.log('[DEBUG] Starting GameEngine processing...');
           monthResult = await gameEngine.advanceMonth(formattedActions, tx); // Pass transaction context
           console.log('[DEBUG] Month advancement completed successfully');
+          
+          // CRITICAL FIX: Re-read projects after GameEngine to get updated songsCreated values
+          console.log('[DEBUG] === POST-GAMEENGINE PROJECT ADVANCEMENT ===');
+          const updatedProjectsAfterEngine = await tx
+            .select()
+            .from(projects)
+            .where(eq(projects.gameId, gameId));
+
+          for (const project of updatedProjectsAfterEngine) {
+            const currentMonth = monthResult.gameState.currentMonth || 1;
+            const stages = ['planning', 'production', 'marketing', 'released'];
+            const currentStageIndex = stages.indexOf(project.stage || 'planning');
+            const monthsElapsed = currentMonth - (project.startMonth || 1);
+            const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
+            const songCount = project.songCount || 1;
+            const songsCreated = project.songsCreated || 0; // NOW gets updated value from GameEngine
+            const allSongsCreated = songsCreated >= songCount;
+            
+            console.log(`[DEBUG] Post-engine advancement check for ${project.title}:`, {
+              projectId: project.id,
+              currentStageIndex,
+              monthsElapsed,
+              isRecordingProject,
+              songCount,
+              songsCreated,
+              allSongsCreated,
+              currentStage: stages[currentStageIndex],
+              artistId: project.artistId,
+              gameEngineExists: !!gameEngine
+            });
+            
+            let newStageIndex = currentStageIndex;
+            
+            // Use the UPDATED songsCreated value for advancement logic
+            if (currentStageIndex === 1) { // production -> marketing
+              if (!isRecordingProject) {
+                if (monthsElapsed >= 2) newStageIndex = 2;
+              } else {
+                // Now using CORRECT songsCreated value after GameEngine updates
+                if (allSongsCreated && monthsElapsed >= 2) {
+                  newStageIndex = 2;
+                  console.log(`[DEBUG] Recording project ${project.title} completed all songs (${songsCreated}/${songCount}), advancing to marketing`);
+                } else if (monthsElapsed >= 4) { // Max 4 months in production
+                  newStageIndex = 2;
+                  console.log(`[DEBUG] Forcing ${project.title} to marketing after 4 months (${songsCreated}/${songCount} songs created)`);
+                } else {
+                  console.log(`[DEBUG] Keeping ${project.title} in production for song generation (${songsCreated}/${songCount} songs, ${monthsElapsed} months)`);
+                }
+              }
+            } else if (monthsElapsed >= 3 && currentStageIndex === 2) { // marketing -> released
+              newStageIndex = 3;
+            }
+            
+            if (newStageIndex > currentStageIndex) {
+              console.log(`[DEBUG] Post-engine advancement: ${project.title} ${stages[currentStageIndex]} -> ${stages[newStageIndex]}`);
+              await tx
+                .update(projects)
+                .set({ 
+                  stage: stages[newStageIndex],
+                  quality: Math.min(100, (project.quality || 0) + 25)
+                })
+                .where(eq(projects.id, project.id));
+              
+              // If advancing to released stage, process song releases
+              console.log(`[SONG RELEASE CONDITIONS] Checking release conditions:`, {
+                projectId: project.id,
+                projectTitle: project.title,
+                newStageIndex,
+                isAdvancingToReleased: newStageIndex === 3,
+                hasArtistId: !!project.artistId,
+                artistId: project.artistId,
+                hasGameEngine: !!gameEngine,
+                allConditionsMet: newStageIndex === 3 && project.artistId && gameEngine
+              });
+              
+              if (newStageIndex === 3 && project.artistId && gameEngine) {
+                console.log(`[SONG RELEASE POST] ✅ ALL CONDITIONS MET - Processing songs for newly released project: ${project.title}`);
+                
+                // First, let's check how many songs we expect to find
+                console.log(`[SONG RELEASE POST] Checking for songs with projectId: ${project.id}`);
+                const testSongs = await tx.select().from(songs)
+                  .where(sql`metadata->>'projectId' = ${project.id}`);
+                console.log(`[SONG RELEASE POST] Found ${testSongs.length} songs for project ${project.id}:`, 
+                  testSongs.map(s => ({ id: s.id, title: s.title, isReleased: s.isReleased })));
+                
+                try {
+                  const releaseResult = await gameEngine.processProjectSongsRelease(project, 0);
+                  console.log(`[SONG RELEASE POST] ✅ SUCCESS - Released ${releaseResult.totalSongsReleased} songs from "${project.title}"`);
+                  console.log(`[SONG RELEASE POST] Release details:`, releaseResult);
+                  
+                  // Verify the updates worked
+                  const verifyUpdates = await tx.select().from(songs)
+                    .where(sql`metadata->>'projectId' = ${project.id}`);
+                  console.log(`[SONG RELEASE POST] Verification - Updated song states:`, 
+                    verifyUpdates.map(s => ({ id: s.id, title: s.title, isReleased: s.isReleased, initialStreams: s.initialStreams })));
+                    
+                } catch (error) {
+                  console.error(`[SONG RELEASE POST] ❌ FAILED to process songs for project ${project.title}:`, error);
+                  console.error(`[SONG RELEASE POST] Error stack:`, error.stack);
+                }
+              } else {
+                console.log(`[SONG RELEASE POST] ❌ CONDITIONS NOT MET - Skipping song release processing`);
+              }
+            }
+          }
+          console.log('[DEBUG] === POST-GAMEENGINE PROJECT ADVANCEMENT COMPLETE ===');
         } catch (engineError) {
           console.error('[ERROR] GameEngine processing failed:', engineError);
           throw new Error(`Month advancement failed: ${engineError instanceof Error ? engineError.message : 'Unknown error'}`);
@@ -889,6 +957,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Destructure the result from the first transaction
       const { gameStateForEngine, monthResult } = result;
+      
+      // Ensure monthResult is defined (it should always be due to the throw in catch block)
+      if (!monthResult) {
+        throw new Error('Month advancement failed: No result returned from GameEngine');
+      }
         
       // Now continue with the rest of the transaction for final updates
       const finalResult = await db.transaction(async (tx) => {
@@ -931,61 +1004,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
 
-        // POST-PROCESSING: Handle final stage transitions and song releases after GameEngine processing
-        console.log('[DEBUG] === POST-PROCESSING PROJECTS AFTER GAME ENGINE ===');
-        const currentProjectsAfter = await tx
-          .select()
+        // POST-PROCESSING: Handle song releases for projects that are released but have unreleased songs
+        console.log('[DEBUG] === POST-PROCESSING: CHECKING FOR UNRELEASED SONGS IN RELEASED PROJECTS ===');
+        
+        // Collect song release changes for the summary
+        const songReleaseChanges: Array<{type: string, description: string, amount: number}> = [];
+        let totalSongReleaseRevenue = 0;
+        
+        // Find released projects with unreleased songs
+        const releasedProjectsWithUnreleasedSongs = await tx
+          .select({
+            project: projects,
+            songs: sql`array_agg(
+              json_build_object(
+                'id', ${songs.id},
+                'title', ${songs.title},
+                'quality', ${songs.quality},
+                'isReleased', ${songs.isReleased}
+              ) ORDER BY ${songs.createdAt}
+            )`.as('songs')
+          })
           .from(projects)
-          .where(eq(projects.gameId, gameId));
+          .leftJoin(songs, and(
+            eq(songs.gameId, projects.gameId),
+            sql`${songs.metadata}->>'projectId' = ${projects.id}::text`
+          ))
+          .where(and(
+            eq(projects.gameId, gameId),
+            eq(projects.stage, 'released')
+          ))
+          .groupBy(projects.id)
+          .having(sql`COUNT(CASE WHEN ${songs.isReleased} = false THEN 1 END) > 0`);
 
-        for (const project of currentProjectsAfter) {
-          const currentMonth = monthResult.gameState.currentMonth || 1;
-          const stages = ['planning', 'production', 'marketing', 'released'];
-          const currentStageIndex = stages.indexOf(project.stage || 'planning');
-          const monthsElapsed = currentMonth - (project.startMonth || 1);
+        console.log(`[DEBUG] Found ${releasedProjectsWithUnreleasedSongs.length} released projects with unreleased songs`);
+        
+        for (const projectData of releasedProjectsWithUnreleasedSongs) {
+          const project = projectData.project;
+          const unreleasedSongs = (projectData.songs || []).filter((s: any) => !s.isReleased);
           
-          // Only handle final advancement to 'released' stage and song release processing
-          if (currentStageIndex === 2 && monthsElapsed >= 3) { // marketing -> released
-            console.log(`[DEBUG] Post-processing: ${project.title} marketing -> released`);
-            
-            // Update project to released stage
-            await tx
-              .update(projects)
-              .set({ 
-                stage: 'released',
-                quality: Math.min(100, (project.quality || 0) + 25)
-              })
-              .where(eq(projects.id, project.id));
-            
-            // PHASE 1 FIX: Mark songs from this specific project as released
-            const { songs } = await import('../shared/schema');
-            
-            // Update songs to be released
-            if (project.artistId) {
-              // For Phase 1, mark all recorded but unreleased songs for this artist as released
-              // This ensures any songs from recording projects get marked as released
-              const updatedSongs = await tx
-                .update(songs)
-                .set({ isReleased: true })
-                .where(and(
-                  eq(songs.gameId, gameId),
-                  eq(songs.artistId, project.artistId),
-                  eq(songs.isRecorded, true),
-                  eq(songs.isReleased, false)
-                ))
-                .returning({ id: songs.id, title: songs.title });
+          console.log(`[DEBUG] Processing song releases for project "${project.title}" (${unreleasedSongs.length} unreleased songs)`);
+          
+          for (const song of unreleasedSongs) {
+            try {
+              console.log(`[DEBUG] Releasing song "${song.title}" (quality: ${song.quality})`);
               
-              console.log(`[DEBUG] Marked ${updatedSongs.length} songs as released for artist when project ${project.title} completed:`, 
-                updatedSongs.map(s => s.title));
-
-              // SIMPLIFIED: Skip complex revenue calculation for now - focus on song generation
-              console.log(`[DEBUG] Project ${project.title} released with ${updatedSongs.length} songs`);
-            } else {
-              console.log(`[DEBUG] Project ${project.title} has no artistId, skipping song release`);
+              // Calculate initial streams for this song
+              const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+              const initialStreams = gameEngine.calculateStreamingOutcome(
+                song.quality || 40,
+                gameStateForEngine.playlistAccess || 'none',
+                gameStateForEngine.reputation || 5,
+                0
+              );
+              
+              const initialRevenue = Math.floor(initialStreams * 0.003); // $0.003 per stream
+              
+              console.log(`[DEBUG] Song "${song.title}" calculated streams: ${initialStreams}, revenue: ${initialRevenue}`);
+              
+              // Update the song as released
+              await tx
+                .update(songs)
+                .set({
+                  isReleased: true,
+                  initialStreams: initialStreams,
+                  totalStreams: initialStreams,
+                  totalRevenue: initialRevenue,
+                  lastMonthRevenue: initialRevenue,
+                  monthlyStreams: initialStreams,
+                  releaseMonth: gameStateForEngine.currentMonth,
+                  updatedAt: new Date()
+                })
+                .where(eq(songs.id, song.id));
+              
+              console.log(`[DEBUG] ✅ Successfully released song "${song.title}"`);
+              
+              // Collect song release change for summary
+              songReleaseChanges.push({
+                type: 'revenue',
+                description: `🎵 "${song.title}" released - ${initialStreams.toLocaleString()} streams`,
+                amount: initialRevenue
+              });
+              
+              totalSongReleaseRevenue += initialRevenue;
+              
+            } catch (songError) {
+              console.error(`[ERROR] Failed to release song "${song.title}":`, songError);
             }
           }
         }
-        console.log('[DEBUG] === POST-PROCESSING COMPLETE ===');
+        
+        // Store song release changes to add to summary later
+        (tx as any)._songReleaseChanges = songReleaseChanges;
+        (tx as any)._totalSongReleaseRevenue = totalSongReleaseRevenue;
         
         // Update released projects with ongoing revenue metadata
         try {
@@ -1020,10 +1130,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error(`Released projects update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
         
+          // Add comprehensive debugging information visible in browser
+          console.log('[DEBUG] Preparing response with debug information...');
+          
+          // Get final project states for debugging
+          const finalProjects = await tx
+            .select()
+            .from(projects)
+            .where(eq(projects.gameId, gameId));
+          
+          // Get final song states for debugging  
+          const finalSongs = await tx
+            .select()
+            .from(songs)
+            .where(eq(songs.gameId, gameId));
+          
+          const debugInfo = {
+            serverMessage: "Server-side processing completed",
+            processingSteps: {
+              totalProjectsCount: finalProjects?.length || 0,
+              gameEngineExecuted: !!monthResult,
+              monthResultSummary: !!monthResult.summary,
+              postEngineProjectCount: finalProjects?.length || 0
+            },
+            projectStates: {
+              final: finalProjects?.map(p => ({
+                id: p.id,
+                title: p.title,
+                stage: p.stage,
+                songsCreated: p.songsCreated
+              })) || []
+            },
+            songStates: {
+              total: finalSongs?.length || 0,
+              released: finalSongs?.filter(s => s.isReleased).length || 0,
+              ready: finalSongs?.filter(s => s.isRecorded && !s.isReleased).length || 0,
+              songDetails: finalSongs?.map(s => ({
+                id: s.id,
+                title: s.title,
+                isRecorded: s.isRecorded,
+                isReleased: s.isReleased,
+                initialStreams: s.initialStreams,
+                projectId: (s.metadata as any)?.projectId
+              })) || []
+            },
+            timestamp: new Date().toISOString()
+          };
+          console.log('[DEBUG] Comprehensive debug info:', JSON.stringify(debugInfo, null, 2));
+
+          // Add song release changes to the monthly summary
+          const storedSongReleaseChanges = (tx as any)._songReleaseChanges || [];
+          const storedTotalSongReleaseRevenue = (tx as any)._totalSongReleaseRevenue || 0;
+          
+          if (storedSongReleaseChanges.length > 0) {
+            console.log(`[DEBUG] Adding ${storedSongReleaseChanges.length} song release changes to monthly summary`);
+            monthResult.summary.changes.push(...storedSongReleaseChanges);
+            monthResult.summary.revenue = (monthResult.summary.revenue || 0) + storedTotalSongReleaseRevenue;
+          }
+
           return {
             gameState: updatedGameState,
             summary: monthResult.summary,
-            campaignResults: monthResult.campaignResults
+            campaignResults: monthResult.campaignResults,
+            debug: debugInfo
           };
         });
       

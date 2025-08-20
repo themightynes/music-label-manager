@@ -228,6 +228,23 @@ export const useGameStore = create<GameStore>()(
           const response = await apiRequest('POST', '/api/advance-month', advanceRequest);
           const result = await response.json();
           
+          // Log the debugging information from our server response
+          console.log('=== ADVANCE MONTH DEBUG INFO ===');
+          console.log('Server response result:', result);
+          if (result.debugInfo) {
+            console.log('Server debug info:', result.debugInfo);
+            if (result.debugInfo.processingSteps) {
+              console.log('Processing steps:', result.debugInfo.processingSteps);
+            }
+            if (result.debugInfo.projectStates) {
+              console.log('Project states:', result.debugInfo.projectStates);
+            }
+            if (result.debugInfo.songStates) {
+              console.log('Song states:', result.debugInfo.songStates);
+            }
+          }
+          console.log('===============================');
+          
           // Reload game data to get updated projects
           const gameResponse = await apiRequest('GET', `/api/game/${gameState.id}`);
           const gameData = await gameResponse.json();

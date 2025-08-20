@@ -96,7 +96,7 @@ export class GameEngine {
 
     // Process each action
     for (const action of monthlyActions) {
-      await this.processAction(action, summary);
+      await this.processAction(action, summary, dbTransaction);
     }
 
     // Process ongoing revenue from released projects
@@ -140,6 +140,27 @@ export class GameEngine {
     // Check for campaign completion
     const campaignResults = await this.checkCampaignCompletion(summary);
     
+    // Save monthly summary to gameState.monthlyStats for UI display
+    const currentMonth = this.gameState.currentMonth || 1;
+    const monthKey = `month${currentMonth - 1}`;  // UI expects month0, month1, etc.
+    this.gameState.monthlyStats = this.gameState.monthlyStats || {};
+    this.gameState.monthlyStats[monthKey] = {
+      revenue: summary.revenue,
+      streams: summary.streams || 0,
+      expenses: summary.expenses,
+      pressMentions: 0, // TODO: Add press mentions tracking
+      reputationChange: Object.values(summary.reputationChanges).reduce((sum, change) => sum + change, 0),
+      changes: summary.changes,
+      events: summary.events
+    };
+    
+    console.log(`[MONTHLY STATS] Saved month ${currentMonth - 1} stats:`, {
+      revenue: summary.revenue,
+      streams: summary.streams || 0,
+      expenses: summary.expenses,
+      monthKey
+    });
+    
     return {
       gameState: this.gameState,
       summary,
@@ -150,7 +171,7 @@ export class GameEngine {
   /**
    * Processes a single player action
    */
-  private async processAction(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+  private async processAction(action: GameEngineAction, summary: MonthSummary, dbTransaction?: any): Promise<void> {
     switch (action.actionType) {
       case 'role_meeting':
         await this.processRoleMeeting(action, summary);
@@ -454,37 +475,38 @@ export class GameEngine {
 
   /**
    * Processes ongoing projects (recordings, tours, etc)
+   * NOTE: This function is currently unused but kept for potential future use
    */
-  private async processOngoingProjects(summary: MonthSummary): Promise<void> {
-    // Projects are now managed via flags since they're not part of database gameState
-    const flags = this.gameState.flags || {};
-    const projects = (flags as any)['active_projects'] || [];
-    for (const project of projects) {
-      if (project.status === 'in_progress') {
-        project.monthsRemaining = (project.monthsRemaining || 0) - 1;
-        
-        if (project.monthsRemaining <= 0) {
-          project.status = 'completed';
-          
-          // Calculate project outcomes based on type
-          const outcomes = await this.calculateProjectOutcomes(project, summary);
-          
-          summary.changes.push({
-            type: 'project_complete',
-            description: `Completed ${project.type}: ${project.name} - ${outcomes.description}`,
-            projectId: project.id,
-            amount: outcomes.revenue
-          });
-        }
-      }
-    }
-    
-    // Process ongoing revenue from released projects
-    await this.processReleasedProjects(summary);
-    
-    // Process song generation for recording projects
-    await this.processRecordingProjects(summary, dbTransaction);
-  }
+  // private async processOngoingProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  //   // Projects are now managed via flags since they're not part of database gameState
+  //   const flags = this.gameState.flags || {};
+  //   const projects = (flags as any)['active_projects'] || [];
+  //   for (const project of projects) {
+  //     if (project.status === 'in_progress') {
+  //       project.monthsRemaining = (project.monthsRemaining || 0) - 1;
+  //       
+  //       if (project.monthsRemaining <= 0) {
+  //         project.status = 'completed';
+  //         
+  //         // Calculate project outcomes based on type
+  //         const outcomes = await this.calculateProjectOutcomes(project, summary);
+  //         
+  //         summary.changes.push({
+  //           type: 'project_complete',
+  //           description: `Completed ${project.type}: ${project.name} - ${outcomes.description}`,
+  //           projectId: project.id,
+  //           amount: outcomes.revenue
+  //         });
+  //       }
+  //     }
+  //   }
+  //   
+  //   // Process ongoing revenue from released projects
+  //   await this.processReleasedProjects(summary);
+  //   
+  //   // Process song generation for recording projects
+  //   await this.processRecordingProjects(summary, dbTransaction);
+  // }
 
   /**
    * Processes ongoing revenue from individual released songs (streaming decay)
@@ -542,10 +564,13 @@ export class GameEngine {
         await this.gameData.updateSongs(songUpdates);
       }
       
-      // Add total ongoing revenue to summary
+      // Add total ongoing revenue and streams to summary
       if (totalOngoingRevenue > 0) {
         summary.revenue += totalOngoingRevenue;
-        console.log(`[INDIVIDUAL SONG DECAY] Total ongoing revenue: $${totalOngoingRevenue}`);
+        // Calculate total streams from revenue (reverse calculation)
+        const totalStreams = Math.round(totalOngoingRevenue / 0.003); // revenue_per_stream = 0.003
+        summary.streams = (summary.streams || 0) + totalStreams;
+        console.log(`[INDIVIDUAL SONG DECAY] Total ongoing revenue: $${totalOngoingRevenue}, streams: ${totalStreams}`);
       }
       
     } catch (error) {
@@ -570,6 +595,9 @@ export class GameEngine {
       
       if (ongoingRevenue > 0) {
         summary.revenue += ongoingRevenue;
+        // Calculate streams from revenue for legacy projects
+        const projectStreams = Math.round(ongoingRevenue / 0.003);
+        summary.streams = (summary.streams || 0) + projectStreams;
         summary.changes.push({
           type: 'ongoing_revenue',
           description: `Ongoing streams: ${project.title}`,
@@ -593,7 +621,7 @@ export class GameEngine {
       const recordingProjects = await this.gameData.getActiveRecordingProjects?.(this.gameState.id || '', dbTransaction);
       
       console.log(`[SONG GENERATION] Found ${recordingProjects?.length || 0} recording projects`);
-      console.log('[SONG GENERATION] Projects:', recordingProjects?.map(p => ({
+      console.log('[SONG GENERATION] Projects:', recordingProjects?.map((p: any) => ({
         id: p.id,
         title: p.title,
         type: p.type,
@@ -611,7 +639,7 @@ export class GameEngine {
         console.log(`[SONG GENERATION] Checking project: ${project.title} (${project.type})`);
         if (this.shouldGenerateProjectSongs(project)) {
           console.log(`[SONG GENERATION] Project ${project.title} should generate songs`);
-          await this.generateMonthlyProjectSongs(project, summary);
+          await this.generateMonthlyProjectSongs(project, summary, dbTransaction);
         } else {
           console.log(`[SONG GENERATION] Project ${project.title} should NOT generate songs - stage: ${project.stage}, songCount: ${project.songCount}, songsCreated: ${project.songsCreated}`);
         }
@@ -642,7 +670,7 @@ export class GameEngine {
   /**
    * Generates songs for a recording project during monthly processing
    */
-  private async generateMonthlyProjectSongs(project: any, summary: MonthSummary): Promise<void> {
+  private async generateMonthlyProjectSongs(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
     console.log(`[SONG GENERATION] Generating songs for project: ${project.title}`);
     console.log(`[SONG GENERATION] Project details:`, {
       id: project.id,
@@ -686,7 +714,7 @@ export class GameEngine {
         if (this.gameData.createSong) {
           console.log(`[SONG GENERATION] Saving song to database via createSong...`);
           try {
-            const savedSong = await this.gameData.createSong(song);
+            const savedSong = await this.gameData.createSong(song, dbTransaction);
             console.log(`[SONG GENERATION] Song saved successfully:`, savedSong.id);
           } catch (songError) {
             console.error(`[SONG GENERATION] Failed to save song:`, songError);
@@ -716,7 +744,7 @@ export class GameEngine {
       if (this.gameData.updateProject) {
         await this.gameData.updateProject(project.id, {
           songsCreated: project.songsCreated
-        });
+        }, dbTransaction);
       }
 
       // Check if project completed all songs
@@ -1277,6 +1305,187 @@ export class GameEngine {
     
     console.log(`[SONG REVENUE CALC] Final revenue for "${song.title}": $${revenue}`);
     return revenue;
+  }
+
+  /**
+   * Processes song release - calculates individual song streams and sets initial values
+   * This is called when a project completes and songs are released
+   */
+  async processSongRelease(song: any, gameState?: any): Promise<{
+    initialStreams: number;
+    initialRevenue: number;
+  }> {
+    const currentGameState = gameState || this.gameState;
+    const currentMonth = currentGameState.currentMonth || 1;
+    
+    console.log(`[SONG RELEASE] 🎯 ENTERING processSongRelease for song: "${song.title}"`);
+    console.log(`[SONG RELEASE] Song details:`, {
+      id: song.id,
+      title: song.title,
+      quality: song.quality,
+      isReleased: song.isReleased,
+      initialStreams: song.initialStreams
+    });
+    console.log(`[SONG RELEASE] Game state:`, {
+      currentMonth,
+      reputation: currentGameState.reputation,
+      playlistAccess: currentGameState.playlistAccess
+    });
+    
+    // Calculate initial streams using individual song quality (not project quality)
+    const initialStreams = this.calculateStreamingOutcome(
+      song.quality || 40,
+      currentGameState.playlistAccess || 'none',
+      currentGameState.reputation || 5,
+      0 // For now, marketing spend is at project level; future enhancement for per-song marketing
+    );
+    
+    // Calculate initial revenue from streams
+    const revenuePerStream = 0.003; // From balance.json ongoing_streams.revenue_per_stream
+    const initialRevenue = initialStreams * revenuePerStream;
+    
+    console.log(`[SONG RELEASE] Calculated for "${song.title}": ${initialStreams} streams, $${Math.round(initialRevenue)} revenue`);
+    
+    // Prepare song updates
+    const songUpdates = {
+      initialStreams: initialStreams,
+      totalStreams: initialStreams,
+      monthlyStreams: initialStreams,
+      totalRevenue: Math.round(initialRevenue),
+      lastMonthRevenue: Math.round(initialRevenue),
+      releaseMonth: currentMonth,
+      isReleased: true
+    };
+    
+    // Update song in database if gameData method available
+    console.log(`[SONG RELEASE] 💾 Preparing to update song in database`);
+    console.log(`[SONG RELEASE] Song updates to apply:`, songUpdates);
+    console.log(`[SONG RELEASE] updateSong method available:`, !!this.gameData.updateSong);
+    
+    if (this.gameData.updateSong) {
+      try {
+        console.log(`[SONG RELEASE] 🔄 Calling updateSong for song ID: ${song.id}`);
+        const updateResult = await this.gameData.updateSong(song.id, songUpdates);
+        console.log(`[SONG RELEASE] ✅ Successfully updated song "${song.title}" in database`);
+        console.log(`[SONG RELEASE] Update result:`, updateResult);
+      } catch (error) {
+        console.error(`[SONG RELEASE] ❌ Failed to update song "${song.title}" in database:`, error);
+        console.error(`[SONG RELEASE] Error stack:`, error.stack);
+        throw error;
+      }
+    } else {
+      console.warn(`[SONG RELEASE] ⚠️ updateSong method not available - song streams not persisted`);
+    }
+    
+    return {
+      initialStreams: initialStreams,
+      initialRevenue: Math.round(initialRevenue)
+    };
+  }
+
+  /**
+   * Processes all songs from a completed project for release
+   * Distributes streams individually to each song based on their quality
+   */
+  async processProjectSongsRelease(project: any, projectStreams: number): Promise<{
+    totalSongsReleased: number;
+    totalStreamsDistributed: number;
+    totalRevenueGenerated: number;
+    songDetails: Array<{songId: string, title: string, streams: number, revenue: number}>;
+  }> {
+    console.log(`[PROJECT SONG RELEASE] 🎯 ENTERING processProjectSongsRelease`);
+    console.log(`[PROJECT SONG RELEASE] Project details:`, {
+      id: project.id,
+      title: project.title,
+      artistId: project.artistId,
+      stage: project.stage,
+      projectStreams
+    });
+    
+    // Check if getSongsByProject method exists
+    if (!this.gameData.getSongsByProject) {
+      console.error(`[PROJECT SONG RELEASE] ❌ getSongsByProject method not available on gameData`);
+      return {
+        totalSongsReleased: 0,
+        totalStreamsDistributed: 0,
+        totalRevenueGenerated: 0,
+        songDetails: []
+      };
+    }
+    
+    // Get all songs for this project
+    console.log(`[PROJECT SONG RELEASE] 🔍 Calling getSongsByProject with projectId: ${project.id}`);
+    const projectSongs = await this.gameData.getSongsByProject(project.id) || [];
+    console.log(`[PROJECT SONG RELEASE] 📊 Found ${projectSongs.length} songs for project:`, 
+      projectSongs.map(s => ({ 
+        id: s.id, 
+        title: s.title, 
+        isReleased: s.isReleased, 
+        isRecorded: s.isRecorded,
+        metadata: s.metadata 
+      })));
+    
+    if (projectSongs.length === 0) {
+      console.warn(`[PROJECT SONG RELEASE] No songs found for project ${project.id}`);
+      return {
+        totalSongsReleased: 0,
+        totalStreamsDistributed: 0,
+        totalRevenueGenerated: 0,
+        songDetails: []
+      };
+    }
+    
+    let totalStreamsDistributed = 0;
+    let totalRevenueGenerated = 0;
+    const songDetails = [];
+    
+    // Process each song individually
+    for (const song of projectSongs) {
+      console.log(`[PROJECT SONG RELEASE] 🎵 Processing song "${song.title}":`, {
+        id: song.id,
+        isReleased: song.isReleased,
+        isRecorded: song.isRecorded,
+        quality: song.quality,
+        initialStreams: song.initialStreams
+      });
+      
+      if (song.isReleased) {
+        console.log(`[PROJECT SONG RELEASE] ⏭️ Song "${song.title}" already released, skipping`);
+        continue;
+      }
+      
+      try {
+        console.log(`[PROJECT SONG RELEASE] 🚀 Calling processSongRelease for "${song.title}"`);
+        const releaseResult = await this.processSongRelease(song);
+        
+        console.log(`[PROJECT SONG RELEASE] ✅ Song "${song.title}" release result:`, releaseResult);
+        
+        totalStreamsDistributed += releaseResult.initialStreams;
+        totalRevenueGenerated += releaseResult.initialRevenue;
+        
+        songDetails.push({
+          songId: song.id,
+          title: song.title,
+          streams: releaseResult.initialStreams,
+          revenue: releaseResult.initialRevenue
+        });
+        
+        console.log(`[PROJECT SONG RELEASE] 📊 Updated totals - Streams: ${totalStreamsDistributed}, Revenue: $${totalRevenueGenerated}`);
+      } catch (error) {
+        console.error(`[PROJECT SONG RELEASE] ❌ Failed to release song "${song.title}":`, error);
+        console.error(`[PROJECT SONG RELEASE] Error details:`, error.stack);
+        // Continue with other songs rather than failing entire project
+      }
+    }
+    
+    console.log(`[PROJECT SONG RELEASE] Complete - Released ${songDetails.length} songs, ${totalStreamsDistributed} total streams`);
+    
+    return {
+      totalSongsReleased: songDetails.length,
+      totalStreamsDistributed: totalStreamsDistributed,
+      totalRevenueGenerated: totalRevenueGenerated,
+      songDetails: songDetails
+    };
   }
 
   /**
@@ -2199,6 +2408,11 @@ export class GameEngine {
     // Add revenue to summary
     summary.revenue += revenue;
     
+    // Add streams to summary for music projects
+    if (streams > 0) {
+      summary.streams = (summary.streams || 0) + streams;
+    }
+    
     // Add detailed changes
     if (streams > 0) {
       summary.changes.push({
@@ -2348,6 +2562,7 @@ export interface MonthSummary {
   changes: GameChange[];
   revenue: number;
   expenses: number;
+  streams?: number;
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
   artistChanges?: Record<string, number>;

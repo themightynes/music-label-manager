@@ -9,6 +9,10 @@ import type {
   RoleMeeting,
   ChoiceEffect
 } from '../../shared/types/gameTypes';
+import { projects, songs } from '../../shared/schema';
+import { eq, and, inArray } from 'drizzle-orm';
+import { db } from '../db';
+import { storage } from '../storage';
 
 /**
  * Server-side game data management
@@ -760,29 +764,12 @@ export class ServerGameData {
     console.log('[ServerGameData] getActiveRecordingProjects called with gameId:', gameId);
     try {
       // Use provided transaction context or fall back to fresh connection
-      let dbToUse;
-      let projects, eq, and, inArray;
+      const dbToUse = dbConnection || db;
       
       if (dbConnection) {
         console.log('[ServerGameData] Using provided transaction context');
-        dbToUse = dbConnection;
-        // Import schema items directly for transaction context
-        const schema = await import('../../shared/schema');
-        const drizzle = await import('drizzle-orm');
-        projects = schema.projects;
-        eq = drizzle.eq;
-        and = drizzle.and;
-        inArray = drizzle.inArray;
       } else {
         console.log('[ServerGameData] Using fresh database connection');
-        const { db } = await import('../db');
-        const { projects: projectsSchema } = await import('../../shared/schema');
-        const { eq: eqOp, and: andOp, inArray: inArrayOp } = await import('drizzle-orm');
-        dbToUse = db;
-        projects = projectsSchema;
-        eq = eqOp;
-        and = andOp;
-        inArray = inArrayOp;
       }
       
       console.log('[ServerGameData] Direct query for active recording projects...');
@@ -790,7 +777,7 @@ export class ServerGameData {
       // First check all projects for debugging
       const allProjects = await dbToUse.select().from(projects).where(eq(projects.gameId, gameId));
       console.log('[ServerGameData] Found', allProjects.length, 'total projects for game');
-      allProjects.forEach(p => {
+      allProjects.forEach((p: any) => {
         console.log('[ServerGameData] Project details:', {
           title: p.title, 
           type: p.type, 
@@ -820,7 +807,7 @@ export class ServerGameData {
         ));
       
       console.log('[ServerGameData] Direct query found active recording projects:', activeProjects.length);
-      activeProjects.forEach(p => {
+      activeProjects.forEach((p: any) => {
         console.log('[ServerGameData] Active project details:', {
           id: p.id,
           title: p.title,
@@ -841,13 +828,20 @@ export class ServerGameData {
     }
   }
 
-  async createSong(song: any) {
+  async createSong(song: any, dbConnection: any = null) {
     console.log('[ServerGameData] createSong called with:', song);
     try {
-      const { storage } = await import('../storage');
-      const createdSong = await storage.createSong(song);
-      console.log('[ServerGameData] Song created successfully:', createdSong.id);
-      return createdSong;
+      // If we have a transaction context, use it; otherwise use storage directly
+      if (dbConnection) {
+        console.log('[ServerGameData] Using transaction context for createSong');
+        const [createdSong] = await dbConnection.insert(songs).values(song).returning();
+        console.log('[ServerGameData] Song created successfully in transaction:', createdSong.id);
+        return createdSong;
+      } else {
+        const createdSong = await storage.createSong(song);
+        console.log('[ServerGameData] Song created successfully:', createdSong.id);
+        return createdSong;
+      }
     } catch (error) {
       console.error('[ServerGameData] createSong error:', error);
       throw error;
@@ -855,14 +849,12 @@ export class ServerGameData {
   }
 
   async getSongsByGame(gameId: string) {
-    const { storage } = await import('../storage');
     return storage.getSongsByGame(gameId);
   }
 
   async getSongsByArtist(artistId: string, gameId: string) {
     console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId });
     try {
-      const { storage } = await import('../storage');
       const songs = await storage.getSongsByArtist(artistId, gameId);
       console.log('[ServerGameData] getSongsByArtist returned:', songs?.length || 0, 'songs');
       return songs;
@@ -873,19 +865,16 @@ export class ServerGameData {
   }
 
   async createRelease(release: any) {
-    const { storage } = await import('../storage');
     return storage.createRelease(release);
   }
 
   async getReleasesByGame(gameId: string) {
-    const { storage } = await import('../storage');
     return storage.getReleasesByGame(gameId);
   }
 
   async getReleasedSongs(gameId: string) {
     console.log('[ServerGameData] getReleasedSongs called with gameId:', gameId);
     try {
-      const { storage } = await import('../storage');
       const releasedSongs = await storage.getReleasedSongs(gameId);
       console.log('[ServerGameData] getReleasedSongs returned:', releasedSongs?.length || 0, 'released songs');
       return releasedSongs;
@@ -898,7 +887,6 @@ export class ServerGameData {
   async updateSongs(songUpdates: any[]) {
     console.log('[ServerGameData] updateSongs called with:', songUpdates.length, 'updates');
     try {
-      const { storage } = await import('../storage');
       const result = await storage.updateSongs(songUpdates);
       console.log('[ServerGameData] updateSongs completed');
       return result;
@@ -908,19 +896,59 @@ export class ServerGameData {
     }
   }
 
+  async updateSong(songId: string, songUpdates: any) {
+    console.log('[ServerGameData] updateSong called for:', songId, 'with updates:', Object.keys(songUpdates));
+    try {
+      const result = await storage.updateSong(songId, songUpdates);
+      console.log('[ServerGameData] updateSong completed');
+      return result;
+    } catch (error) {
+      console.error('[ServerGameData] updateSong error:', error);
+      throw error;
+    }
+  }
+
+  async getSongsByProject(projectId: string) {
+    console.log('[ServerGameData] getSongsByProject called for project:', projectId);
+    try {
+      const songs = await storage.getSongsByProject(projectId);
+      console.log('[ServerGameData] getSongsByProject returned:', songs?.length || 0, 'songs');
+      return songs;
+    } catch (error) {
+      console.error('[ServerGameData] getSongsByProject error:', error);
+      throw error;
+    }
+  }
+
   async createReleaseSong(releaseSong: any) {
-    const { storage } = await import('../storage');
     return storage.createReleaseSong(releaseSong);
   }
 
   async getArtistById(artistId: string) {
-    const { storage } = await import('../storage');
     return storage.getArtist(artistId);
   }
 
-  async updateProject(projectId: string, updates: any) {
-    const { storage } = await import('../storage');
-    return storage.updateProject(projectId, updates);
+  async updateProject(projectId: string, updates: any, dbConnection: any = null) {
+    console.log('[ServerGameData] updateProject called with:', { projectId, updates });
+    try {
+      // If we have a transaction context, use it; otherwise use storage directly
+      if (dbConnection) {
+        console.log('[ServerGameData] Using transaction context for updateProject');
+        const [updatedProject] = await dbConnection.update(projects)
+          .set(updates)
+          .where(eq(projects.id, projectId))
+          .returning();
+        console.log('[ServerGameData] Project updated successfully in transaction');
+        return updatedProject;
+      } else {
+        const updatedProject = await storage.updateProject(projectId, updates);
+        console.log('[ServerGameData] Project updated successfully');
+        return updatedProject;
+      }
+    } catch (error) {
+      console.error('[ServerGameData] updateProject error:', error);
+      throw error;
+    }
   }
 
   // Validation helpers

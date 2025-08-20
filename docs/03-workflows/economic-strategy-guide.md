@@ -54,7 +54,7 @@ Over-funded (> 150% minimum):        +5 quality bonus (diminishing returns)
 
 ## 🎛️ Producer Tier Selection
 
-### **Producer Tier Comparison**
+### **Producer Tier Comparison (Current Implementation)**
 
 | Tier | Quality Bonus | Cost Multiplier | Unlock Requirement | Best For |
 |------|---------------|-----------------|-------------------|----------|
@@ -80,25 +80,25 @@ Over-funded (> 150% minimum):        +5 quality bonus (diminishing returns)
 - **Selective**: Legendary for breakthrough singles
 - **Strategy**: High-quality catalog development
 
-### **Producer ROI Analysis**
+### **Producer ROI Analysis (Implementation Verified)**
 
 ```typescript
 // Quality per dollar spent (efficiency calculation)
 const producerEfficiency = qualityBonus / costMultiplier;
 
 Local:     0 / 1.0 = 0.00   (baseline)
-Regional:  5 / 1.8 = 2.78   (best efficiency)
+Regional:  5 / 1.8 = 2.78   (excellent efficiency)
 National: 12 / 3.2 = 3.75   (premium efficiency)  
 Legendary: 20 / 5.5 = 3.64  (slight efficiency drop)
 ```
 
-**Key Insight**: National producers offer the best quality-to-cost efficiency
+**Key Insight**: National producers offer the best quality-to-cost efficiency, followed closely by Legendary producers
 
 ---
 
 ## ⏰ Time Investment Strategy
 
-### **Time Investment Options**
+### **Time Investment Options (Current Implementation)**
 
 | Option | Quality Bonus | Cost Multiplier | Duration Modifier | Best Use Case |
 |--------|---------------|-----------------|-------------------|---------------|
@@ -107,29 +107,33 @@ Legendary: 20 / 5.5 = 3.64  (slight efficiency drop)
 | **Extended** | +8 | 1.4x | 1.3x | Quality-focused releases |
 | **Perfectionist** | +15 | 2.1x | 1.6x | Flagship releases |
 
-### **Time Investment Strategies**
+### **Time Investment Strategies (Implementation Analysis)**
 
 #### **Rushed Production**
 - **When to Use**: Cash flow problems, filler content
 - **Quality Impact**: -10 penalty (significant)
 - **Cost Savings**: 30% cost reduction
+- **Duration**: 20% faster completion
 - **Trade-off**: Short-term savings for long-term revenue loss
 
 #### **Standard Production**
 - **When to Use**: Regular catalog building
 - **Quality Impact**: Neutral baseline
 - **Balanced**: No cost/time penalties or bonuses
+- **Best For**: Consistent workflow without risk
 
 #### **Extended Production**
 - **When to Use**: Important singles, quality focus
 - **Quality Impact**: +8 bonus (substantial improvement)
 - **Cost Premium**: 40% increase (manageable)
+- **Duration**: 30% longer production time
 - **Sweet Spot**: Best balance of quality improvement and cost
 
 #### **Perfectionist Production**
 - **When to Use**: Breakthrough singles, label reputation building
 - **Quality Impact**: +15 bonus (maximum quality)
 - **Cost Premium**: 110% increase (expensive)
+- **Duration**: 60% longer production time
 - **Strategic**: Reserve for career-defining releases
 
 ---
@@ -199,6 +203,28 @@ finalQuality = Math.min(100,
    - Budget allocation based on efficiency breakpoints
    - Producer tier matching reputation and budget
    - Time investment aligned with project importance
+
+### **Optimal Producer + Time Investment Combinations**
+
+#### **Early Game Efficiency (0-15 Rep)**
+- **Local + Extended**: 1.4x cost, +8 quality bonus
+- **Total Quality Bonus**: +8 for moderate cost increase
+- **Strategy**: Maximum quality improvement within budget constraints
+
+#### **Mid Game Balance (15-35 Rep)**
+- **Regional + Extended**: 2.52x cost, +13 quality bonus
+- **Efficiency**: 13 ÷ 2.52 = 5.16 quality per cost unit
+- **Strategy**: Excellent balance of cost and quality improvement
+
+#### **Late Game Optimization (35-60 Rep)**
+- **National + Extended**: 4.48x cost, +20 quality bonus
+- **Peak Performance**: Maximum achievable quality before Legendary tier
+- **Strategy**: Premium quality for important releases
+
+#### **Elite Production (60+ Rep)**
+- **Legendary + Perfectionist**: 11.55x cost, +35 quality bonus
+- **Ultimate Quality**: Highest possible quality combination
+- **Strategy**: Reserve for game-changing releases only
 
 ### **Common Strategic Patterns**
 
@@ -296,11 +322,25 @@ expectedROI = (5 * 1.2) / 1.8 = 3.33x return
    - Catalog Building → Regional producer + Extended time
    - Experimental → Local producer + Standard time
 
-### **Efficiency Sweet Spots**
+### **Efficiency Sweet Spots (Updated Implementation)**
 - **Best Budget**: 100-150% of minimum viable cost (+7 quality bonus)
 - **Best Producer**: National tier (3.75 quality per cost unit)
 - **Best Time**: Extended investment (+8 quality for 1.4x cost)
-- **Best Combination**: National + Extended + Strong Budget = 85-95 quality range
+- **Best Early Game**: Regional + Extended = 2.52x cost for +13 quality
+- **Best Late Game**: National + Extended = 4.48x cost for +20 quality
+- **Ultimate Combination**: National + Perfectionist + Strong Budget = 90-100 quality range
+
+### **Time Investment ROI Analysis**
+
+```typescript
+// Time Investment Efficiency = Quality Bonus / Cost Multiplier
+Rushed:       -10 / 0.7 = -14.3  (negative efficiency)
+Standard:      0 / 1.0 = 0.0     (neutral baseline)
+Extended:      8 / 1.4 = 5.7     (excellent efficiency)
+Perfectionist: 15 / 2.1 = 7.1    (best quality per dollar)
+```
+
+**Key Insight**: Perfectionist offers the highest quality-per-dollar, but Extended provides the best balance of cost and quality improvement.
 
 ---
 

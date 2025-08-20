@@ -44,9 +44,6 @@ First, let me read ALL the comprehensive documentation:
 !Read /home/runner/workspace/docs/08-future-features-and-fixes/planned-features-analysis.md
 !Read /home/runner/workspace/docs/08-future-features-and-fixes/comprehensive-roadmap.md
 
-## Legacy and Additional Documentation
-!Read /home/runner/workspace/docs/99-legacy/ClaudeCodeInstructions.md
-
 Now I'll perform a quick project health check:
 
 !Bash npm run check
