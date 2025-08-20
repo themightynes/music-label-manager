@@ -179,42 +179,9 @@ export class ServerGameData {
     return this.dataLoader.getArtistDialogue(archetype);
   }
 
-  // Game balance calculations
-  async calculateProjectCost(projectType: string, quality: number = 50): Promise<number> {
-    const costs = await this.getProjectCosts(projectType);
-    const balance = await this.getBalanceConfig();
-    
-    const baseCost = costs.min + ((costs.max - costs.min) * (quality / 100));
-    const qualityMultiplier = balance.economy.project_costs[projectType.toLowerCase()]?.quality_multiplier || 1;
-    
-    return Math.floor(baseCost * qualityMultiplier);
-  }
-
-  async calculateStreamingOutcome(
-    quality: number, 
-    playlistAccess: string, 
-    reputation: number, 
-    adSpend: number
-  ): Promise<number> {
-    const balance = await this.getBalanceConfig();
-    const formulas = balance.market_formulas.streaming_calculation;
-    
-    let baseStreams = quality * 100;
-    
-    // Get playlist access multiplier
-    const playlistTier = balance.access_tier_system.playlist_access[playlistAccess.toLowerCase()];
-    const playlistMultiplier = playlistTier?.reach_multiplier || 0.1;
-    
-    // Calculate reputation and ad boost
-    const reputationBoost = reputation / 100;
-    const adBoost = Math.sqrt(adSpend) / 100;
-    
-    // Apply variance
-    const variance = balance.economy.rng_variance;
-    const rngFactor = variance[0] + (Math.random() * (variance[1] - variance[0]));
-    
-    return Math.floor(baseStreams * playlistMultiplier * (1 + reputationBoost + adBoost) * rngFactor);
-  }
+  // PHASE 3 MIGRATION: Removed duplicate calculation methods
+  // calculateProjectCost() - REMOVED (unused)
+  // calculateStreamingOutcome() - REMOVED (GameEngine has correct implementation)
 
   async shouldTriggerSideEvent(month: number): Promise<boolean> {
     const balance = await this.getBalanceConfig();
@@ -634,124 +601,10 @@ export class ServerGameData {
   }
 
   // Project Cost Calculation with Producer, Time Investment, and Song Count
-  calculateEnhancedProjectCost(
-    projectType: string, 
-    producerTier: string, 
-    timeInvestment: string, 
-    quality: number = 50,
-    songCount?: number
-  ): number {
-    const producerSystem = this.getProducerTierSystemSync();
-    const timeSystem = this.getTimeInvestmentSystemSync();
-    
-    // Get base cost
-    const balance = this.getBalanceConfigSync();
-    const projectCosts = balance.economy.project_costs[projectType.toLowerCase()];
-    if (!projectCosts) {
-      throw new Error(`Unknown project type: ${projectType}`);
-    }
-    
-    // Determine actual song count
-    const actualSongCount = songCount || projectCosts.song_count_default || 1;
-    
-    // Calculate base cost per song
-    const songCountSystem = balance.economy.song_count_cost_system;
-    let totalBaseCost: number;
-    
-    if (songCountSystem?.enabled && actualSongCount > 1) {
-      // Use per-song cost system
-      const baseCostPerSong = songCountSystem.base_per_song_cost[projectType.toLowerCase()] || projectCosts.min;
-      
-      // Calculate economies of scale
-      const economiesMultiplier = this.calculateEconomiesOfScale(actualSongCount, songCountSystem.economies_of_scale);
-      
-      totalBaseCost = baseCostPerSong * actualSongCount * economiesMultiplier;
-    } else {
-      // Use traditional single-song cost
-      totalBaseCost = projectCosts.min + ((projectCosts.max - projectCosts.min) * (quality / 100));
-    }
-    
-    // Apply multipliers
-    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
-    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
-    const qualityMultiplier = projectCosts.quality_multiplier || 1.0;
-    
-    const finalCost = Math.floor(totalBaseCost * producerMultiplier * timeMultiplier * qualityMultiplier);
-    
-    console.log(`[COST CALC] Enhanced project cost for ${projectType}:`, {
-      projectType,
-      actualSongCount,
-      totalBaseCost,
-      producerTier,
-      producerMultiplier,
-      timeInvestment,
-      timeMultiplier,
-      qualityMultiplier,
-      finalCost
-    });
-    
-    return finalCost;
-  }
-
-  /**
-   * Calculates enhanced project cost with per-song budget semantics
-   * Returns the total project cost, taking per-song budgets and multipliers into account
-   */
-  calculatePerSongProjectCost(
-    budgetPerSong: number,
-    songCount: number,
-    producerTier: string,
-    timeInvestment: string
-  ): { baseCost: number; totalCost: number; breakdown: any } {
-    const producerSystem = this.getProducerTierSystemSync();
-    const timeSystem = this.getTimeInvestmentSystemSync();
-    
-    // Calculate base cost: budgetPerSong × songCount
-    const baseCost = budgetPerSong * songCount;
-    
-    // Apply multipliers
-    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
-    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
-    
-    const totalCost = Math.round(baseCost * producerMultiplier * timeMultiplier);
-    
-    const breakdown = {
-      budgetPerSong,
-      songCount,
-      baseCost,
-      producerTier,
-      producerMultiplier,
-      timeInvestment,
-      timeMultiplier,
-      totalCost
-    };
-    
-    console.log('[PER-SONG COST CALC]', breakdown);
-    
-    return { baseCost, totalCost, breakdown };
-  }
-
-  /**
-   * Calculates economies of scale multiplier for song count
-   */
-  private calculateEconomiesOfScale(songCount: number, economiesConfig: any): number {
-    if (!economiesConfig?.enabled) {
-      return 1.0;
-    }
-    
-    const breakpoints = economiesConfig.breakpoints;
-    const thresholds = economiesConfig.thresholds;
-    
-    if (songCount >= thresholds.large_project) {
-      return breakpoints.large_project;
-    } else if (songCount >= thresholds.medium_project) {
-      return breakpoints.medium_project;
-    } else if (songCount >= thresholds.small_project) {
-      return breakpoints.small_project;
-    } else {
-      return breakpoints.single_song;
-    }
-  }
+  // PHASE 3 MIGRATION: Moved business logic methods to GameEngine
+  // calculateEnhancedProjectCost() - MOVED to GameEngine
+  // calculatePerSongProjectCost() - MOVED to GameEngine  
+  // calculateEconomiesOfScale() - MOVED to GameEngine
 
   // Events access
   getEvents() {
@@ -1065,8 +918,9 @@ export const {
   getWorldConfig,
   getRoleById,
   getEventById,
-  calculateProjectCost,
-  calculateStreamingOutcome,
+  // PHASE 3 MIGRATION: Removed exports for methods moved to GameEngine
+  // calculateProjectCost - REMOVED (unused)
+  // calculateStreamingOutcome - REMOVED (moved to GameEngine)
   shouldTriggerSideEvent,
   validateDataIntegrity
 } = serverGameData;

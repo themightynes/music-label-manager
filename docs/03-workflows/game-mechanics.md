@@ -149,13 +149,19 @@ interface ArtistRelationship {
 - **Budget**: $3,000-$12,000
 - **Timeline**: 2 months (planning → production → marketing → released)
 - **Revenue Potential**: $5,000-$25,000 based on individual song quality
-- **Individual Song Revenue Formula** (CONSOLIDATION: Processed ONLY by GameEngine using balance.json):
+- **Individual Song Revenue Formula** ✅ SINGLE SOURCE OF TRUTH - GameEngine ONLY:
   ```typescript
-  // CRITICAL: All processing moved to GameEngine - NO duplicate logic in routes.ts
+  // ✅ MIGRATION COMPLETE: ALL processing in GameEngine with NO duplicate logic
+  // ALL economic calculations moved from gameData.ts and routes.ts to GameEngine
+  
+  // GameEngine.calculateEnhancedProjectCost() - moved from gameData.ts
+  // GameEngine.calculatePerSongProjectCost() - moved from gameData.ts
+  // GameEngine.calculateEconomiesOfScale() - moved from gameData.ts
+  
   // Configuration-driven calculations using balance.json
   const streamingConfig = getStreamingConfigSync();
   
-  // Each song calculated individually by GameEngine
+  // Each song calculated individually by GameEngine ONLY
   const songInitialStreams = songQuality * 50 * (1 + Math.max(0, (songQuality - 40) / 60));
   const songInitialRevenue = songInitialStreams * 0.5; // $0.50 per stream on release
   
@@ -185,23 +191,30 @@ interface ArtistRelationship {
   const revenue = venueCapacity * sellThrough * ticketPrice * numberOfCities;
   ```
 
-### **Project Progression (ARCHITECTURAL SEPARATION)**
-Projects advance through stages with CLEAR separation of responsibilities:
+### **Project Progression** ✅ SINGLE SOURCE OF TRUTH ACHIEVED
+Projects advance through stages with GameEngine handling ALL business logic:
 
 ```typescript
 const stages = ['planning', 'production', 'marketing', 'released'];
 
-// ROUTES.TS RESPONSIBILITY: Stage advancement only
+// ✅ MIGRATION COMPLETE: GameEngine handles ALL project advancement logic
+// GameEngine.advanceProjectStages() - moved from routes.ts
 if (monthsElapsed >= 1 && stage === 'planning') stage = 'production';
 if (monthsElapsed >= 2 && stage === 'production') stage = 'marketing';  
 if (monthsElapsed >= 3 && stage === 'marketing') stage = 'released';
 
-// Quality increases each stage (routes.ts)
+// Quality increases each stage (GameEngine ONLY)
 quality = Math.min(100, quality + 25);
 
-// GAMEENGINE RESPONSIBILITY: Song revenue processing when projects reach "released"
-// GameEngine.processNewlyReleasedProjects() handles all song releases
-// GameEngine.processProjectSongReleases() processes individual songs
+// GAMEENGINE RESPONSIBILITY: ALL business logic consolidated
+// - GameEngine.advanceProjectStages() - project advancement (moved from routes.ts)
+// - GameEngine.processNewlyReleasedProjects() - song release processing
+// - GameEngine.calculateEnhancedProjectCost() - economic calculations (moved from gameData.ts)
+// - GameEngine.calculatePerSongProjectCost() - cost calculations (moved from gameData.ts)
+// - GameEngine.calculateEconomiesOfScale() - scaling calculations (moved from gameData.ts)
+
+// ROUTES.TS: HTTP handling and database transactions ONLY
+// GAMEDATA.TS: JSON data access ONLY (NO calculations)
 ```
 
 ### **Economic Decision System** ✅ NEW - PHASE 2
@@ -359,8 +372,11 @@ interface DialogueChoice {
 
 ## ⚖️ Game Balance System
 
-### **Economic Balance (UPDATED: Configuration-Driven Consolidation)**
-**CRITICAL**: All economic calculations are driven by `/data/balance.json` and processed ONLY by GameEngine:
+### **Economic Balance** ✅ SINGLE SOURCE OF TRUTH COMPLETE
+**ARCHITECTURE**: All economic calculations consolidated in GameEngine with ZERO duplication:
+- ✅ **GameEngine**: ALL business logic (project advancement, economic calculations, revenue processing)
+- ✅ **Routes.ts**: HTTP handling ONLY (delegates everything to GameEngine)
+- ✅ **GameData.ts**: Pure data access ONLY (NO calculations or business logic)
 
 ```json
 {

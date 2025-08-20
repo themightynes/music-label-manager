@@ -185,7 +185,9 @@ Claude-specific instruction files preserved for reference.
 
 ## 🏗️ Architecture Decisions Made
 
-- **Unified Game Engine**: All calculations happen in one place for consistency
+- ✅ **Single Source of Truth**: GameEngine is the ONLY place for business logic
+- ✅ **Clean Layer Separation**: Routes (HTTP), GameData (data), GameEngine (logic) with ZERO overlap
+- ✅ **Eliminated Duplication**: Consolidated project advancement, economic calculations, revenue processing
 - **JSON-based Content**: Easy for non-developers to modify game content
 - **Component-based UI**: Reusable components with clear responsibilities
 - **Type Safety**: TypeScript + Zod validation throughout the stack

@@ -108,6 +108,9 @@ export class GameEngine {
     // Process song generation for recording projects
     await this.processRecordingProjects(summary, dbTransaction);
 
+    // PHASE 1 MIGRATION: Handle project stage advancement within GameEngine
+    await this.advanceProjectStages(summary, dbTransaction);
+
     // Apply delayed effects from previous months
     await this.processDelayedEffects(summary);
 
@@ -1131,7 +1134,7 @@ export class GameEngine {
     }
     
     // Calculate minimum viable per-song cost for this configuration
-    const minTotalCost = this.gameData.calculateEnhancedProjectCost(projectType, producerTier, timeInvestment, 30, songCount);
+    const minTotalCost = this.calculateEnhancedProjectCost(projectType, producerTier, timeInvestment, 30, songCount);
     const minPerSongCost = minTotalCost / songCount;
     
     // Calculate budget ratio relative to minimum viable per-song cost
@@ -1829,7 +1832,7 @@ export class GameEngine {
     let minBudgetForQuality: number;
     
     try {
-      projectCost = this.gameData.calculateEnhancedProjectCost(
+      projectCost = this.calculateEnhancedProjectCost(
         projectType, 
         producerTier, 
         timeInvestment, 
@@ -1838,7 +1841,7 @@ export class GameEngine {
       );
       
       // Calculate minimum budget for meaningful quality bonus
-      minBudgetForQuality = this.gameData.calculateEnhancedProjectCost(
+      minBudgetForQuality = this.calculateEnhancedProjectCost(
         projectType, 
         producerTier, 
         timeInvestment, 
@@ -2353,7 +2356,7 @@ export class GameEngine {
     // Enhanced budget validation with economic efficiency checks
     if (action.details.budget) {
       try {
-        const minCost = this.gameData.calculateEnhancedProjectCost(
+        const minCost = this.calculateEnhancedProjectCost(
           projectType,
           producerTier,
           timeInvestment,
@@ -2430,7 +2433,7 @@ export class GameEngine {
     timeInvestment: string
   ): { valid: boolean; warning?: string; efficiency?: number } {
     try {
-      const minBudget = this.gameData.calculateEnhancedProjectCost(
+      const minBudget = this.calculateEnhancedProjectCost(
         projectType,
         producerTier,
         timeInvestment,
@@ -2598,7 +2601,7 @@ export class GameEngine {
     for (const tier of availableTiers) {
       for (const time of availableTimeInvestments) {
         try {
-          const cost = this.gameData.calculateEnhancedProjectCost('single', tier, time, 50);
+          const cost = this.calculateEnhancedProjectCost('single', tier, time, 50);
           costCalculations[`${tier}_${time}`] = { cost, success: true };
         } catch (error) {
           costCalculations[`${tier}_${time}`] = { error: error instanceof Error ? error.message : 'Unknown error', success: false };
@@ -2688,6 +2691,257 @@ export class GameEngine {
         description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point this month`,
         amount: 0
       });
+    }
+  }
+
+  /**
+   * PHASE 1 MIGRATION: Moved from routes.ts
+   * Handles all project stage advancement logic within GameEngine
+   */
+  private async advanceProjectStages(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    if (!dbTransaction) {
+      console.warn('[PROJECT ADVANCEMENT] No database transaction provided - cannot advance project stages');
+      return;
+    }
+
+    console.log('[PROJECT ADVANCEMENT] === GameEngine Project Stage Advancement ===');
+    console.log(`[PROJECT ADVANCEMENT] Current month: ${this.gameState.currentMonth}`);
+    
+    try {
+      // Import the required modules dynamically to avoid circular dependencies
+      const { projects } = await import('../schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Get all projects for this game
+      const projectList = await dbTransaction
+        .select()
+        .from(projects)
+        .where(eq(projects.gameId, this.gameState.id));
+
+      console.log(`[PROJECT ADVANCEMENT] Found ${projectList.length} projects to evaluate`);
+
+      for (const project of projectList) {
+        const stages = ['planning', 'production', 'marketing', 'released'];
+        const currentStageIndex = stages.indexOf(project.stage || 'planning');
+        const monthsElapsed = (this.gameState.currentMonth || 1) - (project.startMonth || 1);
+        const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
+        const songCount = project.songCount || 1;
+        const songsCreated = project.songsCreated || 0;
+        const allSongsCreated = songsCreated >= songCount;
+        
+        console.log(`[PROJECT ADVANCEMENT] Evaluating ${project.title}:`, {
+          currentStage: project.stage,
+          currentStageIndex,
+          monthsElapsed,
+          isRecordingProject,
+          songCount,
+          songsCreated,
+          allSongsCreated
+        });
+
+        let newStageIndex = currentStageIndex;
+        let advancementReason = '';
+
+        // Stage advancement logic
+        if (currentStageIndex === 0 && monthsElapsed >= 1) {
+          // planning -> production (simple time-based)
+          newStageIndex = 1;
+          advancementReason = `Planning complete after ${monthsElapsed} month${monthsElapsed > 1 ? 's' : ''}`;
+        } else if (currentStageIndex === 1) {
+          // production -> marketing
+          if (!isRecordingProject) {
+            // Non-recording projects (tours) - simple time-based
+            if (monthsElapsed >= 2) {
+              newStageIndex = 2;
+              advancementReason = `Production complete after ${monthsElapsed} months`;
+            }
+          } else {
+            // Recording projects - need all songs OR max 4 months
+            if (allSongsCreated && monthsElapsed >= 2) {
+              newStageIndex = 2;
+              advancementReason = `All ${songsCreated} songs completed after ${monthsElapsed} months`;
+            } else if (monthsElapsed >= 4) {
+              newStageIndex = 2;
+              advancementReason = `Maximum production time reached (${monthsElapsed} months, ${songsCreated}/${songCount} songs)`;
+            }
+          }
+        } else if (currentStageIndex === 2 && monthsElapsed >= 3) {
+          // marketing -> released
+          newStageIndex = 3;
+          advancementReason = `Marketing complete after ${monthsElapsed} months`;
+        }
+
+        // Advance stage if needed
+        if (newStageIndex > currentStageIndex) {
+          const newStage = stages[newStageIndex];
+          console.log(`[PROJECT ADVANCEMENT] Advancing ${project.title}: ${project.stage} -> ${newStage} (${advancementReason})`);
+          
+          // Prepare update data
+          const updateData: any = { 
+            stage: newStage,
+            quality: Math.min(100, (project.quality || 0) + 25)
+          };
+          
+          // If advancing to released stage, track release metadata
+          if (newStage === 'released') {
+            const existingMetadata = project.metadata || {};
+            updateData.metadata = {
+              ...existingMetadata,
+              releaseMonth: this.gameState.currentMonth,
+              releasedAt: new Date().toISOString(),
+              advancementReason
+            };
+            console.log(`[PROJECT ADVANCEMENT] Marking project "${project.title}" as released in month ${this.gameState.currentMonth}`);
+          }
+          
+          // Update project in database
+          await dbTransaction
+            .update(projects)
+            .set(updateData)
+            .where(eq(projects.id, project.id));
+          
+          // Add to summary
+          summary.changes.push({
+            type: 'unlock',
+            description: `📈 ${project.title} advanced to ${newStage} stage: ${advancementReason}`,
+            amount: 0
+          });
+          
+          console.log(`[PROJECT ADVANCEMENT] Successfully advanced "${project.title}" to ${newStage}`);
+        } else {
+          console.log(`[PROJECT ADVANCEMENT] ${project.title} staying in ${project.stage} (${monthsElapsed} months elapsed)`);
+        }
+      }
+      
+      console.log('[PROJECT ADVANCEMENT] === GameEngine Project Stage Advancement Complete ===');
+    } catch (error) {
+      console.error('[PROJECT ADVANCEMENT] Error during project advancement:', error);
+      throw new Error(`Project advancement failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * PHASE 1 MIGRATION: Moved from gameData.ts
+   * Calculates enhanced project cost with producer tier, time investment, and song count
+   */
+  private calculateEnhancedProjectCost(
+    projectType: string, 
+    producerTier: string, 
+    timeInvestment: string, 
+    quality: number = 50,
+    songCount?: number
+  ): number {
+    const producerSystem = this.gameData.getProducerTierSystemSync();
+    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
+    
+    // Get base cost
+    const balance = this.gameData.getBalanceConfigSync();
+    const projectCosts = balance.economy.project_costs[projectType.toLowerCase()];
+    if (!projectCosts) {
+      throw new Error(`Unknown project type: ${projectType}`);
+    }
+    
+    // Determine actual song count
+    const actualSongCount = songCount || projectCosts.song_count_default || 1;
+    
+    // Calculate base cost per song
+    const songCountSystem = balance.economy.song_count_cost_system;
+    let totalBaseCost: number;
+    
+    if (songCountSystem?.enabled && actualSongCount > 1) {
+      // Use per-song cost system
+      const baseCostPerSong = songCountSystem.base_per_song_cost[projectType.toLowerCase()] || projectCosts.min;
+      
+      // Calculate economies of scale
+      const economiesMultiplier = this.calculateEconomiesOfScale(actualSongCount, songCountSystem.economies_of_scale);
+      
+      totalBaseCost = baseCostPerSong * actualSongCount * economiesMultiplier;
+    } else {
+      // Use traditional single-song cost
+      totalBaseCost = projectCosts.min + ((projectCosts.max - projectCosts.min) * (quality / 100));
+    }
+    
+    // Apply multipliers
+    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
+    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
+    const qualityMultiplier = projectCosts.quality_multiplier || 1.0;
+    
+    const finalCost = Math.floor(totalBaseCost * producerMultiplier * timeMultiplier * qualityMultiplier);
+    
+    console.log(`[COST CALC] Enhanced project cost for ${projectType}:`, {
+      projectType,
+      actualSongCount,
+      totalBaseCost,
+      producerTier,
+      producerMultiplier,
+      timeInvestment,
+      timeMultiplier,
+      qualityMultiplier,
+      finalCost
+    });
+    
+    return finalCost;
+  }
+
+  /**
+   * PHASE 1 MIGRATION: Moved from gameData.ts
+   * Calculates enhanced project cost with per-song budget semantics
+   * Returns the total project cost, taking per-song budgets and multipliers into account
+   */
+  private calculatePerSongProjectCost(
+    budgetPerSong: number,
+    songCount: number,
+    producerTier: string,
+    timeInvestment: string
+  ): { baseCost: number; totalCost: number; breakdown: any } {
+    const producerSystem = this.gameData.getProducerTierSystemSync();
+    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
+    
+    // Calculate base cost: budgetPerSong × songCount
+    const baseCost = budgetPerSong * songCount;
+    
+    // Apply multipliers
+    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
+    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
+    
+    const totalCost = Math.round(baseCost * producerMultiplier * timeMultiplier);
+    
+    const breakdown = {
+      budgetPerSong,
+      songCount,
+      baseCost,
+      producerTier,
+      producerMultiplier,
+      timeInvestment,
+      timeMultiplier,
+      totalCost
+    };
+    
+    console.log('[PER-SONG COST CALC]', breakdown);
+    
+    return { baseCost, totalCost, breakdown };
+  }
+
+  /**
+   * PHASE 1 MIGRATION: Moved from gameData.ts
+   * Calculates economies of scale multiplier for song count
+   */
+  private calculateEconomiesOfScale(songCount: number, economiesConfig: any): number {
+    if (!economiesConfig?.enabled) {
+      return 1.0;
+    }
+    
+    const breakpoints = economiesConfig.breakpoints;
+    const thresholds = economiesConfig.thresholds;
+    
+    if (songCount >= thresholds.large_project) {
+      return breakpoints.large_project;
+    } else if (songCount >= thresholds.medium_project) {
+      return breakpoints.medium_project;
+    } else if (songCount >= thresholds.small_project) {
+      return breakpoints.small_project;
+    } else {
+      return breakpoints.single_song;
     }
   }
 

@@ -805,123 +805,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
           console.log('[DEBUG] Formatted actions:', JSON.stringify(formattedActions, null, 2));
           
-          // PRE-PROCESSING: Only handle basic planning -> production advancement
-          console.log('[DEBUG] === PROJECT PRE-ADVANCEMENT (BASIC) ===');
-          const currentMonth = (gameStateForEngine.currentMonth || 1) + 1; // Next month after advancement
-          const projectsToAdvance = await tx
-            .select()
-            .from(projects)
-            .where(eq(projects.gameId, gameId));
-
-          for (const project of projectsToAdvance) {
-            const stages = ['planning', 'production', 'marketing', 'released'];
-            const currentStageIndex = stages.indexOf(project.stage || 'planning');
-            const monthsElapsed = currentMonth - (project.startMonth || 1);
-            
-            // Only handle planning -> production (doesn't depend on songsCreated)
-            if (currentStageIndex === 0 && monthsElapsed >= 1) {
-              console.log(`[DEBUG] Advancing ${project.title} from planning to production`);
-              await tx
-                .update(projects)
-                .set({ 
-                  stage: 'production',
-                  quality: Math.min(100, (project.quality || 0) + 25)
-                })
-                .where(eq(projects.id, project.id));
-            }
-          }
-          console.log('[DEBUG] === PROJECT PRE-ADVANCEMENT (BASIC) COMPLETE ===');
-          
-          // Song release processing moved to post-GameEngine advancement (below)
-          console.log('[DEBUG] === SONG RELEASE PROCESSING MOVED TO POST-ENGINE ===');
+          // PHASE 4 MIGRATION: Project advancement now handled entirely by GameEngine
+          console.log('[DEBUG] === PROJECT ADVANCEMENT DELEGATED TO GAMEENGINE ===');
           
           // Now execute GameEngine with the updated project states within the same transaction
           console.log('[DEBUG] Starting GameEngine processing...');
           monthResult = await gameEngine.advanceMonth(formattedActions, tx); // Pass transaction context
           console.log('[DEBUG] Month advancement completed successfully');
           
-          // CRITICAL FIX: Re-read projects after GameEngine to get updated songsCreated values
-          console.log('[DEBUG] === POST-GAMEENGINE PROJECT ADVANCEMENT ===');
-          const updatedProjectsAfterEngine = await tx
-            .select()
-            .from(projects)
-            .where(eq(projects.gameId, gameId));
-
-          for (const project of updatedProjectsAfterEngine) {
-            const currentMonth = monthResult.gameState.currentMonth || 1;
-            const stages = ['planning', 'production', 'marketing', 'released'];
-            const currentStageIndex = stages.indexOf(project.stage || 'planning');
-            const monthsElapsed = currentMonth - (project.startMonth || 1);
-            const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
-            const songCount = project.songCount || 1;
-            const songsCreated = project.songsCreated || 0; // NOW gets updated value from GameEngine
-            const allSongsCreated = songsCreated >= songCount;
-            
-            console.log(`[DEBUG] Post-engine advancement check for ${project.title}:`, {
-              projectId: project.id,
-              currentStageIndex,
-              monthsElapsed,
-              isRecordingProject,
-              songCount,
-              songsCreated,
-              allSongsCreated,
-              currentStage: stages[currentStageIndex],
-              artistId: project.artistId,
-              gameEngineExists: !!gameEngine
-            });
-            
-            let newStageIndex = currentStageIndex;
-            
-            // Use the UPDATED songsCreated value for advancement logic
-            if (currentStageIndex === 1) { // production -> marketing
-              if (!isRecordingProject) {
-                if (monthsElapsed >= 2) newStageIndex = 2;
-              } else {
-                // Now using CORRECT songsCreated value after GameEngine updates
-                if (allSongsCreated && monthsElapsed >= 2) {
-                  newStageIndex = 2;
-                  console.log(`[DEBUG] Recording project ${project.title} completed all songs (${songsCreated}/${songCount}), advancing to marketing`);
-                } else if (monthsElapsed >= 4) { // Max 4 months in production
-                  newStageIndex = 2;
-                  console.log(`[DEBUG] Forcing ${project.title} to marketing after 4 months (${songsCreated}/${songCount} songs created)`);
-                } else {
-                  console.log(`[DEBUG] Keeping ${project.title} in production for song generation (${songsCreated}/${songCount} songs, ${monthsElapsed} months)`);
-                }
-              }
-            } else if (monthsElapsed >= 3 && currentStageIndex === 2) { // marketing -> released
-              newStageIndex = 3;
-            }
-            
-            if (newStageIndex > currentStageIndex) {
-              console.log(`[DEBUG] Post-engine advancement: ${project.title} ${stages[currentStageIndex]} -> ${stages[newStageIndex]}`);
-              
-              // Prepare update data
-              const updateData: any = { 
-                stage: stages[newStageIndex],
-                quality: Math.min(100, (project.quality || 0) + 25)
-              };
-              
-              // If advancing to released stage, track release month in metadata
-              if (stages[newStageIndex] === 'released') {
-                const existingMetadata = project.metadata || {};
-                updateData.metadata = {
-                  ...existingMetadata,
-                  releaseMonth: monthResult.gameState.currentMonth,
-                  releasedAt: new Date().toISOString()
-                };
-                console.log(`[PROJECT STAGE] Marking project "${project.title}" as released in month ${monthResult.gameState.currentMonth}`);
-              }
-              
-              await tx
-                .update(projects)
-                .set(updateData)
-                .where(eq(projects.id, project.id));
-              
-              // Project stage advancement completed - GameEngine will handle song releases during monthly advancement
-              console.log(`[PROJECT STAGE] Project "${project.title}" advanced to stage: ${stages[newStageIndex]} - GameEngine will process songs during monthly advancement`);
-            }
-          }
-          console.log('[DEBUG] === POST-GAMEENGINE PROJECT ADVANCEMENT COMPLETE ===');
+          // PHASE 4 MIGRATION: Post-GameEngine advancement logic removed
+          // All project stage advancement now handled within GameEngine.advanceProjectStages()
+          console.log('[DEBUG] === PROJECT ADVANCEMENT COMPLETE (GameEngine handled all stages) ===');
         } catch (engineError) {
           console.error('[ERROR] GameEngine processing failed:', engineError);
           throw new Error(`Month advancement failed: ${engineError instanceof Error ? engineError.message : 'Unknown error'}`);

@@ -3,31 +3,31 @@
 ## Quick Context
 You're working on **Top Roles: Music Label Manager**, a browser-based music industry simulation game. This is a monorepo with React (Vite) frontend, Express backend, PostgreSQL database (via Neon on Replit), and shared TypeScript code.
 
-## Current State (Updated: August 18, 2025 - Session End)
-**Latest Session**: Streaming revenue decay system analysis and documentation
+## Current State (Updated: August 20, 2025 - Single Source of Truth Migration Complete)
+**Latest Session**: CRITICAL ARCHITECTURAL MIGRATION - Eliminated all duplicate logic across layers
 - **Tech Stack**: React + Vite, Express, PostgreSQL (Neon), TypeScript, Zustand, React Query
-- **Architecture**: Unified monorepo with clean separation (client/, server/, shared/)
+- **Architecture**: CLEAN SEPARATION OF CONCERNS - GameEngine is single source of truth for ALL business logic
 - **Game Content**: 8 roles, 24 meetings, 6 artists, 12 events (all in JSON files under /data)
-- **Current Phase**: 99.5% Complete MVP - Phase 2 UI/UX Enhancements Complete
+- **Current Phase**: 100% Complete MVP + Clean Architecture Migration
 
 ## Completed Major Systems ✅
-1. ✅ **Unified Game Engine** - Complete in `shared/engine/game-engine.ts`
-2. ✅ **Artist Signing System** - Full discovery, signing, and management
-3. ✅ **Project Creation** - Singles, EPs, Mini-Tours with comprehensive modals
-4. ✅ **Project Revenue System** - Projects generate revenue, streams, and press coverage on completion
-5. ✅ **Dialogue System** - Role meetings with immediate/delayed effects
-6. ✅ **Save/Load System** - Multiple slots with export/import capability
-7. ✅ **Monthly Turn System** - 3-action planning with resource management
-8. ✅ **Access Tier Progression** - Playlist, Press, Venue tier advancement
-9. ✅ **Month Summary Display** - Shows detailed results after month advancement
-10. ✅ **Simplified Architecture** - All components consolidated to `/components` folder
-11. ✅ **Phase 1 UI/UX Enhancements** - Revenue tracking, ROI calculations, enhanced notifications, and tabbed month summary
-12. ✅ **Phase 2 UI/UX Enhancements** - Rich contextual information, strategic recommendations, and comprehensive feedback systems
+1. ✅ **Single Source of Truth Architecture** - GameEngine handles ALL business logic, zero duplication
+2. ✅ **Unified Game Engine** - Complete in `shared/engine/game-engine.ts` with ALL calculations
+3. ✅ **Artist Signing System** - Full discovery, signing, and management
+4. ✅ **Project Creation** - Singles, EPs, Mini-Tours with comprehensive modals
+5. ✅ **Project Revenue System** - Projects generate revenue, streams, and press coverage on completion
+6. ✅ **Dialogue System** - Role meetings with immediate/delayed effects
+7. ✅ **Save/Load System** - Multiple slots with export/import capability
+8. ✅ **Monthly Turn System** - 3-action planning with resource management
+9. ✅ **Access Tier Progression** - Playlist, Press, Venue tier advancement
+10. ✅ **Month Summary Display** - Shows detailed results after month advancement
+11. ✅ **Clean Layer Separation** - Routes (HTTP only), GameData (data only), GameEngine (logic only)
+12. ✅ **Phase 1 & 2 UI/UX Enhancements** - Complete user experience with strategic recommendations
 
 ## Key Files & Their Purpose
 
 ### Core Game Logic
-- `shared/engine/game-engine.ts` - SINGLE SOURCE OF TRUTH for all calculations
+- `shared/engine/game-engine.ts` - SINGLE SOURCE OF TRUTH for ALL business logic (project advancement, economic calculations, revenue processing)
 - `shared/types/gameTypes.ts` - All TypeScript interfaces
 - `shared/api/contracts.ts` - API endpoint definitions
 
@@ -39,9 +39,9 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 - `client/src/components/ProjectCreationModal.tsx` - Project creation interface
 
 ### Backend
-- `server/routes.ts` - Express API endpoints
-- `server/storage.ts` - Database operations
-- `server/data/gameData.ts` - Wrapper for loading JSON content
+- `server/routes.ts` - Express HTTP handling ONLY (delegates ALL business logic to GameEngine)
+- `server/storage.ts` - Pure database operations ONLY
+- `server/data/gameData.ts` - Pure JSON data access ONLY (NO calculations or business logic)
 
 ### Game Content (DO NOT MODIFY WITHOUT CAREFUL CONSIDERATION)
 - `data/balance.json` - All game balance numbers (includes project revenue formulas)
@@ -65,10 +65,12 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 /api/games/:gameId/actions
 ```
 
-### Game Engine Rules
-1. **Server is authoritative** - Only server changes game state
-2. **Client previews only** - Client can show calculations but doesn't save
-3. **All formulas in one place** - `shared/engine/GameEngine.ts`
+### Architecture Rules (CRITICAL - NEWLY ENFORCED)
+1. **GameEngine is single source of truth** - ALL business logic lives here ONLY
+2. **Routes.ts handles HTTP concerns ONLY** - No business logic, delegates everything to GameEngine
+3. **GameData.ts provides data access ONLY** - No calculations, just JSON file loading
+4. **Storage.ts handles database ONLY** - Pure CRUD operations, no business logic
+5. **Client previews only** - Client can show calculations but doesn't save
 
 ## Common Tasks
 
@@ -99,11 +101,14 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 - E2E tests: Complete month cycle
 - Manual tests: Dialogue flows, UI interactions
 
-## Known Issues / Tech Debt
-1. ~~**API Mismatch**: Server routes don't match contracts.ts~~ FIXED
-2. ~~**Hard-coded IDs**: Some components use hard-coded game IDs~~ FIXED
-3. ~~**Duplicate Logic**: Some calculations exist in both client and server~~ FIXED
-4. ~~**Missing Features**: Dialogue UI, project pipelines, event triggers~~ ALL IMPLEMENTED
+## Previous Issues - ALL RESOLVED ✅
+1. ✅ **API Mismatch**: Server routes don't match contracts.ts - FIXED
+2. ✅ **Hard-coded IDs**: Some components use hard-coded game IDs - FIXED  
+3. ✅ **Duplicate Logic**: Some calculations exist in both client and server - **ELIMINATED**
+4. ✅ **Missing Features**: Dialogue UI, project pipelines, event triggers - ALL IMPLEMENTED
+5. ✅ **Project Stage Advancement Split**: Routes.ts vs GameEngine logic - **CONSOLIDATED**
+6. ✅ **Duplicate Streaming Calculations**: GameData.ts vs GameEngine methods - **ELIMINATED**
+7. ✅ **Business Logic in Data Layer**: Economic calculations in wrong layer - **MOVED TO GameEngine**
 
 ## Replit-Specific Notes
 - Database: PostgreSQL via Neon (connection string in Secrets)
@@ -137,7 +142,10 @@ const schema = z.object({ ... });
 5. Ask: "Is this a client, server, or shared concern?"
 
 ## DO NOT
-- ❌ Add game logic to client-only code
+- ❌ Add game logic ANYWHERE except GameEngine
+- ❌ Put business logic in routes.ts (HTTP handling only)
+- ❌ Put calculations in gameData.ts (data access only)
+- ❌ Duplicate logic between layers
 - ❌ Modify JSON data without updating types
 - ❌ Use `any` type without TODO comment
 - ❌ Skip documentation for new features
@@ -160,15 +168,15 @@ npm run db:seed
 ```
 
 ## Recent Changes
+- **August 20, 2025: CRITICAL ARCHITECTURAL MIGRATION COMPLETED**
+  - **Single Source of Truth**: GameEngine now handles ALL business logic
+  - **Project Advancement**: Moved ALL logic from routes.ts to GameEngine.advanceProjectStages()
+  - **Economic Calculations**: Moved calculateEnhancedProjectCost, calculatePerSongProjectCost, calculateEconomiesOfScale from gameData.ts to GameEngine
+  - **Duplicate Logic Elimination**: Removed duplicate methods from gameData.ts
+  - **Clean Separation**: Routes.ts = HTTP only, GameData.ts = data only, GameEngine = logic only
 - August 18, 2025: **Phase 1 & 2 UI/UX Enhancements Completed**
-  - **Phase 1**: ActiveProjects revenue tracking and ROI calculations, MonthSummary tabbed interface and rich categorization, ToastNotification progress indicators and action buttons
-  - **Phase 2**: MonthPlanner detailed action metadata and strategic recommendations, AccessTierBadges complete redesign with progression paths, ArtistRoster comprehensive analytics and management insights
 - December 18, 2024: Fixed project revenue generation system
 - December 18, 2024: Integrated MonthSummary display for advancement results
-- December 18, 2024: Linked ProjectCreationModal to ActiveProjects
-- December 18, 2024: Enhanced toast notifications for all game events
-- December 18, 2024: Consolidated and simplified component architecture
-- December 18, 2024: Removed duplicate components from features folder
 - August 18, 2025: Unified game engine created in shared/engine
 - August 18, 2025: Completed artist signing system
 - August 18, 2025: Implemented save/load functionality

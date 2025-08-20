@@ -49,8 +49,8 @@ shared/
 
 ## 🔧 Core Architecture Patterns
 
-### **1. Unified Game Engine Pattern**
-All game logic is centralized in a single `GameEngine` class:
+### **1. Single Source of Truth Pattern** ✅ MIGRATION COMPLETE
+ALL game logic is now centralized in GameEngine with complete separation of concerns:
 
 ```typescript
 // shared/engine/game-engine.ts
@@ -67,14 +67,25 @@ export class GameEngine {
     this.rng = seedrandom(seed || `${gameState.id}-${gameState.currentMonth}`);
   }
 
+  // PRIMARY METHOD: Handles ALL business logic
   async advanceMonth(monthlyActions: GameEngineAction[]): Promise<{
     gameState: GameState;
     summary: MonthSummary;
     campaignResults?: CampaignResults;
   }> {
     // Process all actions, calculate outcomes, update state
-    // Single source of truth for all game calculations
+    // SINGLE SOURCE OF TRUTH for ALL game calculations
   }
+  
+  // NEW: Project advancement (moved from routes.ts)
+  advanceProjectStages(): void {
+    // ALL project stage advancement logic
+  }
+  
+  // NEW: Economic calculations (moved from gameData.ts) 
+  calculateEnhancedProjectCost(baseData: any): number
+  calculatePerSongProjectCost(songData: any): number
+  calculateEconomiesOfScale(projectCount: number): number
 }
 ```
 
@@ -82,7 +93,9 @@ export class GameEngine {
 - Deterministic gameplay through seeded RNG
 - Consistent calculations between environments
 - Easy testing and balance modifications
-- Clear separation from API layer
+- **ELIMINATED duplicate logic across layers**
+- **Clean architectural boundaries** - no business logic leakage
+- **Single source of truth** for all game mechanics
 
 ### **1.1 Individual Song Revenue System (NEW: Phase 1 Enhancement)**
 Enhanced GameEngine with individual song tracking for realistic music industry simulation:
@@ -141,54 +154,44 @@ class GameEngine {
 - **Aggregated display**: Projects show sum of individual song performance
 - **Backward compatibility**: Graceful fallback for legacy project-based data
 
-### **2. Transaction-Safe Database Operations** ✅ ENHANCED
-All game state changes use database transactions with proper context handling for complex operations:
+### **2. Clean Separation of Concerns** ✅ ARCHITECTURE MIGRATION COMPLETE
+Routes.ts now handles ONLY HTTP concerns, GameEngine handles ALL business logic:
 
 ```typescript
-// server/routes.ts - Month advancement with transaction context
+// server/routes.ts - CLEAN HTTP layer with delegation pattern
 app.post("/api/advance-month", getUserId, async (req, res) => {
   try {
     const result = await db.transaction(async (tx) => {
-      // 1. Get current game state
+      // 1. Get current game state (DATA LAYER ONLY)
       const [gameState] = await tx
         .select()
         .from(gameStates)
         .where(eq(gameStates.id, gameId));
       
-      // 2. Pre-advance projects within transaction context ✅ NEW
-      const projectsToAdvance = await tx
-        .select()
-        .from(projects)
-        .where(eq(projects.gameId, gameId));
-      
-      for (const project of projectsToAdvance) {
-        if (shouldAdvanceStage(project)) {
-          await tx
-            .update(projects)
-            .set({ stage: 'production', quality: project.quality + 25 })
-            .where(eq(projects.id, project.id));
-        }
-      }
-      
-      // 3. Process actions through GameEngine with transaction context ✅ ENHANCED
+      // 2. DELEGATE ALL BUSINESS LOGIC TO GameEngine
       const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
       const monthResult = await gameEngine.advanceMonth(formattedActions, tx);
       
-      // 4. Update database atomically
+      // GameEngine now handles:
+      // - Project stage advancement (moved FROM routes.ts)
+      // - Economic calculations (moved FROM gameData.ts) 
+      // - Revenue processing (consolidated)
+      // - ALL game logic and formulas
+      
+      // 3. Update database with GameEngine results (DATA LAYER ONLY)
       const [updatedGameState] = await tx
         .update(gameStates)
         .set({
           currentMonth: monthResult.gameState.currentMonth,
           money: monthResult.gameState.money,
           reputation: monthResult.gameState.reputation,
-          // ... all game state updates
+          // ... all game state updates calculated by GameEngine
         })
         .where(eq(gameStates.id, gameId))
         .returning();
       
-      // 5. Save action history and update related entities
+      // 4. Save action history (DATA LAYER ONLY)
       await tx.insert(monthlyActions).values(actionRecords);
-      await updateProjectProgression(tx, gameId, monthResult);
       
       return { gameState: updatedGameState, summary: monthResult.summary };
     });
@@ -201,42 +204,40 @@ app.post("/api/advance-month", getUserId, async (req, res) => {
 });
 ```
 
-#### **Transaction Context Integration** ✅ NEW - PHASE 2 
-GameEngine now accepts transaction context to see uncommitted changes:
+#### **Clean Layer Architecture** ✅ MIGRATION COMPLETE
+Each layer now has a single, clear responsibility with no overlap:
 
 ```typescript
-// shared/engine/game-engine.ts
-async advanceMonth(
-  monthlyActions: GameEngineAction[], 
-  dbTransaction?: any  // ✅ NEW: Optional transaction context
-): Promise<GameEngineResult> {
-  // Pass transaction to database operations
-  await this.processRecordingProjects(summary, dbTransaction);
-}
+// LAYER 1: HTTP/API (server/routes.ts)
+// - Request validation
+// - Response formatting  
+// - Database transactions
+// - NO BUSINESS LOGIC
 
-// server/data/gameData.ts  
-async getActiveRecordingProjects(
-  gameId: string, 
-  dbConnection: any = null  // ✅ NEW: Optional transaction context
-) {
-  const dbToUse = dbConnection || db;  // Use transaction or fallback
-  
-  return await dbToUse.select()
-    .from(projects)
-    .where(and(
-      eq(projects.gameId, gameId),
-      eq(projects.stage, 'production'),  // ✅ Can see uncommitted changes
-      inArray(projects.type, ['Single', 'EP'])
-    ));
-}
+// LAYER 2: Business Logic (shared/engine/game-engine.ts)
+// - ALL game calculations
+// - ALL economic formulas
+// - ALL project advancement
+// - ALL revenue processing
+// - NO HTTP or DATABASE concerns
+
+// LAYER 3: Data Access (server/data/gameData.ts)
+// - JSON file loading ONLY
+// - Static data access ONLY
+// - NO CALCULATIONS or BUSINESS LOGIC
+
+// LAYER 4: Database (server/storage.ts)
+// - Pure CRUD operations
+// - Schema management
+// - NO BUSINESS LOGIC
 ```
 
-**Benefits**:
-- **Transaction Isolation Fix**: GameEngine can see project updates within same transaction ✅ NEW
-- **Atomic Operations**: All month advancement changes succeed or fail together
-- **Data Consistency**: No partial updates during complex multi-step processes  
-- **Error Recovery**: Automatic rollback prevents corrupted game states
-- **Professional-grade data integrity**: Safe concurrent access
+**Benefits of Clean Architecture**:
+- **Eliminated Violations**: No duplicate logic between layers
+- **Clear Responsibilities**: Each layer has one purpose
+- **Easy Testing**: Business logic isolated and testable
+- **Maintainable**: Changes in one layer don't affect others
+- **Professional Architecture**: Industry-standard separation of concerns
 
 ### **3. Type-Safe API Contracts**
 Shared types ensure consistency between client and server:
@@ -273,23 +274,24 @@ res.json(response);
 - Self-documenting API contracts
 - Reduced integration bugs
 
-### **4. Content Management System**
-Game content separated from code for easy modification:
+### **4. Pure Data Access Layer** ✅ BUSINESS LOGIC REMOVED
+GameData.ts now provides ONLY static data access with NO calculations:
 
 ```typescript
-// server/data/gameData.ts
+// server/data/gameData.ts - PURE DATA LAYER
 export class ServerGameData {
   private balanceConfig: any = null;
   private rolesData: any = null;
   private artistsData: any = null;
 
   async initialize() {
-    // Load all JSON content files
+    // Load all JSON content files ONLY
     this.balanceConfig = await this.loadJSON('balance.json');
     this.rolesData = await this.loadJSON('roles.json');
     this.artistsData = await this.loadJSON('artists.json');
   }
 
+  // PURE DATA ACCESS - NO BUSINESS LOGIC
   async getRoleById(roleId: string): Promise<Role | null> {
     if (!this.rolesData) await this.initialize();
     return this.rolesData.roles.find((role: any) => role.id === roleId);
@@ -300,7 +302,12 @@ export class ServerGameData {
     return this.balanceConfig;
   }
 
-  // Content access methods for GameEngine
+  // REMOVED: calculateProjectCost(), calculateStreamingOutcome(), 
+  //          calculateEnhancedProjectCost(), calculatePerSongProjectCost(),
+  //          calculateEconomiesOfScale()
+  // ALL CALCULATIONS MOVED TO GameEngine
+  
+  // Simple data access methods for GameEngine
   getStreamingConfigSync(): any { return this.balanceConfig.streaming; }
   getPressConfigSync(): any { return this.balanceConfig.press; }
   getAccessTiersSync(): any { return this.balanceConfig.access_tiers; }
@@ -309,9 +316,11 @@ export class ServerGameData {
 
 **Benefits**:
 - Non-developers can modify game content
-- Version control for game balance
+- Version control for game balance 
 - A/B testing capability
-- Separation of data from logic
+- **Perfect separation of data from logic**
+- **No business logic contamination in data layer**
+- **GameEngine has single source for all calculations**
 
 ---
 

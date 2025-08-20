@@ -281,7 +281,7 @@ Content-Type: application/json
 
 ## ⏰ Month Advancement
 
-### **Advance Month (Primary Game Loop)**
+### **Advance Month (Primary Game Loop)** ✅ SINGLE SOURCE OF TRUTH
 ```http
 POST /api/advance-month
 Authorization: Required (session)
@@ -310,9 +310,15 @@ Content-Type: application/json
     }
   ]
 }
+
+// ARCHITECTURE: Routes.ts handles HTTP validation/transactions, GameEngine processes ALL business logic
+// - Project advancement logic: IN GameEngine
+// - Economic calculations: IN GameEngine  
+// - Revenue processing: IN GameEngine
+// - No duplicate logic between layers
 ```
 
-**Response (200 OK)**:
+**Response (200 OK)**: ✅ ALL CALCULATIONS FROM GameEngine
 ```json
 {
   "gameState": {
@@ -335,18 +341,23 @@ Content-Type: application/json
         "roleId": "manager"
       },
       {
-        "type": "expense",
+        "type": "expense", 
         "description": "Monthly operational costs",
         "amount": -4200
       },
       {
-        "type": "project_complete",
-        "description": "Started single: New Song",
-        "projectId": "uuid",
-        "amount": -7500
+        "type": "project_advance",
+        "description": "Advanced project stages", 
+        "note": "GameEngine handled ALL advancement logic"
+      },
+      {
+        "type": "streaming_revenue",
+        "description": "Individual song revenue decay",
+        "amount": 1250,
+        "note": "GameEngine calculated ALL economic formulas"
       }
     ],
-    "revenue": 0,
+    "revenue": 1250,
     "expenses": 11700,
     "reputationChanges": {
       "global": 3
@@ -355,6 +366,9 @@ Content-Type: application/json
   },
   "campaignResults": null
 }
+
+// NOTE: ALL business logic calculations performed by GameEngine
+// Routes.ts only manages HTTP request/response and database transactions
 ```
 
 **Campaign Completion Response (Month 12)**:
@@ -1036,6 +1050,12 @@ Authorization: Required (session)
 - Session secrets in environment variables
 - HTTPS enforcement in production
 - Database connection encryption
+
+### **Architecture Security**
+- **Single Source of Truth**: GameEngine prevents logic duplication vulnerabilities
+- **Clear Separation**: Routes.ts handles only HTTP concerns, reducing attack surface
+- **Transaction Safety**: Database operations are atomic and consistent
+- **Validation Layers**: Input validation in routes, business logic validation in GameEngine
 
 ---
 

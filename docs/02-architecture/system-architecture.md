@@ -38,12 +38,14 @@ The Music Label Manager is a **strategic simulation game** built as a full-stack
 ## 🧩 Core Components
 
 ### **1. Unified Game Engine (`/shared/engine/game-engine.ts`)**
-**Purpose**: Single source of truth for all game calculations and logic
+**Purpose**: Single source of truth for ALL game calculations and business logic
 
 **Key Responsibilities**:
 - Month advancement and turn processing
 - Resource calculations (money, reputation, creative capital)
-- **Song revenue processing and release management** (CONSOLIDATION: All song revenue logic moved from routes.ts)
+- **ALL project advancement logic** (consolidated from routes.ts)
+- **ALL streaming and revenue calculations** (consolidated from gameData.ts)
+- **ALL economic formulas** (calculateEnhancedProjectCost, calculatePerSongProjectCost, calculateEconomiesOfScale)
 - **Individual song revenue decay calculations** (15% monthly decline using balance.json configuration)
 - **Project song release processing** when projects advance to "released" stage
 - Project progression and completion
@@ -63,6 +65,14 @@ class GameEngine {
     campaignResults?: CampaignResults;
   }>
   
+  // NEW: Project advancement methods (moved from routes.ts)
+  advanceProjectStages(): void
+  
+  // NEW: Economic calculation methods (moved from gameData.ts)
+  calculateEnhancedProjectCost(baseData: any): number
+  calculatePerSongProjectCost(songData: any): number
+  calculateEconomiesOfScale(projectCount: number): number
+  
   // NEW: Consolidated song revenue processing methods
   processNewlyReleasedProjects(summary: MonthSummary, dbTransaction?: any)
   processProjectSongReleases(project: any, summary: MonthSummary, dbTransaction?: any)
@@ -74,9 +84,11 @@ class GameEngine {
 - Consistent calculations between client preview and server execution
 - Easy to test and modify game balance
 - Clear separation of game logic from UI and API layers
-- **Single source of truth for ALL song revenue processing** (no duplicate logic)
-- **Configuration-driven calculations** using balance.json for all revenue formulas
-- **Transaction-safe song processing** with database context integration
+- **Single source of truth for ALL game logic** (no duplicate implementations)
+- **Unified business logic layer** - all calculations in one place
+- **Configuration-driven calculations** using balance.json for all formulas
+- **Transaction-safe processing** with database context integration
+- **Eliminated code duplication** - clean architectural boundaries
 
 ### **2. Database Layer (`/shared/schema.ts`, `/server/storage.ts`)**
 **Purpose**: Persistent game state and user data management
@@ -122,14 +134,14 @@ game_saves (id, user_id, name, game_state, month, created_at)
 - Localization-ready structure
 
 ### **4. API Layer (`/server/routes.ts`)**
-**Purpose**: RESTful API with proper validation and error handling
+**Purpose**: HTTP request handling and database transaction management ONLY
 
 **API Design Patterns**:
 - **Type-safe contracts**: Zod validation for all inputs/outputs
 - **Database transactions**: Atomic operations for game state changes
 - **Error boundaries**: Consistent error handling and user feedback
 - **Authentication middleware**: Session-based user management
-- **CRITICAL ARCHITECTURAL PRINCIPLE**: Routes.ts handles ONLY project stage advancement; GameEngine processes ALL song revenue logic
+- **CRITICAL ARCHITECTURAL PRINCIPLE**: Routes.ts handles ONLY HTTP concerns - ALL business logic delegated to GameEngine
 
 **Key Endpoints**:
 ```typescript
@@ -158,7 +170,7 @@ POST   /api/saves                 // Create new save
 ## 🔄 Data Flow Architecture
 
 ### **Monthly Turn Cycle**
-The core game loop follows this CONSOLIDATED pattern:
+The core game loop follows this SINGLE SOURCE OF TRUTH pattern:
 
 ```
 1. Player selects actions (up to 3) in MonthPlanner
@@ -169,24 +181,25 @@ The core game loop follows this CONSOLIDATED pattern:
    ↓
 4. Server creates database transaction
    ↓
-5. Routes.ts advances project stages (planning → production → marketing → released)
+5. Routes.ts validates input and manages HTTP request/response ONLY
    ↓
-6. GameEngine processes actions and calculates outcomes
+6. GameEngine handles ALL business logic:
+   - Project stage advancement (planning → production → marketing → released)
+   - Action processing and outcome calculations
+   - Newly released project processing (song releases)
+   - Individual song revenue decay (15% monthly using balance.json)
+   - Economic calculations (project costs, streaming outcomes)
    ↓
-7. GameEngine processes newly released projects (song releases)
+7. Database updates: game state, projects, monthly actions, individual song metrics
    ↓
-8. GameEngine calculates individual song revenue decay (15% monthly using balance.json)
+8. Response returns: updated game state, summary, campaign results
    ↓
-9. Database updates: game state, projects, monthly actions, individual song metrics
+9. Zustand store updates state and sets campaignResults if month 12
    ↓
-10. Response returns: updated game state, summary, campaign results
-   ↓
-11. Zustand store updates state and sets campaignResults if month 12
-   ↓
-12. GamePage detects campaignResults and shows completion modal
+10. GamePage detects campaignResults and shows completion modal
 ```
 
-**KEY ARCHITECTURAL CHANGE**: All song revenue processing consolidated into GameEngine ONLY.
+**MIGRATION COMPLETED**: GameEngine is now the SINGLE SOURCE OF TRUTH for all game logic.
 
 ### **Dialogue System Flow**
 Role-based conversations follow this pattern:
@@ -268,23 +281,32 @@ Load Flow:
 - Enables atomic rollback on errors
 - Professional-grade data integrity
 
-### **6. Song Revenue System Consolidation (CRITICAL CHANGE)**
-**Decision**: GameEngine is the SINGLE source of truth for all song revenue processing  
-**Previous Problem**: Duplicate song processing in both routes.ts and GameEngine caused conflicts and inconsistent calculations  
-**Solution**: Removed ALL song processing logic from routes.ts (lines 917-941 removed)  
+### **6. Single Source of Truth Migration (COMPLETED)**
+**Decision**: GameEngine is the SINGLE source of truth for ALL game logic  
+**Previous Problem**: Duplicate implementations across routes.ts, gameData.ts, and GameEngine caused violations and inconsistencies  
+**Solution**: Consolidated ALL business logic into GameEngine ONLY
 **New Architecture**:
-- Routes.ts handles ONLY: Project stage advancement and release month tracking
-- GameEngine handles ALL: Song releases, revenue calculations, monthly decay processing
+- **Routes.ts**: HTTP handling and database transactions ONLY
+- **GameData.ts**: Pure data access for JSON files ONLY  
+- **GameEngine**: ALL game logic, calculations, and business rules
 
-**Revenue Decay Formula (Using balance.json configuration)**:
+**Economic Formulas (ALL in GameEngine using balance.json)**:
 ```typescript
+// Project cost calculations (moved from gameData.ts)
+calculateEnhancedProjectCost(baseData): number
+calculatePerSongProjectCost(songData): number  
+calculateEconomiesOfScale(projectCount): number
+
 // Individual song monthly decay calculation
 const baseDecay = Math.pow(0.85, monthsSinceRelease);  // 15% loss per month
 const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * 0.8;
 const revenue = monthlyStreams * 0.05;  // $0.05 per stream (from balance.json)
+
+// Project advancement logic (moved from routes.ts)
+advanceProjectStages(): void
 ```
 
-**Configuration-Driven Calculations**: ALL revenue calculations use balance.json values via `getStreamingConfigSync()`
+**Configuration-Driven Architecture**: ALL calculations use balance.json values via GameEngine methods
 
 ---
 
