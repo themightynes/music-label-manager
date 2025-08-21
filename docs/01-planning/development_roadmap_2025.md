@@ -71,33 +71,22 @@ Transform the MVP into a sophisticated music industry simulation with deep strat
 
 ---
 
-#### **4. Access Tier Progression System**
-**Priority**: HIGH - Clear progression goals  
+#### **4. Time Investment Quality System**
+**Priority**: HIGH - Strategic depth  
 **Target**: Sprint 2 (Weeks 3-4)
 
-**Requirements**:
-- **Playlist Tiers**: None → Niche → Mid → Flagship (60+ rep)
-- **Press Tiers**: None → Blogs → Mid-Tier → National (50+ rep)
-- **Venue Tiers**: None → Clubs → Theaters (20+ rep) → Arenas (45+ rep)
+**Options**:
+- Rushed (-10 quality, 0.7x cost)
+- Standard (0 quality, 1.0x cost)  
+- Extended (+8 quality, 1.4x cost)
+- Perfectionist (+15 quality, 2.1x cost)
 
 ---
 
 ### **🔧 TIER 2: CORE ENHANCEMENT (Weeks 5-8)**
 *Features that add essential depth*
 
-#### **5. Time Investment Quality System**
-**Priority**: MEDIUM - Strategic depth  
-**Target**: Sprint 2 (Weeks 3-4)
-
-**Options**:
-- Rushed (-10 quality, 0.7x cost)
-- Standard (0 quality, 1.0x cost)
-- Extended (+8 quality, 1.4x cost)
-- Perfectionist (+15 quality, 2.1x cost)
-
----
-
-#### **6. Artist Mood Effects System**
+#### **5. Artist Mood Effects System**
 **Priority**: HIGH - Relationship management  
 **Target**: Sprint 3 (Weeks 5-6)
 
@@ -111,7 +100,7 @@ Transform the MVP into a sophisticated music industry simulation with deep strat
 
 ---
 
-#### **7. Regional Market Barriers System**
+#### **6. Regional Market Barriers System**
 **Priority**: MEDIUM - Market expansion  
 **Target**: Sprint 3 (Weeks 5-6)
 
@@ -128,7 +117,7 @@ Transform the MVP into a sophisticated music industry simulation with deep strat
 ### **⚡ TIER 3: STRATEGIC SYSTEMS (Weeks 9-12)**
 *Features for long-term replayability*
 
-#### **8. Label Brand Building System**
+#### **7. Label Brand Building System**
 **Target**: Weeks 7-8
 **Priority**: MEDIUM - Long-term strategic identity
 
@@ -137,6 +126,25 @@ Transform the MVP into a sophisticated music industry simulation with deep strat
 - Brand coherence scoring system
 - Artist attraction modifiers based on label identity
 - Mixed-genre penalties vs specialist advantages
+
+---
+
+#### **8. Access Tier Progression System**
+**Priority**: MEDIUM - Reputation-based progression gates  
+**Target**: Weeks 7-8
+
+**Implementation Status**: 85% complete - needs critical fixes  
+**Detailed Analysis**: See `docs/01-planning/access-tier-progression-analysis.md`
+
+**Requirements**:
+- **Playlist Tiers**: None → Niche → Mid → Flagship (60+ rep)
+- **Press Tiers**: None → Blogs → Mid-Tier → National (50+ rep)
+- **Venue Tiers**: None → Clubs → Theaters (20+ rep) → Arenas (45+ rep)
+
+**Critical Issues to Resolve**:
+- Fix tier name inconsistencies between balance.json, GameEngine, and UI
+- Add tier upgrade notifications to MonthSummary
+- Resolve TypeScript errors affecting type safety
 
 ---
 
@@ -181,8 +189,7 @@ Transform the MVP into a sophisticated music industry simulation with deep strat
 - Core game loop functionality
 
 ### **Sprint 2: Strategic Depth (Weeks 3-4)**
-- Producer Tier System
-- Access Tier Progression
+- Producer Tier System  
 - Time Investment Quality
 
 ### **Sprint 3: Enhancement (Weeks 5-6)**
@@ -191,7 +198,7 @@ Transform the MVP into a sophisticated music industry simulation with deep strat
 - UI polish and integration
 
 ### **Sprint 4-6: Strategic Systems (Weeks 7-12)**
-- Brand Building (Weeks 7-8)
+- Brand Building & Access Tier Fixes (Weeks 7-8)
 - Marketing & Seasonal (Weeks 9-10)
 - Loyalty & Polish (Weeks 11-12)
 
