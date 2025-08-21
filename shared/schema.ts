@@ -86,6 +86,10 @@ export const songs = pgTable("songs", {
   isReleased: boolean("is_released").default(false),
   releaseId: uuid("release_id").references(() => releases.id, { onDelete: "set null" }),
   
+  // Timestamps for recording and release events
+  recordedAt: timestamp("recorded_at"), // When recording was completed
+  releasedAt: timestamp("released_at"), // When actually released via Plan Release
+  
   // Individual song revenue and streaming metrics
   initialStreams: integer("initial_streams").default(0),
   totalStreams: integer("total_streams").default(0),

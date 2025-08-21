@@ -102,8 +102,8 @@ export class GameEngine {
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary);
     
-    // Process newly released projects (projects that became "released" this month)
-    await this.processNewlyReleasedProjects(summary, dbTransaction);
+    // Process newly recorded projects (projects that became "recorded" this month)
+    await this.processNewlyRecordedProjects(summary, dbTransaction);
     
     // Process song generation for recording projects
     await this.processRecordingProjects(summary, dbTransaction);
@@ -623,12 +623,12 @@ export class GameEngine {
   }
 
   /**
-   * Processes newly released projects - projects that became "released" this month
-   * This handles the initial song release revenue calculations using balance.json configuration
+   * Processes newly recorded projects - projects that became "recorded" this month
+   * This marks songs as recorded but does not release them (no revenue yet)
    */
-  private async processNewlyReleasedProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
-    console.log('[NEWLY RELEASED] === Processing Newly Released Projects ===');
-    console.log(`[NEWLY RELEASED] Current month: ${this.gameState.currentMonth}`);
+  private async processNewlyRecordedProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    console.log('[NEWLY RECORDED] === Processing Newly Recorded Projects ===');
+    console.log(`[NEWLY RECORDED] Current month: ${this.gameState.currentMonth}`);
     
     try {
       // Check if we have a method to get newly released projects
@@ -640,109 +640,89 @@ export class GameEngine {
         console.log(`[NEWLY RELEASED] Found ${releasedProjects.length} released projects in flags`);
         
         for (const project of releasedProjects) {
-          await this.processProjectSongReleases(project, summary, dbTransaction);
+          await this.processProjectSongRecording(project, summary, dbTransaction);
         }
         return;
       }
       
-      // Get all projects in "released" stage
-      let releasedProjects: any[] = [];
+      // Get all projects in "recorded" stage  
+      let recordedProjects: any[] = [];
       if (this.gameData.getProjectsByStage) {
-        releasedProjects = await this.gameData.getProjectsByStage(this.gameState.id || '', 'released', dbTransaction);
+        recordedProjects = await this.gameData.getProjectsByStage(this.gameState.id || '', 'recorded', dbTransaction);
       } else if (this.gameData.getNewlyReleasedProjects) {
-        releasedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id || '', this.gameState.currentMonth || 1, dbTransaction);
+        // Note: This method name should be updated to getNewlyRecordedProjects in future
+        recordedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id || '', this.gameState.currentMonth || 1, dbTransaction);
       }
       
-      console.log(`[NEWLY RELEASED] Found ${releasedProjects.length} released projects`);
+      console.log(`[NEWLY RECORDED] Found ${recordedProjects.length} recorded projects`);
       
-      if (releasedProjects.length === 0) {
-        console.log('[NEWLY RELEASED] No released projects found, skipping song release processing');
+      if (recordedProjects.length === 0) {
+        console.log('[NEWLY RECORDED] No recorded projects found, skipping song recording processing');
         return;
       }
       
-      // Process song releases for each project
-      for (const project of releasedProjects) {
-        await this.processProjectSongReleases(project, summary, dbTransaction);
+      // Process song recording completion for each project
+      for (const project of recordedProjects) {
+        await this.processProjectSongRecording(project, summary, dbTransaction);
       }
       
     } catch (error) {
-      console.error('[NEWLY RELEASED] Error processing newly released projects:', error);
+      console.error('[NEWLY RECORDED] Error processing newly recorded projects:', error);
     }
     
-    console.log('[NEWLY RELEASED] === End Processing ===');
+    console.log('[NEWLY RECORDED] === End Processing ===');
   }
 
   /**
-   * Process song releases for a specific project
-   * This ensures all songs from a released project get proper initial revenue using balance.json values
+   * Process song recording completion for a specific project
+   * This marks all songs from a completed recording project as recorded (but not released)
    */
-  private async processProjectSongReleases(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
-    console.log(`[PROJECT SONG RELEASE] Processing project "${project.title}" (ID: ${project.id})`);
+  private async processProjectSongRecording(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    console.log(`[PROJECT SONG RECORDING] Processing project "${project.title}" (ID: ${project.id})`);
     
     try {
       // Get songs for this project
       const projectSongs = await this.gameData.getSongsByProject?.(project.id) || [];
-      console.log(`[PROJECT SONG RELEASE] Found ${projectSongs.length} songs for project`);
+      console.log(`[PROJECT SONG RECORDING] Found ${projectSongs.length} songs for project`);
       
-      // Filter to only unreleased songs
-      const unreleasedSongs = projectSongs.filter((song: any) => !song.isReleased);
-      console.log(`[PROJECT SONG RELEASE] ${unreleasedSongs.length} songs need to be released`);
+      // Filter to only unrecorded songs (songs that haven't completed recording)
+      const unrecordedSongs = projectSongs.filter((song: any) => !song.isRecorded);
+      console.log(`[PROJECT SONG RECORDING] ${unrecordedSongs.length} songs need recording completion`);
       
-      if (unreleasedSongs.length === 0) {
-        console.log(`[PROJECT SONG RELEASE] All songs already released for project "${project.title}"`);
+      if (unrecordedSongs.length === 0) {
+        console.log(`[PROJECT SONG RECORDING] All songs already recorded for project "${project.title}"`);
         return;
       }
       
-      // Process each unreleased song
-      for (const song of unreleasedSongs) {
-        console.log(`[PROJECT SONG RELEASE] Releasing song "${song.title}" (quality: ${song.quality})`);
+      // Process each unrecorded song - mark as recorded but NOT released
+      for (const song of unrecordedSongs) {
+        console.log(`[PROJECT SONG RECORDING] Completing recording for song "${song.title}" (quality: ${song.quality})`);
         
-        // Calculate initial streams and revenue using balance.json configuration
-        const initialStreams = this.calculateStreamingOutcome(
-          song.quality || 40,
-          this.gameState.playlistAccess || 'none',
-          this.gameState.reputation || 5,
-          0
-        );
-        
-        // Get revenue per stream from balance.json configuration
-        const streamingConfig = this.gameData.getStreamingConfigSync();
-        const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
-        const initialRevenue = Math.floor(initialStreams * revenuePerStream);
-        
-        console.log(`[PROJECT SONG RELEASE] Song "${song.title}": ${initialStreams} streams, $${initialRevenue} revenue (rate: $${revenuePerStream}/stream)`);
-        
-        // Update song in database
+        // Update song in database - only mark as recorded
         if (this.gameData.updateSong) {
           const songUpdate = {
-            isReleased: true,
-            initialStreams: initialStreams,
-            totalStreams: initialStreams,
-            totalRevenue: initialRevenue,
-            lastMonthRevenue: initialRevenue,
-            monthlyStreams: initialStreams,
-            releaseMonth: this.gameState.currentMonth,
+            isRecorded: true,
+            isReleased: false, // Keep as false - will be set by Plan Release feature
+            recordedAt: new Date(), // Track when recording completed
             updatedAt: new Date()
           };
           
           await this.gameData.updateSong(song.id, songUpdate, dbTransaction);
-          console.log(`[PROJECT SONG RELEASE] ✅ Updated song "${song.title}" in database`);
+          console.log(`[PROJECT SONG RECORDING] ✅ Song "${song.title}" marked as recorded`);
         }
         
-        // Add to monthly summary
-        summary.revenue += initialRevenue;
-        summary.streams = (summary.streams || 0) + initialStreams;
+        // Add to summary - recording completion notification (no revenue yet)
         summary.changes.push({
-          type: 'revenue',
-          description: `🎵 "${song.title}" released - ${initialStreams.toLocaleString()} streams`,
-          amount: initialRevenue
+          type: 'unlock',
+          description: `🎵 "${song.title}" recording completed - ready for release`,
+          amount: 0
         });
         
-        console.log(`[PROJECT SONG RELEASE] Added to summary: $${initialRevenue} revenue, ${initialStreams} streams`);
+        console.log(`[PROJECT SONG RECORDING] Song "${song.title}" ready for release via Plan Release feature`);
       }
       
     } catch (error) {
-      console.error(`[PROJECT SONG RELEASE] Error processing project "${project.title}":`, error);
+      console.error(`[PROJECT SONG RECORDING] Error processing project "${project.title}":`, error);
     }
   }
 
@@ -2721,7 +2701,7 @@ export class GameEngine {
       console.log(`[PROJECT ADVANCEMENT] Found ${projectList.length} projects to evaluate`);
 
       for (const project of projectList) {
-        const stages = ['planning', 'production', 'marketing', 'released'];
+        const stages = ['planning', 'production', 'marketing', 'recorded'];
         const currentStageIndex = stages.indexOf(project.stage || 'planning');
         const monthsElapsed = (this.gameState.currentMonth || 1) - (project.startMonth || 1);
         const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
@@ -2782,16 +2762,16 @@ export class GameEngine {
             quality: Math.min(100, (project.quality || 0) + 25)
           };
           
-          // If advancing to released stage, track release metadata
-          if (newStage === 'released') {
+          // If advancing to recorded stage, track recording completion metadata
+          if (newStage === 'recorded') {
             const existingMetadata = project.metadata || {};
             updateData.metadata = {
               ...existingMetadata,
-              releaseMonth: this.gameState.currentMonth,
-              releasedAt: new Date().toISOString(),
+              recordingCompletedMonth: this.gameState.currentMonth,
+              recordedAt: new Date().toISOString(),
               advancementReason
             };
-            console.log(`[PROJECT ADVANCEMENT] Marking project "${project.title}" as released in month ${this.gameState.currentMonth}`);
+            console.log(`[PROJECT ADVANCEMENT] Marking project "${project.title}" as recording completed in month ${this.gameState.currentMonth}`);
           }
           
           // Update project in database

@@ -44,7 +44,7 @@ export function ActiveProjects() {
   };
 
   const getProjectProgress = (project: any) => {
-    const stages = ['planning', 'production', 'marketing', 'released'];
+    const stages = ['planning', 'production', 'marketing', 'recorded'];
     const currentStageIndex = stages.indexOf(project.stage || 'planning');
     return ((currentStageIndex + 1) / stages.length) * 100;
   };
@@ -54,7 +54,8 @@ export function ActiveProjects() {
       case 'planning': return 'bg-slate-400 text-white';
       case 'production': return 'bg-warning text-white';
       case 'marketing': return 'bg-primary text-white';
-      case 'released': return 'bg-success text-white';
+      case 'recorded': return 'bg-green-500 text-white';
+      case 'released': return 'bg-success text-white'; // Legacy support
       default: return 'bg-slate-400 text-white';
     }
   };
@@ -64,7 +65,8 @@ export function ActiveProjects() {
       case 'planning': return 'Planning';
       case 'production': return 'Production';
       case 'marketing': return 'Marketing';
-      case 'released': return '✨ Released';
+      case 'recorded': return '🎵 Recorded';
+      case 'released': return '✨ Released'; // Legacy support
       default: return 'Planning';
     }
   };
@@ -79,6 +81,8 @@ export function ActiveProjects() {
 
   // Calculate aggregated metrics from individual songs
   const calculateProjectMetrics = (project: any) => {
+    // Only show revenue metrics for actually released projects (legacy)
+    // Recorded projects won't show revenue until songs are released via Plan Release
     if (project.stage !== 'released') return null;
     
     const projectSongs = getProjectSongs(project.id);
@@ -240,7 +244,38 @@ export function ActiveProjects() {
                   </span>
                 </div>
 
-                {/* Enhanced Revenue Information for Released Projects */}
+                {/* Information for Recorded Projects */}
+                {project.stage === 'recorded' && (() => {
+                  const projectSongs = getProjectSongs(project.id);
+                  const recordedSongs = projectSongs.filter(song => song.isRecorded);
+                  const readySongs = projectSongs.filter(song => song.isRecorded && !song.isReleased);
+                  
+                  return (
+                    <div className="pt-2 border-t border-slate-200 space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Songs Recorded</span>
+                        <span className="font-mono text-green-600">
+                          {recordedSongs.length} song{recordedSongs.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Ready for Release</span>
+                        <span className="font-mono text-blue-600">
+                          {readySongs.length} song{readySongs.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      
+                      {readySongs.length > 0 && (
+                        <div className="text-xs text-slate-600 italic">
+                          Use Plan Release to publish these songs
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Enhanced Revenue Information for Released Projects (Legacy) */}
                 {project.stage === 'released' && (() => {
                   const metrics = calculateProjectMetrics(project);
                   if (metrics) {

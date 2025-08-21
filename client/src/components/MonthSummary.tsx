@@ -31,7 +31,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
 
   const getChangeIcon = (type: string) => {
     switch (type) {
-      case 'project_complete': return '🎉';
+      case 'project_complete': return '🎵'; // Changed from 🎉 for recording completion
       case 'revenue': return '💰';
       case 'ongoing_revenue': return '📻';
       case 'expense': return '💸';
@@ -311,7 +311,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                               </div>
                             </div>
                           </div>
-                          <Badge className="bg-green-100 text-green-800 px-2 py-1 text-xs">Released</Badge>
+                          <Badge className="bg-green-100 text-green-800 px-2 py-1 text-xs">Recorded</Badge>
                         </div>
                       </CardContent>
                     </Card>

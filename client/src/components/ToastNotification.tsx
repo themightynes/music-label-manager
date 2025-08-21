@@ -231,9 +231,9 @@ export function ToastNotification() {
           const revenue = change.amount || 0;
           
           showEnhancedToast({
-            title: '🎉 Project Released!',
-            description: `${projectTitle} is now live! Generated ${formatCurrency(revenue)} in initial revenue.`,
-            type: 'achievement',
+            title: '🎵 Recording Complete!',
+            description: `${projectTitle} songs are recorded and ready for strategic release.`,
+            type: 'success',
             duration: 7000,
             action: {
               label: 'View Details',
