@@ -98,6 +98,25 @@ export class ServerGameData {
     return meetings.find(meeting => meeting.id === meetingId);
   }
 
+  // Monthly actions data access
+  async getMonthlyActions(): Promise<any[]> {
+    await this.initialize();
+    try {
+      const actionsData = await this.dataLoader.loadActionsData();
+      return actionsData.monthly_actions || [];
+    } catch (error) {
+      console.error('Failed to load actions data:', error);
+      return [];
+    }
+  }
+
+  // Project types data access  
+  async getProjectTypes(): Promise<any> {
+    await this.initialize();
+    const data = await this.dataLoader.loadAllData();
+    return data.balance.economy.project_costs || {};
+  }
+
   // Event data access
   async getAllEvents(): Promise<SideEvent[]> {
     await this.initialize();

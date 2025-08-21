@@ -1,226 +1,130 @@
 # Music Label Manager - Documentation Hub
 
-**Complete Project Documentation**  
-*Version: 1.0 (MVP Complete)*  
-*Date: August 18, 2025*
+**Documentation Navigation Center**
 
 ---
 
-## 📖 Documentation Overview
+## 📊 **Project Status & Onboarding**
 
-This documentation hub contains everything needed to understand, develop, and extend the Music Label Manager project. Documentation is organized by purpose and audience.
-
-## 🎯 Quick Navigation by Role
-
-### **For Project Managers & Stakeholders**
-- [**Executive Handoff Summary**](./HANDOFF_SUMMARY.md) - Complete project status and next steps
-- [**Original Product Vision**](./01-planning/Concept_Vision.md) - Game concept and market positioning
-- [**Product Requirements Document**](./01-planning/prd.md) - Detailed MVP specifications and goals
-
-### **For Developers & Technical Team**
-- [**Development Setup**](./06-development/setup.md) - Get coding in 5 minutes
-- [**System Architecture**](./02-architecture/system-architecture.md) - High-level technical design
-- [**User Workflows**](./03-workflows/user-workflows.md) - Complete user journey implementations
-
-### **For Designers & UX**
-- [**UI Workflow Documentation**](./01-planning/ui/ui_workflow_documentation.md) - Original UI analysis and flows
-- [**Frontend Architecture**](./04-frontend/frontend-architecture.md) - Component structure and design patterns
-
-### **For Content Creators**
-- [**Content Management System**](./07-content/content-system.md) - Edit game content without coding
-- [**Game Mechanics**](./03-workflows/game-mechanics.md) - Complete game systems and balance
+- [**📈 DEVELOPMENT_STATUS.md**](../DEVELOPMENT_STATUS.md) - **SINGLE SOURCE OF TRUTH** for project status, onboarding, and development progress
 
 ---
 
-## 📁 Documentation Structure
+## 🎯 **Quick Start by Role**
 
-### **01-Planning** - Original Conceptual Documents
-Strategic planning and product definition documents from project inception.
+### **Developers**
+- [**System Architecture**](./02-architecture/system-architecture.md) - Technical overview
 
-- [**Concept & Vision**](./01-planning/Concept_Vision.md) - Original game concept and vision statement
-- [**Product Requirements Document**](./01-planning/prd.md) - Detailed MVP specifications and technical requirements
-- [**MVP Content Scope**](./01-planning/mpv_content_scope.md) - Content requirements and writing targets
-- [**UI Workflow Documentation**](./01-planning/ui/ui_workflow_documentation.md) - UI analysis and user flow design
+### **Content Creators**
+- [**Content Editing Guide**](./06-development/content-editing-guide.md) - Edit game content without coding
 
-### **02-Architecture** - Technical System Design
-Core technical architecture and design decisions.
+### **Project Managers**
+- [**Development Roadmap 2025**](./01-planning/development_roadmap_2025.md) - Strategic implementation plan
 
-- [**System Architecture**](./02-architecture/system-architecture.md) - High-level system design and component relationships
-- [**Database Design**](./02-architecture/database-design.md) - Complete schema, relationships, and data patterns
-- [**API Design**](./02-architecture/api-design.md) - REST endpoints, contracts, and integration patterns
+---
+
+## 📁 **Documentation Structure**
+
+### **01-Planning** - Strategic Documents
+- [Development Roadmap 2025](./01-planning/development_roadmap_2025.md)
+- [Music Creation Release Cycle Plan](./01-planning/music-creation-release-cycle-plan.md)
+- [Music Game System Map](./01-planning/music_game_system_map.html)
+
+### **02-Architecture** - Technical Design
+- [System Architecture](./02-architecture/system-architecture.md)
+- [Database Design](./02-architecture/database-design.md)
+- [API Design](./02-architecture/api-design.md)
+- [Music Creation Architecture](./02-architecture/music-creation-architecture.md)
+- [Content Data Schemas](./02-architecture/content-data-schemas.md)
 
 ### **03-Workflows** - User & Game Systems
-User experience and game mechanics implementation.
+- [User Interaction Flows](./03-workflows/user-interaction-flows.md)
+- [Game System Workflows](./03-workflows/game-system-workflows.md)
 
-- [**Complete User Workflows**](./03-workflows/user-workflows.md) - End-to-end user journeys with technical flows
-- [**Game Mechanics**](./03-workflows/game-mechanics.md) - Turn system, resource management, and progression systems
-
-### **04-Frontend** - React Application Design
-Frontend architecture and component documentation.
-
-- [**Frontend Architecture**](./04-frontend/frontend-architecture.md) - React, TypeScript, and state management patterns
+### **04-Frontend** - React Application
+- [Frontend Architecture](./04-frontend/frontend-architecture.md)
 
 ### **05-Backend** - Server Architecture
-Backend system design and implementation patterns.
+- [Backend Architecture](./05-backend/backend-architecture.md)
 
-- [**Backend Architecture**](./05-backend/backend-architecture.md) - Node.js, Express, and server design patterns
+### **06-Development** - Development Guides
+- [Content Editing Guide](./06-development/content-editing-guide.md)
+- [Documentation Governance](./06-development/documentation-governance.md)
 
-### **06-Development** - Setup & Tooling
-Development environment and workflow documentation.
+### **08-Future Features** - Roadmap
+- [Core Features](./08-future-features-and-fixes/CORE_FEATURES.md)
+- [Comprehensive Roadmap](./08-future-features-and-fixes/comprehensive-roadmap.md)
+- [Content Management Features](./08-future-features-and-fixes/content-management-features.md)
 
-- [**Development Setup**](./06-development/setup.md) - Complete local development environment guide
-
-### **07-Content** - Game Content Management
-Content creation and modification system.
-
-- [**Content Management System**](./07-content/content-system.md) - JSON-based content structure and editing workflows
-
-### **99-Legacy** - Historical Files
-Claude-specific instruction files preserved for reference.
-
-- Various Claude Code and project instruction files
+### **09-Troubleshooting** - Issues & Solutions
+- [Consolidated Troubleshooting](./09-troubleshooting/consolidated-system-troubleshooting.md)
 
 ---
 
-## 🎯 Quick Start for New Developers
+## 📋 **Documentation Best Practices**
 
-### **Understanding the System (30 minutes)**
-1. Read [System Architecture](./02-architecture/system-architecture.md) for the big picture
-2. Review [Complete User Workflows](./03-workflows/user-workflows.md) to understand user experience
-3. Check [Game Mechanics](./03-workflows/game-mechanics.md) for core game logic
+### **🎯 Folder Purpose Guidelines**
 
-### **Setting Up Development (15 minutes)**
-1. Follow [Development Setup](./06-development/setup.md) guide
-2. Run the application locally using instructions in the setup guide
-3. Play through a complete 12-month campaign to understand the game
+**Before adding documentation, ask:**
+1. **Does this content belong in an existing folder?**
+2. **Does this create redundancy with existing docs?**
+3. **Is this the right audience for this folder?**
 
-### **Making Your First Changes (1 hour)**
-1. Review [Frontend Architecture](./04-frontend/frontend-architecture.md) to understand UI patterns
-2. Look at [Database Design](./02-architecture/database-design.md) for data structure
-3. Study existing components in `/client/src/components/` for code patterns
+### **📁 Folder Boundaries**
 
----
+| Folder | Purpose | Audience | What Goes Here | What Doesn't Go Here |
+|--------|---------|----------|----------------|---------------------|
+| `01-planning/` | Strategic vision & roadmaps | PMs, Leadership | Business requirements, roadmaps | Implementation details, code |
+| `02-architecture/` | System design & schemas | Developers | Technical architecture, data schemas | User guides, implementation steps |
+| `03-workflows/` | Process flows | Developers, PMs | User journeys, system processes | Code examples, debugging |
+| `04-frontend/` | React app architecture | Frontend devs | Component design, UI patterns | Backend details, content editing |
+| `05-backend/` | Server implementation | Backend devs | Server setup, API implementation | Architecture theory, user guides |
+| `06-development/` | Practical dev guides | All developers | Setup guides, how-to content | Architectural theory, future plans |
+| `08-future-features/` | Roadmap & ideas | PMs, Developers | Future enhancements, research | Current implementation, user guides |
+| `09-troubleshooting/` | Problem solving | All roles | Debugging, fixes, known issues | General documentation, tutorials |
 
-## 🔧 Current MVP Status
+### **🚫 Anti-Patterns to Avoid**
 
-**99.5% Complete** - Fully playable strategic simulation game with Phase 2 UI/UX Enhancements
+1. **Content Duplication**: If it exists elsewhere, link to it instead
+2. **Wrong Audience**: Don't put technical details in user-facing docs
+3. **Scope Creep**: Keep folder purposes narrow and distinct
+4. **Future Bloat**: Don't document unimplemented features in current docs
 
-### **What's Working**
-- ✅ Complete 12-month turn-based campaign system
-- ✅ Artist discovery, signing, and management **with comprehensive analytics and insights**
-- ✅ Project creation (Singles, EPs, Mini-Tours) with progression **and pipeline visualization**
-- ✅ Role-based dialogue system with immediate/delayed effects
-- ✅ Resource management (money, reputation, access tiers) **with detailed progression paths**
-- ✅ **Enhanced strategic planning** with action recommendations and contextual information
-- ✅ Save/load system with multiple slots
-- ✅ Campaign completion with scoring and victory conditions
-- ✅ Professional UI with responsive design **and rich contextual feedback**
+### **✅ Documentation Review Checklist**
 
-### **Technical Excellence**
-- ✅ Type-safe TypeScript throughout
-- ✅ Unified game engine for all calculations
-- ✅ Database transactions for data consistency
-- ✅ Component-based React architecture **with enhanced UI/UX**
-- ✅ RESTful API with proper error handling
-- ✅ JSON-based content management system
-- ✅ **Rich contextual information systems** providing strategic guidance
-- ✅ **Advanced recommendation engines** for optimal decision-making
+**Before adding new documentation:**
+- [ ] **Unique Value**: Does this provide information not available elsewhere?
+- [ ] **Right Location**: Does this match the folder's purpose and audience?
+- [ ] **Cross-References**: Are links to related docs included?
+- [ ] **Maintenance**: Will this stay current with code changes?
+- [ ] **Clarity**: Can the target audience understand and act on this?
 
----
+**Before editing existing documentation:**
+- [ ] **Scope Check**: Are you changing the document's intended purpose?
+- [ ] **Consistency**: Does this match the style and depth of the folder?
+- [ ] **Dependencies**: Will this break links in other documents?
 
-## 🚀 Post-MVP Roadmap
+### **🔄 Maintenance Guidelines**
 
-### **Phase 2: Enhanced Features (2-4 weeks)**
-- Advanced artist relationship system with mood/loyalty consequences
-- Marketing campaign system with measurable ROI
-- Industry events and random opportunities
-- Enhanced project management with budget allocation
+1. **Link Validation**: Check that all internal links work when moving/renaming files
+2. **Audience Consistency**: Don't mix technical and non-technical content in the same document
+3. **Length Control**: Split documents over 500 lines into focused sub-documents
+4. **Regular Review**: Remove outdated information rather than letting it accumulate
 
-### **Phase 3: Production Features (4-6 weeks)**
-- Multi-user support and competition modes
-- Advanced analytics and reporting
-- Social features and leaderboards
-- Mobile-responsive enhancements
+### **📝 Adding New Content**
 
-### **Phase 4: Scale & Polish (2-3 weeks)**
-- Performance optimization
-- Advanced caching strategies
-- Comprehensive testing suite
-- Production monitoring and logging
+**Step 1**: Determine if new content is needed
+- Search existing docs for similar information
+- Consider updating existing docs instead of creating new ones
 
----
+**Step 2**: Choose the right location
+- Match content purpose to folder purpose
+- Consider the primary audience who will use this content
+- Avoid creating new folders unless absolutely necessary
 
-## 📞 Support & Questions
+**Step 3**: Write with focus
+- Address one specific need or question
+- Link to related information rather than duplicating it
+- Use the minimum viable documentation approach
 
-## 🔍 Key Files to Understand First
-
-### **Core Game Logic**
-- `/shared/engine/game-engine.ts` - All game calculations and logic
-- `/shared/schema.ts` - Database schema and type definitions
-- `/data/balance.json` - Economic balance and game formulas
-
-### **Main UI Components**
-- `/client/src/components/Dashboard.tsx` - Main game interface
-- `/client/src/components/MonthPlanner.tsx` - Enhanced turn-based action system with strategic recommendations
-- `/client/src/components/AccessTierBadges.tsx` - Detailed progression system with requirements and benefits
-- `/client/src/components/ArtistRoster.tsx` - Comprehensive artist management with analytics and insights
-- `/client/src/components/DialogueModal.tsx` - Role conversation system
-
-### **Backend Core**
-- `/server/routes.ts` - All API endpoints and business logic
-- `/server/storage.ts` - Database operations and data access
-- `/server/data/gameData.ts` - Content loading and management
-
-## 🛠️ Common Development Tasks
-
-### **Content Modifications**
-- **Adding new dialogue**: Edit `/data/roles.json` or `/data/dialogue.json`
-- **Modifying game balance**: Update `/data/balance.json`
-- **Adding new artists**: Edit `/data/artists.json`
-
-### **Code Changes**
-- **Creating new UI components**: Follow patterns in `/client/src/components/`
-- **Adding new API endpoints**: Extend `/server/routes.ts` with proper validation
-- **Modifying game logic**: Update `/shared/engine/game-engine.ts`
-
-## 🏗️ Architecture Decisions Made
-
-- ✅ **Single Source of Truth**: GameEngine is the ONLY place for business logic
-- ✅ **Clean Layer Separation**: Routes (HTTP), GameData (data), GameEngine (logic) with ZERO overlap
-- ✅ **Eliminated Duplication**: Consolidated project advancement, economic calculations, revenue processing
-- **JSON-based Content**: Easy for non-developers to modify game content
-- **Component-based UI**: Reusable components with clear responsibilities
-- **Type Safety**: TypeScript + Zod validation throughout the stack
-- **Transaction Safety**: Database consistency through proper transaction usage
-
-## ⚠️ CRITICAL ARCHITECTURAL CONSOLIDATION
-
-**Major Refactoring Completed**: Song Revenue System Consolidation
-
-**Previous Problem**: Duplicate song processing existed in both routes.ts and GameEngine, causing conflicts and inconsistent calculations.
-
-**Solution**: All song revenue processing consolidated into GameEngine ONLY:
-- **Routes.ts**: Handles ONLY project stage advancement (planning → production → marketing → released)
-- **GameEngine**: Handles ALL song releases, revenue calculations, monthly decay processing
-- **Configuration-Driven**: All calculations use balance.json values (ongoing_streams.revenue_per_stream: 0.05)
-- **Individual Song Tracking**: Songs have separate revenue streams with 15% monthly decay
-- **New Methods**: `processNewlyReleasedProjects()`, `processProjectSongReleases()`
-
-**Result**: Single source of truth architecture with no conflicting systems.
-
----
-
-## 📚 Documentation Philosophy
-
-This documentation is organized to serve different audiences and purposes:
-
-- **Planning Documents** (`01-planning/`) - Original strategic vision and requirements
-- **Technical Architecture** (`02-07/`) - Implementation details and patterns
-- **Role-Based Navigation** - Quick paths for different team members
-- **Comprehensive Coverage** - Both high-level strategy and low-level implementation
-
-Each document builds upon others to provide complete understanding while remaining accessible to newcomers.
-
----
-
-*This documentation represents the complete knowledge needed to continue development on the Music Label Manager project.*
+**Need help deciding where documentation belongs?** Reference this folder purpose table or consult the detailed [Documentation Governance](./06-development/documentation-governance.md) guide.

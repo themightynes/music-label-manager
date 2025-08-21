@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
-import { PROJECT_TYPES } from '@/lib/gameData';
+// PROJECT_TYPES moved to API - removed import
 import { ProjectCreationModal, type ProjectCreationData } from './ProjectCreationModal';
 import { useState } from 'react';
 

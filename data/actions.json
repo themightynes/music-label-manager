@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "generated": "2025-08-21",
+  "description": "Unified action system combining UI presentation and backend game logic",
+  "monthly_actions": [
+    {
+      "id": "meet_manager",
+      "name": "Meet Manager",
+      "type": "role_meeting",
+      "icon": "fas fa-user-tie",
+      "description": "Schedule strategic planning meeting with your manager",
+      "role_id": "manager",
+      "category": "business"
+    },
+    {
+      "id": "meet_ar",
+      "name": "Meet A&R",
+      "type": "role_meeting", 
+      "icon": "fas fa-search",
+      "description": "Discuss talent acquisition and artist development",
+      "role_id": "ar",
+      "category": "talent"
+    },
+    {
+      "id": "meet_producer",
+      "name": "Meet Producer",
+      "type": "role_meeting",
+      "icon": "fas fa-sliders-h", 
+      "description": "Plan recording sessions and production quality",
+      "role_id": "producer",
+      "category": "production"
+    },
+    {
+      "id": "meet_pr",
+      "name": "Meet PR",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "Coordinate publicity and media relationships",
+      "role_id": "pr", 
+      "category": "marketing"
+    },
+    {
+      "id": "meet_digital",
+      "name": "Digital Marketing",
+      "type": "role_meeting",
+      "icon": "fas fa-chart-line",
+      "description": "Plan social media and digital advertising strategy",
+      "role_id": "digital",
+      "category": "marketing"
+    },
+    {
+      "id": "meet_streaming",
+      "name": "Streaming Pitch", 
+      "type": "role_meeting",
+      "icon": "fas fa-list-ul",
+      "description": "Pitch songs to streaming platforms and playlists",
+      "role_id": "streaming",
+      "category": "distribution"
+    },
+    {
+      "id": "meet_booking",
+      "name": "Meet Booking",
+      "type": "role_meeting", 
+      "icon": "fas fa-calendar-alt",
+      "description": "Plan tours and live performance opportunities",
+      "role_id": "booking",
+      "category": "live"
+    },
+    {
+      "id": "meet_operations",
+      "name": "Meet Operations",
+      "type": "role_meeting",
+      "icon": "fas fa-cogs",
+      "description": "Optimize business operations and efficiency",
+      "role_id": "operations", 
+      "category": "business"
+    },
+    {
+      "id": "start_single",
+      "name": "Start Single",
+      "type": "project_creation",
+      "icon": "fas fa-music",
+      "description": "Begin production of a new single release",
+      "project_type": "single",
+      "category": "production"
+    },
+    {
+      "id": "start_ep", 
+      "name": "Start EP",
+      "type": "project_creation",
+      "icon": "fas fa-compact-disc",
+      "description": "Begin production of an EP (extended play)",
+      "project_type": "ep",
+      "category": "production"
+    },
+    {
+      "id": "start_tour",
+      "name": "Plan Tour",
+      "type": "project_creation", 
+      "icon": "fas fa-route",
+      "description": "Plan and schedule a mini-tour",
+      "project_type": "mini_tour",
+      "category": "live"
+    },
+    {
+      "id": "pr_push",
+      "name": "PR Push",
+      "type": "marketing_campaign",
+      "icon": "fas fa-newspaper", 
+      "description": "Launch targeted public relations campaign",
+      "campaign_type": "pr_push",
+      "category": "marketing"
+    },
+    {
+      "id": "digital_push",
+      "name": "Digital Campaign",
+      "type": "marketing_campaign",
+      "icon": "fas fa-ad",
+      "description": "Launch digital advertising and social media campaign", 
+      "campaign_type": "digital_ads",
+      "category": "marketing"
+    }
+  ],
+  "action_categories": [
+    { "id": "business", "name": "Business Strategy", "color": "blue" },
+    { "id": "talent", "name": "Artist & Talent", "color": "purple" },
+    { "id": "production", "name": "Music Production", "color": "green" },
+    { "id": "marketing", "name": "Marketing & PR", "color": "orange" },
+    { "id": "distribution", "name": "Distribution", "color": "cyan" },
+    { "id": "live", "name": "Live Performance", "color": "red" }
+  ]
+}

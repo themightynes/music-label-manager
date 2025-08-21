@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award } from 'lucide-react';
+import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 
 interface ProjectCreationModalProps {
@@ -29,7 +29,9 @@ export interface ProjectCreationData {
   timeInvestment: 'rushed' | 'standard' | 'extended' | 'perfectionist';
 }
 
-const PROJECT_TYPES = [
+// PROJECT_TYPES moved to API - will be fetched from /api/project-types
+// Temporary fallback data with defensive programming
+const PROJECT_TYPES_FALLBACK = [
   {
     id: 'Single' as const,
     name: 'Single',
@@ -76,6 +78,9 @@ const PROJECT_TYPES = [
     defaultSongs: 0
   }
 ];
+
+// Use fallback data until API integration is complete
+const PROJECT_TYPES = PROJECT_TYPES_FALLBACK;
 
 const PRODUCER_TIERS = [
   {
@@ -151,6 +156,26 @@ const TIME_INVESTMENT_OPTIONS = [
   }
 ];
 
+interface ProjectTypeAPI {
+  single?: {
+    min: number;
+    max: number;
+    quality_multiplier: number;
+    song_count_default: number;
+  };
+  ep?: {
+    min: number;
+    max: number;
+    quality_multiplier: number;
+    song_count_default: number;
+  };
+  mini_tour?: {
+    min: number;
+    max: number;
+    venue_tier_multiplier?: Record<string, number>;
+  };
+}
+
 export function ProjectCreationModal({ 
   gameState, 
   artists, 
@@ -167,6 +192,37 @@ export function ProjectCreationModal({
   const [songCount, setSongCount] = useState(1);
   const [selectedProducerTier, setSelectedProducerTier] = useState<'local' | 'regional' | 'national' | 'legendary'>('local');
   const [selectedTimeInvestment, setSelectedTimeInvestment] = useState<'rushed' | 'standard' | 'extended' | 'perfectionist'>('standard');
+
+  // API state for project types
+  const [projectTypesAPI, setProjectTypesAPI] = useState<ProjectTypeAPI>({});
+  const [loadingProjectTypes, setLoadingProjectTypes] = useState(false);
+  const [projectTypesError, setProjectTypesError] = useState<string | null>(null);
+
+  // Fetch project types from API
+  const fetchProjectTypes = async () => {
+    setLoadingProjectTypes(true);
+    setProjectTypesError(null);
+    try {
+      const response = await fetch('/api/project-types');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch project types: ${response.status}`);
+      }
+      const data = await response.json();
+      setProjectTypesAPI(data.projectTypes || {});
+    } catch (err) {
+      console.error('Failed to fetch project types:', err);
+      setProjectTypesError(err instanceof Error ? err.message : 'Failed to load project types');
+      setProjectTypesAPI({});
+    } finally {
+      setLoadingProjectTypes(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchProjectTypes();
+    }
+  }, [open]);
 
   const currentMoney = gameState.money || 75000;
   const currentReputation = gameState.reputation || 0;
@@ -229,10 +285,27 @@ export function ProjectCreationModal({
 
   const handleTypeSelect = (type: 'Single' | 'EP' | 'Mini-Tour') => {
     setSelectedType(type);
-    const projectType = PROJECT_TYPES.find(p => p.id === type);
-    if (projectType) {
-      setBudgetPerSong(projectType.defaultBudgetPerSong);
-      setSongCount(projectType.defaultSongs);
+    
+    // Use API data if available, otherwise fallback to local data
+    const apiKey = type === 'Single' ? 'single' : type === 'EP' ? 'ep' : 'mini_tour';
+    const apiProjectType = projectTypesAPI[apiKey];
+    const fallbackProjectType = PROJECT_TYPES.find(p => p.id === type);
+    
+    if (apiProjectType) {
+      // Use API data for budget ranges
+      const minBudget = apiProjectType.min || 3000;
+      const maxBudget = apiProjectType.max || 12000;
+      const defaultBudget = Math.floor((minBudget + maxBudget) / 2);
+      setBudgetPerSong(defaultBudget);
+      
+      // Use API data for song count
+      if ('song_count_default' in apiProjectType) {
+        setSongCount(apiProjectType.song_count_default || 1);
+      }
+    } else if (fallbackProjectType) {
+      // Fallback to local data
+      setBudgetPerSong(fallbackProjectType.defaultBudgetPerSong);
+      setSongCount(fallbackProjectType.defaultSongs);
     }
   };
 
@@ -284,26 +357,50 @@ export function ProjectCreationModal({
           <div>
             <Label className="text-base font-semibold">Project Type</Label>
             <div className="grid grid-cols-3 gap-4 mt-2">
-              {PROJECT_TYPES.map((type) => (
-                <Card 
-                  key={type.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedType === type.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleTypeSelect(type.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <type.icon className="w-6 h-6 text-blue-600" />
-                      <div>
-                        <h3 className="font-semibold">{type.name}</h3>
-                        <p className="text-sm text-gray-600">{type.description}</p>
-                        <p className="text-xs text-gray-500">{type.budgetRange}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {loadingProjectTypes ? (
+                <div className="col-span-3 text-center py-8">
+                  <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
+                  <p className="text-slate-600">Loading project types...</p>
+                </div>
+              ) : projectTypesError ? (
+                <div className="col-span-3 text-center py-8">
+                  <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+                  <p className="text-red-600 mb-4">Failed to load project types</p>
+                  <Button onClick={fetchProjectTypes} variant="outline" size="sm">
+                    Try Again
+                  </Button>
+                </div>
+              ) : (
+                PROJECT_TYPES.map((type) => {
+                  // Get budget range from API if available
+                  const apiKey = type.id === 'Single' ? 'single' : type.id === 'EP' ? 'ep' : 'mini_tour';
+                  const apiProjectType = projectTypesAPI[apiKey];
+                  const budgetRange = apiProjectType 
+                    ? `$${apiProjectType.min?.toLocaleString()} - $${apiProjectType.max?.toLocaleString()}`
+                    : type.budgetRange;
+                  
+                  return (
+                    <Card 
+                      key={type.id}
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        selectedType === type.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                      }`}
+                      onClick={() => handleTypeSelect(type.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <type.icon className="w-6 h-6 text-blue-600" />
+                          <div>
+                            <h3 className="font-semibold">{type.name}</h3>
+                            <p className="text-sm text-gray-600">{type.description}</p>
+                            <p className="text-xs text-gray-500">{budgetRange}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </div>
 

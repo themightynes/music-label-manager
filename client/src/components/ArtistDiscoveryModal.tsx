@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Search, Music, TrendingUp, Zap, Heart, Star } from 'lucide-react';
+import { Search, Music, TrendingUp, Zap, Heart, Star, AlertCircle } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { ARTIST_ARCHETYPES } from '@/lib/gameData';
 
@@ -34,105 +34,6 @@ interface ArtistDiscoveryModalProps {
   onSignArtist: (artist: Artist) => Promise<void>;
 }
 
-// Expanded artist pool - combining data and generating more
-const AVAILABLE_ARTISTS: Artist[] = [
-  {
-    id: "art_1",
-    name: "Nova Sterling",
-    archetype: "Visionary",
-    talent: 85,
-    workEthic: 65,
-    popularity: 25,
-    temperament: 75,
-    loyalty: 60,
-    mood: 70,
-    signingCost: 8000,
-    monthlyCost: 1200,
-    bio: "Experimental indie artist pushing boundaries with ethereal soundscapes",
-    genre: "Experimental Pop",
-    age: 23
-  },
-  {
-    id: "art_2", 
-    name: "Mason Rivers",
-    archetype: "Workhorse",
-    talent: 70,
-    workEthic: 90,
-    popularity: 40,
-    temperament: 80,
-    loyalty: 85,
-    mood: 75,
-    signingCost: 6000,
-    monthlyCost: 800,
-    bio: "Reliable songwriter with a gift for crafting memorable hooks",
-    genre: "Folk Rock",
-    age: 28
-  },
-  {
-    id: "art_3",
-    name: "Luna Vee",
-    archetype: "Trendsetter", 
-    talent: 75,
-    workEthic: 60,
-    popularity: 55,
-    temperament: 65,
-    loyalty: 55,
-    mood: 80,
-    signingCost: 12000,
-    monthlyCost: 1500,
-    bio: "Social media savvy artist with an ear for viral melodies",
-    genre: "Pop/Electronic",
-    age: 21
-  },
-  {
-    id: "art_4",
-    name: "Diego Morales",
-    archetype: "Visionary",
-    talent: 90,
-    workEthic: 55,
-    popularity: 15,
-    temperament: 60,
-    loyalty: 70,
-    mood: 65,
-    signingCost: 15000,
-    monthlyCost: 2000,
-    bio: "Jazz fusion prodigy creating groundbreaking instrumental compositions",
-    genre: "Jazz Fusion",
-    age: 26
-  },
-  {
-    id: "art_5",
-    name: "Riley Thompson",
-    archetype: "Workhorse",
-    talent: 65,
-    workEthic: 95,
-    popularity: 35,
-    temperament: 85,
-    loyalty: 90,
-    mood: 85,
-    signingCost: 4000,
-    monthlyCost: 600,
-    bio: "Dedicated country songwriter with authentic storytelling",
-    genre: "Country",
-    age: 31
-  },
-  {
-    id: "art_6",
-    name: "Zara Chen",
-    archetype: "Trendsetter",
-    talent: 80,
-    workEthic: 70,
-    popularity: 65,
-    temperament: 70,
-    loyalty: 50,
-    mood: 75,
-    signingCost: 10000,
-    monthlyCost: 1300,
-    bio: "K-pop inspired artist bridging Eastern and Western sounds",
-    genre: "K-Pop/R&B",
-    age: 20
-  }
-];
 
 export function ArtistDiscoveryModal({ 
   open, 
@@ -144,14 +45,43 @@ export function ArtistDiscoveryModal({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArchetype, setSelectedArchetype] = useState<string>('All');
   const [signingArtist, setSigningArtist] = useState<string | null>(null);
+  const [availableArtists, setAvailableArtists] = useState<Artist[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const availableArtists = AVAILABLE_ARTISTS.filter(artist => 
-    !signedArtists.some(signed => signed.id === artist.id || signed.name === artist.name)
-  );
+  const fetchAvailableArtists = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/artists/available');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch artists: ${response.status}`);
+      }
+      const data = await response.json();
+      const filtered = (data.artists || []).filter(artist => 
+        !signedArtists.some(signed => signed.id === artist.id || signed.name === artist.name)
+      );
+      setAvailableArtists(filtered);
+    } catch (err) {
+      console.error('Failed to fetch available artists:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load artists');
+      setAvailableArtists([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredArtists = availableArtists.filter(artist => {
+  useEffect(() => {
+    if (open) {
+      fetchAvailableArtists();
+    }
+  }, [open, signedArtists]);
+
+  const displayArtists = availableArtists;
+
+  const filteredArtists = displayArtists.filter(artist => {
     const matchesSearch = artist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         artist.genre.toLowerCase().includes(searchTerm.toLowerCase());
+                         (artist.genre || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesArchetype = selectedArchetype === 'All' || artist.archetype === selectedArchetype;
     return matchesSearch && matchesArchetype;
   });
@@ -229,7 +159,20 @@ export function ArtistDiscoveryModal({
 
         {/* Artist Grid */}
         <div className="p-6 overflow-y-auto max-h-96">
-          {filteredArtists.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <Music className="w-12 h-12 text-slate-400 mx-auto mb-4 animate-pulse" />
+              <p className="text-slate-600">Loading available artists...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <p className="text-red-600 mb-4">Failed to load artists</p>
+              <Button onClick={fetchAvailableArtists} variant="outline" size="sm">
+                Try Again
+              </Button>
+            </div>
+          ) : filteredArtists.length === 0 ? (
             <div className="text-center py-8">
               <Music className="w-12 h-12 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-600">No artists found matching your criteria</p>
@@ -244,7 +187,7 @@ export function ArtistDiscoveryModal({
                         <CardTitle className="text-lg font-semibold text-slate-900">
                           {artist.name}
                         </CardTitle>
-                        <p className="text-sm text-slate-600">{artist.genre} • Age {artist.age}</p>
+                        <p className="text-sm text-slate-600">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</p>
                       </div>
                       <Badge className={`${getArchetypeColor(artist.archetype)} border`}>
                         {getArchetypeIcon(artist.archetype)}
@@ -254,7 +197,7 @@ export function ArtistDiscoveryModal({
                   </CardHeader>
 
                   <CardContent className="pt-0">
-                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{artist.bio}</p>
+                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{artist.bio || 'Talented artist...'}</p>
                     
                     {/* Stats */}
                     <div className="space-y-2 mb-4">
@@ -281,11 +224,11 @@ export function ArtistDiscoveryModal({
                     <div className="bg-slate-50 rounded-lg p-3 mb-4">
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600">Signing Cost:</span>
-                        <span className="font-semibold text-slate-900">${artist.signingCost.toLocaleString()}</span>
+                        <span className="font-semibold text-slate-900">${(artist.signingCost || 5000).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600">Monthly Cost:</span>
-                        <span className="font-medium text-slate-700">${artist.monthlyCost.toLocaleString()}/mo</span>
+                        <span className="font-medium text-slate-700">${(artist.monthlyCost || 800).toLocaleString()}/mo</span>
                       </div>
                     </div>
 
@@ -294,14 +237,14 @@ export function ArtistDiscoveryModal({
                       onClick={() => handleSignArtist(artist)}
                       disabled={
                         signingArtist === artist.id || 
-                        (gameState.money || 0) < artist.signingCost ||
+                        (gameState.money || 0) < (artist.signingCost || 5000) ||
                         signedArtists.length >= 3
                       }
                       className="w-full"
                       variant={signingArtist === artist.id ? 'secondary' : 'default'}
                     >
                       {signingArtist === artist.id ? 'Signing...' : 
-                       (gameState.money || 0) < artist.signingCost ? 'Cannot Afford' :
+                       (gameState.money || 0) < (artist.signingCost || 5000) ? 'Cannot Afford' :
                        signedArtists.length >= 3 ? 'Roster Full' :
                        'Sign Artist'}
                     </Button>

@@ -46,7 +46,12 @@ const GameArtistSchema = z.object({
   temperament: z.number(),
   loyalty: z.number(),
   mood: z.number(),
-  signed: z.boolean()
+  signed: z.boolean(),
+  signingCost: z.number().optional(),
+  monthlyCost: z.number().optional(),
+  bio: z.string().optional(),
+  genre: z.string().optional(),
+  age: z.number().optional()
 });
 
 const EventChoiceSchema = z.object({
@@ -182,6 +187,39 @@ export class GameDataLoader {
     } catch (error) {
       console.error('Balance data validation error:', error);
       console.log('First few keys of actual data:', Object.keys(data).slice(0, 10));
+      throw error;
+    }
+  }
+
+  async loadActionsData(): Promise<any> {
+    const data = await this.loadJSON('actions.json');
+    
+    const schema = z.object({
+      version: z.string(),
+      generated: z.string().optional(),
+      description: z.string().optional(),
+      monthly_actions: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        type: z.string(),
+        icon: z.string(),
+        description: z.string().optional(),
+        role_id: z.string().optional(),
+        category: z.string(),
+        project_type: z.string().optional(),
+        campaign_type: z.string().optional()
+      })),
+      action_categories: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        color: z.string()
+      })).optional()
+    });
+
+    try {
+      return schema.parse(data);
+    } catch (error) {
+      console.error('Actions data validation error:', error);
       throw error;
     }
   }

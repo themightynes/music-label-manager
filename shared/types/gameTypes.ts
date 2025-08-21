@@ -11,6 +11,11 @@ export interface GameArtist {
   loyalty: number;
   mood: number;
   signed: boolean;
+  signingCost?: number;
+  monthlyCost?: number;
+  bio?: string;
+  genre?: string;
+  age?: number;
 }
 
 export interface ChoiceEffect {

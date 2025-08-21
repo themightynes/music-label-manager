@@ -3,25 +3,77 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useGameStore } from '@/store/gameStore';
-import { MONTHLY_ACTIONS } from '@/lib/gameData';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 interface MonthPlannerProps {
   onAdvanceMonth: () => Promise<void>;
   isAdvancing: boolean;
 }
 
+interface MonthlyAction {
+  id: string;
+  name: string;
+  type: string;
+  icon: string;
+  description?: string;
+  role_id?: string;
+  category: string;
+  project_type?: string;
+  campaign_type?: string;
+}
+
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
   const { gameState, selectedActions, selectAction, removeAction, openDialogue, projects, artists } = useGameStore();
   const [showActionSelection, setShowActionSelection] = useState(false);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
+  
+  // API state for monthly actions
+  const [monthlyActions, setMonthlyActions] = useState<MonthlyAction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch monthly actions from API
+  const fetchMonthlyActions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/actions/monthly');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch actions: ${response.status}`);
+      }
+      const data = await response.json();
+      setMonthlyActions(data.actions || []);
+    } catch (err) {
+      console.error('Failed to fetch monthly actions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load actions');
+      // Fallback to empty array - component will show error state
+      setMonthlyActions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMonthlyActions();
+  }, []);
 
   if (!gameState) return null;
 
   // Enhanced action metadata with detailed context
   const getActionDetails = (actionId: string) => {
-    const baseAction = MONTHLY_ACTIONS.find(a => a.id === actionId);
-    if (!baseAction) return null;
+    const baseAction = monthlyActions.find(a => a.id === actionId);
+    if (!baseAction) {
+      // Fallback for unknown actions
+      return { 
+        id: actionId, 
+        name: actionId.replace('_', ' '), 
+        type: 'unknown', 
+        icon: 'fas fa-question',
+        description: 'Action details not available',
+        category: 'unknown'
+      };
+    }
 
     const actionDetails: Record<string, any> = {
       'meet_manager': {
@@ -131,10 +183,10 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
     }
   };
 
-  const availableActions = MONTHLY_ACTIONS.filter(action => !selectedActions.includes(action.id));
+  const availableActions = monthlyActions.filter(action => !selectedActions.includes(action.id));
 
   const handleActionClick = async (actionId: string) => {
-    const action = MONTHLY_ACTIONS.find(a => a.id === actionId);
+    const action = monthlyActions.find(a => a.id === actionId);
     if (!action) return;
 
     if (action.type === 'role_meeting') {
@@ -175,7 +227,7 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
 
   const renderActionSlot = (slotNumber: number) => {
     const actionId = selectedActions[slotNumber - 1];
-    const action = actionId ? MONTHLY_ACTIONS.find(a => a.id === actionId) : null;
+    const action = actionId ? monthlyActions.find(a => a.id === actionId) : null;
 
     if (action) {
       return (
@@ -395,7 +447,26 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {availableActions.map(action => {
+              {loading ? (
+                <div className="col-span-full text-center py-8">
+                  <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
+                  <p className="text-slate-600">Loading available actions...</p>
+                </div>
+              ) : error ? (
+                <div className="col-span-full text-center py-8">
+                  <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+                  <p className="text-red-600 mb-4">Failed to load actions</p>
+                  <Button onClick={fetchMonthlyActions} variant="outline" size="sm">
+                    Try Again
+                  </Button>
+                </div>
+              ) : availableActions.length === 0 ? (
+                <div className="col-span-full text-center py-8">
+                  <i className="fas fa-check-circle text-green-400 text-4xl mb-4"></i>
+                  <p className="text-slate-600">All actions selected</p>
+                </div>
+              ) : (
+                availableActions.map(action => {
                 const actionDetails = getActionDetails(action.id);
                 const recommendation = getActionRecommendation(action.id);
                 
@@ -444,7 +515,7 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                     )}
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
         )}

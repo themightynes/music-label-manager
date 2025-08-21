@@ -239,6 +239,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available artists for discovery
+  app.get("/api/artists/available", async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      const allArtists = await serverGameData.getAllArtists();
+      res.json({ artists: allArtists || [] });
+    } catch (error) {
+      console.error('Failed to load available artists:', error);
+      res.status(500).json({ error: 'Failed to load available artists' });
+    }
+  });
+
+  // Get available monthly actions
+  app.get("/api/actions/monthly", async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      const actions = await serverGameData.getMonthlyActions();
+      res.json({ actions: actions || [] });
+    } catch (error) {
+      console.error('Failed to load monthly actions:', error);
+      res.status(500).json({ error: 'Failed to load monthly actions' });
+    }
+  });
+
+  // Get project types and configuration
+  app.get("/api/project-types", async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      const projectTypes = await serverGameData.getProjectTypes();
+      res.json({ projectTypes: projectTypes || {} });
+    } catch (error) {
+      console.error('Failed to load project types:', error);
+      res.status(500).json({ error: 'Failed to load project types' });
+    }
+  });
+
   // Artist routes
   app.post("/api/game/:gameId/artists", getUserId, async (req, res) => {
     try {
