@@ -10,9 +10,11 @@ import { MonthSummary } from './MonthSummary';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 
 export function Dashboard() {
   const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, monthlyOutcome, createNewGame } = useGameStore();
+  const [, setLocation] = useLocation();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showMonthSummary, setShowMonthSummary] = useState(false);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
@@ -86,7 +88,26 @@ export function Dashboard() {
                 <span className="font-mono font-semibold text-sm md:text-base">${(gameState.money || 0).toLocaleString()}</span>
               </div>
               
+              {/* Plan Release Button */}
+              <Button
+                onClick={() => setLocation('/plan-release')}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 px-3 md:px-4 py-2 text-sm font-medium shadow-lg hidden sm:flex items-center space-x-2"
+              >
+                <i className="fas fa-rocket text-sm"></i>
+                <span>Plan Release</span>
+              </Button>
+              
               <div className="flex items-center space-x-1">
+                {/* Mobile Plan Release Button */}
+                <Button
+                  onClick={() => setLocation('/plan-release')}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 p-2 sm:hidden"
+                  size="sm"
+                  title="Plan Release"
+                >
+                  <i className="fas fa-rocket text-sm"></i>
+                </Button>
+                
                 <Button
                   variant="ghost"
                   size="sm"

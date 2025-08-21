@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import GamePage from "@/pages/GamePage";
 import TestDataPage from "@/pages/TestData";
 import LoginPage from "@/pages/LoginPage";
+import PlanReleasePage from "@/pages/PlanReleasePage";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -29,6 +30,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={GamePage} />
+      <Route path="/plan-release" component={PlanReleasePage} />
       <Route path="/test-data" component={TestDataPage} />
       <Route component={NotFound} />
     </Switch>

@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, Rocket } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface MonthPlannerProps {
   onAdvanceMonth: () => Promise<void>;
@@ -25,6 +26,7 @@ interface MonthlyAction {
 
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
   const { gameState, selectedActions, selectAction, removeAction, openDialogue, projects, artists } = useGameStore();
+  const [, setLocation] = useLocation();
   const [showActionSelection, setShowActionSelection] = useState(false);
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   
