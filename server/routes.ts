@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import passport from 'passport';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -602,6 +602,458 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to create release:", error);
       res.status(500).json({ message: "Failed to create release" });
+    }
+  });
+
+  // PLAN RELEASE ENDPOINTS
+
+  // Get artists with ready songs for release planning
+  app.get("/api/game/:gameId/artists/ready-for-release", getUserId, async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      const minSongs = parseInt(req.query.minSongs as string) || 1;
+      
+      // Get all artists for this game with their song counts
+      const artistsResult = await db
+        .select({
+          id: sql`${artists.id}`.as('id'),
+          name: sql`${artists.name}`.as('name'),
+          mood: sql`${artists.mood}`.as('mood'),
+          loyalty: sql`${artists.loyalty}`.as('loyalty'),
+          archetype: sql`${artists.archetype}`.as('archetype'),
+          signedMonth: sql`${artists.signedMonth}`.as('signedMonth'),
+          readySongsCount: sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false THEN 1 END)`.as('readySongsCount'),
+          totalSongsCount: sql`COUNT(${songs.id})`.as('totalSongsCount')
+        })
+        .from(artists)
+        .leftJoin(songs, eq(songs.artistId, artists.id))
+        .where(eq(artists.gameId, gameId))
+        .groupBy(artists.id, artists.name, artists.mood, artists.loyalty, artists.archetype, artists.signedMonth)
+        .having(sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false THEN 1 END) >= ${minSongs}`);
+
+      const totalReadySongs = artistsResult.reduce((sum: number, artist: any) => sum + parseInt(artist.readySongsCount as string), 0);
+      
+      // Sort by readiness (ready songs count + mood)
+      const sortedArtists = artistsResult.sort((a: any, b: any) => {
+        const scoreA = parseInt(a.readySongsCount as string) * 10 + (a.mood || 50);
+        const scoreB = parseInt(b.readySongsCount as string) * 10 + (b.mood || 50);
+        return scoreB - scoreA;
+      });
+
+      res.json({
+        success: true,
+        artists: sortedArtists.map((artist: any) => ({
+          id: artist.id,
+          name: artist.name,
+          genre: 'Pop', // Default genre since not stored in artists table
+          mood: artist.mood || 50,
+          loyalty: artist.loyalty || 50,
+          readySongsCount: parseInt(artist.readySongsCount as string),
+          totalSongsCount: parseInt(artist.totalSongsCount as string),
+          lastProjectMonth: artist.signedMonth,
+          archetype: artist.archetype
+        })),
+        metadata: {
+          totalArtists: artistsResult.length,
+          totalReadySongs,
+          recommendedArtists: sortedArtists.slice(0, 3).map((a: any) => a.id)
+        }
+      });
+    } catch (error) {
+      console.error("Failed to fetch ready artists:", error);
+      res.status(500).json({ 
+        error: 'FETCH_ERROR',
+        message: "Failed to fetch artists ready for release" 
+      });
+    }
+  });
+
+  // Get ready songs for a specific artist
+  app.get("/api/game/:gameId/artists/:artistId/songs/ready", getUserId, async (req, res) => {
+    try {
+      const { gameId, artistId } = req.params;
+      const includeDrafts = req.query.includeDrafts === 'true';
+      const sortBy = req.query.sortBy as string || 'quality';
+      const sortOrder = req.query.sortOrder as string || 'desc';
+      
+      // Get artist info
+      const [artist] = await db
+        .select()
+        .from(artists)
+        .where(and(eq(artists.id, artistId), eq(artists.gameId, gameId)));
+        
+      if (!artist) {
+        return res.status(404).json({
+          error: 'ARTIST_NOT_FOUND',
+          message: 'Artist not found in this game',
+          artistId,
+          gameId
+        });
+      }
+
+      // Get ready songs (recorded but not released, or drafts if requested)
+      let songQuery = db
+        .select()
+        .from(songs)
+        .where(and(
+          eq(songs.artistId, artistId),
+          eq(songs.gameId, gameId),
+          includeDrafts ? sql`true` : eq(songs.isRecorded, true),
+          eq(songs.isReleased, false)
+        ));
+
+      // Apply sorting
+      const orderColumn = sortBy === 'quality' ? songs.quality : 
+                         sortBy === 'createdDate' ? songs.createdAt :
+                         songs.totalRevenue;
+      const orderDirection = sortOrder === 'asc' ? orderColumn : desc(orderColumn);
+      const orderedQuery = songQuery.orderBy(orderDirection);
+
+      const readySongs = await orderedQuery;
+
+      // Calculate estimated metrics for each song (simplified version)
+      const songsWithMetrics = readySongs.map(song => ({
+        id: song.id,
+        title: song.title,
+        quality: song.quality,
+        genre: song.genre || 'Pop',
+        mood: song.mood || 'neutral',
+        createdMonth: song.createdMonth || 1,
+        isRecorded: song.isRecorded,
+        isReleased: song.isReleased,
+        projectId: null, // Not available in current schema
+        producerTier: song.producerTier || 'local',
+        timeInvestment: song.timeInvestment || 'standard',
+        estimatedMetrics: {
+          streams: song.monthlyStreams || Math.floor(song.quality * 1000 + Math.random() * 50000),
+          revenue: song.totalRevenue || Math.floor(song.quality * 50 + Math.random() * 500),
+          chartPotential: Math.min(100, Math.max(0, song.quality + ((artist.mood || 50) - 50) / 2))
+        },
+        metadata: {
+          recordingCost: 5000, // Default recording cost
+          budgetPerSong: 5000, // Default budget per song
+          artistMoodAtCreation: artist.mood || 50
+        }
+      }));
+
+      const totalRevenuePotential = songsWithMetrics.reduce((sum, song) => sum + song.estimatedMetrics.revenue, 0);
+      const averageQuality = songsWithMetrics.length > 0 ? 
+        songsWithMetrics.reduce((sum, song) => sum + song.quality, 0) / songsWithMetrics.length : 0;
+
+      res.json({
+        success: true,
+        artist: {
+          id: artist.id,
+          name: artist.name,
+          genre: 'Pop', // Default genre since not available in schema
+          mood: artist.mood || 50,
+          loyalty: artist.loyalty || 50
+        },
+        songs: songsWithMetrics,
+        totalRevenuePotential,
+        averageQuality: Math.round(averageQuality)
+      });
+    } catch (error) {
+      console.error("Failed to fetch artist songs:", error);
+      res.status(500).json({ 
+        error: 'FETCH_ERROR',
+        message: "Failed to fetch artist ready songs" 
+      });
+    }
+  });
+
+  // Calculate release preview metrics
+  app.post("/api/game/:gameId/releases/preview", getUserId, async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      const {
+        artistId,
+        songIds,
+        releaseType,
+        leadSingleId,
+        seasonalTiming,
+        scheduledReleaseMonth,
+        marketingBudget,
+        leadSingleStrategy
+      } = req.body;
+
+      // Validate basic inputs
+      if (!artistId || !songIds || songIds.length === 0 || !releaseType) {
+        return res.status(400).json({
+          error: 'INVALID_RELEASE_CONFIG',
+          message: 'Invalid release configuration',
+          details: [
+            { field: 'artistId', issue: 'Required' },
+            { field: 'songIds', issue: 'Must have at least one song' },
+            { field: 'releaseType', issue: 'Required' }
+          ]
+        });
+      }
+
+      // Get songs and artist data
+      const [artist] = await db.select().from(artists)
+        .where(and(eq(artists.id, artistId), eq(artists.gameId, gameId)));
+      
+      const releaseSongs = await db.select().from(songs)
+        .where(and(
+          eq(songs.gameId, gameId),
+          sql`${songs.id} = ANY(${songIds})`
+        ));
+
+      if (!artist) {
+        return res.status(404).json({
+          error: 'ARTIST_NOT_FOUND',
+          message: 'Artist not found',
+          artistId
+        });
+      }
+
+      if (releaseSongs.length !== songIds.length) {
+        const foundIds = releaseSongs.map(s => s.id);
+        const missingIds = songIds.filter((id: string) => !foundIds.includes(id));
+        return res.status(404).json({
+          error: 'SONGS_NOT_FOUND',
+          message: 'One or more songs not found or not available',
+          missingSongIds: missingIds,
+          unavailableSongIds: []
+        });
+      }
+
+      // Calculate base metrics
+      const averageQuality = releaseSongs.reduce((sum, song) => sum + song.quality, 0) / releaseSongs.length;
+      const baseStreams = releaseSongs.reduce((sum, song) => sum + (song.monthlyStreams || song.quality * 1000), 0);
+      const baseRevenue = releaseSongs.reduce((sum, song) => sum + (song.totalRevenue || song.quality * 50), 0);
+
+      // Apply release type bonuses
+      const releaseTypeBonuses = {
+        single: { bonus: 20, multiplier: 1.2 },
+        ep: { bonus: 15, multiplier: 1.15 },
+        album: { bonus: 25, multiplier: 1.25 }
+      };
+      
+      const releaseBonus = releaseTypeBonuses[releaseType as keyof typeof releaseTypeBonuses]?.bonus || 0;
+      const releaseMultiplier = releaseTypeBonuses[releaseType as keyof typeof releaseTypeBonuses]?.multiplier || 1;
+
+      // Seasonal multipliers
+      const seasonalMultipliers = {
+        q1: 0.85, q2: 0.95, q3: 0.90, q4: 1.25
+      };
+      const seasonalMultiplier = seasonalMultipliers[seasonalTiming as keyof typeof seasonalMultipliers] || 1;
+
+      // Marketing effectiveness calculation (simplified)
+      const totalMarketingBudget = Object.values(marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0);
+      const marketingMultiplier = Math.min(2.5, 1 + Math.sqrt(totalMarketingBudget / 5000) * 0.6);
+
+      // Calculate final metrics
+      const finalStreams = Math.round(baseStreams * releaseMultiplier * seasonalMultiplier * marketingMultiplier);
+      const finalRevenue = Math.round(baseRevenue * releaseMultiplier * seasonalMultiplier * marketingMultiplier);
+
+      // Calculate ROI
+      const totalInvestment = totalMarketingBudget + (leadSingleStrategy ? 
+        Object.values(leadSingleStrategy.leadSingleBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) : 0);
+      const projectedROI = totalInvestment > 0 ? Math.round(((finalRevenue - totalInvestment) / totalInvestment) * 100) : 0;
+
+      res.json({
+        success: true,
+        preview: {
+          releaseType,
+          songCount: releaseSongs.length,
+          averageQuality: Math.round(averageQuality),
+          estimatedMetrics: {
+            baseStreams,
+            baseRevenue,
+            finalStreams,
+            finalRevenue,
+            chartPotential: Math.min(100, averageQuality + ((artist.mood || 50) - 50) / 2),
+            breakEvenPoint: Math.max(1, Math.ceil(totalInvestment / (finalRevenue / 12)))
+          },
+          bonusBreakdown: {
+            releaseTypeBonus: releaseBonus,
+            seasonalMultiplier,
+            marketingMultiplier,
+            artistMoodBonus: ((artist.mood || 50) - 50) / 10,
+            qualityBonus: Math.max(0, averageQuality - 70) / 2
+          },
+          projectedROI,
+          marketingEffectiveness: Math.round(marketingMultiplier * 40),
+          risks: [],
+          recommendations: []
+        },
+        validationWarnings: []
+      });
+    } catch (error) {
+      console.error("Failed to calculate release preview:", error);
+      res.status(500).json({ 
+        error: 'CALCULATION_ERROR',
+        message: "Failed to calculate release preview" 
+      });
+    }
+  });
+
+  // Create planned release
+  app.post("/api/game/:gameId/releases/plan", getUserId, async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      const {
+        artistId,
+        title,
+        type,
+        songIds,
+        leadSingleId,
+        seasonalTiming,
+        scheduledReleaseMonth,
+        marketingBudget,
+        leadSingleStrategy,
+        metadata
+      } = req.body;
+
+      // Validate inputs
+      if (!artistId || !title || !type || !songIds || songIds.length === 0) {
+        return res.status(400).json({
+          error: 'VALIDATION_ERROR',
+          message: 'Release validation failed',
+          details: [
+            { field: 'artistId', error: 'Required' },
+            { field: 'title', error: 'Required' },
+            { field: 'type', error: 'Required' },
+            { field: 'songIds', error: 'Must have at least one song' }
+          ]
+        });
+      }
+
+      // Check if user has sufficient funds
+      const [gameState] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+      if (!gameState) {
+        return res.status(404).json({
+          error: 'GAME_NOT_FOUND',
+          message: 'Game session not found',
+          gameId
+        });
+      }
+
+      const totalBudget = Object.values(marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) +
+        (leadSingleStrategy ? Object.values(leadSingleStrategy.leadSingleBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) : 0);
+
+      if ((gameState.money || 0) < totalBudget) {
+        return res.status(402).json({
+          error: 'INSUFFICIENT_FUNDS',
+          message: 'Not enough money for marketing budget',
+          required: totalBudget,
+          available: gameState.money || 0,
+          suggestions: [
+            { action: 'REDUCE_BUDGET', description: 'Reduce marketing allocation', potentialSavings: totalBudget - (gameState.money || 0) }
+          ]
+        });
+      }
+
+      // Check for song conflicts (songs already scheduled for release)
+      const conflictingSongs = await db
+        .select()
+        .from(songs)
+        .where(and(
+          eq(songs.gameId, gameId),
+          sql`${songs.id} = ANY(${songIds})`,
+          sql`${songs.releaseId} IS NOT NULL`
+        ));
+
+      if (conflictingSongs.length > 0) {
+        return res.status(409).json({
+          error: 'SONG_ALREADY_SCHEDULED',
+          message: 'Some songs are already part of a planned release',
+          conflictingSongs: conflictingSongs.map(c => ({
+            songId: c.id,
+            songTitle: c.title,
+            conflictingReleaseId: c.releaseId,
+            conflictingReleaseTitle: 'Unknown Release'
+          })),
+          resolutionOptions: [
+            { action: 'CHOOSE_DIFFERENT_SONGS', description: 'Select different songs for this release' }
+          ]
+        });
+      }
+
+      // Create the planned release in a transaction
+      const result = await db.transaction(async (tx) => {
+        // Deduct marketing budget
+        await tx.update(gameStates)
+          .set({ money: (gameState.money || 0) - totalBudget })
+          .where(eq(gameStates.id, gameId));
+
+        // Create release record
+        const [newRelease] = await tx.insert(releases).values({
+          gameId,
+          artistId,
+          title,
+          type,
+          releaseMonth: scheduledReleaseMonth,
+          status: 'planned',
+          marketingBudget: totalBudget,
+          metadata: {
+            ...metadata,
+            seasonalTiming,
+            scheduledReleaseMonth,
+            marketingChannels: Object.keys(marketingBudget || {}),
+            leadSingleStrategy: leadSingleStrategy || null
+          }
+        }).returning();
+
+        // Update songs to mark them as reserved for this release
+        await tx.update(songs)
+          .set({ releaseId: newRelease.id })
+          .where(sql`${songs.id} = ANY(${songIds})`);
+
+        return newRelease;
+      });
+
+      // Get updated game state and planned releases
+      const [updatedGameState] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+      const plannedReleases = await db.select().from(releases)
+        .where(and(eq(releases.gameId, gameId), eq(releases.status, 'planned')));
+
+      res.status(201).json({
+        success: true,
+        release: {
+          id: result.id,
+          title: result.title,
+          type: result.type,
+          artistId: result.artistId,
+          artistName: 'Artist Name', // Would need artist lookup
+          songIds,
+          leadSingleId,
+          scheduledReleaseMonth,
+          status: 'planned',
+          estimatedMetrics: {
+            streams: metadata?.estimatedStreams || 0,
+            revenue: metadata?.estimatedRevenue || 0,
+            roi: metadata?.projectedROI || 0,
+            chartPotential: 50
+          },
+          createdAt: result.createdAt?.toISOString(),
+          createdByMonth: updatedGameState.currentMonth
+        },
+        updatedGameState: {
+          money: updatedGameState.money,
+          plannedReleases: plannedReleases.map(r => ({
+            id: r.id,
+            title: r.title,
+            artistName: 'Artist Name', // Would need artist lookup
+            type: r.type,
+            scheduledMonth: r.releaseMonth,
+            status: r.status
+          })),
+          artistsAffected: [{
+            artistId,
+            songsReserved: songIds.length,
+            moodImpact: 5 // Positive mood boost from planned release
+          }]
+        }
+      });
+    } catch (error) {
+      console.error("Failed to create planned release:", error);
+      res.status(500).json({ 
+        error: 'CREATION_ERROR',
+        message: "Failed to create planned release" 
+      });
     }
   });
 

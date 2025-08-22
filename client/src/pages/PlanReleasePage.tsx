@@ -210,7 +210,7 @@ export default function PlanReleasePage() {
   // Calculate weighted marketing effectiveness based on channel allocation
   const calculateMarketingEffectiveness = (budgets: Record<string, number>, seasonalTiming: string) => {
     const totalBudget = Object.values(budgets).reduce((sum, budget) => sum + budget, 0);
-    if (totalBudget === 0) return { multiplier: 1, adjustedCost: 0, diversityBonus: 1 }; // No marketing = baseline
+    if (totalBudget === 0) return { multiplier: 1, adjustedCost: 0, diversityBonus: 1, activeChannelCount: 0 }; // No marketing = baseline
     
     // Apply seasonal cost adjustments
     const seasonalData = SEASONAL_TIMING.find(st => st.id === seasonalTiming);

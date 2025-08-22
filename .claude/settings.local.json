@@ -33,7 +33,8 @@
       "Bash(PORT=5001 npm run dev)",
       "Bash(sqlite3:*)",
       "Bash(lsof:*)",
-      "Bash(claude mcp add:*)"
+      "Bash(claude mcp add:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

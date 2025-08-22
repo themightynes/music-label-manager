@@ -30,6 +30,8 @@ interface GameStore {
   // Monthly actions
   selectAction: (actionId: string) => void;
   removeAction: (actionId: string) => void;
+  reorderActions: (startIndex: number, endIndex: number) => void;
+  clearActions: () => void;
   advanceMonth: () => Promise<void>;
   
   // Artist management
@@ -207,6 +209,18 @@ export const useGameStore = create<GameStore>()(
         set({ selectedActions: selectedActions.filter(id => id !== actionId) });
       },
 
+      reorderActions: (startIndex: number, endIndex: number) => {
+        const { selectedActions } = get();
+        const result = Array.from(selectedActions);
+        const [removed] = result.splice(startIndex, 1);
+        result.splice(endIndex, 0, removed);
+        set({ selectedActions: result });
+      },
+
+      clearActions: () => {
+        set({ selectedActions: [] });
+      },
+
       // Advance month
       advanceMonth: async () => {
         const { gameState, selectedActions } = get();
@@ -245,13 +259,18 @@ export const useGameStore = create<GameStore>()(
           }
           console.log('===============================');
           
-          // Reload game data to get updated projects
-          const gameResponse = await apiRequest('GET', `/api/game/${gameState.id}`);
+          // Reload game data to get updated projects AND songs
+          const [gameResponse, songsResponse] = await Promise.all([
+            apiRequest('GET', `/api/game/${gameState.id}`),
+            apiRequest('GET', `/api/game/${gameState.id}/songs`)
+          ]);
           const gameData = await gameResponse.json();
+          const songs = await songsResponse.json();
           
           set({
             gameState: result.gameState,
             projects: gameData.projects || [], // Update projects with current state
+            songs: songs || [], // Update songs to include newly recorded ones
             monthlyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],

@@ -11,6 +11,7 @@ export function ActiveProjects() {
   const { projects, artists, createProject, gameState, songs } = useGameStore();
   const [creatingProject, setCreatingProject] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
 
   const handleCreateProject = async (projectData: ProjectCreationData) => {
     if (creatingProject) return;
@@ -44,7 +45,7 @@ export function ActiveProjects() {
   };
 
   const getProjectProgress = (project: any) => {
-    const stages = ['planning', 'production', 'marketing', 'recorded'];
+    const stages = ['planning', 'writing', 'recording'];
     const currentStageIndex = stages.indexOf(project.stage || 'planning');
     return ((currentStageIndex + 1) / stages.length) * 100;
   };
@@ -52,9 +53,11 @@ export function ActiveProjects() {
   const getStatusBadgeClass = (stage: string) => {
     switch (stage) {
       case 'planning': return 'bg-slate-400 text-white';
-      case 'production': return 'bg-warning text-white';
-      case 'marketing': return 'bg-primary text-white';
+      case 'writing': return 'bg-warning text-white';
+      case 'recording': return 'bg-primary text-white';
       case 'recorded': return 'bg-green-500 text-white';
+      case 'production': return 'bg-warning text-white'; // Legacy support
+      case 'marketing': return 'bg-primary text-white'; // Legacy support 
       case 'released': return 'bg-success text-white'; // Legacy support
       default: return 'bg-slate-400 text-white';
     }
@@ -63,12 +66,29 @@ export function ActiveProjects() {
   const getStatusText = (stage: string) => {
     switch (stage) {
       case 'planning': return 'Planning';
-      case 'production': return 'Production';
-      case 'marketing': return 'Marketing';
-      case 'recorded': return '🎵 Recorded';
+      case 'writing': return 'Writing';
+      case 'recording': return 'Recording';
+      case 'recorded': return '✓ Complete';
+      case 'production': return 'Writing'; // Legacy support
+      case 'marketing': return 'Recording'; // Legacy support
       case 'released': return '✨ Released'; // Legacy support
       default: return 'Planning';
     }
+  };
+
+  // Filter projects by status
+  const getActiveProjects = () => {
+    return projects.filter(p => 
+      p.stage === 'planning' || 
+      p.stage === 'writing' || 
+      p.stage === 'recording' ||
+      p.stage === 'production' || // Legacy support
+      p.stage === 'marketing' // Legacy support
+    );
+  };
+
+  const getCompletedProjects = () => {
+    return projects.filter(p => p.stage === 'recorded' || p.stage === 'released');
   };
 
   // Get songs for a specific project
@@ -175,18 +195,56 @@ export function ActiveProjects() {
     };
   };
 
+  const activeProjects = getActiveProjects();
+  const completedProjects = getCompletedProjects();
+  const currentProjects = activeTab === 'active' ? activeProjects : completedProjects;
+
   return (
     <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
       <CardContent className="p-4">
         <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center justify-between">
           <div className="flex items-center">
-            <i className="fas fa-tasks text-primary mr-2"></i>
-            Active Projects
+            <i className="fas fa-music text-primary mr-2"></i>
+            Recording Sessions
           </div>
           <Badge variant="secondary" className="text-xs">
             {projects.length}
           </Badge>
         </h3>
+
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-4 bg-slate-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+              activeTab === 'active'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Active Sessions
+            {activeProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {activeProjects.length}
+              </Badge>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+              activeTab === 'completed'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Completed Sessions
+            {completedProjects.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {completedProjects.length}
+              </Badge>
+            )}
+          </button>
+        </div>
 
         {/* Compact Portfolio Summary */}
         {(() => {
@@ -213,7 +271,7 @@ export function ActiveProjects() {
         })()}
 
         <div className="space-y-3">
-          {projects.map(project => (
+          {currentProjects.map(project => (
             <div key={project.id} className="border border-slate-200 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -226,11 +284,30 @@ export function ActiveProjects() {
               </div>
               
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Progress</span>
-                  <span className="font-mono">{Math.round(getProjectProgress(project))}%</span>
-                </div>
-                <Progress value={getProjectProgress(project)} className="w-full h-1.5" />
+                {/* Only show progress for active sessions */}
+                {activeTab === 'active' && (
+                  <>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Progress</span>
+                      <span className="font-mono">{Math.round(getProjectProgress(project))}%</span>
+                    </div>
+                    <Progress value={getProjectProgress(project)} className="w-full h-1.5" />
+                  </>
+                )}
+
+                {/* Simple info for completed sessions */}
+                {activeTab === 'completed' && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Session Complete</span>
+                    <span className="font-mono text-green-600">
+                      {(() => {
+                        const projectSongs = getProjectSongs(project.id);
+                        const recordedSongs = projectSongs.filter(song => song.isRecorded);
+                        return `${recordedSongs.length} song${recordedSongs.length !== 1 ? 's' : ''} recorded`;
+                      })()}
+                    </span>
+                  </div>
+                )}
                 
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500">
@@ -363,16 +440,27 @@ export function ActiveProjects() {
             </div>
           ))}
 
-          {/* Add Project Button - Compact */}
-          <Button
-            variant="outline"
-            className="w-full border-2 border-dashed border-slate-300 p-3 text-center hover:border-primary hover:bg-primary/5 text-xs"
-            onClick={() => setShowProjectModal(true)}
-            disabled={creatingProject || artists.length === 0}
-          >
-            <i className="fas fa-plus mr-1"></i>
-            {creatingProject ? 'Creating...' : 'Start New Project'}
-          </Button>
+          {/* Add Project Button - Only show in active tab */}
+          {activeTab === 'active' && (
+            <Button
+              variant="outline"
+              className="w-full border-2 border-dashed border-slate-300 p-3 text-center hover:border-primary hover:bg-primary/5 text-xs"
+              onClick={() => setShowProjectModal(true)}
+              disabled={creatingProject || artists.length === 0}
+            >
+              <i className="fas fa-plus mr-1"></i>
+              {creatingProject ? 'Creating...' : 'Start New Recording Session'}
+            </Button>
+          )}
+
+          {/* Empty state for completed sessions */}
+          {activeTab === 'completed' && completedProjects.length === 0 && (
+            <div className="text-center py-8 text-slate-500">
+              <i className="fas fa-music text-2xl mb-2 block text-slate-400"></i>
+              <p className="text-sm">No completed recording sessions yet</p>
+              <p className="text-xs">Sessions will appear here once recording is complete</p>
+            </div>
+          )}
 
           {/* Project Creation Modal */}
           {gameState && (

@@ -2,7 +2,7 @@ import { db } from '../db';
 import { storage } from '../storage';
 import { serverGameData } from '../data/gameData';
 import { GameEngine } from '../../shared/engine/game-engine';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { projects, gameStates, songs } from '../../shared/schema';
 
 /**
@@ -429,61 +429,61 @@ export class MigrationValidator {
     
     try {
       // Check for orphaned projects (projects without artists)
-      const orphanedProjects = await db.query(
-        `SELECT COUNT(*) as count FROM projects p 
-         WHERE p.game_id = $1 
+      const orphanedProjects = await db.execute(
+        sql`SELECT COUNT(*) as count FROM projects p 
+         WHERE p.game_id = ${gameId} 
          AND p.artist_id NOT IN (
-           SELECT a.id FROM artists a WHERE a.game_id = $1
-         )`,
-        [gameId]
+           SELECT a.id FROM artists a WHERE a.game_id = ${gameId}
+         )`
       );
       
+      const orphanedCount = (orphanedProjects as any).rows[0]?.count || 0;
       validations.push({
         checkType: 'orphaned_projects',
-        isValid: orphanedProjects.rows[0].count === '0',
-        issues: orphanedProjects.rows[0].count > 0 ? [`${orphanedProjects.rows[0].count} orphaned projects found`] : [],
-        affectedRecords: parseInt(orphanedProjects.rows[0].count),
-        severity: orphanedProjects.rows[0].count > 0 ? 'high' : 'low'
+        isValid: orphanedCount === 0,
+        issues: orphanedCount > 0 ? [`${orphanedCount} orphaned projects found`] : [],
+        affectedRecords: parseInt(orphanedCount.toString()),
+        severity: orphanedCount > 0 ? 'high' : 'low'
       });
 
       // Check for songs without projects
-      const orphanedSongs = await db.query(
-        `SELECT COUNT(*) as count FROM songs s 
-         WHERE s.game_id = $1 
+      const orphanedSongs = await db.execute(
+        sql`SELECT COUNT(*) as count FROM songs s 
+         WHERE s.game_id = ${gameId} 
          AND s.metadata->>'projectId' NOT IN (
-           SELECT p.id FROM projects p WHERE p.game_id = $1
-         )`,
-        [gameId]
+           SELECT p.id FROM projects p WHERE p.game_id = ${gameId}
+         )`
       );
       
+      const orphanedSongsCount = (orphanedSongs as any).rows[0]?.count || 0;
       validations.push({
         checkType: 'orphaned_songs',
-        isValid: orphanedSongs.rows[0].count === '0',
-        issues: orphanedSongs.rows[0].count > 0 ? [`${orphanedSongs.rows[0].count} orphaned songs found`] : [],
-        affectedRecords: parseInt(orphanedSongs.rows[0].count),
-        severity: orphanedSongs.rows[0].count > 0 ? 'medium' : 'low'
+        isValid: orphanedSongsCount === 0,
+        issues: orphanedSongsCount > 0 ? [`${orphanedSongsCount} orphaned songs found`] : [],
+        affectedRecords: parseInt(orphanedSongsCount.toString()),
+        severity: orphanedSongsCount > 0 ? 'medium' : 'low'
       });
 
       // Check for projects with mismatched song counts
-      const mismatchedCounts = await db.query(
-        `SELECT p.id, p.title, p.song_count, p.songs_created, COUNT(s.id) as actual_songs
+      const mismatchedCounts = await db.execute(
+        sql`SELECT p.id, p.title, p.song_count, p.songs_created, COUNT(s.id) as actual_songs
          FROM projects p 
          LEFT JOIN songs s ON s.metadata->>'projectId' = p.id
-         WHERE p.game_id = $1 
+         WHERE p.game_id = ${gameId} 
          GROUP BY p.id, p.title, p.song_count, p.songs_created
-         HAVING COUNT(s.id) != COALESCE(p.songs_created, 0)`,
-        [gameId]
+         HAVING COUNT(s.id) != COALESCE(p.songs_created, 0)`
       );
 
+      const mismatchedRows = (mismatchedCounts as any).rows;
       validations.push({
         checkType: 'mismatched_song_counts',
-        isValid: mismatchedCounts.rows.length === 0,
-        issues: mismatchedCounts.rows.length > 0 ? 
-          mismatchedCounts.rows.map(row => 
+        isValid: mismatchedRows.length === 0,
+        issues: mismatchedRows.length > 0 ? 
+          mismatchedRows.map((row: any) => 
             `Project ${row.title}: expected ${row.songs_created} songs, found ${row.actual_songs}`
           ) : [],
-        affectedRecords: mismatchedCounts.rows.length,
-        severity: mismatchedCounts.rows.length > 0 ? 'medium' : 'low'
+        affectedRecords: mismatchedRows.length,
+        severity: mismatchedRows.length > 0 ? 'medium' : 'low'
       });
 
       console.log(`✅ Database state validation complete: ${validations.length} checks performed`);
@@ -522,61 +522,61 @@ export class MigrationValidator {
       const currentMonth = gameState.currentMonth || 1;
 
       // Find projects stuck in production for too long
-      const stuckProjects = await db.query(
-        `SELECT * FROM projects 
-         WHERE game_id = $1 
+      const stuckProjects = await db.execute(
+        sql`SELECT * FROM projects 
+         WHERE game_id = ${gameId} 
          AND stage = 'production' 
-         AND ($2 - start_month) > 4`,
-        [gameId, currentMonth]
+         AND (${currentMonth} - start_month) > 4`
       );
 
-      if (stuckProjects.rows.length > 0) {
+      const stuckProjectsRows = (stuckProjects as any).rows;
+      if (stuckProjectsRows.length > 0) {
         edgeCases.push({
           caseType: 'stuck_production_projects',
-          description: `${stuckProjects.rows.length} project(s) stuck in production > 4 months`,
-          affectedProjects: stuckProjects.rows,
+          description: `${stuckProjectsRows.length} project(s) stuck in production > 4 months`,
+          affectedProjects: stuckProjectsRows,
           recommendation: 'Force advance to marketing stage or investigate song generation issues',
           severity: 'medium'
         });
       }
 
       // Find projects with impossible song counts
-      const invalidSongCounts = await db.query(
-        `SELECT * FROM projects 
-         WHERE game_id = $1 
-         AND (songs_created > song_count OR songs_created < 0 OR song_count < 1)`,
-        [gameId]
+      const invalidSongCounts = await db.execute(
+        sql`SELECT * FROM projects 
+         WHERE game_id = ${gameId} 
+         AND (songs_created > song_count OR songs_created < 0 OR song_count < 1)`
       );
 
-      if (invalidSongCounts.rows.length > 0) {
+      const invalidSongCountsRows = (invalidSongCounts as any).rows;
+      if (invalidSongCountsRows.length > 0) {
         edgeCases.push({
           caseType: 'invalid_song_counts',
-          description: `${invalidSongCounts.rows.length} project(s) with invalid song counts`,
-          affectedProjects: invalidSongCounts.rows,
+          description: `${invalidSongCountsRows.length} project(s) with invalid song counts`,
+          affectedProjects: invalidSongCountsRows,
           recommendation: 'Fix song count data before migration',
           severity: 'high'
         });
       }
 
       // Find multiple projects releasing simultaneously
-      const simultaneousReleases = await db.query(
-        `SELECT artist_id, COUNT(*) as release_count, 
+      const simultaneousReleases = await db.execute(
+        sql`SELECT artist_id, COUNT(*) as release_count, 
                 array_agg(title) as titles,
                 metadata->>'releaseMonth' as release_month
          FROM projects 
-         WHERE game_id = $1 
+         WHERE game_id = ${gameId} 
          AND stage = 'released' 
          AND metadata->>'releaseMonth' IS NOT NULL
          GROUP BY artist_id, metadata->>'releaseMonth'
-         HAVING COUNT(*) > 1`,
-        [gameId]
+         HAVING COUNT(*) > 1`
       );
 
-      if (simultaneousReleases.rows.length > 0) {
+      const simultaneousReleasesRows = (simultaneousReleases as any).rows;
+      if (simultaneousReleasesRows.length > 0) {
         edgeCases.push({
           caseType: 'simultaneous_releases',
-          description: `${simultaneousReleases.rows.length} instance(s) of multiple releases same month`,
-          affectedProjects: simultaneousReleases.rows,
+          description: `${simultaneousReleasesRows.length} instance(s) of multiple releases same month`,
+          affectedProjects: simultaneousReleasesRows,
           recommendation: 'Review release scheduling logic',
           severity: 'low'
         });

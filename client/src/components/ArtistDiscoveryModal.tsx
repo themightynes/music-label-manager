@@ -58,7 +58,7 @@ export function ArtistDiscoveryModal({
         throw new Error(`Failed to fetch artists: ${response.status}`);
       }
       const data = await response.json();
-      const filtered = (data.artists || []).filter(artist => 
+      const filtered = (data.artists || []).filter((artist: Artist) => 
         !signedArtists.some(signed => signed.id === artist.id || signed.name === artist.name)
       );
       setAvailableArtists(filtered);

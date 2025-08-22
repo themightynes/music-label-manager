@@ -150,7 +150,7 @@ export function Dashboard() {
             <ArtistRoster />
           </div>
 
-          {/* Project Management */}
+          {/* Recording Sessions */}
           <div className="lg:col-span-1">
             <ActiveProjects />
           </div>
