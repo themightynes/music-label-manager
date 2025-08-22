@@ -81,6 +81,14 @@ export const useGameStore = create<GameStore>()(
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
           
+          console.log('GameStore loadGame debug:', {
+            gameId,
+            gameData: !!data,
+            songsCount: songs?.length || 0,
+            releasesCount: releases?.length || 0,
+            releases: releases
+          });
+          
           set({
             gameState: data.gameState,
             artists: data.artists,
@@ -160,13 +168,34 @@ export const useGameStore = create<GameStore>()(
           const response = await apiRequest('POST', '/api/game', newGameData);
           const gameState = await response.json();
           
-          // Clear campaign results
+          console.log('=== CREATE NEW GAME DEBUG ===');
+          console.log('New game created:', gameState);
+          console.log('Month should be 1, actual:', gameState.currentMonth);
+          console.log('Game ID:', gameState.id);
+          
+          // CRITICAL: Clear all localStorage game data first
+          localStorage.removeItem('music-label-manager-game');
+          localStorage.setItem('currentGameId', gameState.id);
+          console.log('Cleared localStorage and set new gameId');
+          
+          // Clean up old games (keep only the new current game)
+          try {
+            await apiRequest('POST', '/api/cleanup-demo-games', { keepGameId: gameState.id });
+            console.log('Cleaned up old games successfully');
+          } catch (cleanupError) {
+            console.warn('Failed to cleanup old games:', cleanupError);
+            // Don't fail game creation if cleanup fails
+          }
+          
+          // Clear campaign results and set new state
           set({
             gameState,
             artists: [],
             projects: [],
             roles: [],
             monthlyActions: [],
+            songs: [],
+            releases: [],
             selectedActions: [],
             campaignResults: null,
             monthlyOutcome: null

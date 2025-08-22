@@ -2925,6 +2925,319 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Calculates comprehensive release preview metrics using GameEngine formulas
+   * This method provides accurate economic projections for release planning
+   */
+  calculateReleasePreview(
+    songs: any[],
+    artist: any,
+    releaseConfig: {
+      releaseType: 'single' | 'ep' | 'album';
+      leadSingleId?: string;
+      seasonalTiming: string;
+      scheduledReleaseMonth: number;
+      marketingBudget: Record<string, number>;
+      leadSingleStrategy?: {
+        leadSingleId: string;
+        leadSingleReleaseMonth: number;
+        leadSingleBudget: Record<string, number>;
+      };
+    }
+  ) {
+    const balance = this.gameData.getBalanceConfigSync();
+    
+    // Calculate base song metrics using existing GameEngine methods
+    const averageQuality = songs.reduce((sum, song) => sum + song.quality, 0) / songs.length;
+    
+    // Calculate total base streams using sophisticated streaming calculation
+    let totalBaseStreams = 0;
+    let totalBaseRevenue = 0;
+    
+    for (const song of songs) {
+      const songStreams = this.calculateStreamingOutcome(
+        song.quality,
+        this.gameState.playlistAccess || 'none',
+        this.gameState.reputation || 0,
+        0 // No marketing spend for base calculation
+      );
+      totalBaseStreams += songStreams;
+      const revenuePerStream = balance?.market_formulas?.streaming_calculation?.ongoing_streams?.revenue_per_stream;
+      if (!revenuePerStream) {
+        throw new Error('revenue_per_stream not found in balance.json market_formulas.streaming_calculation.ongoing_streams');
+      }
+      totalBaseRevenue += songStreams * revenuePerStream;
+    }
+    
+    // Get release planning configuration from balance.json
+    const releasePlanningConfig = balance?.market_formulas?.release_planning;
+    if (!releasePlanningConfig) {
+      throw new Error('release_planning not found in balance.json market_formulas');
+    }
+    
+    // Apply release type multipliers from balance.json
+    const releaseTypeBonuses = releasePlanningConfig.release_type_bonuses;
+    const releaseTypeData = releaseTypeBonuses[releaseConfig.releaseType];
+    if (!releaseTypeData) {
+      throw new Error(`Release type ${releaseConfig.releaseType} not found in balance.json release_type_bonuses`);
+    }
+    
+    const releaseMultiplier = releaseTypeData.revenue_multiplier;
+    // Calculate bonus percentage from multiplier for display
+    const releaseBonus = Math.round((releaseMultiplier - 1) * 100);
+    
+    // Apply seasonal multipliers from balance.json
+    const seasonalMultipliers = balance?.time_progression?.seasonal_modifiers;
+    if (!seasonalMultipliers) {
+      throw new Error('seasonal_modifiers not found in balance.json time_progression');
+    }
+    const seasonalRevenueMultiplier = seasonalMultipliers[releaseConfig.seasonalTiming as keyof typeof seasonalMultipliers];
+    
+    // Calculate marketing effectiveness using balance.json formulas
+    const totalMarketingBudget = Object.values(releaseConfig.marketingBudget).reduce((sum, budget) => sum + budget, 0);
+    
+    // Channel-specific effectiveness from balance.json
+    const channelEffectiveness = releasePlanningConfig.marketing_channels;
+    
+    // Calculate weighted marketing effectiveness based on channel allocation
+    let weightedEffectiveness = 0;
+    const activeChannels = Object.entries(releaseConfig.marketingBudget).filter(([_, budget]) => budget > 0);
+    
+    if (activeChannels.length > 0) {
+      activeChannels.forEach(([channelId, budget]) => {
+        const channelWeight = budget / totalMarketingBudget;
+        const channelData = channelEffectiveness[channelId as keyof typeof channelEffectiveness];
+        const effectiveness = channelData?.effectiveness || 0.75;
+        weightedEffectiveness += channelWeight * effectiveness;
+      });
+    } else {
+      weightedEffectiveness = 0.75; // Default baseline
+    }
+    
+    // Sophisticated marketing effectiveness calculation
+    const marketingWeight = balance?.market_formulas?.streaming_calculation?.marketing_weight;
+    if (!marketingWeight) {
+      throw new Error('marketing_weight not found in balance.json market_formulas.streaming_calculation');
+    }
+    const baseMarketingMultiplier = 1 + (Math.sqrt(totalMarketingBudget / 5000) * marketingWeight * 3 * weightedEffectiveness);
+    
+    // Channel diversity bonus calculation from balance.json
+    const diversityConfig = releasePlanningConfig.diversity_bonus;
+    const diversityBonus = Math.min(
+      diversityConfig.maximum, 
+      diversityConfig.base + (activeChannels.length - 1) * diversityConfig.per_additional_channel
+    );
+    
+    // Channel synergy bonuses from balance.json
+    const synergyBonuses = releasePlanningConfig.channel_synergy_bonuses;
+    let synergyBonus = 1.0;
+    const channelTypes = activeChannels.map(([id, _]) => id);
+    
+    // Radio + Digital synergy
+    if (channelTypes.includes('radio') && channelTypes.includes('digital')) {
+      synergyBonus += synergyBonuses.radio_digital;
+    }
+    
+    // PR + Influencer synergy
+    if (channelTypes.includes('pr') && channelTypes.includes('influencer')) {
+      synergyBonus += synergyBonuses.pr_influencer;
+    }
+    
+    // Full spectrum bonus (all four channels)
+    if (channelTypes.length === 4) {
+      synergyBonus += synergyBonuses.full_spectrum;
+    }
+    
+    const marketingMultiplier = baseMarketingMultiplier * diversityBonus * synergyBonus;
+    
+    // Calculate seasonal marketing cost adjustments from balance.json
+    const seasonalCostMultipliers = releasePlanningConfig.seasonal_cost_multipliers;
+    const seasonalCostMultiplier = seasonalCostMultipliers[releaseConfig.seasonalTiming as keyof typeof seasonalCostMultipliers] || 1;
+    
+    // Apply seasonal cost adjustments to marketing budget
+    const adjustedMarketingCost = totalMarketingBudget * seasonalCostMultiplier;
+    
+    // Lead single strategy calculation from balance.json
+    let leadSingleBoost = 1;
+    let leadSingleCost = 0;
+    
+    if (releaseConfig.leadSingleStrategy && releaseConfig.releaseType !== 'single') {
+      const leadSong = songs.find(s => s.id === releaseConfig.leadSingleStrategy!.leadSingleId);
+      if (leadSong) {
+        const leadSingleConfig = releasePlanningConfig.lead_single_strategy;
+        const timingGap = releaseConfig.scheduledReleaseMonth - releaseConfig.leadSingleStrategy.leadSingleReleaseMonth;
+        
+        // Calculate timing bonus based on balance.json configuration
+        let timingBonus = leadSingleConfig.default_bonus;
+        if (leadSingleConfig.optimal_timing_months_before.includes(timingGap)) {
+          timingBonus = leadSingleConfig.optimal_timing_bonus;
+        } else if (timingGap === 3) {
+          timingBonus = leadSingleConfig.good_timing_bonus;
+        }
+        
+        const leadSingleBudget = Object.values(releaseConfig.leadSingleStrategy.leadSingleBudget).reduce((sum, budget) => sum + budget, 0);
+        const leadSingleMarketingBonus = 1 + Math.sqrt(leadSingleBudget / leadSingleConfig.budget_scaling_factor) * leadSingleConfig.marketing_effectiveness_factor;
+        
+        leadSingleBoost = timingBonus * leadSingleMarketingBonus;
+        leadSingleCost = leadSingleBudget * seasonalCostMultiplier;
+      }
+    }
+    
+    // Calculate final metrics with all multipliers
+    const finalStreams = Math.round(
+      totalBaseStreams * 
+      releaseMultiplier * 
+      seasonalRevenueMultiplier * 
+      marketingMultiplier * 
+      leadSingleBoost
+    );
+    
+    const finalRevenue = Math.round(
+      totalBaseRevenue * 
+      releaseMultiplier * 
+      seasonalRevenueMultiplier * 
+      marketingMultiplier * 
+      leadSingleBoost
+    );
+    
+    // Calculate channel effectiveness breakdown with detailed metrics from balance.json
+    const channelEffectivenessBreakdown: Record<string, any> = {};
+    activeChannels.forEach(([channelId, budget]) => {
+      const adjustedBudget = budget * seasonalCostMultiplier;
+      const contribution = adjustedMarketingCost > 0 ? (adjustedBudget / adjustedMarketingCost) * 100 : 0;
+      const channelData = channelEffectiveness[channelId as keyof typeof channelEffectiveness];
+      const effectiveness = channelData?.effectiveness || 0.75;
+      
+      channelEffectivenessBreakdown[channelId] = {
+        adjustedBudget,
+        contribution,
+        effectiveness: Math.round(effectiveness * 100),
+        synergies: this.getChannelSynergiesFromBalance(channelId, channelTypes, releasePlanningConfig)
+      };
+    });
+    
+    // Total cost calculation
+    const totalMarketingCost = adjustedMarketingCost + leadSingleCost;
+    
+    // ROI calculation
+    const projectedROI = totalMarketingCost > 0 ? 
+      Math.round(((finalRevenue - totalMarketingCost) / totalMarketingCost) * 100) : 0;
+    
+    return {
+      // Basic release info
+      releaseType: releaseConfig.releaseType,
+      songCount: songs.length,
+      averageQuality: Math.round(averageQuality),
+      
+      // Main metrics (flattened for frontend compatibility)
+      estimatedStreams: finalStreams,
+      estimatedRevenue: finalRevenue,
+      
+      // Bonus breakdown (flattened)
+      releaseBonus,
+      seasonalMultiplier: seasonalRevenueMultiplier,
+      marketingMultiplier,
+      leadSingleBoost,
+      diversityBonus,
+      
+      // Marketing details
+      totalMarketingCost,
+      activeChannelCount: activeChannels.length,
+      channelEffectiveness: channelEffectivenessBreakdown,
+      synergyBonus,
+      
+      // Financial analysis
+      projectedROI,
+      
+      // Additional metrics for detailed breakdown
+      baseStreams: totalBaseStreams,
+      baseRevenue: totalBaseRevenue,
+      chartPotential: Math.min(100, averageQuality + ((artist.mood || 50) - 50) / 2),
+      breakEvenPoint: Math.max(1, Math.ceil(totalMarketingCost / (finalRevenue / 12))),
+      artistMoodBonus: ((artist.mood || 50) - 50) / 10,
+      qualityBonus: Math.max(0, averageQuality - 70) / 2,
+      marketingEffectiveness: Math.round(marketingMultiplier * 40),
+      
+      // Future enhancements
+      risks: this.calculateReleaseRisks(releaseConfig, totalMarketingCost, finalRevenue),
+      recommendations: this.generateReleaseRecommendations(releaseConfig, averageQuality, totalMarketingCost)
+    };
+  }
+  
+  /**
+   * Calculate potential risks for a release strategy
+   */
+  private calculateReleaseRisks(releaseConfig: any, totalCost: number, expectedRevenue: number): string[] {
+    const risks: string[] = [];
+    
+    // High budget risk
+    const budget = Object.values(releaseConfig.marketingBudget).reduce((a: number, b: any) => a + b, 0);
+    if (budget > (this.gameState?.money || 0) * 0.3) {
+      risks.push("High budget risk - using significant portion of available funds");
+    }
+    
+    // Seasonal competition risk
+    if (releaseConfig.seasonalTiming === 'q4') {
+      risks.push("High competition period - Q4 releases face maximum market saturation");
+    }
+    
+    // Low ROI risk
+    if (totalCost > 0 && expectedRevenue / totalCost < 1.5) {
+      risks.push("Low ROI potential - marketing investment may not break even");
+    }
+    
+    return risks;
+  }
+  
+  /**
+   * Get synergies for a specific marketing channel from balance.json data
+   */
+  private getChannelSynergiesFromBalance(channelId: string, activeChannels: string[], releasePlanningConfig: any): string[] {
+    const synergies: string[] = [];
+    const channelData = releasePlanningConfig.marketing_channels[channelId];
+    
+    if (channelData && channelData.synergies) {
+      channelData.synergies.forEach((synergyChannel: string) => {
+        if (activeChannels.includes(synergyChannel)) {
+          synergies.push(`${synergyChannel} synergy (+${Math.round(releasePlanningConfig.channel_synergy_bonuses[`${channelId}_${synergyChannel}`] * 100 || releasePlanningConfig.channel_synergy_bonuses[`${synergyChannel}_${channelId}`] * 100 || 0)}%)`);
+        }
+      });
+    }
+    
+    if (activeChannels.length === 4) {
+      synergies.push(`Full spectrum (+${Math.round(releasePlanningConfig.channel_synergy_bonuses.full_spectrum * 100)}%)`);
+    }
+    
+    return synergies;
+  }
+
+  /**
+   * Generate strategic recommendations for release planning
+   */
+  private generateReleaseRecommendations(releaseConfig: any, averageQuality: number, totalCost: number): string[] {
+    const recommendations: string[] = [];
+    
+    // Quality-based recommendations
+    if (averageQuality >= 85) {
+      recommendations.push("High quality songs - consider premium marketing strategy");
+    } else if (averageQuality < 70) {
+      recommendations.push("Consider investing in higher quality production before release");
+    }
+    
+    // Channel diversity recommendations
+    const activeChannels = Object.entries(releaseConfig.marketingBudget).filter(([_, budget]) => (budget as number) > 0);
+    if (activeChannels.length === 1) {
+      recommendations.push("Consider diversifying marketing channels for better reach");
+    }
+    
+    // Seasonal recommendations
+    if (releaseConfig.seasonalTiming === 'q1') {
+      recommendations.push("Q1 release - lower competition but reduced market activity");
+    }
+    
+    return recommendations;
+  }
+
 }
 
 /**

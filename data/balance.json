@@ -279,6 +279,74 @@
       "merch_percentage": 0.15,
       "ticket_price_base": 25,
       "ticket_price_per_capacity": 0.05
+    },
+    
+    "release_planning": {
+      "marketing_channels": {
+        "radio": {
+          "effectiveness": 0.85,
+          "description": "High reach, mainstream appeal",
+          "synergies": ["digital"]
+        },
+        "digital": {
+          "effectiveness": 0.92,
+          "description": "Targeted, cost-effective",
+          "synergies": ["radio", "influencer"]
+        },
+        "pr": {
+          "effectiveness": 0.78,
+          "description": "Industry credibility, slower build",
+          "synergies": ["influencer"]
+        },
+        "influencer": {
+          "effectiveness": 0.88,
+          "description": "Social engagement, younger demographics",
+          "synergies": ["pr", "digital"]
+        }
+      },
+      
+      "seasonal_cost_multipliers": {
+        "q1": 0.85,
+        "q2": 0.95,
+        "q3": 1.1,
+        "q4": 1.4
+      },
+      
+      "channel_synergy_bonuses": {
+        "radio_digital": 0.15,
+        "pr_influencer": 0.12,
+        "full_spectrum": 0.10
+      },
+      
+      "diversity_bonus": {
+        "base": 1.0,
+        "per_additional_channel": 0.08,
+        "maximum": 1.4
+      },
+      
+      "lead_single_strategy": {
+        "optimal_timing_months_before": [1, 2],
+        "optimal_timing_bonus": 1.25,
+        "good_timing_bonus": 1.15,
+        "default_bonus": 1.05,
+        "marketing_effectiveness_factor": 0.3,
+        "budget_scaling_factor": 2000
+      },
+      
+      "release_type_bonuses": {
+        "single": {
+          "revenue_multiplier": 1.2,
+          "marketing_efficiency": 1.1
+        },
+        "ep": {
+          "revenue_multiplier": 1.15,
+          "marketing_efficiency": 1.05
+        },
+        "album": {
+          "revenue_multiplier": 1.25,
+          "marketing_efficiency": 0.95
+        }
+      }
     }
   },
   

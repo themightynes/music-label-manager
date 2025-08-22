@@ -16,7 +16,7 @@ import {
   createErrorResponse 
 } from "@shared/api/contracts";
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -200,7 +200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startingMoney = await serverGameData.getStartingMoney();
       const gameDataWithBalance = {
         ...validatedData,
-        money: startingMoney
+        money: startingMoney,
+        userId: req.userId  // CRITICAL: Associate game with user
       };
       
       const gameState = await storage.createGameState(gameDataWithBalance);
@@ -448,6 +449,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Save creation error:', error);
         res.status(500).json({ message: "Failed to create save" });
       }
+    }
+  });
+
+  app.delete("/api/saves/:saveId", getUserId, async (req, res) => {
+    try {
+      const saveId = req.params.saveId;
+      const userId = req.userId!;
+      
+      console.log('=== DELETE SAVE DEBUG ===');
+      console.log('Attempting to delete save:', saveId);
+      console.log('For user:', userId);
+      
+      // Verify the save belongs to the user before deleting
+      const saves = await storage.getGameSaves(userId);
+      console.log('User has saves:', saves.map(s => ({ id: s.id, name: s.name })));
+      
+      const saveToDelete = saves.find(save => save.id === saveId);
+      
+      if (!saveToDelete) {
+        console.log('Save not found or does not belong to user');
+        return res.status(404).json({ 
+          error: 'SAVE_NOT_FOUND',
+          message: 'Save file not found or does not belong to this user' 
+        });
+      }
+      
+      console.log('Found save to delete:', saveToDelete.name);
+      await storage.deleteGameSave(saveId);
+      console.log('Save deleted successfully');
+      
+      res.json({ 
+        message: `Deleted save "${saveToDelete.name}"`,
+        deletedSaveId: saveId
+      });
+    } catch (error) {
+      console.error("Failed to delete save:", error);
+      res.status(500).json({ 
+        error: 'DELETE_SAVE_ERROR',
+        message: "Failed to delete save file" 
+      });
     }
   });
 
@@ -797,7 +838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const releaseSongs = await db.select().from(songs)
         .where(and(
           eq(songs.gameId, gameId),
-          sql`${songs.id} = ANY(${songIds})`
+          inArray(songs.id, songIds)
         ));
 
       if (!artist) {
@@ -819,73 +860,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Calculate base metrics
-      const averageQuality = releaseSongs.reduce((sum, song) => sum + song.quality, 0) / releaseSongs.length;
-      const baseStreams = releaseSongs.reduce((sum, song) => sum + (song.monthlyStreams || song.quality * 1000), 0);
-      const baseRevenue = releaseSongs.reduce((sum, song) => sum + (song.totalRevenue || song.quality * 50), 0);
+      // Get current game state for GameEngine
+      const [gameState] = await db.select().from(gameStates)
+        .where(eq(gameStates.id, gameId));
+      
+      if (!gameState) {
+        return res.status(404).json({
+          error: 'GAME_NOT_FOUND',
+          message: 'Game state not found'
+        });
+      }
 
-      // Apply release type bonuses
-      const releaseTypeBonuses = {
-        single: { bonus: 20, multiplier: 1.2 },
-        ep: { bonus: 15, multiplier: 1.15 },
-        album: { bonus: 25, multiplier: 1.25 }
+      // Initialize GameEngine with sophisticated calculations
+      console.log('[RELEASE PREVIEW] Initializing GameEngine for sophisticated calculations...');
+      await serverGameData.initialize();
+      const gameEngine = new GameEngine(gameState, serverGameData);
+      
+      // Use GameEngine's sophisticated release preview calculation
+      const releaseConfig = {
+        releaseType: releaseType as 'single' | 'ep' | 'album',
+        leadSingleId,
+        seasonalTiming,
+        scheduledReleaseMonth,
+        marketingBudget: marketingBudget || {},
+        leadSingleStrategy
       };
       
-      const releaseBonus = releaseTypeBonuses[releaseType as keyof typeof releaseTypeBonuses]?.bonus || 0;
-      const releaseMultiplier = releaseTypeBonuses[releaseType as keyof typeof releaseTypeBonuses]?.multiplier || 1;
+      console.log('[RELEASE PREVIEW] Calculating preview with GameEngine...', {
+        songCount: releaseSongs.length,
+        releaseType,
+        totalMarketingBudget: Object.values(marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0)
+      });
 
-      // Seasonal multipliers
-      const seasonalMultipliers = {
-        q1: 0.85, q2: 0.95, q3: 0.90, q4: 1.25
-      };
-      const seasonalMultiplier = seasonalMultipliers[seasonalTiming as keyof typeof seasonalMultipliers] || 1;
-
-      // Marketing effectiveness calculation (simplified)
-      const totalMarketingBudget = Object.values(marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0);
-      const marketingMultiplier = Math.min(2.5, 1 + Math.sqrt(totalMarketingBudget / 5000) * 0.6);
-
-      // Calculate final metrics
-      const finalStreams = Math.round(baseStreams * releaseMultiplier * seasonalMultiplier * marketingMultiplier);
-      const finalRevenue = Math.round(baseRevenue * releaseMultiplier * seasonalMultiplier * marketingMultiplier);
-
-      // Calculate ROI
-      const totalInvestment = totalMarketingBudget + (leadSingleStrategy ? 
-        Object.values(leadSingleStrategy.leadSingleBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) : 0);
-      const projectedROI = totalInvestment > 0 ? Math.round(((finalRevenue - totalInvestment) / totalInvestment) * 100) : 0;
+      const previewResults = gameEngine.calculateReleasePreview(
+        releaseSongs,
+        artist,
+        releaseConfig
+      );
+      
+      console.log('[RELEASE PREVIEW] GameEngine calculation completed:', {
+        estimatedStreams: previewResults.estimatedStreams,
+        estimatedRevenue: previewResults.estimatedRevenue,
+        totalMarketingCost: previewResults.totalMarketingCost,
+        projectedROI: previewResults.projectedROI
+      });
 
       res.json({
         success: true,
-        preview: {
-          releaseType,
-          songCount: releaseSongs.length,
-          averageQuality: Math.round(averageQuality),
-          estimatedMetrics: {
-            baseStreams,
-            baseRevenue,
-            finalStreams,
-            finalRevenue,
-            chartPotential: Math.min(100, averageQuality + ((artist.mood || 50) - 50) / 2),
-            breakEvenPoint: Math.max(1, Math.ceil(totalInvestment / (finalRevenue / 12)))
-          },
-          bonusBreakdown: {
-            releaseTypeBonus: releaseBonus,
-            seasonalMultiplier,
-            marketingMultiplier,
-            artistMoodBonus: ((artist.mood || 50) - 50) / 10,
-            qualityBonus: Math.max(0, averageQuality - 70) / 2
-          },
-          projectedROI,
-          marketingEffectiveness: Math.round(marketingMultiplier * 40),
-          risks: [],
-          recommendations: []
-        },
+        preview: previewResults,
         validationWarnings: []
       });
     } catch (error) {
       console.error("Failed to calculate release preview:", error);
+      console.error("Error stack:", error.stack);
+      console.error("Error message:", error.message);
+      console.error("Error name:", error.name);
       res.status(500).json({ 
         error: 'CALCULATION_ERROR',
-        message: "Failed to calculate release preview" 
+        message: "Failed to calculate release preview",
+        details: error.message,
+        stack: error.stack
       });
     }
   });
@@ -952,7 +986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(songs)
         .where(and(
           eq(songs.gameId, gameId),
-          sql`${songs.id} = ANY(${songIds})`,
+          inArray(songs.id, songIds),
           sql`${songs.releaseId} IS NOT NULL`
         ));
 
@@ -1000,7 +1034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update songs to mark them as reserved for this release
         await tx.update(songs)
           .set({ releaseId: newRelease.id })
-          .where(sql`${songs.id} = ANY(${songIds})`);
+          .where(inArray(songs.id, songIds));
 
         return newRelease;
       });
@@ -1050,9 +1084,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Failed to create planned release:", error);
+      console.error("Error stack:", error.stack);
+      console.error("Error message:", error.message);
+      console.error("Error name:", error.name);
       res.status(500).json({ 
         error: 'CREATION_ERROR',
-        message: "Failed to create planned release" 
+        message: "Failed to create planned release",
+        details: error.message,
+        stack: error.stack
       });
     }
   });
@@ -1112,6 +1151,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[DEBUG] Error fetching revenue debug status:', error);
       res.status(500).json({ message: "Failed to fetch revenue debug status" });
+    }
+  });
+
+  // Song conflict resolution endpoints
+  app.get("/api/game/:gameId/songs/conflicts", getUserId, async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      
+      // Find all songs that are reserved for planned releases
+      const reservedSongs = await db.select().from(songs)
+        .where(and(
+          eq(songs.gameId, gameId),
+          sql`${songs.releaseId} IS NOT NULL`
+        ));
+      
+      // Get the planned releases these songs are associated with
+      const plannedReleases = await db.select().from(releases)
+        .where(and(
+          eq(releases.gameId, gameId),
+          eq(releases.status, 'planned')
+        ));
+      
+      // Group reserved songs by release
+      const conflictsByRelease = plannedReleases.map(release => ({
+        releaseId: release.id,
+        releaseTitle: release.title,
+        releaseType: release.type,
+        scheduledMonth: release.releaseMonth,
+        reservedSongs: reservedSongs.filter(s => s.releaseId === release.id).map(s => ({
+          songId: s.id,
+          songTitle: s.title,
+          artistId: s.artistId
+        }))
+      }));
+      
+      res.json({
+        success: true,
+        conflicts: {
+          totalReservedSongs: reservedSongs.length,
+          plannedReleases: plannedReleases.length,
+          conflictsByRelease
+        }
+      });
+    } catch (error) {
+      console.error("Failed to get song conflicts:", error);
+      res.status(500).json({
+        error: 'CONFLICT_CHECK_ERROR',
+        message: "Failed to check song conflicts"
+      });
+    }
+  });
+
+  // Clear all song reservations (for debugging/testing)
+  app.post("/api/game/:gameId/songs/clear-reservations", getUserId, async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      
+      // Clear all song reservations
+      const result = await db.update(songs)
+        .set({ releaseId: null })
+        .where(and(
+          eq(songs.gameId, gameId),
+          sql`${songs.releaseId} IS NOT NULL`
+        ))
+        .returning();
+      
+      res.json({
+        success: true,
+        message: `Cleared reservations for ${result.length} songs`,
+        clearedSongs: result.map(s => ({
+          songId: s.id,
+          songTitle: s.title,
+          artistId: s.artistId
+        }))
+      });
+    } catch (error) {
+      console.error("Failed to clear song reservations:", error);
+      res.status(500).json({
+        error: 'CLEAR_RESERVATIONS_ERROR',
+        message: "Failed to clear song reservations"
+      });
+    }
+  });
+
+  // Clean up demo user's old games (keep only current game and manual saves)
+  app.post("/api/cleanup-demo-games", getUserId, async (req, res) => {
+    try {
+      const { keepGameId } = req.body;
+      const userId = req.userId;
+      
+      if (!keepGameId) {
+        return res.status(400).json({ error: 'MISSING_KEEP_GAME_ID', message: 'keepGameId is required' });
+      }
+      
+      // Get all games for this user except the one to keep
+      const gamesToDelete = await db.select({ id: gameStates.id })
+        .from(gameStates)
+        .where(and(
+          eq(gameStates.userId, userId),
+          ne(gameStates.id, keepGameId)
+        ));
+      
+      let deletedCount = 0;
+      
+      // Delete each old game and its related data
+      for (const game of gamesToDelete) {
+        await db.transaction(async (tx) => {
+          // Delete related data first
+          await tx.delete(songs).where(eq(songs.gameId, game.id));
+          await tx.delete(releases).where(eq(releases.gameId, game.id));
+          await tx.delete(projects).where(eq(projects.gameId, game.id));
+          await tx.delete(artists).where(eq(artists.gameId, game.id));
+          await tx.delete(roles).where(eq(roles.gameId, game.id));
+          await tx.delete(monthlyActions).where(eq(monthlyActions.gameId, game.id));
+          
+          // Finally delete the game state
+          await tx.delete(gameStates).where(eq(gameStates.id, game.id));
+          
+          deletedCount++;
+        });
+      }
+      
+      res.json({ 
+        message: `Cleaned up ${deletedCount} old games`,
+        deletedCount,
+        keptGameId: keepGameId
+      });
+    } catch (error) {
+      console.error("Failed to cleanup demo games:", error);
+      res.status(500).json({ 
+        error: 'CLEANUP_ERROR',
+        message: "Failed to cleanup old games" 
+      });
+    }
+  });
+
+  // Delete a planned release and free up its songs
+  app.delete("/api/game/:gameId/releases/:releaseId", getUserId, async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      const releaseId = req.params.releaseId;
+      
+      // Get the release to return marketing budget
+      const [release] = await db.select().from(releases)
+        .where(and(eq(releases.id, releaseId), eq(releases.gameId, gameId)));
+      
+      if (!release) {
+        return res.status(404).json({
+          error: 'RELEASE_NOT_FOUND',
+          message: 'Planned release not found'
+        });
+      }
+      
+      if (release.status !== 'planned') {
+        return res.status(400).json({
+          error: 'CANNOT_DELETE_RELEASED',
+          message: 'Cannot delete a release that has already been executed'
+        });
+      }
+      
+      // Execute deletion in transaction
+      const result = await db.transaction(async (tx) => {
+        // Free up songs reserved for this release
+        const freedSongs = await tx.update(songs)
+          .set({ releaseId: null })
+          .where(eq(songs.releaseId, releaseId))
+          .returning();
+        
+        // Return marketing budget to player
+        const [gameState] = await tx.select().from(gameStates)
+          .where(eq(gameStates.id, gameId));
+        
+        if (gameState) {
+          await tx.update(gameStates)
+            .set({ money: (gameState.money || 0) + (release.marketingBudget || 0) })
+            .where(eq(gameStates.id, gameId));
+        }
+        
+        // Delete the planned release
+        await tx.delete(releases).where(eq(releases.id, releaseId));
+        
+        return { freedSongs, refundedAmount: release.marketingBudget || 0 };
+      });
+      
+      res.json({
+        success: true,
+        message: `Deleted planned release "${release.title}"`,
+        freedSongs: result.freedSongs.map(s => ({
+          songId: s.id,
+          songTitle: s.title
+        })),
+        refundedAmount: result.refundedAmount
+      });
+    } catch (error) {
+      console.error("Failed to delete planned release:", error);
+      res.status(500).json({
+        error: 'DELETE_RELEASE_ERROR',
+        message: "Failed to delete planned release"
+      });
     }
   });
 

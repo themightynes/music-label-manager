@@ -17,6 +17,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   const [newSaveName, setNewSaveName] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const { data: saves = [], refetch: refetchSaves } = useQuery({
     queryKey: ['api', 'saves'],
@@ -76,6 +77,46 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       alert(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (saveId: string, saveName: string) => {
+    if (!confirm(`Are you sure you want to delete the save "${saveName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    console.log('=== CLIENT DELETE DEBUG ===');
+    console.log('Deleting save:', saveId, saveName);
+
+    setDeleting(saveId);
+    try {
+      const response = await fetch(`/api/saves/${saveId}`, { 
+        method: 'DELETE',
+        credentials: 'include' 
+      });
+      
+      console.log('Delete response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('Delete error response:', errorData);
+        throw new Error(errorData.message || 'Failed to delete save');
+      }
+      
+      const result = await response.json();
+      console.log('Delete success response:', result);
+      
+      refetchSaves(); // Refresh saves list
+      alert(`Save "${saveName}" deleted successfully!`);
+    } catch (error) {
+      console.error('Failed to delete save:', error);
+      let errorMessage = 'Failed to delete save. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = `Delete failed: ${error.message}`;
+      }
+      alert(errorMessage);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -159,12 +200,20 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                     size="sm"
                     variant="outline"
                     onClick={() => handleLoad(save.id)}
-                    disabled={loading}
+                    disabled={loading || deleting === save.id}
                     className="text-xs"
                   >
                     {loading ? 'Loading...' : 'Load'}
                   </Button>
-                  <i className="fas fa-save text-slate-400"></i>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDelete(save.id, save.name)}
+                    disabled={loading || deleting === save.id}
+                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    {deleting === save.id ? 'Deleting...' : 'Delete'}
+                  </Button>
                 </div>
               </div>
             </div>

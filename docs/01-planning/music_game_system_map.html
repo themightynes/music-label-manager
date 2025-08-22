@@ -1,487 +1,897 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta viewport="width=device-width, initial-scale=1.0">
-    <title>Music Industry Game Systems - Interactive Mind Map</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            overflow-x: auto;
-        }
-        
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            position: relative;
-            min-height: 800px;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        .system-node {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 15px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 180px;
-            text-align: center;
-        }
-        
-        .system-node:hover {
-            transform: scale(1.05);
-            background: rgba(255, 255, 255, 0.25);
-            border-color: #ffd700;
-            box-shadow: 0 12px 40px rgba(255, 215, 0, 0.3);
-        }
-        
-        .system-node.active {
-            background: rgba(255, 215, 0, 0.3);
-            border-color: #ffd700;
-            transform: scale(1.1);
-        }
-        
-        .node-title {
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        
-        .node-details {
-            font-size: 11px;
-            opacity: 0.9;
-            line-height: 1.3;
-        }
-        
-        .connection-line {
-            position: absolute;
-            height: 2px;
-            background: linear-gradient(90deg, #ffd700, rgba(255, 215, 0, 0.3));
-            z-index: 1;
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
-        }
-        
-        .connection-line.active {
-            height: 4px;
-            opacity: 1;
-            background: #ffd700;
-            box-shadow: 0 0 10px #ffd700;
-        }
-        
-        .tier-label {
-            position: absolute;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            pointer-events: none;
-        }
-        
-        .tier1 { color: #00ff88; }
-        .tier2 { color: #ffaa00; }
-        .tier3 { color: #ff6b6b; }
-        
-        .legend {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 12px;
-        }
-        
-        .controls {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-        }
-        
-        .btn {
-            background: #ffd700;
-            color: #000;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-            font-weight: bold;
-        }
-        
-        .btn:hover {
-            background: #ffed4a;
-        }
-        
-        .detail-panel {
-            position: fixed;
-            left: 20px;
-            top: 100px;
-            width: 300px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            display: none;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎵 Music Industry Game Systems - Interactive Web</h1>
-        
-        <!-- Tier Labels -->
-        <div class="tier-label tier1" style="top: 50px; left: 50px;">TIER 1: ABSOLUTE CORE<br><small>MVP Essential</small></div>
-        <div class="tier-label tier2" style="top: 200px; left: 50px;">TIER 2: CORE ENHANCEMENT<br><small>Essential for Depth</small></div>
-        <div class="tier-label tier3" style="top: 350px; left: 50px;">TIER 3: STRATEGIC SYSTEMS<br><small>Important for Replayability</small></div>
-        <div class="tier-label" style="top: 500px; left: 50px; color: #9ca3af;">TIER 4: ENRICHMENT<br><small>Post-MVP</small></div>
-        <div class="tier-label" style="top: 620px; left: 50px; color: #6b7280;">TIER 5: ADVANCED<br><small>Version 2.0+</small></div>
-        
-        <!-- Core System Nodes -->
-        
-        <!-- TIER 1: ABSOLUTE CORE (MVP Essential) -->
-        <div class="system-node tier1" id="music-creation-cycle" style="top: 80px; left: 280px;">
-            <div class="node-title">🎵 Music Creation & Release Cycle</div>
-            <div class="node-details">⭐ FOUNDATION<br>Multi-song projects<br>Singles→EPs→Albums</div>
-        </div>
-        
-        <div class="system-node tier1" id="streaming-decay" style="top: 100px; left: 480px;">
-            <div class="node-title">📉 Streaming Revenue Decay</div>
-            <div class="node-details">85% monthly decline<br>Catalog building essential<br>Economic transformation</div>
-        </div>
-        
-        <div class="system-node tier1" id="producer-tiers" style="top: 80px; left: 680px;">
-            <div class="node-title">⭐ Producer Tier System</div>
-            <div class="node-details">Local(+0) to Legendary(+20)<br>Strategic selection<br>Quality vs cost</div>
-        </div>
-        
-        <div class="system-node tier1" id="access-progression" style="top: 100px; left: 880px;">
-            <div class="node-title">🚪 Access Tier Progression</div>
-            <div class="node-details">Playlist/Press/Venue gates<br>Reputation unlocks<br>Clear progression</div>
-        </div>
-        
-        <!-- TIER 2: CORE ENHANCEMENT (Essential for Depth) -->
-        <div class="system-node tier2" id="time-investment" style="top: 230px; left: 300px;">
-            <div class="node-title">⏱️ Time Investment Quality</div>
-            <div class="node-details">Rushed(-10) to Perfect(+15)<br>Project planning depth<br>Time pressure decisions</div>
-        </div>
-        
-        <div class="system-node tier2" id="mood-effects" style="top: 250px; left: 500px;">
-            <div class="node-title">😊 Artist Mood Effects</div>
-            <div class="node-details">-30% to +25% performance<br>Relationship management<br>Business impact</div>
-        </div>
-        
-        <div class="system-node tier2" id="regional-barriers" style="top: 230px; left: 700px;">
-            <div class="node-title">🌍 Regional Market Barriers</div>
-            <div class="node-details">Geographic progression<br>Reputation thresholds<br>Market expansion</div>
-        </div>
-        
-        <!-- TIER 3: STRATEGIC SYSTEMS (Important for Replayability) -->
-        <div class="system-node tier3" id="brand-building" style="top: 380px; left: 250px;">
-            <div class="node-title">🏷️ Label Brand Building</div>
-            <div class="node-details">Genre specialization<br>Coherent strategy<br>Long-term identity</div>
-        </div>
-        
-        <div class="system-node tier3" id="multi-channel-marketing" style="top: 400px; left: 450px;">
-            <div class="node-title">📢 Multi-Channel Marketing</div>
-            <div class="node-details">Radio/PR/Digital campaigns<br>Audience targeting<br>ROI optimization</div>
-        </div>
-        
-        <div class="system-node tier3" id="seasonal-modifiers" style="top: 380px; left: 650px;">
-            <div class="node-title">📅 Seasonal Modifiers</div>
-            <div class="node-details">Q4: +25% sales boost<br>Strategic timing<br>Release planning</div>
-        </div>
-        
-        <div class="system-node tier3" id="loyalty-effects" style="top: 400px; left: 850px;">
-            <div class="node-title">❤️ Artist Loyalty Effects</div>
-            <div class="node-details">-20% tour costs<br>Relationship investment<br>Long-term benefits</div>
-        </div>
-        
-        <!-- TIER 4: ENRICHMENT FEATURES (Post-MVP) -->
-        <div class="system-node" id="dynamic-events" style="top: 530px; left: 280px; background: rgba(156, 163, 175, 0.2); border-color: #9ca3af;">
-            <div class="node-title">🎪 Dynamic Events System</div>
-            <div class="node-details">Industry drama<br>Crisis management<br>Sync licensing</div>
-        </div>
-        
-        <div class="system-node" id="artist-synergy" style="top: 550px; left: 480px; background: rgba(156, 163, 175, 0.2); border-color: #9ca3af;">
-            <div class="node-title">🤝 Artist Synergy</div>
-            <div class="node-details">Collaboration bonuses<br>Cross-promotion<br>Multi-artist projects</div>
-        </div>
-        
-        <div class="system-node" id="venue-progression" style="top: 530px; left: 680px; background: rgba(156, 163, 175, 0.2); border-color: #9ca3af;">
-            <div class="node-title">🏟️ Venue Progression</div>
-            <div class="node-details">Club→Theater→Arena<br>Popularity gates<br>Tour optimization</div>
-        </div>
-        
-        <!-- TIER 5: ADVANCED SYSTEMS (Version 2.0+) -->
-        <div class="system-node" id="crisis-management" style="top: 650px; left: 350px; background: rgba(107, 114, 128, 0.2); border-color: #6b7280;">
-            <div class="node-title">🚨 Crisis Management</div>
-            <div class="node-details">Reputation protection<br>Scandal response<br>Future feature</div>
-        </div>
-        
-        <div class="system-node" id="real-time-competition" style="top: 670px; left: 550px; background: rgba(107, 114, 128, 0.2); border-color: #6b7280;">
-            <div class="node-title">⚔️ Real-time Competition</div>
-            <div class="node-details">AI label rivalry<br>Market dynamics<br>Version 2.0+</div>
-        </div>
-        
-        <!-- Central Integration Hub -->
-        <div class="system-node" id="core-loop" style="top: 300px; left: 1100px; background: rgba(255, 215, 0, 0.4); border-color: #ffd700; border-width: 3px;">
-            <div class="node-title">🔄 DEVELOPMENT ROADMAP</div>
-            <div class="node-details">Sprint 1: Foundation<br>Sprint 2: Strategic Depth<br>Sprint 3: Enhancement</div>
-        </div>
-        
-        <!-- JSON Implementation Priority -->
-        <div class="system-node" id="json-priority" style="top: 450px; left: 1100px; background: rgba(34, 197, 94, 0.3); border-color: #22c55e;">
-            <div class="node-title">💾 JSON FIELD PRIORITY</div>
-            <div class="node-details">Critical: longevity_decay<br>Important: mood_effects<br>Enhancement: loyalty_effects</div>
-        </div>
-        
-        <!-- Connection Lines -->
-        <div class="connection-line" id="line-1" style="top: 135px; left: 480px; width: 60px; transform: rotate(0deg);"></div>
-        <div class="connection-line" id="line-2" style="top: 135px; left: 700px; width: 60px; transform: rotate(0deg);"></div>
-        <div class="connection-line" id="line-3" style="top: 365px; left: 430px; width: 60px; transform: rotate(0deg);"></div>
-        <div class="connection-line" id="line-4" style="top: 365px; left: 650px; width: 60px; transform: rotate(0deg);"></div>
-        <div class="connection-line" id="line-5" style="top: 365px; left: 870px; width: 60px; transform: rotate(0deg);"></div>
-        <div class="connection-line" id="line-6" style="top: 615px; left: 380px; width: 60px; transform: rotate(0deg);"></div>
-        <div class="connection-line" id="line-7" style="top: 615px; left: 600px; width: 60px; transform: rotate(0deg);"></div>
-        
-        <!-- Vertical connections -->
-        <div class="connection-line" id="line-v1" style="top: 160px; left: 380px; width: 2px; height: 150px; transform: rotate(90deg);"></div>
-        <div class="connection-line" id="line-v2" style="top: 160px; left: 600px; width: 2px; height: 150px; transform: rotate(90deg);"></div>
-        <div class="connection-line" id="line-v3" style="top: 410px; left: 520px; width: 2px; height: 150px; transform: rotate(90deg);"></div>
-        <div class="connection-line" id="line-v4" style="top: 410px; left: 740px; width: 2px; height: 150px; transform: rotate(90deg);"></div>
-    </div>
-    
-    <div class="legend">
-        <div><span class="tier1">● TIER 1:</span> Foundation Systems</div>
-        <div><span class="tier2">● TIER 2:</span> Enhancement Systems</div>
-        <div><span class="tier3">● TIER 3:</span> Strategic Systems</div>
-        <div>💫 Hover nodes to see connections</div>
-        <div>🔗 Click to see detailed relationships</div>
-    </div>
-    
-    <div class="controls">
-        <button class="btn" onclick="showAllConnections()">Show All Connections</button>
-        <button class="btn" onclick="hideAllConnections()">Hide Connections</button>
-        <button class="btn" onclick="resetView()">Reset View</button>
-    </div>
-    
-    <div class="detail-panel" id="detail-panel">
-        <h3 id="detail-title">System Details</h3>
-        <div id="detail-content"></div>
-    </div>
-    
-    <script>
-        const systemDetails = {
-            'music-creation-cycle': {
-                title: 'Music Creation & Release Cycle ⭐ FOUNDATION',
-                description: 'THE core system - all other systems serve this loop. Multi-song project management and strategic release timing.',
-                connections: ['streaming-decay', 'producer-tiers', 'time-investment'],
-                jsonFields: ['project_management', 'song_cataloging', 'release_types', 'multi_song_tracking'],
-                impact: 'FOUNDATION - This IS the music industry simulation',
-                tier: 'TIER 1: ABSOLUTE CORE',
-                sprint: 'Sprint 1 (Weeks 1-2)'
-            },
-            'streaming-decay': {
-                title: 'Streaming Revenue Decay System',
-                description: 'Transforms economic model from hit-chasing to catalog building. 85% monthly decline forces continuous content creation.',
-                connections: ['music-creation-cycle', 'seasonal-modifiers', 'access-progression'],
-                jsonFields: ['market_formulas.streaming_calculation.longevity_decay: 0.85', 'catalog_value_tracking', 'revenue_persistence'],
-                impact: 'TRANSFORMATIVE - Changes entire economic foundation',
-                tier: 'TIER 1: ABSOLUTE CORE',
-                sprint: 'Sprint 1 (Weeks 1-2)'
-            },
-            'producer-tiers': {
-                title: 'Producer Tier System',
-                description: 'Strategic producer selection affecting song quality. Local(+0) to Legendary(+20) quality bonuses.',
-                connections: ['music-creation-cycle', 'time-investment', 'mood-effects'],
-                jsonFields: ['quality_system.producer_tier_bonus: {local: 0, legendary: 20}', 'cost_scaling', 'availability_gates'],
-                impact: 'HIGH - Every recording becomes strategic budget vs quality decision',
-                tier: 'TIER 1: ABSOLUTE CORE',
-                sprint: 'Sprint 2 (Weeks 3-4)'
-            },
-            'access-progression': {
-                title: 'Access Tier Progression System',
-                description: 'Reputation-gated access to better opportunities. Clear progression goals and unlocks.',
-                connections: ['streaming-decay', 'regional-barriers', 'loyalty-effects'],
-                jsonFields: ['access_tier_system', 'playlist_tiers', 'press_tiers', 'venue_tiers'],
-                impact: 'HIGH - Provides clear progression goals and unlocks opportunities',
-                tier: 'TIER 1: ABSOLUTE CORE',
-                sprint: 'Sprint 2 (Weeks 3-4)'
-            },
-            'time-investment': {
-                title: 'Time Investment Quality System',
-                description: 'Project timeline affecting quality vs cost vs deadline pressure. Rushed(-10) to Perfectionist(+15).',
-                connections: ['producer-tiers', 'mood-effects', 'music-creation-cycle'],
-                jsonFields: ['quality_system.time_investment_bonus: {rushed: -10, perfectionist: 15}', 'deadline_pressure', 'cost_multipliers'],
-                impact: 'MEDIUM - Adds strategic depth to every project with time pressure decisions',
-                tier: 'TIER 2: CORE ENHANCEMENT',
-                sprint: 'Sprint 2 (Weeks 3-4)'
-            },
-            'mood-effects': {
-                title: 'Artist Mood Effects System',
-                description: 'Artist emotional state affecting performance. Very Low(-30%) to Excellent(+25%) performance multipliers.',
-                connections: ['producer-tiers', 'loyalty-effects', 'time-investment'],
-                jsonFields: ['artist_effects.mood_effects: {very_low: -30, excellent: 25}', 'burnout_mechanics', 'recovery_time'],
-                impact: 'HIGH - Makes artist relationship management crucial for business success',
-                tier: 'TIER 2: CORE ENHANCEMENT',
-                sprint: 'Sprint 3 (Weeks 5-6)'
-            },
-            'regional-barriers': {
-                title: 'Regional Market Barriers System',
-                description: 'Geographic progression requiring reputation building. Domestic(0) to Global(+60) expansion strategy.',
-                connections: ['access-progression', 'brand-building', 'multi-channel-marketing'],
-                jsonFields: ['regional_barriers: {domestic: 0, global: 60}', 'reputation_thresholds', 'market_expansion'],
-                impact: 'MEDIUM - Creates strategic market entry and expansion planning',
-                tier: 'TIER 2: CORE ENHANCEMENT',
-                sprint: 'Sprint 3 (Weeks 5-6)'
-            },
-            'brand-building': {
-                title: 'Label Brand Building System',
-                description: 'Genre specialization and coherent artist roster strategy. Long-term strategic identity affects all decisions.',
-                connections: ['regional-barriers', 'multi-channel-marketing', 'loyalty-effects'],
-                jsonFields: ['genre_specialization', 'brand_coherence_calculations', 'artist_attraction_modifiers'],
-                impact: 'MEDIUM - Long-term strategic identity affects all business decisions',
-                tier: 'TIER 3: STRATEGIC SYSTEMS',
-                sprint: 'Post-MVP Phase 1'
-            },
-            'multi-channel-marketing': {
-                title: 'Multi-Channel Marketing System',
-                description: 'Different promotion strategies targeting different audiences. Radio($2.5k-10k), PR($3k-8k), Digital($1k-8k).',
-                connections: ['brand-building', 'seasonal-modifiers', 'regional-barriers'],
-                jsonFields: ['marketing_costs: {radio_push: [2500, 10000]}', 'audience_targeting', 'roi_tracking'],
-                impact: 'MEDIUM - Strategic promotion choices based on artist type and audience',
-                tier: 'TIER 3: STRATEGIC SYSTEMS',
-                sprint: 'Post-MVP Phase 1'
-            },
-            'seasonal-modifiers': {
-                title: 'Seasonal Modifiers System',
-                description: 'Calendar-based sales multipliers. Q1(0.85x) to Q4(1.25x) affecting release timing strategy.',
-                connections: ['streaming-decay', 'multi-channel-marketing', 'music-creation-cycle'],
-                jsonFields: ['seasonal_modifiers: {q1: 0.85, q4: 1.25}', 'calendar_effects', 'timing_strategy'],
-                impact: 'MEDIUM - Release timing becomes crucial strategic decision',
-                tier: 'TIER 3: STRATEGIC SYSTEMS',
-                sprint: 'Post-MVP Phase 1'
-            },
-            'loyalty-effects': {
-                title: 'Artist Loyalty Effects System',
-                description: 'Relationship quality affecting costs and cooperation. High loyalty = -20% tour costs, -50% marketing costs.',
-                connections: ['mood-effects', 'access-progression', 'brand-building'],
-                jsonFields: ['artist_effects.loyalty_effects: {high_loyalty: {tour_cost_reduction: 0.2}}', 'relationship_building', 'cost_benefits'],
-                impact: 'MEDIUM - Relationship building has tangible financial and operational benefits',
-                tier: 'TIER 3: STRATEGIC SYSTEMS',
-                sprint: 'Post-MVP Phase 1'
+    <head>
+        <meta charset="UTF-8" />
+        <meta viewport="width=device-width, initial-scale=1.0" />
+        <title>Music Industry Game Systems - Interactive Mind Map</title>
+        <style>
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                color: white;
+                overflow-x: auto;
             }
-        };
-        
-        let activeConnections = [];
-        
-        document.querySelectorAll('.system-node').forEach(node => {
-            node.addEventListener('mouseenter', function() {
-                const nodeId = this.id;
-                highlightConnections(nodeId);
+
+            .container {
+                max-width: 1600px;
+                margin: 0 auto;
+                position: relative;
+                min-height: 800px;
+            }
+
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            }
+
+            .system-node {
+                position: absolute;
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(10px);
+                border-radius: 15px;
+                padding: 15px;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                min-width: 180px;
+                text-align: center;
+            }
+
+            .system-node:hover {
+                transform: scale(1.05);
+                background: rgba(255, 255, 255, 0.25);
+                border-color: #ffd700;
+                box-shadow: 0 12px 40px rgba(255, 215, 0, 0.3);
+            }
+
+            .system-node.active {
+                background: rgba(255, 215, 0, 0.3);
+                border-color: #ffd700;
+                transform: scale(1.1);
+            }
+
+            .node-title {
+                font-weight: bold;
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+
+            .node-details {
+                font-size: 11px;
+                opacity: 0.9;
+                line-height: 1.3;
+            }
+
+            .connection-line {
+                position: absolute;
+                height: 2px;
+                background: linear-gradient(
+                    90deg,
+                    #ffd700,
+                    rgba(255, 215, 0, 0.3)
+                );
+                z-index: 1;
+                opacity: 0.7;
+                transition: opacity 0.3s ease;
+            }
+
+            .connection-line.active {
+                height: 4px;
+                opacity: 1;
+                background: #ffd700;
+                box-shadow: 0 0 10px #ffd700;
+            }
+
+            .tier-label {
+                position: absolute;
+                font-size: 18px;
+                font-weight: bold;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+                pointer-events: none;
+            }
+
+            .tier1 {
+                color: #00ff88;
+            }
+            .tier2 {
+                color: #ffaa00;
+            }
+            .tier3 {
+                color: #ff6b6b;
+            }
+
+            .legend {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                padding: 15px;
+                border-radius: 10px;
+                font-size: 12px;
+            }
+
+            .controls {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                padding: 15px;
+                border-radius: 10px;
+            }
+
+            .btn {
+                background: #ffd700;
+                color: #000;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 5px;
+                cursor: pointer;
+                margin: 5px;
+                font-weight: bold;
+            }
+
+            .btn:hover {
+                background: #ffed4a;
+            }
+
+            .detail-panel {
+                position: fixed;
+                left: 20px;
+                top: 100px;
+                width: 300px;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 20px;
+                border-radius: 10px;
+                display: none;
+                max-height: 400px;
+                overflow-y: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎵 Music Industry Game Systems - Interactive Web</h1>
+
+            <!-- Tier Labels -->
+            <div class="tier-label tier1" style="top: 50px; left: 50px">
+                TIER 1: ABSOLUTE CORE<br /><small>MVP Essential</small>
+            </div>
+            <div class="tier-label tier2" style="top: 200px; left: 50px">
+                TIER 2: CORE ENHANCEMENT<br /><small>Essential for Depth</small>
+            </div>
+            <div class="tier-label tier3" style="top: 350px; left: 50px">
+                TIER 3: STRATEGIC SYSTEMS<br /><small
+                    >Important for Replayability</small
+                >
+            </div>
+            <div
+                class="tier-label"
+                style="top: 500px; left: 50px; color: #9ca3af"
+            >
+                TIER 4: ENRICHMENT<br /><small>Post-MVP</small>
+            </div>
+            <div
+                class="tier-label"
+                style="top: 620px; left: 50px; color: #6b7280"
+            >
+                TIER 5: ADVANCED<br /><small>Version 2.0+</small>
+            </div>
+
+            <!-- Core System Nodes -->
+
+            <!-- TIER 1: ABSOLUTE CORE (MVP Essential) -->
+            <div
+                class="system-node tier1"
+                id="music-creation-cycle"
+                style="top: 80px; left: 280px"
+            >
+                <div class="node-title">🎵 Music Creation & Release Cycle</div>
+                <div class="node-details">
+                    ⭐ FOUNDATION<br />Multi-song projects<br />Singles→EPs→Albums
+                </div>
+            </div>
+
+            <div
+                class="system-node tier1"
+                id="streaming-decay"
+                style="top: 100px; left: 480px"
+            >
+                <div class="node-title">📉 Streaming Revenue Decay</div>
+                <div class="node-details">
+                    85% monthly decline<br />Catalog building essential<br />Economic
+                    transformation
+                </div>
+            </div>
+
+            <div
+                class="system-node tier1"
+                id="producer-tiers"
+                style="top: 80px; left: 680px"
+            >
+                <div class="node-title">⭐ Producer Tier System</div>
+                <div class="node-details">
+                    Local(+0) to Legendary(+20)<br />Strategic selection<br />Quality
+                    vs cost
+                </div>
+            </div>
+
+            <div
+                class="system-node tier1"
+                id="access-progression"
+                style="top: 100px; left: 880px"
+            >
+                <div class="node-title">🚪 Access Tier Progression</div>
+                <div class="node-details">
+                    Playlist/Press/Venue gates<br />Reputation unlocks<br />Clear
+                    progression
+                </div>
+            </div>
+
+            <!-- TIER 2: CORE ENHANCEMENT (Essential for Depth) -->
+            <div
+                class="system-node tier2"
+                id="time-investment"
+                style="top: 230px; left: 300px"
+            >
+                <div class="node-title">⏱️ Time Investment Quality</div>
+                <div class="node-details">
+                    Rushed(-10) to Perfect(+15)<br />Project planning depth<br />Time
+                    pressure decisions
+                </div>
+            </div>
+
+            <div
+                class="system-node tier2"
+                id="mood-effects"
+                style="top: 250px; left: 500px"
+            >
+                <div class="node-title">😊 Artist Mood Effects</div>
+                <div class="node-details">
+                    -30% to +25% performance<br />Relationship management<br />Business
+                    impact
+                </div>
+            </div>
+
+            <div
+                class="system-node tier2"
+                id="regional-barriers"
+                style="top: 230px; left: 700px"
+            >
+                <div class="node-title">🌍 Regional Market Barriers</div>
+                <div class="node-details">
+                    Geographic progression<br />Reputation thresholds<br />Market
+                    expansion
+                </div>
+            </div>
+
+            <!-- TIER 3: STRATEGIC SYSTEMS (Important for Replayability) -->
+            <div
+                class="system-node tier3"
+                id="brand-building"
+                style="top: 380px; left: 250px"
+            >
+                <div class="node-title">🏷️ Label Brand Building</div>
+                <div class="node-details">
+                    Genre specialization<br />Coherent strategy<br />Long-term
+                    identity
+                </div>
+            </div>
+
+            <div
+                class="system-node tier3"
+                id="multi-channel-marketing"
+                style="top: 400px; left: 450px"
+            >
+                <div class="node-title">📢 Multi-Channel Marketing</div>
+                <div class="node-details">
+                    Radio/PR/Digital campaigns<br />Audience targeting<br />ROI
+                    optimization
+                </div>
+            </div>
+
+            <div
+                class="system-node tier3"
+                id="seasonal-modifiers"
+                style="top: 380px; left: 650px"
+            >
+                <div class="node-title">📅 Seasonal Modifiers</div>
+                <div class="node-details">
+                    Q4: +25% sales boost<br />Strategic timing<br />Release
+                    planning
+                </div>
+            </div>
+
+            <div
+                class="system-node tier3"
+                id="loyalty-effects"
+                style="top: 400px; left: 850px"
+            >
+                <div class="node-title">❤️ Artist Loyalty Effects</div>
+                <div class="node-details">
+                    -20% tour costs<br />Relationship investment<br />Long-term
+                    benefits
+                </div>
+            </div>
+
+            <!-- TIER 4: ENRICHMENT FEATURES (Post-MVP) -->
+            <div
+                class="system-node"
+                id="dynamic-events"
+                style="
+                    top: 530px;
+                    left: 280px;
+                    background: rgba(156, 163, 175, 0.2);
+                    border-color: #9ca3af;
+                "
+            >
+                <div class="node-title">🎪 Dynamic Events System</div>
+                <div class="node-details">
+                    Industry drama<br />Crisis management<br />Sync licensing
+                </div>
+            </div>
+
+            <div
+                class="system-node"
+                id="artist-synergy"
+                style="
+                    top: 550px;
+                    left: 480px;
+                    background: rgba(156, 163, 175, 0.2);
+                    border-color: #9ca3af;
+                "
+            >
+                <div class="node-title">🤝 Artist Synergy</div>
+                <div class="node-details">
+                    Collaboration bonuses<br />Cross-promotion<br />Multi-artist
+                    projects
+                </div>
+            </div>
+
+            <div
+                class="system-node"
+                id="venue-progression"
+                style="
+                    top: 530px;
+                    left: 680px;
+                    background: rgba(156, 163, 175, 0.2);
+                    border-color: #9ca3af;
+                "
+            >
+                <div class="node-title">🏟️ Venue Progression</div>
+                <div class="node-details">
+                    Club→Theater→Arena<br />Popularity gates<br />Tour
+                    optimization
+                </div>
+            </div>
+
+            <!-- TIER 5: ADVANCED SYSTEMS (Version 2.0+) -->
+            <div
+                class="system-node"
+                id="crisis-management"
+                style="
+                    top: 650px;
+                    left: 350px;
+                    background: rgba(107, 114, 128, 0.2);
+                    border-color: #6b7280;
+                "
+            >
+                <div class="node-title">🚨 Crisis Management</div>
+                <div class="node-details">
+                    Reputation protection<br />Scandal response<br />Future
+                    feature
+                </div>
+            </div>
+
+            <div
+                class="system-node"
+                id="real-time-competition"
+                style="
+                    top: 670px;
+                    left: 550px;
+                    background: rgba(107, 114, 128, 0.2);
+                    border-color: #6b7280;
+                "
+            >
+                <div class="node-title">⚔️ Real-time Competition</div>
+                <div class="node-details">
+                    AI label rivalry<br />Market dynamics<br />Version 2.0+
+                </div>
+            </div>
+
+            <!-- Central Integration Hub -->
+            <div
+                class="system-node"
+                id="core-loop"
+                style="
+                    top: 300px;
+                    left: 1100px;
+                    background: rgba(255, 215, 0, 0.4);
+                    border-color: #ffd700;
+                    border-width: 3px;
+                "
+            >
+                <div class="node-title">🔄 DEVELOPMENT ROADMAP</div>
+                <div class="node-details">
+                    Sprint 1: Foundation<br />Sprint 2: Strategic Depth<br />Sprint
+                    3: Enhancement
+                </div>
+            </div>
+
+            <!-- JSON Implementation Priority -->
+            <div
+                class="system-node"
+                id="json-priority"
+                style="
+                    top: 450px;
+                    left: 1100px;
+                    background: rgba(34, 197, 94, 0.3);
+                    border-color: #22c55e;
+                "
+            >
+                <div class="node-title">💾 JSON FIELD PRIORITY</div>
+                <div class="node-details">
+                    Critical: longevity_decay<br />Important: mood_effects<br />Enhancement:
+                    loyalty_effects
+                </div>
+            </div>
+
+            <!-- Connection Lines -->
+            <div
+                class="connection-line"
+                id="line-1"
+                style="
+                    top: 135px;
+                    left: 480px;
+                    width: 60px;
+                    transform: rotate(0deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-2"
+                style="
+                    top: 135px;
+                    left: 700px;
+                    width: 60px;
+                    transform: rotate(0deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-3"
+                style="
+                    top: 365px;
+                    left: 430px;
+                    width: 60px;
+                    transform: rotate(0deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-4"
+                style="
+                    top: 365px;
+                    left: 650px;
+                    width: 60px;
+                    transform: rotate(0deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-5"
+                style="
+                    top: 365px;
+                    left: 870px;
+                    width: 60px;
+                    transform: rotate(0deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-6"
+                style="
+                    top: 615px;
+                    left: 380px;
+                    width: 60px;
+                    transform: rotate(0deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-7"
+                style="
+                    top: 615px;
+                    left: 600px;
+                    width: 60px;
+                    transform: rotate(0deg);
+                "
+            ></div>
+
+            <!-- Vertical connections -->
+            <div
+                class="connection-line"
+                id="line-v1"
+                style="
+                    top: 160px;
+                    left: 380px;
+                    width: 2px;
+                    height: 150px;
+                    transform: rotate(90deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-v2"
+                style="
+                    top: 160px;
+                    left: 600px;
+                    width: 2px;
+                    height: 150px;
+                    transform: rotate(90deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-v3"
+                style="
+                    top: 410px;
+                    left: 520px;
+                    width: 2px;
+                    height: 150px;
+                    transform: rotate(90deg);
+                "
+            ></div>
+            <div
+                class="connection-line"
+                id="line-v4"
+                style="
+                    top: 410px;
+                    left: 740px;
+                    width: 2px;
+                    height: 150px;
+                    transform: rotate(90deg);
+                "
+            ></div>
+        </div>
+
+        <div class="legend">
+            <div><span class="tier1">● TIER 1:</span> Foundation Systems</div>
+            <div><span class="tier2">● TIER 2:</span> Enhancement Systems</div>
+            <div><span class="tier3">● TIER 3:</span> Strategic Systems</div>
+            <div>💫 Hover nodes to see connections</div>
+            <div>🔗 Click to see detailed relationships</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="showAllConnections()">
+                Show All Connections
+            </button>
+            <button class="btn" onclick="hideAllConnections()">
+                Hide Connections
+            </button>
+            <button class="btn" onclick="resetView()">Reset View</button>
+        </div>
+
+        <div class="detail-panel" id="detail-panel">
+            <h3 id="detail-title">System Details</h3>
+            <div id="detail-content"></div>
+        </div>
+
+        <script>
+            const systemDetails = {
+                "music-creation-cycle": {
+                    title: "Music Creation & Release Cycle ⭐ FOUNDATION",
+                    description:
+                        "THE core system - all other systems serve this loop. Multi-song project management, strategic release timing, and sophisticated Plan Release functionality with performance preview and marketing optimization.",
+                    connections: [
+                        "streaming-decay",
+                        "producer-tiers",
+                        "time-investment",
+                    ],
+                    jsonFields: [
+                        "project_management",
+                        "song_cataloging",
+                        "release_types",
+                        "multi_song_tracking",
+                        "release_planning",
+                        "marketing_channels",
+                        "seasonal_optimization",
+                    ],
+                    impact: "FOUNDATION - This IS the music industry simulation",
+                    tier: "TIER 1: ABSOLUTE CORE",
+                    sprint: "Sprint 1 (Weeks 1-2)",
+                    status: "✅ COMPLETE - Including Plan Release System",
+                },
+                "streaming-decay": {
+                    title: "Streaming Revenue Decay System",
+                    description:
+                        "Transforms economic model from hit-chasing to catalog building. 85% monthly decline forces continuous content creation.",
+                    connections: [
+                        "music-creation-cycle",
+                        "seasonal-modifiers",
+                        "access-progression",
+                    ],
+                    jsonFields: [
+                        "market_formulas.streaming_calculation.longevity_decay: 0.85",
+                        "catalog_value_tracking",
+                        "revenue_persistence",
+                    ],
+                    impact: "TRANSFORMATIVE - Changes entire economic foundation",
+                    tier: "TIER 1: ABSOLUTE CORE",
+                    sprint: "Sprint 1 (Weeks 1-2)",
+                },
+                "producer-tiers": {
+                    title: "Producer Tier System",
+                    description:
+                        "Strategic producer selection affecting song quality. Local(+0) to Legendary(+20) quality bonuses.",
+                    connections: [
+                        "music-creation-cycle",
+                        "time-investment",
+                        "mood-effects",
+                    ],
+                    jsonFields: [
+                        "quality_system.producer_tier_bonus: {local: 0, legendary: 20}",
+                        "cost_scaling",
+                        "availability_gates",
+                    ],
+                    impact: "HIGH - Every recording becomes strategic budget vs quality decision",
+                    tier: "TIER 1: ABSOLUTE CORE",
+                    sprint: "Sprint 2 (Weeks 3-4)",
+                },
+                "access-progression": {
+                    title: "Access Tier Progression System",
+                    description:
+                        "Reputation-gated access to better opportunities. Clear progression goals and unlocks.",
+                    connections: [
+                        "streaming-decay",
+                        "regional-barriers",
+                        "loyalty-effects",
+                    ],
+                    jsonFields: [
+                        "access_tier_system",
+                        "playlist_tiers",
+                        "press_tiers",
+                        "venue_tiers",
+                    ],
+                    impact: "HIGH - Provides clear progression goals and unlocks opportunities",
+                    tier: "TIER 1: ABSOLUTE CORE",
+                    sprint: "Sprint 2 (Weeks 3-4)",
+                },
+                "time-investment": {
+                    title: "Time Investment Quality System",
+                    description:
+                        "Project timeline affecting quality vs cost vs deadline pressure. Rushed(-10) to Perfectionist(+15).",
+                    connections: [
+                        "producer-tiers",
+                        "mood-effects",
+                        "music-creation-cycle",
+                    ],
+                    jsonFields: [
+                        "quality_system.time_investment_bonus: {rushed: -10, perfectionist: 15}",
+                        "deadline_pressure",
+                        "cost_multipliers",
+                    ],
+                    impact: "MEDIUM - Adds strategic depth to every project with time pressure decisions",
+                    tier: "TIER 2: CORE ENHANCEMENT",
+                    sprint: "Sprint 2 (Weeks 3-4)",
+                },
+                "mood-effects": {
+                    title: "Artist Mood Effects System",
+                    description:
+                        "Artist emotional state affecting performance. Very Low(-30%) to Excellent(+25%) performance multipliers.",
+                    connections: [
+                        "producer-tiers",
+                        "loyalty-effects",
+                        "time-investment",
+                    ],
+                    jsonFields: [
+                        "artist_effects.mood_effects: {very_low: -30, excellent: 25}",
+                        "burnout_mechanics",
+                        "recovery_time",
+                    ],
+                    impact: "HIGH - Makes artist relationship management crucial for business success",
+                    tier: "TIER 2: CORE ENHANCEMENT",
+                    sprint: "Sprint 3 (Weeks 5-6)",
+                },
+                "regional-barriers": {
+                    title: "Regional Market Barriers System",
+                    description:
+                        "Geographic progression requiring reputation building. Domestic(0) to Global(+60) expansion strategy.",
+                    connections: [
+                        "access-progression",
+                        "brand-building",
+                        "multi-channel-marketing",
+                    ],
+                    jsonFields: [
+                        "regional_barriers: {domestic: 0, global: 60}",
+                        "reputation_thresholds",
+                        "market_expansion",
+                    ],
+                    impact: "MEDIUM - Creates strategic market entry and expansion planning",
+                    tier: "TIER 2: CORE ENHANCEMENT",
+                    sprint: "Sprint 3 (Weeks 5-6)",
+                },
+                "brand-building": {
+                    title: "Label Brand Building System",
+                    description:
+                        "Genre specialization and coherent artist roster strategy. Long-term strategic identity affects all decisions.",
+                    connections: [
+                        "regional-barriers",
+                        "multi-channel-marketing",
+                        "loyalty-effects",
+                    ],
+                    jsonFields: [
+                        "genre_specialization",
+                        "brand_coherence_calculations",
+                        "artist_attraction_modifiers",
+                    ],
+                    impact: "MEDIUM - Long-term strategic identity affects all business decisions",
+                    tier: "TIER 3: STRATEGIC SYSTEMS",
+                    sprint: "Post-MVP Phase 1",
+                },
+                "multi-channel-marketing": {
+                    title: "Multi-Channel Marketing System",
+                    description:
+                        "Different promotion strategies targeting different audiences. Radio($2.5k-10k), PR($3k-8k), Digital($1k-8k).",
+                    connections: [
+                        "brand-building",
+                        "seasonal-modifiers",
+                        "regional-barriers",
+                    ],
+                    jsonFields: [
+                        "marketing_costs: {radio_push: [2500, 10000]}",
+                        "audience_targeting",
+                        "roi_tracking",
+                    ],
+                    impact: "MEDIUM - Strategic promotion choices based on artist type and audience",
+                    tier: "TIER 3: STRATEGIC SYSTEMS",
+                    sprint: "Post-MVP Phase 1",
+                },
+                "seasonal-modifiers": {
+                    title: "Seasonal Modifiers System",
+                    description:
+                        "Calendar-based sales multipliers. Q1(0.85x) to Q4(1.25x) affecting release timing strategy.",
+                    connections: [
+                        "streaming-decay",
+                        "multi-channel-marketing",
+                        "music-creation-cycle",
+                    ],
+                    jsonFields: [
+                        "seasonal_modifiers: {q1: 0.85, q4: 1.25}",
+                        "calendar_effects",
+                        "timing_strategy",
+                    ],
+                    impact: "MEDIUM - Release timing becomes crucial strategic decision",
+                    tier: "TIER 3: STRATEGIC SYSTEMS",
+                    sprint: "Post-MVP Phase 1",
+                },
+                "loyalty-effects": {
+                    title: "Artist Loyalty Effects System",
+                    description:
+                        "Relationship quality affecting costs and cooperation. High loyalty = -20% tour costs, -50% marketing costs.",
+                    connections: [
+                        "mood-effects",
+                        "access-progression",
+                        "brand-building",
+                    ],
+                    jsonFields: [
+                        "artist_effects.loyalty_effects: {high_loyalty: {tour_cost_reduction: 0.2}}",
+                        "relationship_building",
+                        "cost_benefits",
+                    ],
+                    impact: "MEDIUM - Relationship building has tangible financial and operational benefits",
+                    tier: "TIER 3: STRATEGIC SYSTEMS",
+                    sprint: "Post-MVP Phase 1",
+                },
+            };
+
+            let activeConnections = [];
+
+            document.querySelectorAll(".system-node").forEach((node) => {
+                node.addEventListener("mouseenter", function () {
+                    const nodeId = this.id;
+                    highlightConnections(nodeId);
+                });
+
+                node.addEventListener("mouseleave", function () {
+                    clearHighlights();
+                });
+
+                node.addEventListener("click", function () {
+                    showDetailPanel(this.id);
+                });
             });
-            
-            node.addEventListener('mouseleave', function() {
+
+            function highlightConnections(nodeId) {
                 clearHighlights();
-            });
-            
-            node.addEventListener('click', function() {
-                showDetailPanel(this.id);
-            });
-        });
-        
-        function highlightConnections(nodeId) {
-            clearHighlights();
-            
-            const details = systemDetails[nodeId];
-            if (details && details.connections) {
-                details.connections.forEach(connectedId => {
-                    const connectedNode = document.getElementById(connectedId);
-                    if (connectedNode) {
-                        connectedNode.classList.add('active');
-                    }
-                });
-                
-                // Highlight relevant connection lines
-                document.querySelectorAll('.connection-line').forEach(line => {
-                    line.classList.add('active');
-                });
+
+                const details = systemDetails[nodeId];
+                if (details && details.connections) {
+                    details.connections.forEach((connectedId) => {
+                        const connectedNode =
+                            document.getElementById(connectedId);
+                        if (connectedNode) {
+                            connectedNode.classList.add("active");
+                        }
+                    });
+
+                    // Highlight relevant connection lines
+                    document
+                        .querySelectorAll(".connection-line")
+                        .forEach((line) => {
+                            line.classList.add("active");
+                        });
+                }
+
+                document.getElementById(nodeId).classList.add("active");
             }
-            
-            document.getElementById(nodeId).classList.add('active');
-        }
-        
-        function clearHighlights() {
-            document.querySelectorAll('.system-node').forEach(node => {
-                node.classList.remove('active');
-            });
-            document.querySelectorAll('.connection-line').forEach(line => {
-                line.classList.remove('active');
-            });
-        }
-        
-        function showDetailPanel(nodeId) {
-            const panel = document.getElementById('detail-panel');
-            const title = document.getElementById('detail-title');
-            const content = document.getElementById('detail-content');
-            
-            const details = systemDetails[nodeId];
-            if (details) {
-                title.textContent = details.title;
-                content.innerHTML = `
+
+            function clearHighlights() {
+                document.querySelectorAll(".system-node").forEach((node) => {
+                    node.classList.remove("active");
+                });
+                document
+                    .querySelectorAll(".connection-line")
+                    .forEach((line) => {
+                        line.classList.remove("active");
+                    });
+            }
+
+            function showDetailPanel(nodeId) {
+                const panel = document.getElementById("detail-panel");
+                const title = document.getElementById("detail-title");
+                const content = document.getElementById("detail-content");
+
+                const details = systemDetails[nodeId];
+                if (details) {
+                    title.textContent = details.title;
+                    content.innerHTML = `
                     <p><strong>Description:</strong> ${details.description}</p>
                     <p><strong>Key JSON Fields:</strong></p>
-                    <ul>${details.jsonFields.map(field => `<li><code>${field}</code></li>`).join('')}</ul>
-                    <p><strong>Connected Systems:</strong> ${details.connections.join(', ')}</p>
+                    <ul>${details.jsonFields.map((field) => `<li><code>${field}</code></li>`).join("")}</ul>
+                    <p><strong>Connected Systems:</strong> ${details.connections.join(", ")}</p>
                     <p><strong>Development Impact:</strong> ${details.impact}</p>
                 `;
-                panel.style.display = 'block';
+                    panel.style.display = "block";
+                }
             }
-        }
-        
-        function showAllConnections() {
-            document.querySelectorAll('.connection-line').forEach(line => {
-                line.style.opacity = '1';
-                line.classList.add('active');
-            });
-        }
-        
-        function hideAllConnections() {
-            document.querySelectorAll('.connection-line').forEach(line => {
-                line.style.opacity = '0.2';
-                line.classList.remove('active');
-            });
-        }
-        
-        function resetView() {
-            clearHighlights();
-            document.getElementById('detail-panel').style.display = 'none';
-            hideAllConnections();
-        }
-        
-        // Initialize with some connections visible
-        setTimeout(() => {
-            document.querySelectorAll('.connection-line').forEach(line => {
-                line.style.opacity = '0.4';
-            });
-        }, 500);
-    </script>
-</body>
+
+            function showAllConnections() {
+                document
+                    .querySelectorAll(".connection-line")
+                    .forEach((line) => {
+                        line.style.opacity = "1";
+                        line.classList.add("active");
+                    });
+            }
+
+            function hideAllConnections() {
+                document
+                    .querySelectorAll(".connection-line")
+                    .forEach((line) => {
+                        line.style.opacity = "0.2";
+                        line.classList.remove("active");
+                    });
+            }
+
+            function resetView() {
+                clearHighlights();
+                document.getElementById("detail-panel").style.display = "none";
+                hideAllConnections();
+            }
+
+            // Initialize with some connections visible
+            setTimeout(() => {
+                document
+                    .querySelectorAll(".connection-line")
+                    .forEach((line) => {
+                        line.style.opacity = "0.4";
+                    });
+            }, 500);
+        </script>
+    </body>
 </html>

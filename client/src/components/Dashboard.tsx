@@ -3,13 +3,14 @@ import { AccessTierBadges } from './AccessTierBadges';
 import { MonthPlanner } from './MonthPlanner';
 import { ArtistRoster } from './ArtistRoster';
 import { ActiveProjects } from './ActiveProjects';
+import { ActiveReleases } from './ActiveReleases';
 import { DialogueModal } from './DialogueModal';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { MonthSummary } from './MonthSummary';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export function Dashboard() {
@@ -154,6 +155,11 @@ export function Dashboard() {
           <div className="lg:col-span-1">
             <ActiveProjects />
           </div>
+        </div>
+
+        {/* Releases Section - Full Width */}
+        <div className="mb-6">
+          <ActiveReleases />
         </div>
 
         {/* Access Tiers - Full Width Horizontal */}

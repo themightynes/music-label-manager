@@ -382,4 +382,56 @@ game_states (1) ──── (n) monthly_actions
 
 ---
 
+## 🎮 Single User Game State Management
+
+### **Current Implementation Pattern**
+The system implements a simplified single-user game lifecycle optimized for development and demo usage.
+
+### **Game Lifecycle**
+```mermaid
+graph TD
+    A[App Start] --> B{gameId in localStorage?}
+    B -->|Yes| C[Try Load Game]
+    B -->|No| G[Create New Game]
+    C -->|Success| D[Game Ready]
+    C -->|Failed| G[Create New Game]
+    G --> E[Set localStorage gameId]
+    E --> F[Auto-cleanup Old Games]
+    F --> D[Game Ready]
+```
+
+### **Database Cleanup Strategy**
+- **Active Game**: Only one game per user kept active at a time
+- **Manual Saves**: User can save games via SaveGameModal for later retrieval
+- **Auto-cleanup**: `POST /api/cleanup-demo-games` removes old games except current and manual saves
+- **Triggered**: Automatic cleanup occurs on new game creation
+
+### **State Synchronization**
+```javascript
+// GameContext + gameStore synchronization
+localStorage.setItem('currentGameId', newGameId);  // GameContext
+set({ gameState: newGameState });                  // gameStore
+```
+
+### **Key Implementation Details**
+- **User Association**: Fixed userId assignment bug in game creation endpoint
+- **localStorage Management**: Clear stale persist data on new game creation  
+- **Conflict Resolution**: Removed hardcoded fallback game ID to prevent flashing
+- **Reliable Loading**: Game initialization with fallback to new game creation
+
+### **Benefits for Development**
+- ✅ Clean database with only relevant games
+- ✅ Eliminates state synchronization bugs  
+- ✅ Reliable game startup behavior
+- ✅ No data corruption from multiple concurrent games
+
+### **Future Multi-User Considerations**
+This pattern provides foundation for multi-user features:
+- Game ownership validation already implemented
+- Per-user cleanup patterns established
+- Save system ready for user-specific game management
+- Database schema supports full multi-user scaling
+
+---
+
 *This database design supports the complete Music Label Manager simulation with performance, scalability, and data integrity as core principles.*

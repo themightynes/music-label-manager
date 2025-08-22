@@ -6,9 +6,10 @@ import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star, Award, Play, Check } from 'lucide-react';
+import { ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star, Award, Play, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useLocation } from 'wouter';
+import { apiRequest } from '@/lib/queryClient';
 
 // Mock data types
 interface Song {
@@ -68,12 +69,31 @@ interface SeasonalTiming {
   competitionLevel: string;
 }
 
-// Mock data
-const MOCK_ARTISTS: Artist[] = [
-  { id: '1', name: 'Luna Starr', genre: 'Pop', readySongs: 4, totalSongs: 6, mood: 85, loyalty: 70 },
-  { id: '2', name: 'Echo Rebellion', genre: 'Rock', readySongs: 3, totalSongs: 5, mood: 75, loyalty: 80 },
-  { id: '3', name: 'Neon Dreams', genre: 'Electronic', readySongs: 2, totalSongs: 4, mood: 90, loyalty: 65 }
-];
+// Data transformation utilities
+const transformArtistData = (backendArtist: any): Artist => ({
+  id: backendArtist.id,
+  name: backendArtist.name,
+  genre: 'Pop', // Default since not in backend schema
+  readySongs: parseInt(backendArtist.readySongsCount || '0'),
+  totalSongs: parseInt(backendArtist.totalSongsCount || '0'),
+  mood: backendArtist.mood || 50,
+  loyalty: backendArtist.loyalty || 50
+});
+
+const transformSongData = (backendSong: any, artistName: string): Song => ({
+  id: backendSong.id,
+  title: backendSong.title,
+  quality: backendSong.quality,
+  genre: backendSong.genre || 'Pop',
+  mood: backendSong.mood || 'neutral',
+  artistId: backendSong.artistId,
+  artistName,
+  createdMonth: backendSong.createdMonth || 1,
+  estimatedStreams: backendSong.estimatedMetrics?.streams || backendSong.monthlyStreams || 0,
+  estimatedRevenue: backendSong.estimatedMetrics?.revenue || backendSong.totalRevenue || 0,
+  isRecorded: backendSong.isRecorded,
+  isReleased: backendSong.isReleased
+});
 
 const MOCK_SONGS: Song[] = [
   { id: '1', title: 'Midnight Dreams', quality: 87, genre: 'Pop', mood: 'Dreamy', artistId: '1', artistName: 'Luna Starr', createdMonth: 3, estimatedStreams: 145000, estimatedRevenue: 8200, isRecorded: true, isReleased: false },
@@ -141,7 +161,19 @@ const SEASONAL_TIMING: SeasonalTiming[] = [
 
 export default function PlanReleasePage() {
   const [, setLocation] = useLocation();
-  const { gameState } = useGameStore();
+  const { gameState, loadGame } = useGameStore();
+  
+  // Data state
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
+  
+  // Loading states
+  const [loadingArtists, setLoadingArtists] = useState(true);
+  const [loadingSongs, setLoadingSongs] = useState(false);
+  
+  // Error states
+  const [artistError, setArtistError] = useState<string | null>(null);
+  const [songError, setSongError] = useState<string | null>(null);
   
   // Release planning state
   const [selectedArtist, setSelectedArtist] = useState<string>('');
@@ -172,11 +204,64 @@ export default function PlanReleasePage() {
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  
+  // Release preview state
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [calculatingPreview, setCalculatingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  // Load ready artists on component mount
+  useEffect(() => {
+    const loadReadyArtists = async () => {
+      if (!gameState?.id) return;
+      
+      setLoadingArtists(true);
+      setArtistError(null);
+      try {
+        const response = await apiRequest('GET', `/api/game/${gameState.id}/artists/ready-for-release`);
+        const data = await response.json();
+        
+        setArtists(data.artists.map(transformArtistData));
+      } catch (error) {
+        console.error('Failed to load ready artists:', error);
+        setArtistError(error instanceof Error ? error.message : 'Failed to load artists');
+        setArtists([]);
+      } finally {
+        setLoadingArtists(false);
+      }
+    };
+    
+    loadReadyArtists();
+  }, [gameState?.id]);
 
   // Load available songs for selected artist
-  const availableSongs = selectedArtist 
-    ? MOCK_SONGS.filter(song => song.artistId === selectedArtist && song.isRecorded && !song.isReleased)
-    : [];
+  useEffect(() => {
+    const loadArtistSongs = async () => {
+      if (!selectedArtist || !gameState?.id) {
+        setAvailableSongs([]);
+        return;
+      }
+      
+      setLoadingSongs(true);
+      setSongError(null);
+      try {
+        const response = await apiRequest('GET', 
+          `/api/game/${gameState.id}/artists/${selectedArtist}/songs/ready`);
+        const data = await response.json();
+        
+        const artist = artists.find(a => a.id === selectedArtist);
+        setAvailableSongs(data.songs.map((song: any) => transformSongData(song, artist?.name || '')));
+      } catch (error) {
+        console.error('Failed to load artist songs:', error);
+        setSongError(error instanceof Error ? error.message : 'Failed to load songs');
+        setAvailableSongs([]);
+      } finally {
+        setLoadingSongs(false);
+      }
+    };
+    
+    loadArtistSongs();
+  }, [selectedArtist, gameState?.id, artists]);
 
   // Auto-detect release type based on selected songs
   useEffect(() => {
@@ -200,133 +285,80 @@ export default function PlanReleasePage() {
         if (releaseType === 'single') {
           setReleaseTitle(firstSong.title);
         } else {
-          const artistName = MOCK_ARTISTS.find(a => a.id === selectedArtist)?.name || '';
+          const artistName = artists.find(a => a.id === selectedArtist)?.name || '';
           setReleaseTitle(`${artistName} ${releaseType.toUpperCase()}`);
         }
       }
     }
-  }, [selectedSongs, releaseType, selectedArtist, availableSongs]);
+  }, [selectedSongs, releaseType, selectedArtist, availableSongs, artists]);
 
-  // Calculate weighted marketing effectiveness based on channel allocation
-  const calculateMarketingEffectiveness = (budgets: Record<string, number>, seasonalTiming: string) => {
-    const totalBudget = Object.values(budgets).reduce((sum, budget) => sum + budget, 0);
-    if (totalBudget === 0) return { multiplier: 1, adjustedCost: 0, diversityBonus: 1, activeChannelCount: 0 }; // No marketing = baseline
-    
-    // Apply seasonal cost adjustments
-    const seasonalData = SEASONAL_TIMING.find(st => st.id === seasonalTiming);
-    const seasonalCostMultiplier = seasonalData?.marketingCostMultiplier || 1;
-    const adjustedTotalCost = totalBudget * seasonalCostMultiplier;
-    
-    // Calculate weighted effectiveness: (channelBudget * channelEffectiveness) / totalBudget for each channel
-    let weightedEffectiveness = 0;
-    const activeChannels = MARKETING_CHANNELS.filter(channel => (budgets[channel.id] || 0) > 0);
-    
-    MARKETING_CHANNELS.forEach(channel => {
-      const channelBudget = budgets[channel.id] || 0;
-      if (channelBudget > 0) {
-        const weight = channelBudget / totalBudget;
-        const effectiveness = channel.effectiveness / 100; // Convert percentage to decimal
-        weightedEffectiveness += weight * effectiveness;
-      }
-    });
-    
-    // Channel diversity bonus (prevents single-channel optimization)
-    const diversityBonus = Math.min(1 + (activeChannels.length - 1) * 0.06, 1.24); // Up to 24% bonus for 4 channels
-    
-    // Enhanced diminishing returns formula (less punitive)
-    const budgetMultiplier = Math.pow(totalBudget / 5000, 0.6); // Gentler curve than sqrt
-    const finalMultiplier = 1 + (weightedEffectiveness * budgetMultiplier * diversityBonus * 0.9); // Increased effectiveness cap
-    
-    return {
-      multiplier: Math.min(finalMultiplier, 2.5), // Increased cap to 250%
-      adjustedCost: adjustedTotalCost,
-      diversityBonus,
-      activeChannelCount: activeChannels.length
-    };
-  };
 
-  // Calculate release metrics with enhanced marketing logic
-  const calculateReleaseMetrics = () => {
-    const songs = availableSongs.filter(song => selectedSongs.includes(song.id));
-    const totalQuality = songs.reduce((sum, song) => sum + song.quality, 0);
-    const averageQuality = songs.length > 0 ? totalQuality / songs.length : 0;
-    
-    const baseStreams = songs.reduce((sum, song) => sum + song.estimatedStreams, 0);
-    const baseRevenue = songs.reduce((sum, song) => sum + song.estimatedRevenue, 0);
-    
-    // Apply release type bonus
-    const releaseBonus = releaseType ? RELEASE_TYPES.find(rt => rt.id === releaseType)?.bonusAmount || 0 : 0;
-    const releaseBonusMultiplier = 1 + (releaseBonus / 100);
-    
-    // Apply seasonal multiplier
-    const seasonal = SEASONAL_TIMING.find(st => st.id === seasonalTiming)?.multiplier || 1;
-    
-    // Calculate marketing effectiveness with enhanced system
-    const marketingData = calculateMarketingEffectiveness(channelBudgets, seasonalTiming);
-    
-    // Enhanced lead single boost with diminishing returns
-    let leadSingleBoost = 1;
-    let leadSingleData = { multiplier: 1, adjustedCost: 0, diversityBonus: 1, activeChannelCount: 0 };
-    
-    if (releaseType !== 'single' && leadSingle) {
-      const leadSingleBudgetTotal = Object.values(leadSingleBudget).reduce((sum, budget) => sum + budget, 0);
-      if (leadSingleBudgetTotal > 0) {
-        leadSingleData = calculateMarketingEffectiveness(leadSingleBudget, seasonalTiming);
-        // Enhanced lead single effectiveness (50% instead of 30%)
-        const leadSingleEffectivenessContribution = Math.min(
-          (leadSingleData.multiplier - 1) * 0.5,
-          (leadSingleBudgetTotal / 8000) * 0.4 // Diminishing returns based on budget
-        );
-        leadSingleBoost = 1 + leadSingleEffectivenessContribution;
-      }
+  // Calculate release preview using backend API
+  const calculateReleasePreview = async () => {
+    if (!selectedArtist || selectedSongs.length === 0 || !releaseType || !gameState?.id) {
+      setPreviewData(null);
+      return;
     }
     
-    const finalStreams = Math.round(
-      baseStreams * 
-      releaseBonusMultiplier * 
-      seasonal * 
-      marketingData.multiplier * 
-      leadSingleBoost
-    );
+    setCalculatingPreview(true);
+    setPreviewError(null);
     
-    const finalRevenue = Math.round(
-      baseRevenue * 
-      releaseBonusMultiplier * 
-      seasonal * 
-      marketingData.multiplier * 
-      leadSingleBoost
-    );
-    
-    const totalMarketingCost = marketingData.adjustedCost + leadSingleData.adjustedCost;
-    
-    return {
-      songCount: songs.length,
-      averageQuality: Math.round(averageQuality),
-      estimatedStreams: finalStreams,
-      estimatedRevenue: finalRevenue,
-      releaseBonus,
-      seasonalMultiplier: seasonal,
-      marketingMultiplier: marketingData.multiplier,
-      leadSingleBoost,
-      totalMarketingCost,
-      diversityBonus: marketingData.diversityBonus,
-      activeChannelCount: marketingData.activeChannelCount,
-      channelEffectiveness: Object.fromEntries(
-        MARKETING_CHANNELS.map(channel => [
-          channel.id, 
-          {
-            budget: channelBudgets[channel.id] || 0,
-            adjustedBudget: (channelBudgets[channel.id] || 0) * (SEASONAL_TIMING.find(st => st.id === seasonalTiming)?.marketingCostMultiplier || 1),
-            effectiveness: channel.effectiveness,
-            contribution: ((channelBudgets[channel.id] || 0) / Math.max(1, Object.values(channelBudgets).reduce((a, b) => a + b, 0))) * 100
-          }
-        ])
-      ),
-      projectedROI: totalMarketingCost > 0 ? Math.round(((finalRevenue - totalMarketingCost) / totalMarketingCost) * 100) : 0
-    };
+    try {
+      const previewRequest = {
+        artistId: selectedArtist,
+        songIds: selectedSongs,
+        releaseType,
+        leadSingleId: leadSingle || null,
+        seasonalTiming,
+        scheduledReleaseMonth: releaseMonth,
+        marketingBudget: channelBudgets,
+        leadSingleStrategy: releaseType !== 'single' && leadSingle ? {
+          leadSingleId: leadSingle,
+          leadSingleReleaseMonth: leadSingleMonth,
+          leadSingleBudget,
+          totalLeadSingleBudget: Object.values(leadSingleBudget).reduce((a, b) => a + b, 0)
+        } : null
+      };
+      
+      const response = await apiRequest('POST', 
+        `/api/game/${gameState.id}/releases/preview`, previewRequest);
+      const data = await response.json();
+      
+      setPreviewData(data.preview);
+    } catch (error) {
+      console.error('Failed to calculate release preview:', error);
+      setPreviewError(error instanceof Error ? error.message : 'Failed to calculate preview');
+      setPreviewData(null);
+    } finally {
+      setCalculatingPreview(false);
+    }
   };
 
-  const metrics = calculateReleaseMetrics();
+  // Trigger preview calculation when inputs change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      calculateReleasePreview();
+    }, 500); // Debounce API calls
+    
+    return () => clearTimeout(timer);
+  }, [selectedArtist, selectedSongs, releaseType, channelBudgets, seasonalTiming, releaseMonth, leadSingle, leadSingleBudget]);
+
+  // Use preview data or fallback to default values
+  const metrics = previewData || {
+    songCount: selectedSongs.length,
+    averageQuality: 0,
+    estimatedStreams: 0,
+    estimatedRevenue: 0,
+    releaseBonus: 0,
+    seasonalMultiplier: 1,
+    marketingMultiplier: 1,
+    leadSingleBoost: 1,
+    totalMarketingCost: Object.values(channelBudgets).reduce((a, b) => a + b, 0) + Object.values(leadSingleBudget).reduce((a, b) => a + b, 0),
+    diversityBonus: 1,
+    activeChannelCount: 0,
+    channelEffectiveness: {},
+    projectedROI: 0
+  };
 
   // Validation
   const validateRelease = () => {
@@ -381,185 +413,71 @@ export default function PlanReleasePage() {
     
     setIsLoading(true);
     
-    /*
-    API CALL SPECIFICATION:
-    
-    Endpoint: POST /api/game/{gameId}/releases/plan
-    Method: POST
-    Headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer {sessionToken}' // if using token auth
-    }
-    
-    Request Body: {
-      artistId: string;
-      title: string;
-      type: 'single' | 'ep' | 'album';
-      songIds: string[];
-      leadSingleId?: string; // for multi-song releases
-      seasonalTiming: string;
-      scheduledReleaseMonth: number;
-      
-      // Enhanced marketing budget allocation per channel
-      marketingBudget: {
-        radio: number;
-        digital: number;
-        pr: number;
-        influencer: number;
-      };
-      totalMarketingBudget: number; // sum of all channel budgets
-      
-      // Lead single strategy (for EP/Album releases)
-      leadSingleStrategy?: {
-        leadSingleId: string;
-        leadSingleReleaseMonth: number;
-        leadSingleBudget: {
-          radio: number;
-          digital: number;
-          pr: number;
-          influencer: number;
-        };
-        totalLeadSingleBudget: number;
+    try {
+      const releaseData = {
+        artistId: selectedArtist,
+        title: releaseTitle,
+        type: releaseType,
+        songIds: selectedSongs,
+        leadSingleId: leadSingle || null,
+        seasonalTiming,
+        scheduledReleaseMonth: releaseMonth,
+        marketingBudget: channelBudgets,
+        leadSingleStrategy: releaseType !== 'single' && leadSingle ? {
+          leadSingleId: leadSingle,
+          leadSingleReleaseMonth: leadSingleMonth,
+          leadSingleBudget,
+          totalLeadSingleBudget: Object.values(leadSingleBudget).reduce((a, b) => a + b, 0)
+        } : null,
+        metadata: {
+          estimatedStreams: metrics.estimatedStreams,
+          estimatedRevenue: metrics.estimatedRevenue,
+          releaseBonus: metrics.releaseBonus,
+          seasonalMultiplier: metrics.seasonalMultiplier,
+          marketingMultiplier: metrics.marketingMultiplier,
+          leadSingleBoost: metrics.leadSingleBoost,
+          channelEffectiveness: metrics.channelEffectiveness,
+          projectedROI: metrics.projectedROI,
+          totalInvestment: metrics.totalMarketingCost
+        }
       };
       
-      // Enhanced metadata with real-world calculations
-      metadata: {
-        estimatedStreams: number;
-        estimatedRevenue: number;
-        releaseBonus: number;
-        seasonalMultiplier: number;
-        marketingMultiplier: number;
-        leadSingleBoost?: number;
-        channelEffectiveness: Record<string, {
-          budget: number;
-          effectiveness: number;
-          contribution: number;
-        }>;
-        projectedROI: number;
-        totalInvestment: number; // main release + lead single budgets
-      }
-    }
-    
-    Expected Response (Success - 201):
-    {
-      success: true;
-      release: {
-        id: string;
-        title: string;
-        type: string;
-        artistId: string;
-        artistName: string;
-        songIds: string[];
-        leadSingleId?: string;
-        scheduledReleaseMonth: number;
-        status: 'planned';
-        
-        // Enhanced marketing data
-        marketingStrategy: {
-          channelAllocation: Record<string, number>;
-          totalBudget: number;
-          estimatedEffectiveness: number;
-          targetAudiences: string[];
-        };
-        
-        // Lead single data (if applicable)
-        leadSingleStrategy?: {
-          leadSingleId: string;
-          releaseMonth: number;
-          budget: Record<string, number>;
-          totalBudget: number;
-        };
-        
-        estimatedMetrics: {
-          streams: number;
-          revenue: number;
-          roi: number;
-          breakEvenMonths: number;
-          chartPotential: number;
-        };
-        
-        createdAt: string;
-        plannedBy: string; // user ID
-      };
+      const response = await apiRequest('POST', 
+        `/api/game/${gameState?.id}/releases/plan`, releaseData);
+      const result = await response.json();
       
-      updatedGameState: {
-        money: number; // reduced by total marketing investment
-        plannedReleases: Array<{
-          id: string;
-          title: string;
-          type: string;
-          artistName: string;
-          scheduledMonth: number;
-          leadSingleMonth?: number;
-          totalInvestment: number;
-          status: 'planned';
-        }>;
-      };
-      
-      // Lead single release created automatically
-      leadSingleRelease?: {
-        id: string;
-        title: string;
-        type: 'single';
-        scheduledMonth: number;
-        parentReleaseId: string;
-      };
-    }
-    
-    Error Responses:
-    400 Bad Request: {
-      error: 'VALIDATION_ERROR';
-      message: 'Release validation failed';
-      details: Array<{
-        field: string;
-        issue: string;
-        currentValue?: any;
-        expectedValue?: any;
-      }>;
-    }
-    
-    402 Payment Required: {
-      error: 'INSUFFICIENT_FUNDS';
-      message: 'Not enough money for total marketing investment';
-      required: number;
-      available: number;
-      breakdown: {
-        mainReleaseBudget: number;
-        leadSingleBudget: number;
-        totalRequired: number;
-      };
-    }
-    
-    409 Conflict: {
-      error: 'SCHEDULING_CONFLICT';
-      message: 'Release scheduling conflicts detected';
-      conflicts: Array<{
-        type: 'SONG_ALREADY_SCHEDULED' | 'ARTIST_OVERBOOKED' | 'TIMELINE_CONFLICT';
-        description: string;
-        affectedResources: string[];
-        suggestedResolution?: string;
-      }>;
-    }
-    
-    422 Unprocessable Entity: {
-      error: 'BUSINESS_RULE_VIOLATION';
-      message: 'Release violates business rules';
-      violations: Array<{
-        rule: 'LEAD_SINGLE_TIMING' | 'MARKETING_ALLOCATION' | 'BUDGET_LIMITS';
-        description: string;
-        severity: 'warning' | 'error';
-        canOverride: boolean;
-      }>;
-    }
-    */
-    
-    // Mock API delay
-    setTimeout(() => {
-      setIsLoading(false);
-      // Simulate success
+      // Success - refresh game data and redirect to dashboard
       alert('Release planned successfully! You can view it in your project pipeline.');
+      
+      // Refresh game data to load the new planned release
+      if (gameState?.id) {
+        await loadGame(gameState.id);
+      }
+      
       setLocation('/');
-    }, 2000);
+      
+    } catch (error: any) {
+      console.error('Failed to create release:', error);
+      
+      // Handle specific error types
+      if (error.status === 402) {
+        setValidationErrors(['Insufficient funds for total marketing budget']);
+      } else if (error.status === 409) {
+        const details = error.details || {};
+        if (details.conflicts) {
+          setValidationErrors(details.conflicts.map((c: any) => c.description));
+        } else {
+          setValidationErrors(['Song scheduling conflict detected']);
+        }
+      } else if (error.status === 400) {
+        const details = error.details || [];
+        setValidationErrors(details.map((d: any) => d.issue || d.message || 'Validation error'));
+      } else {
+        setValidationErrors(['Failed to create release. Please try again.']);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getQualityColor = (quality: number) => {
@@ -614,42 +532,63 @@ export default function PlanReleasePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {MOCK_ARTISTS.map(artist => (
-                    <div
-                      key={artist.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                        selectedArtist === artist.id 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                      onClick={() => {
-                        setSelectedArtist(artist.id);
-                        setSelectedSongs([]);
-                        setLeadSingle('');
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-slate-900">{artist.name}</h3>
-                        <Badge variant="outline" className="text-xs">{artist.genre}</Badge>
+                {loadingArtists ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
+                    <p className="text-slate-600">Loading available artists...</p>
+                  </div>
+                ) : artistError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+                    <p className="text-red-600 mb-4">{artistError}</p>
+                    <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                      Try Again
+                    </Button>
+                  </div>
+                ) : artists.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-8 h-8 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-600">No artists with ready songs found</p>
+                    <p className="text-sm text-slate-500 mt-2">Artists need recorded songs to plan releases</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {artists.map(artist => (
+                      <div
+                        key={artist.id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                          selectedArtist === artist.id 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        onClick={() => {
+                          setSelectedArtist(artist.id);
+                          setSelectedSongs([]);
+                          setLeadSingle('');
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-slate-900">{artist.name}</h3>
+                          <Badge variant="outline" className="text-xs">{artist.genre}</Badge>
+                        </div>
+                        <div className="space-y-1 text-sm text-slate-600">
+                          <div className="flex justify-between">
+                            <span>Ready Songs:</span>
+                            <span className="font-mono font-semibold text-green-600">{artist.readySongs}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Mood:</span>
+                            <span className="font-mono font-semibold">{artist.mood}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Loyalty:</span>
+                            <span className="font-mono font-semibold">{artist.loyalty}%</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1 text-sm text-slate-600">
-                        <div className="flex justify-between">
-                          <span>Ready Songs:</span>
-                          <span className="font-mono font-semibold text-green-600">{artist.readySongs}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Mood:</span>
-                          <span className="font-mono font-semibold">{artist.mood}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Loyalty:</span>
-                          <span className="font-mono font-semibold">{artist.loyalty}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -664,48 +603,72 @@ export default function PlanReleasePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {availableSongs.map(song => (
-                      <div
-                        key={song.id}
-                        className={`p-4 border rounded-lg transition-all ${
-                          selectedSongs.includes(song.id)
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            checked={selectedSongs.includes(song.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedSongs([...selectedSongs, song.id]);
-                              } else {
-                                setSelectedSongs(selectedSongs.filter(id => id !== song.id));
-                                if (leadSingle === song.id) setLeadSingle('');
-                              }
-                            }}
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold text-slate-900">{song.title}</h4>
-                              <div className="flex items-center space-x-2">
-                                <Badge className={`text-xs ${getQualityColor(song.quality)}`}>
-                                  {song.quality} Quality
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">{song.mood}</Badge>
+                  {loadingSongs ? (
+                    <div className="text-center py-8">
+                      <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
+                      <p className="text-slate-600">Loading available songs...</p>
+                    </div>
+                  ) : songError ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+                      <p className="text-red-600 mb-4">{songError}</p>
+                      <Button onClick={() => {
+                        setSelectedArtist('');
+                        setSelectedArtist(selectedArtist);
+                      }} variant="outline" size="sm">
+                        Try Again
+                      </Button>
+                    </div>
+                  ) : availableSongs.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Music className="w-8 h-8 text-slate-400 mx-auto mb-4" />
+                      <p className="text-slate-600">No ready songs found for this artist</p>
+                      <p className="text-sm text-slate-500 mt-2">Songs must be recorded but not yet released</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {availableSongs.map(song => (
+                        <div
+                          key={song.id}
+                          className={`p-4 border rounded-lg transition-all ${
+                            selectedSongs.includes(song.id)
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              checked={selectedSongs.includes(song.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedSongs([...selectedSongs, song.id]);
+                                } else {
+                                  setSelectedSongs(selectedSongs.filter(id => id !== song.id));
+                                  if (leadSingle === song.id) setLeadSingle('');
+                                }
+                              }}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-semibold text-slate-900">{song.title}</h4>
+                                <div className="flex items-center space-x-2">
+                                  <Badge className={`text-xs ${getQualityColor(song.quality)}`}>
+                                    {song.quality} Quality
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">{song.mood}</Badge>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center space-x-4 text-sm text-slate-600">
-                              <span>Est. {song.estimatedStreams.toLocaleString()} streams</span>
-                              <span>Est. ${song.estimatedRevenue.toLocaleString()} revenue</span>
-                              <span>Created Month {song.createdMonth}</span>
+                              <div className="flex items-center space-x-4 text-sm text-slate-600">
+                                <span>Est. {song.estimatedStreams.toLocaleString()} streams</span>
+                                <span>Est. ${song.estimatedRevenue.toLocaleString()} revenue</span>
+                                <span>Created Month {song.createdMonth}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -849,7 +812,7 @@ export default function PlanReleasePage() {
                       {MARKETING_CHANNELS.map(channel => {
                         const budget = channelBudgets[channel.id] || 0;
                         const isActive = budget > 0;
-                        const effectiveness = metrics.channelEffectiveness[channel.id];
+                        const effectiveness = metrics.channelEffectiveness?.[channel.id];
                         
                         return (
                           <div key={channel.id} className={`p-4 border rounded-lg transition-all ${
@@ -865,7 +828,7 @@ export default function PlanReleasePage() {
                               </div>
                               <div className="text-right">
                                 <div className="text-sm font-semibold text-slate-900">${budget.toLocaleString()}</div>
-                                <div className="text-xs text-slate-500">{effectiveness?.contribution.toFixed(1) || 0}% of budget</div>
+                                <div className="text-xs text-slate-500">{effectiveness?.contribution ? effectiveness.contribution.toFixed(1) : 0}% of budget</div>
                               </div>
                             </div>
                             
@@ -995,10 +958,25 @@ export default function PlanReleasePage() {
                   <CardTitle className="flex items-center space-x-2">
                     <TrendingUp className="w-5 h-5" />
                     <span>Performance Preview</span>
+                    {calculatingPreview && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  {previewError ? (
+                    <div className="text-center py-4">
+                      <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
+                      <p className="text-red-600 text-sm">{previewError}</p>
+                      <Button onClick={calculateReleasePreview} variant="outline" size="sm" className="mt-2">
+                        Retry Calculation
+                      </Button>
+                    </div>
+                  ) : calculatingPreview && !previewData ? (
+                    <div className="text-center py-8">
+                      <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
+                      <p className="text-slate-600">Calculating release metrics...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="text-center p-3 bg-slate-50 rounded-lg">
                         <div className="text-xl font-bold text-slate-900">{metrics.songCount}</div>
@@ -1082,7 +1060,7 @@ export default function PlanReleasePage() {
                         <div className="space-y-1 text-xs">
                           {MARKETING_CHANNELS.map(channel => {
                             const budget = channelBudgets[channel.id] || 0;
-                            const effectiveness = metrics.channelEffectiveness[channel.id];
+                            const effectiveness = metrics.channelEffectiveness?.[channel.id];
                             const adjustedBudget = effectiveness?.adjustedBudget || budget;
                             const seasonalCostChange = adjustedBudget - budget;
                             
@@ -1093,7 +1071,7 @@ export default function PlanReleasePage() {
                                   <span>{channel.name}:</span>
                                 </span>
                                 <div className="text-right font-mono">
-                                  <div>${adjustedBudget.toLocaleString()} ({effectiveness?.contribution.toFixed(1)}%)</div>
+                                  <div>${adjustedBudget.toLocaleString()} {effectiveness?.contribution ? `(${effectiveness.contribution.toFixed(1)}%)` : ''}</div>
                                   {seasonalCostChange !== 0 && (
                                     <div className="text-xs text-orange-600">
                                       {seasonalCostChange > 0 ? '+' : ''}${seasonalCostChange.toLocaleString()} seasonal
@@ -1115,6 +1093,7 @@ export default function PlanReleasePage() {
                       </div>
                     </div>
                   </div>
+                  )}
                 </CardContent>
               </Card>
             )}
