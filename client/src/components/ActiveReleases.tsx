@@ -1,27 +1,70 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { ReleaseWorkflowCard } from './ReleaseWorkflowCard';
 
 export function ActiveReleases() {
   const { releases, artists, songs, gameState } = useGameStore();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'released'>('upcoming');
+  const [stateSync, setStateSync] = useState<'synced' | 'syncing' | 'error'>('synced');
+  
+  // Monitor state synchronization
+  useEffect(() => {
+    if (!releases || releases.length === 0) return;
+    
+    // Check for potential desync indicators
+    const currentMonth = gameState?.currentMonth || 1;
+    const overdueReleases = releases.filter(r => 
+      r.status === 'planned' && (r.releaseMonth || 0) < currentMonth
+    );
+    
+    if (overdueReleases.length > 0) {
+      console.warn('ActiveReleases: Detected potentially desynchronized releases:', overdueReleases);
+      setStateSync('error');
+    } else {
+      setStateSync('synced');
+    }
+  }, [releases, gameState?.currentMonth]);
 
-  // Debug logging
-  console.log('ActiveReleases Debug:', {
+  // Enhanced debug logging for release state tracking
+  console.log('ActiveReleases Enhanced Debug:', {
     totalReleases: releases?.length || 0,
     releases: releases,
-    gameState: gameState?.id
+    gameState: gameState?.id,
+    currentMonth: gameState?.currentMonth,
+    releasesByStatus: {
+      planned: releases?.filter(r => r.status === 'planned').length || 0,
+      released: releases?.filter(r => r.status === 'released').length || 0,
+      catalog: releases?.filter(r => r.status === 'catalog').length || 0,
+      other: releases?.filter(r => !['planned', 'released', 'catalog'].includes(r.status)).length || 0
+    },
+    releaseDetails: releases?.map(r => ({
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      releaseMonth: r.releaseMonth,
+      type: r.type
+    })) || []
   });
 
   const getUpcomingReleases = () => {
-    const upcoming = releases.filter(r => r.status === 'planned');
-    console.log('Filtered upcoming releases:', upcoming);
+    const currentMonth = gameState?.currentMonth || 1;
+    const upcoming = releases.filter(r => {
+      const isPlanned = r.status === 'planned';
+      const isFutureOrCurrent = !r.releaseMonth || r.releaseMonth >= currentMonth;
+      console.log(`Release "${r.title}": status=${r.status}, releaseMonth=${r.releaseMonth}, currentMonth=${currentMonth}, included=${isPlanned && isFutureOrCurrent}`);
+      return isPlanned && isFutureOrCurrent;
+    });
+    console.log('Filtered upcoming releases:', upcoming.length, 'releases');
     return upcoming;
   };
 
   const getReleasedReleases = () => {
-    return releases.filter(r => r.status !== 'planned');
+    const released = releases.filter(r => r.status === 'released' || r.status === 'catalog');
+    console.log('Filtered released releases:', released.length, 'releases');
+    return released;
   };
 
   const getArtistName = (artistId: string) => {
@@ -76,6 +119,28 @@ export function ActiveReleases() {
             <h3 className="text-lg font-semibold text-slate-900">Releases</h3>
             <p className="text-sm text-slate-600">Planned and released music</p>
           </div>
+          
+          {/* State Synchronization Indicator */}
+          <div className="flex items-center space-x-2">
+            {stateSync === 'synced' && (
+              <div className="flex items-center space-x-1 text-green-600">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-xs">Synced</span>
+              </div>
+            )}
+            {stateSync === 'syncing' && (
+              <div className="flex items-center space-x-1 text-blue-600">
+                <Clock className="w-4 h-4 animate-spin" />
+                <span className="text-xs">Syncing...</span>
+              </div>
+            )}
+            {stateSync === 'error' && (
+              <div className="flex items-center space-x-1 text-amber-600" title="Some releases may be out of sync">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-xs">Check Status</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -113,52 +178,12 @@ export function ActiveReleases() {
                 </div>
               ) : (
                 upcomingReleases.map(release => (
-                  <div key={release.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        {/* Header Row */}
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h4 className="font-medium text-slate-900">{release.title}</h4>
-                          {getReleaseTypeBadge(release.type)}
-                          {getStatusBadge(release.status)}
-                        </div>
-
-                        {/* Artist and Details */}
-                        <div className="flex items-center space-x-4 text-sm text-slate-600 mb-2">
-                          <span>by {getArtistName(release.artistId)}</span>
-                          <span>•</span>
-                          <span>{getReleaseSongCount(release.id)} songs</span>
-                          <span>•</span>
-                          <span>Scheduled for {formatMonth(release.releaseMonth)}</span>
-                        </div>
-
-                        {/* Budget Info */}
-                        <div className="text-sm text-slate-500">
-                          Marketing Budget: ${(release.marketingBudget || 0).toLocaleString()}
-                        </div>
-                      </div>
-
-                      {/* Timeline Indicator */}
-                      <div className="text-right text-sm">
-                        {release.releaseMonth && (
-                          <div className={`font-medium ${
-                            release.releaseMonth <= currentMonth 
-                              ? 'text-red-600' 
-                              : release.releaseMonth <= currentMonth + 1
-                              ? 'text-orange-600'
-                              : 'text-slate-600'
-                          }`}>
-                            {release.releaseMonth <= currentMonth 
-                              ? 'Overdue' 
-                              : release.releaseMonth === currentMonth + 1
-                              ? 'Next Month'
-                              : `${release.releaseMonth - currentMonth} months`
-                            }
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <ReleaseWorkflowCard
+                    key={release.id}
+                    release={release}
+                    currentMonth={currentMonth}
+                    artistName={getArtistName(release.artistId)}
+                  />
                 ))
               )}
             </>
@@ -173,44 +198,12 @@ export function ActiveReleases() {
                 </div>
               ) : (
                 releasedReleases.map(release => (
-                  <div key={release.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        {/* Header Row */}
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h4 className="font-medium text-slate-900">{release.title}</h4>
-                          {getReleaseTypeBadge(release.type)}
-                          {getStatusBadge(release.status)}
-                        </div>
-
-                        {/* Artist and Details */}
-                        <div className="flex items-center space-x-4 text-sm text-slate-600 mb-2">
-                          <span>by {getArtistName(release.artistId)}</span>
-                          <span>•</span>
-                          <span>{getReleaseSongCount(release.id)} songs</span>
-                          <span>•</span>
-                          <span>Released {formatMonth(release.releaseMonth)}</span>
-                        </div>
-
-                        {/* Performance Metrics */}
-                        <div className="flex items-center space-x-4 text-sm text-slate-500">
-                          <span>Budget: ${(release.marketingBudget || 0).toLocaleString()}</span>
-                          {release.streamsGenerated > 0 && (
-                            <>
-                              <span>•</span>
-                              <span>Streams: {release.streamsGenerated.toLocaleString()}</span>
-                            </>
-                          )}
-                          {release.revenueGenerated > 0 && (
-                            <>
-                              <span>•</span>
-                              <span>Revenue: ${release.revenueGenerated.toLocaleString()}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <ReleaseWorkflowCard
+                    key={release.id}
+                    release={release}
+                    currentMonth={currentMonth}
+                    artistName={getArtistName(release.artistId)}
+                  />
                 ))
               )}
             </>

@@ -1,7 +1,7 @@
 # 🎵 Music Creation & Release Cycle - Expanded Feature Specification
 **Created**: August 18, 2025  
-**Last Updated**: August 22, 2025  
-**Status**: ✅ Phase 1 & 2 Complete | Phase 3-4 Planned
+**Last Updated**: August 23, 2025  
+**Status**: ✅ Phase 1 & 2 Complete (including critical bug fixes) | Phase 3-4 Planned
 
 > This is the detailed implementation specification for the Music Creation & Release Cycle feature from the Development Roadmap. Phase 1 (Core Multi-Song System) and Phase 2 (Strategic Release Planning) are complete, with Phases 3-4 planned for future implementation.
 
@@ -27,6 +27,7 @@
 ✅ **Song Scheduling**: Conflict detection and resolution system  
 ✅ **GameEngine Integration**: calculateReleasePreview() method with balance.json formulas  
 ✅ **Transaction Management**: Budget validation and release creation with rollback safety  
+✅ **Critical Bug Fix** (August 23, 2025): Ready songs API now properly filters out scheduled songs, resolving single release conflicts  
 
 **User Workflow Verified**: Create project → Set song count → Songs generate → Songs release → Accurate catalog tracking ✨
 
@@ -403,6 +404,7 @@ CREATE TABLE release_songs (
 4. **Transaction Safety**: Database rollback mechanisms crucial for handling complex multi-table operations
 5. **Channel Synergies**: Marketing channel combinations create emergent strategic depth beyond simple budget allocation
 6. **Seasonal Strategy**: Calendar-based multipliers add temporal planning dimension to release strategy
+7. **Song Filtering Fix**: Proper `releaseId IS NULL` filtering in ready songs API essential for preventing false conflict detection in single releases
 
 ---
 

@@ -9,7 +9,7 @@ import {
   type ReleaseSong, type InsertReleaseSong
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User management
@@ -50,7 +50,7 @@ export interface IStorage {
   updateSong(id: string, song: Partial<InsertSong>): Promise<Song>;
   getReleasedSongs(gameId: string): Promise<Song[]>;
   getSongsByProject(projectId: string): Promise<Song[]>;
-  updateSongs(songUpdates: { songId: string; [key: string]: any }[]): Promise<void>;
+  updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: any): Promise<void>;
 
   // Releases
   getReleasesByGame(gameId: string): Promise<Release[]>;
@@ -58,6 +58,9 @@ export interface IStorage {
   getRelease(id: string): Promise<Release | undefined>;
   createRelease(release: InsertRelease): Promise<Release>;
   updateRelease(id: string, release: Partial<InsertRelease>): Promise<Release>;
+  getPlannedReleases(gameId: string, month: number, dbTransaction?: any): Promise<Release[]>;
+  getSongsByRelease(releaseId: string, dbTransaction?: any): Promise<Song[]>;
+  updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any): Promise<Release>;
 
   // Release Songs (junction)
   getReleaseSongs(releaseId: string): Promise<ReleaseSong[]>;
@@ -311,14 +314,21 @@ export class DatabaseStorage implements IStorage {
       .orderBy(songs.createdAt);
   }
 
-  async updateSongs(songUpdates: { songId: string; [key: string]: any }[]): Promise<void> {
+  async updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: any): Promise<void> {
+    const dbContext = dbTransaction || db;
+    console.log(`[STORAGE] updateSongs: updating ${songUpdates.length} songs, usingTransaction=${!!dbTransaction}`);
+    
     // Batch update songs with their new metrics
     for (const update of songUpdates) {
       const { songId, ...updateData } = update;
-      await db.update(songs)
+      console.log(`[STORAGE] updateSongs: updating song ${songId} with data:`, updateData);
+      
+      await dbContext.update(songs)
         .set(updateData)
         .where(eq(songs.id, songId));
     }
+    
+    console.log(`[STORAGE] updateSongs: successfully updated ${songUpdates.length} songs`);
   }
 
   // Releases
@@ -347,6 +357,85 @@ export class DatabaseStorage implements IStorage {
       .set(release)
       .where(eq(releases.id, id))
       .returning();
+    return updatedRelease;
+  }
+
+  async getPlannedReleases(gameId: string, month: number, dbTransaction?: any): Promise<Release[]> {
+    const dbContext = dbTransaction || db;
+    console.log(`[STORAGE] getPlannedReleases: gameId=${gameId}, month=${month}, usingTransaction=${!!dbTransaction}`);
+    
+    const result = await dbContext.select().from(releases)
+      .where(and(
+        eq(releases.gameId, gameId),
+        eq(releases.status, 'planned'),
+        lte(releases.releaseMonth, month)
+      ))
+      .orderBy(releases.createdAt);
+    
+    const overdueCount = result.filter(r => r.releaseMonth && r.releaseMonth < month).length;
+    console.log(`[STORAGE] getPlannedReleases: found ${result.length} releases (${overdueCount} overdue)`);
+    
+    if (overdueCount > 0) {
+      console.log(`[STORAGE] ✅ OVERDUE RELEASE DETECTION: Processing ${overdueCount} releases that should have been executed in previous months`);
+    }
+    return result;
+  }
+
+  async getSongsByRelease(releaseId: string, dbTransaction?: any): Promise<Song[]> {
+    const dbContext = dbTransaction || db;
+    console.log(`[STORAGE] getSongsByRelease: releaseId=${releaseId}, usingTransaction=${!!dbTransaction}`);
+    
+    // First, try to get songs from the junction table (proper releases)
+    const junctionResults = await dbContext.select()
+    .from(songs)
+    .innerJoin(releaseSongs, eq(songs.id, releaseSongs.songId))
+    .where(eq(releaseSongs.releaseId, releaseId))
+    .orderBy(releaseSongs.trackNumber);
+    
+    const junctionSongs = junctionResults.map((result: any) => result.songs);
+    console.log(`[STORAGE] getSongsByRelease: found ${junctionSongs.length} songs via junction table`);
+    
+    // If junction table has songs, return them
+    if (junctionSongs.length > 0) {
+      return junctionSongs;
+    }
+    
+    // Fallback: check direct releaseId field on songs (for legacy/incomplete data)
+    console.log(`[STORAGE] getSongsByRelease: falling back to direct releaseId field`);
+    const directResults = await dbContext.select()
+    .from(songs)
+    .where(eq(songs.releaseId, releaseId))
+    .orderBy(songs.createdAt);
+    
+    console.log(`[STORAGE] getSongsByRelease: found ${directResults.length} songs via direct releaseId field`);
+    return directResults;
+  }
+
+  async updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any): Promise<Release> {
+    const dbContext = dbTransaction || db;
+    console.log(`[STORAGE] updateReleaseStatus: releaseId=${releaseId}, status=${status}, usingTransaction=${!!dbTransaction}`);
+    
+    const updateData: Partial<InsertRelease> = {
+      status
+    };
+
+    // Add metadata fields if provided
+    if (metadata) {
+      if (metadata.initialStreams || metadata.totalRevenue) {
+        updateData.metadata = {
+          initialStreams: metadata.initialStreams,
+          totalRevenue: metadata.totalRevenue,
+          executedAt: new Date().toISOString()
+        };
+      }
+    }
+
+    const [updatedRelease] = await dbContext.update(releases)
+      .set(updateData)
+      .where(eq(releases.id, releaseId))
+      .returning();
+    
+    console.log(`[STORAGE] updateReleaseStatus: successfully updated release to status=${updatedRelease.status}`);
     return updatedRelease;
   }
 

@@ -288,18 +288,28 @@ export const useGameStore = create<GameStore>()(
           }
           console.log('===============================');
           
-          // Reload game data to get updated projects AND songs
-          const [gameResponse, songsResponse] = await Promise.all([
+          // Reload game data to get updated projects, songs, AND releases
+          // CRITICAL FIX: Explicitly fetch releases to ensure state synchronization
+          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
             apiRequest('GET', `/api/game/${gameState.id}`),
-            apiRequest('GET', `/api/game/${gameState.id}/songs`)
+            apiRequest('GET', `/api/game/${gameState.id}/songs`),
+            apiRequest('GET', `/api/game/${gameState.id}/releases`) // Explicit releases fetch
           ]);
           const gameData = await gameResponse.json();
           const songs = await songsResponse.json();
+          const releases = await releasesResponse.json();
+          
+          console.log('=== POST-ADVANCE MONTH STATE SYNC ===');
+          console.log('Game data releases count:', (gameData.releases || []).length);
+          console.log('Direct releases fetch count:', (releases || []).length);
+          console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
+          console.log('=====================================');
           
           set({
             gameState: result.gameState,
             projects: gameData.projects || [], // Update projects with current state
             songs: songs || [], // Update songs to include newly recorded ones
+            releases: releases || [], // FIXED: Use explicit releases fetch for accurate status
             monthlyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],

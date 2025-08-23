@@ -744,6 +744,42 @@ export class ServerGameData {
     return storage.getReleasesByGame(gameId);
   }
 
+  async getPlannedReleases(gameId: string, month: number, dbTransaction?: any) {
+    console.log('[ServerGameData] getPlannedReleases called for gameId:', gameId, 'month:', month, 'transaction:', !!dbTransaction);
+    try {
+      const plannedReleases = await storage.getPlannedReleases(gameId, month, dbTransaction);
+      console.log('[ServerGameData] getPlannedReleases returned:', plannedReleases?.length || 0, 'planned releases');
+      return plannedReleases;
+    } catch (error) {
+      console.error('[ServerGameData] getPlannedReleases error:', error);
+      throw error;
+    }
+  }
+
+  async getSongsByRelease(releaseId: string, dbTransaction?: any) {
+    console.log('[ServerGameData] getSongsByRelease called for release:', releaseId, 'transaction:', !!dbTransaction);
+    try {
+      const songs = await storage.getSongsByRelease(releaseId, dbTransaction);
+      console.log('[ServerGameData] getSongsByRelease returned:', songs?.length || 0, 'songs');
+      return songs;
+    } catch (error) {
+      console.error('[ServerGameData] getSongsByRelease error:', error);
+      throw error;
+    }
+  }
+
+  async updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any) {
+    console.log('[ServerGameData] updateReleaseStatus called for release:', releaseId, 'status:', status, 'transaction:', !!dbTransaction);
+    try {
+      const result = await storage.updateReleaseStatus(releaseId, status, metadata, dbTransaction);
+      console.log('[ServerGameData] updateReleaseStatus completed');
+      return result;
+    } catch (error) {
+      console.error('[ServerGameData] updateReleaseStatus error:', error);
+      throw error;
+    }
+  }
+
   async getReleasedSongs(gameId: string) {
     console.log('[ServerGameData] getReleasedSongs called with gameId:', gameId);
     try {
@@ -756,10 +792,10 @@ export class ServerGameData {
     }
   }
 
-  async updateSongs(songUpdates: any[]) {
-    console.log('[ServerGameData] updateSongs called with:', songUpdates.length, 'updates');
+  async updateSongs(songUpdates: any[], dbTransaction?: any) {
+    console.log('[ServerGameData] updateSongs called with:', songUpdates.length, 'updates, transaction:', !!dbTransaction);
     try {
-      const result = await storage.updateSongs(songUpdates);
+      const result = await storage.updateSongs(songUpdates, dbTransaction);
       console.log('[ServerGameData] updateSongs completed');
       return result;
     } catch (error) {

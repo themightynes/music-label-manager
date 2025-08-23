@@ -21,6 +21,11 @@ import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginS
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+  
   // Authentication endpoints
   app.post('/api/auth/register', async (req, res) => {
     try {
@@ -179,13 +184,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projects = await storage.getProjectsByGame(gameState.id);
       const roles = await storage.getRolesByGame(gameState.id);
       const monthlyActions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth || 1);
+      const releases = await serverGameData.getReleasesByGame(gameState.id);
       
       res.json({
         gameState,
         artists,
         projects,
         roles,
-        monthlyActions
+        monthlyActions,
+        releases
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch game data" });
@@ -732,7 +739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get ready songs (recorded but not released, or drafts if requested)
+      // Get ready songs (recorded but not released, and not already scheduled for a release)
       let songQuery = db
         .select()
         .from(songs)
@@ -740,7 +747,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(songs.artistId, artistId),
           eq(songs.gameId, gameId),
           includeDrafts ? sql`true` : eq(songs.isRecorded, true),
-          eq(songs.isReleased, false)
+          eq(songs.isReleased, false),
+          sql`${songs.releaseId} IS NULL` // Only include songs not already scheduled for releases
         ));
 
       // Apply sorting
@@ -1035,6 +1043,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await tx.update(songs)
           .set({ releaseId: newRelease.id })
           .where(inArray(songs.id, songIds));
+
+        // Deduct marketing budget from game state money
+        await tx.update(gameStates)
+          .set({ money: (gameState.money || 0) - totalBudget })
+          .where(eq(gameStates.id, gameId));
 
         return newRelease;
       });
