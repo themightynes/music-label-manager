@@ -1,0 +1,88 @@
+{
+  "version": "0.1.0",
+  "generated": "2025-08-14",
+  "starting_money": 500000,
+  "monthly_burn_base": [3000, 6000],
+  "bankruptcy_threshold": -10000,
+  "rng_variance": [0.9, 1.1],
+  
+  "project_costs": {
+    "single": {
+      "min": 3000,
+      "max": 12000,
+      "song_count_default": 1
+    },
+    "ep": {
+      "min": 15000,
+      "max": 35000,
+      "song_count_default": 5
+    },
+    "mini_tour": {
+      "min": 5000,
+      "max": 15000,
+      "venue_tier_multiplier": {
+        "clubs": 1.0,
+        "theaters": 1.8,
+        "arenas": 3.2
+      }
+    }
+  },
+  
+  "song_count_cost_system": {
+    "enabled": true,
+    "description": "Cost calculations now based on per-song budgets with multipliers applied to total cost",
+    "base_per_song_cost": {
+      "single": 2500,
+      "ep": 4000
+    },
+    "economies_of_scale": {
+      "enabled": true,
+      "description": "Bulk production efficiencies - larger projects get cost reductions",
+      "breakpoints": {
+        "single_song": 1.0,
+        "small_project": 0.9,
+        "medium_project": 0.85,
+        "large_project": 0.8
+      },
+      "thresholds": {
+        "small_project": 2,
+        "medium_project": 4,
+        "large_project": 7
+      }
+    },
+    "quality_per_song_impact": {
+      "enabled": true,
+      "base_quality_per_song": 0.95,
+      "min_quality_multiplier": 0.85,
+      "description": "More songs slightly reduce individual song quality due to divided attention"
+    }
+  },
+  
+  "marketing_costs": {
+    "pr_push": {
+      "min": 2000,
+      "max": 6000
+    },
+    "digital_ads": {
+      "min": 1000,
+      "max": 8000
+    },
+    "radio_push": {
+      "min": 2500,
+      "max": 10000
+    }
+  },
+  
+  "talent_costs": {
+    "talent_search": {
+      "basic": 5000,
+      "premium": 15000,
+      "extensive": 50000
+    },
+    "signing_bonus": {
+      "unknown": [1000, 5000],
+      "developing": [5000, 25000],
+      "established": [25000, 100000]
+    }
+  }
+}

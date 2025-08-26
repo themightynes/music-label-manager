@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "generated": "2025-08-14",
+  "description": "Master balance file for Top Roles: Music Label Manager MVP",
+  
+  "ui_constants": {
+    "load_time_target_ms": 4000,
+    "month_resolution_target_ms": 300,
+    "bundle_size_target_mb": 1.2,
+    "animation_duration_ms": 250,
+    "toast_duration_ms": 3000
+  }
+}

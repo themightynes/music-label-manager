@@ -1,10 +1,15 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
+async function throwIfResNotOk(res: Response, options?: { silent401?: boolean }) {
   if (!res.ok) {
-    console.warn(`[HTTP ERROR] Status: ${res.status} ${res.statusText}`);
-    console.warn(`[HTTP ERROR] URL: ${res.url}`);
-    console.warn(`[HTTP ERROR] Headers:`, Object.fromEntries(res.headers.entries()));
+    // Skip verbose logging for expected 401s during auth checks
+    const isExpected401 = res.status === 401 && options?.silent401;
+    
+    if (!isExpected401) {
+      console.warn(`[HTTP ERROR] Status: ${res.status} ${res.statusText}`);
+      console.warn(`[HTTP ERROR] URL: ${res.url}`);
+      console.warn(`[HTTP ERROR] Headers:`, Object.fromEntries(res.headers.entries()));
+    }
     
     let errorMessage = `HTTP ${res.status}`;
     let errorDetails = null;
@@ -16,10 +21,14 @@ async function throwIfResNotOk(res: Response) {
       // Strategy 1: Try to parse as JSON (structured error responses)
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
-        console.log('[HTTP ERROR] Attempting JSON parsing...');
+        if (!isExpected401) {
+          console.log('[HTTP ERROR] Attempting JSON parsing...');
+        }
         try {
           const errorData = await res.json();
-          console.log('[HTTP ERROR] JSON parsed successfully:', errorData);
+          if (!isExpected401) {
+            console.log('[HTTP ERROR] JSON parsed successfully:', errorData);
+          }
           
           // Extract error message with multiple fallbacks
           if (typeof errorData === 'object' && errorData !== null) {
@@ -29,20 +38,28 @@ async function throwIfResNotOk(res: Response) {
             errorMessage = errorData;
           }
         } catch (jsonError) {
-          console.warn('[HTTP ERROR] JSON parsing failed:', jsonError);
+          if (!isExpected401) {
+            console.warn('[HTTP ERROR] JSON parsing failed:', jsonError);
+          }
           throw jsonError; // Let it fall through to text parsing
         }
       } else {
-        console.log('[HTTP ERROR] Non-JSON content type, skipping JSON parsing');
+        if (!isExpected401) {
+          console.log('[HTTP ERROR] Non-JSON content type, skipping JSON parsing');
+        }
         throw new Error('Not JSON'); // Force text parsing
       }
     } catch (jsonError) {
       // Strategy 2: Parse as text (fallback)
       try {
-        console.log('[HTTP ERROR] Attempting text parsing...');
+        if (!isExpected401) {
+          console.log('[HTTP ERROR] Attempting text parsing...');
+        }
         const clonedRes = res.clone();
         const textContent = await clonedRes.text();
-        console.log('[HTTP ERROR] Text content:', textContent);
+        if (!isExpected401) {
+          console.log('[HTTP ERROR] Text content:', textContent);
+        }
         
         if (textContent && textContent.trim()) {
           // Check if it's actually HTML error page
@@ -55,7 +72,9 @@ async function throwIfResNotOk(res: Response) {
           errorMessage = res.statusText || `HTTP ${res.status} with empty response`;
         }
       } catch (textError) {
-        console.error('[HTTP ERROR] Both JSON and text parsing failed:', textError);
+        if (!isExpected401) {
+          console.error('[HTTP ERROR] Both JSON and text parsing failed:', textError);
+        }
         errorMessage = res.statusText || `HTTP ${res.status} - Unable to parse response`;
       }
     }
@@ -67,13 +86,15 @@ async function throwIfResNotOk(res: Response) {
     (error as any).url = res.url;
     (error as any).details = errorDetails;
     
-    console.error('[HTTP ERROR] Final error object:', {
-      message: error.message,
-      status: res.status,
-      statusText: res.statusText,
-      url: res.url,
-      details: errorDetails
-    });
+    if (!isExpected401) {
+      console.error('[HTTP ERROR] Final error object:', {
+        message: error.message,
+        status: res.status,
+        statusText: res.statusText,
+        url: res.url,
+        details: errorDetails
+      });
+    }
     
     throw error;
   }
@@ -83,13 +104,19 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { silent401?: boolean }
 ): Promise<Response> {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  console.group(`[HTTP REQUEST ${requestId}] ${method} ${url}`);
-  console.log('[REQUEST] Method:', method);
-  console.log('[REQUEST] URL:', url);
-  console.log('[REQUEST] Data:', data);
+  // Skip verbose logging for auth checks that might fail
+  const isAuthCheck = url.includes('/api/auth/me') && options?.silent401;
+  
+  if (!isAuthCheck) {
+    console.group(`[HTTP REQUEST ${requestId}] ${method} ${url}`);
+    console.log('[REQUEST] Method:', method);
+    console.log('[REQUEST] URL:', url);
+    console.log('[REQUEST] Data:', data);
+  }
   
   const requestConfig: RequestInit = {
     method,
@@ -98,46 +125,60 @@ export async function apiRequest(
     credentials: "include" as RequestCredentials,
   };
   
-  console.log('[REQUEST] Config:', {
-    method: requestConfig.method,
-    headers: requestConfig.headers,
-    body: requestConfig.body ? 'Present' : 'None',
-    credentials: requestConfig.credentials
-  });
+  if (!isAuthCheck) {
+    console.log('[REQUEST] Config:', {
+      method: requestConfig.method,
+      headers: requestConfig.headers,
+      body: requestConfig.body ? 'Present' : 'None',
+      credentials: requestConfig.credentials
+    });
+  }
   
   let res: Response;
   try {
-    console.log('[REQUEST] Sending fetch request...');
+    if (!isAuthCheck) {
+      console.log('[REQUEST] Sending fetch request...');
+    }
     res = await fetch(url, requestConfig);
-    console.log('[RESPONSE] Received response');
-    console.log('[RESPONSE] Status:', res.status, res.statusText);
-    console.log('[RESPONSE] Headers:', Object.fromEntries(res.headers.entries()));
-    console.log('[RESPONSE] OK:', res.ok);
-    console.log('[RESPONSE] Type:', res.type);
-    console.log('[RESPONSE] URL:', res.url);
+    if (!isAuthCheck) {
+      console.log('[RESPONSE] Received response');
+      console.log('[RESPONSE] Status:', res.status, res.statusText);
+      console.log('[RESPONSE] Headers:', Object.fromEntries(res.headers.entries()));
+      console.log('[RESPONSE] OK:', res.ok);
+      console.log('[RESPONSE] Type:', res.type);
+      console.log('[RESPONSE] URL:', res.url);
+    }
   } catch (fetchError) {
-    console.error('[REQUEST] Fetch failed:', fetchError);
-    console.error('[REQUEST] Error type:', typeof fetchError);
-    console.error('[REQUEST] Error constructor:', fetchError?.constructor?.name);
-    console.error('[REQUEST] Error message:', fetchError instanceof Error ? fetchError.message : 'Unknown');
-    console.error('[REQUEST] Error stack:', fetchError instanceof Error ? fetchError.stack : 'No stack');
-    console.groupEnd();
+    if (!isAuthCheck) {
+      console.error('[REQUEST] Fetch failed:', fetchError);
+      console.error('[REQUEST] Error type:', typeof fetchError);
+      console.error('[REQUEST] Error constructor:', fetchError?.constructor?.name);
+      console.error('[REQUEST] Error message:', fetchError instanceof Error ? fetchError.message : 'Unknown');
+      console.error('[REQUEST] Error stack:', fetchError instanceof Error ? fetchError.stack : 'No stack');
+      console.groupEnd();
+    }
     throw fetchError;
   }
   
   try {
-    console.log('[RESPONSE] Checking response status...');
-    await throwIfResNotOk(res);
-    console.log('[RESPONSE] Status check passed');
-    console.groupEnd();
+    if (!isAuthCheck) {
+      console.log('[RESPONSE] Checking response status...');
+    }
+    await throwIfResNotOk(res, options);
+    if (!isAuthCheck) {
+      console.log('[RESPONSE] Status check passed');
+      console.groupEnd();
+    }
     return res;
   } catch (statusError) {
-    console.error('[RESPONSE] Status check failed:', statusError);
-    console.error('[RESPONSE] Error type:', typeof statusError);
-    console.error('[RESPONSE] Error constructor:', statusError?.constructor?.name);
-    console.error('[RESPONSE] Error message:', statusError instanceof Error ? statusError.message : 'Unknown');
-    console.error('[RESPONSE] Error properties:', Object.getOwnPropertyNames(statusError));
-    console.groupEnd();
+    if (!isAuthCheck) {
+      console.error('[RESPONSE] Status check failed:', statusError);
+      console.error('[RESPONSE] Error type:', typeof statusError);
+      console.error('[RESPONSE] Error constructor:', statusError?.constructor?.name);
+      console.error('[RESPONSE] Error message:', statusError instanceof Error ? statusError.message : 'Unknown');
+      console.error('[RESPONSE] Error properties:', Object.getOwnPropertyNames(statusError));
+      console.groupEnd();
+    }
     throw statusError;
   }
 }

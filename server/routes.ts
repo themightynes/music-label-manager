@@ -303,7 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Prepare artist data
       const validatedData = insertArtistSchema.parse({
         ...req.body,
-        gameId: gameId
+        gameId: gameId,
+        monthlyFee: req.body.monthlyCost || req.body.monthlyFee || 1200 // Store monthly cost from JSON data
       });
       
       // Create artist and deduct money in a transaction-like operation
@@ -882,7 +883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Initialize GameEngine with sophisticated calculations
       console.log('[RELEASE PREVIEW] Initializing GameEngine for sophisticated calculations...');
       await serverGameData.initialize();
-      const gameEngine = new GameEngine(gameState, serverGameData);
+      const gameEngine = new GameEngine(gameState, serverGameData, storage);
       
       // Use GameEngine's sophisticated release preview calculation
       const releaseConfig = {
@@ -1525,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let gameEngine: GameEngine;
         try {
           console.log('[DEBUG] Creating GameEngine instance...');
-          gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+          gameEngine = new GameEngine(gameStateForEngine, serverGameData, storage);
           console.log('[DEBUG] GameEngine created successfully');
         } catch (error) {
           console.error('[ERROR] Failed to create GameEngine:', error);
@@ -1780,7 +1781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         // Create GameEngine instance and update action selection
-        const gameEngine = new GameEngine(gameStateForEngine, serverGameData);
+        const gameEngine = new GameEngine(gameStateForEngine, serverGameData, storage);
         const updatedGameState = gameStateForEngine; // For now, just return current state
         
         // Update in database

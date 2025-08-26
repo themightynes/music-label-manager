@@ -371,7 +371,7 @@ export class MigrationValidator {
       for (const params of costParams) {
         // Create temporary GameEngine instance for testing
         const gameState = { id: gameId, currentMonth: 1 } as any;
-        const gameEngine = new GameEngine(gameState, serverGameData);
+        const gameEngine = new GameEngine(gameState, serverGameData, null); // Storage not needed for cost calculation tests
         
         try {
           // Test that the moved method works

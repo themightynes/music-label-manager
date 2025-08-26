@@ -11,7 +11,7 @@ The Music Label Manager is a **strategic simulation game** built as a full-stack
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client (React) │    │  Server (Node)  │    │  Database (PG)  │
+│  Client (React) │    │  Server (Node)  │    │  Database (PG)  │
 │                 │    │                 │    │                 │
 │  ┌─────────────┐│    │ ┌─────────────┐ │    │ ┌─────────────┐ │
 │  │ Components  ││    │ │ Game Engine │ │    │ │ Game State  │ │

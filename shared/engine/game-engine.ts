@@ -12,6 +12,7 @@
 
 import { GameState, Artist, Project, Role, MonthlyAction, Song, Release, ReleaseSong } from '../schema';
 import { ServerGameData } from '../../server/data/gameData';
+import { FinancialSystem } from './FinancialSystem';
 import seedrandom from 'seedrandom';
 
 // Extended MonthlyAction interface for game engine
@@ -43,6 +44,23 @@ interface RNGConfig {
 }
 
 /**
+ * Consolidated financial tracking for monthly calculations
+ */
+export interface MonthlyFinancials {
+  startingBalance: number;
+  operations: { base: number; artists: number; total: number };
+  projects: { costs: number; revenue: number };
+  marketing: { costs: number };
+  roleEffects: { costs: number; revenue: number };
+  streamingRevenue: number;
+  netChange: number;
+  endingBalance: number;
+  breakdown: string; // Human-readable calculation
+}
+
+// Using exported MonthSummary interface from end of file
+
+/**
  * Main game engine class that handles all game logic
  * 
  * @example
@@ -54,14 +72,19 @@ interface RNGConfig {
 export class GameEngine {
   private rng: seedrandom.PRNG;
   private gameData: ServerGameData;
+  private storage: any; // Storage interface for database operations
+  private financialSystem: FinancialSystem;
   
   constructor(
     private gameState: GameState,
     gameData: ServerGameData,
+    storage?: any, // Optional storage parameter for database operations
     seed?: string
   ) {
     this.gameData = gameData;
+    this.storage = storage;
     this.rng = seedrandom(seed || `${gameState.id}-${gameState.currentMonth}`);
+    this.financialSystem = new FinancialSystem(gameData, () => this.rng());
   }
 
   /**
@@ -123,11 +146,27 @@ export class GameEngine {
     // Check for random events
     await this.checkForEvents(summary);
 
-    // Apply monthly burn (operational costs)
-    const monthlyBurn = this.calculateMonthlyBurn();
-    const startingMoney = this.gameData.getBalanceConfigSync().economy.starting_money;
-    this.gameState.money = (this.gameState.money || startingMoney) - monthlyBurn;
+    // Apply monthly burn (operational costs) - handled by consolidated financial calculation
+    const monthlyBurnResult = await this.calculateMonthlyBurnWithBreakdown();
+    const monthlyBurn = monthlyBurnResult.total;
+    // Note: Both money deduction and expense tracking handled by consolidated financial calculation
+    
+    // Initialize expense breakdown if not exists
+    if (!summary.expenseBreakdown) {
+      summary.expenseBreakdown = {
+        monthlyOperations: 0,
+        artistSalaries: 0,
+        projectCosts: 0,
+        marketingCosts: 0,
+        roleMeetingCosts: 0
+      };
+    }
+    summary.expenseBreakdown.monthlyOperations = monthlyBurnResult.baseBurn;
+    summary.expenseBreakdown.artistSalaries = monthlyBurnResult.artistCosts;
+    
+    // Add monthly burn to total expenses
     summary.expenses += monthlyBurn;
+    
     summary.changes.push({
       type: 'expense',
       description: 'Monthly operational costs',
@@ -143,8 +182,14 @@ export class GameEngine {
     // Check for producer tier unlocks
     this.checkProducerTierUnlocks(summary);
 
-    // Apply final calculations  
-    this.gameState.money = (this.gameState.money || startingMoney) + summary.revenue - summary.expenses;
+    // Calculate financial summary (but don't update money yet)
+    const financials = await this.calculateMonthlyFinancials(summary);
+    summary.financialBreakdown = financials.breakdown;
+    
+    // Summary totals are already correctly accumulated throughout the month processing
+    // No need to overwrite them - they contain the complete picture
+    
+    console.log('[FINANCIAL BREAKDOWN]', financials.breakdown);
     
     // Generate economic insights for the month
     this.generateEconomicInsights(summary);
@@ -160,6 +205,13 @@ export class GameEngine {
       revenue: summary.revenue,
       streams: summary.streams || 0,
       expenses: summary.expenses,
+      expenseBreakdown: summary.expenseBreakdown || {
+        monthlyOperations: 0,
+        artistSalaries: 0,
+        projectCosts: 0,
+        marketingCosts: 0,
+        roleMeetingCosts: 0
+      },
       pressMentions: 0, // TODO: Add press mentions tracking
       reputationChange: Object.values(summary.reputationChanges).reduce((sum, change) => sum + change, 0),
       changes: summary.changes,
@@ -172,6 +224,14 @@ export class GameEngine {
       expenses: summary.expenses,
       monthKey
     });
+    
+    // SINGLE POINT OF MONEY UPDATE - at the very end
+    // All revenue and expenses have been accumulated in the summary
+    const monthStartMoney = this.gameState.money || 0;
+    const finalMoney = monthStartMoney + summary.revenue - summary.expenses;
+    this.gameState.money = finalMoney;
+    
+    console.log(`[MONEY UPDATE] Starting: $${monthStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
     
     return {
       gameState: this.gameState,
@@ -189,7 +249,8 @@ export class GameEngine {
         await this.processRoleMeeting(action, summary);
         break;
       case 'start_project':
-        await this.processProjectStart(action, summary);
+        // REDUNDANT: Projects are now handled via database advancement in advanceProjectStages()
+        console.warn('[DEPRECATED] start_project actions are no longer used - projects advance automatically from planning stage');
         break;
       case 'marketing':
         await this.processMarketing(action, summary);
@@ -256,11 +317,22 @@ export class GameEngine {
     for (const [key, value] of Object.entries(effects)) {
       switch (key) {
         case 'money':
-          this.gameState.money = (this.gameState.money || 0) + value;
+          // Note: Money changes will be handled by consolidated financial calculation
           if (value > 0) {
             summary.revenue += value;
           } else {
             summary.expenses += Math.abs(value);
+            // Track role meeting costs in breakdown
+            if (!summary.expenseBreakdown) {
+              summary.expenseBreakdown = {
+                monthlyOperations: 0,
+                artistSalaries: 0,
+                projectCosts: 0,
+                marketingCosts: 0,
+                roleMeetingCosts: 0
+              };
+            }
+            summary.expenseBreakdown.roleMeetingCosts += Math.abs(value);
           }
           break;
         case 'reputation':
@@ -288,56 +360,19 @@ export class GameEngine {
    * Calculates streaming revenue for a release
    * Uses the formula from balance.json
    */
+  // DELEGATED TO FinancialSystem (originally lines 360-410)
   calculateStreamingOutcome(
     quality: number,
     playlistAccess: string,
     reputation: number,
     adSpend: number
   ): number {
-    const config = this.gameData.getStreamingConfigSync();
-    console.log(`[DEBUG] Streaming config loaded:`, {
-      hasConfig: !!config,
-      quality_weight: config?.quality_weight,
-      playlist_weight: config?.playlist_weight,
-      base_streams_per_point: config?.base_streams_per_point,
-      first_week_multiplier: config?.first_week_multiplier
-    });
-    
-    // Get playlist multiplier from real access tiers
-    const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
-    console.log(`[DEBUG] Access multiplier for ${playlistAccess}:`, playlistMultiplier);
-    
-    // Calculate base streams using proper formula
-    const baseStreams = 
-      (quality * config.quality_weight) +
-      (playlistMultiplier * config.playlist_weight * 100) +
-      (reputation * config.reputation_weight) +
-      (Math.sqrt(adSpend / 1000) * config.marketing_weight * 50);
-    
-    console.log(`[DEBUG] Stream calculation components:`, {
-      quality: quality,
-      qualityComponent: quality * config.quality_weight,
-      playlistComponent: playlistMultiplier * config.playlist_weight * 100,
-      reputationComponent: reputation * config.reputation_weight,
-      marketingComponent: Math.sqrt(adSpend / 1000) * config.marketing_weight * 50,
-      baseStreams: baseStreams
-    });
-    
-    // Apply RNG variance from balance config
-    const variance = this.getRandom(0.9, 1.1);
-    
-    // Apply first week multiplier
-    const streams = baseStreams * variance * config.first_week_multiplier * config.base_streams_per_point;
-    
-    console.log(`[DEBUG] Final stream calculation:`, {
-      baseStreams,
-      variance,
-      firstWeekMultiplier: config.first_week_multiplier,
-      baseStreamsPerPoint: config.base_streams_per_point,
-      finalStreams: Math.round(streams)
-    });
-    
-    return Math.round(streams);
+    return this.financialSystem.calculateStreamingOutcome(
+      quality,
+      playlistAccess,
+      reputation,
+      adSpend
+    );
   }
 
   /**
@@ -397,30 +432,19 @@ export class GameEngine {
   /**
    * Calculates tour revenue
    */
+  // DELEGATED TO FinancialSystem (originally lines 469-493)
   calculateTourRevenue(
     venueTier: string,
     artistPopularity: number,
     localReputation: number,
     cities: number
   ): number {
-    const config = this.gameData.getTourConfigSync();
-    const venueCapacity = this.getVenueCapacity(venueTier);
-    
-    // Calculate sell-through rate
-    let sellThrough = config.sell_through_base;
-    sellThrough += (localReputation * config.reputation_modifier);
-    sellThrough *= (1 + (artistPopularity / 100) * config.local_popularity_weight);
-    sellThrough = Math.min(1, sellThrough);
-    
-    // Calculate revenue per show using real config
-    const ticketPrice = config.ticket_price_base + (venueCapacity * config.ticket_price_per_capacity);
-    const ticketRevenue = venueCapacity * sellThrough * ticketPrice;
-    const merchRevenue = ticketRevenue * config.merch_percentage;
-    
-    // Total for all cities
-    const totalRevenue = (ticketRevenue + merchRevenue) * cities;
-    
-    return Math.round(totalRevenue);
+    return this.financialSystem.calculateTourRevenue(
+      venueTier,
+      artistPopularity,
+      localReputation,
+      cities
+    );
   }
 
   /**
@@ -428,21 +452,6 @@ export class GameEngine {
    */
   private getRandom(min: number, max: number): number {
     return min + (this.rng() * (max - min));
-  }
-
-  /**
-   * Helper to get access tier multipliers
-   */
-  private getAccessMultiplier(type: string, tier: string): number {
-    const tiers = this.gameData.getAccessTiersSync();
-    
-    if (type === 'playlist') {
-      const tierData = tiers.playlist_access as any;
-      return tierData[tier]?.reach_multiplier || 0.1;
-    }
-    
-    // Default fallback
-    return 0.1;
   }
 
   /**
@@ -458,20 +467,6 @@ export class GameEngine {
     
     // Default fallback
     return 0.05;
-  }
-
-  /**
-   * Helper to get venue capacity
-   */
-  private getVenueCapacity(tier: string): number {
-    const tiers = this.gameData.getAccessTiersSync();
-    const venueData = tiers.venue_access as any;
-    const venueConfig = venueData[tier];
-    if (venueConfig?.capacity_range) {
-      const [min, max] = venueConfig.capacity_range;
-      return Math.round(this.getRandom(min, max));
-    }
-    return 100;
   }
   
   /**
@@ -492,18 +487,27 @@ export class GameEngine {
   /**
    * Calculates monthly operational costs including artist payments
    */
-  private calculateMonthlyBurn(): number {
-    const [min, max] = this.gameData.getMonthlyBurnRangeSync();
-    const baseBurn = Math.round(this.getRandom(min, max));
-    
-    // Add artist costs - estimate based on flags or assume 1-2 artists at 800-1500/month each
-    // In full implementation, this would use actual artist data passed to GameEngine
-    const flags = this.gameState.flags || {};
-    const estimatedArtists = (flags as any)['signed_artists_count'] || 1; // Default to 1 if not tracked
-    const artistCosts = estimatedArtists * Math.round(this.getRandom(800, 1500));
-    
-    return baseBurn + artistCosts;
+  private async calculateMonthlyBurn(): Promise<number> {
+    const result = await this.calculateMonthlyBurnWithBreakdown();
+    return result.total;
   }
+
+  /**
+   * Calculates monthly operational costs with detailed breakdown for transparency
+   */
+  // DELEGATED TO FinancialSystem (originally lines 572-617)
+  private async calculateMonthlyBurnWithBreakdown(): Promise<{
+    total: number;
+    baseBurn: number;
+    artistCosts: number;
+    artistDetails: Array<{name: string, monthlyFee: number}>;
+  }> {
+    return this.financialSystem.calculateMonthlyBurnWithBreakdown(
+      this.gameState.id || '',
+      this.storage
+    );
+  }
+
 
   /**
    * Processes ongoing projects (recordings, tours, etc)
@@ -659,7 +663,9 @@ export class GameEngine {
     
     try {
       // Get all planned releases (not just current month) to check for lead single strategies
-      const allPlannedReleases = await this.gameData.getReleasesByGame(this.gameState.id, dbTransaction) || [];
+      const allPlannedReleases = (this.storage && this.storage.getProjectsByGame) 
+        ? await this.storage.getProjectsByGame(this.gameState.id) || []
+        : [];
       const plannedReleases = allPlannedReleases.filter(r => r.status === 'planned');
       
       console.log(`[LEAD SINGLE] Found ${plannedReleases.length} planned releases to check for lead singles`);
@@ -867,6 +873,18 @@ export class GameEngine {
         });
         
         summary.expenses += marketingBudget;
+        
+        // Track marketing costs in breakdown
+        if (!summary.expenseBreakdown) {
+          summary.expenseBreakdown = {
+            monthlyOperations: 0,
+            artistSalaries: 0,
+            projectCosts: 0,
+            marketingCosts: 0,
+            roleMeetingCosts: 0
+          };
+        }
+        summary.expenseBreakdown.marketingCosts += marketingBudget;
         
         // Check for press coverage based on marketing spend
         if (marketingBudget > 0) {
@@ -1431,6 +1449,7 @@ export class GameEngine {
    * Calculates budget bonus for song quality using diminishing returns
    * Now works with per-song budget amounts for clearer understanding
    */
+  // DELEGATED TO FinancialSystem (originally lines 1559-1619)
   calculateBudgetQualityBonus(
     budgetPerSong: number,
     projectType: string,
@@ -1438,90 +1457,21 @@ export class GameEngine {
     timeInvestment: string,
     songCount: number = 1
   ): number {
-    const balance = this.gameData.getBalanceConfigSync();
-    const budgetSystem = balance.quality_system.budget_quality_system;
-    
-    if (!budgetSystem?.enabled) {
-      return 0;
-    }
-    
-    // Calculate minimum viable per-song cost for this configuration
-    const minTotalCost = this.calculateEnhancedProjectCost(projectType, producerTier, timeInvestment, 30, songCount);
-    const minPerSongCost = minTotalCost / songCount;
-    
-    // Calculate budget ratio relative to minimum viable per-song cost
-    const budgetRatio = budgetPerSong / minPerSongCost;
-    
-    let budgetBonus = 0;
-    const breakpoints = budgetSystem.efficiency_breakpoints;
-    const maxBonus = budgetSystem.max_budget_bonus;
-    
-    if (budgetRatio < breakpoints.minimum_viable) {
-      // Below minimum viable - penalty
-      budgetBonus = -5;
-    } else if (budgetRatio <= breakpoints.optimal_efficiency) {
-      // Linear scaling from 0 to 40% of max bonus in optimal range
-      budgetBonus = ((budgetRatio - breakpoints.minimum_viable) / (breakpoints.optimal_efficiency - breakpoints.minimum_viable)) * (maxBonus * 0.4);
-    } else if (budgetRatio <= breakpoints.luxury_threshold) {
-      // Linear scaling from 40% to 80% of max bonus in luxury range
-      const baseBonus = maxBonus * 0.4;
-      const luxuryBonus = ((budgetRatio - breakpoints.optimal_efficiency) / (breakpoints.luxury_threshold - breakpoints.optimal_efficiency)) * (maxBonus * 0.4);
-      budgetBonus = baseBonus + luxuryBonus;
-    } else if (budgetRatio <= breakpoints.diminishing_threshold) {
-      // Linear scaling from 80% to 100% of max bonus before diminishing returns
-      const baseBonus = maxBonus * 0.8;
-      const highEndBonus = ((budgetRatio - breakpoints.luxury_threshold) / (breakpoints.diminishing_threshold - breakpoints.luxury_threshold)) * (maxBonus * 0.2);
-      budgetBonus = baseBonus + highEndBonus;
-    } else {
-      // Diminishing returns beyond threshold
-      const excessRatio = budgetRatio - breakpoints.diminishing_threshold;
-      const diminishingBonus = Math.log(1 + excessRatio) * budgetSystem.diminishing_returns_factor * maxBonus * 0.1;
-      budgetBonus = maxBonus + diminishingBonus;
-    }
-    
-    console.log(`[BUDGET CALC] Per-song budget quality bonus calculation:`, {
-      budgetPerSong: budgetPerSong.toFixed(0),
-      minPerSongCost: minPerSongCost.toFixed(0),
-      songCount,
-      budgetRatio: budgetRatio.toFixed(2),
-      budgetBonus: budgetBonus.toFixed(2),
+    return this.financialSystem.calculateBudgetQualityBonus(
+      budgetPerSong,
       projectType,
       producerTier,
-      timeInvestment
-    });
-    
-    return Math.round(budgetBonus * 100) / 100; // Round to 2 decimal places
+      timeInvestment,
+      songCount
+    );
   }
 
   /**
    * Calculates song count impact on individual song quality
    */
+  // DELEGATED TO FinancialSystem (originally lines 1534-1560)
   calculateSongCountQualityImpact(songCount: number): number {
-    const balance = this.gameData.getBalanceConfigSync();
-    const songCountSystem = balance.economy.song_count_cost_system?.quality_per_song_impact;
-    
-    if (!songCountSystem?.enabled || songCount <= 1) {
-      return 1.0; // No impact for single songs
-    }
-    
-    // Quality decreases slightly for each additional song due to divided attention
-    const baseQualityPerSong = songCountSystem.base_quality_per_song;
-    const minMultiplier = songCountSystem.min_quality_multiplier;
-    
-    // Exponential decay: quality = baseQualityPerSong^(songCount-1)
-    const qualityImpact = Math.pow(baseQualityPerSong, songCount - 1);
-    
-    // Ensure it doesn't go below minimum
-    const finalImpact = Math.max(minMultiplier, qualityImpact);
-    
-    console.log(`[SONG COUNT IMPACT] Quality impact calculation:`, {
-      songCount,
-      baseQualityPerSong,
-      qualityImpact: qualityImpact.toFixed(3),
-      finalImpact: finalImpact.toFixed(3)
-    });
-    
-    return finalImpact;
+    return this.financialSystem.calculateSongCountQualityImpact(songCount);
   }
 
   /**
@@ -1614,149 +1564,30 @@ export class GameEngine {
    * Calculates ongoing revenue for a released project using streaming decay formula
    * Revenue naturally decreases over time, simulating real music industry patterns
    */
+  // DELEGATED TO FinancialSystem (originally lines 1742-1812) 
   private calculateOngoingRevenue(project: any): number {
-    const metadata = project.metadata || {};
-    const initialStreams = metadata.streams || 0;
-    const releaseMonth = metadata.releaseMonth || 1;
-    const currentMonth = this.gameState.currentMonth || 1;
-    const monthsSinceRelease = currentMonth - releaseMonth;
-    
-    console.log(`[REVENUE CALC] === Calculating for ${project.title} ===`);
-    console.log(`[REVENUE CALC] Initial streams: ${initialStreams}`);
-    console.log(`[REVENUE CALC] Release month: ${releaseMonth}`);
-    console.log(`[REVENUE CALC] Current month: ${currentMonth}`);
-    console.log(`[REVENUE CALC] Months since release: ${monthsSinceRelease}`);
-    
-    // No revenue if just released this month or no initial streams
-    if (monthsSinceRelease <= 0) {
-      console.log(`[REVENUE CALC] No revenue - just released or future release (monthsSinceRelease: ${monthsSinceRelease})`);
-      return 0;
-    }
-    
-    if (initialStreams === 0) {
-      console.log(`[REVENUE CALC] No revenue - no initial streams`);
-      return 0;
-    }
-    
-    // Get streaming decay configuration from balance.json
-    const streamingConfig = this.gameData.getStreamingConfigSync();
-    const ongoingConfig = streamingConfig.ongoing_streams;
-    
-    const decayRate = ongoingConfig.monthly_decay_rate;
-    const maxDecayMonths = ongoingConfig.max_decay_months;
-    const revenuePerStream = ongoingConfig.revenue_per_stream;
-    const ongoingFactor = ongoingConfig.ongoing_factor;
-    const reputationBonusFactor = ongoingConfig.reputation_bonus_factor;
-    const accessTierBonusFactor = ongoingConfig.access_tier_bonus_factor;
-    const minimumThreshold = ongoingConfig.minimum_revenue_threshold;
-    
-    // Stop generating revenue after max decay period
-    if (monthsSinceRelease > maxDecayMonths) {
-      console.log(`[REVENUE CALC] Project too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
-      return 0;
-    }
-    
-    // Decay formula: starts high, gradually decreases
-    const baseDecay = Math.pow(decayRate, monthsSinceRelease);
-    console.log(`[REVENUE CALC] Decay rate: ${decayRate}, Base decay: ${baseDecay.toFixed(4)}`);
-    
-    // Apply current reputation and access tier bonuses
-    const reputation = this.gameState.reputation || 0;
-    const reputationBonus = 1 + (reputation - 50) * reputationBonusFactor;
-    const playlistMultiplier = this.getAccessMultiplier('playlist', this.gameState.playlistAccess || 'none');
-    const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
-    console.log(`[REVENUE CALC] Reputation: ${reputation}, Reputation bonus: ${reputationBonus.toFixed(4)}`);
-    console.log(`[REVENUE CALC] Playlist access: ${this.gameState.playlistAccess}, Multiplier: ${playlistMultiplier}, Access bonus: ${accessBonus.toFixed(4)}`);
-    
-    // Calculate monthly streams with decay
-    const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
-    console.log(`[REVENUE CALC] Monthly streams calculation: ${initialStreams} * ${baseDecay.toFixed(4)} * ${reputationBonus.toFixed(4)} * ${accessBonus.toFixed(4)} * ${ongoingFactor} = ${monthlyStreams.toFixed(2)}`);
-    
-    // Convert to revenue
-    const revenue = Math.max(0, Math.round(monthlyStreams * revenuePerStream));
-    console.log(`[REVENUE CALC] Revenue calculation: ${monthlyStreams.toFixed(2)} streams * $${revenuePerStream} = $${revenue}`);
-    
-    // Apply minimum threshold
-    if (revenue < minimumThreshold) {
-      console.log(`[REVENUE CALC] Revenue below threshold ($${revenue} < $${minimumThreshold}), returning $0`);
-      return 0;
-    }
-    
-    console.log(`[REVENUE CALC] Final revenue: $${revenue}`);
-    return revenue;
+    return this.financialSystem.calculateOngoingRevenue(
+      project,
+      this.gameState.currentMonth || 1,
+      this.gameState.reputation || 0,
+      this.gameState.playlistAccess || 'none'
+    );
   }
   
   /**
    * Calculates ongoing revenue for an individual released song using streaming decay formula
    * Each song has its own decay pattern based on individual quality and release timing
    */
+  // DELEGATED TO FinancialSystem (originally lines 1714-1782)
   private calculateOngoingSongRevenue(song: any): number {
-    const currentMonth = this.gameState.currentMonth || 1;
-    const releaseMonth = song.releaseMonth || 1;
-    const monthsSinceRelease = currentMonth - releaseMonth;
-    const initialStreams = song.initialStreams || 0;
-    
-    console.log(`[SONG REVENUE CALC] === Calculating for "${song.title}" ===`);
-    console.log(`[SONG REVENUE CALC] Quality: ${song.quality}, Initial streams: ${initialStreams}`);
-    console.log(`[SONG REVENUE CALC] Release month: ${releaseMonth}, Current month: ${currentMonth}`);
-    console.log(`[SONG REVENUE CALC] Months since release: ${monthsSinceRelease}`);
-    
-    // No revenue if just released this month or no initial streams
-    if (monthsSinceRelease <= 0) {
-      console.log(`[SONG REVENUE CALC] No revenue - just released or future release`);
-      return 0;
-    }
-    
-    if (initialStreams === 0) {
-      console.log(`[SONG REVENUE CALC] No revenue - no initial streams`);
-      return 0;
-    }
-    
-    // Get streaming decay configuration from balance.json
-    const streamingConfig = this.gameData.getStreamingConfigSync();
-    const ongoingConfig = streamingConfig.ongoing_streams;
-    
-    const decayRate = ongoingConfig.monthly_decay_rate;
-    const maxDecayMonths = ongoingConfig.max_decay_months;
-    const revenuePerStream = ongoingConfig.revenue_per_stream;
-    const ongoingFactor = ongoingConfig.ongoing_factor;
-    const reputationBonusFactor = ongoingConfig.reputation_bonus_factor;
-    const accessTierBonusFactor = ongoingConfig.access_tier_bonus_factor;
-    const minimumThreshold = ongoingConfig.minimum_revenue_threshold;
-    
-    // Stop generating revenue after max decay period
-    if (monthsSinceRelease > maxDecayMonths) {
-      console.log(`[SONG REVENUE CALC] Song too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
-      return 0;
-    }
-    
-    // Individual song decay formula
-    const baseDecay = Math.pow(decayRate, monthsSinceRelease);
-    console.log(`[SONG REVENUE CALC] Base decay: ${baseDecay.toFixed(4)}`);
-    
-    // Apply current reputation and access tier bonuses
-    const reputation = this.gameState.reputation || 0;
-    const reputationBonus = 1 + (reputation - 50) * reputationBonusFactor;
-    const playlistMultiplier = this.getAccessMultiplier('playlist', this.gameState.playlistAccess || 'none');
-    const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
-    
-    // Calculate monthly streams for this individual song
-    const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
-    console.log(`[SONG REVENUE CALC] Monthly streams: ${initialStreams} * ${baseDecay.toFixed(4)} * ${reputationBonus.toFixed(4)} * ${accessBonus.toFixed(4)} * ${ongoingFactor} = ${monthlyStreams.toFixed(2)}`);
-    
-    // Convert to revenue
-    const revenue = Math.max(0, Math.round(monthlyStreams * revenuePerStream));
-    console.log(`[SONG REVENUE CALC] Revenue: ${monthlyStreams.toFixed(2)} streams * $${revenuePerStream} = $${revenue}`);
-    
-    // Apply minimum threshold
-    if (revenue < minimumThreshold) {
-      console.log(`[SONG REVENUE CALC] Revenue below threshold ($${revenue} < $${minimumThreshold}), returning $0`);
-      return 0;
-    }
-    
-    console.log(`[SONG REVENUE CALC] Final revenue for "${song.title}": $${revenue}`);
-    return revenue;
+    return this.financialSystem.calculateOngoingSongRevenue(
+      song,
+      this.gameState.currentMonth || 1,
+      this.gameState.reputation || 0,
+      this.gameState.playlistAccess || 'none'
+    );
   }
+
 
   /**
    * Processes song release - calculates individual song streams and sets initial values
@@ -2092,232 +1923,11 @@ export class GameEngine {
     }
   }
 
-  /**
-   * Processes starting a new project (Single, EP, Mini-Tour) with enhanced producer tier and time investment support
-   */
-  private async processProjectStart(action: GameEngineAction, summary: MonthSummary): Promise<void> {
-    if (!action.targetId || !action.details?.projectType) return;
-    
-    // Validate project creation parameters first
-    const validation = this.validateProjectCreation(action, this.gameState);
-    if (!validation.valid) {
-      for (const error of validation.errors) {
-        summary.changes.push({
-          type: 'expense',
-          description: `Project creation failed: ${error}`,
-          amount: 0
-        });
-      }
-      return;
-    }
-    
-    const projectType = action.details.projectType;
-    const producerTier = action.details.producerTier || 'local';
-    const timeInvestment = action.details.timeInvestment || 'standard';
-    const currentReputation = this.gameState.reputation || 0;
-    
-    // Validate producer tier availability
-    const availableTiers = this.gameData.getAvailableProducerTiers(currentReputation);
-    if (!availableTiers.includes(producerTier)) {
-      summary.changes.push({
-        type: 'expense',
-        description: `Producer tier '${producerTier}' not available (requires ${this.gameData.getProducerTierSystemSync()[producerTier]?.unlock_rep || 0} reputation)`,
-        amount: 0
-      });
-      return;
-    }
-    
-    // Calculate enhanced project cost with producer tier, time investment, and song count
-    const projectSongCount = action.details.songCount || this.getDefaultSongCount(projectType);
-    let projectCost: number;
-    let minBudgetForQuality: number;
-    
-    try {
-      projectCost = this.calculateEnhancedProjectCost(
-        projectType, 
-        producerTier, 
-        timeInvestment, 
-        50, // Average quality for cost calculation
-        projectSongCount
-      );
-      
-      // Calculate minimum budget for meaningful quality bonus
-      minBudgetForQuality = this.calculateEnhancedProjectCost(
-        projectType, 
-        producerTier, 
-        timeInvestment, 
-        30, // Minimum quality for budget calculation
-        projectSongCount
-      );
-    } catch (error) {
-      console.error('[PROJECT START] Cost calculation failed:', error);
-      summary.changes.push({
-        type: 'expense',
-        description: `Failed to start ${projectType}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        amount: 0
-      });
-      return;
-    }
-    
-    // Enhanced budget validation and quality impact calculation
-    const customBudget = action.details.budget;
-    let finalBudget: number;
-    let budgetQualityBonus: number = 0;
-    
-    if (customBudget && customBudget >= projectCost) {
-      finalBudget = customBudget;
-      // Calculate budget quality bonus for custom budget (per-song)
-      const perSongBudget = customBudget / projectSongCount;
-      budgetQualityBonus = this.calculateBudgetQualityBonus(
-        perSongBudget,
-        projectType,
-        producerTier,
-        timeInvestment,
-        projectSongCount
-      );
-    } else {
-      finalBudget = projectCost;
-      // Calculate budget quality bonus for minimum cost (per-song)
-      const perSongBudget = projectCost / projectSongCount;
-      budgetQualityBonus = this.calculateBudgetQualityBonus(
-        perSongBudget,
-        projectType,
-        producerTier,
-        timeInvestment,
-        projectSongCount
-      );
-    }
-    
-    // Validate budget vs. song count efficiency
-    const songCountCostEfficiency = this.validateSongCountBudgetEfficiency(
-      finalBudget,
-      projectSongCount,
-      projectType,
-      producerTier,
-      timeInvestment
-    );
-    
-    if (!songCountCostEfficiency.valid) {
-      summary.changes.push({
-        type: 'expense',
-        description: `Budget allocation inefficient: ${songCountCostEfficiency.warning}`,
-        amount: 0
-      });
-      // Continue with warning but don't block creation
-    }
-    
-    if ((this.gameState.money || 0) < finalBudget) {
-      const missingAmount = finalBudget - (this.gameState.money || 0);
-      summary.changes.push({
-        type: 'expense',
-        description: `Cannot afford ${projectType} with ${producerTier} producer - need $${missingAmount.toLocaleString()} more`,
-        amount: 0
-      });
-      return;
-    }
-    
-    // Calculate song count quality impact for project planning
-    const songCountQualityImpact = this.calculateSongCountQualityImpact(projectSongCount);
-    
-    // Deduct project cost
-    this.gameState.money = (this.gameState.money || 0) - finalBudget;
-    summary.expenses += finalBudget;
-    
-    // Calculate project duration with time investment modifier
-    const baseDuration = this.getProjectDuration(projectType);
-    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
-    const durationModifier = timeSystem[timeInvestment]?.duration_modifier || 1.0;
-    const adjustedDuration = Math.ceil(baseDuration * durationModifier);
-    
-    // Calculate expected quality range for feedback
-    const baseQuality = 40 + Math.floor(this.getRandom(0, 20));
-    const producerBonus = this.gameData.getProducerTierSystemSync()[producerTier]?.quality_bonus || 0;
-    const timeBonus = timeSystem[timeInvestment]?.quality_bonus || 0;
-    const expectedQuality = Math.min(100, Math.max(20, 
-      (baseQuality + producerBonus + timeBonus + budgetQualityBonus) * songCountQualityImpact
-    ));
-    
-    // Add enhanced project to game state (would normally be handled by database)
-    const newProject = {
-      id: `project-${Date.now()}`,
-      title: action.details.title || `New ${projectType}`,
-      type: projectType,
-      artistId: action.targetId,
-      gameId: this.gameState.id,
-      stage: 'production',
-      quality: expectedQuality, // Enhanced quality calculation
-      budgetPerSong: Math.floor(finalBudget / projectSongCount),
-      totalCost: finalBudget,
-      costUsed: Math.floor(finalBudget * 0.3), // Initial investment
-      startMonth: this.gameState.currentMonth || 1,
-      dueMonth: (this.gameState.currentMonth || 1) + adjustedDuration,
-      songCount: projectSongCount,
-      songsCreated: 0,
-      // Enhanced project metadata with economic tracking
-      producerTier: producerTier,
-      timeInvestment: timeInvestment,
-      metadata: {
-        enhancedProject: true,
-        economicDecisions: {
-          originalCost: projectCost,
-          finalBudget: finalBudget,
-          budgetRatio: finalBudget / minBudgetForQuality,
-          budgetQualityBonus: budgetQualityBonus,
-          songCountQualityImpact: songCountQualityImpact,
-          expectedQuality: expectedQuality,
-          costEfficiency: songCountCostEfficiency
-        },
-        producerCostMultiplier: this.gameData.getProducerTierSystemSync()[producerTier]?.multiplier || 1.0,
-        timeCostMultiplier: timeSystem[timeInvestment]?.multiplier || 1.0,
-        qualityBonuses: {
-          producer: producerBonus,
-          time: timeBonus,
-          budget: budgetQualityBonus
-        }
-      }
-    };
-    
-    // TODO: Store enhanced project in database via ServerGameData
-    // Projects are handled separately in the database, not stored in gameState
-    
-    console.log('[PROJECT START] Enhanced project created:', {
-      title: newProject.title,
-      type: newProject.type,
-      producerTier,
-      timeInvestment,
-      finalBudget,
-      songCount: projectSongCount,
-      adjustedDuration,
-      expectedQuality,
-      budgetQualityBonus,
-      songCountQualityImpact,
-      qualityBonuses: newProject.metadata.qualityBonuses
-    });
-    
-    // Enhanced summary with economic insights
-    const costBreakdown = `${producerTier} producer (${producerBonus > 0 ? '+' + producerBonus + ' quality' : 'standard'}), ${timeInvestment} timeline (${timeBonus > 0 ? '+' + timeBonus + ' quality' : timeBonus < 0 ? timeBonus + ' quality' : 'standard'})`;
-    const budgetInsight = budgetQualityBonus > 0 ? ` +${budgetQualityBonus.toFixed(1)} quality from budget` : '';
-    const songCountInsight = projectSongCount > 1 ? ` (${projectSongCount} songs, ${(songCountQualityImpact * 100 - 100).toFixed(1)}% individual quality)` : '';
-    
-    summary.changes.push({
-      type: 'project_complete',
-      description: `Started ${projectType}: ${newProject.title} - $${finalBudget.toLocaleString()} (${costBreakdown}${budgetInsight})${songCountInsight}`,
-      projectId: newProject.id,
-      amount: -finalBudget
-    });
-  }
+  // REMOVED: processProjectStart method is redundant
+  // Projects are now handled via database creation and automatic advancement in advanceProjectStages()
 
-  /**
-   * Gets default song count for project types
-   */
-  private getDefaultSongCount(projectType: string): number {
-    switch (projectType.toLowerCase()) {
-      case 'single': return 1;
-      case 'ep': return 5;
-      case 'album': return 12;
-      default: return 1;
-    }
-  }
+  // REMOVED: getDefaultSongCount method is redundant
+  // Default song counts are now handled via database project_costs.song_count_default
 
   /**
    * Processes marketing campaigns (PR, Digital Ads, etc.)
@@ -2339,9 +1949,20 @@ export class GameEngine {
       return;
     }
     
-    // Deduct campaign cost
-    this.gameState.money = (this.gameState.money || 0) - campaignCost;
+    // Track campaign cost for consolidated calculation
     summary.expenses += campaignCost;
+    
+    // Track marketing costs in expense breakdown
+    if (!summary.expenseBreakdown) {
+      summary.expenseBreakdown = {
+        monthlyOperations: 0,
+        artistSalaries: 0,
+        projectCosts: 0,
+        marketingCosts: 0,
+        roleMeetingCosts: 0
+      };
+    }
+    summary.expenseBreakdown.marketingCosts += campaignCost;
     
     // Apply marketing effects based on type
     let effectDescription = '';
@@ -2620,108 +2241,11 @@ export class GameEngine {
     };
   }
 
-  /**
-   * Validates project creation parameters before processing
-   */
-  validateProjectCreation(action: GameEngineAction, currentGameState: GameState): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    
-    if (!action.details?.projectType) {
-      errors.push('Project type is required');
-      return { valid: false, errors };
-    }
-    
-    const producerTier = action.details.producerTier || 'local';
-    const timeInvestment = action.details.timeInvestment || 'standard';
-    const reputation = currentGameState.reputation || 0;
-    const projectType = action.details.projectType;
-    const songCount = action.details.songCount || this.getDefaultSongCount(projectType);
-    
-    // Validate song count for project type
-    const songCountValidation = this.validateSongCountForProjectType(projectType, songCount);
-    if (!songCountValidation.valid) {
-      errors.push(...songCountValidation.errors);
-    }
-    
-    // Validate producer tier and time investment
-    const tierValidation = this.validateProducerTierAndTimeInvestment(
-      producerTier, 
-      timeInvestment, 
-      reputation
-    );
-    
-    if (!tierValidation.valid) {
-      errors.push(...tierValidation.errors);
-    }
-    
-    // Enhanced budget validation with economic efficiency checks
-    if (action.details.budget) {
-      try {
-        const minCost = this.calculateEnhancedProjectCost(
-          projectType,
-          producerTier,
-          timeInvestment,
-          30, // Minimum quality for cost calculation
-          songCount
-        );
-        
-        if (action.details.budget < minCost) {
-          errors.push(`Budget too low: minimum $${minCost.toLocaleString()} required for ${producerTier} producer with ${timeInvestment} timeline and ${songCount} song${songCount > 1 ? 's' : ''}`);
-        }
-        
-        if (action.details.budget > (currentGameState.money || 0)) {
-          errors.push(`Insufficient funds: budget $${action.details.budget.toLocaleString()} exceeds available money $${(currentGameState.money || 0).toLocaleString()}`);
-        }
-        
-        // Check for budget exploitation attempts
-        const maxReasonableBudget = minCost * 5; // 5x minimum is reasonable upper bound
-        if (action.details.budget > maxReasonableBudget) {
-          errors.push(`Budget excessive: $${action.details.budget.toLocaleString()} is beyond reasonable spending for this project type (max recommended: $${maxReasonableBudget.toLocaleString()})`);
-        }
-        
-      } catch (error) {
-        errors.push(`Cost calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    }
-    
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
+  // REMOVED: validateProjectCreation method is redundant
+  // Project validation is now handled at database creation time
   
-  /**
-   * Validates song count is appropriate for project type
-   */
-  private validateSongCountForProjectType(projectType: string, songCount: number): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    
-    switch (projectType.toLowerCase()) {
-      case 'single':
-        if (songCount < 1 || songCount > 3) {
-          errors.push('Singles must have 1-3 songs');
-        }
-        break;
-      case 'ep':
-        if (songCount < 3 || songCount > 8) {
-          errors.push('EPs must have 3-8 songs');
-        }
-        break;
-      case 'album':
-        if (songCount < 8 || songCount > 20) {
-          errors.push('Albums must have 8-20 songs');
-        }
-        break;
-      default:
-        // For non-recording projects like tours, song count is not relevant
-        break;
-    }
-    
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
+  // REMOVED: validateSongCountForProjectType method is redundant
+  // Song count validation is now handled at UI creation time
   
   /**
    * Validates budget efficiency relative to song count to prevent exploits
@@ -3048,6 +2572,27 @@ export class GameEngine {
           // planning -> production (simple time-based)
           newStageIndex = 1;
           advancementReason = `Planning complete after ${monthsElapsed} month${monthsElapsed > 1 ? 's' : ''}`;
+          
+          // Track the project cost for consolidated calculation
+          if (project.totalCost) {
+            summary.expenses += project.totalCost;
+            if (!summary.expenseBreakdown) {
+              summary.expenseBreakdown = {
+                monthlyOperations: 0,
+                artistSalaries: 0,
+                projectCosts: 0,
+                marketingCosts: 0,
+                roleMeetingCosts: 0
+              };
+            }
+            summary.expenseBreakdown.projectCosts += project.totalCost;
+            
+            summary.changes.push({
+              type: 'expense',
+              description: `Started ${project.type}: ${project.title} - $${project.totalCost.toLocaleString()}`,
+              amount: -project.totalCost
+            });
+          }
         } else if (currentStageIndex === 1) {
           // production -> marketing
           if (!isRecordingProject) {
@@ -3125,6 +2670,7 @@ export class GameEngine {
    * PHASE 1 MIGRATION: Moved from gameData.ts
    * Calculates enhanced project cost with producer tier, time investment, and song count
    */
+  // DELEGATED TO FinancialSystem (originally lines 2967-3022)
   private calculateEnhancedProjectCost(
     projectType: string, 
     producerTier: string, 
@@ -3132,119 +2678,84 @@ export class GameEngine {
     quality: number = 50,
     songCount?: number
   ): number {
-    const producerSystem = this.gameData.getProducerTierSystemSync();
-    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
-    
-    // Get base cost
-    const balance = this.gameData.getBalanceConfigSync();
-    const projectCosts = balance.economy.project_costs[projectType.toLowerCase()];
-    if (!projectCosts) {
-      throw new Error(`Unknown project type: ${projectType}`);
-    }
-    
-    // Determine actual song count
-    const actualSongCount = songCount || projectCosts.song_count_default || 1;
-    
-    // Calculate base cost per song
-    const songCountSystem = balance.economy.song_count_cost_system;
-    let totalBaseCost: number;
-    
-    if (songCountSystem?.enabled && actualSongCount > 1) {
-      // Use per-song cost system
-      const baseCostPerSong = songCountSystem.base_per_song_cost[projectType.toLowerCase()] || projectCosts.min;
-      
-      // Calculate economies of scale
-      const economiesMultiplier = this.calculateEconomiesOfScale(actualSongCount, songCountSystem.economies_of_scale);
-      
-      totalBaseCost = baseCostPerSong * actualSongCount * economiesMultiplier;
-    } else {
-      // Use traditional single-song cost
-      totalBaseCost = projectCosts.min + ((projectCosts.max - projectCosts.min) * (quality / 100));
-    }
-    
-    // Apply multipliers
-    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
-    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
-    const qualityMultiplier = projectCosts.quality_multiplier || 1.0;
-    
-    const finalCost = Math.floor(totalBaseCost * producerMultiplier * timeMultiplier * qualityMultiplier);
-    
-    console.log(`[COST CALC] Enhanced project cost for ${projectType}:`, {
+    return this.financialSystem.calculateEnhancedProjectCost(
       projectType,
-      actualSongCount,
-      totalBaseCost,
       producerTier,
-      producerMultiplier,
       timeInvestment,
-      timeMultiplier,
-      qualityMultiplier,
-      finalCost
-    });
-    
-    return finalCost;
+      quality,
+      songCount
+    );
   }
+
 
   /**
    * PHASE 1 MIGRATION: Moved from gameData.ts
    * Calculates enhanced project cost with per-song budget semantics
    * Returns the total project cost, taking per-song budgets and multipliers into account
    */
+  // DELEGATED TO FinancialSystem (originally lines 3029-3061)
   private calculatePerSongProjectCost(
     budgetPerSong: number,
     songCount: number,
     producerTier: string,
     timeInvestment: string
   ): { baseCost: number; totalCost: number; breakdown: any } {
-    const producerSystem = this.gameData.getProducerTierSystemSync();
-    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
-    
-    // Calculate base cost: budgetPerSong × songCount
-    const baseCost = budgetPerSong * songCount;
-    
-    // Apply multipliers
-    const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
-    const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
-    
-    const totalCost = Math.round(baseCost * producerMultiplier * timeMultiplier);
-    
-    const breakdown = {
+    return this.financialSystem.calculatePerSongProjectCost(
       budgetPerSong,
       songCount,
-      baseCost,
       producerTier,
-      producerMultiplier,
-      timeInvestment,
-      timeMultiplier,
-      totalCost
-    };
-    
-    console.log('[PER-SONG COST CALC]', breakdown);
-    
-    return { baseCost, totalCost, breakdown };
+      timeInvestment
+    );
   }
 
   /**
-   * PHASE 1 MIGRATION: Moved from gameData.ts
-   * Calculates economies of scale multiplier for song count
+   * Generates human-readable financial breakdown string
    */
-  private calculateEconomiesOfScale(songCount: number, economiesConfig: any): number {
-    if (!economiesConfig?.enabled) {
-      return 1.0;
+  private generateFinancialBreakdown(f: MonthlyFinancials): string {
+    const parts: string[] = [`$${f.startingBalance.toLocaleString()}`];
+    
+    if (f.operations.base > 0) {
+      parts.push(`- $${f.operations.base.toLocaleString()} (operations)`);
+    }
+    if (f.operations.artists > 0) {
+      parts.push(`- $${f.operations.artists.toLocaleString()} (artists)`);
+    }
+    if (f.projects.costs > 0) {
+      parts.push(`- $${f.projects.costs.toLocaleString()} (projects)`);
+    }
+    if (f.projects.revenue > 0) {
+      parts.push(`+ $${f.projects.revenue.toLocaleString()} (project revenue)`);
+    }
+    if (f.marketing.costs > 0) {
+      parts.push(`- $${f.marketing.costs.toLocaleString()} (marketing)`);
+    }
+    if (f.roleEffects.costs > 0) {
+      parts.push(`- $${f.roleEffects.costs.toLocaleString()} (role costs)`);
+    }
+    if (f.roleEffects.revenue > 0) {
+      parts.push(`+ $${f.roleEffects.revenue.toLocaleString()} (role benefits)`);
+    }
+    if (f.streamingRevenue > 0) {
+      parts.push(`+ $${f.streamingRevenue.toLocaleString()} (streaming)`);
     }
     
-    const breakpoints = economiesConfig.breakpoints;
-    const thresholds = economiesConfig.thresholds;
+    parts.push(`= $${f.endingBalance.toLocaleString()}`);
     
-    if (songCount >= thresholds.large_project) {
-      return breakpoints.large_project;
-    } else if (songCount >= thresholds.medium_project) {
-      return breakpoints.medium_project;
-    } else if (songCount >= thresholds.small_project) {
-      return breakpoints.small_project;
-    } else {
-      return breakpoints.single_song;
-    }
+    return parts.join(' ');
   }
+
+  /**
+   * Generates financial breakdown for display purposes only
+   * Does NOT modify game state - that happens at the end of advanceMonth()
+   */
+  // DELEGATED TO FinancialSystem (originally lines 3126-3172)
+  async calculateMonthlyFinancials(summary: MonthSummary): Promise<MonthlyFinancials> {
+    return this.financialSystem.calculateMonthlyFinancials(
+      summary,
+      this.gameState.money || 0
+    );
+  }
+
 
   /**
    * Calculates comprehensive release preview metrics using GameEngine formulas
@@ -3573,6 +3084,14 @@ export interface MonthSummary {
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
   artistChanges?: Record<string, number>;
+  expenseBreakdown?: {
+    monthlyOperations: number;
+    artistSalaries: number;
+    projectCosts: number;
+    marketingCosts: number;
+    roleMeetingCosts: number;
+  };
+  financialBreakdown?: string; // Human-readable financial calculation
 }
 
 export interface GameChange {

@@ -161,32 +161,33 @@ export class GameDataLoader {
   }
 
   async loadBalanceData(): Promise<BalanceConfig> {
-    const data = await this.loadJSON('balance.json');
-    
-    // Use a more lenient validation that matches the actual structure
-    const schema = z.object({
-      version: z.string(),
-      generated: z.string(),
-      description: z.string().optional(),
-      economy: z.record(z.any()),
-      time_progression: z.record(z.any()).optional(),
-      reputation_system: z.record(z.any()).optional(),
-      access_tier_system: z.record(z.any()).optional(),
-      artist_stats: z.record(z.any()).optional(),
-      market_formulas: z.record(z.any()).optional(),
-      side_events: z.record(z.any()).optional(),
-      progression_thresholds: z.record(z.any()).optional(),
-      quality_system: z.record(z.any()).optional(),
-      ui_constants: z.record(z.any()).optional(),
-      save_system: z.record(z.any()).optional(),
-      difficulty_modifiers: z.record(z.any()).optional()
-    }).passthrough(); // Allow extra fields
-
     try {
+      // Import the TypeScript balance module
+      const balanceModule = await import('../../data/balance');
+      const data = balanceModule.default;
+      
+      // Use a more lenient validation that matches the actual structure
+      const schema = z.object({
+        version: z.string(),
+        generated: z.string(),
+        description: z.string().optional(),
+        economy: z.record(z.any()),
+        time_progression: z.record(z.any()).optional(),
+        reputation_system: z.record(z.any()).optional(),
+        access_tier_system: z.record(z.any()).optional(),
+        artist_stats: z.record(z.any()).optional(),
+        market_formulas: z.record(z.any()).optional(),
+        side_events: z.record(z.any()).optional(),
+        progression_thresholds: z.record(z.any()).optional(),
+        quality_system: z.record(z.any()).optional(),
+        ui_constants: z.record(z.any()).optional(),
+        save_system: z.record(z.any()).optional(),
+        difficulty_modifiers: z.record(z.any()).optional()
+      }).passthrough(); // Allow extra fields
+
       return data as BalanceConfig;
     } catch (error) {
-      console.error('Balance data validation error:', error);
-      console.log('First few keys of actual data:', Object.keys(data).slice(0, 10));
+      console.error('Balance data loading error:', error);
       throw error;
     }
   }

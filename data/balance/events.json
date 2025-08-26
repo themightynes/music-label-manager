@@ -1,0 +1,17 @@
+{
+  "side_events": {
+    "monthly_chance": 0.20,
+    "max_events_per_month": 1,
+    "event_cooldown": 2,
+    
+    "event_weights": {
+      "sync_licensing": 0.15,
+      "copyright_issues": 0.10,
+      "platform_opportunities": 0.20,
+      "industry_drama": 0.15,
+      "technical_problems": 0.10,
+      "business_opportunities": 0.15,
+      "artist_personal": 0.15
+    }
+  }
+}

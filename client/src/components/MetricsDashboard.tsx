@@ -1,4 +1,5 @@
 import { useGameStore } from '@/store/gameStore';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export function MetricsDashboard() {
   const { gameState } = useGameStore();
@@ -63,7 +64,8 @@ export function MetricsDashboard() {
       streams: stats.streams || 0,
       pressMentions: stats.pressMentions || 0,
       revenue: stats.revenue || 0,
-      expenses: stats.expenses || 3000
+      expenses: stats.expenses || 0,
+      expenseBreakdown: stats.expenseBreakdown || null
     };
   };
 
@@ -71,9 +73,55 @@ export function MetricsDashboard() {
   const netProfitLoss = stats.revenue - stats.expenses;
   const reputationChange = getReputationChange();
 
+  const renderExpenseBreakdown = () => {
+    if (!stats.expenseBreakdown) {
+      return <div className="text-xs text-slate-500">No expense breakdown available</div>;
+    }
+
+    const breakdown = stats.expenseBreakdown;
+    const total = breakdown.monthlyOperations + breakdown.artistSalaries + breakdown.projectCosts + breakdown.marketingCosts + breakdown.roleMeetingCosts;
+
+    return (
+      <div className="space-y-2 text-xs">
+        <div className="font-semibold text-slate-700 mb-2">Expense Breakdown (${total.toLocaleString()})</div>
+        {breakdown.monthlyOperations > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Monthly Operations:</span>
+            <span className="font-medium">${breakdown.monthlyOperations.toLocaleString()}</span>
+          </div>
+        )}
+        {breakdown.artistSalaries > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Artist Salaries:</span>
+            <span className="font-medium">${breakdown.artistSalaries.toLocaleString()}</span>
+          </div>
+        )}
+        {breakdown.projectCosts > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Project Costs:</span>
+            <span className="font-medium">${breakdown.projectCosts.toLocaleString()}</span>
+          </div>
+        )}
+        {breakdown.marketingCosts > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Marketing Costs:</span>
+            <span className="font-medium">${breakdown.marketingCosts.toLocaleString()}</span>
+          </div>
+        )}
+        {breakdown.roleMeetingCosts > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Role Meeting Costs:</span>
+            <span className="font-medium">${breakdown.roleMeetingCosts.toLocaleString()}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 rounded-2xl shadow-lg border-2 border-slate-200/50 p-4 md:p-6 mb-6">
+    <TooltipProvider>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 rounded-2xl shadow-lg border-2 border-slate-200/50 p-4 md:p-6 mb-6">
         
         {/* Desktop Layout */}
         <div className="hidden lg:block">
@@ -130,8 +178,17 @@ export function MetricsDashboard() {
                   <div className="text-xs text-slate-500">earned</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-red-600">${stats.expenses.toLocaleString()}</div>
-                  <div className="text-xs text-slate-500">spent</div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="cursor-help">
+                        <div className="text-lg font-bold text-red-600">${stats.expenses.toLocaleString()}</div>
+                        <div className="text-xs text-slate-500">spent</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      {renderExpenseBreakdown()}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="text-center">
                   <div className={`text-lg font-bold ${netProfitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -220,8 +277,17 @@ export function MetricsDashboard() {
                   <div className="text-xs text-slate-500">earned</div>
                 </div>
                 <div className="text-center p-2 bg-red-50 rounded">
-                  <div className="text-base font-bold text-red-600">${stats.expenses.toLocaleString()}</div>
-                  <div className="text-xs text-slate-500">spent</div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="cursor-help">
+                        <div className="text-base font-bold text-red-600">${stats.expenses.toLocaleString()}</div>
+                        <div className="text-xs text-slate-500">spent</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      {renderExpenseBreakdown()}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="text-center p-2 bg-slate-50 rounded">
                   <div className={`text-base font-bold ${netProfitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -316,7 +382,14 @@ export function MetricsDashboard() {
                   <div className="text-slate-500">revenue</div>
                 </div>
                 <div>
-                  <span className="text-red-600 font-medium">${stats.expenses.toLocaleString()}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-red-600 font-medium cursor-help">${stats.expenses.toLocaleString()}</span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      {renderExpenseBreakdown()}
+                    </TooltipContent>
+                  </Tooltip>
                   <div className="text-slate-500">expenses</div>
                 </div>
                 <div>
@@ -350,7 +423,8 @@ export function MetricsDashboard() {
           </div>
         </div>
 
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

@@ -1,0 +1,120 @@
+{
+  "reputation_system": {
+    "starting_reputation": 5,
+    "max_reputation": 100,
+    "goal_failure_penalty": 2,
+    "hit_single_bonus": 5,
+    "number_one_bonus": 10,
+    "flop_penalty": 3,
+    
+    "regional_barriers": {
+      "domestic": 0,
+      "neighboring": 15,
+      "international": 35,
+      "global": 60
+    },
+    
+    "decay_rate": 0.1
+  },
+  
+  "access_tier_system": {
+    "playlist_access": {
+      "none": {
+        "threshold": 0,
+        "reach_multiplier": 0.1,
+        "cost_modifier": 1.0
+      },
+      "niche": {
+        "threshold": 10,
+        "reach_multiplier": 0.4,
+        "cost_modifier": 1.2
+      },
+      "mid": {
+        "threshold": 30,
+        "reach_multiplier": 0.8,
+        "cost_modifier": 1.5
+      },
+      "flagship": {
+        "threshold": 60,
+        "reach_multiplier": 1.5,
+        "cost_modifier": 2.0
+      }
+    },
+    
+    "press_access": {
+      "none": {
+        "threshold": 0,
+        "pickup_chance": 0.05,
+        "sentiment_modifier": 0.8
+      },
+      "blogs": {
+        "threshold": 8,
+        "pickup_chance": 0.25,
+        "sentiment_modifier": 1.0
+      },
+      "mid_tier": {
+        "threshold": 25,
+        "pickup_chance": 0.60,
+        "sentiment_modifier": 1.2
+      },
+      "national": {
+        "threshold": 50,
+        "pickup_chance": 0.85,
+        "sentiment_modifier": 1.5
+      }
+    },
+    
+    "venue_access": {
+      "none": {
+        "threshold": 0,
+        "capacity_range": [0, 50],
+        "guarantee_multiplier": 0.3
+      },
+      "clubs": {
+        "threshold": 5,
+        "capacity_range": [50, 500],
+        "guarantee_multiplier": 0.7
+      },
+      "theaters": {
+        "threshold": 20,
+        "capacity_range": [500, 2000],
+        "guarantee_multiplier": 1.0
+      },
+      "arenas": {
+        "threshold": 45,
+        "capacity_range": [2000, 20000],
+        "guarantee_multiplier": 1.5
+      }
+    }
+  },
+  
+  "progression_thresholds": {
+    "second_artist_reputation": 10,
+    "fourth_focus_slot_reputation": 18,
+    "playlist_niche_streams": 100000,
+    "press_blogs_pickups": 2,
+    "venue_clubs_sellouts": 2,
+    "global_label_reputation": 75
+  },
+  
+  "difficulty_modifiers": {
+    "easy": {
+      "starting_money_multiplier": 1.5,
+      "goal_time_extension": 1.5,
+      "reputation_decay": 0.5,
+      "market_variance": 0.8
+    },
+    "normal": {
+      "starting_money_multiplier": 1.0,
+      "goal_time_extension": 1.0,
+      "reputation_decay": 1.0,
+      "market_variance": 1.0
+    },
+    "hard": {
+      "starting_money_multiplier": 0.7,
+      "goal_time_extension": 0.8,
+      "reputation_decay": 1.5,
+      "market_variance": 1.3
+    }
+  }
+}

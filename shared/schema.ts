@@ -33,6 +33,7 @@ export const artists = pgTable("artists", {
   popularity: integer("popularity").default(0),
   signedMonth: integer("signed_month"),
   isSigned: boolean("is_signed").default(false),
+  monthlyFee: integer("monthly_fee").default(1200), // Ongoing monthly cost for this artist
   gameId: uuid("game_id"),
 });
 

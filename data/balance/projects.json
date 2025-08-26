@@ -1,0 +1,24 @@
+{
+  "time_progression": {
+    "campaign_length_months": 12,
+    "focus_slots_base": 3,
+    "focus_slots_unlock_threshold": 18,
+    "focus_slots_max": 4,
+    
+    "project_durations": {
+      "single_recording": [2, 4],
+      "ep_recording": [4, 8], 
+      "mini_tour": [2, 6],
+      "pr_campaign": [1, 3],
+      "digital_campaign": [1, 4]
+    }
+  },
+  
+  "save_system": {
+    "max_save_slots": 3,
+    "autosave_frequency": "monthly",
+    "export_format_version": "1.0",
+    "compression_enabled": true,
+    "validation_strict": true
+  }
+}

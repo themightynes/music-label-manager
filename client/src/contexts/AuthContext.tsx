@@ -39,7 +39,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     queryKey: ['auth', 'me'],
     queryFn: async () => {
       try {
-        const response = await apiRequest('GET', '/api/auth/me');
+        const response = await apiRequest('GET', '/api/auth/me', undefined, { silent401: true });
         return response.json();
       } catch (error) {
         // User not authenticated - this is expected behavior
