@@ -18,6 +18,26 @@ export class FinancialSystem {
   private gameData: any;
   private rng: () => number;
   
+  // Critical constants extracted for easier balance tweaking
+  private readonly CONSTANTS = {
+    DEFAULT_PLAYLIST_MULTIPLIER: 0.1,
+    DEFAULT_VENUE_CAPACITY: 100,
+    PLAYLIST_COMPONENT_SCALE: 100,
+    MARKETING_SCALE: {
+      DIVISOR: 1000,
+      MULTIPLIER: 50
+    },
+    VARIANCE_RANGE: {
+      MIN: 0.9,
+      MAX: 1.1
+    },
+    REPUTATION_BASELINE: 50,
+    DEFAULT_ARTIST_FEE: 1200,
+    DEFAULT_PRESS_CHANCE: 0.05,
+    REPUTATION_GAIN_MULTIPLIER: 2,
+    ROUNDING_FACTOR: 100
+  };
+  
   constructor(gameData: any, rng: () => number) {
     this.gameData = gameData;
     this.rng = rng;
@@ -40,11 +60,11 @@ export class FinancialSystem {
     
     if (type === 'playlist') {
       const tierData = tiers.playlist_access as any;
-      return tierData[tier]?.reach_multiplier || 0.1;
+      return tierData[tier]?.reach_multiplier || this.CONSTANTS.DEFAULT_PLAYLIST_MULTIPLIER;
     }
     
     // Default fallback
-    return 0.1;
+    return this.CONSTANTS.DEFAULT_PLAYLIST_MULTIPLIER;
   }
 
   /**
@@ -59,7 +79,7 @@ export class FinancialSystem {
       const [min, max] = venueConfig.capacity_range;
       return Math.round(this.getRandom(min, max));
     }
-    return 100;
+    return this.CONSTANTS.DEFAULT_VENUE_CAPACITY;
   }
 
   /**
@@ -73,7 +93,7 @@ export class FinancialSystem {
     adSpend: number
   ): number {
     const config = this.gameData.getStreamingConfigSync();
-    console.log(`[DEBUG] Streaming config loaded:`, {
+    // console.log(`[DEBUG] Streaming config loaded:`, {
       hasConfig: !!config,
       quality_weight: config?.quality_weight,
       playlist_weight: config?.playlist_weight,
@@ -83,16 +103,16 @@ export class FinancialSystem {
     
     // Get playlist multiplier from real access tiers
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
-    console.log(`[DEBUG] Access multiplier for ${playlistAccess}:`, playlistMultiplier);
+    // console.log(`[DEBUG] Access multiplier for ${playlistAccess}:`, playlistMultiplier);
     
     // Calculate base streams using proper formula
     const baseStreams = 
       (quality * config.quality_weight) +
-      (playlistMultiplier * config.playlist_weight * 100) +
+      (playlistMultiplier * config.playlist_weight * this.CONSTANTS.PLAYLIST_COMPONENT_SCALE) +
       (reputation * config.reputation_weight) +
-      (Math.sqrt(adSpend / 1000) * config.marketing_weight * 50);
+      (Math.sqrt(adSpend / this.CONSTANTS.MARKETING_SCALE.DIVISOR) * config.marketing_weight * this.CONSTANTS.MARKETING_SCALE.MULTIPLIER);
     
-    console.log(`[DEBUG] Stream calculation components:`, {
+    // console.log(`[DEBUG] Stream calculation components:`, {
       quality: quality,
       qualityComponent: quality * config.quality_weight,
       playlistComponent: playlistMultiplier * config.playlist_weight * 100,
@@ -102,12 +122,12 @@ export class FinancialSystem {
     });
     
     // Apply RNG variance from balance config
-    const variance = this.getRandom(0.9, 1.1);
+    const variance = this.getRandom(this.CONSTANTS.VARIANCE_RANGE.MIN, this.CONSTANTS.VARIANCE_RANGE.MAX);
     
     // Apply first week multiplier
     const streams = baseStreams * variance * config.first_week_multiplier * config.base_streams_per_point;
     
-    console.log(`[DEBUG] Final stream calculation:`, {
+    // console.log(`[DEBUG] Final stream calculation:`, {
       baseStreams,
       variance,
       firstWeekMultiplier: config.first_week_multiplier,
@@ -149,34 +169,24 @@ export class FinancialSystem {
   }
 
   /**
-   * Calculates ongoing revenue for a released project using streaming decay formula
-   * Originally from game-engine.ts line 1742-1812
+   * Common decay calculation logic for both projects and individual songs
+   * Extracted to eliminate duplication between calculateOngoingRevenue and calculateOngoingSongRevenue
    */
-  calculateOngoingRevenue(
-    project: any, 
-    currentMonth: number, 
-    reputation: number, 
-    playlistAccess: string
+  private calculateDecayRevenue(
+    initialStreams: number,
+    monthsSinceRelease: number,
+    reputation: number,
+    playlistAccess: string,
+    entityName: string = 'entity'
   ): number {
-    const metadata = project.metadata || {};
-    const initialStreams = metadata.streams || 0;
-    const releaseMonth = metadata.releaseMonth || 1;
-    const monthsSinceRelease = currentMonth - releaseMonth;
-    
-    console.log(`[REVENUE CALC] === Calculating for ${project.title} ===`);
-    console.log(`[REVENUE CALC] Initial streams: ${initialStreams}`);
-    console.log(`[REVENUE CALC] Release month: ${releaseMonth}`);
-    console.log(`[REVENUE CALC] Current month: ${currentMonth}`);
-    console.log(`[REVENUE CALC] Months since release: ${monthsSinceRelease}`);
-    
     // No revenue if just released this month or no initial streams
     if (monthsSinceRelease <= 0) {
-      console.log(`[REVENUE CALC] No revenue - just released or future release (monthsSinceRelease: ${monthsSinceRelease})`);
+      // console.log(`[DECAY CALC] No revenue for ${entityName} - just released or future release`);
       return 0;
     }
     
     if (initialStreams === 0) {
-      console.log(`[REVENUE CALC] No revenue - no initial streams`);
+      // console.log(`[DECAY CALC] No revenue for ${entityName} - no initial streams`);
       return 0;
     }
     
@@ -194,37 +204,65 @@ export class FinancialSystem {
     
     // Stop generating revenue after max decay period
     if (monthsSinceRelease > maxDecayMonths) {
-      console.log(`[REVENUE CALC] Project too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
+      // console.log(`[DECAY CALC] ${entityName} too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
       return 0;
     }
     
     // Decay formula: starts high, gradually decreases
     const baseDecay = Math.pow(decayRate, monthsSinceRelease);
-    console.log(`[REVENUE CALC] Decay rate: ${decayRate}, Base decay: ${baseDecay.toFixed(4)}`);
+    // console.log(`[DECAY CALC] Decay rate: ${decayRate}, Base decay: ${baseDecay.toFixed(4)}`);
     
     // Apply current reputation and access tier bonuses
-    const reputationBonus = 1 + (reputation - 50) * reputationBonusFactor;
+    const reputationBonus = 1 + (reputation - this.CONSTANTS.REPUTATION_BASELINE) * reputationBonusFactor;
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
     const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
-    console.log(`[REVENUE CALC] Reputation: ${reputation}, Reputation bonus: ${reputationBonus.toFixed(4)}`);
-    console.log(`[REVENUE CALC] Playlist access: ${playlistAccess}, Multiplier: ${playlistMultiplier}, Access bonus: ${accessBonus.toFixed(4)}`);
     
     // Calculate monthly streams with decay
     const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
-    console.log(`[REVENUE CALC] Monthly streams calculation: ${initialStreams} * ${baseDecay.toFixed(4)} * ${reputationBonus.toFixed(4)} * ${accessBonus.toFixed(4)} * ${ongoingFactor} = ${monthlyStreams.toFixed(2)}`);
+    // console.log(`[DECAY CALC] Monthly streams for ${entityName}: ${monthlyStreams.toFixed(2)}`);
     
     // Convert to revenue
     const revenue = Math.max(0, Math.round(monthlyStreams * revenuePerStream));
-    console.log(`[REVENUE CALC] Revenue calculation: ${monthlyStreams.toFixed(2)} streams * $${revenuePerStream} = $${revenue}`);
     
     // Apply minimum threshold
     if (revenue < minimumThreshold) {
-      console.log(`[REVENUE CALC] Revenue below threshold ($${revenue} < $${minimumThreshold}), returning $0`);
+      // console.log(`[DECAY CALC] Revenue below threshold for ${entityName} ($${revenue} < $${minimumThreshold}), returning $0`);
       return 0;
     }
     
-    console.log(`[REVENUE CALC] Final revenue: $${revenue}`);
+    // console.log(`[DECAY CALC] Final revenue for ${entityName}: $${revenue}`);
     return revenue;
+  }
+
+  /**
+   * Calculates ongoing revenue for a released project using streaming decay formula
+   * Originally from game-engine.ts line 1742-1812
+   */
+  calculateOngoingRevenue(
+    project: any, 
+    currentMonth: number, 
+    reputation: number, 
+    playlistAccess: string
+  ): number {
+    const metadata = project.metadata || {};
+    const initialStreams = metadata.streams || 0;
+    const releaseMonth = metadata.releaseMonth || 1;
+    const monthsSinceRelease = currentMonth - releaseMonth;
+    
+    // console.log(`[REVENUE CALC] === Calculating for ${project.title} ===`);
+    // console.log(`[REVENUE CALC] Initial streams: ${initialStreams}`);
+    // console.log(`[REVENUE CALC] Release month: ${releaseMonth}`);
+    // console.log(`[REVENUE CALC] Current month: ${currentMonth}`);
+    // console.log(`[REVENUE CALC] Months since release: ${monthsSinceRelease}`);
+    
+    // Use common decay calculation logic
+    return this.calculateDecayRevenue(
+      initialStreams,
+      monthsSinceRelease,
+      reputation,
+      playlistAccess,
+      project.title || 'project'
+    );
   }
 
   /**
@@ -241,65 +279,19 @@ export class FinancialSystem {
     const monthsSinceRelease = currentMonth - releaseMonth;
     const initialStreams = song.initialStreams || 0;
     
-    console.log(`[SONG REVENUE CALC] === Calculating for "${song.title}" ===`);
-    console.log(`[SONG REVENUE CALC] Quality: ${song.quality}, Initial streams: ${initialStreams}`);
-    console.log(`[SONG REVENUE CALC] Release month: ${releaseMonth}, Current month: ${currentMonth}`);
-    console.log(`[SONG REVENUE CALC] Months since release: ${monthsSinceRelease}`);
+    // console.log(`[SONG REVENUE CALC] === Calculating for "${song.title}" ===`);
+    // console.log(`[SONG REVENUE CALC] Quality: ${song.quality}, Initial streams: ${initialStreams}`);
+    // console.log(`[SONG REVENUE CALC] Release month: ${releaseMonth}, Current month: ${currentMonth}`);
+    // console.log(`[SONG REVENUE CALC] Months since release: ${monthsSinceRelease}`);
     
-    // No revenue if just released this month or no initial streams
-    if (monthsSinceRelease <= 0) {
-      console.log(`[SONG REVENUE CALC] No revenue - just released or future release`);
-      return 0;
-    }
-    
-    if (initialStreams === 0) {
-      console.log(`[SONG REVENUE CALC] No revenue - no initial streams`);
-      return 0;
-    }
-    
-    // Get streaming decay configuration from balance.json
-    const streamingConfig = this.gameData.getStreamingConfigSync();
-    const ongoingConfig = streamingConfig.ongoing_streams;
-    
-    const decayRate = ongoingConfig.monthly_decay_rate;
-    const maxDecayMonths = ongoingConfig.max_decay_months;
-    const revenuePerStream = ongoingConfig.revenue_per_stream;
-    const ongoingFactor = ongoingConfig.ongoing_factor;
-    const reputationBonusFactor = ongoingConfig.reputation_bonus_factor;
-    const accessTierBonusFactor = ongoingConfig.access_tier_bonus_factor;
-    const minimumThreshold = ongoingConfig.minimum_revenue_threshold;
-    
-    // Stop generating revenue after max decay period
-    if (monthsSinceRelease > maxDecayMonths) {
-      console.log(`[SONG REVENUE CALC] Song too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
-      return 0;
-    }
-    
-    // Individual song decay formula
-    const baseDecay = Math.pow(decayRate, monthsSinceRelease);
-    console.log(`[SONG REVENUE CALC] Base decay: ${baseDecay.toFixed(4)}`);
-    
-    // Apply current reputation and access tier bonuses
-    const reputationBonus = 1 + (reputation - 50) * reputationBonusFactor;
-    const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
-    const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
-    
-    // Calculate monthly streams for this individual song
-    const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
-    console.log(`[SONG REVENUE CALC] Monthly streams: ${initialStreams} * ${baseDecay.toFixed(4)} * ${reputationBonus.toFixed(4)} * ${accessBonus.toFixed(4)} * ${ongoingFactor} = ${monthlyStreams.toFixed(2)}`);
-    
-    // Convert to revenue
-    const revenue = Math.max(0, Math.round(monthlyStreams * revenuePerStream));
-    console.log(`[SONG REVENUE CALC] Revenue: ${monthlyStreams.toFixed(2)} streams * $${revenuePerStream} = $${revenue}`);
-    
-    // Apply minimum threshold
-    if (revenue < minimumThreshold) {
-      console.log(`[SONG REVENUE CALC] Revenue below threshold ($${revenue} < $${minimumThreshold}), returning $0`);
-      return 0;
-    }
-    
-    console.log(`[SONG REVENUE CALC] Final revenue for "${song.title}": $${revenue}`);
-    return revenue;
+    // Use common decay calculation logic
+    return this.calculateDecayRevenue(
+      initialStreams,
+      monthsSinceRelease,
+      reputation,
+      playlistAccess,
+      `"${song.title}"`
+    );
   }
 
   /**
@@ -320,9 +312,21 @@ export class FinancialSystem {
       return 0;
     }
     
+    // Validate input parameters
+    if (budgetPerSong < 0 || songCount <= 0) {
+      // console.warn(`[BUDGET CALC] Invalid parameters: budgetPerSong=${budgetPerSong}, songCount=${songCount}`);
+      return 0;
+    }
+    
     // Calculate minimum viable per-song cost for this configuration
     const minTotalCost = this.calculateEnhancedProjectCost(projectType, producerTier, timeInvestment, 30, songCount);
     const minPerSongCost = minTotalCost / songCount;
+    
+    // Safety check for division by zero
+    if (minPerSongCost <= 0) {
+      // console.warn(`[BUDGET CALC] Minimum per-song cost is zero or negative: ${minPerSongCost}`);
+      return 0;
+    }
     
     // Calculate budget ratio relative to minimum viable per-song cost
     const budgetRatio = budgetPerSong / minPerSongCost;
@@ -354,7 +358,7 @@ export class FinancialSystem {
       budgetBonus = maxBonus + diminishingBonus;
     }
     
-    console.log(`[BUDGET CALC] Per-song budget quality bonus calculation:`, {
+    // console.log(`[BUDGET CALC] Per-song budget quality bonus calculation:`, {
       budgetPerSong: budgetPerSong.toFixed(0),
       minPerSongCost: minPerSongCost.toFixed(0),
       songCount,
@@ -365,7 +369,7 @@ export class FinancialSystem {
       timeInvestment
     });
     
-    return Math.round(budgetBonus * 100) / 100; // Round to 2 decimal places
+    return Math.round(budgetBonus * this.CONSTANTS.ROUNDING_FACTOR) / this.CONSTANTS.ROUNDING_FACTOR; // Round to 2 decimal places
   }
 
   /**
@@ -390,7 +394,7 @@ export class FinancialSystem {
     // Ensure it doesn't go below minimum
     const finalImpact = Math.max(minMultiplier, qualityImpact);
     
-    console.log(`[SONG COUNT IMPACT] Quality impact calculation:`, {
+    // console.log(`[SONG COUNT IMPACT] Quality impact calculation:`, {
       songCount,
       baseQualityPerSong,
       qualityImpact: qualityImpact.toFixed(3),
@@ -447,7 +451,7 @@ export class FinancialSystem {
     
     const finalCost = Math.floor(totalBaseCost * producerMultiplier * timeMultiplier);
     
-    console.log(`[COST CALC] Enhanced project cost for ${projectType}:`, {
+    // console.log(`[COST CALC] Enhanced project cost for ${projectType}:`, {
       projectType,
       actualSongCount,
       totalBaseCost,
@@ -494,7 +498,7 @@ export class FinancialSystem {
       totalCost
     };
     
-    console.log('[PER-SONG COST CALC]', breakdown);
+    // console.log('[PER-SONG COST CALC]', breakdown);
     
     return { baseCost, totalCost, breakdown };
   }
@@ -525,12 +529,11 @@ export class FinancialSystem {
   /**
    * Calculates monthly burn with detailed breakdown
    * Originally from game-engine.ts line 572-617
-   * Note: This requires storage access, so it needs GameEngine context
-   * TODO: Refactor to accept artist data as parameter instead of fetching
+   * Now accepts optional artist data to maintain pure function principle
    */
   async calculateMonthlyBurnWithBreakdown(
     gameStateId: string,
-    storage?: any
+    storageOrArtistData?: any
   ): Promise<{
     total: number;
     baseBurn: number;
@@ -544,30 +547,50 @@ export class FinancialSystem {
     let artistCosts = 0;
     let artistDetails: Array<{name: string, monthlyFee: number}> = [];
     
-    try {
-      if (storage && storage.getArtistsByGame) {
-        const signedArtists = await storage.getArtistsByGame(gameStateId);
-        artistDetails = signedArtists.map((artist: any) => ({
-          name: artist.name,
-          monthlyFee: artist.monthlyFee || 1200
-        }));
-        
-        artistCosts = artistDetails.reduce((sum, artist) => sum + artist.monthlyFee, 0);
-        
-        console.log(`[ARTIST COSTS BREAKDOWN] Base operations: $${baseBurn}`);
-        console.log(`[ARTIST COSTS BREAKDOWN] Artist details:`, artistDetails);
-        console.log(`[ARTIST COSTS BREAKDOWN] Total artist costs: $${artistCosts}`);
-        console.log(`[ARTIST COSTS BREAKDOWN] Total monthly burn: $${baseBurn + artistCosts}`);
-      } else {
-        throw new Error('Storage not available for database operations');
+    // Check if we received artist data directly (preferred) or need to fetch from storage
+    if (Array.isArray(storageOrArtistData)) {
+      // Artist data was passed directly - use it
+      artistDetails = storageOrArtistData.map((artist: any) => ({
+        name: artist.name,
+        monthlyFee: artist.monthlyFee || 1200
+      }));
+      
+      artistCosts = artistDetails.reduce((sum, artist) => sum + artist.monthlyFee, 0);
+      
+      // console.log(`[ARTIST COSTS BREAKDOWN] Base operations: $${baseBurn}`);
+      // console.log(`[ARTIST COSTS BREAKDOWN] Artist details:`, artistDetails);
+      // console.log(`[ARTIST COSTS BREAKDOWN] Total artist costs: $${artistCosts}`);
+      // console.log(`[ARTIST COSTS BREAKDOWN] Total monthly burn: $${baseBurn + artistCosts}`);
+    } else {
+      // Legacy path: storageOrArtistData is a storage object
+      try {
+        if (storageOrArtistData && storageOrArtistData.getArtistsByGame) {
+          const signedArtists = await storageOrArtistData.getArtistsByGame(gameStateId);
+          artistDetails = signedArtists.map((artist: any) => ({
+            name: artist.name,
+            monthlyFee: artist.monthlyFee || this.CONSTANTS.DEFAULT_ARTIST_FEE
+          }));
+          
+          artistCosts = artistDetails.reduce((sum, artist) => sum + artist.monthlyFee, 0);
+          
+          // console.log(`[ARTIST COSTS BREAKDOWN] Base operations: $${baseBurn}`);
+          // console.log(`[ARTIST COSTS BREAKDOWN] Artist details:`, artistDetails);
+          // console.log(`[ARTIST COSTS BREAKDOWN] Total artist costs: $${artistCosts}`);
+          // console.log(`[ARTIST COSTS BREAKDOWN] Total monthly burn: $${baseBurn + artistCosts}`);
+        } else {
+          // No storage or artist data available - use fallback
+          // console.warn('[ARTIST COSTS] No artist data or storage provided, using default estimation');
+          const estimatedArtists = 1;
+          artistCosts = estimatedArtists * this.CONSTANTS.DEFAULT_ARTIST_FEE; // Use average cost as fallback
+          artistDetails = [{name: 'Estimated Artists', monthlyFee: artistCosts}];
+        }
+      } catch (error) {
+        // console.error('[ARTIST COSTS] Error fetching signed artists, using fallback calculation:', error);
+        // Fallback estimation if database query fails
+        const estimatedArtists = 1;
+        artistCosts = estimatedArtists * 1200; // Use average cost as fallback
+        artistDetails = [{name: 'Estimated Artists', monthlyFee: artistCosts}];
       }
-    } catch (error) {
-      console.error('[ARTIST COSTS] Error fetching signed artists, using fallback calculation:', error);
-      // Fallback to flag-based estimation if database query fails
-      // TODO: Pass flags as parameter instead
-      const estimatedArtists = 1;
-      artistCosts = estimatedArtists * 1200; // Use average cost as fallback
-      artistDetails = [{name: 'Estimated Artists', monthlyFee: artistCosts}];
     }
     
     return {
@@ -668,5 +691,168 @@ export class FinancialSystem {
     parts.push(`= $${f.endingBalance.toLocaleString()}`);
     
     return parts.join(' ');
+  }
+
+  /**
+   * Calculates press coverage for a release
+   * Originally from game-engine.ts line 381-410
+   */
+  calculatePressPickups(
+    pressAccess: string,
+    prSpend: number,
+    reputation: number,
+    hasStoryFlag: boolean,
+    getRandomFn: () => number,
+    getAccessChanceFn: (type: string, tier: string) => number
+  ): number {
+    const config = this.gameData.getPressConfigSync();
+    
+    // Get base chance from access tier
+    const accessChance = getAccessChanceFn('press', pressAccess);
+    
+    // Calculate pickup chance
+    let chance = config.base_chance + accessChance;
+    chance += (prSpend * config.pr_spend_modifier);
+    chance += (reputation * config.reputation_modifier);
+    
+    if (hasStoryFlag) {
+      chance += config.story_flag_bonus;
+    }
+    
+    // Roll for each potential pickup
+    let pickups = 0;
+    for (let i = 0; i < config.max_pickups_per_release; i++) {
+      if (getRandomFn() < chance) {
+        pickups++;
+      }
+    }
+    
+    return pickups;
+  }
+
+  /**
+   * Calculates press coverage outcome including pickups and reputation gain
+   * Originally from game-engine.ts line 415-430
+   */
+  calculatePressOutcome(
+    quality: number,
+    pressAccess: string,
+    reputation: number,
+    marketingBudget: number,
+    getRandomFn: () => number,
+    getAccessChanceFn: (type: string, tier: string) => number
+  ): { pickups: number; reputationGain: number } {
+    const pickups = this.calculatePressPickups(
+      pressAccess, 
+      marketingBudget, 
+      reputation, 
+      false,
+      getRandomFn,
+      getAccessChanceFn
+    );
+    
+    // Calculate reputation gain based on pickups and quality
+    const reputationGain = pickups > 0 ? Math.floor(pickups * (quality / 100) * this.CONSTANTS.REPUTATION_GAIN_MULTIPLIER) : 0;
+    
+    return {
+      pickups,
+      reputationGain
+    };
+  }
+
+  /**
+   * Helper to get access tier chances
+   * Originally from game-engine.ts line 460-470
+   */
+  getAccessChance(type: string, tier: string): number {
+    const tiers = this.gameData.getAccessTiersSync();
+    
+    if (type === 'press') {
+      const tierData = tiers.press_access as any;
+      return tierData[tier]?.pickup_chance || this.CONSTANTS.DEFAULT_PRESS_CHANCE;
+    }
+    
+    // Default fallback
+    return this.CONSTANTS.DEFAULT_PRESS_CHANCE;
+  }
+
+  /**
+   * Generates economic insight summary for song creation
+   * Originally from game-engine.ts line 1488-1519
+   */
+  static generateSongEconomicInsight(song: any, project: any): string {
+    const metadata = song.metadata || {};
+    const qualityCalc = metadata.qualityCalculation || {};
+    
+    let insight = `Quality: ${song.quality}/100`;
+    
+    // Add producer tier insight
+    if (song.producerTier && song.producerTier !== 'local') {
+      insight += ` (${song.producerTier} producer`;
+      if (qualityCalc.producerBonus > 0) {
+        insight += ` +${qualityCalc.producerBonus}`;
+      }
+      insight += ')';
+    }
+    
+    // Add budget efficiency insight
+    if (metadata.perSongBudget > 0) {
+      const efficiency = parseFloat(metadata.economicEfficiency) || 0;
+      insight += `, $${metadata.perSongBudget.toLocaleString()}/song`;
+      if (efficiency > 0) {
+        insight += ` (${efficiency} quality/$1k)`;
+      }
+    }
+    
+    // Add multi-song impact insight
+    if (metadata.songCountQualityImpact && metadata.songCountQualityImpact !== 1.0) {
+      const impactPercent = (metadata.songCountQualityImpact - 1.0) * 100;
+      insight += `, Multi-song: ${impactPercent > 0 ? '+' : ''}${impactPercent.toFixed(1)}%`;
+    }
+    
+    return insight;
+  }
+  
+  /**
+   * Generates economic summary for project completion
+   * Originally from game-engine.ts line 1524-1560
+   */
+  static generateProjectCompletionSummary(project: any): string {
+    const metadata = project.metadata || {};
+    const economicDecisions = metadata.economicDecisions || {};
+    
+    let summary = `Total investment: $${(project.budget || 0).toLocaleString()}`;
+    
+    if (project.songCount > 1) {
+      const perSongCost = Math.round((project.budget || 0) / project.songCount);
+      summary += ` ($${perSongCost.toLocaleString()}/song)`;
+    }
+    
+    // Add producer tier insight
+    if (project.producerTier && project.producerTier !== 'local') {
+      summary += `, ${project.producerTier} producer`;
+    }
+    
+    // Add time investment insight
+    if (project.timeInvestment && project.timeInvestment !== 'standard') {
+      summary += `, ${project.timeInvestment} timeline`;
+    }
+    
+    // Add expected quality range if available
+    if (economicDecisions.expectedQuality) {
+      summary += `, Target quality: ${economicDecisions.expectedQuality.toFixed(1)}/100`;
+    }
+    
+    // Add budget efficiency insight
+    if (economicDecisions.budgetRatio) {
+      const ratio = economicDecisions.budgetRatio;
+      if (ratio > 1.5) {
+        summary += `, Premium budget (${ratio.toFixed(1)}x minimum)`;
+      } else if (ratio < 1.0) {
+        summary += `, Tight budget (${ratio.toFixed(1)}x minimum)`;
+      }
+    }
+    
+    return summary;
   }
 }

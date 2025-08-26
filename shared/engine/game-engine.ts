@@ -378,55 +378,41 @@ export class GameEngine {
   /**
    * Calculates press coverage for a release
    */
+  // DELEGATED TO FinancialSystem
   calculatePressPickups(
     pressAccess: string,
     prSpend: number,
     reputation: number,
     hasStoryFlag: boolean
   ): number {
-    const config = this.gameData.getPressConfigSync();
-    
-    // Get base chance from access tier
-    const accessChance = this.getAccessChance('press', pressAccess);
-    
-    // Calculate pickup chance
-    let chance = config.base_chance + accessChance;
-    chance += (prSpend * config.pr_spend_modifier);
-    chance += (reputation * config.reputation_modifier);
-    
-    if (hasStoryFlag) {
-      chance += config.story_flag_bonus;
-    }
-    
-    // Roll for each potential pickup
-    let pickups = 0;
-    for (let i = 0; i < config.max_pickups_per_release; i++) {
-      if (this.getRandom(0, 1) < chance) {
-        pickups++;
-      }
-    }
-    
-    return pickups;
+    return this.financialSystem.calculatePressPickups(
+      pressAccess,
+      prSpend,
+      reputation,
+      hasStoryFlag,
+      () => this.getRandom(0, 1),
+      this.getAccessChance.bind(this)
+    );
   }
 
   /**
    * Calculates press coverage outcome including pickups and reputation gain
    */
+  // DELEGATED TO FinancialSystem
   calculatePressOutcome(
     quality: number,
     pressAccess: string,
     reputation: number,
     marketingBudget: number
   ): { pickups: number; reputationGain: number } {
-    const pickups = this.calculatePressPickups(pressAccess, marketingBudget, reputation, false);
-    
-    // Calculate reputation gain based on pickups and quality
-    const reputationGain = pickups > 0 ? Math.floor(pickups * (quality / 100) * 2) : 0;
-    
-    return {
-      pickups,
-      reputationGain
-    };
+    return this.financialSystem.calculatePressOutcome(
+      quality,
+      pressAccess,
+      reputation,
+      marketingBudget,
+      () => this.getRandom(0, 1),
+      this.getAccessChance.bind(this)
+    );
   }
 
   /**
@@ -457,16 +443,9 @@ export class GameEngine {
   /**
    * Helper to get access tier chances
    */
+  // DELEGATED TO FinancialSystem
   private getAccessChance(type: string, tier: string): number {
-    const tiers = this.gameData.getAccessTiersSync();
-    
-    if (type === 'press') {
-      const tierData = tiers.press_access as any;
-      return tierData[tier]?.pickup_chance || 0.05;
-    }
-    
-    // Default fallback
-    return 0.05;
+    return this.financialSystem.getAccessChance(type, tier);
   }
   
   /**
@@ -1485,79 +1464,17 @@ export class GameEngine {
   /**
    * Generates economic insight summary for song creation
    */
+  // DELEGATED TO FinancialSystem
   private generateSongEconomicInsight(song: any, project: any): string {
-    const metadata = song.metadata || {};
-    const qualityCalc = metadata.qualityCalculation || {};
-    
-    let insight = `Quality: ${song.quality}/100`;
-    
-    // Add producer tier insight
-    if (song.producerTier && song.producerTier !== 'local') {
-      insight += ` (${song.producerTier} producer`;
-      if (qualityCalc.producerBonus > 0) {
-        insight += ` +${qualityCalc.producerBonus}`;
-      }
-      insight += ')';
-    }
-    
-    // Add budget efficiency insight
-    if (metadata.perSongBudget > 0) {
-      const efficiency = parseFloat(metadata.economicEfficiency) || 0;
-      insight += `, $${metadata.perSongBudget.toLocaleString()}/song`;
-      if (efficiency > 0) {
-        insight += ` (${efficiency} quality/$1k)`;
-      }
-    }
-    
-    // Add multi-song impact insight
-    if (metadata.songCountQualityImpact && metadata.songCountQualityImpact !== 1.0) {
-      const impactPercent = (metadata.songCountQualityImpact - 1.0) * 100;
-      insight += `, Multi-song: ${impactPercent > 0 ? '+' : ''}${impactPercent.toFixed(1)}%`;
-    }
-    
-    return insight;
+    return FinancialSystem.generateSongEconomicInsight(song, project);
   }
   
   /**
    * Generates economic summary for project completion
    */
+  // DELEGATED TO FinancialSystem
   private generateProjectCompletionSummary(project: any): string {
-    const metadata = project.metadata || {};
-    const economicDecisions = metadata.economicDecisions || {};
-    
-    let summary = `Total investment: $${(project.budget || 0).toLocaleString()}`;
-    
-    if (project.songCount > 1) {
-      const perSongCost = Math.round((project.budget || 0) / project.songCount);
-      summary += ` ($${perSongCost.toLocaleString()}/song)`;
-    }
-    
-    // Add producer tier insight
-    if (project.producerTier && project.producerTier !== 'local') {
-      summary += `, ${project.producerTier} producer`;
-    }
-    
-    // Add time investment insight
-    if (project.timeInvestment && project.timeInvestment !== 'standard') {
-      summary += `, ${project.timeInvestment} timeline`;
-    }
-    
-    // Add expected quality range if available
-    if (economicDecisions.expectedQuality) {
-      summary += `, Target quality: ${economicDecisions.expectedQuality.toFixed(1)}/100`;
-    }
-    
-    // Add budget efficiency insight
-    if (economicDecisions.budgetRatio) {
-      const ratio = economicDecisions.budgetRatio;
-      if (ratio > 1.5) {
-        summary += `, Premium budget (${ratio.toFixed(1)}x minimum)`;
-      } else if (ratio < 1.0) {
-        summary += `, Tight budget (${ratio.toFixed(1)}x minimum)`;
-      }
-    }
-    
-    return summary;
+    return FinancialSystem.generateProjectCompletionSummary(project);
   }
 
   /**
