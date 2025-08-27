@@ -440,18 +440,7 @@ export function ActiveProjects() {
             </div>
           ))}
 
-          {/* Add Project Button - Only show in active tab */}
-          {activeTab === 'active' && (
-            <Button
-              variant="outline"
-              className="w-full border-2 border-dashed border-slate-300 p-3 text-center hover:border-primary hover:bg-primary/5 text-xs"
-              onClick={() => setShowProjectModal(true)}
-              disabled={creatingProject || artists.length === 0}
-            >
-              <i className="fas fa-plus mr-1"></i>
-              {creatingProject ? 'Creating...' : 'Start New Recording Session'}
-            </Button>
-          )}
+
 
           {/* Empty state for completed sessions */}
           {activeTab === 'completed' && completedProjects.length === 0 && (
