@@ -645,7 +645,7 @@ export class GameEngine {
       const allPlannedReleases = (this.storage && this.storage.getProjectsByGame) 
         ? await this.storage.getProjectsByGame(this.gameState.id) || []
         : [];
-      const plannedReleases = allPlannedReleases.filter(r => r.status === 'planned');
+      const plannedReleases = allPlannedReleases.filter((r: any) => r.status === 'planned');
       
       console.log(`[LEAD SINGLE] Found ${plannedReleases.length} planned releases to check for lead singles`);
       
@@ -783,7 +783,7 @@ export class GameEngine {
           let leadSingleBoost = 1.0;
           if (leadSingleStrategy) {
             const leadSong = releaseSongs.find(s => s.id === leadSingleStrategy.leadSingleId);
-            if (leadSong && leadSong.isReleased && leadSong.totalStreams > 0) {
+            if (leadSong && leadSong.isReleased && leadSong.totalStreams && leadSong.totalStreams > 0) {
               // Boost based on lead single performance (10-30% boost)
               leadSingleBoost = 1.0 + Math.min(0.3, (leadSong.totalStreams || 0) / 100000);
               console.log(`[PLANNED RELEASE] Lead single "${leadSong.title}" boost: ${((leadSingleBoost - 1) * 100).toFixed(1)}%`);
@@ -2675,6 +2675,16 @@ export class GameEngine {
 
 
   /**
+   * Helper function to determine season from month
+   */
+  private getSeasonFromMonth(month: number): string {
+    if (month <= 3) return 'q1';
+    if (month <= 6) return 'q2';
+    if (month <= 9) return 'q3';
+    return 'q4';
+  }
+
+  /**
    * Calculates comprehensive release preview metrics using GameEngine formulas
    * This method provides accurate economic projections for release planning
    */
@@ -2695,6 +2705,9 @@ export class GameEngine {
     }
   ) {
     const balance = this.gameData.getBalanceConfigSync();
+    
+    // Auto-detect season from release month
+    const mainReleaseSeason = this.getSeasonFromMonth(releaseConfig.scheduledReleaseMonth);
     
     // Calculate base song metrics using existing GameEngine methods
     const averageQuality = songs.reduce((sum, song) => sum + song.quality, 0) / songs.length;
@@ -2740,7 +2753,7 @@ export class GameEngine {
     if (!seasonalMultipliers) {
       throw new Error('seasonal_modifiers not found in balance.json time_progression');
     }
-    const seasonalRevenueMultiplier = seasonalMultipliers[releaseConfig.seasonalTiming as keyof typeof seasonalMultipliers];
+    const seasonalRevenueMultiplier = seasonalMultipliers[mainReleaseSeason as keyof typeof seasonalMultipliers];
     
     // Calculate marketing effectiveness using balance.json formulas
     const totalMarketingBudget = Object.values(releaseConfig.marketingBudget).reduce((sum, budget) => sum + budget, 0);
@@ -2801,7 +2814,7 @@ export class GameEngine {
     
     // Calculate seasonal marketing cost adjustments from balance.json
     const seasonalCostMultipliers = releasePlanningConfig.seasonal_cost_multipliers;
-    const seasonalCostMultiplier = seasonalCostMultipliers[releaseConfig.seasonalTiming as keyof typeof seasonalCostMultipliers] || 1;
+    const seasonalCostMultiplier = seasonalCostMultipliers[mainReleaseSeason as keyof typeof seasonalCostMultipliers] || 1;
     
     // Apply seasonal cost adjustments to marketing budget
     const adjustedMarketingCost = totalMarketingBudget * seasonalCostMultiplier;
@@ -2827,8 +2840,12 @@ export class GameEngine {
         const leadSingleBudget = Object.values(releaseConfig.leadSingleStrategy.leadSingleBudget).reduce((sum, budget) => sum + budget, 0);
         const leadSingleMarketingBonus = 1 + Math.sqrt(leadSingleBudget / leadSingleConfig.budget_scaling_factor) * leadSingleConfig.marketing_effectiveness_factor;
         
+        // Calculate lead single's own seasonal multiplier based on its release month
+        const leadSingleSeason = this.getSeasonFromMonth(releaseConfig.leadSingleStrategy.leadSingleReleaseMonth);
+        const leadSingleSeasonalMultiplier = seasonalCostMultipliers[leadSingleSeason as keyof typeof seasonalCostMultipliers] || 1;
+        
         leadSingleBoost = timingBonus * leadSingleMarketingBonus;
-        leadSingleCost = leadSingleBudget * seasonalCostMultiplier;
+        leadSingleCost = leadSingleBudget * leadSingleSeasonalMultiplier;
       }
     }
     
@@ -2926,7 +2943,8 @@ export class GameEngine {
     }
     
     // Seasonal competition risk
-    if (releaseConfig.seasonalTiming === 'q4') {
+    const releaseSeason = this.getSeasonFromMonth(releaseConfig.scheduledReleaseMonth);
+    if (releaseSeason === 'q4') {
       risks.push("High competition period - Q4 releases face maximum market saturation");
     }
     
@@ -2980,7 +2998,8 @@ export class GameEngine {
     }
     
     // Seasonal recommendations
-    if (releaseConfig.seasonalTiming === 'q1') {
+    const releaseSeason = this.getSeasonFromMonth(releaseConfig.scheduledReleaseMonth);
+    if (releaseSeason === 'q1') {
       recommendations.push("Q1 release - lower competition but reduced market activity");
     }
     

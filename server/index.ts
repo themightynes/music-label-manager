@@ -3,6 +3,7 @@ import session from 'express-session';
 import passport from 'passport';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { testDatabaseConnection } from "./db";
 import './auth'; // Initialize passport configuration
 
 const app = express();
@@ -55,14 +56,69 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Test database connection on startup
+  console.log('[Database] Testing connection...');
+  const dbConnected = await testDatabaseConnection();
+  if (!dbConnected) {
+    console.error('[Database] Initial connection failed. Server will continue but database operations may fail.');
+  } else {
+    console.log('[Database] Connection successful');
+  }
+
   const server = await registerRoutes(app);
 
+  // Enhanced error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
+    
+    // Log the error details
+    console.error('[Error Middleware]', {
+      status,
+      message,
+      code: err.code,
+      detail: err.detail,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+    
+    // Handle specific database errors
+    if (err.code === '57P01') {
+      // Database connection terminated
+      console.error('[Database] Connection terminated, pool will automatically reconnect');
+      res.status(503).json({ 
+        message: 'Database temporarily unavailable. Please try again.',
+        retryAfter: 5 
+      });
+      return;
+    }
+    
+    // Handle other database connection errors
+    if (err.code && err.code.startsWith('08')) {
+      // Connection exceptions (08xxx codes)
+      res.status(503).json({ 
+        message: 'Database connection error. Please try again later.',
+        retryAfter: 10 
+      });
+      return;
+    }
+    
+    // Handle timeout errors
+    if (err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET') {
+      res.status(504).json({ 
+        message: 'Request timeout. Please try again.',
+        retryAfter: 5 
+      });
+      return;
+    }
 
-    res.status(status).json({ message });
-    throw err;
+    // Default error response
+    res.status(status).json({ 
+      message,
+      ...(process.env.NODE_ENV === 'development' && { 
+        code: err.code,
+        detail: err.detail 
+      })
+    });
   });
 
   // importantly only setup vite in development and after

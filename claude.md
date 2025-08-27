@@ -46,17 +46,9 @@ Building **Top Roles: Music Label Manager** - browser-based music industry simul
 - **Frontend Architecture**: `docs/04-frontend/frontend-architecture.md`
 - **Backend Architecture**: `docs/05-backend/backend-architecture.md`
 
-### Current Development Context
-- **Setup Instructions**: `docs/06-development/setup.md`
-- **Migration Guide**: `docs/06-development/migration-individual-songs.md`
-- **Content System**: `docs/07-content/content-system.md`
-
-### Feature Planning
-- **Core Features**: `docs/08-future-features-and-fixes/CORE_FEATURES.md`
-- **Comprehensive Roadmap**: `docs/08-future-features-and-fixes/comprehensive-roadmap.md`
 
 ## 🎮 JSON Systems Ready
-- `data/balance.json` - Economic formulas, costs, quality bonuses
+- `data/balance.ts` - Economic formulas, costs, quality bonuses
 - `data/roles.json` - 8 industry roles with 72+ dialogue choices
 - `data/artists.json` - Artist archetypes and development systems
 - `data/events.json` - 12 side stories with branching outcomes

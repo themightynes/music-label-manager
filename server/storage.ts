@@ -372,7 +372,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(releases.createdAt);
     
-    const overdueCount = result.filter(r => r.releaseMonth && r.releaseMonth < month).length;
+    const overdueCount = result.filter((r: any) => r.releaseMonth && r.releaseMonth < month).length;
     console.log(`[STORAGE] getPlannedReleases: found ${result.length} releases (${overdueCount} overdue)`);
     
     if (overdueCount > 0) {

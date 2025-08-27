@@ -159,6 +159,14 @@ const SEASONAL_TIMING: SeasonalTiming[] = [
   }
 ];
 
+// Auto-detect seasonal window from month
+const getSeasonFromMonth = (month: number): string => {
+  if (month <= 3) return 'q1';
+  if (month <= 6) return 'q2';
+  if (month <= 9) return 'q3';
+  return 'q4';
+};
+
 export default function PlanReleasePage() {
   const [, setLocation] = useLocation();
   const { gameState, loadGame } = useGameStore();
@@ -181,7 +189,6 @@ export default function PlanReleasePage() {
   const [leadSingle, setLeadSingle] = useState<string>('');
   const [releaseType, setReleaseType] = useState<'single' | 'ep' | 'album' | null>(null);
   const [releaseTitle, setReleaseTitle] = useState('');
-  const [seasonalTiming, setSeasonalTiming] = useState('q4');
   const [releaseMonth, setReleaseMonth] = useState(6);
   
   // Marketing budget allocation per channel
@@ -222,9 +229,17 @@ export default function PlanReleasePage() {
         const data = await response.json();
         
         setArtists(data.artists.map(transformArtistData));
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to load ready artists:', error);
-        setArtistError(error instanceof Error ? error.message : 'Failed to load artists');
+        
+        // Handle specific error types
+        if (error.status === 503 || error.message?.includes('unavailable')) {
+          setArtistError('Database temporarily unavailable. Please refresh the page to try again.');
+        } else if (error.status === 504 || error.message?.includes('timeout')) {
+          setArtistError('Request timed out. Please try again.');
+        } else {
+          setArtistError(error.message || 'Failed to load artists. Please try again.');
+        }
         setArtists([]);
       } finally {
         setLoadingArtists(false);
@@ -251,9 +266,17 @@ export default function PlanReleasePage() {
         
         const artist = artists.find(a => a.id === selectedArtist);
         setAvailableSongs(data.songs.map((song: any) => transformSongData(song, artist?.name || '')));
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to load artist songs:', error);
-        setSongError(error instanceof Error ? error.message : 'Failed to load songs');
+        
+        // Handle specific error types
+        if (error.status === 503 || error.message?.includes('unavailable')) {
+          setSongError('Database temporarily unavailable. Please try again in a moment.');
+        } else if (error.status === 504 || error.message?.includes('timeout')) {
+          setSongError('Request timed out. Please try again.');
+        } else {
+          setSongError(error.message || 'Failed to load songs. Please try again.');
+        }
         setAvailableSongs([]);
       } finally {
         setLoadingSongs(false);
@@ -309,7 +332,6 @@ export default function PlanReleasePage() {
         songIds: selectedSongs,
         releaseType,
         leadSingleId: leadSingle || null,
-        seasonalTiming,
         scheduledReleaseMonth: releaseMonth,
         marketingBudget: channelBudgets,
         leadSingleStrategy: releaseType !== 'single' && leadSingle ? {
@@ -325,9 +347,21 @@ export default function PlanReleasePage() {
       const data = await response.json();
       
       setPreviewData(data.preview);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to calculate release preview:', error);
-      setPreviewError(error instanceof Error ? error.message : 'Failed to calculate preview');
+      
+      // Handle specific error types
+      if (error.status === 503 || error.message?.includes('unavailable')) {
+        setPreviewError('Database temporarily unavailable. Preview will refresh automatically.');
+        // Retry after a delay
+        setTimeout(() => calculateReleasePreview(), 5000);
+      } else if (error.status === 504 || error.message?.includes('timeout')) {
+        setPreviewError('Request timed out. Retrying...');
+        // Retry after a shorter delay
+        setTimeout(() => calculateReleasePreview(), 3000);
+      } else {
+        setPreviewError(error.message || 'Failed to calculate preview');
+      }
       setPreviewData(null);
     } finally {
       setCalculatingPreview(false);
@@ -341,7 +375,7 @@ export default function PlanReleasePage() {
     }, 500); // Debounce API calls
     
     return () => clearTimeout(timer);
-  }, [selectedArtist, selectedSongs, releaseType, channelBudgets, seasonalTiming, releaseMonth, leadSingle, leadSingleBudget]);
+  }, [selectedArtist, selectedSongs, releaseType, channelBudgets, releaseMonth, leadSingle, leadSingleBudget, leadSingleMonth]);
 
   // Use preview data or fallback to default values
   const metrics = previewData || {
@@ -353,7 +387,11 @@ export default function PlanReleasePage() {
     seasonalMultiplier: 1,
     marketingMultiplier: 1,
     leadSingleBoost: 1,
-    totalMarketingCost: Object.values(channelBudgets).reduce((a, b) => a + b, 0) + Object.values(leadSingleBudget).reduce((a, b) => a + b, 0),
+    totalMarketingCost: 
+      Object.values(channelBudgets).reduce((a, b) => a + b, 0) * 
+        (SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(releaseMonth))?.marketingCostMultiplier || 1) +
+      Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * 
+        (SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier || 1),
     diversityBonus: 1,
     activeChannelCount: 0,
     channelEffectiveness: {},
@@ -420,7 +458,6 @@ export default function PlanReleasePage() {
         type: releaseType,
         songIds: selectedSongs,
         leadSingleId: leadSingle || null,
-        seasonalTiming,
         scheduledReleaseMonth: releaseMonth,
         marketingBudget: channelBudgets,
         leadSingleStrategy: releaseType !== 'single' && leadSingle ? {
@@ -727,7 +764,16 @@ export default function PlanReleasePage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs text-slate-600 mb-1 block">Lead Single Release</label>
+                      <label className="text-xs text-slate-600 mb-1 block">
+                        Lead Single Release
+                        <span className="ml-2 text-orange-600">
+                          ({SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.name} - {(() => {
+                            const multiplier = SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier || 1;
+                            const percentage = Math.round((multiplier - 1) * 100);
+                            return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+                          })()} cost)
+                        </span>
+                      </label>
                       <Select value={leadSingleMonth.toString()} onValueChange={(value) => setLeadSingleMonth(parseInt(value))}>
                         <SelectTrigger>
                           <SelectValue />
@@ -781,7 +827,12 @@ export default function PlanReleasePage() {
                       ))}
                     </div>
                     <div className="mt-2 text-xs text-slate-500">
-                      Lead Single Total: ${Object.values(leadSingleBudget).reduce((a, b) => a + b, 0).toLocaleString()}
+                      <div>Lead Single Total: ${Object.values(leadSingleBudget).reduce((a, b) => a + b, 0).toLocaleString()}</div>
+                      {SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier !== 1 && (
+                        <div className="text-orange-600">
+                          Adjusted for {SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.name}: ${Math.round(Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * (SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier || 1)).toLocaleString()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -860,30 +911,18 @@ export default function PlanReleasePage() {
                   {/* Release Timing */}
                   <div>
                     <h4 className="text-sm font-medium text-slate-700 mb-3">Release Timing</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
                       <div>
-                        <label className="text-xs text-slate-600 mb-1 block">Seasonal Window</label>
-                        <Select value={seasonalTiming} onValueChange={setSeasonalTiming}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SEASONAL_TIMING.map(season => (
-                              <SelectItem key={season.id} value={season.id}>
-                                <div className="flex items-center space-x-2">
-                                  <span>{season.name}</span>
-                                  {season.isOptimal && <Star className="w-3 h-3 text-yellow-500" />}
-                                  <span className="text-xs text-slate-500">
-                                    ({season.multiplier > 1 ? '+' : ''}{Math.round((season.multiplier - 1) * 100)}%)
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-600 mb-1 block">Target Month</label>
+                        <label className="text-xs text-slate-600 mb-1 block">
+                          Target Month 
+                          <span className="ml-2 text-orange-600">
+                            ({SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(releaseMonth))?.name} - {(() => {
+                              const multiplier = SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(releaseMonth))?.marketingCostMultiplier || 1;
+                              const percentage = Math.round((multiplier - 1) * 100);
+                              return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+                            })()} cost)
+                          </span>
+                        </label>
                         <Select value={releaseMonth.toString()} onValueChange={(value) => setReleaseMonth(parseInt(value))}>
                           <SelectTrigger>
                             <SelectValue />
@@ -1084,9 +1123,14 @@ export default function PlanReleasePage() {
                           {releaseType !== 'single' && leadSingle && Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) > 0 && (
                             <div className="flex justify-between border-t pt-1">
                               <span className="text-slate-600">Lead Single Budget:</span>
-                              <span className="font-mono text-purple-600">
-                                ${Object.values(leadSingleBudget).reduce((a, b) => a + b, 0).toLocaleString()}
-                              </span>
+                              <div className="text-right font-mono text-purple-600">
+                                <div>${Math.round(Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * (SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier || 1)).toLocaleString()}</div>
+                                {SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier !== 1 && (
+                                  <div className="text-xs text-orange-600">
+                                    +${Math.round(Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * ((SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier || 1) - 1)).toLocaleString()} seasonal
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

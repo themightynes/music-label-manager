@@ -185,7 +185,7 @@ export class GameDataLoader {
         difficulty_modifiers: z.record(z.any()).optional()
       }).passthrough(); // Allow extra fields
 
-      return data as BalanceConfig;
+      return data as unknown as BalanceConfig;
     } catch (error) {
       console.error('Balance data loading error:', error);
       throw error;

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import passport from 'passport';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases, roles } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -16,7 +16,7 @@ import {
   createErrorResponse 
 } from "@shared/api/contracts";
 import { db } from "./db";
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, ne } from "drizzle-orm";
 import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -921,14 +921,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Failed to calculate release preview:", error);
-      console.error("Error stack:", error.stack);
-      console.error("Error message:", error.message);
-      console.error("Error name:", error.name);
+      console.error("Error stack:", (error as Error).stack);
+      console.error("Error message:", (error as Error).message);
+      console.error("Error name:", (error as Error).name);
       res.status(500).json({ 
         error: 'CALCULATION_ERROR',
         message: "Failed to calculate release preview",
-        details: error.message,
-        stack: error.stack
+        details: (error as Error).message,
+        stack: (error as Error).stack
       });
     }
   });
@@ -1098,14 +1098,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Failed to create planned release:", error);
-      console.error("Error stack:", error.stack);
-      console.error("Error message:", error.message);
-      console.error("Error name:", error.name);
+      console.error("Error stack:", (error as Error).stack);
+      console.error("Error message:", (error as Error).message);
+      console.error("Error name:", (error as Error).name);
       res.status(500).json({ 
         error: 'CREATION_ERROR',
         message: "Failed to create planned release",
-        details: error.message,
-        stack: error.stack
+        details: (error as Error).message,
+        stack: (error as Error).stack
       });
     }
   });
@@ -1257,6 +1257,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!keepGameId) {
         return res.status(400).json({ error: 'MISSING_KEEP_GAME_ID', message: 'keepGameId is required' });
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
       
       // Get all games for this user except the one to keep
