@@ -307,6 +307,7 @@ export const useGameStore = create<GameStore>()(
           
           set({
             gameState: result.gameState,
+            artists: gameData.artists || [], // Update artists to reflect mood changes
             projects: gameData.projects || [], // Update projects with current state
             songs: songs || [], // Update songs to include newly recorded ones
             releases: releases || [], // FIXED: Use explicit releases fetch for accurate status
