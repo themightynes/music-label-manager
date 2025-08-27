@@ -31,7 +31,7 @@ export function ActiveReleases() {
   // Enhanced debug logging for release state tracking
   console.log('ActiveReleases Enhanced Debug:', {
     totalReleases: releases?.length || 0,
-    releases: releases,
+    totalSongs: songs?.length || 0,
     gameState: gameState?.id,
     currentMonth: gameState?.currentMonth,
     releasesByStatus: {
@@ -39,15 +39,44 @@ export function ActiveReleases() {
       released: releases?.filter(r => r.status === 'released').length || 0,
       catalog: releases?.filter(r => r.status === 'catalog').length || 0,
       other: releases?.filter(r => !['planned', 'released', 'catalog'].includes(r.status)).length || 0
-    },
-    releaseDetails: releases?.map(r => ({
-      id: r.id,
-      title: r.title,
-      status: r.status,
-      releaseMonth: r.releaseMonth,
-      type: r.type
-    })) || []
+    }
   });
+  
+  // Separate log for songs to force display
+  if (songs && songs.length > 0) {
+    console.log('SONGS DATA - First 2 songs:');
+    songs.slice(0, 2).forEach((song, i) => {
+      console.log(`Song ${i}:`, {
+        id: song.id,
+        title: song.title,
+        releaseId: song.releaseId,
+        isReleased: song.isReleased,
+        artistId: song.artistId
+      });
+    });
+    
+    // Check if any songs are linked to releases
+    const songsWithReleases = songs.filter(s => s.releaseId);
+    console.log(`Songs with releaseId set: ${songsWithReleases.length} out of ${songs.length}`);
+    if (songsWithReleases.length > 0) {
+      console.log('Songs linked to releases:', songsWithReleases.map(s => ({
+        songTitle: s.title,
+        releaseId: s.releaseId
+      })));
+    }
+  }
+  
+  if (releases && releases.length > 0) {
+    console.log('RELEASES DATA - All releases:');
+    releases.forEach((release, i) => {
+      console.log(`Release ${i}:`, {
+        id: release.id,
+        title: release.title,
+        status: release.status,
+        hasRevenue: release.revenueGenerated > 0
+      });
+    });
+  }
 
   const getUpcomingReleases = () => {
     const currentMonth = gameState?.currentMonth || 1;

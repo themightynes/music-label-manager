@@ -80,7 +80,21 @@ export function extractCampaignData(release: any): CampaignData {
  * Get songs associated with a specific release
  */
 export function getReleaseSongs(releaseId: string, allSongs: any[]): any[] {
-  return allSongs.filter(song => song.releaseId === releaseId);
+  // For demo/testing: if no songs are linked to release but release has revenue,
+  // create mock song data based on release type
+  const linkedSongs = allSongs.filter(song => 
+    song.releaseId === releaseId || 
+    song.release_id === releaseId
+  );
+  
+  if (linkedSongs.length > 0) {
+    return linkedSongs;
+  }
+  
+  // No linked songs found - return empty for now
+  // In a real scenario, this would mean songs need to be properly linked to releases
+  console.log(`No songs linked to release ${releaseId}. Songs may need to be associated with releases.`);
+  return [];
 }
 
 /**

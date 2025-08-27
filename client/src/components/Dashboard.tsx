@@ -78,8 +78,8 @@ export function Dashboard() {
                 <span className="hidden md:inline">Month</span>
                 <span className="md:hidden">M</span>
                 <span className="font-mono font-semibold text-primary">{gameState.currentMonth || 1}</span>
-                <span className="hidden md:inline">of 12</span>
-                <span className="md:hidden">/12</span>
+                <span className="hidden md:inline">of 36</span>
+                <span className="md:hidden">/36</span>
               </div>
             </div>
             

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import passport from 'passport';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases, roles } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases, releaseSongs, roles } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -1044,6 +1044,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await tx.update(songs)
           .set({ releaseId: newRelease.id })
           .where(inArray(songs.id, songIds));
+
+        // CRITICAL FIX: Also create entries in the junction table for proper song-release association
+        // This ensures songs are properly linked when releases are executed
+        const releaseSongEntries = songIds.map((songId, index) => ({
+          id: crypto.randomUUID(),
+          releaseId: newRelease.id,
+          songId: songId,
+          trackNumber: index + 1, // Track order based on selection order
+          createdAt: new Date()
+        }));
+        
+        await tx.insert(releaseSongs).values(releaseSongEntries);
+        console.log(`[PLAN RELEASE] Created ${releaseSongEntries.length} junction table entries for release ${newRelease.id}`);
 
         // Deduct marketing budget from game state money
         await tx.update(gameStates)

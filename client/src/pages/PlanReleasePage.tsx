@@ -930,7 +930,7 @@ export default function PlanReleasePage() {
                           <SelectContent>
                             {Array.from({ length: 8 }, (_, i) => {
                               const month = (gameState?.currentMonth || 1) + i + 1;
-                              return month <= 12 ? (
+                              return month <= 36 ? (
                                 <SelectItem key={month} value={month.toString()}>
                                   Month {month}
                                 </SelectItem>

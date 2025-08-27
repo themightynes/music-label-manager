@@ -59,6 +59,35 @@ export function ReleaseWorkflowCard({
   const releaseSongs = getReleaseSongs(release.id, songs);
   const campaignData = extractCampaignData(release);
   
+  // Calculate actual totals from songs if release totals are missing
+  const totalStreamsFromSongs = releaseSongs.reduce((sum, song) => sum + (song.totalStreams || 0), 0);
+  const totalRevenueFromSongs = releaseSongs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
+  
+  // Use song totals if release totals are 0 or missing
+  const actualTotalStreams = release.streamsGenerated || totalStreamsFromSongs;
+  const actualTotalRevenue = release.revenueGenerated || totalRevenueFromSongs;
+  
+  // Debug logging for released items
+  if (release.status === 'released') {
+    console.log('ReleaseWorkflowCard Debug:', {
+      releaseId: release.id,
+      releaseTitle: release.title,
+      status: release.status,
+      originalStreams: release.streamsGenerated || 0,
+      originalRevenue: release.revenueGenerated || 0,
+      calculatedStreams: totalStreamsFromSongs,
+      calculatedRevenue: totalRevenueFromSongs,
+      actualTotalStreams,
+      actualTotalRevenue,
+      songsProvided: songs?.length || 0,
+      releaseSongsFound: releaseSongs.length,
+      metadata: release.metadata,
+      leadSingleStrategy,
+      hasLeadSingle,
+      campaignData
+    });
+  }
+  
   // Calculate timeline progress
   const getTimelineProgress = () => {
     if (!hasLeadSingle) {
@@ -85,17 +114,27 @@ export function ReleaseWorkflowCard({
 
   const timeline = getTimelineProgress();
   
-  // Calculate enhanced metrics for released releases
+  // Calculate enhanced metrics for ALL released items
   const isReleased = timeline.phase === 'released' || timeline.phase === 'fully-released';
-  const hasPerformanceData = release.streamsGenerated > 0 || release.revenueGenerated > 0;
   
   let performanceMetrics: PerformanceMetrics | null = null;
   let trackBreakdown: TrackBreakdown | null = null;
   let campaignOutcome: CampaignOutcome | null = null;
   
-  if (isReleased && hasPerformanceData) {
-    performanceMetrics = calculatePerformanceMetrics(release, releaseSongs, campaignData);
-    trackBreakdown = analyzeTrackBreakdown(release, releaseSongs);
+  // Always calculate metrics for released items to show enhanced UI
+  if (isReleased) {
+    // Create release object with corrected totals for metrics calculations
+    const releaseWithActuals = {
+      ...release,
+      streamsGenerated: actualTotalStreams,
+      revenueGenerated: actualTotalRevenue
+    };
+    
+    performanceMetrics = calculatePerformanceMetrics(releaseWithActuals, releaseSongs, campaignData);
+    // Only create track breakdown if we have songs
+    if (releaseSongs.length > 0) {
+      trackBreakdown = analyzeTrackBreakdown(releaseWithActuals, releaseSongs);
+    }
     campaignOutcome = assessCampaignOutcome(performanceMetrics, campaignData);
   }
   
@@ -175,6 +214,21 @@ export function ReleaseWorkflowCard({
                 <span>Total Investment:</span>
                 <span className="font-mono font-semibold">{formatCurrency(campaignData.totalInvestment)}</span>
               </div>
+              
+              {/* Marketing breakdown */}
+              {hasLeadSingle && campaignData.leadSingleBudget > 0 && (
+                <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                  <div className="flex justify-between">
+                    <span className="ml-2">Lead Single:</span>
+                    <span>{formatCurrency(campaignData.leadSingleBudget)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="ml-2">Main Release:</span>
+                    <span>{formatCurrency(campaignData.mainBudget)}</span>
+                  </div>
+                </div>
+              )}
+              
               {performanceMetrics && (
                 <div className="flex justify-between text-sm mt-1">
                   <span>ROI:</span>
@@ -193,7 +247,8 @@ export function ReleaseWorkflowCard({
   };
   
   const renderTrackBreakdown = () => {
-    if (!trackBreakdown || releaseSongs.length === 0) return null;
+    // Always show track breakdown section for released items, even without linked songs
+    if (!trackBreakdown) return null;
     
     return (
       <div className="space-y-3">
@@ -453,70 +508,48 @@ export function ReleaseWorkflowCard({
           </div>
         )}
 
-        {/* Performance Metrics */}
-        {isReleased && hasPerformanceData ? (
+        {/* Enhanced Performance Section - Shows for ALL released items */}
+        {isReleased && (
           <div className="space-y-4">
             {/* Basic Performance Metrics */}
             <div className="pt-2 border-t border-slate-200">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="text-center">
                   <div className="font-mono font-semibold text-blue-600">
-                    {formatStreams(release.streamsGenerated)}
+                    {formatStreams(actualTotalStreams)}
                   </div>
                   <div className="text-xs text-slate-600">Total Streams</div>
                 </div>
                 <div className="text-center">
                   <div className="font-mono font-semibold text-green-600">
-                    {formatCurrency(release.revenueGenerated)}
+                    {formatCurrency(actualTotalRevenue)}
                   </div>
                   <div className="text-xs text-slate-600">Revenue</div>
                 </div>
               </div>
             </div>
             
-            {/* Campaign Summary */}
+            {/* Campaign Summary - Always shows for released items */}
             {renderCampaignSummary()}
             
-            {/* Track Breakdown */}
+            {/* Track Breakdown - Shows if songs are available */}
             {renderTrackBreakdown()}
             
             {/* Detailed Analytics Toggle */}
-            {(trackBreakdown?.mainTracks.length || 0) > 0 && (
-              <div className="pt-2 border-t border-slate-200">
-                <button
-                  onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
-                  className="w-full text-sm text-slate-600 hover:text-slate-800 flex items-center justify-center space-x-2 py-2"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  <span>{showDetailedAnalytics ? 'Hide' : 'Show'} Detailed Analytics</span>
-                  {showDetailedAnalytics ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-              </div>
-            )}
+            <div className="pt-2 border-t border-slate-200">
+              <button
+                onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
+                className="w-full text-sm text-slate-600 hover:text-slate-800 flex items-center justify-center space-x-2 py-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>{showDetailedAnalytics ? 'Hide' : 'Show'} Detailed Analytics</span>
+                {showDetailedAnalytics ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </div>
             
             {/* Performance Analytics */}
             {renderPerformanceAnalytics()}
           </div>
-        ) : (
-          /* Basic performance metrics for releases without detailed data */
-          release.streamsGenerated > 0 && (
-            <div className="pt-2 border-t border-slate-200">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="text-center">
-                  <div className="font-mono font-semibold text-blue-600">
-                    {release.streamsGenerated.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-slate-600">Total Streams</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-mono font-semibold text-green-600">
-                    ${release.revenueGenerated.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-slate-600">Revenue</div>
-                </div>
-              </div>
-            </div>
-          )
         )}
       </CardContent>
     </Card>
