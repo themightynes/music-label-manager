@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -11,25 +11,53 @@ import {
   Clock, 
   ArrowRight,
   Target,
-  Users
+  Users,
+  BarChart3,
+  Award,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  DollarSign
 } from 'lucide-react';
+import {
+  extractCampaignData,
+  getReleaseSongs,
+  calculatePerformanceMetrics,
+  analyzeTrackBreakdown,
+  assessCampaignOutcome,
+  formatCurrency,
+  formatStreams,
+  getEffectivenessStyle,
+  type CampaignData,
+  type PerformanceMetrics,
+  type TrackBreakdown,
+  type CampaignOutcome
+} from '@/lib/releaseAnalytics';
 
 interface ReleaseWorkflowCardProps {
   release: any;
   currentMonth: number;
   artistName: string;
   onReleasePage?: boolean;
+  songs?: any[]; // Songs from useGameStore for enhanced released view
 }
 
 export function ReleaseWorkflowCard({ 
   release, 
   currentMonth, 
   artistName,
-  onReleasePage = false 
+  onReleasePage = false,
+  songs = []
 }: ReleaseWorkflowCardProps) {
+  const [showDetailedAnalytics, setShowDetailedAnalytics] = useState(false);
+  
   const metadata = release.metadata as any;
   const leadSingleStrategy = metadata?.leadSingleStrategy;
   const hasLeadSingle = leadSingleStrategy && release.type !== 'single';
+  
+  // Get release songs for enhanced analytics
+  const releaseSongs = getReleaseSongs(release.id, songs);
+  const campaignData = extractCampaignData(release);
   
   // Calculate timeline progress
   const getTimelineProgress = () => {
@@ -56,6 +84,20 @@ export function ReleaseWorkflowCard({
   };
 
   const timeline = getTimelineProgress();
+  
+  // Calculate enhanced metrics for released releases
+  const isReleased = timeline.phase === 'released' || timeline.phase === 'fully-released';
+  const hasPerformanceData = release.streamsGenerated > 0 || release.revenueGenerated > 0;
+  
+  let performanceMetrics: PerformanceMetrics | null = null;
+  let trackBreakdown: TrackBreakdown | null = null;
+  let campaignOutcome: CampaignOutcome | null = null;
+  
+  if (isReleased && hasPerformanceData) {
+    performanceMetrics = calculatePerformanceMetrics(release, releaseSongs, campaignData);
+    trackBreakdown = analyzeTrackBreakdown(release, releaseSongs);
+    campaignOutcome = assessCampaignOutcome(performanceMetrics, campaignData);
+  }
   
   // Get phase display info
   const getPhaseInfo = (phase: string) => {
@@ -100,6 +142,165 @@ export function ReleaseWorkflowCard({
 
   const phaseInfo = getPhaseInfo(timeline.phase);
   const PhaseIcon = phaseInfo.icon;
+
+  // Enhanced Released View Components
+  const renderCampaignSummary = () => {
+    if (!campaignOutcome) return null;
+    
+    return (
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+          <Award className="w-4 h-4" />
+          <span>Campaign Summary</span>
+        </h4>
+        
+        <div className={`p-3 rounded-lg border ${campaignOutcome.color.replace('text-', 'border-').replace('bg-', 'border-').replace('-600', '-200').replace('-100', '-200')}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-lg">{campaignOutcome.icon}</span>
+              <div>
+                <div className="font-medium text-sm capitalize">{campaignOutcome.tier.replace('_', ' ')}</div>
+                <div className="text-xs text-slate-600">{campaignOutcome.description}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-semibold">{campaignData.strategy === 'lead_single' ? 'Lead Single Strategy' : 'Direct Release'}</div>
+              <div className="text-xs text-slate-500">{campaignData.campaignDuration} month campaign</div>
+            </div>
+          </div>
+          
+          {campaignData.totalInvestment > 0 && (
+            <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+              <div className="flex justify-between text-sm">
+                <span>Total Investment:</span>
+                <span className="font-mono font-semibold">{formatCurrency(campaignData.totalInvestment)}</span>
+              </div>
+              {performanceMetrics && (
+                <div className="flex justify-between text-sm mt-1">
+                  <span>ROI:</span>
+                  <span className={`font-mono font-semibold ${
+                    performanceMetrics.totalROI >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {(performanceMetrics.totalROI * 100).toFixed(0)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
+  const renderTrackBreakdown = () => {
+    if (!trackBreakdown || releaseSongs.length === 0) return null;
+    
+    return (
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+          <Music className="w-4 h-4" />
+          <span>Track Performance</span>
+        </h4>
+        
+        {trackBreakdown.leadSingle && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Star className="w-4 h-4 text-blue-600" />
+                <div>
+                  <div className="font-medium text-sm">{trackBreakdown.leadSingle.song.title}</div>
+                  <div className="text-xs text-blue-600">Lead Single</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-mono font-semibold">{formatStreams(trackBreakdown.leadSingle.streams)}</div>
+                <div className="text-xs text-slate-500">{trackBreakdown.leadSingle.contributionPercentage.toFixed(0)}% of revenue</div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {trackBreakdown.mainTracks.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs text-slate-500 font-medium">All Tracks:</div>
+            {trackBreakdown.mainTracks.slice(0, showDetailedAnalytics ? undefined : 3).map((track, index) => (
+              <div key={track.song.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-slate-400 w-4">#{track.rank}</span>
+                  <div>
+                    <div className="text-sm font-medium">{track.song.title}</div>
+                    <div className="text-xs text-slate-500">Quality: {track.song.quality || 'N/A'}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-mono">{formatStreams(track.streams)}</div>
+                  <div className="text-xs text-slate-500">{formatCurrency(track.revenue)}</div>
+                </div>
+              </div>
+            ))}
+            
+            {trackBreakdown.mainTracks.length > 3 && (
+              <button
+                onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
+                className="w-full text-xs text-slate-500 hover:text-slate-700 flex items-center justify-center space-x-1 py-1"
+              >
+                {showDetailedAnalytics ? (
+                  <><ChevronUp className="w-3 h-3" /><span>Show Less</span></>
+                ) : (
+                  <><ChevronDown className="w-3 h-3" /><span>Show All {trackBreakdown.mainTracks.length} Tracks</span></>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  const renderPerformanceAnalytics = () => {
+    if (!performanceMetrics || !showDetailedAnalytics) return null;
+    
+    const effectivenessStyle = getEffectivenessStyle(performanceMetrics.campaignEffectiveness);
+    
+    return (
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+          <BarChart3 className="w-4 h-4" />
+          <span>Performance Analytics</span>
+        </h4>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-2 bg-slate-50 rounded">
+            <div className="text-xs text-slate-500">Campaign Effectiveness</div>
+            <div className={`text-sm font-semibold ${effectivenessStyle.color.split(' ')[0]}`}>
+              {effectivenessStyle.label}
+            </div>
+          </div>
+          
+          <div className="p-2 bg-slate-50 rounded">
+            <div className="text-xs text-slate-500">Cost Per Stream</div>
+            <div className="text-sm font-mono font-semibold">
+              ${performanceMetrics.costPerStream.toFixed(3)}
+            </div>
+          </div>
+          
+          <div className="p-2 bg-slate-50 rounded">
+            <div className="text-xs text-slate-500">Avg Revenue/Track</div>
+            <div className="text-sm font-mono font-semibold">
+              {formatCurrency(performanceMetrics.averageRevenuePerTrack)}
+            </div>
+          </div>
+          
+          <div className="p-2 bg-slate-50 rounded">
+            <div className="text-xs text-slate-500">Stream Distribution</div>
+            <div className="text-sm font-semibold capitalize">
+              {performanceMetrics.streamDistribution.replace('_', ' ')}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card className={`transition-all ${
@@ -252,24 +453,70 @@ export function ReleaseWorkflowCard({
           </div>
         )}
 
-        {/* Performance Metrics (if available) */}
-        {release.streamsGenerated > 0 && (
-          <div className="pt-2 border-t border-slate-200">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="text-center">
-                <div className="font-mono font-semibold text-blue-600">
-                  {release.streamsGenerated.toLocaleString()}
+        {/* Performance Metrics */}
+        {isReleased && hasPerformanceData ? (
+          <div className="space-y-4">
+            {/* Basic Performance Metrics */}
+            <div className="pt-2 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="font-mono font-semibold text-blue-600">
+                    {formatStreams(release.streamsGenerated)}
+                  </div>
+                  <div className="text-xs text-slate-600">Total Streams</div>
                 </div>
-                <div className="text-xs text-slate-600">Total Streams</div>
-              </div>
-              <div className="text-center">
-                <div className="font-mono font-semibold text-green-600">
-                  ${release.revenueGenerated.toLocaleString()}
+                <div className="text-center">
+                  <div className="font-mono font-semibold text-green-600">
+                    {formatCurrency(release.revenueGenerated)}
+                  </div>
+                  <div className="text-xs text-slate-600">Revenue</div>
                 </div>
-                <div className="text-xs text-slate-600">Revenue</div>
               </div>
             </div>
+            
+            {/* Campaign Summary */}
+            {renderCampaignSummary()}
+            
+            {/* Track Breakdown */}
+            {renderTrackBreakdown()}
+            
+            {/* Detailed Analytics Toggle */}
+            {(trackBreakdown?.mainTracks.length || 0) > 0 && (
+              <div className="pt-2 border-t border-slate-200">
+                <button
+                  onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
+                  className="w-full text-sm text-slate-600 hover:text-slate-800 flex items-center justify-center space-x-2 py-2"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>{showDetailedAnalytics ? 'Hide' : 'Show'} Detailed Analytics</span>
+                  {showDetailedAnalytics ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+              </div>
+            )}
+            
+            {/* Performance Analytics */}
+            {renderPerformanceAnalytics()}
           </div>
+        ) : (
+          /* Basic performance metrics for releases without detailed data */
+          release.streamsGenerated > 0 && (
+            <div className="pt-2 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="font-mono font-semibold text-blue-600">
+                    {release.streamsGenerated.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-slate-600">Total Streams</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-mono font-semibold text-green-600">
+                    ${release.revenueGenerated.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-slate-600">Revenue</div>
+                </div>
+              </div>
+            </div>
+          )
         )}
       </CardContent>
     </Card>

@@ -1,0 +1,294 @@
+/**
+ * Helper functions for enhanced release details and analytics
+ * Uses existing data from useGameStore without requiring backend changes
+ */
+
+export interface CampaignData {
+  hasLeadSingle: boolean;
+  leadSingleBudget: number;
+  leadSingleMonth?: number;
+  mainBudget: number;
+  totalInvestment: number;
+  campaignDuration: number;
+  strategy: 'lead_single' | 'direct_release';
+}
+
+export interface PerformanceMetrics {
+  totalROI: number;
+  costPerStream: number;
+  campaignEffectiveness: 'excellent' | 'strong' | 'good' | 'fair' | 'poor';
+  leadSingleContribution: number;
+  averageRevenuePerTrack: number;
+  streamDistribution: 'balanced' | 'single_dominant' | 'track_focused';
+}
+
+export interface TrackBreakdown {
+  leadSingle?: {
+    song: any;
+    streams: number;
+    revenue: number;
+    contributionPercentage: number;
+  };
+  mainTracks: Array<{
+    song: any;
+    streams: number;
+    revenue: number;
+    contributionPercentage: number;
+    rank: number;
+  }>;
+  bestPerformer: any;
+  worstPerformer: any;
+  totalTracks: number;
+}
+
+export interface CampaignOutcome {
+  tier: 'breakthrough' | 'strong_success' | 'modest_success' | 'underperformed' | 'failed';
+  description: string;
+  color: string;
+  icon: string;
+}
+
+/**
+ * Extract campaign information from release metadata
+ */
+export function extractCampaignData(release: any): CampaignData {
+  const metadata = release.metadata as any;
+  const leadSingleStrategy = metadata?.leadSingleStrategy;
+  
+  const hasLeadSingle = !!(leadSingleStrategy && release.type !== 'single');
+  const leadSingleBudget = leadSingleStrategy?.totalLeadSingleBudget || 0;
+  const mainBudget = release.marketingBudget || 0;
+  const totalInvestment = leadSingleBudget + mainBudget;
+  
+  let campaignDuration = 1; // Default for single month releases
+  if (hasLeadSingle && leadSingleStrategy.leadSingleReleaseMonth) {
+    campaignDuration = (release.releaseMonth || 0) - leadSingleStrategy.leadSingleReleaseMonth + 1;
+  }
+  
+  return {
+    hasLeadSingle,
+    leadSingleBudget,
+    leadSingleMonth: leadSingleStrategy?.leadSingleReleaseMonth,
+    mainBudget,
+    totalInvestment,
+    campaignDuration: Math.max(1, campaignDuration),
+    strategy: hasLeadSingle ? 'lead_single' : 'direct_release'
+  };
+}
+
+/**
+ * Get songs associated with a specific release
+ */
+export function getReleaseSongs(releaseId: string, allSongs: any[]): any[] {
+  return allSongs.filter(song => song.releaseId === releaseId);
+}
+
+/**
+ * Identify the lead single from release songs
+ */
+export function identifyLeadSingle(releaseSongs: any[], release: any): any | null {
+  const metadata = release.metadata as any;
+  const leadSingleStrategy = metadata?.leadSingleStrategy;
+  
+  if (!leadSingleStrategy) return null;
+  
+  // Try to find the lead single by release month or first released song
+  const leadSingleMonth = leadSingleStrategy.leadSingleReleaseMonth;
+  
+  // First, look for songs released in the lead single month
+  if (leadSingleMonth) {
+    const leadSong = releaseSongs.find(song => song.releaseMonth === leadSingleMonth);
+    if (leadSong) return leadSong;
+  }
+  
+  // Fallback: return the highest quality song or first song
+  return releaseSongs.sort((a, b) => (b.quality || 0) - (a.quality || 0))[0] || null;
+}
+
+/**
+ * Calculate comprehensive performance metrics
+ */
+export function calculatePerformanceMetrics(release: any, releaseSongs: any[], campaignData: CampaignData): PerformanceMetrics {
+  const totalRevenue = release.revenueGenerated || 0;
+  const totalStreams = release.streamsGenerated || 0;
+  const { totalInvestment } = campaignData;
+  
+  // Calculate ROI
+  const totalROI = totalInvestment > 0 ? (totalRevenue - totalInvestment) / totalInvestment : 0;
+  
+  // Calculate cost per stream
+  const costPerStream = totalStreams > 0 ? totalInvestment / totalStreams : 0;
+  
+  // Determine campaign effectiveness based on ROI
+  let campaignEffectiveness: PerformanceMetrics['campaignEffectiveness'] = 'poor';
+  if (totalROI >= 2.0) campaignEffectiveness = 'excellent';
+  else if (totalROI >= 1.0) campaignEffectiveness = 'strong';
+  else if (totalROI >= 0.5) campaignEffectiveness = 'good';
+  else if (totalROI >= 0) campaignEffectiveness = 'fair';
+  
+  // Calculate lead single contribution
+  const leadSingle = identifyLeadSingle(releaseSongs, release);
+  const leadSingleRevenue = leadSingle?.totalRevenue || 0;
+  const leadSingleContribution = totalRevenue > 0 ? (leadSingleRevenue / totalRevenue) * 100 : 0;
+  
+  // Calculate average revenue per track
+  const trackCount = releaseSongs.length || 1;
+  const averageRevenuePerTrack = totalRevenue / trackCount;
+  
+  // Determine stream distribution pattern
+  let streamDistribution: PerformanceMetrics['streamDistribution'] = 'balanced';
+  if (releaseSongs.length > 1) {
+    const songStreams = releaseSongs.map(s => s.totalStreams || 0);
+    const maxStreams = Math.max(...songStreams);
+    const avgStreams = songStreams.reduce((a, b) => a + b, 0) / songStreams.length;
+    
+    if (maxStreams > avgStreams * 2) {
+      streamDistribution = leadSingleContribution > 60 ? 'single_dominant' : 'track_focused';
+    }
+  }
+  
+  return {
+    totalROI,
+    costPerStream,
+    campaignEffectiveness,
+    leadSingleContribution,
+    averageRevenuePerTrack,
+    streamDistribution
+  };
+}
+
+/**
+ * Create detailed track breakdown analysis
+ */
+export function analyzeTrackBreakdown(release: any, releaseSongs: any[]): TrackBreakdown {
+  const totalRevenue = release.revenueGenerated || 0;
+  const leadSingle = identifyLeadSingle(releaseSongs, release);
+  
+  // Sort songs by performance (streams + revenue combined score)
+  const rankedSongs = releaseSongs
+    .map(song => ({
+      song,
+      streams: song.totalStreams || 0,
+      revenue: song.totalRevenue || 0,
+      score: (song.totalStreams || 0) + (song.totalRevenue || 0) * 10 // Weight revenue higher
+    }))
+    .sort((a, b) => b.score - a.score);
+  
+  // Calculate contribution percentages
+  const songsWithContribution = rankedSongs.map((item, index) => ({
+    ...item,
+    contributionPercentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
+    rank: index + 1
+  }));
+  
+  // Separate lead single from main tracks
+  const mainTracks = songsWithContribution.filter(item => item.song.id !== leadSingle?.id);
+  
+  const leadSingleData = leadSingle ? songsWithContribution.find(item => item.song.id === leadSingle.id) : undefined;
+  
+  return {
+    leadSingle: leadSingleData ? {
+      song: leadSingleData.song,
+      streams: leadSingleData.streams,
+      revenue: leadSingleData.revenue,
+      contributionPercentage: leadSingleData.contributionPercentage
+    } : undefined,
+    mainTracks: mainTracks.map(({ song, streams, revenue, contributionPercentage, rank }) => ({
+      song,
+      streams,
+      revenue,
+      contributionPercentage,
+      rank
+    })),
+    bestPerformer: rankedSongs[0]?.song,
+    worstPerformer: rankedSongs[rankedSongs.length - 1]?.song,
+    totalTracks: releaseSongs.length
+  };
+}
+
+/**
+ * Assess overall campaign outcome
+ */
+export function assessCampaignOutcome(metrics: PerformanceMetrics, campaignData: CampaignData): CampaignOutcome {
+  const { totalROI, campaignEffectiveness } = metrics;
+  const { totalInvestment } = campaignData;
+  
+  if (totalROI >= 3.0 || campaignEffectiveness === 'excellent') {
+    return {
+      tier: 'breakthrough',
+      description: 'Exceptional performance exceeded all expectations',
+      color: 'text-purple-600 bg-purple-100',
+      icon: '🚀'
+    };
+  } else if (totalROI >= 1.5 || campaignEffectiveness === 'strong') {
+    return {
+      tier: 'strong_success',
+      description: 'Strong performance with excellent ROI',
+      color: 'text-green-600 bg-green-100',
+      icon: '⭐'
+    };
+  } else if (totalROI >= 0.5 || campaignEffectiveness === 'good') {
+    return {
+      tier: 'modest_success',
+      description: 'Solid performance meeting expectations',
+      color: 'text-blue-600 bg-blue-100',
+      icon: '✅'
+    };
+  } else if (totalROI >= -0.25 || campaignEffectiveness === 'fair') {
+    return {
+      tier: 'underperformed',
+      description: 'Below expectations but not a total loss',
+      color: 'text-yellow-600 bg-yellow-100',
+      icon: '⚠️'
+    };
+  } else {
+    return {
+      tier: 'failed',
+      description: 'Significant underperformance requires review',
+      color: 'text-red-600 bg-red-100',
+      icon: '❌'
+    };
+  }
+}
+
+/**
+ * Format currency values for display
+ */
+export function formatCurrency(amount: number): string {
+  if (amount >= 1000) {
+    return `$${(amount / 1000).toFixed(1)}K`;
+  }
+  return `$${amount.toLocaleString()}`;
+}
+
+/**
+ * Format stream counts for display
+ */
+export function formatStreams(streams: number): string {
+  if (streams >= 1000000) {
+    return `${(streams / 1000000).toFixed(1)}M`;
+  } else if (streams >= 1000) {
+    return `${(streams / 1000).toFixed(0)}K`;
+  }
+  return streams.toLocaleString();
+}
+
+/**
+ * Get effectiveness color and badge styling
+ */
+export function getEffectivenessStyle(effectiveness: PerformanceMetrics['campaignEffectiveness']) {
+  switch (effectiveness) {
+    case 'excellent':
+      return { color: 'text-purple-600 bg-purple-100', label: 'Excellent' };
+    case 'strong':
+      return { color: 'text-green-600 bg-green-100', label: 'Strong' };
+    case 'good':
+      return { color: 'text-blue-600 bg-blue-100', label: 'Good' };
+    case 'fair':
+      return { color: 'text-yellow-600 bg-yellow-100', label: 'Fair' };
+    case 'poor':
+      return { color: 'text-red-600 bg-red-100', label: 'Poor' };
+    default:
+      return { color: 'text-slate-600 bg-slate-100', label: 'Unknown' };
+  }
+}

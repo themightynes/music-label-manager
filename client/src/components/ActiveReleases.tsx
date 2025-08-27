@@ -183,6 +183,7 @@ export function ActiveReleases() {
                     release={release}
                     currentMonth={currentMonth}
                     artistName={getArtistName(release.artistId)}
+                    songs={songs}
                   />
                 ))
               )}
@@ -203,6 +204,7 @@ export function ActiveReleases() {
                     release={release}
                     currentMonth={currentMonth}
                     artistName={getArtistName(release.artistId)}
+                    songs={songs}
                   />
                 ))
               )}
