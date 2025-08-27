@@ -118,6 +118,86 @@ export function MetricsDashboard() {
     );
   };
 
+  const renderRevenueBreakdown = () => {
+    const monthlyStats = gameState.monthlyStats as any;
+    const currentMonth = gameState.currentMonth || 1;
+    const currentMonthKey = `month${currentMonth - 1}`;
+    const monthData = monthlyStats?.[currentMonthKey] || {};
+    const changes = monthData.changes || [];
+
+    // Categorize revenue sources from changes following pure function principles
+    const revenueBreakdown = {
+      streamingRevenue: 0,
+      projectRevenue: 0,
+      tourRevenue: 0,
+      roleBenefits: 0,
+      otherRevenue: 0
+    };
+
+    changes.forEach((change: any) => {
+      if (change.amount > 0) {
+        const description = change.description?.toLowerCase() || '';
+        const amount = change.amount;
+
+        if (change.type === 'ongoing_revenue' || description.includes('streaming') || description.includes('streams')) {
+          revenueBreakdown.streamingRevenue += amount;
+        } else if (change.type === 'revenue' && (description.includes('streaming') || description.includes('streams'))) {
+          revenueBreakdown.streamingRevenue += amount;
+        } else if (change.type === 'project_complete' || description.includes('revenue') || description.includes('complete')) {
+          revenueBreakdown.projectRevenue += amount;
+        } else if (description.includes('tour')) {
+          revenueBreakdown.tourRevenue += amount;
+        } else if (description.includes('role') || description.includes('meeting') || description.includes('benefit')) {
+          revenueBreakdown.roleBenefits += amount;
+        } else if (change.type === 'revenue') {
+          revenueBreakdown.otherRevenue += amount;
+        }
+      }
+    });
+
+    const total = Object.values(revenueBreakdown).reduce((sum, amount) => sum + amount, 0);
+
+    if (total === 0) {
+      return <div className="text-xs text-slate-500">No revenue breakdown available</div>;
+    }
+
+    return (
+      <div className="space-y-2 text-xs">
+        <div className="font-semibold text-emerald-700 mb-2">Revenue Breakdown (${total.toLocaleString()})</div>
+        {revenueBreakdown.streamingRevenue > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">🎵 Streaming Revenue:</span>
+            <span className="font-medium text-emerald-600">${revenueBreakdown.streamingRevenue.toLocaleString()}</span>
+          </div>
+        )}
+        {revenueBreakdown.projectRevenue > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">🎧 Project Completion:</span>
+            <span className="font-medium text-emerald-600">${revenueBreakdown.projectRevenue.toLocaleString()}</span>
+          </div>
+        )}
+        {revenueBreakdown.tourRevenue > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">🎤 Tour Revenue:</span>
+            <span className="font-medium text-emerald-600">${revenueBreakdown.tourRevenue.toLocaleString()}</span>
+          </div>
+        )}
+        {revenueBreakdown.roleBenefits > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">🤝 Role Benefits:</span>
+            <span className="font-medium text-emerald-600">${revenueBreakdown.roleBenefits.toLocaleString()}</span>
+          </div>
+        )}
+        {revenueBreakdown.otherRevenue > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">💼 Other Revenue:</span>
+            <span className="font-medium text-emerald-600">${revenueBreakdown.otherRevenue.toLocaleString()}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <TooltipProvider>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -174,8 +254,17 @@ export function MetricsDashboard() {
                   <div className="text-xs text-slate-500">mentions</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-emerald-600">${stats.revenue.toLocaleString()}</div>
-                  <div className="text-xs text-slate-500">earned</div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="cursor-help">
+                        <div className="text-lg font-bold text-emerald-600">${stats.revenue.toLocaleString()}</div>
+                        <div className="text-xs text-slate-500">earned</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      {renderRevenueBreakdown()}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="text-center">
                   <Tooltip>
@@ -273,8 +362,17 @@ export function MetricsDashboard() {
                   <div className="text-xs text-slate-500">press</div>
                 </div>
                 <div className="text-center p-2 bg-emerald-50 rounded">
-                  <div className="text-base font-bold text-emerald-600">${stats.revenue.toLocaleString()}</div>
-                  <div className="text-xs text-slate-500">earned</div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="cursor-help">
+                        <div className="text-base font-bold text-emerald-600">${stats.revenue.toLocaleString()}</div>
+                        <div className="text-xs text-slate-500">earned</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      {renderRevenueBreakdown()}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="text-center p-2 bg-red-50 rounded">
                   <Tooltip>
@@ -378,7 +476,14 @@ export function MetricsDashboard() {
               {/* Secondary Metrics */}
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div>
-                  <span className="text-emerald-600 font-medium">${stats.revenue.toLocaleString()}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-emerald-600 font-medium cursor-help">${stats.revenue.toLocaleString()}</span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      {renderRevenueBreakdown()}
+                    </TooltipContent>
+                  </Tooltip>
                   <div className="text-slate-500">revenue</div>
                 </div>
                 <div>
