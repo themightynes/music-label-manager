@@ -838,6 +838,20 @@ export class GameEngine {
           await this.gameData.updateSongs(songUpdates, dbTransaction);
         }
         
+        // Apply mood boost for successful release
+        if (release.artistId) {
+          const moodBoost = (release.type === 'album' || release.type === 'ep') ? 10 : 5;
+          
+          // Track mood change for later application in processMonthlyMoodChanges
+          if (!summary.artistChanges) {
+            summary.artistChanges = {};
+          }
+          summary.artistChanges[release.artistId] = 
+            (summary.artistChanges[release.artistId] || 0) + moodBoost;
+          
+          console.log(`[PLANNED RELEASE] Artist mood boost +${moodBoost} for releasing "${release.title}" (${release.type})`);
+        }
+        
         // Add to summary
         summary.revenue += totalRevenue;
         summary.streams = (summary.streams || 0) + totalStreams;
@@ -1381,6 +1395,8 @@ export class GameEngine {
     const baseQuality = 40 + Math.floor(this.getRandom(0, 20));
     
     // Artist mood bonus (-10 to +10 based on mood)
+    // IMPORTANT: If you change this formula, also update the preview calculation in:
+    // client/src/components/ProjectCreationModal.tsx (line ~277)
     const artistMoodBonus = Math.floor(((artist.mood || 50) - 50) * 0.2);
     
     // Producer tier quality bonus
@@ -1728,6 +1744,17 @@ export class GameEngine {
       let moodChange = 0;
       const currentMood = artist.mood || 50;
       
+      // Apply any release-based mood changes (from processPlannedReleases)
+      const releaseMoodBoost = summary.artistChanges?.[artist.id] || 0;
+      if (releaseMoodBoost > 0) {
+        moodChange += releaseMoodBoost;
+        summary.changes.push({
+          type: 'mood',
+          description: `${artist.name}'s mood improved from successful release (+${releaseMoodBoost})`,
+          amount: releaseMoodBoost
+        });
+      }
+      
       // Count active projects for this artist
       const activeProjects = projects.filter(
         (p: any) => p.artistId === artist.id && 
@@ -1760,7 +1787,7 @@ export class GameEngine {
           await this.storage.updateArtist(artist.id, { mood: newMood });
         }
         
-        // Track change
+        // Track change - always show the total mood change
         summary.changes.push({
           type: 'mood',
           description: `${artist.name}'s mood ${moodChange > 0 ? 'improved' : 'decreased'}`,

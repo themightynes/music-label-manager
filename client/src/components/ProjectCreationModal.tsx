@@ -274,7 +274,10 @@ export function ProjectCreationModal({
   const baseQuality = 50;
   const producerBonus = selectedProducer?.qualityBonus || 0;
   const timeBonus = selectedTimeOption?.qualityModifier || 0;
-  const artistMoodBonus = selectedArtist ? (artists.find(a => a.id === selectedArtist)?.mood || 50) * 0.2 : 0;
+  // IMPORTANT: This preview calculation must match the backend formula in:
+  // shared/engine/game-engine.ts (calculateEnhancedSongQuality method, line ~1400)
+  // If you change this formula, update the backend calculation as well
+  const artistMoodBonus = selectedArtist ? Math.floor(((artists.find(a => a.id === selectedArtist)?.mood || 50) - 50) * 0.2) : 0;
   const budgetBonus = selectedProjectType?.isRecording ? calculateBudgetQualityBonus(budgetPerSong, selectedType || '') : 0;
   const estimatedQuality = Math.min(100, Math.max(20, baseQuality + producerBonus + timeBonus + artistMoodBonus + budgetBonus));
 
