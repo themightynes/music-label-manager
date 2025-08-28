@@ -143,6 +143,9 @@ export class GameEngine {
     // Apply delayed effects from previous months
     await this.processDelayedEffects(summary);
 
+    // Process monthly mood changes
+    await this.processMonthlyMoodChanges(summary);
+
     // Check for random events
     await this.checkForEvents(summary);
 
@@ -1706,6 +1709,68 @@ export class GameEngine {
   }
 
   /**
+   * Process monthly mood changes for all artists
+   */
+  private async processMonthlyMoodChanges(summary: MonthSummary): Promise<void> {
+    // Get artists from storage if available
+    if (!this.storage || !this.storage.getArtistsByGame) {
+      return;
+    }
+    
+    const artists = await this.storage.getArtistsByGame(this.gameState.id);
+    if (!artists || artists.length === 0) return;
+    
+    // Get projects from storage if available
+    const projects = this.storage.getProjectsByGame ? 
+      await this.storage.getProjectsByGame(this.gameState.id) : [];
+    
+    for (const artist of artists) {
+      let moodChange = 0;
+      const currentMood = artist.mood || 50;
+      
+      // Count active projects for this artist
+      const activeProjects = projects.filter(
+        (p: any) => p.artistId === artist.id && 
+        ['recording', 'mixing', 'mastering'].includes(p.stage)
+      ).length;
+      
+      // Workload stress: -5 mood per project beyond 2
+      if (activeProjects > 2) {
+        moodChange -= (activeProjects - 2) * 5;
+        summary.changes.push({
+          type: 'mood',
+          description: `${artist.name} is stressed from workload (${activeProjects} active projects)`,
+          amount: moodChange
+        });
+      }
+      
+      // Natural drift toward 50 (by 3 points max)
+      if (currentMood > 55) {
+        moodChange -= 3;
+      } else if (currentMood < 45) {
+        moodChange += 3;
+      }
+      
+      // Apply mood change
+      if (moodChange !== 0) {
+        const newMood = Math.max(0, Math.min(100, currentMood + moodChange));
+        
+        // Update artist mood in storage
+        if (this.storage.updateArtist) {
+          await this.storage.updateArtist(artist.id, { mood: newMood });
+        }
+        
+        // Track change
+        summary.changes.push({
+          type: 'mood',
+          description: `${artist.name}'s mood ${moodChange > 0 ? 'improved' : 'decreased'}`,
+          amount: moodChange
+        });
+      }
+    }
+  }
+
+  /**
    * Checks for random events based on probability
    */
   private async checkForEvents(summary: MonthSummary): Promise<void> {
@@ -3031,7 +3096,7 @@ export interface MonthSummary {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood';
   description: string;
   amount?: number;
   roleId?: string;
