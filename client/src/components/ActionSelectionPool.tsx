@@ -131,13 +131,13 @@ export function ActionSelectionPool({
     <div className="space-y-4">
       {/* Header with quick actions */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">Available Actions</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Focus Actions Pool</h3>
         <div className="flex space-x-2">
           <Button
             variant="outline"
             size="sm"
             onClick={onAutoRecommend}
-            disabled={selectedActions.length >= 3}
+            disabled={selectedActions.length >= (3)}
             className="text-xs"
           >
             <i className="fas fa-magic mr-1"></i>
@@ -206,7 +206,7 @@ export function ActionSelectionPool({
                 const actionDetails = getActionDetails(action.id);
                 const recommendation = getActionRecommendation(action.id);
                 const isSelected = selectedActions.includes(action.id);
-                const isDisabled = !isSelected && selectedActions.length >= 3;
+                const isDisabled = !isSelected && selectedActions.length >= 3; // TODO: Use gameState.focusSlots from props
 
                 return (
                   <ActionCard

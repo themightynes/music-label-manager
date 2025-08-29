@@ -6,7 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star, Award, Play, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star, Award, Play, Check, Loader2, AlertCircle, Edit2, X } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
@@ -190,6 +191,9 @@ export default function PlanReleasePage() {
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [leadSingle, setLeadSingle] = useState<string>('');
   const [releaseType, setReleaseType] = useState<'single' | 'ep' | 'album' | null>(null);
+  const [editingSongId, setEditingSongId] = useState<string | null>(null);
+  const [editedTitle, setEditedTitle] = useState<string>('');
+  const [songTitles, setSongTitles] = useState<Record<string, string>>({});
   const [releaseTitle, setReleaseTitle] = useState('');
   const [releaseMonth, setReleaseMonth] = useState(6);
   
@@ -528,6 +532,61 @@ export default function PlanReleasePage() {
     return 'text-red-600 bg-red-100';
   };
 
+  // Song title editing functions
+  const startEditingSong = (songId: string, currentTitle: string) => {
+    setEditingSongId(songId);
+    setEditedTitle(currentTitle);
+  };
+
+  const cancelEditingSong = () => {
+    setEditingSongId(null);
+    setEditedTitle('');
+  };
+
+  const saveSongTitle = async (songId: string) => {
+    const trimmedTitle = editedTitle.trim();
+    
+    // Validation
+    if (!trimmedTitle) {
+      cancelEditingSong();
+      return;
+    }
+    
+    if (trimmedTitle.length > 100) {
+      alert('Song title must be 100 characters or less');
+      return;
+    }
+    
+    try {
+      await apiRequest('PATCH', `/api/songs/${songId}`, { title: trimmedTitle });
+      
+      // If we get here without throwing, the update was successful
+      // Update local state
+      setSongTitles(prev => ({ ...prev, [songId]: trimmedTitle }));
+      
+      // Update the song in availableSongs if it exists
+      setAvailableSongs(prev => prev.map(song => 
+        song.id === songId ? { ...song, title: trimmedTitle } : song
+      ));
+      
+      // Close the edit box
+      setEditingSongId(null);
+      setEditedTitle('');
+    } catch (error: any) {
+      console.error('Failed to update song title:', error);
+      const errorMessage = error?.message || error?.details || 'Unknown error';
+      alert(`Failed to update song title: ${errorMessage}`);
+    }
+  };
+
+  const handleTitleKeyPress = (e: React.KeyboardEvent, songId: string) => {
+    if (e.key === 'Enter') {
+      saveSongTitle(songId);
+    } else if (e.key === 'Escape') {
+      cancelEditingSong();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -691,7 +750,60 @@ export default function PlanReleasePage() {
                             />
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-semibold text-slate-900">{song.title}</h4>
+                                {editingSongId === song.id ? (
+                                  <div className="flex items-center space-x-2 flex-1 mr-2">
+                                    <Input
+                                      value={editedTitle}
+                                      onChange={(e) => setEditedTitle(e.target.value)}
+                                      onKeyDown={(e) => handleTitleKeyPress(e, song.id)}
+                                      onBlur={(e) => {
+                                        // Don't save if clicking on the cancel or save buttons
+                                        const relatedTarget = e.relatedTarget as HTMLElement;
+                                        if (relatedTarget && relatedTarget.closest('.song-edit-buttons')) {
+                                          return;
+                                        }
+                                        saveSongTitle(song.id);
+                                      }}
+                                      className="h-7 text-sm font-semibold"
+                                      maxLength={100}
+                                      autoFocus
+                                    />
+                                    <div className="song-edit-buttons flex items-center space-x-1">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => saveSongTitle(song.id)}
+                                        className="h-7 w-7 p-0"
+                                        type="button"
+                                      >
+                                        <Check className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={cancelEditingSong}
+                                        className="h-7 w-7 p-0"
+                                        type="button"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center space-x-2 group">
+                                    <h4 className="font-semibold text-slate-900">
+                                      {songTitles[song.id] || song.title}
+                                    </h4>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => startEditingSong(song.id, songTitles[song.id] || song.title)}
+                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
                                 <div className="flex items-center space-x-2">
                                   <Badge className={`text-xs ${getQualityColor(song.quality)}`}>
                                     {song.quality} Quality
@@ -733,7 +845,7 @@ export default function PlanReleasePage() {
                         .filter(song => selectedSongs.includes(song.id))
                         .map(song => (
                           <SelectItem key={song.id} value={song.id}>
-                            {song.title} (Quality: {song.quality})
+                            {songTitles[song.id] || song.title} (Quality: {song.quality})
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -759,7 +871,10 @@ export default function PlanReleasePage() {
                   <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <h4 className="text-sm font-semibold text-blue-700 mb-2">Selected Lead Single</h4>
                     <p className="text-sm text-blue-600">
-                      {availableSongs.find(s => s.id === leadSingle)?.title || 'No lead single selected'}
+                      {(() => {
+                        const leadSong = availableSongs.find(s => s.id === leadSingle);
+                        return leadSong ? (songTitles[leadSong.id] || leadSong.title) : 'No lead single selected';
+                      })()}
                     </p>
                     <p className="text-xs text-blue-500 mt-1">
                       This single will build momentum for the full {releaseType} release

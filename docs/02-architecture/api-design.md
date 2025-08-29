@@ -409,6 +409,63 @@ Content-Type: application/json
 
 ---
 
+## 🎵 Song Management
+
+### **Update Song Title**
+```http
+PATCH /api/songs/:songId
+Authorization: Required (session)
+Content-Type: application/json
+
+{
+  "title": "New Song Title"
+}
+```
+
+**Response (200 OK)**:
+```json
+{
+  "success": true,
+  "song": {
+    "id": "uuid",
+    "title": "New Song Title",
+    "previousTitle": "Old Song Title"
+  }
+}
+```
+
+**Error Response (400 Bad Request)**:
+```json
+{
+  "error": "INVALID_TITLE",
+  "message": "Song title must be a non-empty string"
+}
+```
+
+**Error Response (403 Forbidden)**:
+```json
+{
+  "error": "UNAUTHORIZED", 
+  "message": "You do not have permission to edit this song"
+}
+```
+
+**Error Response (404 Not Found)**:
+```json
+{
+  "error": "SONG_NOT_FOUND",
+  "message": "Song not found"
+}
+```
+
+**Validation Rules**:
+- Title must be non-empty string after trimming whitespace
+- Maximum 100 characters
+- Song must belong to user's active game
+- User must own the game containing the song
+
+---
+
 ## 📝 Action History
 
 ### **Record Player Action**

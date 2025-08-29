@@ -40,7 +40,23 @@
 
 ## ✅ **RECENTLY COMPLETED** (Last 30 Days)
 
-### **August 29, 2025 - Data-Driven Action System & UI Unification**
+### **August 29, 2025 - Focus Slots System & Content Data Architecture Refactoring**
+- ✅ **Focus Slots System - Complete Implementation** - Connected action point system to gameplay
+  - ✅ Fixed disconnected focus slots that weren't actually limiting action selection
+  - ✅ Implemented live tracking - `usedFocusSlots` updates in real-time as actions are selected
+  - ✅ Removed all hardcoded "3" references - UI now dynamically uses `gameState.focusSlots`
+  - ✅ Added 4th slot unlock at 50+ reputation with automatic notification
+  - ✅ Synchronized client/server state - proper reset to 0 on game load and month advancement
+  - ✅ Updated all UI components (SelectionSummary, MonthPlanner, Dashboard) for dynamic limits
+  - ✅ Result: Clear "2/3 Focus Slots, 1 available" live feedback throughout action selection
+- ✅ **Focus Slots UI/UX Unification** - Enhanced terminology and visual consistency
+  - ✅ Renamed "Available Actions" → "Focus Actions Pool" for clear connection to Focus Slots
+  - ✅ Updated action buttons to show "Use Focus Slot" with focus icon
+  - ✅ Added visual slot indicators showing filled/empty states as progress bars
+  - ✅ Implemented "Focus Cost: 1 Slot" display in action details
+  - ✅ Changed messaging from "Select actions" to "Allocate focus slots"
+  - ✅ Added tooltip explaining Focus Slots are monthly action points
+  - ✅ Result: Users now clearly understand the resource-based action system
 - ✅ **Unified Action System Architecture** - Complete data-driven approach for game actions
   - ✅ Enhanced `actions.json` with detailed action metadata (cost, duration, prerequisites, outcomes, benefits)
   - ✅ Added smart recommendation system with conditions and messages in action data
@@ -59,6 +75,36 @@
   - ✅ Easy to add/modify/remove actions without touching code
   - ✅ Follows established architectural patterns from game engine
   - ✅ No breaking changes - fully backward compatible
+- ✅ **Song Name Generation System Refactoring** - Data-driven content architecture expansion
+  - ✅ Created new `data/balance/content.json` with song name pools and mood types
+  - ✅ Moved 16 hardcoded song names from game-engine.ts to structured JSON data
+  - ✅ Added genre-specific song name pools for future enhancement capability
+  - ✅ Implemented mood types data structure for song generation variety
+  - ✅ Updated balance.ts to export content data through established module system
+  - ✅ Enhanced TypeScript types with optional `song_generation` property in BalanceConfig
+  - ✅ Game engine now fetches names via `gameData.getBalanceConfigSync()?.song_generation`
+  - ✅ Maintained complete backward compatibility with fallback values
+- ✅ **Architectural Benefits of Content.json**
+  - ✅ Follows separation of concerns principle - content data separated from business logic
+  - ✅ Enables easy content updates without code deployment
+  - ✅ Prepares foundation for future genre-specific song naming system
+  - ✅ Reduces coupling between GameEngine and hardcoded content
+  - ✅ Establishes pattern for future content type additions (album names, marketing slogans, etc.)
+- ✅ **Song Title Editing Feature** - Player-controlled song customization system
+  - ✅ `PATCH /api/songs/:songId` endpoint with comprehensive validation and authorization
+  - ✅ Title validation: non-empty, max 100 characters, proper user ownership checks
+  - ✅ Inline editing UI with hover-to-reveal edit icons in Plan Release page
+  - ✅ Keyboard support: Enter to save, Escape to cancel editing
+  - ✅ Visual feedback with check/X buttons for save/cancel actions
+  - ✅ Click-outside-to-save behavior with blur conflict prevention
+  - ✅ Real-time updates in song list and lead single dropdown selection
+  - ✅ Proper error handling and user feedback for failed updates
+- ✅ **Enhanced Player Experience Benefits**
+  - ✅ Creative control: Players can rename songs to match album themes
+  - ✅ Improved immersion: Personalized song titles enhance emotional connection
+  - ✅ Strategic depth: Thematic album creation with cohesive naming
+  - ✅ User agency: Direct manipulation of game content without limitations
+  - ✅ Smooth UX: No page refresh needed, instant visual updates
 
 ### **August 26, 2025 - Financial System Architecture Refactoring**
 - ✅ **FinancialSystem.ts Module Extraction** - Clean separation of concerns from GameEngine

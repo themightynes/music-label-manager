@@ -11,10 +11,21 @@ The game uses JSON files in `/data/` for all content, separated by concern:
 
 ```
 data/
-├── balance.json          # Economic balance and game formulas
+├── balance.ts           # Main balance configuration aggregator  
+├── balance/             # Modular balance configuration files
+│   ├── config.json      # Version and metadata
+│   ├── economy.json     # Economic costs and formulas
+│   ├── progression.json # Reputation and access tier systems
+│   ├── quality.json     # Quality calculation rules
+│   ├── artists.json     # Artist archetype definitions
+│   ├── markets.json     # Market and seasonal modifiers
+│   ├── projects.json    # Project durations and settings
+│   ├── events.json      # Random event configurations
+│   └── content.json     # Game content generation (NEW)
+├── actions.json         # Player actions and effects
+├── artists.json         # Available artist pool and characteristics  
 ├── roles.json           # Industry role definitions and dialogue
 ├── dialogue.json        # Artist conversations and interactions
-├── artists.json         # Available artist pool and characteristics
 ├── events.json          # Random events (future feature)
 └── world.json           # Global game configuration (future feature)
 ```
@@ -35,6 +46,7 @@ interface BalanceConfig {
   streaming: StreamingConfig;
   press: PressConfig;
   time_progression: TimeProgressionConfig;
+  song_generation?: SongGenerationConfig;  // Added August 29, 2025
 }
 ```
 
@@ -255,6 +267,221 @@ interface ArtistChoice extends DialogueChoice {
   ]
 }
 ```
+
+---
+
+## 🎵 Content Generation Schema (`balance/content.json`)
+
+### **Purpose**
+The content.json file contains all data for procedural content generation, separating game content from business logic. This enables easy content updates without code changes and supports future content customization features.
+
+### **Root Structure**
+```typescript
+interface ContentGenerationConfig {
+  song_generation: SongGenerationConfig;
+}
+
+interface SongGenerationConfig {
+  name_pools: SongNamePools;
+  mood_types: string[];
+}
+
+interface SongNamePools {
+  default: string[];
+  genre_specific: Record<string, string[]>;
+}
+```
+
+### **Schema Structure**
+
+#### **Song Name Pools**
+```json
+{
+  "song_generation": {
+    "name_pools": {
+      "default": [
+        "Midnight Dreams",
+        "City Lights", 
+        "Hearts on Fire",
+        "Thunder Road",
+        "Broken Chains",
+        "Rebel Soul",
+        "Digital Love",
+        "Neon Nights",
+        "System Override",
+        "Golden Hour",
+        "Starlight",
+        "Electric Pulse",
+        "Velvet Sky",
+        "Crimson Dawn",
+        "Silver Lining",
+        "Ocean Waves"
+      ],
+      "genre_specific": {
+        "pop": [
+          "Summer Nights",
+          "Dance Floor", 
+          "Sweet Escape",
+          "Radio Waves"
+        ],
+        "rock": [
+          "Thunder Road",
+          "Broken Chains",
+          "Rebel Soul", 
+          "Electric Storm"
+        ],
+        "electronic": [
+          "Digital Love",
+          "System Override",
+          "Neon Nights",
+          "Circuit Breaker"
+        ]
+      }
+    }
+  }
+}
+```
+
+#### **Mood Types**
+```json
+{
+  "song_generation": {
+    "mood_types": [
+      "upbeat",
+      "melancholic", 
+      "aggressive",
+      "chill"
+    ]
+  }
+}
+```
+
+### **GameEngine Integration**
+
+#### **Song Name Generation**
+```typescript
+// In game-engine.ts - generateSong() method
+const songNamePools = this.gameData.getBalanceConfigSync()?.song_generation?.name_pools;
+const defaultSongNames = songNamePools?.default || [
+  // Fallback if data not available
+  'Midnight Dreams', 'City Lights', 'Hearts on Fire', 'Thunder Road'
+];
+
+// Future enhancement: genre-specific selection
+const songNames = defaultSongNames;
+const randomName = songNames[Math.floor(this.getRandom(0, songNames.length))];
+```
+
+#### **Mood Generation**
+```typescript
+// In game-engine.ts - generateSongMood() method  
+const moodTypes = this.gameData.getBalanceConfigSync()?.song_generation?.mood_types;
+const moods = moodTypes || ['upbeat', 'melancholic', 'aggressive', 'chill'];
+return moods[Math.floor(this.getRandom(0, moods.length))];
+```
+
+### **Architectural Benefits**
+
+- **Separation of Concerns**: Content data separated from business logic in GameEngine
+- **Easy Content Updates**: Modify song names without touching code or redeployment
+- **Future Extensibility**: Genre-specific song naming ready for implementation
+- **Backward Compatibility**: Fallback values ensure system works if data unavailable
+- **Established Pattern**: Follows same data-driven approach as balance configuration
+
+### **Song Title Editing API Integration**
+
+#### **API Endpoint Specification**
+```
+PATCH /api/songs/:songId
+Content-Type: application/json
+Authorization: Required (via getUserId middleware)
+```
+
+**Request Body**:
+```json
+{
+  "title": "New Song Title"
+}
+```
+
+**Response (Success)**:
+```json
+{
+  "success": true,
+  "song": {
+    "id": "song-uuid-here",
+    "title": "New Song Title",
+    "previousTitle": "Previous Song Title"
+  }
+}
+```
+
+**Response (Error Examples)**:
+```json
+{
+  "error": "INVALID_TITLE",
+  "message": "Song title must be a non-empty string"
+}
+
+{
+  "error": "TITLE_TOO_LONG",
+  "message": "Song title must be 100 characters or less"
+}
+
+{
+  "error": "UNAUTHORIZED",
+  "message": "You do not have permission to edit this song"
+}
+```
+
+#### **Validation Rules**
+- **Title Required**: Must be non-empty string after trimming whitespace
+- **Length Limit**: Maximum 100 characters
+- **User Authorization**: Song must belong to user's active game
+- **Game Ownership**: User must own the game containing the song
+- **Security**: Full authorization chain prevents cross-user data access
+
+#### **Database Schema Impact**
+```sql
+-- Songs table supports title updates
+UPDATE songs 
+SET title = ?, updatedAt = CURRENT_TIMESTAMP 
+WHERE id = ? AND gameId IN (SELECT id FROM game_states WHERE userId = ?);
+```
+
+#### **UI Integration Pattern**
+```typescript
+// Client-side song editing state management
+const [editingSongId, setEditingSongId] = useState<string | null>(null);
+const [editedTitle, setEditedTitle] = useState<string>('');
+const [songTitles, setSongTitles] = useState<Record<string, string>>({});
+
+// API call with proper error handling
+const updateSongTitle = async (songId: string, title: string) => {
+  const response = await apiRequest(`/api/songs/${songId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title })
+  });
+  
+  // Response object, not JSON - fixed common integration bug
+  if (response.ok) {
+    const data = await response.json();
+    setSongTitles(prev => ({ ...prev, [songId]: data.song.title }));
+    setEditingSongId(null);
+  }
+};
+```
+
+### **Future Enhancements Enabled**
+
+- **Genre-Specific Names**: Artist genre could influence song name selection
+- **Additional Content Types**: Album names, marketing slogans, press quotes
+- **Localization Support**: Multiple language versions of content pools
+- **Dynamic Content**: Time-based or seasonal content variations
+- **User Customization**: Player-uploaded custom content pools
+- **Bulk Editing**: Multiple song title updates in single API call
+- **History Tracking**: Song title change history for undo functionality
+- **Validation Extensions**: Custom validation rules per genre or project type
 
 ---
 

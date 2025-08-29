@@ -236,6 +236,20 @@ export class GameEngine {
     
     console.log(`[MONEY UPDATE] Starting: $${monthStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
     
+    // Check for focus slot unlock at 50+ reputation
+    if (this.gameState.reputation >= 50) {
+      const currentSlots = this.gameState.focusSlots || 3;
+      if (currentSlots < 4) {
+        this.gameState.focusSlots = 4;
+        summary.changes.push({
+          type: 'unlock',
+          description: 'Fourth focus slot unlocked! You can now select 4 actions per month.',
+          icon: 'fa-unlock'
+        });
+        console.log('[UNLOCK] Fourth focus slot unlocked at reputation', this.gameState.reputation);
+      }
+    }
+    
     return {
       gameState: this.gameState,
       summary,
@@ -1400,13 +1414,15 @@ export class GameEngine {
   private generateSong(project: any, artist: any): any {
     const currentMonth = this.gameState.currentMonth || 1;
     
-    // Generate song name from predefined pools (would come from balance.json in full implementation)
-    const songNames = [
-      'Midnight Dreams', 'City Lights', 'Hearts on Fire', 'Thunder Road', 
-      'Broken Chains', 'Rebel Soul', 'Digital Love', 'Neon Nights',
-      'System Override', 'Golden Hour', 'Starlight', 'Electric Pulse',
-      'Velvet Sky', 'Crimson Dawn', 'Silver Lining', 'Ocean Waves'
+    // Get song names from data layer
+    const songNamePools = this.gameData.getBalanceConfigSync()?.song_generation?.name_pools;
+    const defaultSongNames = songNamePools?.default || [
+      // Fallback if data not available
+      'Midnight Dreams', 'City Lights', 'Hearts on Fire', 'Thunder Road'
     ];
+    
+    // Could use genre-specific names in future based on artist.genre
+    const songNames = defaultSongNames;
     
     const randomName = songNames[Math.floor(this.getRandom(0, songNames.length))];
     
@@ -1629,7 +1645,8 @@ export class GameEngine {
    * Generates a random mood for a song
    */
   private generateSongMood(): string {
-    const moods = ['upbeat', 'melancholic', 'aggressive', 'chill'];
+    const moodTypes = this.gameData.getBalanceConfigSync()?.song_generation?.mood_types;
+    const moods = moodTypes || ['upbeat', 'melancholic', 'aggressive', 'chill'];
     return moods[Math.floor(this.getRandom(0, moods.length))];
   }
   

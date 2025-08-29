@@ -1250,6 +1250,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update song title
+  app.patch("/api/songs/:songId", getUserId, async (req, res) => {
+    try {
+      const { songId } = req.params;
+      const { title } = req.body;
+      const userId = req.userId;
+      
+      // Validate user ID exists
+      if (!userId) {
+        return res.status(401).json({
+          error: 'UNAUTHORIZED',
+          message: 'User authentication required'
+        });
+      }
+      
+      // Validate title
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({
+          error: 'INVALID_TITLE',
+          message: 'Song title must be a non-empty string'
+        });
+      }
+      
+      // Validate title length
+      if (title.length > 100) {
+        return res.status(400).json({
+          error: 'TITLE_TOO_LONG',
+          message: 'Song title must be 100 characters or less'
+        });
+      }
+      
+      // First check if song exists and belongs to user's game
+      const [song] = await db.select({
+        songId: songs.id,
+        gameId: songs.gameId,
+        currentTitle: songs.title
+      })
+      .from(songs)
+      .where(eq(songs.id, songId))
+      .limit(1);
+      
+      if (!song) {
+        return res.status(404).json({
+          error: 'SONG_NOT_FOUND',
+          message: 'Song not found'
+        });
+      }
+      
+      // Verify the game belongs to the user
+      const [game] = await db.select()
+        .from(gameStates)
+        .where(and(
+          eq(gameStates.id, song.gameId),
+          eq(gameStates.userId, userId)
+        ))
+        .limit(1);
+      
+      if (!game) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to edit this song'
+        });
+      }
+      
+      // Update the song title
+      const [updatedSong] = await db.update(songs)
+        .set({ 
+          title: title.trim(),
+          updatedAt: new Date()
+        })
+        .where(eq(songs.id, songId))
+        .returning();
+      
+      res.json({
+        success: true,
+        song: {
+          id: updatedSong.id,
+          title: updatedSong.title,
+          previousTitle: song.currentTitle
+        }
+      });
+      
+    } catch (error) {
+      console.error("Failed to update song title:", error);
+      res.status(500).json({
+        error: 'UPDATE_FAILED',
+        message: 'Failed to update song title'
+      });
+    }
+  });
+
   // Clear all song reservations (for debugging/testing)
   app.post("/api/game/:gameId/songs/clear-reservations", getUserId, async (req, res) => {
     try {
@@ -1622,6 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             money: monthResult.gameState.money,
             reputation: monthResult.gameState.reputation,
             creativeCapital: monthResult.gameState.creativeCapital,
+            focusSlots: monthResult.gameState.focusSlots,
             usedFocusSlots: monthResult.gameState.usedFocusSlots,
             playlistAccess: monthResult.gameState.playlistAccess,
             pressAccess: monthResult.gameState.pressAccess,

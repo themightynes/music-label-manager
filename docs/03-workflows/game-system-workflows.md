@@ -154,6 +154,122 @@ processing                         monthly                          to player mo
 
 ---
 
+## 🎵 Song Title Editing Workflow
+
+### **Player-Initiated Song Customization Process**
+
+```
+Song Discovery → Edit Trigger → Validation → Update Processing → UI Refresh
+      ↓             ↓            ↓            ↓                ↓
+1. Player views   2. Hover      3. Client    4. API request   5. Real-time
+   song in           reveals       validates    processes       UI updates
+   release           edit icon     input        title change    across components
+   planning
+```
+
+### **Song Title Editing Flow**
+
+**Phase 1: Edit Initiation**
+```
+Player Interaction → UI State Change → Edit Mode Activation
+       ↓                 ↓                   ↓
+Hover over song      Edit icon appears    Input field replaces
+title in Plan        with pencil          display title with
+Release page         symbol               current value
+```
+
+**Phase 2: Input Validation & Processing**
+```
+User Input → Client Validation → API Request → Server Processing → Database Update
+    ↓              ↓                 ↓             ↓                 ↓
+Player types    Length check       PATCH          Authorization     Title updated
+new title       (max 100 chars)   /api/songs/    verification      with timestamp
+                Non-empty check    :songId        Game ownership    in songs table
+```
+
+**Phase 3: Response Handling & UI Updates**
+```
+API Response → State Updates → Component Refresh → Visual Feedback
+     ↓             ↓              ↓                 ↓
+Success/Error   songTitles     Song list          Check mark or
+response        state map      Lead single        error message
+received        updated        dropdown refresh   displayed
+```
+
+### **Validation Chain Workflow**
+
+```
+Title Input → Client Checks → Server Validation → Database Constraints → Response
+     ↓             ↓              ↓                    ↓                  ↓
+"New Title"   Length ≤ 100    Non-empty string     User owns game     Success: {
+              Not empty       User authenticated   Song exists        id, title,
+              Trim spaces     Game ownership       Valid song ID      previousTitle}
+```
+
+### **Error Handling Workflow**
+
+```
+Validation Failure → Error Classification → User Feedback → Recovery Options
+       ↓                   ↓                    ↓              ↓
+Client: Length/Empty    Server: Auth/Not Found   Error message  Cancel edit or
+Server: Unauthorized    Database: Constraint     displayed      retry input
+Network: Request failed  Unknown: 500 error      to user        
+```
+
+**Error Recovery Flow**:
+- **Input Errors**: Highlight invalid input, show validation message
+- **Authorization Errors**: Display permission message, exit edit mode  
+- **Network Errors**: Show retry option, maintain edit state
+- **Unknown Errors**: Generic error message, safe fallback to display mode
+
+### **Cross-Component Integration Workflow**
+
+```
+Title Update → Song List Refresh → Lead Single Update → State Synchronization
+     ↓               ↓                    ↓                    ↓
+API success     Updated title        Dropdown options     All components
+response        in song cards        reflect new title    display consistent
+received        immediately          if song selected     updated title
+```
+
+**Integration Points**:
+- **Song Selection**: Edited titles immediately available in selection pool
+- **Lead Single Dropdown**: Options update in real-time without re-fetch
+- **Release Preview**: Updated titles reflected in marketing preview
+- **Project Summary**: New titles shown in project overview displays
+
+### **UX Enhancement Features**
+
+**Keyboard Navigation Workflow**:
+```
+Edit Mode → Key Press Detection → Action Processing → Mode Exit
+    ↓           ↓                    ↓               ↓
+Input         Enter = Save         API call        Success: exit edit
+field         Escape = Cancel      or state        Error: show message
+focused       Tab = Next field     reset           Cancel: restore original
+```
+
+**Click Interaction Workflow**:
+```
+Mouse Events → Event Classification → Action Processing → UI Response
+     ↓               ↓                    ↓               ↓
+Click inside    Continue editing     No action         Input remains
+Click outside   Save changes         API call          Edit mode exits
+Click buttons   Save/Cancel          API or cancel     Mode change
+```
+
+### **Performance Optimization Workflow**
+
+```
+Edit State → Debounced Validation → Optimistic Updates → Error Recovery
+     ↓              ↓                     ↓                 ↓
+User types    Client validation      UI updates        Rollback on
+characters    300ms delay           immediately       API failure
+              Prevents spam         Appears saved     Restore previous
+```
+
+---
+
 ## 🎲 Access Tier Progression Workflow
 
 ### **Tier Advancement Process**

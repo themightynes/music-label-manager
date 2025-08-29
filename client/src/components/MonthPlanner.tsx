@@ -187,12 +187,16 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
 
 
   const handleAutoRecommend = () => {
+    const totalSlots = gameState?.focusSlots || 3;
+    const usedSlots = gameState?.usedFocusSlots || 0;
+    const availableSlots = totalSlots - usedSlots;
+    
     const recommendedActions = monthlyActions
       .filter(action => {
         const recommendation = getActionRecommendation(action.id);
         return (recommendation.isRecommended || recommendation.isUrgent) && !selectedActions.includes(action.id);
       })
-      .slice(0, 3 - selectedActions.length)
+      .slice(0, availableSlots)
       .map(action => action.id);
     
     recommendedActions.forEach(actionId => selectAction(actionId));
@@ -218,9 +222,15 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
           <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
             <i className="fas fa-calendar-alt text-white text-xl md:text-2xl"></i>
           </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-slate-900">Month {gameState.currentMonth} Strategy</h2>
-            <p className="text-sm md:text-base text-slate-600">Choose your 3 strategic actions for this month</p>
+          <div className="flex-1">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900">Month {gameState.currentMonth} Focus Strategy</h2>
+            <p className="text-sm md:text-base text-slate-600">
+              Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
+              {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th slot unlocked!)</span>}
+            </p>
+          </div>
+          <div className="hidden md:block" title="Focus Slots are your monthly action points. Each strategic action requires one focus slot.">
+            <i className="fas fa-info-circle text-slate-400 hover:text-slate-600 cursor-help"></i>
           </div>
         </div>
 
@@ -309,7 +319,7 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
           </div>
         )}
 
-        {/* Strategic Action Selection - Split Panel Design */}
+        {/* Focus Action Selection - Split Panel Design */}
         <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-white/50 shadow-sm mb-4 md:mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
             {/* Left Panel - Action Selection Pool */}

@@ -171,8 +171,18 @@ src/
 **Purpose**: Game balance and content configuration
 
 **Content Architecture**:
-- **`balance.json`**: Economic formulas, costs, multipliers, decay rates
-- **`artists.json`**: Artist definitions, archetypes, traits
+- **`balance.ts`**: Main balance configuration aggregator (exports unified balance object)
+- **`balance/`**: Modular balance configuration files
+  - **`content.json`**: Song name pools and mood types for content generation (NEW)
+  - **`economy.json`**: Economic costs and formulas
+  - **`progression.json`**: Reputation and access tier progression systems
+  - **`quality.json`**: Quality calculation rules and bonuses
+  - **`artists.json`**: Artist archetype definitions and traits
+  - **`markets.json`**: Market barriers and seasonal modifiers
+  - **`projects.json`**: Project durations and time progression settings
+  - **`events.json`**: Random event configurations
+  - **`config.json`**: Version metadata and configuration info
+- **`artists.json`**: Available artist pool and characteristics
 - **`roles.json`**: Industry professionals, dialogue trees
 - **`world.json`**: Game world configuration and access tiers
 - **`actions.json`**: Available player actions and effects
@@ -193,6 +203,13 @@ src/
   "access_tier_system": {
     "playlist_tiers": { /* progression thresholds */ },
     "press_tiers": { /* reputation gates */ }
+  },
+  "song_generation": {
+    "name_pools": {
+      "default": ["Midnight Dreams", "City Lights", "..."],
+      "genre_specific": { "pop": ["Summer Nights"], "rock": ["Thunder Road"] }
+    },
+    "mood_types": ["upbeat", "melancholic", "aggressive", "chill"]
   }
 }
 ```
@@ -224,6 +241,22 @@ Game State → Serialization → Database Storage → Retrieval → Deserializat
 1. Current    2. JSON        3. JSONB          4. User        5. Parse       6. Game
    state         export         storage           loads           JSON          restored
 ```
+
+### **Song Title Editing Flow**
+```
+Player Edit → UI Update → API Request → Authorization → Database Update → State Sync
+     ↓           ↓           ↓            ↓               ↓                ↓
+1. Player    2. Inline    3. PATCH       4. Verify       5. Update       6. All UI
+   hovers       input        /songs/:id     ownership       songs           components
+   song         appears      request        chain           table           refreshed
+```
+
+**Song Editing Architecture Benefits**:
+- **Real-time updates**: No page refresh required, instant visual feedback
+- **Authorization chain**: Multi-level security with user → game → song validation  
+- **State consistency**: Synchronized updates across all UI components
+- **User agency**: Direct content manipulation enhances player engagement
+- **Extensibility**: Foundation for future content customization features
 
 ---
 

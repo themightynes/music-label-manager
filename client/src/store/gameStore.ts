@@ -89,8 +89,14 @@ export const useGameStore = create<GameStore>()(
             releases: releases
           });
           
+          // Ensure usedFocusSlots is synced with selectedActions (should be 0 when loading)
+          const syncedGameState = {
+            ...data.gameState,
+            usedFocusSlots: 0  // Reset to 0 since selectedActions is empty
+          };
+          
           set({
-            gameState: data.gameState,
+            gameState: syncedGameState,
             artists: data.artists,
             projects: data.projects,
             roles: data.roles,
@@ -187,9 +193,15 @@ export const useGameStore = create<GameStore>()(
             // Don't fail game creation if cleanup fails
           }
           
+          // Ensure new game starts with 0 used slots
+          const syncedGameState = {
+            ...gameState,
+            usedFocusSlots: 0  // New game starts with no slots used
+          };
+          
           // Clear campaign results and set new state
           set({
-            gameState,
+            gameState: syncedGameState,
             artists: [],
             projects: [],
             roles: [],
@@ -227,15 +239,27 @@ export const useGameStore = create<GameStore>()(
 
       // Monthly action selection
       selectAction: (actionId: string) => {
-        const { selectedActions } = get();
-        if (selectedActions.length < 3 && !selectedActions.includes(actionId)) {
-          set({ selectedActions: [...selectedActions, actionId] });
+        const { selectedActions, gameState } = get();
+        const availableSlots = gameState?.focusSlots || 3;
+        
+        if (selectedActions.length < availableSlots && !selectedActions.includes(actionId)) {
+          const newSelectedActions = [...selectedActions, actionId];
+          set({ 
+            selectedActions: newSelectedActions,
+            gameState: gameState ? { ...gameState, usedFocusSlots: newSelectedActions.length } : gameState
+          });
         }
       },
 
       removeAction: (actionId: string) => {
-        const { selectedActions } = get();
-        set({ selectedActions: selectedActions.filter(id => id !== actionId) });
+        const { selectedActions, gameState } = get();
+        if (selectedActions.includes(actionId)) {
+          const newSelectedActions = selectedActions.filter(id => id !== actionId);
+          set({ 
+            selectedActions: newSelectedActions,
+            gameState: gameState ? { ...gameState, usedFocusSlots: newSelectedActions.length } : gameState
+          });
+        }
       },
 
       reorderActions: (startIndex: number, endIndex: number) => {
@@ -247,7 +271,11 @@ export const useGameStore = create<GameStore>()(
       },
 
       clearActions: () => {
-        set({ selectedActions: [] });
+        const { gameState } = get();
+        set({ 
+          selectedActions: [],
+          gameState: gameState ? { ...gameState, usedFocusSlots: 0 } : gameState
+        });
       },
 
       // Advance month
@@ -305,8 +333,14 @@ export const useGameStore = create<GameStore>()(
           console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
           console.log('=====================================');
           
+          // Ensure usedFocusSlots is reset to 0 for the new month
+          const syncedGameState = {
+            ...result.gameState,
+            usedFocusSlots: 0  // Always 0 at start of new month
+          };
+          
           set({
-            gameState: result.gameState,
+            gameState: syncedGameState,
             artists: gameData.artists || [], // Update artists to reflect mood changes
             projects: gameData.projects || [], // Update projects with current state
             songs: songs || [], // Update songs to include newly recorded ones

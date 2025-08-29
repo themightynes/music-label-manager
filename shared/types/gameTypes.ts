@@ -157,6 +157,13 @@ export interface BalanceConfig {
   ui_constants: Record<string, number>;
   save_system: Record<string, any>;
   difficulty_modifiers: Record<string, Record<string, number>>;
+  song_generation?: {
+    name_pools: {
+      default: string[];
+      genre_specific?: Record<string, string[]>;
+    };
+    mood_types: string[];
+  };
 }
 
 export interface WorldConfig {
