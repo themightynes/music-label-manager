@@ -2003,31 +2003,7 @@ export class GameEngine {
   private async checkProgressionGates(summary: MonthSummary): Promise<void> {
     const thresholds = this.gameData.getProgressionThresholdsSync();
     
-    // Check for second artist unlock
-    const reputation = this.gameState.reputation || 0;
-    if (reputation >= thresholds.second_artist_reputation) {
-      const flags = this.gameState.flags || {};
-      if (!(flags as any)['second_artist_unlocked']) {
-        (flags as any)['second_artist_unlocked'] = true;
-        this.gameState.flags = flags;
-        summary.changes.push({
-          type: 'unlock',
-          description: 'Second artist slot unlocked!'
-        });
-      }
-    }
-    
-    // Check for fourth focus slot
-    if (reputation >= thresholds.fourth_focus_slot_reputation) {
-      const currentSlots = this.gameState.focusSlots || 3;
-      if (currentSlots < 4) {
-        this.gameState.focusSlots = 4;
-        summary.changes.push({
-          type: 'unlock',
-          description: 'Fourth focus slot unlocked!'
-        });
-      }
-    }
+    // Slot unlock functionality has been removed - these were non-functional placeholders
   }
 
   /**

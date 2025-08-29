@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Music, Trophy, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap } from 'lucide-react';
 
 interface MonthSummaryProps {
   monthlyStats: any;
@@ -14,7 +14,7 @@ interface MonthSummaryProps {
 }
 
 export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMonthResults }: MonthSummaryProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'events'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects'>('overview');
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -34,6 +34,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
       case 'project_complete': return '🎵'; // Changed from 🎉 for recording completion
       case 'revenue': return '💰';
       case 'ongoing_revenue': return '📻';
+      case 'release': return '🚀'; // New releases generating initial revenue
       case 'expense': return '💸';
       case 'unlock': return '🔓';
       case 'artist': return '🎤';
@@ -50,12 +51,15 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
     };
 
     changes.forEach(change => {
-      if (change.type === 'revenue' || change.type === 'project_complete' || change.type === 'ongoing_revenue') {
+      if (change.type === 'revenue' || change.type === 'ongoing_revenue' || change.type === 'release') {
         categories.revenue.push(change);
       } else if (change.type === 'expense') {
         categories.expenses.push(change);
-      } else if (change.type === 'unlock' || change.type === 'project_complete') {
+      } else if (change.type === 'unlock') {
         categories.achievements.push(change);
+      } else if (change.type === 'project_complete') {
+        // Projects go to other category, will be shown in Projects tab
+        categories.other.push(change);
       } else {
         categories.other.push(change);
       }
@@ -204,7 +208,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
       <div className="px-8 py-6">
         {isMonthResults && changes.length > 0 ? (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="overview" className="flex items-center space-x-2">
                 <Trophy className="h-4 w-4" />
                 <span>Overview</span>
@@ -212,10 +216,6 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
               <TabsTrigger value="projects" className="flex items-center space-x-2">
                 <Music className="h-4 w-4" />
                 <span>Projects</span>
-              </TabsTrigger>
-              <TabsTrigger value="events" className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <span>Events</span>
               </TabsTrigger>
             </TabsList>
 
@@ -293,9 +293,9 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
             </TabsContent>
 
             <TabsContent value="projects" className="space-y-4">
-              {changes.filter((c: any) => c.type === 'project_complete').length > 0 ? (
+              {changes.filter((c: any) => c.type === 'project_complete' || c.type === 'song_release').length > 0 ? (
                 <div className="grid gap-4">
-                  {changes.filter((c: any) => c.type === 'project_complete').map((change: any, index: number) => (
+                  {changes.filter((c: any) => c.type === 'project_complete' || c.type === 'song_release').map((change: any, index: number) => (
                     <Card key={index} className="border-slate-200 hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
@@ -311,7 +311,9 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                               </div>
                             </div>
                           </div>
-                          <Badge className="bg-green-100 text-green-800 px-2 py-1 text-xs">Recorded</Badge>
+                          <Badge className="bg-green-100 text-green-800 px-2 py-1 text-xs">
+                            {change.type === 'project_complete' ? 'Recorded' : 'Released'}
+                          </Badge>
                         </div>
                       </CardContent>
                     </Card>
@@ -323,36 +325,6 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                     <Music className="h-10 w-10 text-slate-400 mx-auto mb-4" />
                     <h3 className="text-sm font-semibold text-slate-600 mb-2">No Projects Completed</h3>
                     <p className="text-xs text-slate-500">No projects were completed this month</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="events" className="space-y-4">
-              {monthlyStats?.events?.length > 0 ? (
-                <div className="grid gap-4">
-                  {monthlyStats.events.map((event: any, index: number) => (
-                    <Card key={index} className="border-slate-200">
-                      <CardContent className="p-6">
-                        <div className="flex items-start space-x-4">
-                          <div className="p-3 bg-blue-100 rounded-full">
-                            <Calendar className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold text-slate-900">{event.title || 'Event'}</h4>
-                            <p className="text-xs text-slate-600 mt-1">{event.description}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <Calendar className="h-10 w-10 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-sm font-semibold text-slate-600 mb-2">No Special Events</h3>
-                    <p className="text-xs text-slate-500">No special events occurred this month</p>
                   </CardContent>
                 </Card>
               )}
