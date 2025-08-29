@@ -26,8 +26,8 @@
 ## 📁 **Documentation Structure**
 
 ### **01-Planning** - Strategic Documents
-- [Development Roadmap 2025](./01-planning/development_roadmap_2025.md)
-- [Music Creation Release Cycle Plan](./01-planning/music-creation-release-cycle-plan.md)
+- [Development Roadmap 2025 (v1.0)](./01-planning/development_roadmap_2025_sim-v1.0.md)
+- [Music Creation Future Phases](./01-planning/implementation-specs/music-creation-release-cycle-phases-3-4-FUTURE.md)
 - [Music Game System Map](./01-planning/music_game_system_map.html)
 
 ### **02-Architecture** - Technical Design
@@ -52,8 +52,8 @@
 - [Documentation Governance](./06-development/documentation-governance.md)
 
 ### **08-Future Features** - Roadmap
-- [Core Features](./08-future-features-and-fixes/CORE_FEATURES.md)
-- [Comprehensive Roadmap](./08-future-features-and-fixes/comprehensive-roadmap.md)
+- [Core Features (v2.0)](./01-planning/CORE_FEATURES_sim-v2.0.md)
+- [Comprehensive Roadmap (v3.0+)](./08-future-features-and-fixes/comprehensive-roadmap_sim-v3.0.md)
 - [Content Management Features](./08-future-features-and-fixes/content-management-features.md)
 
 ### **09-Troubleshooting** - Issues & Solutions

@@ -740,8 +740,36 @@ export class ServerGameData {
     return storage.createRelease(release);
   }
 
-  async getReleasesByGame(gameId: string) {
-    return storage.getReleasesByGame(gameId);
+  async getReleasesByGame(gameId: string, dbTransaction?: any) {
+    console.log('[ServerGameData] 📦 getReleasesByGame called');
+    console.log('[ServerGameData] 🎮 Game ID:', gameId);
+    console.log('[ServerGameData] 💾 Transaction available:', !!dbTransaction);
+    
+    try {
+      const releases = await storage.getReleasesByGame(gameId, dbTransaction);
+      console.log('[ServerGameData] 📋 Total releases found:', releases?.length || 0);
+      
+      // Log releases with lead single strategies
+      const releasesWithLeadSingles = releases?.filter((r: any) => r.metadata?.leadSingleStrategy) || [];
+      console.log('[ServerGameData] 🎵 Releases with lead singles:', releasesWithLeadSingles.length);
+      
+      if (releasesWithLeadSingles.length > 0) {
+        console.log('[ServerGameData] 🎯 Lead single details:');
+        releasesWithLeadSingles.forEach((r: any) => {
+          console.log(`  - "${r.title}":`, {
+            releaseId: r.id,
+            releaseMonth: r.releaseMonth,
+            leadSingleMonth: r.metadata.leadSingleStrategy.leadSingleReleaseMonth,
+            leadSingleId: r.metadata.leadSingleStrategy.leadSingleId
+          });
+        });
+      }
+      
+      return releases;
+    } catch (error) {
+      console.error('[ServerGameData] ❌ getReleasesByGame error:', error);
+      throw error;
+    }
   }
 
   async getPlannedReleases(gameId: string, month: number, dbTransaction?: any) {
@@ -757,13 +785,32 @@ export class ServerGameData {
   }
 
   async getSongsByRelease(releaseId: string, dbTransaction?: any) {
-    console.log('[ServerGameData] getSongsByRelease called for release:', releaseId, 'transaction:', !!dbTransaction);
+    console.log('[ServerGameData] 🎵 getSongsByRelease called');
+    console.log('[ServerGameData] 📀 Release ID:', releaseId);
+    console.log('[ServerGameData] 💾 Transaction available:', !!dbTransaction);
+    
     try {
       const songs = await storage.getSongsByRelease(releaseId, dbTransaction);
-      console.log('[ServerGameData] getSongsByRelease returned:', songs?.length || 0, 'songs');
+      console.log('[ServerGameData] 📋 Songs found:', songs?.length || 0);
+      
+      if (songs && songs.length > 0) {
+        console.log('[ServerGameData] 🎶 Song details:');
+        songs.forEach((song: any, index: number) => {
+          console.log(`  Song #${index + 1}:`, {
+            id: song.id,
+            title: song.title,
+            quality: song.quality,
+            isReleased: song.isReleased,
+            releaseMonth: song.releaseMonth,
+            totalStreams: song.totalStreams || 0,
+            totalRevenue: song.totalRevenue || 0
+          });
+        });
+      }
+      
       return songs;
     } catch (error) {
-      console.error('[ServerGameData] getSongsByRelease error:', error);
+      console.error('[ServerGameData] ❌ getSongsByRelease error:', error);
       throw error;
     }
   }
@@ -793,13 +840,29 @@ export class ServerGameData {
   }
 
   async updateSongs(songUpdates: any[], dbTransaction?: any) {
-    console.log('[ServerGameData] updateSongs called with:', songUpdates.length, 'updates, transaction:', !!dbTransaction);
+    console.log('[ServerGameData] 🎯🎯🎯 === UPDATESONGS CALLED === 🎯🎯🎯');
+    console.log('[ServerGameData] 📦 Number of updates:', songUpdates.length);
+    console.log('[ServerGameData] 💾 Transaction available:', !!dbTransaction);
+    console.log('[ServerGameData] 🎵 Songs being updated:');
+    
+    songUpdates.forEach((update, index) => {
+      console.log(`[ServerGameData] Song #${index + 1}:`, {
+        songId: update.songId,
+        isReleased: update.isReleased,
+        releaseMonth: update.releaseMonth,
+        initialStreams: update.initialStreams,
+        totalStreams: update.totalStreams,
+        totalRevenue: update.totalRevenue,
+        isLeadSingleUpdate: update.releaseMonth && update.isReleased === true
+      });
+    });
+    
     try {
       const result = await storage.updateSongs(songUpdates, dbTransaction);
-      console.log('[ServerGameData] updateSongs completed');
+      console.log('[ServerGameData] ✅ updateSongs completed successfully');
       return result;
     } catch (error) {
-      console.error('[ServerGameData] updateSongs error:', error);
+      console.error('[ServerGameData] ❌ updateSongs FAILED:', error);
       throw error;
     }
   }

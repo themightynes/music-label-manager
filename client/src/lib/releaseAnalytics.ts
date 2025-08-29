@@ -57,7 +57,10 @@ export function extractCampaignData(release: any): CampaignData {
   
   const hasLeadSingle = !!(leadSingleStrategy && release.type !== 'single');
   const leadSingleBudget = leadSingleStrategy?.totalLeadSingleBudget || 0;
-  const mainBudget = release.marketingBudget || 0;
+  // For the main budget, check both marketingBudget field and metadata.marketingBudget
+  const mainBudget = release.marketingBudget || metadata?.marketingBudget || 
+    (typeof metadata?.marketingBudget === 'object' ? 
+      Object.values(metadata.marketingBudget).reduce((a: number, b: any) => a + (b || 0), 0) : 0);
   const totalInvestment = leadSingleBudget + mainBudget;
   
   let campaignDuration = 1; // Default for single month releases

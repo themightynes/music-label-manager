@@ -639,48 +639,132 @@ export class GameEngine {
    * Checks all planned releases for lead single strategies and releases them early
    */
   private async processLeadSingles(summary: MonthSummary, dbTransaction?: any): Promise<void> {
-    console.log('[LEAD SINGLE] === Processing Lead Singles ===');
+    console.log('[LEAD SINGLE] 🎯🎯🎯 === STARTING LEAD SINGLE PROCESSING === 🎯🎯🎯');
     const currentMonth = this.gameState.currentMonth || 1;
-    console.log(`[LEAD SINGLE] Current month: ${currentMonth}`);
+    console.log(`[LEAD SINGLE] 📅 Current month: ${currentMonth}`);
+    console.log(`[LEAD SINGLE] 🎮 Game ID: ${this.gameState.id}`);
+    console.log(`[LEAD SINGLE] 💾 Transaction available: ${!!dbTransaction}`);
     
     try {
-      // Get all planned releases (not just current month) to check for lead single strategies
-      const allPlannedReleases = (this.storage && this.storage.getProjectsByGame) 
-        ? await this.storage.getProjectsByGame(this.gameState.id) || []
-        : [];
-      const plannedReleases = allPlannedReleases.filter((r: any) => r.status === 'planned');
+      // Get all planned releases from gameData to check for lead single strategies
+      // We need ALL planned releases, not just those for the current month
+      console.log('[LEAD SINGLE] 🔍 Fetching all releases from database...');
+      const allReleases = await this.gameData.getReleasesByGame(this.gameState.id, dbTransaction) || [];
+      console.log(`[LEAD SINGLE] 📦 Total releases found: ${allReleases.length}`);
       
-      console.log(`[LEAD SINGLE] Found ${plannedReleases.length} planned releases to check for lead singles`);
+      const plannedReleases = allReleases.filter((r: any) => r.status === 'planned');
+      console.log(`[LEAD SINGLE] 📋 Planned releases: ${plannedReleases.length}`);
+      
+      // Enhanced debugging: Log ALL releases with their metadata
+      console.log('[LEAD SINGLE] 🔬 === DETAILED RELEASE ANALYSIS ===');
+      plannedReleases.forEach((release: any, index: number) => {
+        console.log(`[LEAD SINGLE] Release #${index + 1}:`, {
+          id: release.id,
+          title: release.title,
+          type: release.type,
+          status: release.status,
+          releaseMonth: release.releaseMonth,
+          hasMetadata: !!release.metadata,
+          metadataType: typeof release.metadata,
+          metadataKeys: release.metadata ? Object.keys(release.metadata) : [],
+          hasLeadSingleStrategy: !!(release.metadata?.leadSingleStrategy),
+          leadSingleDetails: release.metadata?.leadSingleStrategy ? {
+            leadSingleId: release.metadata.leadSingleStrategy.leadSingleId,
+            leadSingleReleaseMonth: release.metadata.leadSingleStrategy.leadSingleReleaseMonth,
+            leadSingleBudget: release.metadata.leadSingleStrategy.leadSingleBudget,
+            monthComparison: {
+              leadSingleMonth: release.metadata.leadSingleStrategy.leadSingleReleaseMonth,
+              currentMonth: currentMonth,
+              shouldRelease: release.metadata.leadSingleStrategy.leadSingleReleaseMonth === currentMonth
+            }
+          } : null
+        });
+      });
+      
+      // Count how many lead singles should release this month
+      const leadSinglesToRelease = plannedReleases.filter((r: any) => {
+        const lss = r.metadata?.leadSingleStrategy;
+        return lss && lss.leadSingleReleaseMonth === currentMonth;
+      });
+      console.log(`[LEAD SINGLE] ⭐ ${leadSinglesToRelease.length} lead single(s) should release this month`);
       
       for (const release of plannedReleases) {
         const metadata = release.metadata as any;
         const leadSingleStrategy = metadata?.leadSingleStrategy;
         
+        // Enhanced debugging for each release
+        if (leadSingleStrategy) {
+          console.log(`[LEAD SINGLE] 🎵 Checking release "${release.title}":`, {
+            releaseId: release.id,
+            leadSingleId: leadSingleStrategy.leadSingleId,
+            leadSingleReleaseMonth: leadSingleStrategy.leadSingleReleaseMonth,
+            mainReleaseMonth: release.releaseMonth,
+            currentMonth: currentMonth,
+            monthMatch: leadSingleStrategy.leadSingleReleaseMonth === currentMonth,
+            willRelease: leadSingleStrategy.leadSingleReleaseMonth === currentMonth ? '✅ YES' : '❌ NO'
+          });
+        }
+        
         if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseMonth === currentMonth) {
-          console.log(`[LEAD SINGLE] Executing lead single for "${release.title}" (Release month: ${release.releaseMonth})`);
+          console.log(`[LEAD SINGLE] 🚀🚀🚀 EXECUTING LEAD SINGLE RELEASE 🚀🚀🚀`);
+          console.log(`[LEAD SINGLE] 📀 Release: "${release.title}" (ID: ${release.id})`);
+          console.log(`[LEAD SINGLE] 📅 Main release scheduled for month ${release.releaseMonth}`);
           
           // Get the lead single song
+          console.log(`[LEAD SINGLE] 🔍 Fetching songs for release ${release.id}...`);
           const releaseSongs = await this.gameData.getSongsByRelease(release.id, dbTransaction) || [];
+          console.log(`[LEAD SINGLE] 📋 Found ${releaseSongs.length} songs in release`);
+          console.log(`[LEAD SINGLE] 🎵 Songs:`, releaseSongs.map(s => ({
+            id: s.id,
+            title: s.title,
+            quality: s.quality,
+            isReleased: s.isReleased,
+            isLeadSingle: s.id === leadSingleStrategy.leadSingleId
+          })));
+          
           const leadSong = releaseSongs.find(song => song.id === leadSingleStrategy.leadSingleId);
           
           if (leadSong) {
-            console.log(`[LEAD SINGLE] Releasing "${leadSong.title}" as lead single`);
+            console.log(`[LEAD SINGLE] ✅ Found lead single: "${leadSong.title}" (ID: ${leadSong.id})`);
+            console.log(`[LEAD SINGLE] 📊 Lead single details:`, {
+              id: leadSong.id,
+              title: leadSong.title,
+              quality: leadSong.quality,
+              isAlreadyReleased: leadSong.isReleased,
+              currentStreams: leadSong.totalStreams || 0,
+              currentRevenue: leadSong.totalRevenue || 0
+            });
             
             // Calculate lead single performance
-            const leadSingleBudget = Object.values(leadSingleStrategy.leadSingleBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0);
+            console.log(`[LEAD SINGLE] 💰 Calculating budget...`);
+            const budgetBreakdown = leadSingleStrategy.leadSingleBudget || {};
+            console.log(`[LEAD SINGLE] 💵 Budget breakdown:`, budgetBreakdown);
+            const leadSingleBudget = Object.values(budgetBreakdown).reduce((sum: number, budget) => sum + (budget as number), 0);
+            console.log(`[LEAD SINGLE] 💵 Total lead single budget: $${leadSingleBudget}`);
+            
+            console.log(`[LEAD SINGLE] 📈 Calculating streaming outcome...`);
+            console.log(`[LEAD SINGLE] 📊 Input parameters:`, {
+              songQuality: leadSong.quality || 50,
+              playlistAccess: this.gameState.playlistAccess || 'none',
+              reputation: this.gameState.reputation || 0,
+              marketingBudget: leadSingleBudget
+            });
+            
             const initialStreams = this.calculateStreamingOutcome(
               leadSong.quality || 50,
               this.gameState.playlistAccess || 'none', 
               this.gameState.reputation || 0,
               leadSingleBudget
             );
+            console.log(`[LEAD SINGLE] 🎯 Calculated initial streams: ${initialStreams}`);
             
             const streamingConfig = this.gameData.getStreamingConfigSync();
             const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
             const initialRevenue = Math.round(initialStreams * revenuePerStream);
             
             // Update the lead song as released
-            await this.gameData.updateSongs([{
+            console.log(`[LEAD SINGLE] 💾 Updating song in database...`);
+            const songUpdate = {
               songId: leadSong.id,
               isReleased: true,
               releaseMonth: currentMonth,
@@ -689,7 +773,16 @@ export class GameEngine {
               totalStreams: (leadSong.totalStreams || 0) + initialStreams,
               totalRevenue: Math.round((leadSong.totalRevenue || 0) + initialRevenue),
               lastMonthRevenue: Math.round(initialRevenue)
-            }], dbTransaction);
+            };
+            console.log(`[LEAD SINGLE] 📝 Song update payload:`, songUpdate);
+            
+            try {
+              await this.gameData.updateSongs([songUpdate], dbTransaction);
+              console.log(`[LEAD SINGLE] ✅ Song successfully updated in database`);
+            } catch (updateError) {
+              console.error(`[LEAD SINGLE] ❌ Failed to update song:`, updateError);
+              throw updateError;
+            }
             
             // Add to summary
             summary.revenue += initialRevenue;
@@ -701,16 +794,27 @@ export class GameEngine {
               amount: initialRevenue
             });
             
-            console.log(`[LEAD SINGLE] "${leadSong.title}" released successfully - Revenue: $${initialRevenue}, Streams: ${initialStreams}`);
+            console.log(`[LEAD SINGLE] 🎉 === LEAD SINGLE RELEASE COMPLETE === 🎉`);
+            console.log(`[LEAD SINGLE] 📊 Final results:`, {
+              songTitle: leadSong.title,
+              revenue: `$${initialRevenue}`,
+              streams: initialStreams,
+              addedToMonth: currentMonth,
+              mainReleaseMonth: release.releaseMonth
+            });
           } else {
-            console.warn(`[LEAD SINGLE] Lead song not found for release "${release.title}"`);
+            console.warn(`[LEAD SINGLE] ⚠️ Lead song not found!`);
+            console.warn(`[LEAD SINGLE] 🔍 Looking for song ID: ${leadSingleStrategy.leadSingleId}`);
+            console.warn(`[LEAD SINGLE] 📋 Available songs:`, releaseSongs.map(s => ({ id: s.id, title: s.title })));
           }
         }
       }
       
-      console.log('[LEAD SINGLE] === End Processing ===');
+      console.log('[LEAD SINGLE] 🏁🏁🏁 === LEAD SINGLE PROCESSING COMPLETE === 🏁🏁🏁');
     } catch (error) {
-      console.error('[LEAD SINGLE] CRITICAL ERROR processing lead singles:', error);
+      console.error('[LEAD SINGLE] 🚨🚨🚨 CRITICAL ERROR 🚨🚨🚨');
+      console.error('[LEAD SINGLE] Error details:', error);
+      console.error('[LEAD SINGLE] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   }
@@ -720,37 +824,61 @@ export class GameEngine {
    * This executes the release, generates initial revenue, and updates song statuses
    */
   private async processPlannedReleases(summary: MonthSummary, dbTransaction?: any): Promise<void> {
-    console.log('[PLANNED RELEASE] === Processing Planned Releases ===');
-    console.log(`[PLANNED RELEASE] Current month: ${this.gameState.currentMonth}`);
-    console.log(`[PLANNED RELEASE] Game state ID: ${this.gameState.id}`);
-    console.log(`[PLANNED RELEASE] Transaction context: ${!!dbTransaction ? 'AVAILABLE' : 'MISSING'}`);
+    console.log('[PLANNED RELEASE] 🎯🎯🎯 === STARTING PLANNED RELEASE PROCESSING === 🎯🎯🎯');
+    console.log(`[PLANNED RELEASE] 📅 Current month: ${this.gameState.currentMonth}`);
+    console.log(`[PLANNED RELEASE] 🎮 Game state ID: ${this.gameState.id}`);
+    console.log(`[PLANNED RELEASE] 💾 Transaction context: ${!!dbTransaction ? 'AVAILABLE' : 'MISSING'}`);
     
     try {
       // Get planned releases scheduled for this month
       const currentMonth = this.gameState.currentMonth || 1;
-      console.log(`[PLANNED RELEASE] Querying planned releases for gameId=${this.gameState.id}, month=${currentMonth}, transaction=${!!dbTransaction}`);
+      console.log(`[PLANNED RELEASE] 🔍 Querying planned releases for gameId=${this.gameState.id}, month=${currentMonth}`);
       const plannedReleases = await this.gameData.getPlannedReleases(
         this.gameState.id, 
         currentMonth,
         dbTransaction
       ) || [];
       
-      console.log(`[PLANNED RELEASE] Found ${plannedReleases.length} releases scheduled for this month`);
+      console.log(`[PLANNED RELEASE] 📦 Found ${plannedReleases.length} releases scheduled for this month`);
       
       if (plannedReleases.length === 0) {
-        console.log('[PLANNED RELEASE] No releases scheduled for this month');
+        console.log('[PLANNED RELEASE] 📆 No releases scheduled for this month');
         return;
       }
       
+      // Log all releases that will be processed
+      console.log('[PLANNED RELEASE] 📋 Releases to process:');
+      plannedReleases.forEach((release: any, index: number) => {
+        console.log(`[PLANNED RELEASE] Release #${index + 1}:`, {
+          id: release.id,
+          title: release.title,
+          type: release.type,
+          releaseMonth: release.releaseMonth,
+          marketingBudget: release.marketingBudget,
+          hasLeadSingleStrategy: !!(release.metadata?.leadSingleStrategy)
+        });
+      })
+      
       for (const release of plannedReleases) {
-        console.log(`[PLANNED RELEASE] Executing release: "${release.title}" (Type: ${release.type})`);
+        console.log(`[PLANNED RELEASE] 🚀🚀🚀 EXECUTING RELEASE 🚀🚀🚀`);
+        console.log(`[PLANNED RELEASE] 📀 Release: "${release.title}" (Type: ${release.type}, ID: ${release.id})`)
         
         // Get songs associated with this release
+        console.log(`[PLANNED RELEASE] 🎵 Fetching songs for release...`);
         const releaseSongs = await this.gameData.getSongsByRelease(release.id, dbTransaction) || [];
-        console.log(`[PLANNED RELEASE] Found ${releaseSongs.length} songs for release`);
+        console.log(`[PLANNED RELEASE] 📋 Found ${releaseSongs.length} songs`);
+        console.log(`[PLANNED RELEASE] 🎶 Songs in release:`, releaseSongs.map(s => ({
+          id: s.id,
+          title: s.title,
+          quality: s.quality,
+          isReleased: s.isReleased,
+          isRecorded: s.isRecorded,
+          totalStreams: s.totalStreams || 0,
+          totalRevenue: s.totalRevenue || 0
+        })));
         
         if (releaseSongs.length === 0) {
-          console.warn(`[PLANNED RELEASE] No songs found for release "${release.title}", skipping`);
+          console.warn(`[PLANNED RELEASE] ⚠️ No songs found for release "${release.title}", skipping`);
           continue;
         }
         
@@ -767,12 +895,39 @@ export class GameEngine {
         const metadata = release.metadata as any;
         const leadSingleStrategy = metadata?.leadSingleStrategy;
         
+        console.log(`[PLANNED RELEASE] 🎯 Lead single strategy:`, leadSingleStrategy ? {
+          hasLeadSingle: true,
+          leadSingleId: leadSingleStrategy.leadSingleId,
+          leadSingleReleaseMonth: leadSingleStrategy.leadSingleReleaseMonth,
+          mainReleaseMonth: currentMonth
+        } : { hasLeadSingle: false });
+        
+        // Count how many songs will be processed
+        const alreadyReleasedSongs = releaseSongs.filter(s => s.isReleased);
+        const songsToRelease = releaseSongs.filter(s => !s.isReleased);
+        console.log(`[PLANNED RELEASE] 📊 Song statistics:`, {
+          totalSongs: releaseSongs.length,
+          alreadyReleased: alreadyReleasedSongs.length,
+          toRelease: songsToRelease.length,
+          leadSingleAlreadyReleased: leadSingleStrategy ? 
+            alreadyReleasedSongs.some(s => s.id === leadSingleStrategy.leadSingleId) : false
+        });
+        
         for (const song of releaseSongs) {
           // CRITICAL FIX: Skip songs that are already released (lead singles)
           if (song.isReleased) {
-            console.log(`[PLANNED RELEASE] Skipping "${song.title}" - already released as lead single`);
+            console.log(`[PLANNED RELEASE] ⏭️ SKIPPING "${song.title}" (ID: ${song.id})`);
+            console.log(`[PLANNED RELEASE] 📊 Reason: Already released`);
+            console.log(`[PLANNED RELEASE] 📋 Existing stats:`, {
+              totalStreams: song.totalStreams || 0,
+              totalRevenue: song.totalRevenue || 0,
+              releaseMonth: song.releaseMonth,
+              isLeadSingle: leadSingleStrategy?.leadSingleId === song.id
+            });
             continue;
           }
+          
+          console.log(`[PLANNED RELEASE] 🎯 Processing song: "${song.title}" (ID: ${song.id})`)
           
           // Calculate initial streams using existing streaming calculation
           const initialStreams = this.calculateStreamingOutcome(
@@ -785,11 +940,26 @@ export class GameEngine {
           // Lead single boost: if this release had a successful lead single, boost remaining songs
           let leadSingleBoost = 1.0;
           if (leadSingleStrategy) {
+            console.log(`[PLANNED RELEASE] 🔍 Checking for lead single boost...`);
             const leadSong = releaseSongs.find(s => s.id === leadSingleStrategy.leadSingleId);
-            if (leadSong && leadSong.isReleased && leadSong.totalStreams && leadSong.totalStreams > 0) {
-              // Boost based on lead single performance (10-30% boost)
-              leadSingleBoost = 1.0 + Math.min(0.3, (leadSong.totalStreams || 0) / 100000);
-              console.log(`[PLANNED RELEASE] Lead single "${leadSong.title}" boost: ${((leadSingleBoost - 1) * 100).toFixed(1)}%`);
+            if (leadSong) {
+              console.log(`[PLANNED RELEASE] 🎵 Lead single found: "${leadSong.title}"`);
+              console.log(`[PLANNED RELEASE] 📊 Lead single stats:`, {
+                isReleased: leadSong.isReleased,
+                totalStreams: leadSong.totalStreams || 0,
+                totalRevenue: leadSong.totalRevenue || 0
+              });
+              
+              if (leadSong.isReleased && leadSong.totalStreams && leadSong.totalStreams > 0) {
+                // Boost based on lead single performance (10-30% boost)
+                leadSingleBoost = 1.0 + Math.min(0.3, (leadSong.totalStreams || 0) / 100000);
+                console.log(`[PLANNED RELEASE] ✨ Lead single boost calculated: ${((leadSingleBoost - 1) * 100).toFixed(1)}%`);
+                console.log(`[PLANNED RELEASE] 📈 Boost formula: min(30%, streams/100k) = min(30%, ${leadSong.totalStreams}/100000)`);
+              } else {
+                console.log(`[PLANNED RELEASE] ❌ No boost - lead single not properly released or no streams`);
+              }
+            } else {
+              console.log(`[PLANNED RELEASE] ⚠️ Lead single song not found in release songs`);
             }
           }
           
@@ -906,7 +1076,16 @@ export class GameEngine {
           }
         }
         
-        console.log(`[PLANNED RELEASE] Release "${release.title}" executed successfully - Revenue: $${totalRevenue}, Streams: ${totalStreams}`);
+        console.log(`[PLANNED RELEASE] 🎉 === RELEASE COMPLETE === 🎉`);
+        console.log(`[PLANNED RELEASE] 📊 Final statistics for "${release.title}":`, {
+          songsReleased: songUpdates.length,
+          totalRevenue: `$${totalRevenue}`,
+          totalStreams: totalStreams,
+          marketingSpent: `$${marketingBudget}`,
+          netRevenue: `$${totalRevenue - marketingBudget}`,
+          hadLeadSingle: !!leadSingleStrategy,
+          leadSingleBoostApplied: leadSingleStrategy ? 'Check individual songs above' : 'N/A'
+        });
       }
       
     } catch (error) {
@@ -961,8 +1140,10 @@ export class GameEngine {
       return 1.0;
     }
     
-    // Determine quarter based on month (1-3: Q1, 4-6: Q2, 7-9: Q3, 10-12: Q4)
-    const quarter = Math.ceil(month / 3);
+    // Determine quarter based on month within year (handles months 1-36)
+    // Convert to 1-12 range: month 13 -> 1, month 25 -> 1, etc.
+    const yearMonth = ((month - 1) % 12) + 1;
+    const quarter = Math.ceil(yearMonth / 3);
     const quarterKey = `q${quarter}`;
     
     return seasonalModifiers[quarterKey] || 1.0;
@@ -2770,9 +2951,11 @@ export class GameEngine {
    * Helper function to determine season from month
    */
   private getSeasonFromMonth(month: number): string {
-    if (month <= 3) return 'q1';
-    if (month <= 6) return 'q2';
-    if (month <= 9) return 'q3';
+    // Convert to 1-12 range for quarters (handles months 1-36)
+    const yearMonth = ((month - 1) % 12) + 1;
+    if (yearMonth <= 3) return 'q1';
+    if (yearMonth <= 6) return 'q2';
+    if (yearMonth <= 9) return 'q3';
     return 'q4';
   }
 

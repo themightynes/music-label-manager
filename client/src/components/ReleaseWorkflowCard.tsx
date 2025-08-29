@@ -69,7 +69,7 @@ export function ReleaseWorkflowCard({
   
   // Debug logging for released items
   if (release.status === 'released') {
-    console.log('ReleaseWorkflowCard Debug:', {
+    console.log('ReleaseWorkflowCard Debug - Released Item:', {
       releaseId: release.id,
       releaseTitle: release.title,
       status: release.status,
@@ -84,7 +84,14 @@ export function ReleaseWorkflowCard({
       metadata: release.metadata,
       leadSingleStrategy,
       hasLeadSingle,
-      campaignData
+      campaignData: {
+        ...campaignData,
+        breakdown: {
+          leadSingleBudget: campaignData.leadSingleBudget,
+          mainBudget: campaignData.mainBudget,
+          totalInvestment: campaignData.totalInvestment
+        }
+      }
     });
   }
   
@@ -215,17 +222,21 @@ export function ReleaseWorkflowCard({
                 <span className="font-mono font-semibold">{formatCurrency(campaignData.totalInvestment)}</span>
               </div>
               
-              {/* Marketing breakdown */}
-              {hasLeadSingle && campaignData.leadSingleBudget > 0 && (
+              {/* Marketing breakdown - show if there's a lead single OR if we have breakdown data */}
+              {(campaignData.leadSingleBudget > 0 || campaignData.mainBudget > 0) && (
                 <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-                  <div className="flex justify-between">
-                    <span className="ml-2">Lead Single:</span>
-                    <span>{formatCurrency(campaignData.leadSingleBudget)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="ml-2">Main Release:</span>
-                    <span>{formatCurrency(campaignData.mainBudget)}</span>
-                  </div>
+                  {campaignData.leadSingleBudget > 0 && (
+                    <div className="flex justify-between">
+                      <span className="ml-2">Lead Single Marketing:</span>
+                      <span>{formatCurrency(campaignData.leadSingleBudget)}</span>
+                    </div>
+                  )}
+                  {campaignData.mainBudget > 0 && (
+                    <div className="flex justify-between">
+                      <span className="ml-2">Main Release Marketing:</span>
+                      <span>{formatCurrency(campaignData.mainBudget)}</span>
+                    </div>
+                  )}
                 </div>
               )}
               

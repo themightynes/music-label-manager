@@ -53,7 +53,7 @@ export interface IStorage {
   updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: any): Promise<void>;
 
   // Releases
-  getReleasesByGame(gameId: string): Promise<Release[]>;
+  getReleasesByGame(gameId: string, dbTransaction?: any): Promise<Release[]>;
   getReleasesByArtist(artistId: string, gameId: string): Promise<Release[]>;
   getRelease(id: string): Promise<Release | undefined>;
   createRelease(release: InsertRelease): Promise<Release>;
@@ -316,24 +316,48 @@ export class DatabaseStorage implements IStorage {
 
   async updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: any): Promise<void> {
     const dbContext = dbTransaction || db;
-    console.log(`[STORAGE] updateSongs: updating ${songUpdates.length} songs, usingTransaction=${!!dbTransaction}`);
+    console.log(`[STORAGE] 💾💾💾 === UPDATING SONGS === 💾💾💾`);
+    console.log(`[STORAGE] 📦 Total songs to update: ${songUpdates.length}`);
+    console.log(`[STORAGE] 📌 Using transaction: ${!!dbTransaction}`);
     
     // Batch update songs with their new metrics
-    for (const update of songUpdates) {
+    for (let i = 0; i < songUpdates.length; i++) {
+      const update = songUpdates[i];
       const { songId, ...updateData } = update;
-      console.log(`[STORAGE] updateSongs: updating song ${songId} with data:`, updateData);
       
-      await dbContext.update(songs)
-        .set(updateData)
-        .where(eq(songs.id, songId));
+      console.log(`[STORAGE] 🎵 Song #${i + 1}/${songUpdates.length}: ${songId}`);
+      console.log(`[STORAGE] 📝 Update data:`, {
+        songId: songId,
+        isReleased: updateData.isReleased,
+        releaseMonth: updateData.releaseMonth,
+        initialStreams: updateData.initialStreams,
+        monthlyStreams: updateData.monthlyStreams,
+        totalStreams: updateData.totalStreams,
+        totalRevenue: updateData.totalRevenue,
+        lastMonthRevenue: updateData.lastMonthRevenue,
+        ...Object.keys(updateData).filter(k => !['isReleased', 'releaseMonth', 'initialStreams', 'monthlyStreams', 'totalStreams', 'totalRevenue', 'lastMonthRevenue'].includes(k))
+          .reduce((obj, key) => ({ ...obj, [key]: updateData[key] }), {})
+      });
+      
+      try {
+        const result = await dbContext.update(songs)
+          .set(updateData)
+          .where(eq(songs.id, songId));
+        console.log(`[STORAGE] ✅ Song ${songId} updated successfully`);
+      } catch (error) {
+        console.error(`[STORAGE] ❌ Failed to update song ${songId}:`, error);
+        throw error;
+      }
     }
     
-    console.log(`[STORAGE] updateSongs: successfully updated ${songUpdates.length} songs`);
+    console.log(`[STORAGE] 🎉 === UPDATE COMPLETE === 🎉`);
+    console.log(`[STORAGE] 📊 Successfully updated ${songUpdates.length} songs`);
   }
 
   // Releases
-  async getReleasesByGame(gameId: string): Promise<Release[]> {
-    return await db.select().from(releases).where(eq(releases.gameId, gameId));
+  async getReleasesByGame(gameId: string, dbTransaction?: any): Promise<Release[]> {
+    const dbContext = dbTransaction || db;
+    return await dbContext.select().from(releases).where(eq(releases.gameId, gameId));
   }
 
   async getReleasesByArtist(artistId: string, gameId: string): Promise<Release[]> {
@@ -415,19 +439,22 @@ export class DatabaseStorage implements IStorage {
     const dbContext = dbTransaction || db;
     console.log(`[STORAGE] updateReleaseStatus: releaseId=${releaseId}, status=${status}, usingTransaction=${!!dbTransaction}`);
     
+    // First, get the existing release to preserve its metadata
+    const [existingRelease] = await dbContext.select().from(releases)
+      .where(eq(releases.id, releaseId));
+    
     const updateData: Partial<InsertRelease> = {
       status
     };
 
-    // Add metadata fields if provided
+    // Merge new metadata with existing metadata instead of replacing it
     if (metadata) {
-      if (metadata.initialStreams || metadata.totalRevenue) {
-        updateData.metadata = {
-          initialStreams: metadata.initialStreams,
-          totalRevenue: metadata.totalRevenue,
-          executedAt: new Date().toISOString()
-        };
-      }
+      const existingMetadata = (existingRelease?.metadata as any) || {};
+      updateData.metadata = {
+        ...existingMetadata,  // Preserve existing metadata (including leadSingleStrategy)
+        ...metadata,          // Add new metadata fields
+        executedAt: new Date().toISOString()
+      };
     }
 
     const [updatedRelease] = await dbContext.update(releases)

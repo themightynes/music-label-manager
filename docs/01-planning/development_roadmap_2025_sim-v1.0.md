@@ -28,7 +28,9 @@ Transform the MVP into a sophisticated music industry simulation with deep strat
 - Release timing and catalog building strategy
 - Song quality affects release success
 
-**Detailed Specification**: See `docs/01-planning/music-creation-release-cycle-plan.md`
+**Detailed Specification**: 
+- Completed: `docs/99-legacy/complete/music-creation-release-cycle-phases-1-2-COMPLETE.md`
+- Future: `docs/01-planning/implementation-specs/music-creation-release-cycle-phases-3-4-FUTURE.md`
 
 **Implementation Status**:
 - Phase 1: Core Multi-Song System ✅ Complete
@@ -326,3 +328,5 @@ This means:
 ---
 
 *This roadmap defines the complete development plan. For current progress, see `DEVELOPMENT_STATUS.md`*
+
+> **Note**: Once the 12-week roadmap is complete, refer to `docs/01-planning/CORE_FEATURES_sim-v2.0.md` for Tier 4-5 features and post-MVP development priorities.

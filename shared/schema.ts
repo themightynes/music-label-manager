@@ -35,6 +35,33 @@ export const artists = pgTable("artists", {
   isSigned: boolean("is_signed").default(false),
   monthlyFee: integer("monthly_fee").default(1200), // Ongoing monthly cost for this artist
   gameId: uuid("game_id"),
+  // Additional artist attributes
+  talent: integer("talent").default(50), // 0-100
+  workEthic: integer("work_ethic").default(50), // 0-100
+  stress: integer("stress").default(0), // 0-100
+  creativity: integer("creativity").default(50), // 0-100
+  massAppeal: integer("mass_appeal").default(50), // 0-100
+  lastAttentionMonth: integer("last_attention_month").default(1),
+  experience: integer("experience").default(0),
+  // Mood tracking
+  moodHistory: jsonb("mood_history").default('[]'), // Array of mood change events
+  lastMoodEvent: text("last_mood_event"), // Nullable - description of last mood event
+  moodTrend: integer("mood_trend").default(0), // -1 (declining), 0 (stable), 1 (improving)
+});
+
+// Mood Events - Track artist mood changes over time
+export const moodEvents = pgTable("mood_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: uuid("artist_id").references(() => artists.id),
+  gameId: uuid("game_id").references(() => gameStates.id),
+  eventType: text("event_type").notNull(), // e.g., "release_success", "neglected", "creative_breakthrough"
+  moodChange: integer("mood_change").notNull(), // Amount of mood change (+/-)
+  moodBefore: integer("mood_before").notNull(), // Mood value before the event
+  moodAfter: integer("mood_after").notNull(), // Mood value after the event
+  description: text("description").notNull(), // Human-readable description of the event
+  monthOccurred: integer("month_occurred").notNull(), // Game month when this happened
+  metadata: jsonb("metadata").default('{}'), // Additional event-specific data
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Industry roles
@@ -56,6 +83,8 @@ export const projects = pgTable("projects", {
   artistId: uuid("artist_id").references(() => artists.id),
   stage: text("stage").default("planning"), // planning, production, marketing, released
   quality: integer("quality").default(0),
+  budget: integer("budget").default(0), // Total budget allocated for the project
+  budgetUsed: integer("budget_used").default(0), // Budget already spent
   budgetPerSong: integer("budget_per_song").default(0),
   totalCost: integer("total_cost").default(0),
   costUsed: integer("cost_used").default(0),
@@ -212,6 +241,7 @@ export const artistsRelations = relations(artists, ({ many }) => ({
   projects: many(projects),
   songs: many(songs),
   releases: many(releases),
+  moodEvents: many(moodEvents),
 }));
 
 export const projectsRelations = relations(projects, ({ one }) => ({
@@ -268,6 +298,17 @@ export const monthlyActionsRelations = relations(monthlyActions, ({ one }) => ({
   }),
 }));
 
+export const moodEventsRelations = relations(moodEvents, ({ one }) => ({
+  artist: one(artists, {
+    fields: [moodEvents.artistId],
+    references: [artists.id],
+  }),
+  gameState: one(gameStates, {
+    fields: [moodEvents.gameId],
+    references: [gameStates.id],
+  }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -312,6 +353,11 @@ export const insertMonthlyActionSchema = createInsertSchema(monthlyActions).omit
   createdAt: true,
 });
 
+export const insertMoodEventSchema = createInsertSchema(moodEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -345,3 +391,6 @@ export type InsertGameState = z.infer<typeof insertGameStateSchema>;
 
 export type MonthlyAction = typeof monthlyActions.$inferSelect;
 export type InsertMonthlyAction = z.infer<typeof insertMonthlyActionSchema>;
+
+export type MoodEvent = typeof moodEvents.$inferSelect;
+export type InsertMoodEvent = z.infer<typeof insertMoodEventSchema>;

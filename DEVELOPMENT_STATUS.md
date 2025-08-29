@@ -112,11 +112,28 @@
 
 ## 📚 **REFERENCE DOCUMENTS**
 
-For detailed specifications and roadmaps:
-- **Full 12-Week Roadmap**: `docs/01-planning/development_roadmap_2025.md`
-- **Music Creation Feature**: `docs/01-planning/music-creation-release-cycle-plan.md`
+### **Planning Documentation Index**
+
+#### **Active Development (v1.0)**
+- **Current Sprint**: `docs/01-planning/development_roadmap_2025_sim-v1.0.md` - Week 5 of 12
+
+#### **Next Version (v2.0)**  
+- **Core Features**: `docs/01-planning/CORE_FEATURES_sim-v2.0.md` - Post-MVP features
+
+#### **Implementation Specs**
+- **Artist Mood System**: `docs/01-planning/implementation-specs/artist-mood-plan.md` - 🚧 In Progress
+- **Music Creation Ph 3-4**: `docs/01-planning/implementation-specs/music-creation-release-cycle-phases-3-4-FUTURE.md` - 🔴 Future
+- **Access Tier Analysis**: `docs/01-planning/implementation-specs/access-tier-progression-analysis.md` - 📋 Planning
+
+#### **Long-term Vision (v3.0+)**
+- **Platform Roadmap**: `docs/08-future-features-and-fixes/comprehensive-roadmap_sim-v3.0.md` - 18-24 month vision
+
+#### **Completed Work**
+- **Music Creation Ph 1-2**: `docs/99-legacy/complete/music-creation-release-cycle-phases-1-2-COMPLETE.md` - ✅ Complete
+
+#### **Technical References**
 - **Technical Architecture**: `docs/02-architecture/system-architecture.md`
-- **All Documentation**: `docs/README.md`
+- **All Documentation Hub**: `docs/README.md`
 
 ### **Core System Files**
 - **Financial Calculations**: `shared/engine/FinancialSystem.ts` - Single source of truth for all financial calculations

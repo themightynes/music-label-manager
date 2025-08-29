@@ -139,7 +139,10 @@ export function MetricsDashboard() {
         const description = change.description?.toLowerCase() || '';
         const amount = change.amount;
 
-        if (change.type === 'ongoing_revenue' || description.includes('streaming') || description.includes('streams')) {
+        // Planned releases (type: 'release') are streaming revenue from initial release
+        if (change.type === 'release' || description.includes('released:')) {
+          revenueBreakdown.streamingRevenue += amount;
+        } else if (change.type === 'ongoing_revenue' || description.includes('streaming') || description.includes('streams')) {
           revenueBreakdown.streamingRevenue += amount;
         } else if (change.type === 'revenue' && (description.includes('streaming') || description.includes('streams'))) {
           revenueBreakdown.streamingRevenue += amount;

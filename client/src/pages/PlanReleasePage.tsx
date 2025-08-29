@@ -159,11 +159,13 @@ const SEASONAL_TIMING: SeasonalTiming[] = [
   }
 ];
 
-// Auto-detect seasonal window from month
+// Auto-detect seasonal window from month (handles months 1-36)
 const getSeasonFromMonth = (month: number): string => {
-  if (month <= 3) return 'q1';
-  if (month <= 6) return 'q2';
-  if (month <= 9) return 'q3';
+  // Convert to 1-12 range for quarters
+  const yearMonth = ((month - 1) % 12) + 1;
+  if (yearMonth <= 3) return 'q1';
+  if (yearMonth <= 6) return 'q2';
+  if (yearMonth <= 9) return 'q3';
   return 'q4';
 };
 
@@ -475,7 +477,9 @@ export default function PlanReleasePage() {
           leadSingleBoost: metrics.leadSingleBoost,
           channelEffectiveness: metrics.channelEffectiveness,
           projectedROI: metrics.projectedROI,
-          totalInvestment: metrics.totalMarketingCost
+          totalInvestment: metrics.totalMarketingCost,
+          // Store the marketing budget in metadata as well for released items
+          marketingBudget: Object.values(channelBudgets).reduce((a, b) => a + b, 0)
         }
       };
       

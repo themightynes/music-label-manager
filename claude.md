@@ -35,7 +35,7 @@ Building **Top Roles: Music Label Manager** - browser-based music industry simul
 ## 📚 Documentation References
 
 ### Architecture & Planning
-- **Development Roadmap**: `docs/01-planning/development_roadmap_2025.md`
+- **Development Roadmap**: `docs/01-planning/development_roadmap_2025_sim-v1.0.md`
 - **System Architecture**: `docs/02-architecture/system-architecture.md`
 - **Database Design**: `docs/02-architecture/database-design.md`
 - **API Design**: `docs/02-architecture/api-design.md`
