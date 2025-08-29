@@ -24,14 +24,29 @@ interface MonthlyAction {
   category: string;
   project_type?: string;
   campaign_type?: string;
+  details?: {
+    cost: string;
+    duration: string;
+    prerequisites: string;
+    outcomes: string[];
+    benefits: string[];
+  };
+  recommendations?: {
+    urgent_when?: Record<string, any>;
+    recommended_when?: Record<string, any>;
+    reasons?: Record<string, string>;
+  };
+  firstMeetingId?: string;
+  availableMeetings?: number;
 }
 
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
   const { gameState, selectedActions, selectAction, removeAction, reorderActions, clearActions, openDialogue, projects, artists } = useGameStore();
   const [, setLocation] = useLocation();
   
-  // API state for monthly actions
+  // API state for monthly actions and categories
   const [monthlyActions, setMonthlyActions] = useState<MonthlyAction[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +61,7 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
       }
       const data = await response.json();
       setMonthlyActions(data.actions || []);
+      setCategories(data.categories || []);
     } catch (err) {
       console.error('Failed to fetch monthly actions:', err);
       setError(err instanceof Error ? err.message : 'Failed to load actions');
@@ -62,159 +78,111 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
 
   if (!gameState) return null;
 
-  // Enhanced action metadata with detailed context
+  // Use action data from API with details
   const getActionDetails = (actionId: string) => {
-    const baseAction = monthlyActions.find(a => a.id === actionId);
-    if (!baseAction) {
+    const action = monthlyActions.find(a => a.id === actionId);
+    if (!action) {
       // Fallback for unknown actions
       return { 
         id: actionId, 
-        name: actionId.replace('_', ' '), 
+        name: actionId.replace(/_/g, ' '), 
         type: 'unknown', 
         icon: 'fas fa-question',
         description: 'Action details not available',
         category: 'unknown'
       };
     }
-
-    const actionDetails: Record<string, any> = {
-      'meet_manager': {
-        ...baseAction,
-        description: 'Strategic planning and resource allocation',
-        outcomes: ['Budget decisions', 'Strategic direction', 'Resource optimization'],
-        cost: 'Free',
-        duration: '1 week',
-        prerequisites: 'None',
-        benefits: ['Unlock budget decisions', 'Strategic insights', 'Team coordination']
-      },
-      'meet_ar': {
-        ...baseAction,
-        description: 'Talent scouting and artist development strategy',
-        outcomes: ['Artist discovery', 'Development planning', 'Market positioning'],
-        cost: '$2,000 - $5,000',
-        duration: '1-2 weeks',
-        prerequisites: 'None',
-        benefits: ['Access to new talent', 'Artist development insights', 'Market analysis']
-      },
-      'meet_producer': {
-        ...baseAction,
-        description: 'Music production planning and quality control',
-        outcomes: ['Production timeline', 'Quality improvements', 'Technical direction'],
-        cost: '$1,000 - $3,000',
-        duration: '1 week',
-        prerequisites: 'Active project recommended',
-        benefits: ['Enhanced project quality', 'Production efficiency', 'Technical expertise']
-      },
-      'meet_pr': {
-        ...baseAction,
-        description: 'Media strategy and publicity planning',
-        outcomes: ['Press coverage', 'Media relationships', 'Brand positioning'],
-        cost: '$2,000 - $6,000',
-        duration: '2-3 weeks',
-        prerequisites: 'Project in marketing stage',
-        benefits: ['Increased visibility', 'Media connections', 'Brand awareness']
-      },
-      'meet_digital': {
-        ...baseAction,
-        description: 'Digital marketing and social media strategy',
-        outcomes: ['Online campaigns', 'Social media growth', 'Digital presence'],
-        cost: '$1,000 - $8,000',
-        duration: '1-4 weeks',
-        prerequisites: 'Released content recommended',
-        benefits: ['Digital reach', 'Fan engagement', 'Online visibility']
-      },
-      'meet_streaming': {
-        ...baseAction,
-        description: 'Playlist placement and streaming optimization',
-        outcomes: ['Playlist submissions', 'Streaming strategy', 'Platform relationships'],
-        cost: '$500 - $2,000',
-        duration: '1-2 weeks',
-        prerequisites: `${gameState.playlistAccess || 'None'} playlist access`,
-        benefits: ['Playlist placements', 'Streaming growth', 'Platform visibility']
-      },
-      'meet_booking': {
-        ...baseAction,
-        description: 'Live performance and tour planning',
-        outcomes: ['Venue bookings', 'Tour planning', 'Live opportunities'],
-        cost: '$1,000 - $5,000',
-        duration: '2-4 weeks',
-        prerequisites: `${gameState.venueAccess || 'None'} venue access`,
-        benefits: ['Live revenue', 'Fan engagement', 'Market expansion']
-      },
-      'meet_operations': {
-        ...baseAction,
-        description: 'Business operations and efficiency optimization',
-        outcomes: ['Cost reduction', 'Process improvement', 'Team efficiency'],
-        cost: '$500 - $2,000',
-        duration: '1 week',
-        prerequisites: 'None',
-        benefits: ['Operational efficiency', 'Cost savings', 'Team productivity']
-      }
+    
+    // Build ActionDetails from MonthlyAction
+    const actionDetails = {
+      id: action.id,
+      name: action.name,
+      type: action.type,
+      icon: action.icon,
+      description: action.description || 'No description available',
+      category: action.category,
+      outcomes: action.details?.outcomes,
+      cost: action.details?.cost,
+      duration: action.details?.duration,
+      prerequisites: action.details?.prerequisites,
+      benefits: action.details?.benefits
     };
-
-    return actionDetails[actionId] || baseAction;
+    
+    // Add runtime data for specific actions
+    if (action.id === 'meet_streaming') {
+      actionDetails.prerequisites = `${gameState.playlistAccess || 'None'} playlist access`;
+    }
+    if (action.id === 'meet_booking') {
+      actionDetails.prerequisites = `${gameState.venueAccess || 'None'} venue access`;
+    }
+    
+    return actionDetails;
   };
 
-  // Check if an action is optimal based on current game state
+  // Use recommendation data from actions.json
   const getActionRecommendation = (actionId: string) => {
+    const action = monthlyActions.find(a => a.id === actionId);
+    if (!action?.recommendations) {
+      return { isUrgent: false, isRecommended: false, reason: '' };
+    }
+    
     const activeProjects = projects.filter(p => p.stage !== 'released' && p.stage !== 'recorded').length;
     const releasedProjects = projects.filter(p => p.stage === 'released' || p.stage === 'recorded').length;
     const artistCount = artists.length;
     const currentMoney = gameState.money || 0;
     const currentRep = gameState.reputation || 0;
-
-    switch (actionId) {
-      case 'meet_manager':
-        return {
-          isUrgent: currentMoney < 20000,
-          isRecommended: activeProjects > 2,
-          reason: currentMoney < 20000 ? 'Low budget needs attention' : activeProjects > 2 ? 'Multiple projects need management' : ''
-        };
-      case 'meet_ar':
-        return {
-          isUrgent: artistCount === 0,
-          isRecommended: artistCount < 3,
-          reason: artistCount === 0 ? 'No artists signed' : artistCount < 3 ? 'Need more talent' : ''
-        };
-      case 'meet_producer':
-        return {
-          isUrgent: false,
-          isRecommended: activeProjects > 0,
-          reason: activeProjects > 0 ? 'Active projects need production' : ''
-        };
-      case 'meet_pr':
-        return {
-          isUrgent: false,
-          isRecommended: releasedProjects > 0 && currentRep < 50,
-          reason: releasedProjects > 0 && currentRep < 50 ? 'Build reputation from releases' : ''
-        };
-      case 'meet_digital':
-        return {
-          isUrgent: false,
-          isRecommended: releasedProjects > 0,
-          reason: releasedProjects > 0 ? 'Promote released music digitally' : ''
-        };
-      case 'meet_streaming':
-        return {
-          isUrgent: false,
-          isRecommended: gameState.playlistAccess !== 'None' && releasedProjects > 0,
-          reason: gameState.playlistAccess !== 'None' && releasedProjects > 0 ? 'Leverage playlist access' : ''
-        };
-      case 'meet_booking':
-        return {
-          isUrgent: false,
-          isRecommended: gameState.venueAccess !== 'None' && artistCount > 0,
-          reason: gameState.venueAccess !== 'None' && artistCount > 0 ? 'Book shows for artists' : ''
-        };
-      case 'meet_operations':
-        return {
-          isUrgent: currentMoney < 30000,
-          isRecommended: activeProjects > 1,
-          reason: currentMoney < 30000 ? 'Financial operations urgent' : activeProjects > 1 ? 'Manage multiple projects' : ''
-        };
-      default:
-        return { isUrgent: false, isRecommended: false, reason: '' };
+    
+    const { recommendations } = action;
+    let isUrgent = false;
+    let isRecommended = false;
+    let reason = '';
+    
+    // Check urgent conditions
+    if (recommendations.urgent_when) {
+      if (recommendations.urgent_when.money_below && currentMoney < recommendations.urgent_when.money_below) {
+        isUrgent = true;
+        reason = recommendations.reasons?.low_money || 'Low budget needs attention';
+      }
+      if (recommendations.urgent_when.artists_equal !== undefined && artistCount === recommendations.urgent_when.artists_equal) {
+        isUrgent = true;
+        reason = recommendations.reasons?.no_artists || 'No artists signed';
+      }
     }
+    
+    // Check recommended conditions
+    if (recommendations.recommended_when && !isUrgent) {
+      if (recommendations.recommended_when.active_projects_above !== undefined && activeProjects > recommendations.recommended_when.active_projects_above) {
+        isRecommended = true;
+        reason = recommendations.reasons?.many_projects || recommendations.reasons?.has_projects || 'Projects need attention';
+      }
+      if (recommendations.recommended_when.artists_below !== undefined && artistCount < recommendations.recommended_when.artists_below) {
+        isRecommended = true;
+        reason = recommendations.reasons?.few_artists || 'Need more talent';
+      }
+      if (recommendations.recommended_when.artists_above !== undefined && artistCount > recommendations.recommended_when.artists_above) {
+        isRecommended = true;
+        reason = recommendations.reasons?.book_shows || 'Artists available';
+      }
+      if (recommendations.recommended_when.released_projects_above !== undefined && releasedProjects > recommendations.recommended_when.released_projects_above) {
+        if (recommendations.recommended_when.reputation_below) {
+          isRecommended = currentRep < recommendations.recommended_when.reputation_below;
+          reason = isRecommended ? (recommendations.reasons?.build_reputation || 'Build reputation') : '';
+        } else {
+          isRecommended = true;
+          reason = recommendations.reasons?.has_releases || 'Releases available';
+        }
+      }
+      if (recommendations.recommended_when.playlist_access_not && gameState.playlistAccess !== recommendations.recommended_when.playlist_access_not) {
+        isRecommended = isRecommended && releasedProjects > 0;
+        reason = isRecommended ? (recommendations.reasons?.leverage_access || 'Leverage access') : '';
+      }
+      if (recommendations.recommended_when.venue_access_not && gameState.venueAccess !== recommendations.recommended_when.venue_access_not) {
+        isRecommended = isRecommended && artistCount > 0;
+        reason = isRecommended ? (recommendations.reasons?.book_shows || 'Book shows') : '';
+      }
+    }
+    
+    return { isUrgent, isRecommended, reason };
   };
 
 
@@ -234,39 +202,11 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
     const action = monthlyActions.find(a => a.id === actionId);
     if (!action) return;
 
-    if (action.type === 'role_meeting') {
-      // Map action IDs to actual role IDs in roles.json
-      const roleMapping: Record<string, string> = {
-        'meet_manager': 'manager',
-        'meet_ar': 'anr',              // Fix: ar -> anr
-        'meet_producer': 'producer',
-        'meet_pr': 'pr',
-        'meet_digital': 'digital',
-        'meet_streaming': 'streaming',
-        'meet_booking': 'booking',
-        'meet_operations': 'ops'       // Fix: operations -> ops
-      };
-      
-      // Map roles to their first available meeting
-      const defaultMeetings: Record<string, string> = {
-        'manager': 'mgr_priorities',
-        'anr': 'anr_single_choice',
-        'producer': 'prod_timeline', 
-        'pr': 'pr_angle',
-        'digital': 'ads_split',
-        'streaming': 'pitch_strategy',
-        'booking': 'tour_scale',
-        'ops': 'release_ops'
-      };
-      
-      const roleId = roleMapping[action.id] || 'manager';
-      const meetingId = defaultMeetings[roleId] || 'mgr_priorities';
-      
-      // CRITICAL FIX: Add action to slot AND open dialogue
-      selectAction(actionId);
-      await openDialogue(roleId, meetingId);
-    } else {
-      selectAction(actionId);
+    selectAction(actionId);
+    
+    // Use enriched data from API for role meetings
+    if (action.type === 'role_meeting' && action.role_id && action.firstMeetingId) {
+      await openDialogue(action.role_id, action.firstMeetingId);
     }
   };
 
@@ -390,6 +330,7 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
               ) : (
                 <ActionSelectionPool
                   actions={monthlyActions}
+                  categories={categories}
                   getActionDetails={getActionDetails}
                   getActionRecommendation={getActionRecommendation}
                   selectedActions={selectedActions}

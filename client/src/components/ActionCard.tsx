@@ -151,6 +151,20 @@ export function ActionCard({
                   </ul>
                 </div>
               )}
+              
+              {actionDetails.benefits && actionDetails.benefits.length > 0 && (
+                <div>
+                  <span className="text-slate-500">Benefits:</span>
+                  <ul className="mt-1 space-y-1">
+                    {actionDetails.benefits.map((benefit, index) => (
+                      <li key={index} className="text-slate-600 flex items-center">
+                        <i className="fas fa-star text-xs text-yellow-500 mr-2"></i>
+                        {benefit}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </CardContent>
         </CollapsibleContent>

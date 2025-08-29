@@ -259,12 +259,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available monthly actions
+  // Get available monthly actions with enriched role data and categories
   app.get("/api/actions/monthly", async (req, res) => {
     try {
       await serverGameData.initialize();
-      const actions = await serverGameData.getMonthlyActions();
-      res.json({ actions: actions || [] });
+      const actionsData = await serverGameData.getMonthlyActionsWithCategories();
+      const roles = await serverGameData.getAllRoles();
+      
+      // Enrich actions with role meeting data
+      const enrichedActions = actionsData.actions.map((action: any) => {
+        if (action.type === 'role_meeting' && action.role_id) {
+          const role = roles.find(r => r.id === action.role_id);
+          if (role && role.meetings && role.meetings.length > 0) {
+            return {
+              ...action,
+              firstMeetingId: role.meetings[0].id,
+              availableMeetings: role.meetings.length
+            };
+          }
+        }
+        return action;
+      });
+      
+      res.json({ 
+        actions: enrichedActions || [],
+        categories: actionsData.categories || []
+      });
     } catch (error) {
       console.error('Failed to load monthly actions:', error);
       res.status(500).json({ error: 'Failed to load monthly actions' });
@@ -1047,7 +1067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // CRITICAL FIX: Also create entries in the junction table for proper song-release association
         // This ensures songs are properly linked when releases are executed
-        const releaseSongEntries = songIds.map((songId, index) => ({
+        const releaseSongEntries = songIds.map((songId: string, index: number) => ({
           id: crypto.randomUUID(),
           releaseId: newRelease.id,
           songId: songId,

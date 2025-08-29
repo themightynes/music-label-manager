@@ -8,72 +8,207 @@
       "name": "Meet Manager",
       "type": "role_meeting",
       "icon": "fas fa-user-tie",
-      "description": "Schedule strategic planning meeting with your manager",
+      "description": "Strategic planning and resource allocation",
       "role_id": "manager",
-      "category": "business"
+      "category": "business",
+      "details": {
+        "cost": "Free",
+        "duration": "1 week",
+        "prerequisites": "None",
+        "outcomes": ["Budget decisions", "Strategic direction", "Resource optimization"],
+        "benefits": ["Unlock budget decisions", "Strategic insights", "Team coordination"]
+      },
+      "recommendations": {
+        "urgent_when": {
+          "money_below": 20000
+        },
+        "recommended_when": {
+          "active_projects_above": 2
+        },
+        "reasons": {
+          "low_money": "Low budget needs attention",
+          "many_projects": "Multiple projects need management"
+        }
+      }
     },
     {
       "id": "meet_ar",
       "name": "Meet A&R",
       "type": "role_meeting", 
       "icon": "fas fa-search",
-      "description": "Discuss talent acquisition and artist development",
-      "role_id": "ar",
-      "category": "talent"
+      "description": "Talent scouting and artist development strategy",
+      "role_id": "anr",
+      "category": "talent",
+      "details": {
+        "cost": "$2,000 - $5,000",
+        "duration": "1-2 weeks",
+        "prerequisites": "None",
+        "outcomes": ["Artist discovery", "Development planning", "Market positioning"],
+        "benefits": ["Access to new talent", "Artist development insights", "Market analysis"]
+      },
+      "recommendations": {
+        "urgent_when": {
+          "artists_equal": 0
+        },
+        "recommended_when": {
+          "artists_below": 3
+        },
+        "reasons": {
+          "no_artists": "No artists signed",
+          "few_artists": "Need more talent"
+        }
+      }
     },
     {
       "id": "meet_producer",
       "name": "Meet Producer",
       "type": "role_meeting",
       "icon": "fas fa-sliders-h", 
-      "description": "Plan recording sessions and production quality",
+      "description": "Music production planning and quality control",
       "role_id": "producer",
-      "category": "production"
+      "category": "production",
+      "details": {
+        "cost": "$1,000 - $3,000",
+        "duration": "1 week",
+        "prerequisites": "Active project recommended",
+        "outcomes": ["Production timeline", "Quality improvements", "Technical direction"],
+        "benefits": ["Enhanced project quality", "Production efficiency", "Technical expertise"]
+      },
+      "recommendations": {
+        "recommended_when": {
+          "active_projects_above": 0
+        },
+        "reasons": {
+          "has_projects": "Active projects need production"
+        }
+      }
     },
     {
       "id": "meet_pr",
       "name": "Meet PR",
       "type": "role_meeting",
       "icon": "fas fa-bullhorn",
-      "description": "Coordinate publicity and media relationships",
+      "description": "Media strategy and publicity planning",
       "role_id": "pr", 
-      "category": "marketing"
+      "category": "marketing",
+      "details": {
+        "cost": "$2,000 - $6,000",
+        "duration": "2-3 weeks",
+        "prerequisites": "Project in marketing stage",
+        "outcomes": ["Press coverage", "Media relationships", "Brand positioning"],
+        "benefits": ["Increased visibility", "Media connections", "Brand awareness"]
+      },
+      "recommendations": {
+        "recommended_when": {
+          "released_projects_above": 0,
+          "reputation_below": 50
+        },
+        "reasons": {
+          "build_reputation": "Build reputation from releases"
+        }
+      }
     },
     {
       "id": "meet_digital",
       "name": "Digital Marketing",
       "type": "role_meeting",
       "icon": "fas fa-chart-line",
-      "description": "Plan social media and digital advertising strategy",
+      "description": "Digital marketing and social media strategy",
       "role_id": "digital",
-      "category": "marketing"
+      "category": "marketing",
+      "details": {
+        "cost": "$1,000 - $8,000",
+        "duration": "1-4 weeks",
+        "prerequisites": "Released content recommended",
+        "outcomes": ["Online campaigns", "Social media growth", "Digital presence"],
+        "benefits": ["Digital reach", "Fan engagement", "Online visibility"]
+      },
+      "recommendations": {
+        "recommended_when": {
+          "released_projects_above": 0
+        },
+        "reasons": {
+          "has_releases": "Promote released music digitally"
+        }
+      }
     },
     {
       "id": "meet_streaming",
       "name": "Streaming Pitch", 
       "type": "role_meeting",
       "icon": "fas fa-list-ul",
-      "description": "Pitch songs to streaming platforms and playlists",
+      "description": "Playlist placement and streaming optimization",
       "role_id": "streaming",
-      "category": "distribution"
+      "category": "distribution",
+      "details": {
+        "cost": "$500 - $2,000",
+        "duration": "1-2 weeks",
+        "prerequisites": "Playlist access tier",
+        "outcomes": ["Playlist submissions", "Streaming strategy", "Platform relationships"],
+        "benefits": ["Playlist placements", "Streaming growth", "Platform visibility"]
+      },
+      "recommendations": {
+        "recommended_when": {
+          "playlist_access_not": "None",
+          "released_projects_above": 0
+        },
+        "reasons": {
+          "leverage_access": "Leverage playlist access"
+        }
+      }
     },
     {
       "id": "meet_booking",
       "name": "Meet Booking",
       "type": "role_meeting", 
       "icon": "fas fa-calendar-alt",
-      "description": "Plan tours and live performance opportunities",
+      "description": "Live performance and tour planning",
       "role_id": "booking",
-      "category": "live"
+      "category": "live",
+      "details": {
+        "cost": "$1,000 - $5,000",
+        "duration": "2-4 weeks",
+        "prerequisites": "Venue access tier",
+        "outcomes": ["Venue bookings", "Tour planning", "Live opportunities"],
+        "benefits": ["Live revenue", "Fan engagement", "Market expansion"]
+      },
+      "recommendations": {
+        "recommended_when": {
+          "venue_access_not": "None",
+          "artists_above": 0
+        },
+        "reasons": {
+          "book_shows": "Book shows for artists"
+        }
+      }
     },
     {
       "id": "meet_operations",
       "name": "Meet Operations",
       "type": "role_meeting",
       "icon": "fas fa-cogs",
-      "description": "Optimize business operations and efficiency",
-      "role_id": "operations", 
-      "category": "business"
+      "description": "Business operations and efficiency optimization",
+      "role_id": "ops", 
+      "category": "business",
+      "details": {
+        "cost": "$500 - $2,000",
+        "duration": "1 week",
+        "prerequisites": "None",
+        "outcomes": ["Cost reduction", "Process improvement", "Team efficiency"],
+        "benefits": ["Operational efficiency", "Cost savings", "Team productivity"]
+      },
+      "recommendations": {
+        "urgent_when": {
+          "money_below": 30000
+        },
+        "recommended_when": {
+          "active_projects_above": 1
+        },
+        "reasons": {
+          "low_money": "Financial operations urgent",
+          "many_projects": "Manage multiple projects"
+        }
+      }
     },
     {
       "id": "start_single",
@@ -122,11 +257,47 @@
     }
   ],
   "action_categories": [
-    { "id": "business", "name": "Business Strategy", "color": "blue" },
-    { "id": "talent", "name": "Artist & Talent", "color": "purple" },
-    { "id": "production", "name": "Music Production", "color": "green" },
-    { "id": "marketing", "name": "Marketing & PR", "color": "orange" },
-    { "id": "distribution", "name": "Distribution", "color": "cyan" },
-    { "id": "live", "name": "Live Performance", "color": "red" }
+    { 
+      "id": "business", 
+      "name": "Business Strategy", 
+      "icon": "fas fa-briefcase",
+      "description": "Strategic planning and business development",
+      "color": "blue" 
+    },
+    { 
+      "id": "talent", 
+      "name": "Artist & Talent", 
+      "icon": "fas fa-users",
+      "description": "Artist scouting and talent development",
+      "color": "purple" 
+    },
+    { 
+      "id": "production", 
+      "name": "Music Production", 
+      "icon": "fas fa-music",
+      "description": "Recording and production activities",
+      "color": "green" 
+    },
+    { 
+      "id": "marketing", 
+      "name": "Marketing & PR", 
+      "icon": "fas fa-bullhorn",
+      "description": "Promotion and public relations",
+      "color": "orange" 
+    },
+    { 
+      "id": "distribution", 
+      "name": "Distribution", 
+      "icon": "fas fa-shipping-fast",
+      "description": "Release and distribution channels",
+      "color": "cyan" 
+    },
+    { 
+      "id": "live", 
+      "name": "Live Performance", 
+      "icon": "fas fa-microphone-alt",
+      "description": "Concerts and live events",
+      "color": "red" 
+    }
   ]
 }

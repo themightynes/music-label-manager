@@ -110,6 +110,21 @@ export class ServerGameData {
     }
   }
 
+  // Get monthly actions with categories
+  async getMonthlyActionsWithCategories(): Promise<{ actions: any[], categories: any[] }> {
+    await this.initialize();
+    try {
+      const actionsData = await this.dataLoader.loadActionsData();
+      return {
+        actions: actionsData.monthly_actions || [],
+        categories: actionsData.action_categories || []
+      };
+    } catch (error) {
+      console.error('Failed to load actions data:', error);
+      return { actions: [], categories: [] };
+    }
+  }
+
   // Project types data access  
   async getProjectTypes(): Promise<any> {
     await this.initialize();
