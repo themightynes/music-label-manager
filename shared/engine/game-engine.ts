@@ -982,7 +982,7 @@ export class GameEngine {
         
         // Apply mood boost for successful release
         if (release.artistId) {
-          const moodBoost = (release.type === 'album' || release.type === 'ep') ? 10 : 5;
+          const moodBoost = (release.type === 'album' || release.type === 'ep') ? 20 : 5;
           
           // Track mood change for later application in processMonthlyMoodChanges
           if (!summary.artistChanges) {
