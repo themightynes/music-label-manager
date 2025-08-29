@@ -235,37 +235,6 @@ export class FinancialSystem {
   }
 
   /**
-   * Calculates ongoing revenue for a released project using streaming decay formula
-   * Originally from game-engine.ts line 1742-1812
-   */
-  calculateOngoingRevenue(
-    project: any, 
-    currentMonth: number, 
-    reputation: number, 
-    playlistAccess: string
-  ): number {
-    const metadata = project.metadata || {};
-    const initialStreams = metadata.streams || 0;
-    const releaseMonth = metadata.releaseMonth || 1;
-    const monthsSinceRelease = currentMonth - releaseMonth;
-    
-    // console.log(`[REVENUE CALC] === Calculating for ${project.title} ===`);
-    // console.log(`[REVENUE CALC] Initial streams: ${initialStreams}`);
-    // console.log(`[REVENUE CALC] Release month: ${releaseMonth}`);
-    // console.log(`[REVENUE CALC] Current month: ${currentMonth}`);
-    // console.log(`[REVENUE CALC] Months since release: ${monthsSinceRelease}`);
-    
-    // Use common decay calculation logic
-    return this.calculateDecayRevenue(
-      initialStreams,
-      monthsSinceRelease,
-      reputation,
-      playlistAccess,
-      project.title || 'project'
-    );
-  }
-
-  /**
    * Calculates ongoing revenue for an individual released song
    * Originally from game-engine.ts line 1666-1732
    */

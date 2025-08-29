@@ -1636,38 +1636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('[DEBUG] === POST-PROCESSING: SONG RELEASES HANDLED BY GAMEENGINE ===');
         console.log('[DEBUG] Routes.ts no longer processes individual song releases - GameEngine handles all song revenue processing');
         
-        // Update released projects with ongoing revenue metadata
-        try {
-          console.log('[DEBUG] Updating released projects with ongoing revenue metadata...');
-          const processedReleasedProjects = (monthResult.gameState.flags as any)?.['released_projects'] || [];
-          console.log('[DEBUG] Found', processedReleasedProjects.length, 'processed released projects');
-          
-          for (const processedProject of processedReleasedProjects) {
-            if (processedProject.metadata?.lastMonthRevenue && processedProject.metadata.lastMonthRevenue > 0) {
-              console.log(`[DEBUG] Updating metadata for project ${processedProject.id} with revenue ${processedProject.metadata.lastMonthRevenue}`);
-              
-              try {
-                // Update the project metadata in the database
-                await tx
-                  .update(projects)
-                  .set({
-                    metadata: {
-                      ...processedProject.metadata
-                    }
-                  })
-                  .where(eq(projects.id, processedProject.id));
-                console.log(`[DEBUG] Successfully updated project ${processedProject.id} metadata`);
-              } catch (projectUpdateError) {
-                console.error(`[ERROR] Failed to update project ${processedProject.id} metadata:`, projectUpdateError);
-                throw new Error(`Failed to update project metadata: ${projectUpdateError instanceof Error ? projectUpdateError.message : 'Unknown error'}`);
-              }
-            }
-          }
-          console.log('[DEBUG] Completed updating released projects metadata');
-        } catch (error) {
-          console.error('[ERROR] Failed during released projects metadata update:', error);
-          throw new Error(`Released projects update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+        // Legacy project metadata update removed - individual songs handle their own revenue tracking
         
           // Add comprehensive debugging information visible in browser
           console.log('[DEBUG] Preparing response with debug information...');

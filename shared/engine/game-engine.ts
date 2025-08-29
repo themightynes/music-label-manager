@@ -600,38 +600,10 @@ export class GameEngine {
       
     } catch (error) {
       console.error('[INDIVIDUAL SONG DECAY] Error processing released songs:', error);
-      // Fallback to legacy project-based processing if song-based fails
-      await this.processReleasedProjectsLegacy(summary);
+      // No fallback - individual song processing is the only path
     }
     
     console.log('[INDIVIDUAL SONG DECAY] === End Processing ===');
-  }
-  
-  /**
-   * Legacy project-based ongoing revenue processing (fallback)
-   */
-  private async processReleasedProjectsLegacy(summary: MonthSummary): Promise<void> {
-    console.log('[LEGACY DECAY] Falling back to project-based ongoing revenue');
-    
-    const releasedProjects = (this.gameState.flags as any)?.['released_projects'] || [];
-    
-    for (const project of releasedProjects) {
-      const ongoingRevenue = this.calculateOngoingRevenue(project);
-      
-      if (ongoingRevenue > 0) {
-        summary.revenue += ongoingRevenue;
-        // Calculate streams from revenue for legacy projects
-        const streamingConfig = this.gameData.getStreamingConfigSync();
-        const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
-        const projectStreams = Math.round(ongoingRevenue / revenuePerStream);
-        summary.streams = (summary.streams || 0) + projectStreams;
-        summary.changes.push({
-          type: 'ongoing_revenue',
-          description: `Ongoing streams: ${project.title}`,
-          amount: ongoingRevenue
-        });
-      }
-    }
   }
 
   /**
@@ -1677,20 +1649,6 @@ export class GameEngine {
     return FinancialSystem.generateProjectCompletionSummary(project);
   }
 
-  /**
-   * Calculates ongoing revenue for a released project using streaming decay formula
-   * Revenue naturally decreases over time, simulating real music industry patterns
-   */
-  // DELEGATED TO FinancialSystem (originally lines 1742-1812) 
-  private calculateOngoingRevenue(project: any): number {
-    return this.financialSystem.calculateOngoingRevenue(
-      project,
-      this.gameState.currentMonth || 1,
-      this.gameState.reputation || 0,
-      this.gameState.playlistAccess || 'none'
-    );
-  }
-  
   /**
    * Calculates ongoing revenue for an individual released song using streaming decay formula
    * Each song has its own decay pattern based on individual quality and release timing
