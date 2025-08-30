@@ -179,8 +179,9 @@ export class GameEngine {
     // Check progression gates
     await this.checkProgressionGates(summary);
 
-    // Update access tiers based on reputation
-    this.updateAccessTiers();
+    // Update access tiers based on reputation and collect notifications
+    const tierChanges = this.updateAccessTiers();
+    summary.changes.push(...tierChanges);
 
     // Check for producer tier unlocks
     this.checkProducerTierUnlocks(summary);
@@ -1982,11 +1983,17 @@ export class GameEngine {
   }
 
   /**
-   * Updates access tiers based on current reputation and checks for producer tier unlocks
+   * Updates access tiers based on current reputation and returns tier upgrade notifications
    */
-  private updateAccessTiers(): void {
+  private updateAccessTiers(): GameChange[] {
     const tiers = this.gameData.getAccessTiersSync();
     const reputation = this.gameState.reputation || 0;
+    const tierChanges: GameChange[] = [];
+    
+    // Store previous values to detect changes
+    const previousPlaylist = this.gameState.playlistAccess;
+    const previousPress = this.gameState.pressAccess;
+    const previousVenue = this.gameState.venueAccess;
     
     // Update playlist access
     const playlistTiers = Object.entries(tiers.playlist_access)
@@ -2026,6 +2033,42 @@ export class GameEngine {
         break;
       }
     }
+    
+    // Generate notifications for tier upgrades
+    if (previousPlaylist !== this.gameState.playlistAccess && this.gameState.playlistAccess !== 'none') {
+      const tierDisplay = this.gameState.playlistAccess === 'niche' ? 'Niche' :
+                         this.gameState.playlistAccess === 'mid' ? 'Mid-Tier' :
+                         this.gameState.playlistAccess === 'flagship' ? 'Flagship' : this.gameState.playlistAccess;
+      tierChanges.push({
+        type: 'unlock',
+        description: `🎵 Playlist Access Upgraded: ${tierDisplay} playlists unlocked! Your releases can now reach wider audiences.`,
+        amount: 0
+      });
+    }
+    
+    if (previousPress !== this.gameState.pressAccess && this.gameState.pressAccess !== 'none') {
+      const tierDisplay = this.gameState.pressAccess === 'blogs' ? 'Music Blogs' :
+                         this.gameState.pressAccess === 'mid_tier' ? 'Mid-Tier Press' :
+                         this.gameState.pressAccess === 'national' ? 'National Media' : this.gameState.pressAccess;
+      tierChanges.push({
+        type: 'unlock',
+        description: `📰 Press Access Upgraded: ${tierDisplay} coverage unlocked! Your projects will get better media attention.`,
+        amount: 0
+      });
+    }
+    
+    if (previousVenue !== this.gameState.venueAccess && this.gameState.venueAccess !== 'none') {
+      const tierDisplay = this.gameState.venueAccess === 'clubs' ? 'Club Venues' :
+                         this.gameState.venueAccess === 'theaters' ? 'Theater Venues' :
+                         this.gameState.venueAccess === 'arenas' ? 'Arena Venues' : this.gameState.venueAccess;
+      tierChanges.push({
+        type: 'unlock',
+        description: `🎭 Venue Access Upgraded: ${tierDisplay} unlocked! Your artists can now perform at larger venues.`,
+        amount: 0
+      });
+    }
+    
+    return tierChanges;
   }
 
   /**
@@ -2239,8 +2282,8 @@ export class GameEngine {
     let bonus = 0;
     
     // Playlist access bonus
-    if (this.gameState.playlistAccess === 'Mid') bonus += 20;
-    else if (this.gameState.playlistAccess === 'Niche') bonus += 10;
+    if (this.gameState.playlistAccess === 'mid') bonus += 20;
+    else if (this.gameState.playlistAccess === 'niche') bonus += 10;
     
     // Press access bonus  
     if (this.gameState.pressAccess === 'Mid-Tier') bonus += 20;
@@ -2300,7 +2343,7 @@ export class GameEngine {
     else if (scoreBreakdown.reputation >= 20) achievements.push('🌟 Well Known - 100+ Reputation');
     
     // Access tier achievements
-    if (this.gameState.playlistAccess === 'Mid' && this.gameState.pressAccess === 'Mid-Tier') {
+    if (this.gameState.playlistAccess === 'mid' && this.gameState.pressAccess === 'mid_tier') {
       achievements.push('🎵 Media Mogul - Maximum playlist and press access');
     }
     

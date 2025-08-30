@@ -5,13 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
 import { ArtistDiscoveryModal } from './ArtistDiscoveryModal';
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Heart, Star, Info, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Heart, Star, Info, DollarSign, ExternalLink } from 'lucide-react';
 import { SongCatalog } from './SongCatalog';
+import { useLocation } from 'wouter';
 
 export function ArtistRoster() {
   const { gameState, artists, signArtist, openDialogue, projects } = useGameStore();
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
   const handleSignArtist = async (artistData: any) => {
     try {
@@ -368,7 +370,16 @@ export function ArtistRoster() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 text-xs"
+                    className="text-xs"
+                    onClick={() => setLocation(`/artist/${artist.id}`)}
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    Details
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
                     onClick={() => handleArtistMeeting(artist)}
                   >
                     <i className="fas fa-handshake mr-1"></i>

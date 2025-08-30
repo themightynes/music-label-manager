@@ -174,6 +174,11 @@ export class ServerGameData {
     return balance.economy.starting_money;
   }
 
+  async getStartingReputation(): Promise<number> {
+    const balance = await this.getBalanceConfig();
+    return balance.reputation_system.starting_reputation;
+  }
+
   async getProjectCosts(projectType: string): Promise<{ min: number; max: number }> {
     const balance = await this.getBalanceConfig();
     const costs = balance.economy.project_costs[projectType.toLowerCase()];
@@ -282,10 +287,10 @@ export class ServerGameData {
           reach_multiplier: access.playlist_access.mid.reach_multiplier, 
           description: "Mid-tier playlist access" 
         },
-        major: { 
+        flagship: { 
           threshold: access.playlist_access.flagship.threshold, 
           reach_multiplier: access.playlist_access.flagship.reach_multiplier, 
-          description: "Major playlist access" 
+          description: "Flagship playlist access" 
         }
       },
       press_access: {
@@ -304,13 +309,18 @@ export class ServerGameData {
           pickup_chance: access.press_access.mid_tier.pickup_chance, 
           description: "Mid-tier publication access" 
         },
-        major: { 
+        national: { 
           threshold: access.press_access.national.threshold, 
           pickup_chance: access.press_access.national.pickup_chance, 
-          description: "Major publication access" 
+          description: "National media access" 
         }
       },
       venue_access: {
+        none: {
+          threshold: access.venue_access.none.threshold,
+          capacity_range: access.venue_access.none.capacity_range,
+          description: "No venue access"
+        },
         clubs: { 
           threshold: access.venue_access.clubs.threshold, 
           capacity_range: access.venue_access.clubs.capacity_range, 
@@ -325,11 +335,6 @@ export class ServerGameData {
           threshold: access.venue_access.arenas.threshold, 
           capacity_range: access.venue_access.arenas.capacity_range, 
           description: "Arenas and large venues" 
-        },
-        stadiums: { 
-          threshold: 80, 
-          capacity_range: [15000, 50000], 
-          description: "Stadiums and festivals" 
         }
       }
     };
@@ -450,19 +455,19 @@ export class ServerGameData {
           none: { threshold: 0, reach_multiplier: 0.1, description: "No playlist access" },
           niche: { threshold: 10, reach_multiplier: 0.4, description: "Niche playlist access" },
           mid: { threshold: 30, reach_multiplier: 0.8, description: "Mid-tier playlist access" },
-          major: { threshold: 60, reach_multiplier: 1.5, description: "Major playlist access" }
+          flagship: { threshold: 60, reach_multiplier: 1.5, description: "Flagship playlist access" }
         },
         press_access: {
           none: { threshold: 0, pickup_chance: 0.05, description: "No press contacts" },
           blogs: { threshold: 8, pickup_chance: 0.25, description: "Music blog access" },
           mid_tier: { threshold: 25, pickup_chance: 0.60, description: "Mid-tier publication access" },
-          major: { threshold: 50, pickup_chance: 0.85, description: "Major publication access" }
+          national: { threshold: 50, pickup_chance: 0.85, description: "National media access" }
         },
         venue_access: {
+          none: { threshold: 0, capacity_range: [0, 50], description: "No venue access" },
           clubs: { threshold: 5, capacity_range: [50, 500], description: "Small clubs and bars" },
           theaters: { threshold: 20, capacity_range: [500, 2000], description: "Theaters and mid-size venues" },
-          arenas: { threshold: 45, capacity_range: [2000, 20000], description: "Arenas and large venues" },
-          stadiums: { threshold: 80, capacity_range: [15000, 50000], description: "Stadiums and festivals" }
+          arenas: { threshold: 45, capacity_range: [2000, 20000], description: "Arenas and large venues" }
         }
       };
     }

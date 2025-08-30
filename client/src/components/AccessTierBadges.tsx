@@ -136,12 +136,31 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
     }
   };
 
+  // Map lowercase tier names from game state to UI display names
+  const tierNameMap: Record<string, string> = {
+    // Playlist tiers
+    'none': 'None',
+    'niche': 'Niche',
+    'mid': 'Mid',
+    'flagship': 'Flagship',
+    // Press tiers  
+    'blogs': 'Blogs',
+    'mid_tier': 'Mid-Tier',
+    'national': 'Major',
+    // Venue tiers
+    'clubs': 'Clubs',
+    'theaters': 'Theaters',
+    'arenas': 'Arenas'
+  };
+
   const getCurrentTier = (tierType: keyof typeof accessTiers) => {
     const currentTierName = tierType === 'playlist' ? gameState.playlistAccess :
                            tierType === 'press' ? gameState.pressAccess :
                            gameState.venueAccess;
     
-    return accessTiers[tierType].tiers.find(t => t.name === currentTierName) || accessTiers[tierType].tiers[0];
+    // Map lowercase tier names from gameState to UI tier names
+    const mappedName = currentTierName ? (tierNameMap[currentTierName] || 'None') : 'None';
+    return accessTiers[tierType].tiers.find(t => t.name === mappedName) || accessTiers[tierType].tiers[0];
   };
 
   const getNextTier = (tierType: keyof typeof accessTiers) => {

@@ -161,52 +161,8 @@ export function ToastNotification() {
       }
     }
 
-    // Enhanced access tier upgrades with actions
-    if (prev.playlistAccess !== current.playlistAccess) {
-      showEnhancedToast({
-        title: '🎵 Playlist Access Upgraded!',
-        description: `You now have ${current.playlistAccess} playlist access. This opens new opportunities for your releases.`,
-        type: 'achievement',
-        duration: 6000,
-        action: {
-          label: 'Learn More',
-          onClick: () => {
-            // Could show detailed benefits of the new access tier
-            console.log('Playlist access details');
-          }
-        }
-      });
-    }
-
-    if (prev.pressAccess !== current.pressAccess) {
-      showEnhancedToast({
-        title: '📰 Press Access Upgraded!',
-        description: `You now have ${current.pressAccess} press access. Your projects will get better media coverage.`,
-        type: 'achievement',
-        duration: 6000,
-        action: {
-          label: 'View Benefits',
-          onClick: () => {
-            console.log('Press access details');
-          }
-        }
-      });
-    }
-
-    if (prev.venueAccess !== current.venueAccess) {
-      showEnhancedToast({
-        title: '🏟️ Venue Access Upgraded!',
-        description: `You now have ${current.venueAccess} venue access. Your artists can now perform at bigger venues.`,
-        type: 'achievement',
-        duration: 6000,
-        action: {
-          label: 'Plan Tour',
-          onClick: () => {
-            console.log('Tour planning');
-          }
-        }
-      });
-    }
+    // Access tier notifications are now handled server-side in MonthSummary
+    // This ensures consistency with other progression notifications
 
     prevGameState.current = gameState;
     prevMonthlyOutcome.current = monthlyOutcome;

@@ -157,13 +157,14 @@ export const useGameStore = create<GameStore>()(
             // userId will be set by the server from authentication
             currentMonth: 1,
             // money will be set by server from balance.json
+            // reputation will be set by server from balance.json
             reputation: 0,
             creativeCapital: 0,
             focusSlots: 3,
             usedFocusSlots: 0,
-            playlistAccess: 'None',
-            pressAccess: 'None',
-            venueAccess: 'None',
+            playlistAccess: 'none',
+            pressAccess: 'none',
+            venueAccess: 'none',
             campaignType,
             rngSeed: Math.random().toString(36),
             flags: {},

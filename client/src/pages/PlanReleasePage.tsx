@@ -668,7 +668,19 @@ export default function PlanReleasePage() {
                         }}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-slate-900">{artist.name}</h3>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-slate-900">{artist.name}</h3>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/artist/${artist.id}`);
+                              }}
+                              className="text-blue-500 hover:text-blue-700 text-xs"
+                              title="View artist details"
+                            >
+                              <i className="fas fa-external-link-alt"></i>
+                            </button>
+                          </div>
                           <Badge variant="outline" className="text-xs">{artist.genre}</Badge>
                         </div>
                         <div className="space-y-1 text-sm text-slate-600">

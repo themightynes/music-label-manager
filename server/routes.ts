@@ -200,16 +200,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/game", getUserId, async (req, res) => {
+    console.log('🚀 [GAME CREATION] Starting new game creation...');
     try {
       const validatedData = insertGameStateSchema.parse(req.body);
+      console.log('📝 [GAME CREATION] Validated data reputation:', validatedData.reputation);
       
-      // Set starting money from balance.json configuration
+      // Ensure serverGameData is initialized before accessing balance config
+      await serverGameData.initialize();
+      
+      // Set starting money and reputation from balance.json configuration
       const startingMoney = await serverGameData.getStartingMoney();
+      const startingReputation = await serverGameData.getStartingReputation();
+      // Make these logs more visible
+      console.error('🎮🎮🎮 REPUTATION FROM BALANCE:', startingReputation);
+      console.error('💰💰💰 MONEY FROM BALANCE:', startingMoney);
       const gameDataWithBalance = {
         ...validatedData,
         money: startingMoney,
+        reputation: startingReputation,
         userId: req.userId  // CRITICAL: Associate game with user
       };
+      console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation);
       
       const gameState = await storage.createGameState(gameDataWithBalance);
       
