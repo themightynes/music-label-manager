@@ -60,7 +60,7 @@ export default function GamePage() {
   
   if (isInitializing || !gameState) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-primary text-xl mb-4">🎵 Music Label Manager</div>
           <div className="text-slate-600">
@@ -83,7 +83,7 @@ export default function GamePage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen">
         <Dashboard />
         
         {/* Campaign Results Modal */}
