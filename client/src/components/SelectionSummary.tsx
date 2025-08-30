@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useGameStore } from '@/store/gameStore';
 
 interface MonthlyAction {
   id: string;
@@ -30,12 +31,16 @@ export function SelectionSummary({
   onAdvanceMonth,
   isAdvancing
 }: SelectionSummaryProps) {
+  const { gameState } = useGameStore();
+  const totalSlots = gameState?.focusSlots || 3;
+  const usedSlots = gameState?.usedFocusSlots || 0;
+  const availableSlots = totalSlots - usedSlots;
   
   const selectedActionObjects = selectedActions.map(id => 
     actions.find(action => action.id === id)
   ).filter(Boolean) as MonthlyAction[];
 
-  const progress = (selectedActions.length / 3) * 100;
+  const progress = (usedSlots / totalSlots) * 100;
 
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;
@@ -49,31 +54,46 @@ export function SelectionSummary({
   };
 
   const getProgressColor = () => {
-    if (selectedActions.length === 0) return 'bg-slate-200';
-    if (selectedActions.length < 3) return 'bg-yellow-400';
+    if (usedSlots === 0) return 'bg-slate-200';
+    if (usedSlots < totalSlots) return 'bg-yellow-400';
     return 'bg-green-500';
   };
 
   const getStatusMessage = () => {
-    if (selectedActions.length === 0) return 'Select actions to begin planning';
-    if (selectedActions.length < 3) return `Select ${3 - selectedActions.length} more action${3 - selectedActions.length !== 1 ? 's' : ''}`;
-    return 'Ready to advance month!';
+    if (usedSlots === 0) return 'Allocate focus slots to begin planning';
+    if (usedSlots < totalSlots) return `${availableSlots} focus slot${availableSlots !== 1 ? 's' : ''} remaining`;
+    return 'All focus slots allocated - Ready!';
   };
 
   return (
     <Card className="h-full">
       <CardHeader className="p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">Selected Actions</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Focus Slots</h3>
           <Badge variant="secondary" className="text-sm">
-            {selectedActions.length}/3
+            {usedSlots}/{totalSlots} Used
           </Badge>
+        </div>
+        
+        {/* Visual Focus Slots */}
+        <div className="flex gap-2 mt-3 mb-2">
+          {Array.from({ length: totalSlots }).map((_, index) => (
+            <div
+              key={index}
+              className={`flex-1 h-2 rounded-full transition-all ${
+                index < usedSlots
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                  : 'bg-slate-200'
+              }`}
+              title={`Slot ${index + 1}`}
+            />
+          ))}
         </div>
         
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600">Progress</span>
-            <span className="font-medium">{selectedActions.length}/3</span>
+            <span className="text-slate-600">Slots Allocated</span>
+            <span className="font-medium">{usedSlots} of {totalSlots}</span>
           </div>
           <Progress value={progress} className="h-2" />
           <p className="text-xs text-slate-500">{getStatusMessage()}</p>
@@ -135,8 +155,8 @@ export function SelectionSummary({
                 ) : (
                   <div className="text-center py-8 text-slate-400">
                     <i className="fas fa-hand-point-left text-2xl mb-2 block"></i>
-                    <p className="text-sm">Select actions from the left panel</p>
-                    <p className="text-xs">Actions will be executed in order</p>
+                    <p className="text-sm">Choose focus actions from the pool</p>
+                    <p className="text-xs">Each action uses one focus slot</p>
                   </div>
                 )}
                 {provided.placeholder}
@@ -147,11 +167,11 @@ export function SelectionSummary({
 
         {/* Advance Month Button */}
         <div className="space-y-3">
-          {selectedActions.length < 3 && (
+          {usedSlots < totalSlots && (
             <div className="text-center p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <i className="fas fa-info-circle text-amber-600 mr-2"></i>
               <span className="text-sm text-amber-700">
-                Select {3 - selectedActions.length} more action{3 - selectedActions.length !== 1 ? 's' : ''} to continue
+                Allocate {availableSlots} more focus slot{availableSlots !== 1 ? 's' : ''} to continue
               </span>
             </div>
           )}

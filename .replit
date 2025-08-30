@@ -35,8 +35,18 @@ localPort = 5002
 externalPort = 3002
 
 [[ports]]
+localPort = 13462
+externalPort = 8080
+exposeLocalhost = true
+
+[[ports]]
 localPort = 19274
 externalPort = 6800
+exposeLocalhost = true
+
+[[ports]]
+localPort = 23858
+externalPort = 8008
 exposeLocalhost = true
 
 [[ports]]
@@ -46,6 +56,9 @@ exposeLocalhost = true
 
 [[ports]]
 localPort = 34115
+
+[[ports]]
+localPort = 37414
 externalPort = 5000
 exposeLocalhost = true
 
@@ -84,4 +97,3 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_database==1.0.0"]

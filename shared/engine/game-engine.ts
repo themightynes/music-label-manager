@@ -179,8 +179,9 @@ export class GameEngine {
     // Check progression gates
     await this.checkProgressionGates(summary);
 
-    // Update access tiers based on reputation
-    this.updateAccessTiers();
+    // Update access tiers based on reputation and collect notifications
+    const tierChanges = this.updateAccessTiers();
+    summary.changes.push(...tierChanges);
 
     // Check for producer tier unlocks
     this.checkProducerTierUnlocks(summary);
@@ -235,6 +236,19 @@ export class GameEngine {
     this.gameState.money = finalMoney;
     
     console.log(`[MONEY UPDATE] Starting: $${monthStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
+    
+    // Check for focus slot unlock at 50+ reputation
+    if (this.gameState.reputation && this.gameState.reputation >= 50) {
+      const currentSlots = this.gameState.focusSlots || 3;
+      if (currentSlots < 4) {
+        this.gameState.focusSlots = 4;
+        summary.changes.push({
+          type: 'unlock',
+          description: 'Fourth focus slot unlocked! You can now select 4 actions per month.'
+        });
+        console.log('[UNLOCK] Fourth focus slot unlocked at reputation', this.gameState.reputation);
+      }
+    }
     
     return {
       gameState: this.gameState,
@@ -1400,13 +1414,15 @@ export class GameEngine {
   private generateSong(project: any, artist: any): any {
     const currentMonth = this.gameState.currentMonth || 1;
     
-    // Generate song name from predefined pools (would come from balance.json in full implementation)
-    const songNames = [
-      'Midnight Dreams', 'City Lights', 'Hearts on Fire', 'Thunder Road', 
-      'Broken Chains', 'Rebel Soul', 'Digital Love', 'Neon Nights',
-      'System Override', 'Golden Hour', 'Starlight', 'Electric Pulse',
-      'Velvet Sky', 'Crimson Dawn', 'Silver Lining', 'Ocean Waves'
+    // Get song names from data layer
+    const songNamePools = this.gameData.getBalanceConfigSync()?.song_generation?.name_pools;
+    const defaultSongNames = songNamePools?.default || [
+      // Fallback if data not available
+      'Midnight Dreams', 'City Lights', 'Hearts on Fire', 'Thunder Road'
     ];
+    
+    // Could use genre-specific names in future based on artist.genre
+    const songNames = defaultSongNames;
     
     const randomName = songNames[Math.floor(this.getRandom(0, songNames.length))];
     
@@ -1629,7 +1645,8 @@ export class GameEngine {
    * Generates a random mood for a song
    */
   private generateSongMood(): string {
-    const moods = ['upbeat', 'melancholic', 'aggressive', 'chill'];
+    const moodTypes = this.gameData.getBalanceConfigSync()?.song_generation?.mood_types;
+    const moods = moodTypes || ['upbeat', 'melancholic', 'aggressive', 'chill'];
     return moods[Math.floor(this.getRandom(0, moods.length))];
   }
   
@@ -1965,11 +1982,17 @@ export class GameEngine {
   }
 
   /**
-   * Updates access tiers based on current reputation and checks for producer tier unlocks
+   * Updates access tiers based on current reputation and returns tier upgrade notifications
    */
-  private updateAccessTiers(): void {
+  private updateAccessTiers(): GameChange[] {
     const tiers = this.gameData.getAccessTiersSync();
     const reputation = this.gameState.reputation || 0;
+    const tierChanges: GameChange[] = [];
+    
+    // Store previous values to detect changes
+    const previousPlaylist = this.gameState.playlistAccess;
+    const previousPress = this.gameState.pressAccess;
+    const previousVenue = this.gameState.venueAccess;
     
     // Update playlist access
     const playlistTiers = Object.entries(tiers.playlist_access)
@@ -2009,6 +2032,42 @@ export class GameEngine {
         break;
       }
     }
+    
+    // Generate notifications for tier upgrades
+    if (previousPlaylist !== this.gameState.playlistAccess && this.gameState.playlistAccess !== 'none') {
+      const tierDisplay = this.gameState.playlistAccess === 'niche' ? 'Niche' :
+                         this.gameState.playlistAccess === 'mid' ? 'Mid-Tier' :
+                         this.gameState.playlistAccess === 'flagship' ? 'Flagship' : this.gameState.playlistAccess;
+      tierChanges.push({
+        type: 'unlock',
+        description: `🎵 Playlist Access Upgraded: ${tierDisplay} playlists unlocked! Your releases can now reach wider audiences.`,
+        amount: 0
+      });
+    }
+    
+    if (previousPress !== this.gameState.pressAccess && this.gameState.pressAccess !== 'none') {
+      const tierDisplay = this.gameState.pressAccess === 'blogs' ? 'Music Blogs' :
+                         this.gameState.pressAccess === 'mid_tier' ? 'Mid-Tier Press' :
+                         this.gameState.pressAccess === 'national' ? 'National Media' : this.gameState.pressAccess;
+      tierChanges.push({
+        type: 'unlock',
+        description: `📰 Press Access Upgraded: ${tierDisplay} coverage unlocked! Your projects will get better media attention.`,
+        amount: 0
+      });
+    }
+    
+    if (previousVenue !== this.gameState.venueAccess && this.gameState.venueAccess !== 'none') {
+      const tierDisplay = this.gameState.venueAccess === 'clubs' ? 'Club Venues' :
+                         this.gameState.venueAccess === 'theaters' ? 'Theater Venues' :
+                         this.gameState.venueAccess === 'arenas' ? 'Arena Venues' : this.gameState.venueAccess;
+      tierChanges.push({
+        type: 'unlock',
+        description: `🎭 Venue Access Upgraded: ${tierDisplay} unlocked! Your artists can now perform at larger venues.`,
+        amount: 0
+      });
+    }
+    
+    return tierChanges;
   }
 
   /**
@@ -2018,9 +2077,16 @@ export class GameEngine {
     const reputation = this.gameState.reputation || 0;
     const producerSystem = this.gameData.getProducerTierSystemSync();
     
-    // Track which tiers were previously unlocked
+    // Track which tiers were previously unlocked - properly handle flags
     const flags = this.gameState.flags || {};
-    const unlockedTiers = (flags as any)['unlocked_producer_tiers'] || ['local'];
+    let unlockedTiers = (flags as any)['unlocked_producer_tiers'];
+    
+    // Initialize unlockedTiers if it doesn't exist yet
+    if (!unlockedTiers) {
+      unlockedTiers = ['local']; // Start with local tier
+      (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
+      this.gameState.flags = flags;
+    }
     
     let newUnlocks = false;
     const availableTiers = this.gameData.getAvailableProducerTiers(reputation);
@@ -2041,10 +2107,9 @@ export class GameEngine {
       }
     }
     
-    if (newUnlocks) {
-      (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
-      this.gameState.flags = flags;
-    }
+    // Always update the flags to ensure persistence
+    (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
+    this.gameState.flags = flags;
   }
 
   // REMOVED: processProjectStart method is redundant
@@ -2222,8 +2287,8 @@ export class GameEngine {
     let bonus = 0;
     
     // Playlist access bonus
-    if (this.gameState.playlistAccess === 'Mid') bonus += 20;
-    else if (this.gameState.playlistAccess === 'Niche') bonus += 10;
+    if (this.gameState.playlistAccess === 'mid') bonus += 20;
+    else if (this.gameState.playlistAccess === 'niche') bonus += 10;
     
     // Press access bonus  
     if (this.gameState.pressAccess === 'Mid-Tier') bonus += 20;
@@ -2283,7 +2348,7 @@ export class GameEngine {
     else if (scoreBreakdown.reputation >= 20) achievements.push('🌟 Well Known - 100+ Reputation');
     
     // Access tier achievements
-    if (this.gameState.playlistAccess === 'Mid' && this.gameState.pressAccess === 'Mid-Tier') {
+    if (this.gameState.playlistAccess === 'mid' && this.gameState.pressAccess === 'mid_tier') {
       achievements.push('🎵 Media Mogul - Maximum playlist and press access');
     }
     

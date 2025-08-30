@@ -98,7 +98,8 @@ export function ActionCard({
             disabled={disabled}
             className="text-xs"
           >
-            {isSelected ? 'Selected' : 'Select'}
+            <i className="fas fa-crosshairs mr-1"></i>
+            {isSelected ? 'Using Focus Slot' : 'Use Focus Slot'}
           </Button>
           
           <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
@@ -117,9 +118,14 @@ export function ActionCard({
             <div className="space-y-2 text-xs">
               <p className="text-slate-700">{actionDetails.description}</p>
               
+              <div className="flex justify-between bg-blue-50 rounded p-1">
+                <span className="text-blue-700 font-medium">Focus Cost:</span>
+                <span className="font-bold text-blue-800">1 Slot</span>
+              </div>
+              
               {actionDetails.cost && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Cost:</span>
+                  <span className="text-slate-500">Money Cost:</span>
                   <span className="font-medium">{actionDetails.cost}</span>
                 </div>
               )}
@@ -146,6 +152,20 @@ export function ActionCard({
                       <li key={index} className="text-slate-600 flex items-center">
                         <i className="fas fa-chevron-right text-xs text-slate-400 mr-2"></i>
                         {outcome}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {actionDetails.benefits && actionDetails.benefits.length > 0 && (
+                <div>
+                  <span className="text-slate-500">Benefits:</span>
+                  <ul className="mt-1 space-y-1">
+                    {actionDetails.benefits.map((benefit, index) => (
+                      <li key={index} className="text-slate-600 flex items-center">
+                        <i className="fas fa-star text-xs text-yellow-500 mr-2"></i>
+                        {benefit}
                       </li>
                     ))}
                   </ul>

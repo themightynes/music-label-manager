@@ -200,16 +200,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/game", getUserId, async (req, res) => {
+    console.log('🚀 [GAME CREATION] Starting new game creation...');
     try {
       const validatedData = insertGameStateSchema.parse(req.body);
+      console.log('📝 [GAME CREATION] Validated data reputation:', validatedData.reputation);
       
-      // Set starting money from balance.json configuration
+      // Ensure serverGameData is initialized before accessing balance config
+      await serverGameData.initialize();
+      
+      // Set starting money and reputation from balance.json configuration
       const startingMoney = await serverGameData.getStartingMoney();
+      const startingReputation = await serverGameData.getStartingReputation();
+      // Make these logs more visible
+      console.error('🎮🎮🎮 REPUTATION FROM BALANCE:', startingReputation);
+      console.error('💰💰💰 MONEY FROM BALANCE:', startingMoney);
       const gameDataWithBalance = {
         ...validatedData,
         money: startingMoney,
+        reputation: startingReputation,
         userId: req.userId  // CRITICAL: Associate game with user
       };
+      console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation);
       
       const gameState = await storage.createGameState(gameDataWithBalance);
       
@@ -259,12 +270,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available monthly actions
+  // Get available monthly actions with enriched role data and categories
   app.get("/api/actions/monthly", async (req, res) => {
     try {
       await serverGameData.initialize();
-      const actions = await serverGameData.getMonthlyActions();
-      res.json({ actions: actions || [] });
+      const actionsData = await serverGameData.getMonthlyActionsWithCategories();
+      const roles = await serverGameData.getAllRoles();
+      
+      // Enrich actions with role meeting data
+      const enrichedActions = actionsData.actions.map((action: any) => {
+        if (action.type === 'role_meeting' && action.role_id) {
+          const role = roles.find(r => r.id === action.role_id);
+          if (role && role.meetings && role.meetings.length > 0) {
+            return {
+              ...action,
+              firstMeetingId: role.meetings[0].id,
+              availableMeetings: role.meetings.length
+            };
+          }
+        }
+        return action;
+      });
+      
+      res.json({ 
+        actions: enrichedActions || [],
+        categories: actionsData.categories || []
+      });
     } catch (error) {
       console.error('Failed to load monthly actions:', error);
       res.status(500).json({ error: 'Failed to load monthly actions' });
@@ -1047,7 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // CRITICAL FIX: Also create entries in the junction table for proper song-release association
         // This ensures songs are properly linked when releases are executed
-        const releaseSongEntries = songIds.map((songId, index) => ({
+        const releaseSongEntries = songIds.map((songId: string, index: number) => ({
           id: crypto.randomUUID(),
           releaseId: newRelease.id,
           songId: songId,
@@ -1230,6 +1261,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update song title
+  app.patch("/api/songs/:songId", getUserId, async (req, res) => {
+    try {
+      const { songId } = req.params;
+      const { title } = req.body;
+      const userId = req.userId;
+      
+      // Validate user ID exists
+      if (!userId) {
+        return res.status(401).json({
+          error: 'UNAUTHORIZED',
+          message: 'User authentication required'
+        });
+      }
+      
+      // Validate title
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({
+          error: 'INVALID_TITLE',
+          message: 'Song title must be a non-empty string'
+        });
+      }
+      
+      // Validate title length
+      if (title.length > 100) {
+        return res.status(400).json({
+          error: 'TITLE_TOO_LONG',
+          message: 'Song title must be 100 characters or less'
+        });
+      }
+      
+      // First check if song exists and belongs to user's game
+      const [song] = await db.select({
+        songId: songs.id,
+        gameId: songs.gameId,
+        currentTitle: songs.title
+      })
+      .from(songs)
+      .where(eq(songs.id, songId))
+      .limit(1);
+      
+      if (!song) {
+        return res.status(404).json({
+          error: 'SONG_NOT_FOUND',
+          message: 'Song not found'
+        });
+      }
+      
+      // Verify the game belongs to the user
+      const [game] = await db.select()
+        .from(gameStates)
+        .where(and(
+          eq(gameStates.id, song.gameId),
+          eq(gameStates.userId, userId)
+        ))
+        .limit(1);
+      
+      if (!game) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to edit this song'
+        });
+      }
+      
+      // Update the song title
+      const [updatedSong] = await db.update(songs)
+        .set({ 
+          title: title.trim(),
+          updatedAt: new Date()
+        })
+        .where(eq(songs.id, songId))
+        .returning();
+      
+      res.json({
+        success: true,
+        song: {
+          id: updatedSong.id,
+          title: updatedSong.title,
+          previousTitle: song.currentTitle
+        }
+      });
+      
+    } catch (error) {
+      console.error("Failed to update song title:", error);
+      res.status(500).json({
+        error: 'UPDATE_FAILED',
+        message: 'Failed to update song title'
+      });
+    }
+  });
+
   // Clear all song reservations (for debugging/testing)
   app.post("/api/game/:gameId/songs/clear-reservations", getUserId, async (req, res) => {
     try {
@@ -1262,61 +1384,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clean up demo user's old games (keep only current game and manual saves)
-  app.post("/api/cleanup-demo-games", getUserId, async (req, res) => {
-    try {
-      const { keepGameId } = req.body;
-      const userId = req.userId;
-      
-      if (!keepGameId) {
-        return res.status(400).json({ error: 'MISSING_KEEP_GAME_ID', message: 'keepGameId is required' });
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ error: 'UNAUTHORIZED', message: 'User not authenticated' });
-      }
-      
-      // Get all games for this user except the one to keep
-      const gamesToDelete = await db.select({ id: gameStates.id })
-        .from(gameStates)
-        .where(and(
-          eq(gameStates.userId, userId),
-          ne(gameStates.id, keepGameId)
-        ));
-      
-      let deletedCount = 0;
-      
-      // Delete each old game and its related data
-      for (const game of gamesToDelete) {
-        await db.transaction(async (tx) => {
-          // Delete related data first
-          await tx.delete(songs).where(eq(songs.gameId, game.id));
-          await tx.delete(releases).where(eq(releases.gameId, game.id));
-          await tx.delete(projects).where(eq(projects.gameId, game.id));
-          await tx.delete(artists).where(eq(artists.gameId, game.id));
-          await tx.delete(roles).where(eq(roles.gameId, game.id));
-          await tx.delete(monthlyActions).where(eq(monthlyActions.gameId, game.id));
-          
-          // Finally delete the game state
-          await tx.delete(gameStates).where(eq(gameStates.id, game.id));
-          
-          deletedCount++;
-        });
-      }
-      
-      res.json({ 
-        message: `Cleaned up ${deletedCount} old games`,
-        deletedCount,
-        keptGameId: keepGameId
-      });
-    } catch (error) {
-      console.error("Failed to cleanup demo games:", error);
-      res.status(500).json({ 
-        error: 'CLEANUP_ERROR',
-        message: "Failed to cleanup old games" 
-      });
-    }
-  });
 
   // Delete a planned release and free up its songs
   app.delete("/api/game/:gameId/releases/:releaseId", getUserId, async (req, res) => {
@@ -1602,6 +1669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             money: monthResult.gameState.money,
             reputation: monthResult.gameState.reputation,
             creativeCapital: monthResult.gameState.creativeCapital,
+            focusSlots: monthResult.gameState.focusSlots,
             usedFocusSlots: monthResult.gameState.usedFocusSlots,
             playlistAccess: monthResult.gameState.playlistAccess,
             pressAccess: monthResult.gameState.pressAccess,

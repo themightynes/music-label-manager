@@ -28,6 +28,7 @@ interface ActionDetails {
 
 interface ActionSelectionPoolProps {
   actions: MonthlyAction[];
+  categories?: any[];
   getActionDetails: (actionId: string) => ActionDetails;
   getActionRecommendation: (actionId: string) => { isRecommended: boolean; isUrgent: boolean; reason?: string };
   selectedActions: string[];
@@ -36,8 +37,8 @@ interface ActionSelectionPoolProps {
   onAutoRecommend: () => void;
 }
 
-// Category configuration with icons and descriptions
-const CATEGORIES = {
+// Default category configuration (fallback if not provided from API)
+const DEFAULT_CATEGORIES = {
   'business': {
     name: 'Business Strategy',
     icon: 'fas fa-briefcase',
@@ -72,6 +73,7 @@ const CATEGORIES = {
 
 export function ActionSelectionPool({
   actions,
+  categories,
   getActionDetails,
   getActionRecommendation,
   selectedActions,
@@ -90,8 +92,21 @@ export function ActionSelectionPool({
     return acc;
   }, {} as Record<string, MonthlyAction[]>);
 
+  // Use categories from API or fallback to defaults
+  const categoriesConfig = categories && categories.length > 0 
+    ? categories.reduce((acc: Record<string, any>, cat: any) => {
+        acc[cat.id] = {
+          name: cat.name,
+          icon: cat.icon,
+          description: cat.description,
+          color: cat.color
+        };
+        return acc;
+      }, {} as Record<string, any>)
+    : DEFAULT_CATEGORIES;
+
   // Get category info with action counts
-  const categoryStats = Object.entries(CATEGORIES).map(([key, category]) => {
+  const categoryStats = Object.entries(categoriesConfig).map(([key, category]) => {
     const categoryActions = actionsByCategory[key] || [];
     const selectedCount = categoryActions.filter(action => selectedActions.includes(action.id)).length;
     const recommendedCount = categoryActions.filter(action => 
@@ -116,13 +131,13 @@ export function ActionSelectionPool({
     <div className="space-y-4">
       {/* Header with quick actions */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">Available Actions</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Focus Actions Pool</h3>
         <div className="flex space-x-2">
           <Button
             variant="outline"
             size="sm"
             onClick={onAutoRecommend}
-            disabled={selectedActions.length >= 3}
+            disabled={selectedActions.length >= (3)}
             className="text-xs"
           >
             <i className="fas fa-magic mr-1"></i>
@@ -187,11 +202,11 @@ export function ActionSelectionPool({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-              {category.actions.map((action) => {
+              {category.actions.map((action: MonthlyAction) => {
                 const actionDetails = getActionDetails(action.id);
                 const recommendation = getActionRecommendation(action.id);
                 const isSelected = selectedActions.includes(action.id);
-                const isDisabled = !isSelected && selectedActions.length >= 3;
+                const isDisabled = !isSelected && selectedActions.length >= 3; // TODO: Use gameState.focusSlots from props
 
                 return (
                   <ActionCard

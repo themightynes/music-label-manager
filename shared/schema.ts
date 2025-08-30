@@ -201,9 +201,9 @@ export const gameStates = pgTable("game_states", {
   creativeCapital: integer("creative_capital").default(0),
   focusSlots: integer("focus_slots").default(3),
   usedFocusSlots: integer("used_focus_slots").default(0),
-  playlistAccess: text("playlist_access").default("None"), // None, Niche, Mid
-  pressAccess: text("press_access").default("None"), // None, Blogs, Mid-Tier
-  venueAccess: text("venue_access").default("None"), // None, Clubs
+  playlistAccess: text("playlist_access").default("none"), // none, niche, mid, flagship
+  pressAccess: text("press_access").default("none"), // none, blogs, mid_tier, national
+  venueAccess: text("venue_access").default("none"), // none, clubs, theaters, arenas
   campaignType: text("campaign_type").default("Balanced"), // Commercial, Critical, Balanced
   rngSeed: text("rng_seed"),
   campaignCompleted: boolean("campaign_completed").default(false),

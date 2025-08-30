@@ -7,6 +7,7 @@ import markets from './balance/markets.json';
 import projects from './balance/projects.json';
 import events from './balance/events.json';
 import config from './balance/config.json';
+import content from './balance/content.json';
 
 // Reconstruct the exact original balance.json structure
 // This ensures 100% backward compatibility
@@ -72,7 +73,10 @@ const balance = {
   save_system: projects.save_system,
   
   // Difficulty modifiers
-  difficulty_modifiers: progression.difficulty_modifiers
+  difficulty_modifiers: progression.difficulty_modifiers,
+  
+  // Content generation
+  song_generation: content.song_generation
 };
 
 // Default export for backward compatibility
@@ -87,5 +91,6 @@ export {
   markets,
   projects,
   events,
-  config
+  config,
+  content
 };

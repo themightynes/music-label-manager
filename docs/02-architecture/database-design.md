@@ -400,11 +400,11 @@ graph TD
     F --> D[Game Ready]
 ```
 
-### **Database Cleanup Strategy**
-- **Active Game**: Only one game per user kept active at a time
+### **Database Management Strategy**
+- **Multiple Games**: Users can maintain multiple active games simultaneously
 - **Manual Saves**: User can save games via SaveGameModal for later retrieval
-- **Auto-cleanup**: `POST /api/cleanup-demo-games` removes old games except current and manual saves
-- **Triggered**: Automatic cleanup occurs on new game creation
+- **Save/Load System**: Complete save game functionality with named saves
+- **No Auto-cleanup**: Games persist until manually deleted by user
 
 ### **State Synchronization**
 ```javascript

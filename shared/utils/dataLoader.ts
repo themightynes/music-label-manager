@@ -208,11 +208,25 @@ export class GameDataLoader {
         role_id: z.string().optional(),
         category: z.string(),
         project_type: z.string().optional(),
-        campaign_type: z.string().optional()
+        campaign_type: z.string().optional(),
+        details: z.object({
+          cost: z.string(),
+          duration: z.string(),
+          prerequisites: z.string(),
+          outcomes: z.array(z.string()),
+          benefits: z.array(z.string())
+        }).optional(),
+        recommendations: z.object({
+          urgent_when: z.record(z.any()).optional(),
+          recommended_when: z.record(z.any()).optional(),
+          reasons: z.record(z.string()).optional()
+        }).optional()
       })),
       action_categories: z.array(z.object({
         id: z.string(),
         name: z.string(),
+        icon: z.string(),
+        description: z.string(),
         color: z.string()
       })).optional()
     });
