@@ -238,14 +238,13 @@ export class GameEngine {
     console.log(`[MONEY UPDATE] Starting: $${monthStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
     
     // Check for focus slot unlock at 50+ reputation
-    if (this.gameState.reputation >= 50) {
+    if (this.gameState.reputation && this.gameState.reputation >= 50) {
       const currentSlots = this.gameState.focusSlots || 3;
       if (currentSlots < 4) {
         this.gameState.focusSlots = 4;
         summary.changes.push({
           type: 'unlock',
-          description: 'Fourth focus slot unlocked! You can now select 4 actions per month.',
-          icon: 'fa-unlock'
+          description: 'Fourth focus slot unlocked! You can now select 4 actions per month.'
         });
         console.log('[UNLOCK] Fourth focus slot unlocked at reputation', this.gameState.reputation);
       }
@@ -2078,9 +2077,16 @@ export class GameEngine {
     const reputation = this.gameState.reputation || 0;
     const producerSystem = this.gameData.getProducerTierSystemSync();
     
-    // Track which tiers were previously unlocked
+    // Track which tiers were previously unlocked - properly handle flags
     const flags = this.gameState.flags || {};
-    const unlockedTiers = (flags as any)['unlocked_producer_tiers'] || ['local'];
+    let unlockedTiers = (flags as any)['unlocked_producer_tiers'];
+    
+    // Initialize unlockedTiers if it doesn't exist yet
+    if (!unlockedTiers) {
+      unlockedTiers = ['local']; // Start with local tier
+      (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
+      this.gameState.flags = flags;
+    }
     
     let newUnlocks = false;
     const availableTiers = this.gameData.getAvailableProducerTiers(reputation);
@@ -2101,10 +2107,9 @@ export class GameEngine {
       }
     }
     
-    if (newUnlocks) {
-      (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
-      this.gameState.flags = flags;
-    }
+    // Always update the flags to ensure persistence
+    (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
+    this.gameState.flags = flags;
   }
 
   // REMOVED: processProjectStart method is redundant

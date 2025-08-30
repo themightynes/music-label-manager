@@ -185,15 +185,6 @@ export const useGameStore = create<GameStore>()(
           localStorage.setItem('currentGameId', gameState.id);
           console.log('Cleared localStorage and set new gameId');
           
-          // Clean up old games (keep only the new current game)
-          try {
-            await apiRequest('POST', '/api/cleanup-demo-games', { keepGameId: gameState.id });
-            console.log('Cleaned up old games successfully');
-          } catch (cleanupError) {
-            console.warn('Failed to cleanup old games:', cleanupError);
-            // Don't fail game creation if cleanup fails
-          }
-          
           // Ensure new game starts with 0 used slots
           const syncedGameState = {
             ...gameState,

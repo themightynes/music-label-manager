@@ -1384,61 +1384,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clean up demo user's old games (keep only current game and manual saves)
-  app.post("/api/cleanup-demo-games", getUserId, async (req, res) => {
-    try {
-      const { keepGameId } = req.body;
-      const userId = req.userId;
-      
-      if (!keepGameId) {
-        return res.status(400).json({ error: 'MISSING_KEEP_GAME_ID', message: 'keepGameId is required' });
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ error: 'UNAUTHORIZED', message: 'User not authenticated' });
-      }
-      
-      // Get all games for this user except the one to keep
-      const gamesToDelete = await db.select({ id: gameStates.id })
-        .from(gameStates)
-        .where(and(
-          eq(gameStates.userId, userId),
-          ne(gameStates.id, keepGameId)
-        ));
-      
-      let deletedCount = 0;
-      
-      // Delete each old game and its related data
-      for (const game of gamesToDelete) {
-        await db.transaction(async (tx) => {
-          // Delete related data first
-          await tx.delete(songs).where(eq(songs.gameId, game.id));
-          await tx.delete(releases).where(eq(releases.gameId, game.id));
-          await tx.delete(projects).where(eq(projects.gameId, game.id));
-          await tx.delete(artists).where(eq(artists.gameId, game.id));
-          await tx.delete(roles).where(eq(roles.gameId, game.id));
-          await tx.delete(monthlyActions).where(eq(monthlyActions.gameId, game.id));
-          
-          // Finally delete the game state
-          await tx.delete(gameStates).where(eq(gameStates.id, game.id));
-          
-          deletedCount++;
-        });
-      }
-      
-      res.json({ 
-        message: `Cleaned up ${deletedCount} old games`,
-        deletedCount,
-        keptGameId: keepGameId
-      });
-    } catch (error) {
-      console.error("Failed to cleanup demo games:", error);
-      res.status(500).json({ 
-        error: 'CLEANUP_ERROR',
-        message: "Failed to cleanup old games" 
-      });
-    }
-  });
 
   // Delete a planned release and free up its songs
   app.delete("/api/game/:gameId/releases/:releaseId", getUserId, async (req, res) => {
