@@ -42,7 +42,7 @@
 - [Game System Workflows](./03-workflows/game-system-workflows.md)
 
 ### **04-Frontend** - React Application
-- [Frontend Architecture](./04-frontend/frontend-architecture.md)
+- [Frontend Architecture](./04-frontend/frontend-architecture.md) *(Updated: Aug 31, 2025 - Dark Plum Theme)*
 
 ### **05-Backend** - Server Architecture
 - [Backend Architecture](./05-backend/backend-architecture.md)

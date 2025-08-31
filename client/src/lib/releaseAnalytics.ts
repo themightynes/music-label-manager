@@ -234,7 +234,7 @@ export function assessCampaignOutcome(metrics: PerformanceMetrics, campaignData:
     return {
       tier: 'breakthrough',
       description: 'Exceptional performance exceeded all expectations',
-      color: 'text-purple-600 bg-purple-100',
+      color: 'text-[#791014] bg-[#791014]/10',
       icon: '🚀'
     };
   } else if (totalROI >= 1.5 || campaignEffectiveness === 'strong') {
@@ -296,7 +296,7 @@ export function formatStreams(streams: number): string {
 export function getEffectivenessStyle(effectiveness: PerformanceMetrics['campaignEffectiveness']) {
   switch (effectiveness) {
     case 'excellent':
-      return { color: 'text-purple-600 bg-purple-100', label: 'Excellent' };
+      return { color: 'text-[#791014] bg-[#791014]/10', label: 'Excellent' };
     case 'strong':
       return { color: 'text-green-600 bg-green-100', label: 'Strong' };
     case 'good':
@@ -306,6 +306,6 @@ export function getEffectivenessStyle(effectiveness: PerformanceMetrics['campaig
     case 'poor':
       return { color: 'text-red-600 bg-red-100', label: 'Poor' };
     default:
-      return { color: 'text-slate-600 bg-slate-100', label: 'Unknown' };
+      return { color: 'text-white/70 bg-[#65557c]/20', label: 'Unknown' };
   }
 }

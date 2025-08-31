@@ -76,7 +76,7 @@ export function ImprovedMarketingBudget({
         {budgetMode === 'simple' ? (
           // Simple Mode: Preset Packages
           <div className="space-y-4">
-            <p className="text-sm text-slate-600 mb-4">
+            <p className="text-sm text-white/70 mb-4">
               Choose a marketing package to get started quickly:
             </p>
             <div className="grid gap-3">
@@ -86,20 +86,20 @@ export function ImprovedMarketingBudget({
                   <div
                     key={preset.id}
                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
+                      isSelected ? 'border-blue-500 bg-blue-50' : 'border-[#4e324c]/50 hover:border-[#65557c]/60'
                     }`}
                     onClick={() => setChannelBudgets(preset.allocation)}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-slate-900">{preset.name}</h4>
+                      <h4 className="font-semibold text-white">{preset.name}</h4>
                       <Badge variant={isSelected ? 'default' : 'outline'}>
                         ${preset.total.toLocaleString()}
                       </Badge>
                     </div>
-                    <p className="text-sm text-slate-600">{preset.description}</p>
+                    <p className="text-sm text-white/70">{preset.description}</p>
                     
                     {/* Quick channel breakdown */}
-                    <div className="flex space-x-4 mt-2 text-xs text-slate-500">
+                    <div className="flex space-x-4 mt-2 text-xs text-white/50">
                       {MARKETING_CHANNELS.map(channel => {
                         const amount = preset.allocation[channel.id];
                         return amount > 0 ? (
@@ -115,7 +115,7 @@ export function ImprovedMarketingBudget({
             </div>
             
             <div className="pt-4 border-t">
-              <p className="text-xs text-slate-500 mb-2">Want more control?</p>
+              <p className="text-xs text-white/50 mb-2">Want more control?</p>
               <Button
                 variant="ghost"
                 size="sm"
@@ -173,15 +173,15 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-slate-700">{title}</h4>
+        <h4 className="text-sm font-medium text-white/90">{title}</h4>
         <Badge variant="outline" className="font-mono">
           Total: ${totalBudget.toLocaleString()}
         </Badge>
       </div>
       
       {/* Quick total budget slider */}
-      <div className="p-3 bg-slate-50 rounded-lg">
-        <label className="text-xs text-slate-600 mb-2 block">Quick Budget Adjust</label>
+      <div className="p-3 bg-[#3c252d]/10 rounded-lg">
+        <label className="text-xs text-white/70 mb-2 block">Quick Budget Adjust</label>
         <Slider
           value={[totalBudget]}
           onValueChange={(value) => {
@@ -198,7 +198,7 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
           step={500}
           className="w-full"
         />
-        <div className="flex justify-between text-xs text-slate-500 mt-1">
+        <div className="flex justify-between text-xs text-white/50 mt-1">
           <span>$0</span>
           <span>${Math.min(20000, gameState?.money || 0).toLocaleString()}</span>
         </div>
@@ -216,7 +216,7 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
             <div
               key={channel.id}
               className={`border rounded-lg transition-all ${
-                isActive ? 'border-blue-200 bg-blue-50' : 'border-slate-200'
+                isActive ? 'border-blue-200 bg-blue-50' : 'border-[#4e324c]/50'
               }`}
             >
               {/* Channel Header */}
@@ -226,15 +226,15 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <i className={`${channel.icon} ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <i className={`${channel.icon} ${isActive ? 'text-blue-600' : 'text-white/40'}`} />
                     <div>
-                      <h5 className="font-medium text-slate-900">{channel.name}</h5>
-                      <p className="text-xs text-slate-500">{channel.targetAudience} • {channel.effectiveness}% effective</p>
+                      <h5 className="font-medium text-white">{channel.name}</h5>
+                      <p className="text-xs text-white/50">{channel.targetAudience} • {channel.effectiveness}% effective</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-mono font-semibold">${budget.toLocaleString()}</div>
-                    <div className="text-xs text-slate-500">{percentage.toFixed(1)}%</div>
+                    <div className="text-xs text-white/50">{percentage.toFixed(1)}%</div>
                   </div>
                 </div>
                 
@@ -253,7 +253,7 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
               {isExpanded && (
                 <div className="px-3 pb-3 border-t bg-white">
                   <div className="pt-3 space-y-3">
-                    <p className="text-xs text-slate-600">{channel.description}</p>
+                    <p className="text-xs text-white/70">{channel.description}</p>
                     
                     <Slider
                       value={[budget]}
@@ -266,7 +266,7 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
                       className="w-full"
                     />
                     
-                    <div className="flex justify-between text-xs text-slate-500">
+                    <div className="flex justify-between text-xs text-white/50">
                       <span>Min: ${channel.minBudget.toLocaleString()}</span>
                       <span>Max: ${channel.maxBudget.toLocaleString()}</span>
                     </div>

@@ -52,14 +52,14 @@ export function ActiveProjects() {
 
   const getStatusBadgeClass = (stage: string) => {
     switch (stage) {
-      case 'planning': return 'bg-slate-400 text-white';
+      case 'planning': return 'bg-[#65557c] text-white';
       case 'writing': return 'bg-warning text-white';
-      case 'recording': return 'bg-primary text-white';
+      case 'recording': return 'bg-[#A75A5B] text-white';
       case 'recorded': return 'bg-green-500 text-white';
       case 'production': return 'bg-warning text-white'; // Legacy support
-      case 'marketing': return 'bg-primary text-white'; // Legacy support 
+      case 'marketing': return 'bg-[#A75A5B] text-white'; // Legacy support 
       case 'released': return 'bg-success text-white'; // Legacy support
-      default: return 'bg-slate-400 text-white';
+      default: return 'bg-[#65557c] text-white';
     }
   };
 
@@ -200,11 +200,11 @@ export function ActiveProjects() {
   const currentProjects = activeTab === 'active' ? activeProjects : completedProjects;
 
   return (
-    <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+    <Card className="shadow-sm">
       <CardContent className="p-4">
-        <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center justify-between">
+        <h3 className="text-base font-semibold text-white mb-3 flex items-center justify-between">
           <div className="flex items-center">
-            <i className="fas fa-music text-primary mr-2"></i>
+            <i className="fas fa-music text-[#A75A5B] mr-2"></i>
             Recording Sessions
           </div>
           <Badge variant="secondary" className="text-xs">
@@ -213,13 +213,13 @@ export function ActiveProjects() {
         </h3>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 mb-4 bg-slate-100 p-1 rounded-lg">
+        <div className="flex space-x-1 mb-4 bg-[#3c252d]/30 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab('active')}
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
               activeTab === 'active'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                : 'text-white/70 hover:text-white'
             }`}
           >
             Active Sessions
@@ -233,8 +233,8 @@ export function ActiveProjects() {
             onClick={() => setActiveTab('completed')}
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
               activeTab === 'completed'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                : 'text-white/70 hover:text-white'
             }`}
           >
             Completed Sessions
@@ -251,17 +251,17 @@ export function ActiveProjects() {
           const stats = calculatePortfolioStats();
           if (stats) {
             return (
-              <div className="mb-3 p-3 bg-slate-50 rounded-lg border">
+              <div className="mb-3 p-3 bg-[#3c252d]/20 rounded-lg border">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="text-center">
                     <div className="font-medium text-green-600">${stats.totalRevenue.toLocaleString()}</div>
-                    <div className="text-slate-500">Revenue</div>
+                    <div className="text-white/50">Revenue</div>
                   </div>
                   <div className="text-center">
                     <div className={`font-medium ${stats.portfolioROI >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {formatROI(stats.portfolioROI)}
                     </div>
-                    <div className="text-slate-500">ROI</div>
+                    <div className="text-white/50">ROI</div>
                   </div>
                 </div>
               </div>
@@ -272,11 +272,11 @@ export function ActiveProjects() {
 
         <div className="space-y-3">
           {currentProjects.map(project => (
-            <div key={project.id} className="border border-slate-200 rounded-lg p-3">
+            <div key={project.id} className="border border-[#4e324c] rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h4 className="font-medium text-slate-900 text-sm">{project.title}</h4>
-                  <div className="text-xs text-slate-600">{getArtistName(project.artistId || '')}</div>
+                  <h4 className="font-medium text-white text-sm">{project.title}</h4>
+                  <div className="text-xs text-white/70">{getArtistName(project.artistId || '')}</div>
                 </div>
                 <Badge className={`text-xs px-2 py-1 ${getStatusBadgeClass(project.stage || 'planning')}`}>
                   {getStatusText(project.stage || 'planning')}
@@ -288,7 +288,7 @@ export function ActiveProjects() {
                 {activeTab === 'active' && (
                   <>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Progress</span>
+                      <span className="text-white/50">Progress</span>
                       <span className="font-mono">{Math.round(getProjectProgress(project))}%</span>
                     </div>
                     <Progress value={getProjectProgress(project)} className="w-full h-1.5" />
@@ -298,7 +298,7 @@ export function ActiveProjects() {
                 {/* Simple info for completed sessions */}
                 {activeTab === 'completed' && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Session Complete</span>
+                    <span className="text-white/50">Session Complete</span>
                     <span className="font-mono text-green-600">
                       {(() => {
                         const projectSongs = getProjectSongs(project.id);
@@ -310,7 +310,7 @@ export function ActiveProjects() {
                 )}
                 
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">
+                  <span className="text-white/50">
                     {(project.songCount || 1) > 1 ? 'Budget per song' : 'Budget'}
                   </span>
                   <span className="font-mono">
@@ -328,23 +328,23 @@ export function ActiveProjects() {
                   const readySongs = projectSongs.filter(song => song.isRecorded && !song.isReleased);
                   
                   return (
-                    <div className="pt-2 border-t border-slate-200 space-y-1">
+                    <div className="pt-2 border-t border-[#4e324c] space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Songs Recorded</span>
+                        <span className="text-white/50">Songs Recorded</span>
                         <span className="font-mono text-green-600">
                           {recordedSongs.length} song{recordedSongs.length !== 1 ? 's' : ''}
                         </span>
                       </div>
                       
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Ready for Release</span>
-                        <span className="font-mono text-blue-600">
+                        <span className="text-white/50">Ready for Release</span>
+                        <span className="font-mono text-[#A75A5B]">
                           {readySongs.length} song{readySongs.length !== 1 ? 's' : ''}
                         </span>
                       </div>
                       
                       {readySongs.length > 0 && (
-                        <div className="text-xs text-slate-600 italic">
+                        <div className="text-xs text-white/70 italic">
                           Use Plan Release to publish these songs
                         </div>
                       )}
@@ -357,31 +357,31 @@ export function ActiveProjects() {
                   const metrics = calculateProjectMetrics(project);
                   if (metrics) {
                     return (
-                      <div className="pt-2 border-t border-slate-200 space-y-1">
+                      <div className="pt-2 border-t border-[#4e324c] space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">Total Revenue</span>
+                          <span className="text-white/50">Total Revenue</span>
                           <span className="font-mono text-green-600">
                             ${metrics.revenue.toLocaleString()}
                           </span>
                         </div>
                         
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">ROI</span>
+                          <span className="text-white/50">ROI</span>
                           <span className={`font-mono font-medium ${metrics.roi >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                             {formatROI(metrics.roi)}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">Total Streams</span>
-                          <span className="font-mono text-blue-600">
+                          <span className="text-white/50">Total Streams</span>
+                          <span className="font-mono text-[#A75A5B]">
                             {metrics.streams.toLocaleString()}
                           </span>
                         </div>
                         
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">Songs Released</span>
-                          <span className="font-mono text-purple-600">
+                          <span className="text-white/50">Songs Released</span>
+                          <span className="font-mono text-[#791014]">
                             {metrics.songCount} song{metrics.songCount > 1 ? 's' : ''}
                           </span>
                         </div>
@@ -389,7 +389,7 @@ export function ActiveProjects() {
                         {/* Show last month revenue if using individual tracking */}
                         {metrics.individual && metrics.lastMonthRevenue > 0 && (
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-500">Last Month</span>
+                            <span className="text-white/50">Last Month</span>
                             <span className="font-mono text-green-600">
                               +${metrics.lastMonthRevenue.toLocaleString()}
                             </span>
@@ -398,7 +398,7 @@ export function ActiveProjects() {
 
                         {/* Show individual tracking indicator */}
                         {metrics.individual && (
-                          <div className="text-xs text-center text-slate-400 mt-1">
+                          <div className="text-xs text-center text-white/50 mt-1">
                             🎵 Individual song tracking active
                           </div>
                         )}
@@ -413,8 +413,8 @@ export function ActiveProjects() {
                             <>
                               {pressPickups && pressPickups > 0 && (
                                 <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-500">Press Coverage</span>
-                                  <span className="font-mono text-purple-600">
+                                  <span className="text-white/50">Press Coverage</span>
+                                  <span className="font-mono text-[#791014]">
                                     {pressPickups} pickup{pressPickups > 1 ? 's' : ''}
                                   </span>
                                 </div>
@@ -422,8 +422,8 @@ export function ActiveProjects() {
 
                               {releaseMonth && (
                                 <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-500">Released</span>
-                                  <span className="font-mono text-slate-600">
+                                  <span className="text-white/50">Released</span>
+                                  <span className="font-mono text-white/70">
                                     Month {releaseMonth}
                                   </span>
                                 </div>
@@ -444,8 +444,8 @@ export function ActiveProjects() {
 
           {/* Empty state for completed sessions */}
           {activeTab === 'completed' && completedProjects.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
-              <i className="fas fa-music text-2xl mb-2 block text-slate-400"></i>
+            <div className="text-center py-8 text-white/50">
+              <i className="fas fa-music text-2xl mb-2 block text-white/50"></i>
               <p className="text-sm">No completed recording sessions yet</p>
               <p className="text-xs">Sessions will appear here once recording is complete</p>
             </div>

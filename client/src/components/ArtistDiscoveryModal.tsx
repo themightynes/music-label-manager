@@ -111,28 +111,28 @@ export function ArtistDiscoveryModal({
 
   const getArchetypeColor = (archetype: string) => {
     switch (archetype) {
-      case 'Visionary': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Workhorse': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Trendsetter': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Visionary': return 'bg-[#791014]/20 text-[#B34A4F] border-[#791014]/30';
+      case 'Workhorse': return 'bg-[#A75A5B]/20 text-[#A75A5B] border-[#A75A5B]/30';
+      case 'Trendsetter': return 'bg-green-500/20 text-green-300 border-green-400/30';
+      default: return 'bg-[#65557c]/20 text-[#65557c] border-[#65557c]/30';
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-        <DialogHeader className="border-b border-slate-200 pb-4">
-          <DialogTitle className="text-xl font-bold text-slate-900 flex items-center">
-            <Music className="w-5 h-5 mr-2 text-primary" />
+        <DialogHeader className="border-b border-[#4e324c] pb-4">
+          <DialogTitle className="text-xl font-bold text-white flex items-center">
+            <Music className="w-5 h-5 mr-2 text-[#A75A5B]" />
             Discover Artists
           </DialogTitle>
         </DialogHeader>
 
         {/* Search and Filters */}
-        <div className="p-6 border-b border-slate-200">
+        <div className="p-6 border-b border-[#4e324c]">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-white/50" />
               <Input
                 placeholder="Search artists by name or genre..."
                 value={searchTerm}
@@ -161,8 +161,8 @@ export function ArtistDiscoveryModal({
         <div className="p-6 overflow-y-auto max-h-96">
           {loading ? (
             <div className="text-center py-8">
-              <Music className="w-12 h-12 text-slate-400 mx-auto mb-4 animate-pulse" />
-              <p className="text-slate-600">Loading available artists...</p>
+              <Music className="w-12 h-12 text-white/50 mx-auto mb-4 animate-pulse" />
+              <p className="text-white/70">Loading available artists...</p>
             </div>
           ) : error ? (
             <div className="text-center py-8">
@@ -174,8 +174,8 @@ export function ArtistDiscoveryModal({
             </div>
           ) : filteredArtists.length === 0 ? (
             <div className="text-center py-8">
-              <Music className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600">No artists found matching your criteria</p>
+              <Music className="w-12 h-12 text-white/50 mx-auto mb-4" />
+              <p className="text-white/70">No artists found matching your criteria</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -184,10 +184,10 @@ export function ArtistDiscoveryModal({
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-lg font-semibold text-slate-900">
+                        <CardTitle className="text-lg font-semibold text-white">
                           {artist.name}
                         </CardTitle>
-                        <p className="text-sm text-slate-600">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</p>
+                        <p className="text-sm text-white/70">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</p>
                       </div>
                       <Badge className={`${getArchetypeColor(artist.archetype)} border`}>
                         {getArchetypeIcon(artist.archetype)}
@@ -197,38 +197,38 @@ export function ArtistDiscoveryModal({
                   </CardHeader>
 
                   <CardContent className="pt-0">
-                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{artist.bio || 'Talented artist...'}</p>
+                    <p className="text-sm text-white/70 mb-4 line-clamp-2">{artist.bio || 'Talented artist...'}</p>
                     
                     {/* Stats */}
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-600">Talent</span>
+                        <span className="text-white/70">Talent</span>
                         <span className="font-medium">{artist.talent}/100</span>
                       </div>
                       <Progress value={artist.talent} className="h-1" />
                       
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-600">Work Ethic</span>
+                        <span className="text-white/70">Work Ethic</span>
                         <span className="font-medium">{artist.workEthic}/100</span>
                       </div>
                       <Progress value={artist.workEthic} className="h-1" />
                       
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-600">Popularity</span>
+                        <span className="text-white/70">Popularity</span>
                         <span className="font-medium">{artist.popularity}/100</span>
                       </div>
                       <Progress value={artist.popularity} className="h-1" />
                     </div>
 
                     {/* Costs */}
-                    <div className="bg-slate-50 rounded-lg p-3 mb-4">
+                    <div className="bg-[#3c252d]/20 rounded-lg p-3 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Signing Cost:</span>
-                        <span className="font-semibold text-slate-900">${(artist.signingCost || 5000).toLocaleString()}</span>
+                        <span className="text-white/70">Signing Cost:</span>
+                        <span className="font-semibold text-white">${(artist.signingCost || 5000).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Monthly Cost:</span>
-                        <span className="font-medium text-slate-700">${(artist.monthlyCost || 800).toLocaleString()}/mo</span>
+                        <span className="text-white/70">Monthly Cost:</span>
+                        <span className="font-medium text-white/90">${(artist.monthlyCost || 800).toLocaleString()}/mo</span>
                       </div>
                     </div>
 
@@ -256,8 +256,8 @@ export function ArtistDiscoveryModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-200 flex justify-between items-center">
-          <div className="text-sm text-slate-600">
+        <div className="p-6 border-t border-[#4e324c] flex justify-between items-center">
+          <div className="text-sm text-white/70">
             Budget: <span className="font-semibold">${(gameState.money || 0).toLocaleString()}</span>
             {' • '}
             Roster: <span className="font-semibold">{signedArtists.length}/3</span>

@@ -48,17 +48,17 @@ export default function TestDataPage() {
       </CardHeader>
       <CardContent>
         {data?.error ? (
-          <div className="text-red-600 p-4 bg-red-50 rounded">
+          <div className="text-red-600 p-4 bg-red-500/10 rounded">
             Error: {data.error}
           </div>
         ) : (
-          <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded overflow-auto">
+          <pre className="whitespace-pre-wrap text-sm bg-gray-500/10 p-4 rounded overflow-auto">
             {JSON.stringify(data, null, 2)}
           </pre>
         )}
         
         {expectedCounts && data?.counts && (
-          <div className="mt-4 p-4 bg-blue-50 rounded">
+          <div className="mt-4 p-4 bg-blue-500/10 rounded">
             <h4 className="font-medium mb-2">Verification Checklist:</h4>
             <ul className="space-y-1 text-sm">
               <li className={data.counts.roles === expectedCounts.roles ? "text-green-600" : "text-red-600"}>
@@ -84,7 +84,7 @@ export default function TestDataPage() {
     <div className="container mx-auto p-4 space-y-6">
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Data Integration Test</h1>
-        <p className="text-gray-600">Verify that JSON game data files are loading correctly</p>
+        <p className="text-white/70">Verify that JSON game data files are loading correctly</p>
         
         <div className="flex gap-4 justify-center">
           <Button onClick={runTestData} disabled={loading}>

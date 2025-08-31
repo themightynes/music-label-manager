@@ -49,23 +49,23 @@ export function EnhancedReleasePreview({ metrics, decisions, gameState }) {
         <CardContent className="pt-6">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-lg font-bold text-slate-900">{metrics.songCount || 0}</div>
-              <div className="text-xs text-slate-600">Songs</div>
+              <div className="text-lg font-bold text-white">{metrics.songCount || 0}</div>
+              <div className="text-xs text-white/70">Songs</div>
               <QualityIndicator quality={metrics.averageQuality || 0} />
             </div>
             <div>
-              <div className="text-lg font-bold text-slate-900">{decisions.releaseType || 'Single'}</div>
-              <div className="text-xs text-slate-600">Release Type</div>
+              <div className="text-lg font-bold text-white">{decisions.releaseType || 'Single'}</div>
+              <div className="text-xs text-white/70">Release Type</div>
               <Badge variant="outline" className="text-xs mt-1">
                 +{metrics.releaseBonus || 0}% bonus
               </Badge>
             </div>
             <div>
-              <div className="text-lg font-bold text-slate-900">
+              <div className="text-lg font-bold text-white">
                 {Math.round(((metrics.seasonalMultiplier || 1) - 1) * 100) > 0 ? '+' : ''}
                 {Math.round(((metrics.seasonalMultiplier || 1) - 1) * 100)}%
               </div>
-              <div className="text-xs text-slate-600">Seasonal</div>
+              <div className="text-xs text-white/70">Seasonal</div>
               <SeasonalIndicator multiplier={metrics.seasonalMultiplier || 1} />
             </div>
           </div>
@@ -107,14 +107,14 @@ function PerformanceCard({ title, value, subtitle, trend, icon: Icon, color }) {
     green: 'border-green-200 bg-green-50',
     blue: 'border-blue-200 bg-blue-50',
     red: 'border-red-200 bg-red-50',
-    slate: 'border-slate-200 bg-slate-50'
+    slate: 'border-[#4e324c]/50 bg-[#3c252d]/10'
   };
 
   const textColorClasses = {
     green: 'text-green-600',
     blue: 'text-blue-600',
     red: 'text-red-600',
-    slate: 'text-slate-600'
+    slate: 'text-white/70'
   };
 
   return (
@@ -129,7 +129,7 @@ function PerformanceCard({ title, value, subtitle, trend, icon: Icon, color }) {
       </div>
       <div className="space-y-1">
         <div className={`text-lg font-bold ${textColorClasses[color]}`}>{value}</div>
-        <div className="text-xs text-slate-600">{subtitle}</div>
+        <div className="text-xs text-white/70">{subtitle}</div>
       </div>
     </div>
   );
@@ -145,7 +145,7 @@ function QualityIndicator({ quality }) {
   };
 
   return (
-    <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
+    <div className="w-full bg-[#65557c]/30 rounded-full h-1.5 mt-1">
       <div
         className={`h-1.5 rounded-full transition-all ${getQualityColor(quality)}`}
         style={{ width: `${quality}%` }}
@@ -160,7 +160,7 @@ function SeasonalIndicator({ multiplier }) {
   return (
     <Badge
       variant={isPositive ? "default" : "secondary"}
-      className={`text-xs mt-1 ${isPositive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}
+      className={`text-xs mt-1 ${isPositive ? 'bg-green-100 text-green-700' : 'bg-[#65557c]/20 text-white/70'}`}
     >
       {isPositive ? 'Optimal' : 'Off-peak'}
     </Badge>
@@ -194,19 +194,19 @@ function OverviewBreakdown({ metrics, decisions }) {
                 <div className="text-green-600 font-semibold">
                   ${(metrics.estimatedRevenue || 0).toLocaleString()}
                 </div>
-                <div className="text-xs text-slate-500">Gross Revenue</div>
+                <div className="text-xs text-white/50">Gross Revenue</div>
               </div>
               <div>
                 <div className="text-red-600 font-semibold">
                   -${(metrics.totalMarketingCost || 0).toLocaleString()}
                 </div>
-                <div className="text-xs text-slate-500">Marketing Cost</div>
+                <div className="text-xs text-white/50">Marketing Cost</div>
               </div>
               <div>
                 <div className={`font-semibold ${netProfit > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {netProfit > 0 ? '+' : ''}${netProfit.toLocaleString()}
                 </div>
-                <div className="text-xs text-slate-500">Net Profit</div>
+                <div className="text-xs text-white/50">Net Profit</div>
               </div>
             </div>
           </div>
@@ -246,8 +246,8 @@ function RevenueFlowBar({ baseRevenue, marketingCost, netProfit }) {
     <div className="space-y-2">
       <div className="flex items-center space-x-2">
         <div className="w-4 h-4 bg-green-500 rounded-sm" />
-        <span className="text-xs text-slate-600">Revenue</span>
-        <div className="flex-1 bg-slate-200 rounded-full h-2">
+        <span className="text-xs text-white/70">Revenue</span>
+        <div className="flex-1 bg-[#65557c]/30 rounded-full h-2">
           <div
             className="bg-green-500 h-2 rounded-full"
             style={{ width: `${(baseRevenue / maxValue) * 100}%` }}
@@ -257,8 +257,8 @@ function RevenueFlowBar({ baseRevenue, marketingCost, netProfit }) {
       
       <div className="flex items-center space-x-2">
         <div className="w-4 h-4 bg-red-500 rounded-sm" />
-        <span className="text-xs text-slate-600">Costs</span>
-        <div className="flex-1 bg-slate-200 rounded-full h-2">
+        <span className="text-xs text-white/70">Costs</span>
+        <div className="flex-1 bg-[#65557c]/30 rounded-full h-2">
           <div
             className="bg-red-500 h-2 rounded-full"
             style={{ width: `${(marketingCost / maxValue) * 100}%` }}
@@ -281,17 +281,17 @@ function MultiplierStack({ base, multipliers }) {
         if (!isBase) runningTotal += contribution;
         
         const colors = {
-          base: 'bg-slate-400',
+          base: 'bg-[#65557c]/80',
           bonus: 'bg-blue-500',
           seasonal: 'bg-green-500',
-          marketing: 'bg-purple-500',
+          marketing: 'bg-[#791014]',
           lead: 'bg-orange-500'
         };
         
         return (
           <div key={index} className="flex items-center space-x-3">
             <div className={`w-3 h-3 rounded-sm ${colors[multiplier.type]}`} />
-            <span className="text-sm text-slate-700 min-w-[100px]">{multiplier.name}</span>
+            <span className="text-sm text-white/90 min-w-[100px]">{multiplier.name}</span>
             <Badge variant="outline" className="text-xs">
               {isBase ? multiplier.value : `+${multiplier.value}%`}
             </Badge>
@@ -329,13 +329,13 @@ function MarketingBreakdown({ metrics, decisions }) {
                     <span className="text-sm font-medium capitalize">{channelId}</span>
                     <span className="text-sm font-mono">${data.budget.toLocaleString()}</span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="w-full bg-[#65557c]/30 rounded-full h-2">
                     <div
                       className="bg-blue-500 h-2 rounded-full"
                       style={{ width: `${data.contribution}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-xs text-slate-500 mt-1">
+                  <div className="flex justify-between text-xs text-white/50 mt-1">
                     <span>{data.effectiveness}% effective</span>
                     <span>{data.contribution.toFixed(1)}% of budget</span>
                   </div>
@@ -399,7 +399,7 @@ function TimelineView({ decisions, gameState }) {
                       Month {event.month}
                     </Badge>
                   </div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-white/50">
                     {event.month === currentMonth ? 'This month' : 
                      event.month < currentMonth ? `${currentMonth - event.month} months ago` :
                      `${event.month - currentMonth} months from now`}

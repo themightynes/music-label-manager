@@ -118,7 +118,7 @@ export function GuidedPlanReleaseWorkflow() {
           <div className="space-y-4">
             {/* Step indicator */}
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-slate-900">Plan Release</h1>
+              <h1 className="text-2xl font-bold text-white">Plan Release</h1>
               <Badge variant="outline">
                 Step {visibleSteps.findIndex(step => step.id === currentStep) + 1} of {visibleSteps.length}
               </Badge>
@@ -127,7 +127,7 @@ export function GuidedPlanReleaseWorkflow() {
             {/* Progress bar */}
             <div className="space-y-2">
               <Progress value={progressPercentage} className="h-2" />
-              <div className="flex justify-between text-sm text-slate-600">
+              <div className="flex justify-between text-sm text-white/70">
                 <span>{currentStepData?.title}</span>
                 <span>{Math.round(progressPercentage)}% complete</span>
               </div>
@@ -148,7 +148,7 @@ export function GuidedPlanReleaseWorkflow() {
                         ? 'bg-blue-100 text-blue-700 border border-blue-300' 
                         : isCompleted || isPast
                           ? 'bg-green-100 text-green-700'
-                          : 'bg-slate-100 text-slate-500'
+                          : 'bg-[#65557c]/20 text-white/50'
                     }`}
                   >
                     {isCompleted || isPast ? (
@@ -200,7 +200,7 @@ export function GuidedPlanReleaseWorkflow() {
             
             <div className="flex space-x-3">
               {/* Quick decisions indicator */}
-              <div className="flex items-center space-x-2 text-sm text-slate-600">
+              <div className="flex items-center space-x-2 text-sm text-white/70">
                 <span>Quick decisions:</span>
                 <Badge variant="secondary">{completedFields.length}</Badge>
               </div>
@@ -335,7 +335,7 @@ function RiskOpportunityIndicator({ risks, opportunities }) {
 function ArtistSelectionStep({ decisions, setDecisions }) {
   return (
     <div className="space-y-4">
-      <p className="text-slate-600">Choose an artist to create a release for.</p>
+      <p className="text-white/70">Choose an artist to create a release for.</p>
       {/* Artist selection UI - simplified for focus */}
       <div className="grid gap-4">
         {/* Artist cards with clear selection */}
@@ -347,7 +347,7 @@ function ArtistSelectionStep({ decisions, setDecisions }) {
 function SongSelectionStep({ decisions, setDecisions }) {
   return (
     <div className="space-y-4">
-      <p className="text-slate-600">Select songs for your release. The number of songs determines the release type.</p>
+      <p className="text-white/70">Select songs for your release. The number of songs determines the release type.</p>
       {/* Song selection with clear type indicators */}
       <div className="grid gap-3">
         {/* Song list with better visual feedback */}
@@ -387,7 +387,7 @@ function MarketingPlanStep({ decisions, setDecisions }) {
 
 function HelpTooltip({ content }) {
   return (
-    <div className="inline-flex items-center justify-center w-5 h-5 bg-slate-200 rounded-full text-xs text-slate-600 cursor-help">
+    <div className="inline-flex items-center justify-center w-5 h-5 bg-[#65557c]/30 rounded-full text-xs text-white/70 cursor-help">
       ?
     </div>
   );

@@ -173,9 +173,9 @@ export function ArtistRoster() {
   };
 
   return (
-    <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+    <Card className="shadow-sm">
       <CardContent className="p-4">
-        <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center justify-between">
+        <h3 className="text-base font-semibold text-white mb-3 flex items-center justify-between">
           <div className="flex items-center">
             <i className="fas fa-microphone text-secondary mr-2"></i>
             Artist Roster
@@ -189,10 +189,10 @@ export function ArtistRoster() {
 
           {/* Empty state when no artists */}
           {(!artists || artists.length === 0) && (
-            <div className="text-center text-slate-500 py-6">
-              <i className="fas fa-microphone text-slate-300 text-3xl mb-3"></i>
-              <p className="text-sm font-medium text-slate-600 mb-2">No Artists Signed</p>
-              <p className="text-xs text-slate-500 mb-4">Discover talent to build your roster</p>
+            <div className="text-center text-white/50 py-6">
+              <i className="fas fa-microphone text-white/30 text-3xl mb-3"></i>
+              <p className="text-sm font-medium text-white/70 mb-2">No Artists Signed</p>
+              <p className="text-xs text-white/50 mb-4">Discover talent to build your roster</p>
               <Button
                 onClick={() => setShowDiscoveryModal(true)}
                 size="sm"
@@ -214,15 +214,15 @@ export function ArtistRoster() {
             const StatusIcon = relationship.statusIcon;
 
             return (
-              <div key={artist.id} className="border border-slate-200 rounded-lg p-3">
+              <div key={artist.id} className="border border-[#4e324c] rounded-lg p-3">
                 {/* Condensed Artist Header */}
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h4 className="font-medium text-slate-900 text-sm flex items-center">
+                    <h4 className="font-medium text-white text-sm flex items-center">
                       {artist.name}
                       <StatusIcon className={`w-3 h-3 ml-1 ${relationship.statusColor}`} />
                     </h4>
-                    <div className="flex items-center space-x-1 text-xs text-slate-600">
+                    <div className="flex items-center space-x-1 text-xs text-white/70">
                       <span>{artist.archetype}</span>
                       <span>•</span>
                       <span className={relationship.statusColor}>{relationship.statusText}</span>
@@ -234,7 +234,7 @@ export function ArtistRoster() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setExpandedArtist(isExpanded ? null : artist.id)}
-                    className="text-slate-400 hover:text-slate-600 p-1"
+                    className="text-white/50 hover:text-white/70 p-1"
                   >
                     <Info className="w-3 h-3" />
                   </Button>
@@ -242,27 +242,27 @@ export function ArtistRoster() {
 
                 {/* Condensed Metrics */}
                 <div className="grid grid-cols-4 gap-2 mb-2 text-center">
-                  <div className="p-1 bg-slate-50 rounded text-xs">
-                    <div className="font-medium text-slate-900">{insights.projects}</div>
-                    <div className="text-slate-500">Projects</div>
+                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+                    <div className="font-medium text-white">{insights.projects}</div>
+                    <div className="text-white/50">Projects</div>
                   </div>
-                  <div className="p-1 bg-slate-50 rounded text-xs">
+                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
                     <div className={`font-medium ${insights.avgROI >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {insights.releasedProjects > 0 ? `${insights.avgROI > 0 ? '+' : ''}${insights.avgROI.toFixed(0)}%` : '--'}
                     </div>
-                    <div className="text-slate-500">ROI</div>
+                    <div className="text-white/50">ROI</div>
                   </div>
-                  <div className="p-1 bg-slate-50 rounded text-xs">
+                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
                     <div className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
                       {artist.mood || 50}%
                     </div>
-                    <div className="text-slate-500">Mood</div>
+                    <div className="text-white/50">Mood</div>
                   </div>
-                  <div className="p-1 bg-slate-50 rounded text-xs">
+                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
                     <div className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
                       {artist.loyalty || 50}%
                     </div>
-                    <div className="text-slate-500">Loyalty</div>
+                    <div className="text-white/50">Loyalty</div>
                   </div>
                 </div>
 
@@ -271,7 +271,7 @@ export function ArtistRoster() {
                   <div className="mb-2">
                     <div className={`text-xs p-2 rounded flex items-center space-x-2 ${
                       recommendations[0].type === 'urgent' ? 'bg-red-50 text-red-700' :
-                      recommendations[0].type === 'action' ? 'bg-blue-50 text-blue-700' :
+                      recommendations[0].type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
                       'bg-yellow-50 text-yellow-700'
                     }`}>
                       <span>{recommendations[0].icon}</span>
@@ -282,24 +282,24 @@ export function ArtistRoster() {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="mt-4 pt-3 border-t border-slate-200 space-y-3">
+                  <div className="mt-4 pt-3 border-t border-[#4e324c] space-y-3">
                     {/* Archetype Details */}
                     <div>
-                      <h5 className="text-xs font-semibold text-slate-700 mb-2">Archetype: {artist.archetype}</h5>
-                      <p className="text-xs text-slate-600 mb-2">{archetype.description}</p>
+                      <h5 className="text-xs font-semibold text-white/90 mb-2">Archetype: {artist.archetype}</h5>
+                      <p className="text-xs text-white/70 mb-2">{archetype.description}</p>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div>
-                          <span className="font-medium text-slate-700">Strengths:</span>
-                          <ul className="text-slate-600 ml-2 mt-1">
+                          <span className="font-medium text-white/90">Strengths:</span>
+                          <ul className="text-white/70 ml-2 mt-1">
                             {archetype.strengths.map((strength: string, idx: number) => (
                               <li key={idx}>• {strength}</li>
                             ))}
                           </ul>
                         </div>
                         <div>
-                          <span className="font-medium text-slate-700">Preferences:</span>
-                          <ul className="text-slate-600 ml-2 mt-1">
+                          <span className="font-medium text-white/90">Preferences:</span>
+                          <ul className="text-white/70 ml-2 mt-1">
                             {archetype.preferences.map((pref: string, idx: number) => (
                               <li key={idx}>• {pref}</li>
                             ))}
@@ -309,18 +309,18 @@ export function ArtistRoster() {
                     </div>
 
                     {/* Management Tips */}
-                    <div className="p-2 bg-blue-50 rounded">
-                      <div className="text-xs font-medium text-blue-700 mb-1">💡 Management Tip</div>
-                      <p className="text-xs text-blue-600">{archetype.tips}</p>
+                    <div className="p-2 bg-[#A75A5B]/10 rounded">
+                      <div className="text-xs font-medium text-[#A75A5B] mb-1">💡 Management Tip</div>
+                      <p className="text-xs text-[#A75A5B]">{archetype.tips}</p>
                     </div>
 
                     {/* Detailed Mood/Loyalty Factors */}
                     <div>
-                      <h5 className="text-xs font-semibold text-slate-700 mb-2">What Affects {artist.name}</h5>
+                      <h5 className="text-xs font-semibold text-white/90 mb-2">What Affects {artist.name}</h5>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div>
                           <span className="font-medium text-green-700">Positive Factors:</span>
-                          <ul className="text-slate-600 ml-2 mt-1">
+                          <ul className="text-white/70 ml-2 mt-1">
                             {archetype.moodFactors.positive.map((factor: string, idx: number) => (
                               <li key={idx}>• {factor}</li>
                             ))}
@@ -328,7 +328,7 @@ export function ArtistRoster() {
                         </div>
                         <div>
                           <span className="font-medium text-red-700">Negative Factors:</span>
-                          <ul className="text-slate-600 ml-2 mt-1">
+                          <ul className="text-white/70 ml-2 mt-1">
                             {archetype.moodFactors.negative.map((factor: string, idx: number) => (
                               <li key={idx}>• {factor}</li>
                             ))}
@@ -340,12 +340,12 @@ export function ArtistRoster() {
                     {/* All Recommendations */}
                     {recommendations.length > 2 && (
                       <div>
-                        <h5 className="text-xs font-semibold text-slate-700 mb-2">Additional Recommendations</h5>
+                        <h5 className="text-xs font-semibold text-white/90 mb-2">Additional Recommendations</h5>
                         <div className="space-y-1">
                           {recommendations.slice(2).map((rec, index) => (
                             <div key={index} className={`text-xs p-2 rounded flex items-center space-x-2 ${
                               rec.type === 'urgent' ? 'bg-red-50 text-red-700' :
-                              rec.type === 'action' ? 'bg-blue-50 text-blue-700' :
+                              rec.type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
                               'bg-yellow-50 text-yellow-700'
                             }`}>
                               <span>{rec.icon}</span>
@@ -405,11 +405,11 @@ export function ArtistRoster() {
 
           {/* Browse Talent - Compact */}
           {artists && artists.length > 0 && artists.length < 3 && (
-            <div className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center">
+            <div className="border-2 border-dashed border-[#4e324c] rounded-lg p-3 text-center">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-primary hover:text-indigo-700 text-xs font-medium w-full"
+                className="text-[#A75A5B] hover:text-[#8B4A6C] text-xs font-medium w-full"
                 onClick={() => setShowDiscoveryModal(true)}
               >
                 <i className="fas fa-plus mr-1"></i>

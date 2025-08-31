@@ -72,18 +72,18 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-yellow-500 text-xl">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Top Roles: Music Label Manager</CardTitle>
-          <p className="text-slate-600">Sign in to manage your record label</p>
+          <p className="text-white/70">Sign in to manage your record label</p>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
@@ -168,7 +168,7 @@ export default function LoginPage() {
           </Tabs>
           
           <div className="mt-6 text-center">
-            <div className="text-sm text-slate-500 mb-2">Or try the demo:</div>
+            <div className="text-sm text-white/50 mb-2">Or try the demo:</div>
             <Button 
               variant="outline" 
               onClick={handleDemoLogin}

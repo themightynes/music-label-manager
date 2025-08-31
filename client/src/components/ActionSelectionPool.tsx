@@ -131,7 +131,7 @@ export function ActionSelectionPool({
     <div className="space-y-4">
       {/* Header with quick actions */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">Focus Actions Pool</h3>
+        <h3 className="text-lg font-semibold text-white">Focus Actions Pool</h3>
         <div className="flex space-x-2">
           <Button
             variant="outline"
@@ -181,7 +181,7 @@ export function ActionSelectionPool({
                   </Badge>
                 )}
                 {category.recommendedCount > 0 && (
-                  <Badge variant="default" className="text-xs px-1 bg-green-500">
+                  <Badge variant="default" className="text-xs px-1 bg-[#5AA75A] text-white">
                     {category.recommendedCount}
                   </Badge>
                 )}
@@ -193,8 +193,8 @@ export function ActionSelectionPool({
         {/* Category content */}
         {categoryStats.map((category) => (
           <TabsContent key={category.key} value={category.key} className="space-y-4">
-            <div className="flex items-center space-x-2 text-sm text-slate-600">
-              <i className={`${category.icon} text-blue-600`}></i>
+            <div className="flex items-center space-x-2 text-sm text-white/70">
+              <i className={`${category.icon} text-[#A75A5B]`}></i>
               <span>{category.description}</span>
               <Badge variant="secondary" className="text-xs">
                 {category.totalCount} action{category.totalCount !== 1 ? 's' : ''}
@@ -224,8 +224,8 @@ export function ActionSelectionPool({
             </div>
 
             {category.actions.length === 0 && (
-              <div className="text-center py-8 text-slate-500">
-                <i className={`${category.icon} text-2xl mb-2 block text-slate-400`}></i>
+              <div className="text-center py-8 text-white/50">
+                <i className={`${category.icon} text-2xl mb-2 block text-white/50`}></i>
                 <p className="text-sm">No actions available in this category</p>
               </div>
             )}

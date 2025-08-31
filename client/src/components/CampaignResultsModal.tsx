@@ -30,9 +30,9 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
       case 'Commercial Success':
         return 'bg-green-500';
       case 'Critical Acclaim':
-        return 'bg-purple-500';
+        return 'bg-[#791014]';
       case 'Balanced Growth':
-        return 'bg-blue-500';
+        return 'bg-[#A75A5B]/100';
       case 'Survival':
         return 'bg-yellow-500';
       case 'Failure':
@@ -62,11 +62,11 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="text-center border-b border-slate-200 pb-6">
+        <DialogHeader className="text-center border-b border-[#4e324c] pb-6">
           <div className="text-6xl mb-4">
             {getVictoryTypeIcon(campaignResults.victoryType)}
           </div>
-          <DialogTitle className="text-2xl font-bold text-slate-900">
+          <DialogTitle className="text-2xl font-bold text-white">
             Campaign Complete!
           </DialogTitle>
           <div className="mt-4">
@@ -75,7 +75,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
             >
               {campaignResults.victoryType}
             </Badge>
-            <div className="text-3xl font-bold text-slate-700 mt-2">
+            <div className="text-3xl font-bold text-white/90 mt-2">
               Final Score: {campaignResults.finalScore}
             </div>
           </div>
@@ -85,12 +85,12 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
           {/* Campaign Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">
+              <CardTitle className="text-lg font-semibold text-white">
                 Your Story
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-700 leading-relaxed">
+              <p className="text-white/90 leading-relaxed">
                 {campaignResults.summary}
               </p>
             </CardContent>
@@ -99,7 +99,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
           {/* Score Breakdown */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">
+              <CardTitle className="text-lg font-semibold text-white">
                 Score Breakdown
               </CardTitle>
             </CardHeader>
@@ -109,31 +109,31 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
                   <div className="text-2xl font-bold text-green-600">
                     {campaignResults.scoreBreakdown.money}
                   </div>
-                  <div className="text-sm text-slate-600">Money</div>
+                  <div className="text-sm text-white/70">Money</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-2xl font-bold text-[#791014]">
                     {campaignResults.scoreBreakdown.reputation}
                   </div>
-                  <div className="text-sm text-slate-600">Reputation</div>
+                  <div className="text-sm text-white/70">Reputation</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-[#A75A5B]">
                     {campaignResults.scoreBreakdown.artistsSuccessful}
                   </div>
-                  <div className="text-sm text-slate-600">Artist Success</div>
+                  <div className="text-sm text-white/70">Artist Success</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-orange-600">
                     {campaignResults.scoreBreakdown.projectsCompleted}
                   </div>
-                  <div className="text-sm text-slate-600">Projects</div>
+                  <div className="text-sm text-white/70">Projects</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-indigo-600">
                     {campaignResults.scoreBreakdown.accessTierBonus}
                   </div>
-                  <div className="text-sm text-slate-600">Access Bonus</div>
+                  <div className="text-sm text-white/70">Access Bonus</div>
                 </div>
               </div>
             </CardContent>
@@ -143,7 +143,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
           {campaignResults.achievements.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">
+                <CardTitle className="text-lg font-semibold text-white">
                   Achievements Unlocked
                 </CardTitle>
               </CardHeader>
@@ -152,10 +152,10 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
                   {campaignResults.achievements.map((achievement, index) => (
                     <div
                       key={index}
-                      className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg"
+                      className="flex items-center space-x-3 p-3 bg-[#3c252d]/20 rounded-lg"
                     >
                       <div className="text-xl">🏅</div>
-                      <div className="text-slate-700 font-medium">
+                      <div className="text-white/90 font-medium">
                         {achievement}
                       </div>
                     </div>
@@ -167,7 +167,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center space-x-4 p-6 border-t border-slate-200">
+        <div className="flex justify-center space-x-4 p-6 border-t border-[#4e324c]">
           <Button
             variant="outline"
             onClick={onClose}
@@ -177,7 +177,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
           </Button>
           <Button
             onClick={onNewGame}
-            className="px-8 py-3 bg-primary text-white hover:bg-indigo-700"
+            className="px-8 py-3 bg-primary text-white hover:bg-[#8B4A6C]"
           >
             Start New Campaign
           </Button>

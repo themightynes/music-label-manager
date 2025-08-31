@@ -75,15 +75,15 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
   const categorizedChanges = categorizeChanges(changes);
 
   return (
-    <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-7xl mx-auto">
+    <div className="bg-[#23121c] rounded-xl shadow-xl border border-[#4e324c] w-full max-w-7xl mx-auto">
       {/* Header Section - Clean and prominent */}
-      <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-8 py-6 border-b border-slate-200">
+      <div className="bg-gradient-to-r from-[#3c252d]/50 to-[#A75A5B]/10 px-8 py-6 border-b border-[#4e324c]">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">
+            <h1 className="text-xl font-bold text-white">
               {isMonthResults ? `Month ${monthlyStats?.month || ''} Results` : 'Month Summary'}
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-white/70 mt-1">
               Your financial performance and key achievements
             </p>
           </div>
@@ -91,7 +91,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
           {/* Big prominent net income display */}
           <div className="text-right">
             <div className="flex items-center space-x-2">
-              <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+              <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
                 {netIncome >= 0 ? (
                   <TrendingUp className={`h-5 w-5 ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`} />
                 ) : (
@@ -104,7 +104,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                 }`}>
                   {netIncome >= 0 ? '+' : ''}{formatCurrency(netIncome)}
                 </div>
-                <div className="text-sm text-slate-500 font-medium">Net Income</div>
+                <div className="text-sm text-white/50 font-medium">Net Income</div>
               </div>
             </div>
           </div>
@@ -112,19 +112,19 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
       </div>
 
       {/* Financial Summary Bar - Horizontal layout for easy scanning */}
-      <div className="px-8 py-6 bg-slate-50 border-b border-slate-200">
+      <div className="px-8 py-6 bg-[#3c252d]/20 border-b border-[#4e324c]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Revenue Card */}
-          <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+          <div className="bg-[#3c252d]/66 rounded-lg p-6 border border-[#65557c] shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-2 bg-green-500/20 rounded-lg">
                   <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-green-700">Revenue</h3>
-                  <p className="text-xs text-slate-500">Income earned</p>
+                  <p className="text-xs text-white/50">Income earned</p>
                 </div>
               </div>
               <div className="text-right">
@@ -136,15 +136,15 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
           </div>
 
           {/* Expenses Card */}
-          <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+          <div className="bg-[#3c252d]/66 rounded-lg p-6 border border-[#65557c] shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-red-100 rounded-lg">
+                <div className="p-2 bg-red-500/20 rounded-lg">
                   <TrendingDown className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-red-700">Expenses</h3>
-                  <p className="text-xs text-slate-500">Costs incurred</p>
+                  <p className="text-xs text-white/50">Costs incurred</p>
                 </div>
               </div>
               <div className="text-right">
@@ -156,21 +156,21 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
           </div>
 
           {/* Profit Margin Card */}
-          <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+          <div className="bg-[#3c252d]/66 rounded-lg p-6 border border-[#65557c] shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-blue-100' : 'bg-orange-100'}`}>
-                  <DollarSign className={`h-5 w-5 ${netIncome >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+                <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-[#A75A5B]/20' : 'bg-orange-500/20'}`}>
+                  <DollarSign className={`h-5 w-5 ${netIncome >= 0 ? 'text-[#A75A5B]' : 'text-orange-600'}`} />
                 </div>
                 <div>
-                  <h3 className={`text-sm font-semibold ${netIncome >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                  <h3 className={`text-sm font-semibold ${netIncome >= 0 ? 'text-[#A75A5B]' : 'text-orange-700'}`}>
                     Profit Margin
                   </h3>
-                  <p className="text-xs text-slate-500">Performance ratio</p>
+                  <p className="text-xs text-white/50">Performance ratio</p>
                 </div>
               </div>
               <div className="text-right">
-                <div className={`text-lg font-bold ${netIncome >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                <div className={`text-lg font-bold ${netIncome >= 0 ? 'text-[#A75A5B]' : 'text-orange-700'}`}>
                   {revenue > 0 ? `${((netIncome / revenue) * 100).toFixed(1)}%` : '0%'}
                 </div>
               </div>
@@ -181,13 +181,13 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
         {/* Visual breakdown bar */}
         <div className="mt-6">
           <div className="flex justify-between items-center mb-3">
-            <h4 className="text-xs font-semibold text-slate-700">Financial Breakdown</h4>
-            <div className="text-xs text-slate-500">
+            <h4 className="text-xs font-semibold text-white/90">Financial Breakdown</h4>
+            <div className="text-xs text-white/50">
               Revenue vs Expenses
             </div>
           </div>
           
-          <div className="relative bg-slate-200 rounded-full h-4 overflow-hidden">
+          <div className="relative bg-[#610b16] rounded-full h-4 overflow-hidden">
             {revenue > 0 && (
               <div 
                 className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-500"
@@ -195,7 +195,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
               />
             )}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-medium text-slate-700">
+              <span className="text-xs font-medium text-white/90">
                 {revenue > 0 ? `${formatCurrency(revenue)} earned` : 'No revenue'}
                 {expenses > 0 && ` • ${formatCurrency(expenses)} spent`}
               </span>
@@ -233,7 +233,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {categorizedChanges.revenue.map((change: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
+                        <div key={index} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                           <div className="flex items-center space-x-3">
                             <span className="text-sm">{getChangeIcon(change.type)}</span>
                             <span className="text-sm font-medium text-green-800">{change.description}</span>
@@ -251,16 +251,16 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                 {categorizedChanges.achievements.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center space-x-2 text-blue-700 text-sm">
+                      <CardTitle className="flex items-center space-x-2 text-[#A75A5B] text-sm">
                         <Trophy className="h-4 w-4" />
                         <span>Achievements</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {categorizedChanges.achievements.map((change: any, index: number) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div key={index} className="flex items-center space-x-3 p-3 bg-[#A75A5B]/10 rounded-lg border border-[#A75A5B]/20">
                           <span className="text-sm">{getChangeIcon(change.type)}</span>
-                          <span className="text-sm font-medium text-blue-800">{change.description}</span>
+                          <span className="text-sm font-medium text-[#A75A5B]">{change.description}</span>
                         </div>
                       ))}
                     </CardContent>
@@ -273,7 +273,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                 <CardContent className="p-6">
                   <div className="text-center">
                     <div className={`inline-flex items-center space-x-2 p-4 rounded-xl ${
-                      netIncome >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                      netIncome >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                     }`}>
                       {netIncome >= 0 ? (
                         <Zap className="h-5 w-5" />
@@ -296,22 +296,22 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
               {changes.filter((c: any) => c.type === 'project_complete' || c.type === 'song_release').length > 0 ? (
                 <div className="grid gap-4">
                   {changes.filter((c: any) => c.type === 'project_complete' || c.type === 'song_release').map((change: any, index: number) => (
-                    <Card key={index} className="border-slate-200 hover:shadow-md transition-shadow">
+                    <Card key={index} className="border-[#4e324c] hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
-                            <div className="p-3 bg-green-100 rounded-full">
+                            <div className="p-3 bg-green-500/20 rounded-full">
                               <Music className="h-5 w-5 text-green-600" />
                             </div>
                             <div>
-                              <h4 className="text-sm font-semibold text-slate-900">{change.description}</h4>
-                              <div className="flex items-center space-x-4 text-xs text-slate-500 mt-1">
+                              <h4 className="text-sm font-semibold text-white">{change.description}</h4>
+                              <div className="flex items-center space-x-4 text-xs text-white/50 mt-1">
                                 <span>Revenue: {formatCurrency(change.amount || 0)}</span>
                                 {change.projectId && <span>Project ID: {change.projectId}</span>}
                               </div>
                             </div>
                           </div>
-                          <Badge className="bg-green-100 text-green-800 px-2 py-1 text-xs">
+                          <Badge className="bg-green-500/20 text-green-400 px-2 py-1 text-xs">
                             {change.type === 'project_complete' ? 'Recorded' : 'Released'}
                           </Badge>
                         </div>
@@ -322,9 +322,9 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <Music className="h-10 w-10 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-sm font-semibold text-slate-600 mb-2">No Projects Completed</h3>
-                    <p className="text-xs text-slate-500">No projects were completed this month</p>
+                    <Music className="h-10 w-10 text-white/50 mx-auto mb-4" />
+                    <h3 className="text-sm font-semibold text-white/70 mb-2">No Projects Completed</h3>
+                    <p className="text-xs text-white/50">No projects were completed this month</p>
                   </CardContent>
                 </Card>
               )}
@@ -334,24 +334,24 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
           /* Empty state for no results */
           <Card>
             <CardContent className="p-12 text-center">
-              <div className="p-4 bg-slate-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-slate-400" />
+              <div className="p-4 bg-[#3c252d]/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-white/50" />
               </div>
-              <h3 className="text-base font-semibold text-slate-600 mb-2">No Results Available</h3>
-              <p className="text-sm text-slate-500">No detailed results are available for this month</p>
+              <h3 className="text-base font-semibold text-white/70 mb-2">No Results Available</h3>
+              <p className="text-sm text-white/50">No detailed results are available for this month</p>
             </CardContent>
           </Card>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-8 py-6 border-t border-slate-200 bg-slate-50">
+      <div className="px-8 py-6 border-t border-[#4e324c] bg-[#3c252d]/20">
         <div className="max-w-md mx-auto">
           <Button
             onClick={onAdvanceMonth}
             disabled={isAdvancing}
             size="lg"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+            className="w-full bg-[#A75A5B] hover:bg-[#A75A5B]/80 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
           >
             {isAdvancing ? (
               <span className="flex items-center justify-center">

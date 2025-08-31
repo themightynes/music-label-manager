@@ -24,35 +24,35 @@ export function QuickStats() {
   const netProfitLoss = stats.revenue - stats.expenses;
 
   return (
-    <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+    <Card className="bg-white rounded-xl shadow-sm border border-[#4e324c]">
       <CardContent className="p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
           <i className="fas fa-chart-bar text-success mr-2"></i>
           This Month's Performance
         </h3>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600">Total Streams</span>
+            <span className="text-sm text-white/70">Total Streams</span>
             <span className="font-mono font-semibold">{stats.streams.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600">Press Mentions</span>
+            <span className="text-sm text-white/70">Press Mentions</span>
             <span className="font-mono font-semibold">{stats.pressMentions}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600">Revenue</span>
+            <span className="text-sm text-white/70">Revenue</span>
             <span className="font-mono font-semibold text-success">${stats.revenue.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600">Expenses</span>
+            <span className="text-sm text-white/70">Expenses</span>
             <span className="font-mono font-semibold text-danger">${stats.expenses.toLocaleString()}</span>
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-200">
+        <div className="mt-4 pt-4 border-t border-[#4e324c]">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-900">Net Profit/Loss</span>
+            <span className="text-sm font-medium text-white">Net Profit/Loss</span>
             <span className={`font-mono font-bold ${netProfitLoss >= 0 ? 'text-success' : 'text-danger'}`}>
               {netProfitLoss >= 0 ? '+' : ''}${netProfitLoss.toLocaleString()}
             </span>

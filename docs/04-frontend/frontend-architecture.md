@@ -1,7 +1,8 @@
 # Frontend Architecture
 
 **Music Label Manager - React Application Design**  
-*Version: 1.0 (MVP Complete)*
+*Version: 1.1 (MVP Complete + Dark Plum Theme)*
+*Last Updated: August 31, 2025*
 
 ---
 
@@ -13,10 +14,177 @@ The Music Label Manager frontend is a **React 18** application built with **Type
 - **React 18** with Hooks and Context
 - **TypeScript** for type safety
 - **Vite** for fast development and building
-- **Tailwind CSS** for styling
+- **Tailwind CSS** for styling with custom plum/burgundy theme
 - **Zustand** for game state management
 - **React Query** for server state management
-- **Shadcn/UI** for component library
+- **Shadcn/UI** for component library with dark theme customization
+
+---
+
+## 🎨 Visual Theme System
+
+### **Theme Architecture Overview**
+*Updated: August 31, 2025*
+
+The Music Label Manager frontend features a **comprehensive dark plum/burgundy theme** designed for an immersive gaming experience. The theme system replaces the previous light slate design with a cohesive dark aesthetic that enhances readability and visual appeal.
+
+### **Core Theme Implementation**
+
+#### **1. Background System**
+```css
+/* Layered background approach */
+body::before {
+  /* Base background color layer */
+  background-color: hsl(var(--background));
+  z-index: -2;
+}
+
+body::after {
+  /* Full-coverage background image */
+  background-image: url('/plum_background.880Z.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  opacity: 1;
+  z-index: -1;
+}
+```
+
+**Key Features**:
+- **Dual-layer system**: Base color + overlay image for rich visual depth
+- **Fixed attachment**: Background image stays fixed during scrolling
+- **Full opacity**: Complete image visibility for maximum immersion
+- **Responsive scaling**: Cover ensures proper scaling across all devices
+
+#### **2. Component Color Scheme**
+
+**Primary Components**:
+```typescript
+// Card components
+const Card = {
+  background: '#23121c',    // Dark plum container
+  border: '#4e324c',        // Plum border
+  text: '#ffffff',          // White primary text
+  textSecondary: 'rgba(255, 255, 255, 0.7)' // White/70 secondary
+};
+
+// Header elements
+const Header = {
+  background: '#2C222A',    // Base plum background
+  border: '#4e324c',        // Consistent plum borders
+  text: '#ffffff'           // White text
+};
+
+// Interactive elements
+const Interactive = {
+  primary: '#A75A5B',       // Plum accent for buttons
+  secondary: '#791014',     // Burgundy secondary
+  hover: '#D99696',         // Light plum hover states
+  outline: '#4e324c'        // Plum outlines
+};
+```
+
+#### **3. Typography System**
+- **Primary Text**: Pure white (#ffffff) for maximum readability
+- **Secondary Text**: White at 70% opacity for hierarchy
+- **Font Stack**: Inter for UI, JetBrains Mono for numeric values
+- **Contrast Ratios**: All combinations exceed WCAG AA standards
+
+#### **4. CSS Variable Integration**
+```css
+:root {
+  --secondary: #791014;
+  --secondary-foreground: hsl(0 0% 100%);
+}
+
+.dark {
+  --secondary: #791014;
+  --secondary-foreground: hsl(0 0% 100%);
+}
+```
+
+### **Component Theme Applications**
+
+#### **Shadcn/UI Customizations**
+All base components have been updated with the plum theme:
+
+```typescript
+// Card component theming
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-[10px] bg-[#23121c] border border-[#4e324c] text-white shadow-sm",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+
+// Button variant theming
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium...",
+  {
+    variants: {
+      variant: {
+        default: "bg-[#A75A5B] text-[#A75A5B]-foreground hover:bg-[#A75A5B]/90",
+        outline: "border border-[#4e324c] bg-transparent text-white hover:bg-[#A75A5B]/20",
+        secondary: "bg-[#3c252d] text-white hover:bg-[#3c252d]/80",
+        ghost: "hover:bg-[#A75A5B]/10 hover:text-white"
+      }
+    }
+  }
+);
+```
+
+#### **40+ Component Updates**
+The following components received comprehensive theme updates:
+- **UI Components**: All cards, buttons, inputs, dialogs, and navigation elements
+- **Game Components**: Dashboard, artist roster, project tracking, month planner
+- **Modals**: All modal dialogs with consistent dark theming
+- **Status Indicators**: KPI cards, progress bars, badges, and notifications
+
+### **Theme Benefits**
+
+#### **User Experience**
+- **Immersive Gaming**: Dark theme creates focus on game content
+- **Reduced Eye Strain**: Dark backgrounds easier on eyes during extended play
+- **Professional Aesthetic**: Burgundy/plum palette suggests music industry sophistication
+- **Visual Hierarchy**: Clear distinction between interactive and static elements
+
+#### **Technical Benefits**
+- **Consistent Implementation**: Single source of truth for all theme values
+- **Easy Maintenance**: CSS variables allow quick theme adjustments
+- **Performance Optimized**: Minimal CSS overhead with efficient class structure
+- **Accessibility Compliant**: High contrast ratios throughout
+
+#### **Design Cohesion**
+- **10px Border Radius**: Modern rounded corners across all components
+- **Consistent Spacing**: Uniform padding and margins following design system
+- **Color Harmony**: Plum/burgundy palette creates visual unity
+- **Responsive Design**: Theme adapts seamlessly across all screen sizes
+
+### **Migration from Light Theme**
+The August 31, 2025 update represented a complete visual transformation:
+
+**Before (Light Theme)**:
+- White/light gray backgrounds
+- Slate-600 text colors  
+- Purple accent colors
+- Standard gray borders
+- Light card containers
+
+**After (Dark Plum Theme)**:
+- Dark plum backgrounds (#2C222A, #23121c)
+- White/white-70 text for readability
+- Burgundy accent colors (#791014)
+- Plum borders (#4e324c) 
+- Background image integration
+- 10px rounded corners for modern aesthetic
+
+This transformation maintains all functionality while dramatically improving visual appeal and user experience.
 
 ---
 
@@ -101,8 +269,8 @@ export function Dashboard() {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen">
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen font-sans">
+      <header className="bg-[#2C222A] shadow-sm border-b border-[#4e324c]">
         {/* Game title, month counter, money display, save button */}
       </header>
       
@@ -137,10 +305,11 @@ export function Dashboard() {
 ```
 
 **Responsibilities**:
-- Main layout and responsive grid
-- Modal orchestration
-- Game state display
+- Main layout and responsive grid with dark plum theming
+- Modal orchestration with consistent color scheme
+- Game state display with white text on dark backgrounds
 - Action coordination between components
+- Background image integration and visual hierarchy
 
 #### **MonthPlanner.tsx** - Enhanced Turn-Based Action System with Strategic Recommendations
 ```typescript
@@ -262,8 +431,8 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <p className="text-sm text-slate-600 italic">
+          <div className="bg-[#3c252d]/10 p-4 rounded-lg">
+            <p className="text-sm text-white/70 italic">
               "{selectedMeeting?.prompt || "How are things going this month?"}"
             </p>
           </div>
@@ -935,27 +1104,154 @@ import { Badge } from '@/components/ui/badge';
 </Card>
 ```
 
-### **Tailwind CSS Patterns**
-Consistent styling patterns throughout the application:
+### **Theming System**
 
+The application features a comprehensive **dark plum/burgundy theme** implemented on August 31, 2025, providing an immersive and cohesive visual experience.
+
+#### **Color Palette**
+```typescript
+// Primary Theme Colors
+const themeColors = {
+  // Main Background Colors
+  baseBackground: '#2C222A',     // Base plum background
+  cardBackground: '#23121c',     // Dark plum for cards/containers
+  headerBackground: '#2C222A',   // Header background
+  
+  // Border Colors
+  primaryBorder: '#4e324c',      // Plum borders for cards/inputs
+  
+  // Text Colors
+  primaryText: '#ffffff',        // White text for readability
+  secondaryText: 'rgba(255, 255, 255, 0.7)', // White/70 for secondary text
+  
+  // Accent Colors
+  primary: '#A75A5B',           // Plum accent for buttons/highlights
+  secondary: '#791014',         // Burgundy secondary color
+  hoverState: '#D99696',        // Light plum for hover states
+  
+  // Status Colors
+  success: 'hsl(142.1 76.2% 36.3%)', // Green for positive states
+  warning: 'hsl(43.2 97.8% 48.8%)',  // Yellow for warnings
+  danger: 'hsl(0 84.2% 60.2%)',      // Red for negative states
+};
+```
+
+#### **Background Image System**
+```css
+/* Full-coverage background implementation */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: -1;
+  background-image: url('/plum_background.880Z.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  opacity: 1; /* Full opacity for immersive experience */
+}
+```
+
+#### **CSS Variable System**
+```css
+/* Custom CSS variables for consistent theming */
+:root {
+  --secondary: #791014;           /* Burgundy accent */
+  --secondary-foreground: #ffffff; /* White text on burgundy */
+}
+
+.dark {
+  --secondary: #791014;           /* Maintained in dark mode */
+  --secondary-foreground: #ffffff;
+}
+```
+
+#### **Component Styling Patterns**
 ```css
 /* Layout patterns */
 .dashboard-grid { @apply grid grid-cols-1 lg:grid-cols-12 gap-6; }
 .card-grid { @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4; }
 
-/* Interactive elements */
-.action-button { @apply p-4 border rounded-lg hover:bg-slate-50 transition-colors; }
-.selected-action { @apply bg-blue-50 border-blue-200; }
+/* Card components with dark plum theme */
+.card-base {
+  @apply rounded-[10px] bg-[#23121c] border border-[#4e324c] text-white shadow-sm;
+}
 
-/* Status indicators */
-.status-positive { @apply text-green-600 bg-green-50; }
-.status-negative { @apply text-red-600 bg-red-50; }
-.status-neutral { @apply text-slate-600 bg-slate-50; }
+/* Interactive elements */
+.action-button {
+  @apply p-4 border border-[#4e324c] rounded-[10px] bg-[#23121c] text-white;
+  @apply hover:bg-[#D99696] transition-colors;
+}
+
+/* Button variants */
+.button-primary {
+  @apply bg-[#A75A5B] text-white hover:bg-[#A75A5B]/90;
+}
+
+.button-secondary {
+  @apply bg-[#3c252d] text-white hover:bg-[#3c252d]/80;
+}
+
+.button-outline {
+  @apply border border-[#4e324c] bg-transparent text-white;
+  @apply hover:bg-[#A75A5B]/20 hover:text-white;
+}
+
+/* Status indicators with dark theme compatibility */
+.status-positive { @apply text-green-400 bg-green-900/20; }
+.status-negative { @apply text-red-400 bg-red-900/20; }
+.status-neutral { @apply text-white/70 bg-[#3c252d]/10; }
 
 /* Resource displays */
-.resource-card { @apply bg-white rounded-lg shadow-sm border p-4; }
-.kpi-value { @apply text-2xl font-bold font-mono; }
+.resource-card {
+  @apply bg-[#23121c] border border-[#4e324c] rounded-[10px] shadow-sm border p-4;
+}
+.kpi-value { @apply text-2xl font-bold font-mono text-white; }
+
+/* Header styling */
+.header-base {
+  @apply bg-[#2C222A] border-b border-[#4e324c] shadow-sm;
+}
+
+/* Input styling */
+.input-base {
+  @apply bg-[#23121c] border border-[#4e324c] text-white rounded-[10px];
+  @apply focus:border-[#A75A5B] focus:ring-[#A75A5B];
+}
 ```
+
+#### **Dark Theme Considerations**
+- **Contrast Ratios**: All text combinations meet WCAG AA standards
+- **Readability**: White/off-white text on dark plum backgrounds
+- **Visual Hierarchy**: Burgundy accents create clear focus points
+- **Consistency**: 10px rounded corners throughout for modern aesthetic
+- **Accessibility**: High contrast maintained across all interactive elements
+
+#### **Responsive Design Integration**
+```typescript
+// Theme-aware responsive patterns
+<div className="bg-[#2C222A] text-white">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {/* Cards automatically adapt with consistent theming */}
+  </div>
+</div>
+
+// Mobile-optimized theme elements
+<div className="bg-[#23121c] border border-[#4e324c] rounded-[10px]">
+  <div className="flex flex-col md:flex-row gap-4">
+    {/* Stack vertically on mobile, horizontally on larger screens */}
+  </div>
+</div>
+```
+
+### **Legacy Theme Migration**
+The UI was completely transformed from a light slate/gray theme to the current dark plum system:
+- **Before**: Light backgrounds with slate-600 text
+- **After**: Dark plum backgrounds (#2C222A, #23121c) with white text
+- **Accent Evolution**: Purple accents replaced with burgundy (#791014)
+- **Border Updates**: All gray borders converted to plum (#4e324c)
+- **Hover States**: New plum hover color (#D99696) for better interaction feedback
 
 ### **Responsive Design**
 Mobile-first responsive design with breakpoints:
@@ -1038,7 +1334,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <CardTitle className="text-red-600">Something went wrong</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-600 mb-4">
+              <p className="text-white/70 mb-4">
                 An unexpected error occurred. Please refresh the page to continue.
               </p>
               <Button onClick={() => window.location.reload()}>

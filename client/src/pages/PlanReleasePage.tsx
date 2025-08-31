@@ -526,10 +526,10 @@ export default function PlanReleasePage() {
   };
 
   const getQualityColor = (quality: number) => {
-    if (quality >= 90) return 'text-green-600 bg-green-100';
-    if (quality >= 80) return 'text-blue-600 bg-blue-100';
-    if (quality >= 70) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+    if (quality >= 90) return 'text-green-600';
+    if (quality >= 80) return 'text-[#A75A5B]';
+    if (quality >= 70) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   // Song title editing functions
@@ -590,7 +590,7 @@ export default function PlanReleasePage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
+      <header className="bg-[#2C222A] shadow-sm border-b border-[#4e324c]/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -598,20 +598,20 @@ export default function PlanReleasePage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation('/')}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 text-white hover:text-white hover:bg-white/10"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Dashboard</span>
               </Button>
-              <div className="h-6 w-px bg-slate-300" />
-              <h1 className="text-xl font-bold text-slate-900">Plan Release</h1>
+              <div className="h-6 w-px opacity-30 bg-white" />
+              <h1 className="text-xl font-bold text-white">Plan Release</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 bg-slate-100 px-3 py-1 rounded-lg">
-                <DollarSign className="w-4 h-4 text-green-600" />
-                <span className="font-mono font-semibold">${(gameState?.money || 0).toLocaleString()}</span>
+              <div className="flex items-center space-x-2 bg-[#23121c] border border-[#4e324c] px-3 py-1 rounded-[10px]">
+                <DollarSign className="w-4 h-4 text-green-400" />
+                <span className="font-mono font-semibold text-white">${(gameState?.money || 0).toLocaleString()}</span>
               </div>
-              <div className="text-sm text-slate-600">Month {gameState?.currentMonth || 1}</div>
+              <div className="text-sm text-white/70">Month {gameState?.currentMonth || 1}</div>
             </div>
           </div>
         </div>
@@ -634,8 +634,8 @@ export default function PlanReleasePage() {
               <CardContent>
                 {loadingArtists ? (
                   <div className="text-center py-8">
-                    <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
-                    <p className="text-slate-600">Loading available artists...</p>
+                    <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                    <p className="text-white/70">Loading available artists...</p>
                   </div>
                 ) : artistError ? (
                   <div className="text-center py-8">
@@ -647,9 +647,9 @@ export default function PlanReleasePage() {
                   </div>
                 ) : artists.length === 0 ? (
                   <div className="text-center py-8">
-                    <Users className="w-8 h-8 text-slate-400 mx-auto mb-4" />
-                    <p className="text-slate-600">No artists with ready songs found</p>
-                    <p className="text-sm text-slate-500 mt-2">Artists need recorded songs to plan releases</p>
+                    <Users className="w-8 h-8 text-white/40 mx-auto mb-4" />
+                    <p className="text-white/70">No artists with ready songs found</p>
+                    <p className="text-sm text-white/50 mt-2">Artists need recorded songs to plan releases</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -658,8 +658,8 @@ export default function PlanReleasePage() {
                         key={artist.id}
                         className={`p-4 border rounded-lg cursor-pointer transition-all ${
                           selectedArtist === artist.id 
-                            ? 'border-blue-500 bg-blue-50' 
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? 'border-[#A75A5B] bg-[#A75A5B]/10' 
+                            : 'border-[#4e324c]/50 hover:border-[#65557c]/60'
                         }`}
                         onClick={() => {
                           setSelectedArtist(artist.id);
@@ -669,13 +669,13 @@ export default function PlanReleasePage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-slate-900">{artist.name}</h3>
+                            <h3 className="font-semibold text-white">{artist.name}</h3>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setLocation(`/artist/${artist.id}`);
                               }}
-                              className="text-blue-500 hover:text-blue-700 text-xs"
+                              className="text-[#A75A5B] hover:text-[#A75A5B] text-xs"
                               title="View artist details"
                             >
                               <i className="fas fa-external-link-alt"></i>
@@ -683,7 +683,7 @@ export default function PlanReleasePage() {
                           </div>
                           <Badge variant="outline" className="text-xs">{artist.genre}</Badge>
                         </div>
-                        <div className="space-y-1 text-sm text-slate-600">
+                        <div className="space-y-1 text-sm text-white/70">
                           <div className="flex justify-between">
                             <span>Ready Songs:</span>
                             <span className="font-mono font-semibold text-green-600">{artist.readySongs}</span>
@@ -717,8 +717,8 @@ export default function PlanReleasePage() {
                 <CardContent>
                   {loadingSongs ? (
                     <div className="text-center py-8">
-                      <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
-                      <p className="text-slate-600">Loading available songs...</p>
+                      <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                      <p className="text-white/70">Loading available songs...</p>
                     </div>
                   ) : songError ? (
                     <div className="text-center py-8">
@@ -733,9 +733,9 @@ export default function PlanReleasePage() {
                     </div>
                   ) : availableSongs.length === 0 ? (
                     <div className="text-center py-8">
-                      <Music className="w-8 h-8 text-slate-400 mx-auto mb-4" />
-                      <p className="text-slate-600">No ready songs found for this artist</p>
-                      <p className="text-sm text-slate-500 mt-2">Songs must be recorded but not yet released</p>
+                      <Music className="w-8 h-8 text-white/40 mx-auto mb-4" />
+                      <p className="text-white/70">No ready songs found for this artist</p>
+                      <p className="text-sm text-white/50 mt-2">Songs must be recorded but not yet released</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -744,8 +744,8 @@ export default function PlanReleasePage() {
                           key={song.id}
                           className={`p-4 border rounded-lg transition-all ${
                             selectedSongs.includes(song.id)
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-slate-200 hover:border-slate-300'
+                              ? 'border-[#A75A5B] bg-[#A75A5B]/10'
+                              : 'border-[#4e324c]/50 hover:border-[#65557c]/60'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
@@ -803,7 +803,7 @@ export default function PlanReleasePage() {
                                   </div>
                                 ) : (
                                   <div className="flex items-center space-x-2 group">
-                                    <h4 className="font-semibold text-slate-900">
+                                    <h4 className="font-semibold text-white">
                                       {songTitles[song.id] || song.title}
                                     </h4>
                                     <Button
@@ -823,7 +823,7 @@ export default function PlanReleasePage() {
                                   <Badge variant="outline" className="text-xs">{song.mood}</Badge>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-4 text-sm text-slate-600">
+                              <div className="flex items-center space-x-4 text-sm text-white/70">
                                 <span>Est. {song.estimatedStreams.toLocaleString()} streams</span>
                                 <span>Est. ${song.estimatedRevenue.toLocaleString()} revenue</span>
                                 <span>Created Month {song.createdMonth}</span>
@@ -862,7 +862,7 @@ export default function PlanReleasePage() {
                         ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-slate-600 mt-2">
+                  <p className="text-sm text-white/70 mt-2">
                     The lead single will receive extra promotional focus and affect overall release performance.
                   </p>
                 </CardContent>
@@ -880,22 +880,22 @@ export default function PlanReleasePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="text-sm font-semibold text-blue-700 mb-2">Selected Lead Single</h4>
-                    <p className="text-sm text-blue-600">
+                  <div className="p-3 bg-[#A75A5B]/10 rounded-lg border border-[#A75A5B]/30">
+                    <h4 className="text-sm font-semibold text-[#A75A5B] mb-2">Selected Lead Single</h4>
+                    <p className="text-sm text-[#A75A5B]">
                       {(() => {
                         const leadSong = availableSongs.find(s => s.id === leadSingle);
                         return leadSong ? (songTitles[leadSong.id] || leadSong.title) : 'No lead single selected';
                       })()}
                     </p>
-                    <p className="text-xs text-blue-500 mt-1">
+                    <p className="text-xs text-[#A75A5B] mt-1">
                       This single will build momentum for the full {releaseType} release
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs text-slate-600 mb-1 block">
+                      <label className="text-xs text-white/70 mb-1 block">
                         Lead Single Release
                         <span className="ml-2 text-orange-600">
                           ({SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.name} - {(() => {
@@ -922,8 +922,8 @@ export default function PlanReleasePage() {
                       </Select>
                     </div>
                     <div>
-                      <label className="text-xs text-slate-600 mb-1 block">Main Release</label>
-                      <div className="p-2 bg-slate-100 rounded border text-sm text-slate-700">
+                      <label className="text-xs text-white/70 mb-1 block">Main Release</label>
+                      <div className="p-2 bg-[#23121c]/10 rounded border text-sm text-white/90">
                         Month {releaseMonth}
                       </div>
                     </div>
@@ -931,16 +931,16 @@ export default function PlanReleasePage() {
 
                   {/* Lead Single Marketing Budget */}
                   <div>
-                    <h4 className="text-sm font-medium text-slate-700 mb-3">Lead Single Marketing Budget</h4>
+                    <h4 className="text-sm font-medium text-white/90 mb-3">Lead Single Marketing Budget</h4>
                     <div className="space-y-3">
                       {MARKETING_CHANNELS.map(channel => (
                         <div key={`lead-${channel.id}`} className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <i className={`${channel.icon} text-sm text-slate-600`} />
-                            <span className="text-sm text-slate-700">{channel.name}</span>
+                            <i className={`${channel.icon} text-sm text-white/70`} />
+                            <span className="text-sm text-white/90">{channel.name}</span>
                           </div>
                           <div className="flex items-center space-x-3">
-                            <span className="text-xs text-slate-500 w-16">
+                            <span className="text-xs text-white/50 w-16">
                               ${(leadSingleBudget[channel.id] || 0).toLocaleString()}
                             </span>
                             <Slider
@@ -957,7 +957,7 @@ export default function PlanReleasePage() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-2 text-xs text-slate-500">
+                    <div className="mt-2 text-xs text-white/50">
                       <div>Lead Single Total: ${Object.values(leadSingleBudget).reduce((a, b) => a + b, 0).toLocaleString()}</div>
                       {SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier !== 1 && (
                         <div className="text-orange-600">
@@ -984,8 +984,8 @@ export default function PlanReleasePage() {
                   {/* Marketing Budget Allocation */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-slate-700">Budget Allocation</h4>
-                      <span className="text-sm font-mono font-semibold text-blue-600">
+                      <h4 className="text-sm font-medium text-white/90">Budget Allocation</h4>
+                      <span className="text-sm font-mono font-semibold text-[#A75A5B]">
                         Total: ${Object.values(channelBudgets).reduce((a, b) => a + b, 0).toLocaleString()}
                       </span>
                     </div>
@@ -998,19 +998,19 @@ export default function PlanReleasePage() {
                         
                         return (
                           <div key={channel.id} className={`p-4 border rounded-lg transition-all ${
-                            isActive ? 'border-blue-300 bg-blue-50' : 'border-slate-200'
+                            isActive ? 'border-[#A75A5B] bg-[#A75A5B]/10' : 'border-[#4e324c]/50'
                           }`}>
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-3">
-                                <i className={`${channel.icon} text-lg ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                                <i className={`${channel.icon} text-lg ${isActive ? 'text-[#A75A5B]' : 'text-white/40'}`} />
                                 <div>
-                                  <h5 className="font-semibold text-slate-900">{channel.name}</h5>
-                                  <p className="text-xs text-slate-600">{channel.description}</p>
+                                  <h5 className="font-semibold text-white">{channel.name}</h5>
+                                  <p className="text-xs text-white/70">{channel.description}</p>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-sm font-semibold text-slate-900">${budget.toLocaleString()}</div>
-                                <div className="text-xs text-slate-500">{effectiveness?.contribution ? effectiveness.contribution.toFixed(1) : 0}% of budget</div>
+                                <div className="text-sm font-semibold text-white">${budget.toLocaleString()}</div>
+                                <div className="text-xs text-white/50">{effectiveness?.contribution ? effectiveness.contribution.toFixed(1) : 0}% of budget</div>
                               </div>
                             </div>
                             
@@ -1025,7 +1025,7 @@ export default function PlanReleasePage() {
                                 step={250}
                                 className="w-full"
                               />
-                              <div className="flex justify-between text-xs text-slate-500">
+                              <div className="flex justify-between text-xs text-white/50">
                                 <span>${channel.minBudget.toLocaleString()} min</span>
                                 <span className="font-semibold">
                                   {channel.effectiveness}% effectiveness • {channel.targetAudience}
@@ -1041,10 +1041,10 @@ export default function PlanReleasePage() {
 
                   {/* Release Timing */}
                   <div>
-                    <h4 className="text-sm font-medium text-slate-700 mb-3">Release Timing</h4>
+                    <h4 className="text-sm font-medium text-white/90 mb-3">Release Timing</h4>
                     <div>
                       <div>
-                        <label className="text-xs text-slate-600 mb-1 block">
+                        <label className="text-xs text-white/70 mb-1 block">
                           Target Month 
                           <span className="ml-2 text-orange-600">
                             ({SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(releaseMonth))?.name} - {(() => {
@@ -1092,27 +1092,27 @@ export default function PlanReleasePage() {
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-slate-700 mb-1 block">Release Title</label>
+                      <label className="text-sm font-medium text-white/90 mb-1 block">Release Title</label>
                       <input
                         type="text"
                         value={releaseTitle}
                         onChange={(e) => setReleaseTitle(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                        className="w-full px-3 py-2 border border-[#65557c]/60 rounded-md text-sm"
                         placeholder="Enter release title"
                       />
                     </div>
                     
-                    <div className="p-3 bg-slate-50 rounded-lg">
-                      <h4 className="text-sm font-semibold text-slate-700 mb-2">Release Bonus</h4>
+                    <div className="p-3 bg-[#23121c]/5 rounded-lg">
+                      <h4 className="text-sm font-semibold text-white/90 mb-2">Release Bonus</h4>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600">
+                        <span className="text-sm text-white/70">
                           {RELEASE_TYPES.find(rt => rt.id === releaseType)?.bonusType}
                         </span>
                         <span className="text-sm font-semibold text-green-600">
                           +{RELEASE_TYPES.find(rt => rt.id === releaseType)?.bonusAmount}%
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-white/50 mt-1">
                         {RELEASE_TYPES.find(rt => rt.id === releaseType)?.description}
                       </p>
                     </div>
@@ -1128,7 +1128,7 @@ export default function PlanReleasePage() {
                   <CardTitle className="flex items-center space-x-2">
                     <TrendingUp className="w-5 h-5" />
                     <span>Performance Preview</span>
-                    {calculatingPreview && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+                    {calculatingPreview && <Loader2 className="w-4 h-4 animate-spin text-[#A75A5B]" />}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1142,43 +1142,43 @@ export default function PlanReleasePage() {
                     </div>
                   ) : calculatingPreview && !previewData ? (
                     <div className="text-center py-8">
-                      <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
-                      <p className="text-slate-600">Calculating release metrics...</p>
+                      <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                      <p className="text-white/70">Calculating release metrics...</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="text-center p-3 bg-slate-50 rounded-lg">
-                        <div className="text-xl font-bold text-slate-900">{metrics.songCount}</div>
-                        <div className="text-slate-600">Songs</div>
+                      <div className="text-center p-3 bg-[#23121c]/5 rounded-lg">
+                        <div className="text-xl font-bold text-white">{metrics.songCount}</div>
+                        <div className="text-white/70">Songs</div>
                       </div>
-                      <div className="text-center p-3 bg-slate-50 rounded-lg">
-                        <div className="text-xl font-bold text-slate-900">{metrics.averageQuality}</div>
-                        <div className="text-slate-600">Avg Quality</div>
+                      <div className="text-center p-3 bg-[#23121c]/5 rounded-lg">
+                        <div className="text-xl font-bold text-white">{metrics.averageQuality}</div>
+                        <div className="text-white/70">Avg Quality</div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">Estimated Streams:</span>
-                        <span className="font-mono font-semibold text-blue-600">
+                        <span className="text-sm text-white/70">Estimated Streams:</span>
+                        <span className="font-mono font-semibold text-[#A75A5B]">
                           {metrics.estimatedStreams.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">Estimated Revenue:</span>
+                        <span className="text-sm text-white/70">Estimated Revenue:</span>
                         <span className="font-mono font-semibold text-green-600">
                           ${metrics.estimatedRevenue.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">Marketing Cost:</span>
+                        <span className="text-sm text-white/70">Marketing Cost:</span>
                         <span className="font-mono font-semibold text-red-600">
                           -${metrics.totalMarketingCost.toLocaleString()}
                         </span>
                       </div>
                       <div className="border-t pt-3 flex justify-between items-center">
-                        <span className="text-sm font-semibold text-slate-700">Projected ROI:</span>
+                        <span className="text-sm font-semibold text-white/90">Projected ROI:</span>
                         <span className={`font-mono font-bold ${
                           metrics.projectedROI > 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
@@ -1189,34 +1189,34 @@ export default function PlanReleasePage() {
 
                     <div className="pt-3 border-t space-y-3">
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-700 mb-2">Multipliers Applied</h4>
+                        <h4 className="text-sm font-semibold text-white/90 mb-2">Multipliers Applied</h4>
                         <div className="space-y-1 text-xs">
                           <div className="flex justify-between">
-                            <span className="text-slate-600">Release Bonus:</span>
+                            <span className="text-white/70">Release Bonus:</span>
                             <span className="font-mono">+{metrics.releaseBonus}%</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-slate-600">Seasonal Revenue:</span>
+                            <span className="text-white/70">Seasonal Revenue:</span>
                             <span className="font-mono">
                               {metrics.seasonalMultiplier > 1 ? '+' : ''}{Math.round((metrics.seasonalMultiplier - 1) * 100)}%
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-slate-600">Marketing:</span>
+                            <span className="text-white/70">Marketing:</span>
                             <span className="font-mono">
                               +{Math.round((metrics.marketingMultiplier - 1) * 100)}%
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-slate-600">Channel Diversity:</span>
-                            <span className="font-mono text-blue-600">
+                            <span className="text-white/70">Channel Diversity:</span>
+                            <span className="font-mono text-[#A75A5B]">
                               +{Math.round((metrics.diversityBonus - 1) * 100)}% ({metrics.activeChannelCount} channels)
                             </span>
                           </div>
                           {releaseType !== 'single' && leadSingle && metrics.leadSingleBoost > 1 && (
                             <div className="flex justify-between">
-                              <span className="text-slate-600">Lead Single Boost:</span>
-                              <span className="font-mono text-purple-600">
+                              <span className="text-white/70">Lead Single Boost:</span>
+                              <span className="font-mono text-[#791014]">
                                 +{Math.round((metrics.leadSingleBoost - 1) * 100)}%
                               </span>
                             </div>
@@ -1226,7 +1226,7 @@ export default function PlanReleasePage() {
 
                       {/* Marketing Channel Breakdown */}
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-700 mb-2">Marketing Breakdown</h4>
+                        <h4 className="text-sm font-semibold text-white/90 mb-2">Marketing Breakdown</h4>
                         <div className="space-y-1 text-xs">
                           {MARKETING_CHANNELS.map(channel => {
                             const budget = channelBudgets[channel.id] || 0;
@@ -1236,7 +1236,7 @@ export default function PlanReleasePage() {
                             
                             return budget > 0 ? (
                               <div key={channel.id} className="flex justify-between">
-                                <span className="text-slate-600 flex items-center space-x-1">
+                                <span className="text-white/70 flex items-center space-x-1">
                                   <i className={`${channel.icon} text-xs`} />
                                   <span>{channel.name}:</span>
                                 </span>
@@ -1253,8 +1253,8 @@ export default function PlanReleasePage() {
                           })}
                           {releaseType !== 'single' && leadSingle && Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) > 0 && (
                             <div className="flex justify-between border-t pt-1">
-                              <span className="text-slate-600">Lead Single Budget:</span>
-                              <div className="text-right font-mono text-purple-600">
+                              <span className="text-white/70">Lead Single Budget:</span>
+                              <div className="text-right font-mono text-[#791014]">
                                 <div>${Math.round(Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * (SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier || 1)).toLocaleString()}</div>
                                 {SEASONAL_TIMING.find(s => s.id === getSeasonFromMonth(leadSingleMonth))?.marketingCostMultiplier !== 1 && (
                                   <div className="text-xs text-orange-600">
@@ -1277,7 +1277,7 @@ export default function PlanReleasePage() {
             <Card>
               <CardContent className="pt-6">
                 {validationErrors.length > 0 && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-200 rounded-lg">
                     <h4 className="text-sm font-semibold text-red-700 mb-1">Please fix the following:</h4>
                     <ul className="text-xs text-red-600 space-y-1">
                       {validationErrors.map((error, index) => (
@@ -1306,7 +1306,7 @@ export default function PlanReleasePage() {
                   )}
                 </Button>
 
-                <p className="text-xs text-slate-500 text-center mt-2">
+                <p className="text-xs text-white/50 text-center mt-2">
                   This will schedule the release and deduct the marketing budget from your funds.
                 </p>
               </CardContent>

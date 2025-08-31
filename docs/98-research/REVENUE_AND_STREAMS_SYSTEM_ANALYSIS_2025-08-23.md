@@ -311,7 +311,7 @@ const netProfitLoss = stats.revenue - stats.expenses;
   <div className="text-2xl font-bold text-emerald-600">
     ${stats.revenue.toLocaleString()}
   </div>
-  <div className="text-xs text-slate-500">Revenue</div>
+  <div className="text-xs text-white/50">Revenue</div>
 </div>
 
 {/* Streaming Performance */}  
@@ -319,7 +319,7 @@ const netProfitLoss = stats.revenue - stats.expenses;
   <div className="text-2xl font-bold text-blue-600">
     {(stats.streams / 1000).toFixed(1)}K
   </div>
-  <div className="text-xs text-slate-500">Streams</div>
+  <div className="text-xs text-white/50">Streams</div>
 </div>
 
 {/* Net Income */}
@@ -364,7 +364,7 @@ const categorizeChanges = (changes: any[]) => {
   <div key={index} className="flex items-center justify-between py-2">
     <div className="flex items-center space-x-2">
       <span className="text-lg">{getChangeIcon(change.type)}</span>
-      <span className="text-sm text-slate-700">{change.description}</span>
+      <span className="text-sm text-white/90">{change.description}</span>
     </div>
     <span className="text-sm font-medium text-emerald-600">
       +${Math.abs(change.amount).toLocaleString()}
@@ -395,12 +395,12 @@ interface Song {
 **Individual Song Display:**
 ```tsx
 {songs.map(song => (
-  <Card key={song.id} className="border border-slate-200">
+  <Card key={song.id} className="border border-[#4e324c]/50">
     <CardContent className="p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-medium text-slate-900">{song.title}</h4>
-          <div className="flex items-center space-x-4 text-xs text-slate-500">
+          <h4 className="font-medium text-white">{song.title}</h4>
+          <div className="flex items-center space-x-4 text-xs text-white/50">
             <span>Quality: {song.quality}</span>
             {song.totalStreams && (
               <span>

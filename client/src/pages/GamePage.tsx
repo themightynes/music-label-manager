@@ -63,7 +63,7 @@ export default function GamePage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-primary text-xl mb-4">🎵 Music Label Manager</div>
-          <div className="text-slate-600">
+          <div className="text-white/70">
             {isInitializing ? 'Initializing game...' : 'Please create or load a game to continue'}
           </div>
         </div>

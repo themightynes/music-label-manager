@@ -142,7 +142,7 @@ Select {availableSlots} more action{availableSlots !== 1 ? 's' : ''}
 
 **File:** `client/src/components/MonthPlanner.tsx` (Lines 227-230 - UPDATED)
 ```typescript
-<p className="text-sm md:text-base text-slate-600">
+<p className="text-sm md:text-base text-white/70">
   Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
   {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th slot unlocked!)</span>}
 </p>
@@ -150,13 +150,13 @@ Select {availableSlots} more action{availableSlots !== 1 ? 's' : ''}
 
 **File:** `client/src/components/ActionSelectionPool.tsx` (Line 134 - UPDATED)
 ```typescript
-<h3 className="text-lg font-semibold text-slate-900">Focus Actions Pool</h3>
+<h3 className="text-lg font-semibold text-white">Focus Actions Pool</h3>
 ```
 
 **File:** `client/src/components/SelectionSummary.tsx` (Lines 72-74, 80-82 - UPDATED)
 ```typescript
 // Header shows "Focus Slots" with "X/Y Used" badge
-<h3 className="text-lg font-semibold text-slate-900">Focus Slots</h3>
+<h3 className="text-lg font-semibold text-white">Focus Slots</h3>
 <Badge variant="secondary" className="text-sm">
   {usedSlots}/{totalSlots} Used
 </Badge>
@@ -169,7 +169,7 @@ Select {availableSlots} more action{availableSlots !== 1 ? 's' : ''}
       className={`flex-1 h-2 rounded-full transition-all ${
         index < usedSlots
           ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
-          : 'bg-slate-200'
+          : 'bg-[#65557c]/30'
       }`}
       title={`Slot ${index + 1}`}
     />

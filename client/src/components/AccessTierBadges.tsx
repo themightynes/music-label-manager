@@ -25,7 +25,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'None', 
           level: 0, 
-          color: 'bg-slate-400 text-white',
+          color: 'bg-[#65557c] text-white',
           description: 'No playlist connections',
           benefits: [],
           requirements: 'Starting level'
@@ -41,7 +41,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'Mid', 
           level: 2, 
-          color: 'bg-blue-500 text-white',
+          color: 'bg-[#A75A5B]/100 text-white',
           description: 'Medium-sized curated playlists',
           benefits: ['Mid-tier playlist access', '10K-100K follower playlists', 'Editorial consideration'],
           requirements: '35+ Reputation, 3 released projects'
@@ -49,7 +49,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'Flagship', 
           level: 3, 
-          color: 'bg-purple-500 text-white',
+          color: 'bg-[#791014] text-white',
           description: 'Major platform editorial playlists',
           benefits: ['Flagship playlist access', '100K+ follower playlists', 'Algorithm boost'],
           requirements: '60+ Reputation, 5 released projects, Major label status'
@@ -64,7 +64,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'None', 
           level: 0, 
-          color: 'bg-slate-400 text-white',
+          color: 'bg-[#65557c] text-white',
           description: 'No media connections',
           benefits: [],
           requirements: 'Starting level'
@@ -80,7 +80,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'Mid-Tier', 
           level: 2, 
-          color: 'bg-blue-500 text-white',
+          color: 'bg-[#A75A5B]/100 text-white',
           description: 'Regional magazines and radio',
           benefits: ['Regional press', 'Radio interviews', 'Magazine features'],
           requirements: '30+ Reputation, Consistent press coverage'
@@ -88,7 +88,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'Major', 
           level: 3, 
-          color: 'bg-purple-500 text-white',
+          color: 'bg-[#791014] text-white',
           description: 'National media and major publications',
           benefits: ['National press', 'TV appearances', 'Major publication features'],
           requirements: '55+ Reputation, Industry recognition'
@@ -103,7 +103,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'None', 
           level: 0, 
-          color: 'bg-slate-400 text-white',
+          color: 'bg-[#65557c] text-white',
           description: 'No venue connections',
           benefits: [],
           requirements: 'Starting level'
@@ -119,7 +119,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'Theaters', 
           level: 2, 
-          color: 'bg-blue-500 text-white',
+          color: 'bg-[#A75A5B]/100 text-white',
           description: 'Mid-sized theaters and venues',
           benefits: ['Theater venues (500-2000 capacity)', 'Regional touring', 'Higher ticket prices'],
           requirements: '40+ Reputation, Proven live draw'
@@ -127,7 +127,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
         { 
           name: 'Arenas', 
           level: 3, 
-          color: 'bg-purple-500 text-white',
+          color: 'bg-[#791014] text-white',
           description: 'Large arenas and stadiums',
           benefits: ['Arena venues (2000+ capacity)', 'National touring', 'Premium revenue'],
           requirements: '65+ Reputation, Established fanbase'
@@ -195,14 +195,14 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
   };
 
   return (
-    <div className="bg-gradient-to-r from-white via-slate-50 to-blue-50 rounded-2xl shadow-lg border-2 border-slate-200/50 p-4 md:p-6">
+    <div className="bg-[#23121c] rounded-[10px] shadow-lg border border-[#4e324c] p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-            <Key className="w-5 h-5 mr-2 text-primary" />
+          <h3 className="text-lg font-semibold text-white flex items-center">
+            <Key className="w-5 h-5 mr-2 text-[#A75A5B]" />
             Industry Access Tiers
           </h3>
-          <p className="text-sm text-slate-600">Build reputation to unlock new opportunities</p>
+          <p className="text-sm text-white/70">Build reputation to unlock new opportunities</p>
         </div>
       </div>
       
@@ -216,14 +216,14 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           const isExpanded = expandedTier === tierType;
 
           return (
-            <div key={tierType} className="bg-white/60 rounded-xl p-4 border border-white/50">
+            <div key={tierType} className="bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
               {/* Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
-                  <IconComponent className="w-4 h-4 text-primary" />
+                  <IconComponent className="w-4 h-4 text-[#A75A5B]" />
                   <div>
-                    <h4 className="text-sm font-medium text-slate-900">{tierData.name}</h4>
-                    <p className="text-xs text-slate-600">{tierData.description}</p>
+                    <h4 className="text-sm font-medium text-white">{tierData.name}</h4>
+                    <p className="text-xs text-white/70">{tierData.description}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -234,7 +234,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setExpandedTier(isExpanded ? null : tierType)}
-                    className="text-slate-400 hover:text-slate-600 p-1"
+                    className="text-white/50 hover:text-white/70 p-1"
                   >
                     <Info className="w-3 h-3" />
                   </Button>
@@ -245,48 +245,48 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
               {nextTier && (
                 <div className="mb-2">
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-slate-600">Progress to {nextTier.name}</span>
-                    <span className="font-medium text-slate-700">{Math.round(progress)}%</span>
+                    <span className="text-white/70">Progress to {nextTier.name}</span>
+                    <span className="font-medium text-white/90">{Math.round(progress)}%</span>
                   </div>
                   <Progress value={progress} className="h-1.5" />
                 </div>
               )}
 
               {/* Current Benefits */}
-              <div className="text-xs text-slate-600">
+              <div className="text-xs text-white/70">
                 <span className="font-medium">Current: </span>
                 {currentTier.level === 0 ? 'No special access' : currentTier.description}
               </div>
 
               {/* Expanded Details */}
               {isExpanded && (
-                <div className="mt-4 pt-3 border-t border-slate-200 space-y-3">
+                <div className="mt-4 pt-3 border-t border-[#4e324c] space-y-3">
                   {/* All Tiers Overview */}
                   <div>
-                    <h5 className="text-xs font-semibold text-slate-700 mb-2">Progression Path</h5>
+                    <h5 className="text-xs font-semibold text-white/90 mb-2">Progression Path</h5>
                     <div className="space-y-2">
                       {tierData.tiers.map((tier, index) => (
                         <div key={tier.name} className={`p-2 rounded border ${
-                          tier.name === currentTier.name ? 'border-blue-300 bg-blue-50' : 'border-slate-200'
+                          tier.name === currentTier.name ? 'border-[#A75A5B]/30 bg-[#A75A5B]/10' : 'border-[#4e324c]'
                         }`}>
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center space-x-2">
                               <Badge className={`text-xs ${tier.color}`}>{tier.name}</Badge>
                               {tier.name === currentTier.name && (
-                                <span className="text-xs text-blue-600 font-medium">Current</span>
+                                <span className="text-xs text-[#A75A5B] font-medium">Current</span>
                               )}
                             </div>
-                            {tier.level > currentTier.level && <Lock className="w-3 h-3 text-slate-400" />}
+                            {tier.level > currentTier.level && <Lock className="w-3 h-3 text-white/50" />}
                           </div>
-                          <p className="text-xs text-slate-600 mb-1">{tier.description}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-white/70 mb-1">{tier.description}</p>
+                          <p className="text-xs text-white/50">
                             <span className="font-medium">Requirements: </span>
                             {tier.requirements}
                           </p>
                           {tier.benefits.length > 0 && (
                             <div className="mt-1">
-                              <span className="text-xs font-medium text-slate-600">Benefits: </span>
-                              <ul className="text-xs text-slate-500 ml-2">
+                              <span className="text-xs font-medium text-white/70">Benefits: </span>
+                              <ul className="text-xs text-white/50 ml-2">
                                 {tier.benefits.map((benefit, idx) => (
                                   <li key={idx}>• {benefit}</li>
                                 ))}
@@ -302,7 +302,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
 
               {/* Next Tier Requirements */}
               {nextTier && !isExpanded && (
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-white/50">
                   <span className="font-medium">Next Unlock: </span>
                   {nextTier.requirements}
                 </div>

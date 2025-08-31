@@ -184,7 +184,9 @@ export function ProjectCreationModal({
   open = false, 
   onOpenChange 
 }: ProjectCreationModalProps) {
-  const [isOpen, setIsOpen] = useState(open);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
   const [selectedType, setSelectedType] = useState<'Single' | 'EP' | 'Mini-Tour' | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string>('');
   const [title, setTitle] = useState('');
@@ -344,12 +346,14 @@ export function ProjectCreationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button onClick={() => setIsOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Start Project
-        </Button>
-      </DialogTrigger>
+      {!onOpenChange && (
+        <DialogTrigger asChild>
+          <Button onClick={() => setIsOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Start Project
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
@@ -362,8 +366,8 @@ export function ProjectCreationModal({
             <div className="grid grid-cols-3 gap-4 mt-2">
               {loadingProjectTypes ? (
                 <div className="col-span-3 text-center py-8">
-                  <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
-                  <p className="text-slate-600">Loading project types...</p>
+                  <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                  <p className="text-white/70">Loading project types...</p>
                 </div>
               ) : projectTypesError ? (
                 <div className="col-span-3 text-center py-8">
@@ -386,17 +390,17 @@ export function ProjectCreationModal({
                     <Card 
                       key={type.id}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedType === type.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                        selectedType === type.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
                       }`}
                       onClick={() => handleTypeSelect(type.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-3">
-                          <type.icon className="w-6 h-6 text-blue-600" />
+                          <type.icon className="w-6 h-6 text-[#A75A5B]" />
                           <div>
                             <h3 className="font-semibold">{type.name}</h3>
-                            <p className="text-sm text-gray-600">{type.description}</p>
-                            <p className="text-xs text-gray-500">{budgetRange}</p>
+                            <p className="text-sm text-white/70">{type.description}</p>
+                            <p className="text-xs text-white/50">{budgetRange}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -449,22 +453,22 @@ export function ProjectCreationModal({
                         className={`cursor-pointer transition-all ${
                           !isUnlocked ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
                         } ${
-                          selectedProducerTier === tier.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                          selectedProducerTier === tier.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
                         }`}
                         onClick={() => isUnlocked && setSelectedProducerTier(tier.id)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <tier.icon className="w-5 h-5 text-blue-600" />
+                              <tier.icon className="w-5 h-5 text-[#A75A5B]" />
                               <div>
                                 <h4 className="font-semibold">{tier.name}</h4>
-                                <p className="text-sm text-gray-600">{tier.description}</p>
+                                <p className="text-sm text-white/70">{tier.description}</p>
                               </div>
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-semibold">+{tier.qualityBonus} Quality</p>
-                              <p className="text-xs text-gray-500">{tier.costMultiplier}x Cost</p>
+                              <p className="text-xs text-white/50">{tier.costMultiplier}x Cost</p>
                             </div>
                           </div>
                           {!isUnlocked && (
@@ -487,24 +491,24 @@ export function ProjectCreationModal({
                     <Card 
                       key={option.id}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedTimeInvestment === option.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                        selectedTimeInvestment === option.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
                       }`}
                       onClick={() => setSelectedTimeInvestment(option.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <option.icon className="w-5 h-5 text-blue-600" />
+                            <option.icon className="w-5 h-5 text-[#A75A5B]" />
                             <div>
                               <h4 className="font-semibold">{option.name}</h4>
-                              <p className="text-sm text-gray-600">{option.description}</p>
+                              <p className="text-sm text-white/70">{option.description}</p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-semibold">
                               {option.qualityModifier > 0 ? '+' : ''}{option.qualityModifier} Quality
                             </p>
-                            <p className="text-xs text-gray-500">{option.costMultiplier}x Cost</p>
+                            <p className="text-xs text-white/50">{option.costMultiplier}x Cost</p>
                           </div>
                         </div>
                       </CardContent>
@@ -529,74 +533,74 @@ export function ProjectCreationModal({
                 />
                 <div className="mt-2 text-sm space-y-1">
                   {selectedProjectType?.isRecording && (
-                    <div className="p-3 bg-slate-50 rounded-lg border">
-                      <h4 className="font-medium text-slate-700 mb-2">Cost Calculation:</h4>
+                    <div className="p-3 bg-[#3c252d]/20 rounded-lg border">
+                      <h4 className="font-medium text-white/90 mb-2">Cost Calculation:</h4>
                       <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
-                          <span className="text-slate-600">Budget per song:</span>
+                          <span className="text-white/70">Budget per song:</span>
                           <span className="font-mono">${budgetPerSong.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-600">Number of songs:</span>
+                          <span className="text-white/70">Number of songs:</span>
                           <span className="font-mono">{songCount} song{songCount > 1 ? 's' : ''}</span>
                         </div>
                         <div className="flex justify-between border-t pt-1">
-                          <span className="text-slate-600">Base cost:</span>
+                          <span className="text-white/70">Base cost:</span>
                           <span className="font-mono">${totalBaseCost.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-600">Producer ({producerMultiplier}x):</span>
+                          <span className="text-white/70">Producer ({producerMultiplier}x):</span>
                           <span className="font-mono">${Math.round(totalBaseCost * producerMultiplier).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-600">Time investment ({timeMultiplier}x):</span>
+                          <span className="text-white/70">Time investment ({timeMultiplier}x):</span>
                           <span className="font-mono">${finalTotalCost.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between border-t pt-1 font-semibold">
-                          <span className="text-slate-900">Final total cost:</span>
-                          <span className="font-mono text-blue-600">${finalTotalCost.toLocaleString()}</span>
+                          <span className="text-white">Final total cost:</span>
+                          <span className="font-mono text-[#A75A5B]">${finalTotalCost.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
                   )}
                   {!selectedProjectType?.isRecording && (
-                    <div className="text-gray-600">
+                    <div className="text-white/70">
                       <p>Total cost with multipliers: ${finalTotalCost.toLocaleString()}</p>
                     </div>
                   )}
                   {/* Quality Preview with Breakdown */}
-                  <div className="p-3 bg-blue-50 rounded-lg border">
-                    <h4 className="font-medium text-blue-700 mb-2">Quality Preview:</h4>
+                  <div className="p-3 bg-[#A75A5B]/10 rounded-lg border">
+                    <h4 className="font-medium text-[#A75A5B] mb-2">Quality Preview:</h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-blue-600">Base quality:</span>
+                        <span className="text-[#A75A5B]">Base quality:</span>
                         <span className="font-mono">{baseQuality}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-blue-600">Producer ({selectedProducerTier}):</span>
+                        <span className="text-[#A75A5B]">Producer ({selectedProducerTier}):</span>
                         <span className="font-mono">{producerBonus > 0 ? '+' : ''}{producerBonus}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-blue-600">Time ({selectedTimeInvestment}):</span>
+                        <span className="text-[#A75A5B]">Time ({selectedTimeInvestment}):</span>
                         <span className="font-mono">{timeBonus > 0 ? '+' : ''}{timeBonus}</span>
                       </div>
                       {selectedArtist && (
                         <div className="flex justify-between">
-                          <span className="text-blue-600">Artist mood:</span>
+                          <span className="text-[#A75A5B]">Artist mood:</span>
                           <span className="font-mono">{artistMoodBonus > 0 ? '+' : ''}{Math.round(artistMoodBonus)}</span>
                         </div>
                       )}
                       {selectedProjectType?.isRecording && (
                         <div className="flex justify-between">
-                          <span className="text-blue-600">Budget bonus:</span>
+                          <span className="text-[#A75A5B]">Budget bonus:</span>
                           <span className="font-mono font-semibold text-green-600">
                             {budgetBonus > 0 ? '+' : ''}{budgetBonus}
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between border-t pt-1">
-                        <span className="text-blue-700 font-medium">Total quality:</span>
-                        <span className="font-mono font-bold text-blue-700">{Math.round(estimatedQuality)}</span>
+                        <span className="text-[#A75A5B] font-medium">Total quality:</span>
+                        <span className="font-mono font-bold text-[#A75A5B]">{Math.round(estimatedQuality)}</span>
                       </div>
                     </div>
                   </div>

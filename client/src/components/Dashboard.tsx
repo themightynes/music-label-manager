@@ -8,24 +8,26 @@ import { DialogueModal } from './DialogueModal';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { MonthSummary } from './MonthSummary';
+import { ProjectCreationModal } from './ProjectCreationModal';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export function Dashboard() {
-  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, monthlyOutcome, createNewGame } = useGameStore();
+  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, monthlyOutcome, createNewGame, selectedActions, artists, createProject } = useGameStore();
   const [, setLocation] = useLocation();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showMonthSummary, setShowMonthSummary] = useState(false);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
 
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">No Game Loaded</h2>
-          <p className="text-slate-600">Please create a new game or load an existing one.</p>
+          <h2 className="text-2xl font-bold text-white mb-4">No Game Loaded</h2>
+          <p className="text-white/70">Please create a new game or load an existing one.</p>
         </div>
       </div>
     );
@@ -63,36 +65,64 @@ export function Dashboard() {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen font-sans">
+    <div className="min-h-screen font-sans">
       {/* Header - Responsive */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
+      <header className="bg-[#2C222A] shadow-sm border-b border-[#4e324c]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2 md:space-x-4">
               <div className="flex items-center space-x-2">
-                <i className="fas fa-music text-primary text-xl md:text-2xl"></i>
-                <h1 className="text-lg md:text-xl font-bold text-slate-900 hidden sm:block">Music Label Manager</h1>
-                <h1 className="text-lg font-bold text-slate-900 sm:hidden">MLM</h1>
+                <i className="fas fa-music text-[#A75A5B] text-xl md:text-2xl"></i>
+                <h1 className="text-lg md:text-xl font-bold text-white hidden sm:block">Music Label Manager</h1>
+                <h1 className="text-lg font-bold text-white sm:hidden">MLM</h1>
               </div>
-              <div className="flex items-center space-x-1 md:space-x-2 text-xs md:text-sm text-slate-600">
+              <div className="flex items-center space-x-1 md:space-x-2 text-xs md:text-sm text-white/70">
                 <span className="hidden md:inline">Month</span>
                 <span className="md:hidden">M</span>
-                <span className="font-mono font-semibold text-primary">{gameState.currentMonth || 1}</span>
+                <span className="font-mono font-semibold text-[#A75A5B]">{gameState.currentMonth || 1}</span>
                 <span className="hidden md:inline">of 36</span>
                 <span className="md:hidden">/36</span>
               </div>
             </div>
             
             <div className="flex items-center space-x-2 md:space-x-4">
-              <div className="flex items-center space-x-1 md:space-x-2 bg-slate-100 px-2 md:px-3 py-1 rounded-lg">
-                <i className="fas fa-dollar-sign text-success text-sm"></i>
-                <span className="font-mono font-semibold text-sm md:text-base">${(gameState.money || 0).toLocaleString()}</span>
+              <div className="flex items-center space-x-1 md:space-x-2 bg-[#23121c] border border-[#4e324c] px-2 md:px-3 py-1 rounded-[10px]">
+                <i className="fas fa-dollar-sign text-green-400 text-sm"></i>
+                <span className="font-mono font-semibold text-sm md:text-base text-white">${(gameState.money || 0).toLocaleString()}</span>
               </div>
+              
+              {/* Advance to Next Month Button */}
+              <Button
+                onClick={handleAdvanceMonth}
+                disabled={selectedActions.length === 0 || isAdvancingMonth}
+                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAdvancingMonth ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin text-sm"></i>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-forward text-sm"></i>
+                    <span>Advance Month</span>
+                  </>
+                )}
+              </Button>
+              
+              {/* Recording Session Button */}
+              <Button
+                onClick={() => setShowProjectModal(true)}
+                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2"
+              >
+                <i className="fas fa-plus text-sm"></i>
+                <span>Recording Session</span>
+              </Button>
               
               {/* Plan Release Button */}
               <Button
                 onClick={() => setLocation('/plan-release')}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 px-3 md:px-4 py-2 text-sm font-medium shadow-lg hidden sm:flex items-center space-x-2"
+                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2"
               >
                 <i className="fas fa-rocket text-sm"></i>
                 <span>Plan Release</span>
@@ -102,7 +132,7 @@ export function Dashboard() {
                 {/* Mobile Plan Release Button */}
                 <Button
                   onClick={() => setLocation('/plan-release')}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 p-2 sm:hidden"
+                  className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#2a1923] p-2 sm:hidden rounded-[10px]"
                   size="sm"
                   title="Plan Release"
                 >
@@ -113,7 +143,7 @@ export function Dashboard() {
                   variant="ghost"
                   size="sm"
                   onClick={handleNewGame}
-                  className="p-2 text-slate-600 hover:text-slate-900"
+                  className="p-2 text-white hover:text-white hover:bg-white/10"
                   title="Start New Game"
                 >
                   <i className="fas fa-plus text-sm"></i>
@@ -123,7 +153,7 @@ export function Dashboard() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowSaveModal(true)}
-                  className="p-2 text-slate-600 hover:text-slate-900"
+                  className="p-2 text-white hover:text-white hover:bg-white/10"
                   title="Save & Load Game"
                 >
                   <i className="fas fa-save text-sm"></i>
@@ -199,8 +229,8 @@ export function Dashboard() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="text-4xl mb-4">⚠️</div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Start New Game?</h3>
-              <p className="text-sm text-slate-600 mb-6">
+              <h3 className="text-lg font-semibold text-white mb-2">Start New Game?</h3>
+              <p className="text-sm text-white/70 mb-6">
                 This will permanently delete your current progress (Month {gameState.currentMonth}). Are you sure you want to continue?
               </p>
               <div className="flex space-x-3">
@@ -225,6 +255,22 @@ export function Dashboard() {
       )}
       
       <SaveGameModal open={showSaveModal} onOpenChange={setShowSaveModal} />
+      
+      {/* Project Creation Modal */}
+      {gameState && (
+        <ProjectCreationModal
+          gameState={gameState}
+          artists={artists}
+          onCreateProject={async (projectData) => {
+            await createProject(projectData);
+            setShowProjectModal(false);
+          }}
+          isCreating={false}
+          open={showProjectModal}
+          onOpenChange={setShowProjectModal}
+        />
+      )}
+      
       <ToastNotification />
     </div>
   );

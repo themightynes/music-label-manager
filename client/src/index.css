@@ -14,7 +14,7 @@
   --popover-foreground: hsl(210 25% 7.8431%);
   --primary: hsl(238.5 94.1% 67.1%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(251.1 91.7% 69.6%);
+  --secondary: #791014;
   --secondary-foreground: hsl(0 0% 100%);
   --success: hsl(142.1 76.2% 36.3%);
   --success-foreground: hsl(0 0% 100%);
@@ -69,7 +69,7 @@
   --popover-foreground: hsl(200 6.6667% 91.1765%);
   --primary: hsl(238.5 94.1% 67.1%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(251.1 91.7% 69.6%);
+  --secondary: #791014;
   --secondary-foreground: hsl(0 0% 100%);
   --success: hsl(142.1 76.2% 36.3%);
   --success-foreground: hsl(0 0% 100%);
@@ -132,12 +132,12 @@
     right: 0;
     bottom: 0;
     z-index: -1;
-    background-image: url('/background.png');
+    background-image: url('/plum_background.880Z.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    opacity: 0.15;
+    opacity: 1;
   }
 
   .font-mono {

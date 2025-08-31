@@ -216,29 +216,29 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
 
 
   return (
-    <Card className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 rounded-2xl shadow-lg border-2 border-blue-200/50">
+    <Card className="shadow-lg">
       <CardContent className="p-4 md:p-6 lg:p-8">
         <div className="flex items-center space-x-4 mb-6">
-          <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-[#A75A5B] to-[#8B4A6C] rounded-xl flex items-center justify-center shadow-lg">
             <i className="fas fa-calendar-alt text-white text-xl md:text-2xl"></i>
           </div>
           <div className="flex-1">
-            <h2 className="text-xl md:text-2xl font-bold text-slate-900">Month {gameState.currentMonth} Focus Strategy</h2>
-            <p className="text-sm md:text-base text-slate-600">
+            <h2 className="text-xl md:text-2xl font-bold text-white">Month {gameState.currentMonth} Focus Strategy</h2>
+            <p className="text-sm md:text-base text-white/70">
               Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
               {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th slot unlocked!)</span>}
             </p>
           </div>
           <div className="hidden md:block" title="Focus Slots are your monthly action points. Each strategic action requires one focus slot.">
-            <i className="fas fa-info-circle text-slate-400 hover:text-slate-600 cursor-help"></i>
+            <i className="fas fa-info-circle text-white/50 hover:text-white/70 cursor-help"></i>
           </div>
         </div>
 
         {/* Project Status Overview */}
         {projects.length > 0 && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-200">
-            <h4 className="text-sm font-semibold text-slate-800 mb-3 flex items-center">
-              <i className="fas fa-project-diagram text-blue-600 mr-2"></i>
+          <div className="mb-6 p-4 bg-[#3c252d]/[0.66] rounded-[8px] border border-[#65557c]">
+            <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+              <i className="fas fa-project-diagram text-[#A75A5B] mr-2"></i>
               Project Pipeline Status
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -259,8 +259,8 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                 
                 const stageColor = {
                   planning: 'text-yellow-600',
-                  writing: 'text-blue-600',
-                  recording: 'text-purple-600',
+                  writing: 'text-[#A75A5B]',
+                  recording: 'text-[#791014]',
                   recorded: 'text-green-600'
                 }[stage];
 
@@ -276,10 +276,10 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                     <div className={`${stageColor} mb-1`}>
                       <i className={`${stageIcon} text-lg`}></i>
                     </div>
-                    <div className="text-xs font-medium text-slate-700">{stageDisplayName}</div>
-                    <div className="text-lg font-bold text-slate-900">{stageProjects.length}</div>
+                    <div className="text-xs font-medium text-white/90">{stageDisplayName}</div>
+                    <div className="text-lg font-bold text-white">{stageProjects.length}</div>
                     {stageProjects.length > 0 && (
-                      <div className="text-xs text-slate-500 mt-1">
+                      <div className="text-xs text-white/50 mt-1">
                         {stageProjects.slice(0, 2).map(p => p.title).join(', ')}
                         {stageProjects.length > 2 && ` +${stageProjects.length - 2} more`}
                       </div>
@@ -291,8 +291,8 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
             
             {/* Progress indicators for active projects */}
             {projects.filter(p => p.stage !== 'recorded' && p.stage !== 'released').length > 0 && (
-              <div className="mt-4 pt-3 border-t border-slate-200">
-                <div className="text-xs font-medium text-slate-700 mb-2">Active Project Progress</div>
+              <div className="mt-4 pt-3 border-t border-[#4e324c]">
+                <div className="text-xs font-medium text-white/90 mb-2">Active Project Progress</div>
                 {projects.filter(p => p.stage !== 'recorded' && p.stage !== 'released').slice(0, 3).map(project => {
                   // Map legacy stages to new stages for progress calculation
                   const currentStage = project.stage || 'planning';
@@ -306,8 +306,8 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                     <div key={project.id} className="flex items-center space-x-3 mb-2">
                       <div className="flex-1">
                         <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-medium text-slate-700">{project.title}</span>
-                          <span className="text-slate-500">{Math.round(progress)}%</span>
+                          <span className="font-medium text-white/90">{project.title}</span>
+                          <span className="text-white/50">{Math.round(progress)}%</span>
                         </div>
                         <Progress value={progress} className="h-1.5" />
                       </div>
@@ -320,14 +320,14 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
         )}
 
         {/* Focus Action Selection - Split Panel Design */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-white/50 shadow-sm mb-4 md:mb-6">
+        <div className="bg-[#3c252d]/[0.66] rounded-[8px] border border-[#65557c] shadow-sm mb-4 md:mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
             {/* Left Panel - Action Selection Pool */}
             <div className="lg:col-span-2">
               {loading ? (
                 <div className="text-center py-8">
-                  <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
-                  <p className="text-slate-600">Loading available actions...</p>
+                  <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                  <p className="text-white/70">Loading available actions...</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-8">

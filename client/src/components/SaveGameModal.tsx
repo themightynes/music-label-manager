@@ -177,21 +177,21 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader className="border-b border-slate-200 pb-4">
-          <DialogTitle className="text-lg font-semibold text-slate-900">Save & Load Game</DialogTitle>
+        <DialogHeader className="border-b border-[#4e324c] pb-4">
+          <DialogTitle className="text-lg font-semibold text-white">Save & Load Game</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-4">
           {/* Existing saves */}
           {(saves as any[]).map((save: any) => (
-            <div key={save.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50">
+            <div key={save.id} className="border border-[#4e324c] rounded-lg p-4 hover:bg-[#A75A5B]/10">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="font-medium text-slate-900">{save.name}</div>
-                  <div className="text-xs text-slate-600">
+                  <div className="font-medium text-white">{save.name}</div>
+                  <div className="text-xs text-white/70">
                     Month {save.month} • ${gameState?.money?.toLocaleString() || '0'}
                   </div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-white/50">
                     Saved {formatDate(save.updatedAt)}
                   </div>
                 </div>
@@ -221,9 +221,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
           {/* Empty slots */}
           {Array.from({ length: Math.max(0, 3 - (saves as any[]).length) }).map((_, index) => (
-            <div key={`empty-${index}`} className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
-              <i className="fas fa-plus text-slate-400 text-xl mb-2"></i>
-              <p className="text-sm text-slate-500">Empty Slot</p>
+            <div key={`empty-${index}`} className="border-2 border-dashed border-[#4e324c] rounded-lg p-4 text-center">
+              <i className="fas fa-plus text-white/50 text-xl mb-2"></i>
+              <p className="text-sm text-white/50">Empty Slot</p>
             </div>
           ))}
 
@@ -238,26 +238,26 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
             <Button
               onClick={handleSave}
               disabled={!newSaveName.trim() || saving}
-              className="w-full bg-primary text-white hover:bg-indigo-700"
+              className="w-full bg-[#A75A5B] text-white hover:bg-[#8B4A6C]"
             >
               {saving ? 'Saving...' : 'Save Game'}
             </Button>
           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-200 flex justify-between">
+        <div className="p-6 border-t border-[#4e324c] flex justify-between">
           <div className="flex space-x-3">
             <Button
               variant="ghost"
               onClick={handleExport}
-              className="text-primary hover:text-indigo-700 font-medium"
+              className="text-[#A75A5B] hover:text-[#8B4A6C] font-medium"
             >
               Export JSON
             </Button>
             <Button
               variant="ghost"
               onClick={handleImport}
-              className="text-slate-600 hover:text-slate-900 font-medium"
+              className="text-white/70 hover:text-white font-medium"
             >
               Import JSON
             </Button>
@@ -266,7 +266,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="text-slate-600 hover:text-slate-900"
+              className="text-white/70 hover:text-white"
             >
               Cancel
             </Button>

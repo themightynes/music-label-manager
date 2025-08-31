@@ -27,9 +27,9 @@ export function MobilePlanReleaseLayout({
   const STEP_NAMES = ['Artist', 'Songs', 'Marketing', 'Review'];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#3c252d]/10">
       {/* Mobile Header with Progress */}
-      <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
+      <header className="bg-white shadow-sm border-b border-[#4e324c]/50 sticky top-0 z-40">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <Button
@@ -43,7 +43,7 @@ export function MobilePlanReleaseLayout({
             </Button>
             
             {/* Money indicator */}
-            <div className="flex items-center space-x-2 bg-slate-100 px-3 py-1 rounded-lg text-sm">
+            <div className="flex items-center space-x-2 bg-[#65557c]/20 px-3 py-1 rounded-lg text-sm">
               <DollarSign className="w-4 h-4 text-green-600" />
               <span className="font-mono font-semibold">${(gameState?.money || 0).toLocaleString()}</span>
             </div>
@@ -52,11 +52,11 @@ export function MobilePlanReleaseLayout({
           {/* Progress indicator */}
           <div className="flex items-center space-x-2">
             <div className="flex-1">
-              <div className="flex justify-between text-xs text-slate-600 mb-1">
+              <div className="flex justify-between text-xs text-white/70 mb-1">
                 <span>Step {currentStep} of {totalSteps}</span>
                 <span>{STEP_NAMES[currentStep - 1]}</span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-2">
+              <div className="w-full bg-[#65557c]/30 rounded-full h-2">
                 <div 
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(currentStep / totalSteps) * 100}%` }}
@@ -89,7 +89,7 @@ export function MobilePlanReleaseLayout({
       </main>
 
       {/* Floating action area */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#4e324c]/50 p-4">
         <MobileActionArea 
           currentStep={currentStep}
           totalSteps={totalSteps}
@@ -112,31 +112,31 @@ export function MobileArtistGrid({ artists, selectedArtist, onSelect }) {
           className={`p-4 border rounded-lg transition-all ${
             selectedArtist === artist.id 
               ? 'border-blue-500 bg-blue-50' 
-              : 'border-slate-200'
+              : 'border-[#4e324c]/50'
           }`}
           onClick={() => onSelect(artist.id)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-slate-900">{artist.name}</h3>
+              <h3 className="font-semibold text-white">{artist.name}</h3>
               <Badge variant="outline" className="text-xs mt-1">{artist.genre}</Badge>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-400" />
+            <ChevronRight className="w-5 h-5 text-white/40" />
           </div>
           
           {/* Compact stats */}
           <div className="mt-3 grid grid-cols-3 gap-3 text-center text-sm">
             <div>
               <div className="font-semibold text-green-600">{artist.readySongs}</div>
-              <div className="text-xs text-slate-500">Songs</div>
+              <div className="text-xs text-white/50">Songs</div>
             </div>
             <div>
               <div className="font-semibold">{artist.mood}%</div>
-              <div className="text-xs text-slate-500">Mood</div>
+              <div className="text-xs text-white/50">Mood</div>
             </div>
             <div>
               <div className="font-semibold">{artist.loyalty}%</div>
-              <div className="text-xs text-slate-500">Loyalty</div>
+              <div className="text-xs text-white/50">Loyalty</div>
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@ export function MobileSongList({ songs, selectedSongs, onToggle }) {
           <div
             key={song.id}
             className={`p-4 border rounded-lg transition-all ${
-              isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200'
+              isSelected ? 'border-blue-500 bg-blue-50' : 'border-[#4e324c]/50'
             }`}
             onClick={() => onToggle(song.id)}
           >
@@ -163,14 +163,14 @@ export function MobileSongList({ songs, selectedSongs, onToggle }) {
               {/* Large touch target for checkbox */}
               <div className="pt-1">
                 <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                  isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                  isSelected ? 'bg-blue-600 border-blue-600' : 'border-[#65557c]/60'
                 }`}>
                   {isSelected && <div className="w-3 h-3 bg-white rounded-sm" />}
                 </div>
               </div>
               
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-slate-900 truncate">{song.title}</h4>
+                <h4 className="font-semibold text-white truncate">{song.title}</h4>
                 
                 {/* Stacked info for mobile */}
                 <div className="mt-2 space-y-1">
@@ -181,7 +181,7 @@ export function MobileSongList({ songs, selectedSongs, onToggle }) {
                     <Badge variant="outline" className="text-xs">{song.mood}</Badge>
                   </div>
                   
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-white/70">
                     <div>{song.estimatedStreams.toLocaleString()} streams</div>
                     <div>${song.estimatedRevenue.toLocaleString()} revenue</div>
                   </div>
@@ -217,10 +217,10 @@ export function MobileMarketingBudget({ channels, budgets, setBudgets, gameState
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <i className={`${channel.icon} text-lg ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <i className={`${channel.icon} text-lg ${isActive ? 'text-blue-600' : 'text-white/40'}`} />
                   <div>
-                    <h5 className="font-medium text-slate-900">{channel.name}</h5>
-                    <p className="text-xs text-slate-500">{channel.targetAudience}</p>
+                    <h5 className="font-medium text-white">{channel.name}</h5>
+                    <p className="text-xs text-white/50">{channel.targetAudience}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -235,7 +235,7 @@ export function MobileMarketingBudget({ channels, budgets, setBudgets, gameState
             {/* Expanded controls */}
             {isExpanded && (
               <div className="p-4 border-t bg-white">
-                <p className="text-sm text-slate-600 mb-4">{channel.description}</p>
+                <p className="text-sm text-white/70 mb-4">{channel.description}</p>
                 
                 {/* Large touch-friendly slider */}
                 <div className="space-y-4">
@@ -296,7 +296,7 @@ function MobileBudgetSlider({ value, min, max, step, onChange }) {
   return (
     <div className="space-y-3">
       <div className="flex justify-between text-sm">
-        <span className="text-slate-600">Budget</span>
+        <span className="text-white/70">Budget</span>
         <span className="font-mono font-semibold">${value.toLocaleString()}</span>
       </div>
       
@@ -309,9 +309,9 @@ function MobileBudgetSlider({ value, min, max, step, onChange }) {
           step={step}
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value))}
-          className="w-full h-8 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb-large"
+          className="w-full h-8 bg-[#65557c]/30 rounded-lg appearance-none cursor-pointer slider-thumb-large"
         />
-        <div className="flex justify-between text-xs text-slate-500 mt-1">
+        <div className="flex justify-between text-xs text-white/50 mt-1">
           <span>${min.toLocaleString()}</span>
           <span>${max.toLocaleString()}</span>
         </div>
@@ -326,34 +326,34 @@ function MobilePreviewContent({ metrics }) {
     <div className="space-y-4 pt-4">
       {/* Key metrics in large, readable format */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="text-center p-4 bg-slate-50 rounded-lg">
+        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
           <div className="text-2xl font-bold text-blue-600">
             {metrics.estimatedStreams?.toLocaleString() || '0'}
           </div>
-          <div className="text-sm text-slate-600">Est. Streams</div>
+          <div className="text-sm text-white/70">Est. Streams</div>
         </div>
-        <div className="text-center p-4 bg-slate-50 rounded-lg">
+        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
           <div className="text-2xl font-bold text-green-600">
             ${metrics.estimatedRevenue?.toLocaleString() || '0'}
           </div>
-          <div className="text-sm text-slate-600">Est. Revenue</div>
+          <div className="text-sm text-white/70">Est. Revenue</div>
         </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
-        <div className="text-center p-4 bg-slate-50 rounded-lg">
+        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
           <div className="text-2xl font-bold text-red-600">
             -${metrics.totalMarketingCost?.toLocaleString() || '0'}
           </div>
-          <div className="text-sm text-slate-600">Marketing Cost</div>
+          <div className="text-sm text-white/70">Marketing Cost</div>
         </div>
-        <div className="text-center p-4 bg-slate-50 rounded-lg">
+        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
           <div className={`text-2xl font-bold ${
             (metrics.projectedROI || 0) > 0 ? 'text-green-600' : 'text-red-600'
           }`}>
             {(metrics.projectedROI || 0) > 0 ? '+' : ''}{metrics.projectedROI || 0}%
           </div>
-          <div className="text-sm text-slate-600">ROI</div>
+          <div className="text-sm text-white/70">ROI</div>
         </div>
       </div>
       

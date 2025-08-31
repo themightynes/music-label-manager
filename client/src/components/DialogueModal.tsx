@@ -41,7 +41,7 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
             <DialogTitle>Loading Dialogue</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center p-8">
-            <div className="text-slate-500">Loading dialogue...</div>
+            <div className="text-white/50">Loading dialogue...</div>
           </div>
         </DialogContent>
       </Dialog>
@@ -56,7 +56,7 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
             <DialogTitle>Dialogue Unavailable</DialogTitle>
           </DialogHeader>
           <div className="text-center py-8">
-            <p className="text-slate-500">Dialogue content not available.</p>
+            <p className="text-white/50">Dialogue content not available.</p>
             <Button
               variant="outline"
               className="mt-4"
@@ -98,23 +98,23 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
-        <DialogHeader className="border-b border-slate-200 pb-4">
+        <DialogHeader className="border-b border-[#4e324c] pb-4">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-[#A75A5B] rounded-lg flex items-center justify-center">
               <i className={`${roleInfo?.icon || 'fas fa-user'} text-white text-xl`}></i>
             </div>
             <div>
-              <DialogTitle className="text-lg font-semibold text-slate-900">
+              <DialogTitle className="text-lg font-semibold text-white">
                 Meeting with {roleInfo?.name || roleData.name}
               </DialogTitle>
-              <p className="text-sm text-slate-600">Industry Professional</p>
+              <p className="text-sm text-white/70">Industry Professional</p>
             </div>
           </div>
         </DialogHeader>
 
         <div className="p-6">
           <div className="mb-6">
-            <p className="text-slate-700 leading-relaxed">
+            <p className="text-white/90 leading-relaxed">
               {meetingData.prompt}
             </p>
           </div>
@@ -124,12 +124,12 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
               <Button
                 key={choice.id}
                 variant="outline"
-                className="w-full text-left p-4 hover:bg-slate-50 hover:border-primary group h-auto"
+                className="w-full text-left p-4 hover:bg-[#A75A5B]/10 hover:border-[#A75A5B] group h-auto"
                 onClick={() => handleChoiceSelect(choice.id)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm text-slate-900 group-hover:text-primary transition-colors">
+                    <p className="text-sm text-white group-hover:text-[#A75A5B] transition-colors">
                       {choice.label}
                     </p>
                   </div>

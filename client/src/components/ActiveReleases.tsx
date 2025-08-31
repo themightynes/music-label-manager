@@ -103,8 +103,8 @@ export function ActiveReleases() {
 
   const getReleaseTypeBadge = (type: string) => {
     const typeConfig = {
-      single: { label: 'Single', color: 'bg-blue-100 text-blue-800' },
-      ep: { label: 'EP', color: 'bg-purple-100 text-purple-800' },
+      single: { label: 'Single', color: 'bg-[#A75A5B]/20 text-[#A75A5B]' },
+      ep: { label: 'EP', color: 'bg-[#791014]/10 text-[#791014]' },
       album: { label: 'Album', color: 'bg-green-100 text-green-800' },
       compilation: { label: 'Compilation', color: 'bg-orange-100 text-orange-800' }
     };
@@ -117,11 +117,11 @@ export function ActiveReleases() {
     const statusConfig = {
       planned: { label: 'Planned', color: 'bg-yellow-100 text-yellow-800' },
       released: { label: 'Released', color: 'bg-green-100 text-green-800' },
-      catalog: { label: 'Catalog', color: 'bg-gray-100 text-gray-800' }
+      catalog: { label: 'Catalog', color: 'bg-gray-100 text-white' }
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || 
-                   { label: status, color: 'bg-gray-100 text-gray-800' };
+                   { label: status, color: 'bg-gray-100 text-white' };
     return <Badge className={config.color}>{config.label}</Badge>;
   };
 
@@ -140,13 +140,13 @@ export function ActiveReleases() {
   const currentMonth = gameState?.currentMonth || 1;
 
   return (
-    <Card className="bg-white shadow-sm">
+    <Card className="shadow-sm">
       <CardContent className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Releases</h3>
-            <p className="text-sm text-slate-600">Planned and released music</p>
+            <h3 className="text-lg font-semibold text-white">Releases</h3>
+            <p className="text-sm text-white/70">Planned and released music</p>
           </div>
           
           {/* State Synchronization Indicator */}
@@ -158,7 +158,7 @@ export function ActiveReleases() {
               </div>
             )}
             {stateSync === 'syncing' && (
-              <div className="flex items-center space-x-1 text-blue-600">
+              <div className="flex items-center space-x-1 text-[#A75A5B]">
                 <Clock className="w-4 h-4 animate-spin" />
                 <span className="text-xs">Syncing...</span>
               </div>
@@ -173,12 +173,12 @@ export function ActiveReleases() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg mb-6">
+        <div className="flex space-x-1 bg-[#3c252d]/30 p-1 rounded-lg mb-6">
           <button
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === 'upcoming' 
-                ? 'bg-white text-slate-900 shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm' 
+                : 'text-white/70 hover:text-white'
             }`}
             onClick={() => setActiveTab('upcoming')}
           >
@@ -187,8 +187,8 @@ export function ActiveReleases() {
           <button
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === 'released' 
-                ? 'bg-white text-slate-900 shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm' 
+                : 'text-white/70 hover:text-white'
             }`}
             onClick={() => setActiveTab('released')}
           >
@@ -202,8 +202,8 @@ export function ActiveReleases() {
             <>
               {upcomingReleases.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-slate-500 mb-2">No upcoming releases planned</p>
-                  <p className="text-sm text-slate-400">Use Plan Release to schedule new releases</p>
+                  <p className="text-white/50 mb-2">No upcoming releases planned</p>
+                  <p className="text-sm text-white/50">Use Plan Release to schedule new releases</p>
                 </div>
               ) : (
                 upcomingReleases.map(release => (
@@ -223,8 +223,8 @@ export function ActiveReleases() {
             <>
               {releasedReleases.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-slate-500 mb-2">No releases yet</p>
-                  <p className="text-sm text-slate-400">Complete planned releases to see them here</p>
+                  <p className="text-white/50 mb-2">No releases yet</p>
+                  <p className="text-sm text-white/50">Complete planned releases to see them here</p>
                 </div>
               ) : (
                 releasedReleases.map(release => (

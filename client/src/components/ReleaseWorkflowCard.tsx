@@ -151,14 +151,14 @@ export function ReleaseWorkflowCard({
       case 'pre-campaign':
         return {
           icon: Clock,
-          color: 'text-slate-500 bg-slate-100',
+          color: 'text-white/50 bg-[#3c252d]/30',
           label: 'Campaign Planned',
           description: 'Release strategy ready to execute'
         };
       case 'lead-single-active':
         return {
           icon: Play,
-          color: 'text-blue-600 bg-blue-100',
+          color: 'text-[#A75A5B] bg-[#A75A5B]/20',
           label: 'Lead Single Live',
           description: 'Building momentum for main release'
         };
@@ -195,7 +195,7 @@ export function ReleaseWorkflowCard({
     
     return (
       <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+        <h4 className="text-sm font-semibold text-white/90 flex items-center space-x-2">
           <Award className="w-4 h-4" />
           <span>Campaign Summary</span>
         </h4>
@@ -206,12 +206,12 @@ export function ReleaseWorkflowCard({
               <span className="text-lg">{campaignOutcome.icon}</span>
               <div>
                 <div className="font-medium text-sm capitalize">{campaignOutcome.tier.replace('_', ' ')}</div>
-                <div className="text-xs text-slate-600">{campaignOutcome.description}</div>
+                <div className="text-xs text-white/70">{campaignOutcome.description}</div>
               </div>
             </div>
             <div className="text-right">
               <div className="text-sm font-semibold">{campaignData.strategy === 'lead_single' ? 'Lead Single Strategy' : 'Direct Release'}</div>
-              <div className="text-xs text-slate-500">{campaignData.campaignDuration} month campaign</div>
+              <div className="text-xs text-white/50">{campaignData.campaignDuration} month campaign</div>
             </div>
           </div>
           
@@ -224,7 +224,7 @@ export function ReleaseWorkflowCard({
               
               {/* Marketing breakdown - show if there's a lead single OR if we have breakdown data */}
               {(campaignData.leadSingleBudget > 0 || campaignData.mainBudget > 0) && (
-                <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                <div className="mt-1 space-y-0.5 text-xs text-white/50">
                   {campaignData.leadSingleBudget > 0 && (
                     <div className="flex justify-between">
                       <span className="ml-2">Lead Single Marketing:</span>
@@ -263,24 +263,24 @@ export function ReleaseWorkflowCard({
     
     return (
       <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+        <h4 className="text-sm font-semibold text-white/90 flex items-center space-x-2">
           <Music className="w-4 h-4" />
           <span>Track Performance</span>
         </h4>
         
         {trackBreakdown.leadSingle && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="p-3 bg-[#A75A5B]/10 border border-[#A75A5B]/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Star className="w-4 h-4 text-blue-600" />
+                <Star className="w-4 h-4 text-[#A75A5B]" />
                 <div>
                   <div className="font-medium text-sm">{trackBreakdown.leadSingle.song.title}</div>
-                  <div className="text-xs text-blue-600">Lead Single</div>
+                  <div className="text-xs text-[#A75A5B]">Lead Single</div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-sm font-mono font-semibold">{formatStreams(trackBreakdown.leadSingle.streams)}</div>
-                <div className="text-xs text-slate-500">{trackBreakdown.leadSingle.contributionPercentage.toFixed(0)}% of revenue</div>
+                <div className="text-xs text-white/50">{trackBreakdown.leadSingle.contributionPercentage.toFixed(0)}% of revenue</div>
               </div>
             </div>
           </div>
@@ -288,19 +288,19 @@ export function ReleaseWorkflowCard({
         
         {trackBreakdown.mainTracks.length > 0 && (
           <div className="space-y-2">
-            <div className="text-xs text-slate-500 font-medium">All Tracks:</div>
+            <div className="text-xs text-white/50 font-medium">All Tracks:</div>
             {trackBreakdown.mainTracks.slice(0, showDetailedAnalytics ? undefined : 3).map((track, index) => (
-              <div key={track.song.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+              <div key={track.song.id} className="flex items-center justify-between p-2 bg-[#3c252d]/20 rounded">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-slate-400 w-4">#{track.rank}</span>
+                  <span className="text-xs text-white/50 w-4">#{track.rank}</span>
                   <div>
                     <div className="text-sm font-medium">{track.song.title}</div>
-                    <div className="text-xs text-slate-500">Quality: {track.song.quality || 'N/A'}</div>
+                    <div className="text-xs text-white/50">Quality: {track.song.quality || 'N/A'}</div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-mono">{formatStreams(track.streams)}</div>
-                  <div className="text-xs text-slate-500">{formatCurrency(track.revenue)}</div>
+                  <div className="text-xs text-white/50">{formatCurrency(track.revenue)}</div>
                 </div>
               </div>
             ))}
@@ -308,7 +308,7 @@ export function ReleaseWorkflowCard({
             {trackBreakdown.mainTracks.length > 3 && (
               <button
                 onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
-                className="w-full text-xs text-slate-500 hover:text-slate-700 flex items-center justify-center space-x-1 py-1"
+                className="w-full text-xs text-white/50 hover:text-white/90 flex items-center justify-center space-x-1 py-1"
               >
                 {showDetailedAnalytics ? (
                   <><ChevronUp className="w-3 h-3" /><span>Show Less</span></>
@@ -330,35 +330,35 @@ export function ReleaseWorkflowCard({
     
     return (
       <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+        <h4 className="text-sm font-semibold text-white/90 flex items-center space-x-2">
           <BarChart3 className="w-4 h-4" />
           <span>Performance Analytics</span>
         </h4>
         
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-2 bg-slate-50 rounded">
-            <div className="text-xs text-slate-500">Campaign Effectiveness</div>
+          <div className="p-2 bg-[#3c252d]/20 rounded">
+            <div className="text-xs text-white/50">Campaign Effectiveness</div>
             <div className={`text-sm font-semibold ${effectivenessStyle.color.split(' ')[0]}`}>
               {effectivenessStyle.label}
             </div>
           </div>
           
-          <div className="p-2 bg-slate-50 rounded">
-            <div className="text-xs text-slate-500">Cost Per Stream</div>
+          <div className="p-2 bg-[#3c252d]/20 rounded">
+            <div className="text-xs text-white/50">Cost Per Stream</div>
             <div className="text-sm font-mono font-semibold">
               ${performanceMetrics.costPerStream.toFixed(3)}
             </div>
           </div>
           
-          <div className="p-2 bg-slate-50 rounded">
-            <div className="text-xs text-slate-500">Avg Revenue/Track</div>
+          <div className="p-2 bg-[#3c252d]/20 rounded">
+            <div className="text-xs text-white/50">Avg Revenue/Track</div>
             <div className="text-sm font-mono font-semibold">
               {formatCurrency(performanceMetrics.averageRevenuePerTrack)}
             </div>
           </div>
           
-          <div className="p-2 bg-slate-50 rounded">
-            <div className="text-xs text-slate-500">Stream Distribution</div>
+          <div className="p-2 bg-[#3c252d]/20 rounded">
+            <div className="text-xs text-white/50">Stream Distribution</div>
             <div className="text-sm font-semibold capitalize">
               {performanceMetrics.streamDistribution.replace('_', ' ')}
             </div>
@@ -370,7 +370,7 @@ export function ReleaseWorkflowCard({
 
   return (
     <Card className={`transition-all ${
-      timeline.phase === 'lead-single-active' ? 'ring-2 ring-blue-200 bg-blue-50/30' : ''
+      timeline.phase === 'lead-single-active' ? 'ring-2 ring-[#A75A5B]/20 bg-[#A75A5B]/10/30' : ''
     }`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -381,7 +381,7 @@ export function ReleaseWorkflowCard({
                 {release.type.toUpperCase()}
               </Badge>
             </CardTitle>
-            <p className="text-sm text-slate-600 mt-1">by {artistName}</p>
+            <p className="text-sm text-white/70 mt-1">by {artistName}</p>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -394,14 +394,14 @@ export function ReleaseWorkflowCard({
 
       <CardContent className="space-y-4">
         {/* Phase Status */}
-        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-[#3c252d]/20 rounded-lg">
           <div>
-            <div className="font-medium text-sm text-slate-900">{phaseInfo.label}</div>
-            <div className="text-xs text-slate-600">{phaseInfo.description}</div>
+            <div className="font-medium text-sm text-white">{phaseInfo.label}</div>
+            <div className="text-xs text-white/70">{phaseInfo.description}</div>
           </div>
           <div className="text-right">
             <div className="text-sm font-mono font-semibold">{Math.round(timeline.progress)}%</div>
-            <div className="text-xs text-slate-500">Complete</div>
+            <div className="text-xs text-white/50">Complete</div>
           </div>
         </div>
 
@@ -411,7 +411,7 @@ export function ReleaseWorkflowCard({
             value={timeline.progress} 
             className="h-2" 
           />
-          <div className="text-xs text-slate-500 text-center">
+          <div className="text-xs text-white/50 text-center">
             Campaign Progress
           </div>
         </div>
@@ -419,7 +419,7 @@ export function ReleaseWorkflowCard({
         {/* Campaign Timeline */}
         {hasLeadSingle && (
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+            <h4 className="text-sm font-semibold text-white/90 flex items-center space-x-2">
               <Target className="w-4 h-4" />
               <span>Campaign Timeline</span>
             </h4>
@@ -431,14 +431,14 @@ export function ReleaseWorkflowCard({
                   ? 'bg-green-50 border border-green-200' 
                   : currentMonth === leadSingleStrategy.leadSingleReleaseMonth - 1
                   ? 'bg-yellow-50 border border-yellow-200'
-                  : 'bg-slate-50'
+                  : 'bg-[#3c252d]/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                   currentMonth >= leadSingleStrategy.leadSingleReleaseMonth 
                     ? 'bg-green-500' 
                     : currentMonth === leadSingleStrategy.leadSingleReleaseMonth - 1
                     ? 'bg-yellow-500'
-                    : 'bg-slate-300'
+                    : 'bg-[#65557c]/60'
                 }`} />
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
@@ -448,7 +448,7 @@ export function ReleaseWorkflowCard({
                       Month {leadSingleStrategy.leadSingleReleaseMonth}
                     </Badge>
                   </div>
-                  <div className="text-xs text-slate-600 mt-1">
+                  <div className="text-xs text-white/70 mt-1">
                     Build anticipation and test market reception
                   </div>
                 </div>
@@ -456,7 +456,7 @@ export function ReleaseWorkflowCard({
 
               {/* Arrow */}
               <div className="flex justify-center">
-                <ArrowRight className="w-4 h-4 text-slate-400" />
+                <ArrowRight className="w-4 h-4 text-white/50" />
               </div>
 
               {/* Main Release Phase */}
@@ -465,14 +465,14 @@ export function ReleaseWorkflowCard({
                   ? 'bg-green-50 border border-green-200' 
                   : currentMonth === release.releaseMonth - 1
                   ? 'bg-yellow-50 border border-yellow-200'
-                  : 'bg-slate-50'
+                  : 'bg-[#3c252d]/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                   currentMonth >= release.releaseMonth 
                     ? 'bg-green-500' 
                     : currentMonth === release.releaseMonth - 1
                     ? 'bg-yellow-500'
-                    : 'bg-slate-300'
+                    : 'bg-[#65557c]/60'
                 }`} />
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
@@ -482,7 +482,7 @@ export function ReleaseWorkflowCard({
                       Month {release.releaseMonth}
                     </Badge>
                   </div>
-                  <div className="text-xs text-slate-600 mt-1">
+                  <div className="text-xs text-white/70 mt-1">
                     Complete release with lead single momentum
                   </div>
                 </div>
@@ -493,11 +493,11 @@ export function ReleaseWorkflowCard({
 
         {/* Marketing Investment */}
         {release.marketingBudget && (
-          <div className="pt-2 border-t border-slate-200">
+          <div className="pt-2 border-t border-[#4e324c]">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="w-4 h-4 text-slate-600" />
-                <span className="text-slate-600">Total Marketing</span>
+                <TrendingUp className="w-4 h-4 text-white/70" />
+                <span className="text-white/70">Total Marketing</span>
               </div>
               <span className="font-mono font-semibold">
                 ${(release.marketingBudget + (leadSingleStrategy?.totalLeadSingleBudget || 0)).toLocaleString()}
@@ -505,7 +505,7 @@ export function ReleaseWorkflowCard({
             </div>
             
             {hasLeadSingle && leadSingleStrategy.totalLeadSingleBudget > 0 && (
-              <div className="mt-2 space-y-1 text-xs text-slate-500">
+              <div className="mt-2 space-y-1 text-xs text-white/50">
                 <div className="flex justify-between">
                   <span>Lead Single Campaign:</span>
                   <span>${leadSingleStrategy.totalLeadSingleBudget.toLocaleString()}</span>
@@ -523,19 +523,19 @@ export function ReleaseWorkflowCard({
         {isReleased && (
           <div className="space-y-4">
             {/* Basic Performance Metrics */}
-            <div className="pt-2 border-t border-slate-200">
+            <div className="pt-2 border-t border-[#4e324c]">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="text-center">
-                  <div className="font-mono font-semibold text-blue-600">
+                  <div className="font-mono font-semibold text-[#A75A5B]">
                     {formatStreams(actualTotalStreams)}
                   </div>
-                  <div className="text-xs text-slate-600">Total Streams</div>
+                  <div className="text-xs text-white/70">Total Streams</div>
                 </div>
                 <div className="text-center">
                   <div className="font-mono font-semibold text-green-600">
                     {formatCurrency(actualTotalRevenue)}
                   </div>
-                  <div className="text-xs text-slate-600">Revenue</div>
+                  <div className="text-xs text-white/70">Revenue</div>
                 </div>
               </div>
             </div>
@@ -547,10 +547,10 @@ export function ReleaseWorkflowCard({
             {renderTrackBreakdown()}
             
             {/* Detailed Analytics Toggle */}
-            <div className="pt-2 border-t border-slate-200">
+            <div className="pt-2 border-t border-[#4e324c]">
               <button
                 onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
-                className="w-full text-sm text-slate-600 hover:text-slate-800 flex items-center justify-center space-x-2 py-2"
+                className="w-full text-sm text-white/70 hover:text-white flex items-center justify-center space-x-2 py-2"
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>{showDetailedAnalytics ? 'Hide' : 'Show'} Detailed Analytics</span>
