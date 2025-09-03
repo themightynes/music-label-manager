@@ -72,9 +72,11 @@ export function Dashboard() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2 md:space-x-4">
               <div className="flex items-center space-x-2">
-                <i className="fas fa-music text-[#A75A5B] text-xl md:text-2xl"></i>
-                <h1 className="text-lg md:text-xl font-bold text-white hidden sm:block">Music Label Manager</h1>
-                <h1 className="text-lg font-bold text-white sm:hidden">MLM</h1>
+                <img 
+                  src="/logo4.png" 
+                  alt="Music Label Manager" 
+                  className="h-10 md:h-12 w-auto"
+                />
               </div>
               <div className="flex items-center space-x-1 md:space-x-2 text-xs md:text-sm text-white/70">
                 <span className="hidden md:inline">Month</span>

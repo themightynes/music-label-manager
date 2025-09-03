@@ -84,7 +84,7 @@ export class GameEngine {
     this.gameData = gameData;
     this.storage = storage;
     this.rng = seedrandom(seed || `${gameState.id}-${gameState.currentMonth}`);
-    this.financialSystem = new FinancialSystem(gameData, () => this.rng());
+    this.financialSystem = new FinancialSystem(gameData, () => this.rng(), gameData);
   }
 
   /**
@@ -750,6 +750,20 @@ export class GameEngine {
             
             // Update the lead song as released
             console.log(`[LEAD SINGLE] 💾 Updating song in database...`);
+            // Allocate lead single marketing via InvestmentTracker before song update
+            if (this.financialSystem.investmentTracker && leadSingleBudget > 0) {
+              try {
+                await this.financialSystem.investmentTracker.allocateMarketingToSong(
+                  release.id,
+                  leadSong.id,
+                  leadSingleBudget,
+                  dbTransaction
+                );
+              } catch (allocError) {
+                console.warn(`[LEAD SINGLE] ⚠️ Marketing allocation skipped or failed:`, allocError);
+              }
+            }
+
             const songUpdate = {
               songId: leadSong.id,
               isReleased: true,
@@ -760,7 +774,7 @@ export class GameEngine {
               totalRevenue: Math.round((leadSong.totalRevenue || 0) + initialRevenue),
               lastMonthRevenue: Math.round(initialRevenue)
             };
-            console.log(`[LEAD SINGLE] 📝 Song update payload:`, songUpdate);
+            console.log(`[LEAD SINGLE] 📝 Song update payload (marketing handled by InvestmentTracker):`, songUpdate);
             
             try {
               await this.gameData.updateSongs([songUpdate], dbTransaction);
@@ -959,7 +973,20 @@ export class GameEngine {
           totalStreams += boostedStreams;
           totalRevenue += initialRevenue;
           
-          // Prepare song update
+          // Calculate per-song marketing allocation
+          if (this.financialSystem.investmentTracker && marketingBudget > 0) {
+            try {
+              await this.financialSystem.investmentTracker.allocateMarketingInvestment(
+                release.id,
+                marketingBudget,
+                dbTransaction
+              );
+            } catch (allocError) {
+              console.warn(`[PLANNED RELEASE] ⚠️ Base marketing allocation skipped or failed:`, allocError);
+            }
+          }
+          
+          // Prepare song update (marketing handled by InvestmentTracker)
           songUpdates.push({
             songId: song.id,
             isReleased: true,
@@ -1522,20 +1549,13 @@ export class GameEngine {
       isRecorded: true,
       isReleased: false,
       releaseId: null,
+      // Direct foreign key and investment tracking
+      projectId: project.id,
+      productionBudget: Math.round(perSongBudget),
+      marketingAllocation: 0, // Will be set when release is planned
+      // Simplified metadata - only quality calculation details
       metadata: {
-        projectId: project.id,
         artistMood: artist.mood || 50,
-        baseQuality: baseQuality,
-        producerBonus: producerBonus,
-        timeBonus: timeBonus,
-        budgetQualityBonus: budgetQualityBonus,
-        songCountQualityImpact: songCountQualityImpact,
-        perSongBudget: perSongBudget,
-        totalProjectBudget: projectBudget,
-        economicEfficiency: perSongBudget > 0 ? (finalQuality / (perSongBudget / 1000)).toFixed(2) : 0,
-        producerTier: producerTier,
-        timeInvestment: timeInvestment,
-        generatedAt: new Date().toISOString(),
         qualityCalculation: {
           base: baseQuality,
           artistMoodBonus: Math.floor(((artist.mood || 50) - 50) * 0.2),
@@ -1544,7 +1564,8 @@ export class GameEngine {
           budgetBonus: budgetQualityBonus,
           songCountImpact: songCountQualityImpact,
           final: finalQuality
-        }
+        },
+        generatedAt: new Date().toISOString()
       }
     };
   }

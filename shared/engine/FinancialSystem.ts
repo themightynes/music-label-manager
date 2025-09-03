@@ -9,14 +9,177 @@
  * - Cost calculations (projects, operations, marketing)
  * - Budget and quality calculations
  * - Economic scaling calculations
+ * - Investment tracking for ROI analysis
  */
 
 // Import types from game-engine.ts where they're defined
 import type { MonthSummary, MonthlyFinancials } from './game-engine';
 
+/**
+ * Tracks production and marketing investments at the song level for ROI analysis
+ */
+export class InvestmentTracker {
+  private storage: any; // Will be DatabaseStorage instance
+  
+  constructor(storage: any) {
+    this.storage = storage;
+  }
+  
+  /**
+   * Internal helper to apply batch marketing allocation deltas.
+   * Expects updates with absolute values already calculated.
+   */
+  private async applyMarketingAllocations(
+    updates: Array<{ songId: string; marketingAllocation: number }>,
+    dbTransaction?: any
+  ): Promise<void> {
+    if (!updates || updates.length === 0) return;
+    await this.storage.updateSongs(updates, dbTransaction);
+  }
+  
+  /**
+   * Records production investment when a song is created
+   * This replaces the old metadata.perSongBudget approach
+   */
+  async recordProductionInvestment(
+    songId: string,
+    projectId: string,
+    productionBudget: number,
+    dbTransaction?: any
+  ): Promise<void> {
+    await this.storage.updateSong(songId, {
+      projectId,
+      productionBudget
+    }, dbTransaction);
+  }
+  
+  /**
+   * Allocates marketing budget across songs when a release is planned
+   * Distributes the total marketing budget equally among all songs
+   */
+  async allocateMarketingInvestment(
+    releaseId: string,
+    totalMarketingBudget: number,
+    dbTransaction?: any
+  ): Promise<{ allocations: Array<{ songId: string; delta: number }>; skipped: boolean }> {
+    // Idempotency: check release metadata flag and set it within the same transaction
+    const release = await this.storage.getRelease(releaseId);
+    const releaseMeta = (release?.metadata as any) || {};
+    if (releaseMeta.baseMarketingAllocated) {
+      return { allocations: [], skipped: true };
+    }
+    
+    const releaseSongs = await this.storage.getSongsByRelease(releaseId, dbTransaction);
+    if (releaseSongs.length === 0 || totalMarketingBudget <= 0) {
+      // Still set flag to avoid re-entry with zero budget
+      await this.storage.updateRelease(releaseId, {
+        metadata: { ...(releaseMeta || {}), baseMarketingAllocated: true }
+      });
+      return { allocations: [], skipped: true };
+    }
+    
+    const count = releaseSongs.length;
+    const base = Math.floor(totalMarketingBudget / count);
+    const remainder = totalMarketingBudget - (base * count);
+    
+    // Deterministic: first N songs receive +1 until remainder exhausted (ordered by trackNumber via storage.getSongsByRelease)
+    const allocations: Array<{ songId: string; delta: number }> = releaseSongs.map((song: any, index: number) => ({
+      songId: song.id,
+      delta: base + (index < remainder ? 1 : 0)
+    }));
+    
+    const updates = releaseSongs.map((song: any, index: number) => ({
+      songId: song.id,
+      marketingAllocation: (song.marketingAllocation || 0) + allocations[index].delta
+    }));
+    
+    await this.applyMarketingAllocations(updates, dbTransaction);
+    // Mark idempotency flag
+    await this.storage.updateRelease(releaseId, {
+      metadata: { ...(releaseMeta || {}), baseMarketingAllocated: true }
+    });
+    
+    return { allocations, skipped: false };
+  }
+
+  /**
+   * Targeted allocation for a single song (lead single phase).
+   * Checks and sets release metadata flag leadMarketingAllocated for idempotency.
+   */
+  async allocateMarketingToSong(
+    releaseId: string,
+    songId: string,
+    amount: number,
+    dbTransaction?: any
+  ): Promise<{ allocations: Array<{ songId: string; delta: number }>; skipped: boolean }> {
+    const release = await this.storage.getRelease(releaseId);
+    const releaseMeta = (release?.metadata as any) || {};
+    if (releaseMeta.leadMarketingAllocated || amount <= 0) {
+      if (!releaseMeta.leadMarketingAllocated) {
+        // Set flag even if amount <= 0 to keep logic idempotent for this phase
+        await this.storage.updateRelease(releaseId, {
+          metadata: { ...(releaseMeta || {}), leadMarketingAllocated: true }
+        });
+      }
+      return { allocations: [], skipped: true };
+    }
+    
+    const song = await this.storage.getSong(songId);
+    if (!song) {
+      return { allocations: [], skipped: true };
+    }
+    
+    const newAllocation = (song.marketingAllocation || 0) + amount;
+    await this.storage.updateSong(songId, { marketingAllocation: newAllocation }, dbTransaction);
+    await this.storage.updateRelease(releaseId, {
+      metadata: { ...(releaseMeta || {}), leadMarketingAllocated: true }
+    });
+    
+    return { allocations: [{ songId, delta: amount }], skipped: false };
+  }
+  
+  /**
+   * Gets comprehensive investment metrics for an artist
+   */
+  async getArtistInvestmentMetrics(artistId: string, gameId: string): Promise<{
+    totalProductionInvestment: number;
+    totalMarketingInvestment: number;
+    totalInvestment: number;
+    totalRevenue: number;
+    overallROI: number;
+    songCount: number;
+  }> {
+    const songs = await this.storage.getSongsByArtist(artistId, gameId);
+    
+    const metrics = songs.reduce((acc: any, song: any) => ({
+      totalProductionInvestment: acc.totalProductionInvestment + (song.productionBudget || 0),
+      totalMarketingInvestment: acc.totalMarketingInvestment + (song.marketingAllocation || 0),
+      totalRevenue: acc.totalRevenue + (song.totalRevenue || 0),
+      songCount: acc.songCount + 1
+    }), {
+      totalProductionInvestment: 0,
+      totalMarketingInvestment: 0,
+      totalRevenue: 0,
+      songCount: 0
+    });
+    
+    const totalInvestment = metrics.totalProductionInvestment + metrics.totalMarketingInvestment;
+    const overallROI = totalInvestment > 0 
+      ? ((metrics.totalRevenue - totalInvestment) / totalInvestment) * 100 
+      : 0;
+    
+    return {
+      ...metrics,
+      totalInvestment,
+      overallROI
+    };
+  }
+}
+
 export class FinancialSystem {
   private gameData: any;
   private rng: () => number;
+  public investmentTracker: InvestmentTracker | null = null;
   
   // Critical constants extracted for easier balance tweaking
   private readonly CONSTANTS = {
@@ -38,9 +201,14 @@ export class FinancialSystem {
     ROUNDING_FACTOR: 100
   };
   
-  constructor(gameData: any, rng: () => number) {
+  constructor(gameData: any, rng: () => number, storage?: any) {
     this.gameData = gameData;
     this.rng = rng;
+    
+    // Initialize InvestmentTracker if storage is provided
+    if (storage) {
+      this.investmentTracker = new InvestmentTracker(storage);
+    }
   }
 
   /**

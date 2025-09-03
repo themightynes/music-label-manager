@@ -15,6 +15,20 @@
       "when": 1755579347829,
       "tag": "0001_ambiguous_starhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756870000359,
+      "tag": "0002_lethal_otto_octavius",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1756870037565,
+      "tag": "0003_silky_spyke",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 // PROJECT_TYPES moved to API - removed import
 import { ProjectCreationModal, type ProjectCreationData } from './ProjectCreationModal';
 import { useState } from 'react';
+import { useProjectROI, usePortfolioROI } from '@/hooks/useAnalytics';
 
 export function ActiveProjects() {
   const { projects, artists, createProject, gameState, songs } = useGameStore();
@@ -91,59 +92,12 @@ export function ActiveProjects() {
     return projects.filter(p => p.stage === 'recorded' || p.stage === 'released');
   };
 
-  // Get songs for a specific project
+  // Get songs for a specific project (kept for display purposes)
   const getProjectSongs = (projectId: string) => {
     return songs.filter((song: any) => {
       const metadata = song.metadata as any;
       return metadata?.projectId === projectId;
     });
-  };
-
-  // Calculate aggregated metrics from individual songs
-  const calculateProjectMetrics = (project: any) => {
-    // Only show revenue metrics for actually released projects (legacy)
-    // Recorded projects won't show revenue until songs are released via Plan Release
-    if (project.stage !== 'released') return null;
-    
-    const projectSongs = getProjectSongs(project.id);
-    if (projectSongs.length === 0) {
-      // Fallback to legacy project metadata if no individual songs found
-      const metadata = project.metadata as any || {};
-      const revenue = metadata.revenue || 0;
-      const streams = metadata.streams || 0;
-      const songCount = metadata.songCount || 0;
-      
-      if (!revenue) return null;
-      
-      const investment = project.totalCost || project.budgetPerSong || 0;
-      const roi = investment > 0 ? ((revenue - investment) / investment) * 100 : 0;
-      return { roi, revenue, investment, streams, songCount, individual: false };
-    }
-    
-    // Calculate aggregated metrics from individual songs
-    const totalRevenue = projectSongs.reduce((sum: number, song: any) => sum + (song.totalRevenue || 0), 0);
-    const totalStreams = projectSongs.reduce((sum: number, song: any) => sum + (song.totalStreams || 0), 0);
-    const lastMonthRevenue = projectSongs.reduce((sum: number, song: any) => sum + (song.lastMonthRevenue || 0), 0);
-    
-    if (!totalRevenue) return null;
-    
-    const investment = project.totalCost || project.budgetPerSong || 0;
-    const roi = investment > 0 ? ((totalRevenue - investment) / investment) * 100 : 0;
-    
-    return { 
-      roi, 
-      revenue: totalRevenue, 
-      investment, 
-      streams: totalStreams, 
-      songCount: projectSongs.length,
-      lastMonthRevenue,
-      individual: true,
-      songs: projectSongs
-    };
-  };
-
-  const calculateProjectROI = (project: any) => {
-    return calculateProjectMetrics(project);
   };
 
   const formatROI = (roi: number) => {
@@ -156,43 +110,61 @@ export function ActiveProjects() {
     return artist?.name || 'Unknown Artist';
   };
 
-  const calculatePortfolioStats = () => {
-    const releasedProjects = projects.filter(p => p.stage === 'released');
-    if (releasedProjects.length === 0) return null;
+  // Component to display project ROI using the backend hook
+  const ProjectROIDisplay = ({ project }: { project: any }) => {
+    const { data: metrics, isLoading } = useProjectROI(project.id);
     
-    let totalRevenue = 0;
-    let totalInvestment = 0;
-    let totalStreams = 0;
-    let profitableProjects = 0;
-    let totalSongs = 0;
+    if (isLoading) return null;
+    if (!metrics || !metrics.totalRevenue) return null;
     
-    releasedProjects.forEach(project => {
-      const metrics = calculateProjectMetrics(project);
-      if (metrics) {
-        totalRevenue += metrics.revenue;
-        totalInvestment += metrics.investment;
-        totalStreams += metrics.streams;
-        totalSongs += metrics.songCount;
+    return (
+      <div className="pt-2 border-t border-[#4e324c] space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-white/50">Total Revenue</span>
+          <span className="font-mono text-green-600">
+            ${metrics.totalRevenue.toLocaleString()}
+          </span>
+        </div>
         
-        if (metrics.revenue > metrics.investment) {
-          profitableProjects++;
-        }
-      }
-    });
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-white/50">ROI</span>
+          <span className={`font-mono font-medium ${metrics.roi >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+            {formatROI(metrics.roi)}
+          </span>
+        </div>
+        
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-white/50">Songs Released</span>
+          <span className="font-mono text-[#791014]">
+            {metrics.songCount} song{metrics.songCount > 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  // Component to display portfolio stats using the backend hook
+  const PortfolioStatsDisplay = () => {
+    const { data: stats, isLoading } = usePortfolioROI();
     
-    const portfolioROI = totalInvestment > 0 ? ((totalRevenue - totalInvestment) / totalInvestment) * 100 : 0;
-    const successRate = (profitableProjects / releasedProjects.length) * 100;
+    if (isLoading || !stats || stats.releasedSongs === 0) return null;
     
-    return {
-      totalRevenue,
-      totalInvestment,
-      totalStreams,
-      totalSongs,
-      portfolioROI,
-      successRate,
-      releasedCount: releasedProjects.length,
-      profitableProjects
-    };
+    return (
+      <div className="mb-3 p-3 bg-[#3c252d]/20 rounded-lg border">
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="text-center">
+            <div className="font-medium text-green-600">${stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-white/50">Revenue</div>
+          </div>
+          <div className="text-center">
+            <div className={`font-medium ${stats.overallROI >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              {formatROI(stats.overallROI)}
+            </div>
+            <div className="text-white/50">ROI</div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const activeProjects = getActiveProjects();
@@ -246,29 +218,8 @@ export function ActiveProjects() {
           </button>
         </div>
 
-        {/* Compact Portfolio Summary */}
-        {(() => {
-          const stats = calculatePortfolioStats();
-          if (stats) {
-            return (
-              <div className="mb-3 p-3 bg-[#3c252d]/20 rounded-lg border">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="text-center">
-                    <div className="font-medium text-green-600">${stats.totalRevenue.toLocaleString()}</div>
-                    <div className="text-white/50">Revenue</div>
-                  </div>
-                  <div className="text-center">
-                    <div className={`font-medium ${stats.portfolioROI >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {formatROI(stats.portfolioROI)}
-                    </div>
-                    <div className="text-white/50">ROI</div>
-                  </div>
-                </div>
-              </div>
-            );
-          }
-          return null;
-        })()}
+        {/* Compact Portfolio Summary - Using backend data */}
+        <PortfolioStatsDisplay />
 
         <div className="space-y-3">
           {currentProjects.map(project => (
@@ -352,90 +303,8 @@ export function ActiveProjects() {
                   );
                 })()}
 
-                {/* Enhanced Revenue Information for Released Projects (Legacy) */}
-                {project.stage === 'released' && (() => {
-                  const metrics = calculateProjectMetrics(project);
-                  if (metrics) {
-                    return (
-                      <div className="pt-2 border-t border-[#4e324c] space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/50">Total Revenue</span>
-                          <span className="font-mono text-green-600">
-                            ${metrics.revenue.toLocaleString()}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/50">ROI</span>
-                          <span className={`font-mono font-medium ${metrics.roi >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {formatROI(metrics.roi)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/50">Total Streams</span>
-                          <span className="font-mono text-[#A75A5B]">
-                            {metrics.streams.toLocaleString()}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/50">Songs Released</span>
-                          <span className="font-mono text-[#791014]">
-                            {metrics.songCount} song{metrics.songCount > 1 ? 's' : ''}
-                          </span>
-                        </div>
-
-                        {/* Show last month revenue if using individual tracking */}
-                        {metrics.individual && metrics.lastMonthRevenue > 0 && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-white/50">Last Month</span>
-                            <span className="font-mono text-green-600">
-                              +${metrics.lastMonthRevenue.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Show individual tracking indicator */}
-                        {metrics.individual && (
-                          <div className="text-xs text-center text-white/50 mt-1">
-                            🎵 Individual song tracking active
-                          </div>
-                        )}
-
-                        {/* Legacy metadata fallback */}
-                        {!metrics.individual && (() => {
-                          const metadata = project.metadata as any || {};
-                          const pressPickups = metadata.pressPickups;
-                          const releaseMonth = metadata.releaseMonth;
-                          
-                          return (
-                            <>
-                              {pressPickups && pressPickups > 0 && (
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-white/50">Press Coverage</span>
-                                  <span className="font-mono text-[#791014]">
-                                    {pressPickups} pickup{pressPickups > 1 ? 's' : ''}
-                                  </span>
-                                </div>
-                              )}
-
-                              {releaseMonth && (
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-white/50">Released</span>
-                                  <span className="font-mono text-white/70">
-                                    Month {releaseMonth}
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                {/* Enhanced Revenue Information for Released Projects - Using Backend Data */}
+                {project.stage === 'released' && <ProjectROIDisplay project={project} />}
               </div>
             </div>
           ))}

@@ -128,6 +128,19 @@ export const songs = pgTable("songs", {
   lastMonthRevenue: integer("last_month_revenue").default(0),
   releaseMonth: integer("release_month"),
   
+  // Investment tracking for ROI analysis
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  productionBudget: integer("production_budget").default(0), // Recording/production costs
+  marketingAllocation: integer("marketing_allocation").default(0), // Marketing spend allocated
+  totalInvestment: integer("total_investment").generatedAlwaysAs(sql`production_budget + marketing_allocation`),
+  roiPercentage: real("roi_percentage").generatedAlwaysAs(sql`
+    CASE 
+      WHEN (production_budget + marketing_allocation) > 0 THEN 
+        ((total_revenue - (production_budget + marketing_allocation))::REAL / (production_budget + marketing_allocation)::REAL * 100)
+      ELSE NULL 
+    END
+  `),
+  
   metadata: jsonb("metadata").default('{}'), // hooks, features, special attributes, decay data
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
@@ -139,6 +152,12 @@ export const songs = pgTable("songs", {
   recordedQualityIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_recorded_quality" ON ${table} ("game_id", "quality", "producer_tier") WHERE "is_recorded" = true`,
   revenueTrackingIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_revenue_tracking" ON ${table} ("game_id", "is_released", "total_revenue" DESC, "total_streams" DESC) WHERE "is_released" = true AND "total_revenue" > 0`,
   monthlyRevenueIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_monthly_revenue" ON ${table} ("release_month", "last_month_revenue") WHERE "release_month" IS NOT NULL`,
+  
+  // Investment and ROI tracking indexes
+  projectSongsIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_by_project" ON ${table} ("project_id") WHERE "project_id" IS NOT NULL`,
+  artistRoiIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_artist_roi" ON ${table} ("artist_id", "roi_percentage" DESC) WHERE "is_released" = true AND "roi_percentage" IS NOT NULL`,
+  producerRoiIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_producer_roi" ON ${table} ("producer_tier", "roi_percentage" DESC) WHERE "is_released" = true AND "roi_percentage" IS NOT NULL`,
+  investmentAnalysisIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_investment_analysis" ON ${table} ("game_id", "total_investment", "total_revenue") WHERE "is_released" = true`,
 }));
 
 // Releases (Singles, EPs, Albums, Compilations)
@@ -167,6 +186,10 @@ export const releaseSongs = pgTable("release_songs", {
   isSingle: boolean("is_single").default(false), // was this pushed as a single?
 }, (table) => ({
   pk: sql`PRIMARY KEY (${table.releaseId}, ${table.songId})`,
+  // Performance indexes for efficient queries
+  releaseTracksIdx: sql`CREATE INDEX IF NOT EXISTS "idx_release_songs_by_release" ON ${table} ("release_id", "track_number")`,
+  songReleasesIdx: sql`CREATE INDEX IF NOT EXISTS "idx_release_songs_by_song" ON ${table} ("song_id")`,
+  leadSinglesIdx: sql`CREATE INDEX IF NOT EXISTS "idx_release_songs_lead_singles" ON ${table} ("release_id") WHERE "is_single" = true`,
 }));
 
 // Dialogue choices and effects

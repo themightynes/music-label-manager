@@ -1,0 +1,1 @@
+ALTER TABLE "songs" ALTER COLUMN "total_investment" DROP NOT NULL;

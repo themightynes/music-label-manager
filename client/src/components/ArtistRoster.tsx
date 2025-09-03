@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { TrendingUp, TrendingDown, Heart, Star, Info, DollarSign, ExternalLink } from 'lucide-react';
 import { SongCatalog } from './SongCatalog';
 import { useLocation } from 'wouter';
+import { useArtistROI } from '@/hooks/useAnalytics';
 
 export function ArtistRoster() {
   const { gameState, artists, signArtist, openDialogue, projects } = useGameStore();
@@ -28,7 +29,7 @@ export function ArtistRoster() {
     await openDialogue('Artist', `meeting_${artist.id}`);
   };
 
-  // Enhanced artist analytics
+  // Enhanced artist analytics (ROI moved to backend)
   const getArtistInsights = (artist: any) => {
     const archetype = artist.archetype;
     const mood = artist.mood || 50;
@@ -39,26 +40,16 @@ export function ArtistRoster() {
     const artistProjects = projects.filter(p => p.artistId === artist.id);
     const releasedProjects = artistProjects.filter(p => p.stage === 'released');
     
-    // Calculate total revenue from artist projects
+    // Total revenue now comes from backend, keeping this for backward compatibility
     const totalRevenue = releasedProjects.reduce((sum, project) => {
       const metadata = project.metadata as any || {};
       return sum + (metadata.revenue || 0);
     }, 0);
 
-    // Performance metrics
-    const avgROI = releasedProjects.length > 0 ? 
-      releasedProjects.reduce((sum, project) => {
-        const metadata = project.metadata as any || {};
-        const budget = project.totalCost || project.budgetPerSong || 0;
-        const revenue = metadata.revenue || 0;
-        return sum + (budget > 0 ? ((revenue - budget) / budget) * 100 : 0);
-      }, 0) / releasedProjects.length : 0;
-
     return {
       projects: artistProjects.length,
       releasedProjects: releasedProjects.length,
       totalRevenue,
-      avgROI,
       archetype,
       mood,
       loyalty,
@@ -132,7 +123,7 @@ export function ArtistRoster() {
   };
 
   // Get recommendations for improving artist relationship
-  const getArtistRecommendations = (artist: any, insights: any) => {
+  const getArtistRecommendations = (artist: any, insights: any, roi?: number) => {
     const archetype = getArchetypeInfo(artist.archetype);
     const relationship = getRelationshipStatus(artist.mood || 50, artist.loyalty || 50);
     const recommendations = [];
@@ -161,7 +152,7 @@ export function ArtistRoster() {
       });
     }
 
-    if (insights.avgROI < 0 && insights.releasedProjects > 0) {
+    if (roi !== undefined && roi < 0 && insights.releasedProjects > 0) {
       recommendations.push({
         type: 'strategy',
         text: 'Review project strategy - recent releases underperformed',
@@ -209,214 +200,24 @@ export function ArtistRoster() {
             const insights = getArtistInsights(artist);
             const archetype = getArchetypeInfo(artist.archetype);
             const relationship = getRelationshipStatus(artist.mood || 50, artist.loyalty || 50);
-            const recommendations = getArtistRecommendations(artist, insights);
             const isExpanded = expandedArtist === artist.id;
             const StatusIcon = relationship.statusIcon;
 
             return (
-              <div key={artist.id} className="border border-[#4e324c] rounded-lg p-3">
-                {/* Condensed Artist Header */}
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <h4 className="font-medium text-white text-sm flex items-center">
-                      {artist.name}
-                      <StatusIcon className={`w-3 h-3 ml-1 ${relationship.statusColor}`} />
-                    </h4>
-                    <div className="flex items-center space-x-1 text-xs text-white/70">
-                      <span>{artist.archetype}</span>
-                      <span>•</span>
-                      <span className={relationship.statusColor}>{relationship.statusText}</span>
-                      <span>•</span>
-                      <span>${insights.totalRevenue.toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setExpandedArtist(isExpanded ? null : artist.id)}
-                    className="text-white/50 hover:text-white/70 p-1"
-                  >
-                    <Info className="w-3 h-3" />
-                  </Button>
-                </div>
-
-                {/* Condensed Metrics */}
-                <div className="grid grid-cols-4 gap-2 mb-2 text-center">
-                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
-                    <div className="font-medium text-white">{insights.projects}</div>
-                    <div className="text-white/50">Projects</div>
-                  </div>
-                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
-                    <div className={`font-medium ${insights.avgROI >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {insights.releasedProjects > 0 ? `${insights.avgROI > 0 ? '+' : ''}${insights.avgROI.toFixed(0)}%` : '--'}
-                    </div>
-                    <div className="text-white/50">ROI</div>
-                  </div>
-                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
-                    <div className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {artist.mood || 50}%
-                    </div>
-                    <div className="text-white/50">Mood</div>
-                  </div>
-                  <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
-                    <div className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {artist.loyalty || 50}%
-                    </div>
-                    <div className="text-white/50">Loyalty</div>
-                  </div>
-                </div>
-
-                {/* Priority Recommendation */}
-                {recommendations.length > 0 && (
-                  <div className="mb-2">
-                    <div className={`text-xs p-2 rounded flex items-center space-x-2 ${
-                      recommendations[0].type === 'urgent' ? 'bg-red-50 text-red-700' :
-                      recommendations[0].type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
-                      'bg-yellow-50 text-yellow-700'
-                    }`}>
-                      <span>{recommendations[0].icon}</span>
-                      <span className="flex-1 truncate">{recommendations[0].text}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Expanded Details */}
-                {isExpanded && (
-                  <div className="mt-4 pt-3 border-t border-[#4e324c] space-y-3">
-                    {/* Archetype Details */}
-                    <div>
-                      <h5 className="text-xs font-semibold text-white/90 mb-2">Archetype: {artist.archetype}</h5>
-                      <p className="text-xs text-white/70 mb-2">{archetype.description}</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="font-medium text-white/90">Strengths:</span>
-                          <ul className="text-white/70 ml-2 mt-1">
-                            {archetype.strengths.map((strength: string, idx: number) => (
-                              <li key={idx}>• {strength}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <span className="font-medium text-white/90">Preferences:</span>
-                          <ul className="text-white/70 ml-2 mt-1">
-                            {archetype.preferences.map((pref: string, idx: number) => (
-                              <li key={idx}>• {pref}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Management Tips */}
-                    <div className="p-2 bg-[#A75A5B]/10 rounded">
-                      <div className="text-xs font-medium text-[#A75A5B] mb-1">💡 Management Tip</div>
-                      <p className="text-xs text-[#A75A5B]">{archetype.tips}</p>
-                    </div>
-
-                    {/* Detailed Mood/Loyalty Factors */}
-                    <div>
-                      <h5 className="text-xs font-semibold text-white/90 mb-2">What Affects {artist.name}</h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="font-medium text-green-700">Positive Factors:</span>
-                          <ul className="text-white/70 ml-2 mt-1">
-                            {archetype.moodFactors.positive.map((factor: string, idx: number) => (
-                              <li key={idx}>• {factor}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <span className="font-medium text-red-700">Negative Factors:</span>
-                          <ul className="text-white/70 ml-2 mt-1">
-                            {archetype.moodFactors.negative.map((factor: string, idx: number) => (
-                              <li key={idx}>• {factor}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* All Recommendations */}
-                    {recommendations.length > 2 && (
-                      <div>
-                        <h5 className="text-xs font-semibold text-white/90 mb-2">Additional Recommendations</h5>
-                        <div className="space-y-1">
-                          {recommendations.slice(2).map((rec, index) => (
-                            <div key={index} className={`text-xs p-2 rounded flex items-center space-x-2 ${
-                              rec.type === 'urgent' ? 'bg-red-50 text-red-700' :
-                              rec.type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
-                              'bg-yellow-50 text-yellow-700'
-                            }`}>
-                              <span>{rec.icon}</span>
-                              <span>{rec.text}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Song Catalog */}
-                    <SongCatalog 
-                      artistId={artist.id} 
-                      gameId={gameState?.id || ''} 
-                      className="mt-4"
-                    />
-                  </div>
-                )}
-
-                {/* Compact Action Buttons */}
-                <div className="flex space-x-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setLocation(`/artist/${artist.id}`)}
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1" />
-                    Details
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => handleArtistMeeting(artist)}
-                  >
-                    <i className="fas fa-handshake mr-1"></i>
-                    Meet
-                  </Button>
-                  {insights.projects === 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs text-green-600 hover:text-green-700"
-                      onClick={() => {
-                        console.log('Start project for', artist.name);
-                      }}
-                    >
-                      <i className="fas fa-plus mr-1"></i>
-                      Project
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <ArtistCard
+                key={artist.id}
+                artist={artist}
+                insights={insights}
+                relationship={relationship}
+                archetype={archetype}
+                isExpanded={isExpanded}
+                onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
+                onMeet={() => handleArtistMeeting(artist)}
+                onNavigate={() => setLocation(`/artist/${artist.id}`)}
+                gameState={gameState}
+              />
             );
           })}
-
-          {/* Browse Talent - Compact */}
-          {artists && artists.length > 0 && artists.length < 3 && (
-            <div className="border-2 border-dashed border-[#4e324c] rounded-lg p-3 text-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[#A75A5B] hover:text-[#8B4A6C] text-xs font-medium w-full"
-                onClick={() => setShowDiscoveryModal(true)}
-              >
-                <i className="fas fa-plus mr-1"></i>
-                {artists.length >= 3 ? 'Roster Full' : 'Browse Talent'}
-              </Button>
-            </div>
-          )}
         </div>
       </CardContent>
 
@@ -431,5 +232,304 @@ export function ArtistRoster() {
         />
       )}
     </Card>
+  );
+}
+
+// Component to display individual artist card with backend ROI
+function ArtistCard({ 
+  artist, 
+  insights, 
+  relationship, 
+  archetype, 
+  isExpanded, 
+  onToggleExpand, 
+  onMeet, 
+  onNavigate,
+  gameState 
+}: {
+  artist: any;
+  insights: any;
+  relationship: any;
+  archetype: any;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onMeet: () => void;
+  onNavigate: () => void;
+  gameState: any;
+}) {
+  // Fetch ROI from backend
+  const { data: roiData } = useArtistROI(artist.id);
+  const avgROI = roiData?.overallROI ?? 0;
+  
+  // Get recommendations with backend ROI
+  const getArtistRecommendations = (artist: any, insights: any, roi?: number) => {
+    const archetype = getArchetypeInfo(artist.archetype);
+    const recommendations = [];
+
+    if (relationship.overallStatus < 60) {
+      recommendations.push({
+        type: 'urgent',
+        text: `Schedule a meeting to address ${artist.name}'s concerns`,
+        icon: '🤝'
+      });
+    }
+
+    if (insights.releasedProjects === 0 && insights.projects > 0) {
+      recommendations.push({
+        type: 'action',
+        text: 'Focus on completing current projects to build momentum',
+        icon: '🎵'
+      });
+    }
+
+    if (insights.projects === 0) {
+      recommendations.push({
+        type: 'action',
+        text: `Start a ${archetype.idealProjects[0].toLowerCase()} to engage ${artist.name}`,
+        icon: '🚀'
+      });
+    }
+
+    if (roi !== undefined && roi < 0 && insights.releasedProjects > 0) {
+      recommendations.push({
+        type: 'strategy',
+        text: 'Review project strategy - recent releases underperformed',
+        icon: '📈'
+      });
+    }
+
+    return recommendations;
+  };
+  
+  const getArchetypeInfo = (archetype: string) => {
+    const archetypeData: Record<string, any> = {
+      'Visionary': {
+        description: 'Creative and experimental',
+        strengths: ['High creativity', 'Artistic integrity', 'Innovation'],
+        preferences: ['Creative freedom', 'Artistic projects', 'Experimental approaches'],
+        moodFactors: {
+          positive: ['Creative projects', 'Artistic recognition', 'Freedom to experiment'],
+          negative: ['Commercial pressure', 'Restrictive contracts', 'Rushed timelines']
+        },
+        idealProjects: ['Singles with artistic merit', 'Experimental EPs', 'Creative collaborations'],
+        tips: 'Give creative freedom and avoid purely commercial decisions'
+      },
+      'Workhorse': {
+        description: 'Reliable and productive',
+        strengths: ['Consistency', 'Reliability', 'Work ethic'],
+        preferences: ['Clear schedules', 'Professional environment', 'Regular projects'],
+        moodFactors: {
+          positive: ['Consistent work', 'Professional treatment', 'Meeting deadlines'],
+          negative: ['Uncertainty', 'Chaotic schedules', 'Unclear expectations']
+        },
+        idealProjects: ['Regular single releases', 'Structured EP campaigns', 'Tour schedules'],
+        tips: 'Maintain consistent project flow and clear communication'
+      },
+      'Trendsetter': {
+        description: 'Trend-aware and commercial',
+        strengths: ['Market awareness', 'Commercial appeal', 'Adaptability'],
+        preferences: ['Trending sounds', 'Commercial success', 'Market opportunities'],
+        moodFactors: {
+          positive: ['Commercial success', 'Trending projects', 'Market recognition'],
+          negative: ['Outdated approaches', 'Poor sales', 'Missing trends']
+        },
+        idealProjects: ['Commercial singles', 'Trend-following EPs', 'Market-focused campaigns'],
+        tips: 'Focus on commercial viability and current market trends'
+      }
+    };
+
+    return archetypeData[archetype] || archetypeData['Workhorse'];
+  };
+  
+  const recommendations = getArtistRecommendations(artist, insights, avgROI);
+  const StatusIcon = relationship.statusIcon;
+  
+  return (
+    <div className="border border-[#4e324c] rounded-lg p-3">
+      {/* Condensed Artist Header */}
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h4 className="font-medium text-white text-sm flex items-center">
+            {artist.name}
+            <StatusIcon className={`w-3 h-3 ml-1 ${relationship.statusColor}`} />
+          </h4>
+          <div className="flex items-center space-x-1 text-xs text-white/70">
+            <span>{artist.archetype}</span>
+            <span>•</span>
+            <span className={relationship.statusColor}>{relationship.statusText}</span>
+            <span>•</span>
+            <span>${roiData?.totalRevenue?.toLocaleString() || insights.totalRevenue.toLocaleString()}</span>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleExpand}
+          className="text-white/50 hover:text-white/70 p-1"
+        >
+          <Info className="w-3 h-3" />
+        </Button>
+      </div>
+
+      {/* Condensed Metrics */}
+      <div className="grid grid-cols-4 gap-2 mb-2 text-center">
+        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+          <div className="font-medium text-white">{insights.projects}</div>
+          <div className="text-white/50">Projects</div>
+        </div>
+        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+          <div className={`font-medium ${avgROI >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {insights.releasedProjects > 0 ? `${avgROI > 0 ? '+' : ''}${avgROI.toFixed(0)}%` : '--'}
+          </div>
+          <div className="text-white/50">ROI</div>
+        </div>
+        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+          <div className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+            {artist.mood || 50}%
+          </div>
+          <div className="text-white/50">Mood</div>
+        </div>
+        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+          <div className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+            {artist.loyalty || 50}%
+          </div>
+          <div className="text-white/50">Loyalty</div>
+        </div>
+      </div>
+
+      {/* Priority Recommendation */}
+      {recommendations.length > 0 && (
+        <div className="mb-2">
+          <div className={`text-xs p-2 rounded flex items-center space-x-2 ${
+            recommendations[0].type === 'urgent' ? 'bg-red-50 text-red-700' :
+            recommendations[0].type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
+            'bg-yellow-50 text-yellow-700'
+          }`}>
+            <span>{recommendations[0].icon}</span>
+            <span className="flex-1 truncate">{recommendations[0].text}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div className="mt-4 pt-3 border-t border-[#4e324c] space-y-3">
+          {/* Archetype Details */}
+          <div>
+            <h5 className="text-xs font-semibold text-white/90 mb-2">Archetype: {artist.archetype}</h5>
+            <p className="text-xs text-white/70 mb-2">{archetype.description}</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="font-medium text-white/90">Strengths:</span>
+                <ul className="text-white/70 ml-2 mt-1">
+                  {archetype.strengths.map((strength: string, idx: number) => (
+                    <li key={idx}>• {strength}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <span className="font-medium text-white/90">Preferences:</span>
+                <ul className="text-white/70 ml-2 mt-1">
+                  {archetype.preferences.map((pref: string, idx: number) => (
+                    <li key={idx}>• {pref}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Management Tips */}
+          <div className="p-2 bg-[#A75A5B]/10 rounded">
+            <div className="text-xs font-medium text-[#A75A5B] mb-1">💡 Management Tip</div>
+            <p className="text-xs text-[#A75A5B]">{archetype.tips}</p>
+          </div>
+
+          {/* Detailed Mood/Loyalty Factors */}
+          <div>
+            <h5 className="text-xs font-semibold text-white/90 mb-2">What Affects {artist.name}</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="font-medium text-green-700">Positive Factors:</span>
+                <ul className="text-white/70 ml-2 mt-1">
+                  {archetype.moodFactors.positive.map((factor: string, idx: number) => (
+                    <li key={idx}>• {factor}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <span className="font-medium text-red-700">Negative Factors:</span>
+                <ul className="text-white/70 ml-2 mt-1">
+                  {archetype.moodFactors.negative.map((factor: string, idx: number) => (
+                    <li key={idx}>• {factor}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* All Recommendations */}
+          {recommendations.length > 2 && (
+            <div>
+              <h5 className="text-xs font-semibold text-white/90 mb-2">Additional Recommendations</h5>
+              <div className="space-y-1">
+                {recommendations.slice(2).map((rec, index) => (
+                  <div key={index} className={`text-xs p-2 rounded flex items-center space-x-2 ${
+                    rec.type === 'urgent' ? 'bg-red-50 text-red-700' :
+                    rec.type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
+                    'bg-yellow-50 text-yellow-700'
+                  }`}>
+                    <span>{rec.icon}</span>
+                    <span>{rec.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Song Catalog */}
+          <SongCatalog 
+            artistId={artist.id} 
+            gameId={gameState?.id || ''} 
+            className="mt-4"
+          />
+        </div>
+      )}
+
+      {/* Compact Action Buttons */}
+      <div className="flex space-x-1">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs"
+          onClick={onNavigate}
+        >
+          <ExternalLink className="w-3 h-3 mr-1" />
+          Details
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs"
+          onClick={onMeet}
+        >
+          <i className="fas fa-handshake mr-1"></i>
+          Meet
+        </Button>
+        {insights.projects === 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs text-green-600 hover:text-green-700"
+            onClick={() => {
+              console.log('Start project for', artist.name);
+            }}
+          >
+            <i className="fas fa-plus mr-1"></i>
+            Project
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }

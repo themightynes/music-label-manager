@@ -18,6 +18,7 @@ import {
 import { db } from "./db";
 import { eq, desc, and, sql, inArray, ne } from "drizzle-orm";
 import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
+import analyticsRouter from './routes/analytics';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1328,8 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the song title
       const [updatedSong] = await db.update(songs)
         .set({ 
-          title: title.trim(),
-          updatedAt: new Date()
+          title: title.trim()
         })
         .where(eq(songs.id, songId))
         .returning();
@@ -1871,6 +1871,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register analytics routes
+  app.use(analyticsRouter);
 
   const httpServer = createServer(app);
   return httpServer;

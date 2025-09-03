@@ -38,6 +38,7 @@ import {
 import { useGameStore } from '@/store/gameStore';
 import { useLocation, useParams } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
+import { useArtistROI } from '@/hooks/useAnalytics';
 
 // Types based on existing patterns
 interface Artist {
@@ -468,24 +469,13 @@ export default function ArtistPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div className="p-3 bg-blue-500/10 rounded-lg">
-                      <div className="text-lg font-bold text-blue-700">{avgQuality}</div>
-                      <div className="text-xs text-white/70">Avg Quality</div>
-                    </div>
-                    <div className="p-3 bg-green-500/10 rounded-lg">
-                      <div className="text-lg font-bold text-green-700">{artistProjects.length}</div>
-                      <div className="text-xs text-white/70">Projects</div>
-                    </div>
-                    <div className="p-3 bg-[#791014]/10 rounded-lg">
-                      <div className="text-lg font-bold text-[#791014]">{songs.filter(s => s.isRecorded && !s.isReleased).length}</div>
-                      <div className="text-xs text-white/70">Ready Songs</div>
-                    </div>
-                    <div className="p-3 bg-orange-500/10 rounded-lg">
-                      <div className="text-lg font-bold text-orange-700">{artist.popularity || 0}</div>
-                      <div className="text-xs text-white/70">Popularity</div>
-                    </div>
-                  </div>
+                  <PerformanceMetrics 
+                    artistId={artistId || ''}
+                    avgQuality={avgQuality}
+                    projectCount={artistProjects.length}
+                    readySongs={songs.filter(s => s.isRecorded && !s.isReleased).length}
+                    popularity={artist.popularity || 0}
+                  />
                 </CardContent>
               </Card>
 
@@ -1028,6 +1018,61 @@ export default function ArtistPage() {
           </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+// Component to display performance metrics with backend ROI
+function PerformanceMetrics({ 
+  artistId, 
+  avgQuality, 
+  projectCount, 
+  readySongs, 
+  popularity 
+}: {
+  artistId: string;
+  avgQuality: number;
+  projectCount: number;
+  readySongs: number;
+  popularity: number;
+}) {
+  // Fetch ROI from backend
+  const { data: roiData } = useArtistROI(artistId);
+  const overallROI = roiData?.overallROI ?? 0;
+  const totalRevenue = roiData?.totalRevenue ?? 0;
+  
+  return (
+    <div className="grid grid-cols-2 gap-4 text-center">
+      <div className="p-3 bg-blue-500/10 rounded-lg">
+        <div className="text-lg font-bold text-blue-700">{avgQuality}</div>
+        <div className="text-xs text-white/70">Avg Quality</div>
+      </div>
+      <div className="p-3 bg-green-500/10 rounded-lg">
+        <div className="text-lg font-bold text-green-700">{projectCount}</div>
+        <div className="text-xs text-white/70">Projects</div>
+      </div>
+      <div className="p-3 bg-[#791014]/10 rounded-lg">
+        <div className="text-lg font-bold text-[#791014]">{readySongs}</div>
+        <div className="text-xs text-white/70">Ready Songs</div>
+      </div>
+      <div className="p-3 bg-orange-500/10 rounded-lg">
+        <div className="text-lg font-bold text-orange-700">{popularity}</div>
+        <div className="text-xs text-white/70">Popularity</div>
+      </div>
+      {/* ROI Metric */}
+      <div className={`p-3 ${overallROI >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'} rounded-lg`}>
+        <div className={`text-lg font-bold ${overallROI >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+          {overallROI > 0 ? '+' : ''}{overallROI.toFixed(0)}%
+        </div>
+        <div className="text-xs text-white/70">ROI</div>
+      </div>
+      {/* Total Revenue Metric */}
+      <div className="p-3 bg-[#A75A5B]/10 rounded-lg">
+        <div className="text-lg font-bold text-[#A75A5B]">
+          ${(totalRevenue / 1000).toFixed(1)}k
+        </div>
+        <div className="text-xs text-white/70">Revenue</div>
+      </div>
     </div>
   );
 }

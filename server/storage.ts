@@ -291,8 +291,9 @@ export class DatabaseStorage implements IStorage {
     return newSong;
   }
 
-  async updateSong(id: string, song: Partial<InsertSong>): Promise<Song> {
-    const [updatedSong] = await db.update(songs)
+  async updateSong(id: string, song: Partial<InsertSong>, dbTransaction?: any): Promise<Song> {
+    const dbContext = dbTransaction || db;
+    const [updatedSong] = await dbContext.update(songs)
       .set(song)
       .where(eq(songs.id, id))
       .returning();
@@ -310,7 +311,7 @@ export class DatabaseStorage implements IStorage {
 
   async getSongsByProject(projectId: string): Promise<Song[]> {
     return await db.select().from(songs)
-      .where(sql`metadata->>'projectId' = ${projectId}`)
+      .where(eq(songs.projectId, projectId))
       .orderBy(songs.createdAt);
   }
 

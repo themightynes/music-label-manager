@@ -75,7 +75,7 @@ export function MetricsDashboard() {
 
   const renderExpenseBreakdown = () => {
     if (!stats.expenseBreakdown) {
-      return <div className="text-xs text-white/50">No expense breakdown available</div>;
+      return <div className="text-xs text-black/50">No expense breakdown available</div>;
     }
 
     const breakdown = stats.expenseBreakdown;
@@ -83,34 +83,34 @@ export function MetricsDashboard() {
 
     return (
       <div className="space-y-2 text-xs">
-        <div className="font-semibold text-white/90 mb-2">Expense Breakdown (${total.toLocaleString()})</div>
+        <div className="font-semibold text-red-600/90 mb-2">Expense Breakdown (${total.toLocaleString()})</div>
         {breakdown.monthlyOperations > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">Monthly Operations:</span>
+            <span className="text-black/70">Monthly Operations:</span>
             <span className="font-medium">${breakdown.monthlyOperations.toLocaleString()}</span>
           </div>
         )}
         {breakdown.artistSalaries > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">Artist Salaries:</span>
+            <span className="text-black/70">Artist Salaries:</span>
             <span className="font-medium">${breakdown.artistSalaries.toLocaleString()}</span>
           </div>
         )}
         {breakdown.projectCosts > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">Project Costs:</span>
+            <span className="text-black/70">Project Costs:</span>
             <span className="font-medium">${breakdown.projectCosts.toLocaleString()}</span>
           </div>
         )}
         {breakdown.marketingCosts > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">Marketing Costs:</span>
+            <span className="text-black/70">Marketing Costs:</span>
             <span className="font-medium">${breakdown.marketingCosts.toLocaleString()}</span>
           </div>
         )}
         {breakdown.roleMeetingCosts > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">Role Meeting Costs:</span>
+            <span className="text-black/70">Role Meeting Costs:</span>
             <span className="font-medium">${breakdown.roleMeetingCosts.toLocaleString()}</span>
           </div>
         )}
@@ -169,31 +169,31 @@ export function MetricsDashboard() {
         <div className="font-semibold text-emerald-700 mb-2">Revenue Breakdown (${total.toLocaleString()})</div>
         {revenueBreakdown.streamingRevenue > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">🎵 Streaming Revenue:</span>
+            <span className="text-black/70">🎵 Streaming Revenue:</span>
             <span className="font-medium text-emerald-600">${revenueBreakdown.streamingRevenue.toLocaleString()}</span>
           </div>
         )}
         {revenueBreakdown.projectRevenue > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">🎧 Project Completion:</span>
+            <span className="text-black/70">🎧 Project Completion:</span>
             <span className="font-medium text-emerald-600">${revenueBreakdown.projectRevenue.toLocaleString()}</span>
           </div>
         )}
         {revenueBreakdown.tourRevenue > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">🎤 Tour Revenue:</span>
+            <span className="text-black/70">🎤 Tour Revenue:</span>
             <span className="font-medium text-emerald-600">${revenueBreakdown.tourRevenue.toLocaleString()}</span>
           </div>
         )}
         {revenueBreakdown.roleBenefits > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">🤝 Role Benefits:</span>
+            <span className="text-black/70">🤝 Role Benefits:</span>
             <span className="font-medium text-emerald-600">${revenueBreakdown.roleBenefits.toLocaleString()}</span>
           </div>
         )}
         {revenueBreakdown.otherRevenue > 0 && (
           <div className="flex justify-between">
-            <span className="text-white/70">💼 Other Revenue:</span>
+            <span className="text-black/70">💼 Other Revenue:</span>
             <span className="font-medium text-emerald-600">${revenueBreakdown.otherRevenue.toLocaleString()}</span>
           </div>
         )}
