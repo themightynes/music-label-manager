@@ -1,6 +1,6 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**  
-*Updated: September 3, 2025*
+*Updated: September 4, 2025*
 
 ---
 
@@ -39,6 +39,28 @@
 ---
 
 ## ✅ **RECENTLY COMPLETED** (Last 30 Days)
+
+### **September 4, 2025 - ROI System Fixes & UI Data Refresh**
+- ✅ **Critical Bug Fix: Marketing Cost Tracking** - Fixed InvestmentTracker initialization
+  - ✅ Fixed `game-engine.ts` passing wrong parameter to FinancialSystem (was `gameData`, now `this.storage`)
+  - ✅ InvestmentTracker now properly initialized and allocates marketing costs to songs
+  - ✅ Marketing costs will now be tracked for all future releases through Plan Release workflow
+- ✅ **ROI Display & Calculation Fixes** - Comprehensive fixes across all components
+  - ✅ Removed misleading Revenue/ROI display from Recording Sessions (ActiveProjects)
+  - ✅ Fixed Release ROI calculation to include BOTH production costs AND marketing costs
+  - ✅ Fixed Artist Roster ROI showing "--" by checking for revenue OR investment (not just investment)
+  - ✅ Added Total Streams field to backend AnalyticsService response
+  - ✅ Added cost breakdown displays (Recording/Marketing) to Artist Roster expanded view
+  - ✅ Reorganized Artist Detail Performance section with complete financial metrics
+- ✅ **Automatic UI Data Refresh After Month Advance** - Complete refresh system
+  - ✅ Added React Query cache invalidation for all ROI queries after month advancement
+  - ✅ SongCatalog component now detects month changes and auto-refreshes
+  - ✅ All financial metrics (streams, revenue, costs, ROI) update automatically
+  - ✅ No manual refresh needed - components subscribe to gameState changes
+- ✅ **Technical Improvements**
+  - ✅ Clean separation: Recording Sessions show production costs only, Releases show full ROI
+  - ✅ Backend properly aggregates totalStreams, totalRevenue, and both cost types
+  - ✅ Frontend hooks properly invalidate and refetch after game state changes
 
 ### **September 3, 2025 - Phase 3 Analytics: Backend ROI Calculation System**
 - ✅ **Artist Cost Tracking & ROI System - Phase 3 Complete** - Migrated ROI calculations to backend for 50% performance improvement

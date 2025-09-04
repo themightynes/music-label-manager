@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Music, Calendar, TrendingUp, DollarSign, PlayCircle } from 'lucide-react';
+import { useGameStore } from '@/store/gameStore';
 
 interface Song {
   id: string;
@@ -36,12 +37,16 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Subscribe to gameState to detect month changes
+  const currentMonth = useGameStore((state) => state.gameState?.currentMonth);
+  const storeSongs = useGameStore((state) => state.songs);
 
   useEffect(() => {
     if (artistId && gameId) {
       loadArtistSongs();
     }
-  }, [artistId, gameId]);
+  }, [artistId, gameId, currentMonth]); // Refresh when month changes
 
   const loadArtistSongs = async (isRetry = false) => {
     try {

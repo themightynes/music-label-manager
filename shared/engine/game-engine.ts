@@ -84,7 +84,7 @@ export class GameEngine {
     this.gameData = gameData;
     this.storage = storage;
     this.rng = seedrandom(seed || `${gameState.id}-${gameState.currentMonth}`);
-    this.financialSystem = new FinancialSystem(gameData, () => this.rng(), gameData);
+    this.financialSystem = new FinancialSystem(gameData, () => this.rng(), this.storage);
   }
 
   /**

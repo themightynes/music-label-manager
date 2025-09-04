@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { GameState, Artist, Project, Role, MonthlyAction } from '@shared/schema';
 // Game engine moved to shared - client no longer calculates outcomes
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface GameStore {
   // Game state
@@ -342,6 +342,12 @@ export const useGameStore = create<GameStore>()(
             selectedActions: [],
             isAdvancingMonth: false
           });
+          
+          // Invalidate React Query caches to refresh UI components
+          await queryClient.invalidateQueries({ queryKey: ['artist-roi'] });
+          await queryClient.invalidateQueries({ queryKey: ['project-roi'] });
+          await queryClient.invalidateQueries({ queryKey: ['portfolio-roi'] });
+          await queryClient.invalidateQueries({ queryKey: ['release-roi'] });
         } catch (error) {
           console.error('=== ADVANCE MONTH ERROR ===');
           console.error('Error occurred during month advancement');
