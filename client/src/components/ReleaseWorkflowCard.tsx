@@ -215,30 +215,54 @@ export function ReleaseWorkflowCard({
             </div>
           </div>
           
-          {campaignData.totalInvestment > 0 && (
+          {(campaignData.totalInvestment > 0 || releaseSongs.some(s => s.productionBudget > 0)) && (
             <div className="mt-2 pt-2 border-t border-current border-opacity-20">
-              <div className="flex justify-between text-sm">
-                <span>Total Investment:</span>
-                <span className="font-mono font-semibold">{formatCurrency(campaignData.totalInvestment)}</span>
-              </div>
-              
-              {/* Marketing breakdown - show if there's a lead single OR if we have breakdown data */}
-              {(campaignData.leadSingleBudget > 0 || campaignData.mainBudget > 0) && (
-                <div className="mt-1 space-y-0.5 text-xs text-white/50">
-                  {campaignData.leadSingleBudget > 0 && (
-                    <div className="flex justify-between">
-                      <span className="ml-2">Lead Single Marketing:</span>
-                      <span>{formatCurrency(campaignData.leadSingleBudget)}</span>
+              {/* Calculate production costs */}
+              {(() => {
+                const totalProductionCost = releaseSongs.reduce((sum, song) => 
+                  sum + (song.productionBudget || 0), 0
+                );
+                const totalMarketingCost = campaignData.totalInvestment;
+                const grandTotal = totalProductionCost + totalMarketingCost;
+                
+                return (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span>Total Investment:</span>
+                      <span className="font-mono font-semibold">{formatCurrency(grandTotal)}</span>
                     </div>
-                  )}
-                  {campaignData.mainBudget > 0 && (
-                    <div className="flex justify-between">
-                      <span className="ml-2">Main Release Marketing:</span>
-                      <span>{formatCurrency(campaignData.mainBudget)}</span>
+                    
+                    {/* Cost breakdown */}
+                    <div className="mt-1 space-y-0.5 text-xs text-white/50">
+                      {totalProductionCost > 0 && (
+                        <div className="flex justify-between">
+                          <span className="ml-2">Recording Sessions:</span>
+                          <span>{formatCurrency(totalProductionCost)}</span>
+                        </div>
+                      )}
+                      {totalMarketingCost > 0 && (
+                        <div className="flex justify-between">
+                          <span className="ml-2">Total Marketing:</span>
+                          <span>{formatCurrency(totalMarketingCost)}</span>
+                        </div>
+                      )}
+                      {/* Sub-breakdown of marketing if applicable */}
+                      {campaignData.leadSingleBudget > 0 && (
+                        <div className="flex justify-between ml-4 text-white/40">
+                          <span>• Lead Single:</span>
+                          <span>{formatCurrency(campaignData.leadSingleBudget)}</span>
+                        </div>
+                      )}
+                      {campaignData.mainBudget > 0 && campaignData.leadSingleBudget > 0 && (
+                        <div className="flex justify-between ml-4 text-white/40">
+                          <span>• Main Release:</span>
+                          <span>{formatCurrency(campaignData.mainBudget)}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
+                  </>
+                );
+              })()}
               
               {performanceMetrics && (
                 <div className="flex justify-between text-sm mt-1">
@@ -428,16 +452,16 @@ export function ReleaseWorkflowCard({
               {/* Lead Single Phase */}
               <div className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
                 currentMonth >= leadSingleStrategy.leadSingleReleaseMonth 
-                  ? 'bg-green-50 border border-green-200' 
+                  ? 'bg-green-900/30 border border-green-600/40' 
                   : currentMonth === leadSingleStrategy.leadSingleReleaseMonth - 1
-                  ? 'bg-yellow-50 border border-yellow-200'
+                  ? 'bg-amber-900/30 border border-amber-600/40'
                   : 'bg-[#3c252d]/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                   currentMonth >= leadSingleStrategy.leadSingleReleaseMonth 
-                    ? 'bg-green-500' 
+                    ? 'bg-green-600' 
                     : currentMonth === leadSingleStrategy.leadSingleReleaseMonth - 1
-                    ? 'bg-yellow-500'
+                    ? 'bg-amber-600'
                     : 'bg-[#65557c]/60'
                 }`} />
                 <div className="flex-1">
@@ -462,16 +486,16 @@ export function ReleaseWorkflowCard({
               {/* Main Release Phase */}
               <div className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
                 currentMonth >= release.releaseMonth 
-                  ? 'bg-green-50 border border-green-200' 
+                  ? 'bg-green-900/30 border border-green-600/40' 
                   : currentMonth === release.releaseMonth - 1
-                  ? 'bg-yellow-50 border border-yellow-200'
+                  ? 'bg-amber-900/30 border border-amber-600/40'
                   : 'bg-[#3c252d]/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                   currentMonth >= release.releaseMonth 
-                    ? 'bg-green-500' 
+                    ? 'bg-green-600' 
                     : currentMonth === release.releaseMonth - 1
-                    ? 'bg-yellow-500'
+                    ? 'bg-amber-600'
                     : 'bg-[#65557c]/60'
                 }`} />
                 <div className="flex-1">

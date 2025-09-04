@@ -218,8 +218,6 @@ export function ActiveProjects() {
           </button>
         </div>
 
-        {/* Compact Portfolio Summary - Using backend data */}
-        <PortfolioStatsDisplay />
 
         <div className="space-y-3">
           {currentProjects.map(project => (
@@ -294,17 +292,21 @@ export function ActiveProjects() {
                         </span>
                       </div>
                       
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-white/50">Total Production Cost</span>
+                        <span className="font-mono text-white/70">
+                          ${((project.budgetPerSong || 0) * (project.songCount || 1)).toLocaleString()}
+                        </span>
+                      </div>
+                      
                       {readySongs.length > 0 && (
-                        <div className="text-xs text-white/70 italic">
+                        <div className="text-xs text-white/70 italic mt-1">
                           Use Plan Release to publish these songs
                         </div>
                       )}
                     </div>
                   );
                 })()}
-
-                {/* Enhanced Revenue Information for Released Projects - Using Backend Data */}
-                {project.stage === 'released' && <ProjectROIDisplay project={project} />}
               </div>
             </div>
           ))}

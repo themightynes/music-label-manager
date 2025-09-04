@@ -115,10 +115,10 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   };
 
   const getQualityColor = (quality: number) => {
-    if (quality >= 80) return 'bg-green-100 text-green-800';
-    if (quality >= 60) return 'bg-yellow-100 text-yellow-800';
-    if (quality >= 40) return 'bg-orange-100 text-orange-800';
-    return 'bg-red-100 text-red-800';
+    if (quality >= 80) return 'bg-green-900/30 text-green-300 border border-green-600/40';
+    if (quality >= 60) return 'bg-amber-900/30 text-amber-300 border border-amber-600/40';
+    if (quality >= 40) return 'bg-orange-900/30 text-orange-300 border border-orange-600/40';
+    return 'bg-red-900/30 text-red-300 border border-red-600/40';
   };
 
   const getStatusBadge = (song: Song) => {
@@ -126,7 +126,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       return <Badge variant="default" className="bg-[#A75A5B]/20 text-[#A75A5B]">Released</Badge>;
     }
     if (song.isRecorded) {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800">Ready</Badge>;
+      return <Badge variant="secondary" className="bg-green-900/30 text-green-300 border border-green-600/40">Ready</Badge>;
     }
     return <Badge variant="outline">Recording</Badge>;
   };
@@ -151,7 +151,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
     return (
       <div className={className}>
         <h5 className="text-xs font-semibold text-white/90 mb-2">Song Catalog</h5>
-        <div className="text-xs text-red-600 p-3 bg-red-50 rounded border border-red-200">
+        <div className="text-xs text-red-300 p-3 bg-red-900/30 rounded border border-red-600/40">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="font-medium mb-1">Unable to load songs</div>
@@ -166,7 +166,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
               <button
                 onClick={handleRetry}
                 disabled={loading}
-                className="ml-2 px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded border border-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ml-2 px-2 py-1 text-xs bg-red-900/30 hover:bg-red-800/40 text-red-300 rounded border border-red-600/40 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Retrying...' : 'Retry'}
               </button>
@@ -225,12 +225,12 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
 
       {/* Enhanced Summary Stats */}
       <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-        <div className="p-2 bg-[#3c252d]/20 rounded text-center">
+        <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
           <div className="font-medium text-white">{songs.length}</div>
           <div className="text-white/50">Total Songs</div>
         </div>
-        <div className="p-2 bg-[#A75A5B]/10 rounded text-center">
-          <div className="font-medium text-[#A75A5B]">{releasedSongs.length}</div>
+        <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
+          <div className="font-medium text-green-300">{releasedSongs.length}</div>
           <div className="text-white/50">Released</div>
         </div>
       </div>
@@ -238,12 +238,12 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       {/* Revenue & Streams Stats - Only show if there are released songs with metrics */}
       {releasedSongs.length > 0 && (totalRevenue > 0 || totalStreams > 0) && (
         <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-          <div className="p-2 bg-green-50 rounded text-center">
-            <div className="font-medium text-green-700">${totalRevenue.toLocaleString()}</div>
+          <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
+            <div className="font-medium text-green-300">${totalRevenue.toLocaleString()}</div>
             <div className="text-white/50">Total Revenue</div>
           </div>
-          <div className="p-2 bg-[#791014]/10 rounded text-center">
-            <div className="font-medium text-[#791014]">{totalStreams.toLocaleString()}</div>
+          <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
+            <div className="font-medium text-green-300">{totalStreams.toLocaleString()}</div>
             <div className="text-white/50">Total Streams</div>
           </div>
         </div>
@@ -251,7 +251,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       
       {/* Last Month Performance - Only show if there was recent activity */}
       {lastMonthRevenue > 0 && (
-        <div className="p-2 bg-gradient-to-r from-green-50 to-[#A75A5B]/10 rounded mb-3">
+        <div className="p-2 bg-gradient-to-r from-green-900/20 to-[#A75A5B]/20 border border-green-600/30 rounded mb-3">
           <div className="text-xs text-center">
             <div className="font-medium text-white/90">Last Month: +${lastMonthRevenue.toLocaleString()}</div>
             <div className="text-white/50">Recent Performance</div>

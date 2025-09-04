@@ -64,6 +64,7 @@ export class AnalyticsService {
       marketingAllocation: songs.marketingAllocation,
       totalInvestment: songs.totalInvestment,
       totalRevenue: songs.totalRevenue,
+      totalStreams: songs.totalStreams,
       roiPercentage: songs.roiPercentage,
       quality: songs.quality,
       isReleased: songs.isReleased
@@ -79,6 +80,7 @@ export class AnalyticsService {
     const totalMarketingInvestment = artistSongs.reduce((sum, s) => sum + (s.marketingAllocation || 0), 0);
     const totalInvestment = totalProductionInvestment + totalMarketingInvestment;
     const totalRevenue = artistSongs.reduce((sum, s) => sum + (s.totalRevenue || 0), 0);
+    const totalStreams = artistSongs.reduce((sum, s) => sum + (s.totalStreams || 0), 0);
     
     const overallROI = totalInvestment > 0 
       ? ((totalRevenue - totalInvestment) / totalInvestment) * 100 
@@ -99,6 +101,7 @@ export class AnalyticsService {
       totalMarketingInvestment,
       totalInvestment,
       totalRevenue,
+      totalStreams,
       overallROI,
       songCount: artistSongs.length,
       releasedSongCount: artistSongs.filter(s => s.isReleased).length,

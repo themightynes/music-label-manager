@@ -373,23 +373,23 @@ function ArtistCard({
 
       {/* Condensed Metrics */}
       <div className="grid grid-cols-4 gap-2 mb-2 text-center">
-        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
           <div className="font-medium text-white">{insights.projects}</div>
           <div className="text-white/50">Projects</div>
         </div>
-        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
-          <div className={`font-medium ${avgROI >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {insights.releasedProjects > 0 ? `${avgROI > 0 ? '+' : ''}${avgROI.toFixed(0)}%` : '--'}
+        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
+          <div className={`font-medium ${avgROI >= 0 ? 'text-green-600' : avgROI < 0 ? 'text-red-600' : 'text-white'}`}>
+            {roiData && (roiData.totalInvestment > 0 || roiData.totalRevenue > 0) ? `${avgROI > 0 ? '+' : ''}${avgROI.toFixed(0)}%` : '--'}
           </div>
           <div className="text-white/50">ROI</div>
         </div>
-        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
           <div className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
             {artist.mood || 50}%
           </div>
           <div className="text-white/50">Mood</div>
         </div>
-        <div className="p-1 bg-[#3c252d]/20 rounded text-xs">
+        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
           <div className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
             {artist.loyalty || 50}%
           </div>
@@ -401,9 +401,9 @@ function ArtistCard({
       {recommendations.length > 0 && (
         <div className="mb-2">
           <div className={`text-xs p-2 rounded flex items-center space-x-2 ${
-            recommendations[0].type === 'urgent' ? 'bg-red-50 text-red-700' :
-            recommendations[0].type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
-            'bg-yellow-50 text-yellow-700'
+            recommendations[0].type === 'urgent' ? 'bg-red-900/30 text-red-300 border border-red-600/40' :
+            recommendations[0].type === 'action' ? 'bg-[#A75A5B]/20 text-[#A75A5B] border border-[#A75A5B]/40' :
+            'bg-amber-900/30 text-amber-300 border border-amber-600/40'
           }`}>
             <span>{recommendations[0].icon}</span>
             <span className="flex-1 truncate">{recommendations[0].text}</span>
@@ -414,6 +414,36 @@ function ArtistCard({
       {/* Expanded Details */}
       {isExpanded && (
         <div className="mt-4 pt-3 border-t border-[#4e324c] space-y-3">
+          {/* Financial Summary */}
+          {roiData && (roiData.totalRevenue > 0 || roiData.totalInvestment > 0) && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              <div className="p-2 bg-[#3c252d]/30 rounded">
+                <div className="text-white/50 mb-0.5">Total Revenue</div>
+                <div className="font-mono font-semibold text-green-600">
+                  ${(roiData.totalRevenue || 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="p-2 bg-[#3c252d]/30 rounded">
+                <div className="text-white/50 mb-0.5">Total Streams</div>
+                <div className="font-mono font-semibold text-blue-600">
+                  {((roiData.totalStreams || 0) / 1000).toFixed(0)}k
+                </div>
+              </div>
+              <div className="p-2 bg-[#3c252d]/30 rounded">
+                <div className="text-white/50 mb-0.5">Recording Costs</div>
+                <div className="font-mono font-semibold text-white/70">
+                  ${(roiData.totalProductionInvestment || 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="p-2 bg-[#3c252d]/30 rounded">
+                <div className="text-white/50 mb-0.5">Marketing Costs</div>
+                <div className="font-mono font-semibold text-white/70">
+                  ${(roiData.totalMarketingInvestment || 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Archetype Details */}
           <div>
             <h5 className="text-xs font-semibold text-white/90 mb-2">Archetype: {artist.archetype}</h5>
@@ -440,7 +470,7 @@ function ArtistCard({
           </div>
 
           {/* Management Tips */}
-          <div className="p-2 bg-[#A75A5B]/10 rounded">
+          <div className="p-2 bg-[#A75A5B]/20 border border-[#A75A5B]/40 rounded">
             <div className="text-xs font-medium text-[#A75A5B] mb-1">💡 Management Tip</div>
             <p className="text-xs text-[#A75A5B]">{archetype.tips}</p>
           </div>
@@ -450,7 +480,7 @@ function ArtistCard({
             <h5 className="text-xs font-semibold text-white/90 mb-2">What Affects {artist.name}</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="font-medium text-green-700">Positive Factors:</span>
+                <span className="font-medium text-green-400">Positive Factors:</span>
                 <ul className="text-white/70 ml-2 mt-1">
                   {archetype.moodFactors.positive.map((factor: string, idx: number) => (
                     <li key={idx}>• {factor}</li>
@@ -458,7 +488,7 @@ function ArtistCard({
                 </ul>
               </div>
               <div>
-                <span className="font-medium text-red-700">Negative Factors:</span>
+                <span className="font-medium text-red-400">Negative Factors:</span>
                 <ul className="text-white/70 ml-2 mt-1">
                   {archetype.moodFactors.negative.map((factor: string, idx: number) => (
                     <li key={idx}>• {factor}</li>
@@ -475,9 +505,9 @@ function ArtistCard({
               <div className="space-y-1">
                 {recommendations.slice(2).map((rec, index) => (
                   <div key={index} className={`text-xs p-2 rounded flex items-center space-x-2 ${
-                    rec.type === 'urgent' ? 'bg-red-50 text-red-700' :
-                    rec.type === 'action' ? 'bg-[#A75A5B]/10 text-[#A75A5B]' :
-                    'bg-yellow-50 text-yellow-700'
+                    rec.type === 'urgent' ? 'bg-red-900/30 text-red-300 border border-red-600/40' :
+                    rec.type === 'action' ? 'bg-[#A75A5B]/20 text-[#A75A5B] border border-[#A75A5B]/40' :
+                    'bg-amber-900/30 text-amber-300 border border-amber-600/40'
                   }`}>
                     <span>{rec.icon}</span>
                     <span>{rec.text}</span>

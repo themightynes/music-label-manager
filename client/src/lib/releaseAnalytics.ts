@@ -9,6 +9,7 @@ export interface CampaignData {
   leadSingleMonth?: number;
   mainBudget: number;
   totalInvestment: number;
+  totalProductionCost?: number;
   campaignDuration: number;
   strategy: 'lead_single' | 'direct_release';
 }
@@ -128,13 +129,20 @@ export function identifyLeadSingle(releaseSongs: any[], release: any): any | nul
 export function calculatePerformanceMetrics(release: any, releaseSongs: any[], campaignData: CampaignData): PerformanceMetrics {
   const totalRevenue = release.revenueGenerated || 0;
   const totalStreams = release.streamsGenerated || 0;
-  const { totalInvestment } = campaignData;
   
-  // Calculate ROI
-  const totalROI = totalInvestment > 0 ? (totalRevenue - totalInvestment) / totalInvestment : 0;
+  // Calculate total production costs from all songs in the release
+  const totalProductionCost = releaseSongs.reduce((sum, song) => 
+    sum + (song.productionBudget || 0), 0
+  );
   
-  // Calculate cost per stream
-  const costPerStream = totalStreams > 0 ? totalInvestment / totalStreams : 0;
+  // Total investment includes both production and marketing costs
+  const totalInvestmentWithProduction = campaignData.totalInvestment + totalProductionCost;
+  
+  // Calculate ROI with full costs
+  const totalROI = totalInvestmentWithProduction > 0 ? (totalRevenue - totalInvestmentWithProduction) / totalInvestmentWithProduction : 0;
+  
+  // Calculate cost per stream with full investment
+  const costPerStream = totalStreams > 0 ? totalInvestmentWithProduction / totalStreams : 0;
   
   // Determine campaign effectiveness based on ROI
   let campaignEffectiveness: PerformanceMetrics['campaignEffectiveness'] = 'poor';

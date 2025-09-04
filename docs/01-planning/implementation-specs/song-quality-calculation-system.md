@@ -239,3 +239,4 @@ The system is designed to be extensible. Potential future enhancements could inc
 - Collaboration bonuses for multiple artists
 - Seasonal or market condition modifiers
 
+
