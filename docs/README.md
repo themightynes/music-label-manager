@@ -19,14 +19,15 @@
 - [**Content Editing Guide**](./06-development/content-editing-guide.md) - Edit game content without coding
 
 ### **Project Managers**
-- [**Development Roadmap 2025**](./01-planning/development_roadmap_2025.md) - Strategic implementation plan
+- [**Active Development (v2.0)**](./01-planning/CORE_FEATURES_sim-v2.0.md) - Current priorities & roadmap
 
 ---
 
 ## 📁 **Documentation Structure**
 
 ### **01-Planning** - Strategic Documents
-- [Development Roadmap 2025 (v1.0)](./01-planning/development_roadmap_2025_sim-v1.0.md)
+- [**Active Development (v2.0)**](./01-planning/CORE_FEATURES_sim-v2.0.md) - Current 6-month priorities
+- [Development Roadmap 2025 (v1.0) - COMPLETE](./99-legacy/complete/development_roadmap_2025_sim-v1.0.md) - Historical MVP record
 - [Music Creation Future Phases](./01-planning/implementation-specs/music-creation-release-cycle-phases-3-4-FUTURE.md)
 - [Music Game System Map](./01-planning/music_game_system_map.html)
 
@@ -52,8 +53,7 @@
 - [Documentation Governance](./06-development/documentation-governance.md)
 
 ### **08-Future Features** - Roadmap
-- [Core Features (v2.0)](./01-planning/CORE_FEATURES_sim-v2.0.md)
-- [Comprehensive Roadmap (v3.0+)](./08-future-features-and-fixes/comprehensive-roadmap_sim-v3.0.md)
+- [Comprehensive Roadmap (v3.0+)](./08-future-features-and-fixes/comprehensive-roadmap_sim-v3.0.md) - Long-term vision
 - [Content Management Features](./08-future-features-and-fixes/content-management-features.md)
 
 ### **09-Troubleshooting** - Issues & Solutions

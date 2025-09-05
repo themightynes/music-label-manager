@@ -26,7 +26,7 @@ Welcome! I'll get you oriented for development work on the Music Label Manager p
 Based on the essential documentation, here's your development-ready summary:
 
 ## 🎯 **Music Label Manager** - Strategic Music Industry Simulation
-**Status**: MVP Complete (August 2025) - Post-MVP Enhancement Phase
+**Status**: MVP Complete (August 2025) - Active v2.0 Development (September 2025)
 
 **Core Game**: 36-month turn-based campaign where players run a record label, managing artists, creating projects (Singles/EPs/Tours), building industry relationships, and progressing through access tiers.
 
@@ -56,7 +56,8 @@ Based on the essential documentation, here's your development-ready summary:
 
 **Project Understanding:**
 - **Current Status**: `DEVELOPMENT_STATUS.md` - What's complete, what's next
-- **Strategic Vision**: `docs/01-planning/development_roadmap_2025.md` - Project direction
+- **Active Development**: `docs/01-planning/CORE_FEATURES_sim-v2.0.md` - Current 6-month priorities
+- **Completed MVP**: `docs/99-legacy/complete/development_roadmap_2025_sim-v1.0.md` - Historical MVP record
 - **User Flows**: `docs/03-workflows/user-interaction-flows.md` - Player experience
 - **System Flows**: `docs/03-workflows/game-system-workflows.md` - Backend processing
 
