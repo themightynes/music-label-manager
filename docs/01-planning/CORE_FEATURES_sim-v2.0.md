@@ -1,8 +1,10 @@
-# CORE_FEATURES.md
+# Music Label Manager - Active Development Roadmap (v2.0)
 
-# Music Label Manager - Core Features Development Guide
+*Current 6-month development priorities and features*
+*Last Updated: September 2025*
 
-*Development priority guide for implementing game systems and features*
+> **Note**: For completed MVP features, see `development_roadmap_2025_sim-v1.0.md`  
+> **Note**: For long-term vision (12-24 months), see `comprehensive-roadmap_sim-v3.0.md`
 
 -----
 
@@ -123,17 +125,17 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-### **6. Artist Mood Effects**
+### **6. Artist Mood Effects** (Enhancement of existing system)
 
-**System**: Artist emotional state affecting performance and output quality
-**Scale**: Very Low (-30%) → Low (-15%) → Good (+10%) → Excellent (+25%)
+**System**: Complete the artist mood system with interactive management
+**Current Status**: Basic mood tracking and multipliers implemented in v1.0
 
-**Implementation Requirements**:
+**New Implementation Requirements**:
 
-- Mood tracking and display for each artist
-- Performance multipliers applied to all projects
 - Mood management through dialogue choices and work-life balance
-- Visual mood indicators and trend tracking
+- Trigger special events or artist departure when mood is low
+- Mood trend tracking and predictive warnings
+- Recovery activities and mood improvement strategies
 
 **JSON Fields**: `roles.json → artist_effects.mood_effects`
 **User Impact**: Makes artist relationship management crucial for business success
@@ -176,7 +178,7 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-### **9. Multi-Channel Marketing**
+### **9. Multi-Channel Marketing** (Moved from v1.0)
 
 **System**: Different promotion strategies targeting different audiences
 **Channels**: Radio push ($2.5k-10k), PR campaigns ($3k-8k), Digital ads ($1k-8k)
@@ -185,11 +187,13 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 - Marketing campaign creation interface
 - Channel-specific audience targeting and outcomes
-- ROI tracking and optimization
+- Basic ROI tracking and reporting
 - Platform relationship building
 
 **JSON Fields**: `balance.json → marketing_costs`
 **User Impact**: Strategic promotion choices based on artist type and target audience
+
+> **Note**: Advanced features (A/B testing, detailed analytics) reserved for v3.0
 
 -----
 
@@ -210,20 +214,19 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-### **11. Artist Loyalty Effects**
+### **11. Visual Feedback for Tier Progression** (UI Polish)
 
-**System**: Relationship quality affecting costs and cooperation
-**Effects**: High loyalty (-20% tour costs, -50% marketing), Low loyalty (cost penalties)
+**System**: Enhanced UI/UX for access tier system
+**Current Status**: Access tier system functional but lacks visual feedback
 
 **Implementation Requirements**:
 
-- Loyalty tracking and relationship building mechanics
-- Cost reduction calculations based on loyalty levels
-- Contract negotiation and retention mechanics
-- Long-term relationship investment payoffs
+- Unlock notifications when reaching new tiers
+- Visual progress bars toward next tier
+- Clear indication of locked features and requirements
+- Achievement-style celebration animations
 
-**JSON Fields**: `roles.json → artist_effects.loyalty_effects`
-**User Impact**: Relationship building has tangible financial and operational benefits
+**User Impact**: Clear progression feedback and satisfying unlock moments
 
 -----
 
@@ -258,18 +261,17 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 ## 🚀 **TIER 5: ADVANCED SYSTEMS**
 
-### **Future Development Features**:
+### **Moved to Long-term Vision (v3.0)**:
 
+- Artist Loyalty Effects System
+- Music Creation & Release Phases 3-4
 - Crisis Management System
-- Technology Disruption Events
-- Economic Cycle Response
-- Advanced Artist Development
-- Genre & Trend Adaptation
-- Social Impact & Cultural Influence
-- Real-time Industry Competition
-- Comprehensive Mod Support
-- Educational Institution Integration
-- Live Industry Data Integration
+- Advanced Analytics & ROI
+- Multiplayer Features
+- Educational Platform
+- Industry Integration
+
+See `comprehensive-roadmap_sim-v3.0.md` for details on these features.
 
 -----
 

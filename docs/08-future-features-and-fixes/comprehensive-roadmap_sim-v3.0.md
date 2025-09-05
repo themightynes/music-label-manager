@@ -1,122 +1,62 @@
-# Music Label Manager - Comprehensive Long-Term Roadmap
+# Music Label Manager - Long-Term Vision Roadmap (v3.0)
 
 ## Vision Statement
 Transform Music Label Manager from a solid MVP into the **definitive music industry simulation** - a comprehensive, realistic platform that serves both entertainment and professional education markets.
 
-*Roadmap derived from comprehensive JSON data analysis*  
-*Generated: August 18, 2025*  
-*Target Timeline: 18-24 months for full implementation*
+*Long-term vision for 12-24 months beyond active development*  
+*Last Updated: September 2025*  
+
+> **Note**: For completed MVP features, see `development_roadmap_2025_sim-v1.0.md`  
+> **Note**: For active 6-month development, see `CORE_FEATURES_sim-v2.0.md`
 
 ---
 
-## 🎯 **PHASE 1: CORE ENHANCEMENT (Months 1-3)**
-*Foundation improvements and critical missing systems*
+## 🎯 **PHASE 0: FEATURES FROM v1.0 MVP**
+*Features moved from incomplete MVP development*
 
-### **1.1 Revenue & Economic Realism**
+### **Artist Loyalty Effects System**
+**Origin**: v1.0 Sprint 6 (Weeks 11-12) - Not implemented
 
-#### **Streaming Revenue Decay System** ⭐ CRITICAL
-- **Implementation**: Monthly revenue calculation for all released projects
-- **Features**:
-  - 85% monthly decay rate for streaming revenue
-  - Reputation bonuses affect entire catalog
-  - Long-tail revenue for successful releases (12-24 months)
-  - Cumulative streaming milestone tracking
-- **User Workflow**: Players see realistic ongoing revenue from their catalog
-- **Business Impact**: Encourages building diverse catalog vs. one-hit strategy
+**System**: Long-term relationship quality affecting costs and cooperation
+**Effects**: 
+- High loyalty (80+): -20% tour costs, -50% marketing costs
+- Low loyalty (0-20): +20% cost penalty, 15% departure risk
 
-#### **Seasonal Market Modifiers**
-- **Implementation**: Quarterly revenue multipliers
-- **Features**:
-  - Q1: 0.85x (post-holiday slump)
-  - Q2: 0.95x (spring normalization)  
-  - Q3: 0.90x (summer distraction)
-  - Q4: 1.25x (holiday boost)
-- **User Workflow**: Strategic release timing becomes crucial
-- **UI Enhancement**: Calendar view showing seasonal trends
+**Implementation Requirements**:
+- Loyalty tracking separate from mood (mood = short-term, loyalty = long-term)
+- Loyalty builds slowly through consistent positive treatment
+- Contract negotiation advantages for high loyalty artists
+- Long-term relationship investment payoffs
 
-#### **Regional Market Expansion**
-- **Implementation**: Multi-territory release system
-- **Features**:
-  - Domestic (0 barrier), Neighboring (+15), International (+35), Global (+60)
-  - Territory-specific reputation tracking
-  - Currency conversion and market size differences
-  - Distribution cost scaling by territory
-- **User Workflow**: 
-  1. Choose release territories for each project
-  2. Build regional reputation through tours/marketing
-  3. Unlock new territories as global reputation grows
-- **UI Components**: World map territory selector, regional reputation dashboard
+### **Music Creation & Release Cycle - Advanced Phases**
+**Origin**: v1.0 Phases 3-4 - Not implemented
 
-### **1.2 Advanced Project Quality Systems**
+**Phase 3: Advanced Catalog Features**
+- Catalog value optimization strategies
+- Back catalog remastering and re-releases
+- Greatest hits compilations
+- Deluxe editions and anniversary releases
 
-#### **Producer Tier Selection System**
-- **Implementation**: Producer marketplace with tier-based quality bonuses
-- **Producer Tiers**:
-  - **Local**: $0 bonus, +0 quality
-  - **Regional**: $3k-8k, +5 quality, regional reputation bonus
-  - **National**: $8k-20k, +12 quality, national media connections
-  - **Legendary**: $20k-50k, +20 quality, guaranteed press coverage
-- **User Workflow**:
-  1. Browse producer marketplace by budget/style
-  2. Review producer portfolios and past successes
-  3. Negotiate rates and project scope
-  4. See quality improvements during production
-- **UI Components**: ProducerMarketplaceModal, producer profile cards, negotiation interface
-
-#### **Time Investment Quality System**
-- **Implementation**: Project timeline vs. quality trade-offs
-- **Investment Levels**:
-  - **Rushed**: -10 quality, 50% time, 75% cost
-  - **Standard**: +0 quality, 100% time, 100% cost
-  - **Extended**: +8 quality, 150% time, 120% cost
-  - **Perfectionist**: +15 quality, 200% time, 150% cost
-- **User Workflow**:
-  1. Set project timeline during creation
-  2. Adjust time/quality slider during production
-  3. Face deadline pressure vs. quality decisions
-  4. See market reception based on quality choices
-- **UI Components**: Timeline slider, quality prediction meter, deadline countdown
-
-#### **Artist Synergy & Collaboration System**
-- **Implementation**: Multi-artist project bonuses
-- **Features**:
-  - +10 quality bonus for compatible artists
-  - Archetype synergy matrix (Visionary + Workhorse = Innovation)
-  - Guest feature system with revenue sharing
-  - Collaboration history affects future compatibility
-- **User Workflow**:
-  1. Select primary and featuring artists
-  2. Review compatibility scores and past collaborations
-  3. Negotiate revenue splits and creative control
-  4. Manage interpersonal dynamics during production
-
-### **1.3 Enhanced Artist Discovery & Management**
-
-#### **Advanced Talent Search System**
-- **Implementation**: Multi-tier artist discovery beyond initial 6
-- **Search Tiers**:
-  - **Basic ($5k)**: 3 local artists, basic stats revealed
-  - **Premium ($15k)**: 6 regional artists, full stats + archetype bonuses
-  - **Extensive ($50k)**: 12 national artists, includes established acts
-- **Artist Status Tiers**:
-  - **Unknown**: $1k-5k signing, high growth potential
-  - **Developing**: $5k-25k signing, proven local following
-  - **Established**: $25k-100k signing, national recognition
-- **User Workflow**:
-  1. Set talent search budget and geographic scope
-  2. Review discovered artist portfolios and demos
-  3. Evaluate signing costs vs. potential returns
-  4. Negotiate contract terms and development plans
-- **UI Components**: TalentSearchModal, artist scouting reports, contract negotiation
+**Phase 4: Enhanced UX & Cognitive Load Optimization**
+- Streamlined multi-project management interface
+- Batch operations for similar projects
+- Smart defaults based on past choices
+- Advanced filtering and sorting for large catalogs
 
 ---
 
-## 🚀 **PHASE 2: STRATEGIC DEPTH (Months 4-8)**
+## 🎯 **PHASE 1: ADVANCED ECONOMIC SYSTEMS**
+*Note: Basic economic features (streaming decay, seasonal modifiers, regional markets) are in v2.0*
+
+---
+
+## 🚀 **PHASE 2: STRATEGIC DEPTH**
 *Advanced systems that add strategic complexity*
+*Note: Basic Multi-Channel Marketing is in v2.0 active development*
 
-### **2.1 Comprehensive Marketing & Campaign System**
+### **2.1 Advanced Marketing Analytics**
 
-#### **Dedicated PR Campaign System**
+#### **Dedicated PR Campaign System** (Enhancement of v2.0 basic marketing)
 - **Implementation**: Standalone PR campaigns separate from project marketing
 - **Campaign Types**:
   - **Artist Image Building**: 1-2 months, builds long-term reputation
@@ -164,27 +104,21 @@ Transform Music Label Manager from a solid MVP into the **definitive music indus
   6. Analyze ROI and audience insights for future campaigns
 - **UI Components**: DigitalCampaignDashboard, creative asset manager, audience insights panel
 
-### **2.2 Advanced Artist Psychology & Relationship System**
+### **2.2 Advanced Artist Psychology System**
+*Note: Basic mood system with dialogue is in v2.0. This adds depth.*
 
-#### **Complex Mood & Loyalty Consequences**
-- **Implementation**: Deep artist psychology simulation
-- **Mood Effects** (0-100 scale):
-  - **Very Low (0-20)**: -30% performance, higher chance of quitting
-  - **Low (21-40)**: -15% performance, creative blocks
-  - **Neutral (41-60)**: Standard performance
-  - **Good (61-80)**: +10% performance, bonus creativity
-  - **Excellent (81-100)**: +25% performance, breakthrough potential
-- **Loyalty Effects**:
-  - **Disloyal (0-20)**: 50% chance of breaking contract early
-  - **Neutral (21-60)**: Standard contract adherence
-  - **Loyal (61-80)**: -20% tour costs, +bonus promotion
-  - **Devoted (81-100)**: -50% marketing costs, exclusive loyalty bonus
-- **User Workflow**:
-  1. Monitor artist mood through regular check-ins
-  2. Address mood issues through dialogue choices
-  3. Balance creative freedom vs. commercial pressure
-  4. Invest in artist development to build loyalty
-  5. Handle loyalty crises through relationship management
+#### **Complex Psychology Simulation**
+- **Implementation**: Deep artist personality modeling beyond basic mood
+- **Personality Traits**:
+  - Creativity vs. Commercial mindset
+  - Risk tolerance and experimentation desire
+  - Social needs and collaboration preferences
+  - Work ethic and reliability patterns
+- **Advanced Mood Factors**:
+  - Creative satisfaction from project outcomes
+  - Peer comparison and industry status
+  - Personal life events affecting work
+  - Long-term career trajectory satisfaction
 
 #### **Archetype-Specific Bonuses & Challenges**
 - **Implementation**: Deep archetype systems beyond basic stats
