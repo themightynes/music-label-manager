@@ -1,131 +1,36 @@
-# Music Label Manager - Active Development Roadmap (v2.0)
+# Music Label Manager - Post-MVP Development Roadmap (v2.0)
 
-*Current 6-month development priorities and features*
+*NEW features for 6-month post-MVP development*
 *Last Updated: September 2025*
 
-> **Note**: For completed MVP features, see `development_roadmap_2025_sim-v1.0.md`  
+> **Note**: For COMPLETED MVP features, see `docs/99-legacy/complete/development_roadmap_2025_sim-v1.0.md`  
 > **Note**: For long-term vision (12-24 months), see `comprehensive-roadmap_sim-v3.0.md`
 
------
-
-## 🎯 **DEVELOPMENT TIER SYSTEM**
-
-Features are organized by implementation priority and impact on core gameplay experience.
-
-### **TIER 1: ABSOLUTE CORE** (MVP Essential)
-
-*These features define the fundamental game experience and must be implemented first*
-
-### **TIER 2: CORE ENHANCEMENT** (Essential for Depth)
-
-*These features significantly improve the core experience and should be implemented early*
-
-### **TIER 3: STRATEGIC SYSTEMS** (Important for Replayability)
-
-*These features add strategic depth and long-term engagement*
-
-### **TIER 4: ENRICHMENT FEATURES** (Post-MVP)
-
-*These features add variety and richness to the experience*
-
-### **TIER 5: ADVANCED SYSTEMS** (Version 2.0+)
-
-*Complex features for future development phases*
+> **IMPORTANT**: This document contains ONLY NEW features not yet implemented. All completed v1.0 features have been removed.
 
 -----
 
-## 🎵 **TIER 1: ABSOLUTE CORE**
+## 🎯 **POST-MVP DEVELOPMENT TIERS**
 
-### **1. Music Creation & Release Cycle** ⭐ **FOUNDATION**
+Features are organized by implementation priority for the post-MVP phase.
 
-**System**: Multi-song project management and release strategy
-**Core Loop**: `Artists create songs → release as singles → bundle into EPs → compile into albums`
+### **TIER 1: IMMEDIATE PRIORITIES** (Sprint 3-4, Weeks 5-8)
 
-**Implementation Requirements**:
+*Critical enhancements to deepen core gameplay*
 
-- Multi-song project tracking per artist
-- Strategic single selection from available songs
-- EP creation (3-5 songs) and album compilation (8-12 songs)
-- Release timing and catalog building strategy
-- Song quality affects release success
+### **TIER 2: STRATEGIC SYSTEMS** (Sprint 5-6, Weeks 9-12)
 
-**JSON Fields**: Project management, song cataloging, release types
-**User Impact**: This IS the music industry simulation - all other systems serve this loop
+*Features that add strategic depth and long-term engagement*
+
+### **TIER 3: ENRICHMENT FEATURES** (Months 4-6)
+
+*Features that add variety and richness to the experience*
 
 -----
 
-### **2. Streaming Revenue Decay**
+## 🎵 **TIER 1: IMMEDIATE PRIORITIES**
 
-**System**: Monthly revenue decline for all releases
-**Formula**: `current_revenue = previous_revenue * 0.85` (monthly)
-
-**Implementation Requirements**:
-
-- Apply 85% decay to all active releases each month
-- Track individual release revenue streams over time
-- Display revenue trends and catalog value
-- Make new releases essential for sustained income
-
-**JSON Fields**: `balance.json → market_formulas.streaming_calculation.longevity_decay`
-**User Impact**: Transforms economic model from "one hit wonder" to "catalog building strategy"
-
------
-
-### **3. Producer Tier System**
-
-**System**: Strategic producer selection affecting song quality
-**Tiers**: Local (+0), Regional (+5), National (+12), Legendary (+20)
-
-**Implementation Requirements**:
-
-- Producer marketplace with tier selection interface
-- Cost scaling by producer tier and reputation
-- Quality bonuses applied to song/project outcomes
-- Producer availability based on label reputation
-
-**JSON Fields**: `balance.json → quality_system.producer_tier_bonus`
-**User Impact**: Makes every recording session a strategic budget vs quality decision
-
------
-
-### **4. Access Tier Progression**
-
-**System**: Reputation-gated access to better promotion opportunities
-**Categories**: Playlist placement, Press coverage, Venue booking
-
-**Implementation Requirements**:
-
-- **Playlist Tiers**: None → Niche → Mid → Flagship (60+ rep, 1.5x multiplier)
-- **Press Tiers**: None → Blogs → Mid-Tier → National (50+ rep, 85% pickup)
-- **Venue Tiers**: None → Clubs → Theaters (20+ rep) → Arenas (45+ rep)
-- Visual tier badges and unlock notifications
-- Reputation thresholds gate progression
-
-**JSON Fields**: `balance.json → access_tier_system`
-**User Impact**: Provides clear progression goals and unlocks better opportunities
-
------
-
-## 🔧 **TIER 2: CORE ENHANCEMENT**
-
-### **5. Time Investment Quality**
-
-**System**: Project timeline affecting quality vs cost vs deadline pressure
-**Options**: Rushed (-10), Standard (0), Extended (+8), Perfectionist (+15)
-
-**Implementation Requirements**:
-
-- Timeline slider in project creation interface
-- Quality bonuses/penalties based on time allocation
-- Cost multipliers for extended development
-- Deadline pressure mechanics
-
-**JSON Fields**: `balance.json → quality_system.time_investment_bonus`
-**User Impact**: Adds strategic depth to every project with time pressure decisions
-
------
-
-### **6. Artist Mood Effects** (Enhancement of existing system)
+### **1. Artist Mood Effects** (Enhancement of existing system)
 
 **System**: Complete the artist mood system with interactive management
 **Current Status**: Basic mood tracking and multipliers implemented in v1.0
@@ -142,7 +47,7 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-### **7. Regional Market Barriers**
+### **2. Regional Market Barriers**
 
 **System**: Geographic progression requiring reputation building
 **Barriers**: Domestic (0), Neighboring (+15), International (+35), Global (+60)
@@ -159,9 +64,25 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-## ⚡ **TIER 3: STRATEGIC SYSTEMS**
+### **3. Visual Feedback for Tier Progression** (UI Polish)
 
-### **8. Label Brand Building**
+**System**: Enhanced UI/UX for access tier system
+**Current Status**: Access tier system functional but lacks visual feedback
+
+**Implementation Requirements**:
+
+- Unlock notifications when reaching new tiers
+- Visual progress bars toward next tier
+- Clear indication of locked features and requirements
+- Achievement-style celebration animations
+
+**User Impact**: Clear progression feedback and satisfying unlock moments
+
+-----
+
+## ⚡ **TIER 2: STRATEGIC SYSTEMS**
+
+### **4. Label Brand Building**
 
 **System**: Genre specialization and coherent artist roster strategy
 **Mechanics**: Consistent signings → genre bonuses → attract aligned artists
@@ -178,7 +99,7 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-### **9. Multi-Channel Marketing** (Moved from v1.0)
+### **5. Multi-Channel Marketing**
 
 **System**: Different promotion strategies targeting different audiences
 **Channels**: Radio push ($2.5k-10k), PR campaigns ($3k-8k), Digital ads ($1k-8k)
@@ -197,61 +118,29 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-### **10. Seasonal Modifiers**
 
-**System**: Calendar-based sales multipliers affecting release timing
-**Multipliers**: Q1 (0.85x), Q2 (0.95x), Q3 (0.90x), Q4 (1.25x)
+## 🎪 **TIER 3: ENRICHMENT FEATURES**
 
-**Implementation Requirements**:
-
-- Quarterly sales multipliers applied automatically
-- Calendar view showing seasonal trends
-- Strategic release timing recommendations
-- Holiday season competitive pressure
-
-**JSON Fields**: `balance.json → time_progression.seasonal_modifiers`
-**User Impact**: Release timing becomes crucial strategic decision
-
------
-
-### **11. Visual Feedback for Tier Progression** (UI Polish)
-
-**System**: Enhanced UI/UX for access tier system
-**Current Status**: Access tier system functional but lacks visual feedback
-
-**Implementation Requirements**:
-
-- Unlock notifications when reaching new tiers
-- Visual progress bars toward next tier
-- Clear indication of locked features and requirements
-- Achievement-style celebration animations
-
-**User Impact**: Clear progression feedback and satisfying unlock moments
-
------
-
-## 🎪 **TIER 4: ENRICHMENT FEATURES**
-
-### **12. Dynamic Events System**
+### **6. Dynamic Events System**
 
 - Random industry events requiring strategic responses
 - Sync licensing opportunities ($5k-100k deals)
 - Crisis management (scandals, technical issues)
 - Market opportunities and disruptions
 
-### **13. Artist Synergy & Collaboration**
+### **7. Artist Synergy & Collaboration**
 
 - Multi-artist project bonuses (+10 quality for compatible artists)
 - Collaboration success based on relationships
 - Cross-promotion between roster artists
 
-### **14. Advanced Dialogue Effects**
+### **8. Advanced Dialogue Effects**
 
 - Complex narrative consequences with delayed effects
 - Character development and relationship evolution
 - Industry respect and cultural impact building
 
-### **15. Venue Progression System**
+### **9. Venue Progression System**
 
 - Artist popularity-based venue access
 - Tour routing and logistics management
@@ -259,12 +148,12 @@ Features are organized by implementation priority and impact on core gameplay ex
 
 -----
 
-## 🚀 **TIER 5: ADVANCED SYSTEMS**
+## 🚀 **DEFERRED TO v3.0**
 
-### **Moved to Long-term Vision (v3.0)**:
+### **Advanced Systems (12-24 months)**:
 
 - Artist Loyalty Effects System
-- Music Creation & Release Phases 3-4
+- Music Creation & Release Phases 3-4  
 - Crisis Management System
 - Advanced Analytics & ROI
 - Multiplayer Features
@@ -275,72 +164,105 @@ See `comprehensive-roadmap_sim-v3.0.md` for details on these features.
 
 -----
 
-## 📋 **IMPLEMENTATION ROADMAP**
+## 📋 **POST-MVP IMPLEMENTATION ROADMAP**
 
-### **Sprint 1 (Weeks 1-2): Music Foundation**
+### **Current Sprint (Weeks 5-6): Enhancement & Polish**
 
-1. Music Creation & Release Cycle - Core song/EP/album system
-1. Streaming Revenue Decay - Economic foundation
-1. Basic integration and core loop functionality
+1. Artist Mood Effects - Complete interactive management
+2. Regional Market Barriers - Geographic strategy
+3. Visual Feedback for Tier Progression - UI polish
 
-### **Sprint 2 (Weeks 3-4): Strategic Depth**
+### **Sprint 4 (Weeks 7-8): Strategic Depth**
 
-1. Producer Tier System - Recording strategy
-1. Access Tier Progression - Clear advancement
-1. Time Investment Quality - Project planning depth
+1. Label Brand Building - Genre specialization
+2. Initial Multi-Channel Marketing implementation
 
-### **Sprint 3 (Weeks 5-6): Enhancement & Polish**
+### **Sprint 5-6 (Weeks 9-12): Marketing & Events**
 
-1. Artist Mood Effects - Relationship management
-1. Regional Market Barriers - Geographic strategy
-1. UI polish and demo preparation
+1. Complete Multi-Channel Marketing system
+2. Begin Dynamic Events System
 
-### **Post-MVP Phases**:
+### **Months 4-6: Enrichment Phase**
 
-- **Phase 1**: Tier 3 Strategic Systems
-- **Phase 2**: Tier 4 Enrichment Features
-- **Phase 3**: Tier 5 Advanced Systems
+- Artist Synergy & Collaboration
+- Advanced Dialogue Effects  
+- Venue Progression System
+- Complete Dynamic Events
 
 -----
 
-## 🎯 **JSON FIELD MAPPING**
+## 🎯 **NEW JSON FIELD REQUIREMENTS**
 
-### **Critical JSON Implementations**:
+### **Priority JSON Implementations for v2.0**:
 
 ```json
-// balance.json priority fields
-"market_formulas.streaming_calculation.longevity_decay": 0.85,
-"quality_system.producer_tier_bonus": { "local": 0, "regional": 5, "national": 12, "legendary": 20 },
-"quality_system.time_investment_bonus": { "rushed": -10, "standard": 0, "extended": 8, "perfectionist": 15 },
-"access_tier_system": { /* playlist/press/venue progression */ },
-"regional_barriers": { "domestic": 0, "neighboring": 15, "international": 35, "global": 60 },
-"seasonal_modifiers": { "q1": 0.85, "q2": 0.95, "q3": 0.90, "q4": 1.25 }
+// balance.json NEW fields needed
+"regional_barriers": { 
+  "domestic": 0, 
+  "neighboring": 15, 
+  "international": 35, 
+  "global": 60 
+},
+"marketing_channels": {
+  "radio": { "cost_range": [2500, 10000], "effectiveness": 1.2 },
+  "pr_campaign": { "cost_range": [3000, 8000], "effectiveness": 1.1 },
+  "digital_ads": { "cost_range": [1000, 8000], "effectiveness": 1.0 }
+},
+"label_brand_bonuses": {
+  "genre_consistency": { "threshold": 0.7, "bonus": 1.15 },
+  "mixed_penalty": 0.85
+}
 
-// roles.json priority fields  
-"artist_effects.mood_effects": { "very_low": -30, "low": -15, "good": 10, "excellent": 25 },
-"artist_effects.loyalty_effects": { /* cost reductions and penalties */ }
+// roles.json enhanced fields  
+"artist_effects.mood_management": {
+  "dialogue_impact": { "positive": 10, "negative": -15 },
+  "workload_impact": { "overworked": -20, "balanced": 5 },
+  "success_impact": { "hit": 15, "flop": -10 }
+}
 ```
 
 -----
 
-## 🔑 **DESIGN PRINCIPLES**
+## 🔑 **POST-MVP DESIGN PRINCIPLES**
 
-### **Core Philosophy**:
+### **v2.0 Focus Areas**:
 
-- **Music creation is central** - All systems serve the song→single→EP→album cycle
-- **Economic realism** - Revenue decay forces continuous content creation
-- **Strategic choice** - Every decision has meaningful consequences
-- **Clear progression** - Players understand advancement paths
-- **Quality over complexity** - Deep core systems > many shallow features
+- **Deepen existing systems** - Enhance mood, add visual feedback, expand markets
+- **Strategic complexity** - Brand building, marketing channels, event responses
+- **Player engagement** - Dynamic events, collaborations, dialogue choices
+- **Geographic expansion** - Regional barriers and international markets
+- **Long-term planning** - Label identity and artist synergies
 
-### **Implementation Guidelines**:
+### **Implementation Priorities**:
 
-- Implement features that **directly enhance music creation and release**
-- Prioritize **player agency and strategic choice**
-- Ensure **clear feedback** on all player decisions
-- Build **interconnected systems** that reinforce each other
-- Maintain **economic balance** between risk and reward
+1. **Complete partial v1.0 features** (Artist Mood interactive management)
+2. **Add missing UI/UX polish** (Visual tier progression feedback)
+3. **Implement strategic depth** (Brand building, marketing channels)
+4. **Introduce dynamic content** (Events, collaborations, advanced dialogue)
 
 -----
 
-*This document serves as the authoritative guide for feature implementation priority and system design decisions.*
+## 📊 **SUMMARY OF CHANGES**
+
+### **Removed from v2.0 (Already Complete in v1.0)**:
+- ✅ Music Creation & Release Cycle (Phases 1-2)
+- ✅ Streaming Revenue Decay
+- ✅ Producer Tier System
+- ✅ Time Investment Quality
+- ✅ Access Tier Progression
+- ✅ Seasonal Modifiers
+
+### **Remaining NEW Features for v2.0**:
+- 🚧 Artist Mood Effects (enhancement)
+- 📋 Regional Market Barriers
+- 📋 Visual Feedback for Tier Progression
+- 📋 Label Brand Building
+- 📋 Multi-Channel Marketing
+- 📋 Dynamic Events System
+- 📋 Artist Synergy & Collaboration
+- 📋 Advanced Dialogue Effects
+- 📋 Venue Progression System
+
+-----
+
+*This document now contains ONLY new features for post-MVP development. See v1.0 for completed features.*
