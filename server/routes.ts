@@ -394,7 +394,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameId: req.params.gameId
       });
       
-      console.log('[PROJECT CREATION] Validated data after schema parse:', JSON.stringify({
+      // Additional budget validation based on economy.json
+      const projectTypes = await serverGameData.getProjectTypes();
+      const projectTypeKey = validatedData.type === 'Single' ? 'single' : 
+                            validatedData.type === 'EP' ? 'ep' : 'mini_tour';
+      const projectTypeConfig = projectTypes[projectTypeKey];
+      
+      if (projectTypeConfig && validatedData.type !== 'Mini-Tour') {
+        // For recording projects, validate budget per song
+        const budgetPerSong = validatedData.budgetPerSong || 0;
+        const songCount = validatedData.songCount || projectTypeConfig.song_count_default || 1;
+        const minPerSong = Math.round(projectTypeConfig.min / songCount);
+        const maxPerSong = Math.round(projectTypeConfig.max / songCount);
+        
+        if (budgetPerSong < minPerSong) {
+          throw new Error(`Budget per song must be at least $${minPerSong.toLocaleString()} for ${validatedData.type} projects`);
+        }
+        if (budgetPerSong > maxPerSong) {
+          throw new Error(`Budget per song cannot exceed $${maxPerSong.toLocaleString()} for ${validatedData.type} projects`);
+        }
+      } else if (projectTypeConfig) {
+        // For tour projects, validate total budget
+        const totalCost = validatedData.totalCost || 0;
+        if (totalCost < projectTypeConfig.min) {
+          throw new Error(`Budget must be at least $${projectTypeConfig.min.toLocaleString()} for ${validatedData.type} projects`);
+        }
+        if (totalCost > projectTypeConfig.max) {
+          throw new Error(`Budget cannot exceed $${projectTypeConfig.max.toLocaleString()} for ${validatedData.type} projects`);
+        }
+      }
+      
+      console.log('[PROJECT CREATION] Validated data after schema parse and budget validation:', JSON.stringify({
         title: validatedData.title,
         type: validatedData.type,
         budgetPerSong: validatedData.budgetPerSong,

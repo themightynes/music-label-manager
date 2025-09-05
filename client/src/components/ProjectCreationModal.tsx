@@ -37,10 +37,6 @@ const PROJECT_TYPES_FALLBACK = [
     name: 'Single',
     icon: Music,
     description: 'Recording session for 1-3 songs',
-    budgetRange: '$2k - $6k per song',
-    minBudgetPerSong: 2000,
-    maxBudgetPerSong: 6000,
-    defaultBudgetPerSong: 3000,
     duration: '2-3 months',
     isRecording: true,
     minSongs: 1,
@@ -52,10 +48,6 @@ const PROJECT_TYPES_FALLBACK = [
     name: 'EP',
     icon: Disc,
     description: 'Recording session for 3-5 songs',
-    budgetRange: '$3k - $7k per song',
-    minBudgetPerSong: 3000,
-    maxBudgetPerSong: 7000,
-    defaultBudgetPerSong: 4500,
     duration: '3-5 months',
     isRecording: true,
     minSongs: 3,
@@ -67,10 +59,6 @@ const PROJECT_TYPES_FALLBACK = [
     name: 'Mini-Tour',
     icon: MapPin,
     description: 'Small venue tour',
-    budgetRange: '$5k - $15k total',
-    minBudgetPerSong: 5000,     // For tours, this represents total budget
-    maxBudgetPerSong: 15000,
-    defaultBudgetPerSong: 10000,
     duration: '1-2 months',
     isRecording: false,
     minSongs: 0,
@@ -87,36 +75,32 @@ const PRODUCER_TIERS = [
     id: 'local' as const,
     name: 'Local',
     icon: Music,
-    description: 'Neighborhood studio',
+    description: 'Neighborhood studio (skill: 40)',
     costMultiplier: 1.0,
-    qualityBonus: 0,
     unlockReputation: 0
   },
   {
     id: 'regional' as const,
     name: 'Regional',
     icon: Star,
-    description: 'Regional producer',
+    description: 'Regional producer (skill: 55)',
     costMultiplier: 1.8,
-    qualityBonus: 5,
     unlockReputation: 15
   },
   {
     id: 'national' as const,
     name: 'National',
     icon: Award,
-    description: 'National producer',
+    description: 'National producer (skill: 75)',
     costMultiplier: 3.2,
-    qualityBonus: 12,
     unlockReputation: 35
   },
   {
     id: 'legendary' as const,
     name: 'Legendary',
     icon: Zap,
-    description: 'Legendary producer',
+    description: 'Legendary producer (skill: 95)',
     costMultiplier: 5.5,
-    qualityBonus: 20,
     unlockReputation: 60
   }
 ];
@@ -127,32 +111,28 @@ const TIME_INVESTMENT_OPTIONS = [
     name: 'Rushed',
     icon: Clock,
     description: 'Quick turnaround',
-    costMultiplier: 0.7,
-    qualityModifier: -10
+    costMultiplier: 0.7
   },
   {
     id: 'standard' as const,
     name: 'Standard',
     icon: Clock,
     description: 'Normal timeline',
-    costMultiplier: 1.0,
-    qualityModifier: 0
+    costMultiplier: 1.0
   },
   {
     id: 'extended' as const,
     name: 'Extended',
     icon: Clock,
     description: 'Extra time',
-    costMultiplier: 1.4,
-    qualityModifier: 8
+    costMultiplier: 1.4
   },
   {
     id: 'perfectionist' as const,
     name: 'Perfectionist',
     icon: Clock,
     description: 'Maximum quality',
-    costMultiplier: 2.1,
-    qualityModifier: 15
+    costMultiplier: 2.1
   }
 ];
 
@@ -240,48 +220,184 @@ export function ProjectCreationModal({
   const timeMultiplier = selectedTimeOption?.costMultiplier || 1.0;
   const finalTotalCost = Math.round(totalBaseCost * producerMultiplier * timeMultiplier);
 
-  // Calculate budget quality bonus (simplified version of backend logic)
-  const calculateBudgetQualityBonus = (budgetPerSong: number, projectType: string): number => {
-    if (budgetPerSong <= 0) return 0;
-    
-    // Approximate minimum viable costs (simplified)
-    const minViableCosts = {
-      'Single': 2500,
-      'EP': 3000,
-      'Mini-Tour': 5000
+  // Calculate dynamic minimum viable cost (matches backend calculation)
+  const calculateDynamicMinViableCost = (projectType: string, producerTier: string, timeInvestment: string, songCount: number): number => {
+    // Base per-song costs
+    const baseCosts = {
+      'Single': 3500,
+      'EP': 4000,
+      'Mini-Tour': 3500
     };
     
-    const minCost = minViableCosts[projectType as keyof typeof minViableCosts] || 2500;
-    const budgetRatio = budgetPerSong / minCost;
+    let baseCostPerSong = baseCosts[projectType as keyof typeof baseCosts] || 3500;
     
-    // Efficiency breakpoints (matching backend logic)
-    if (budgetRatio < 0.6) {
-      return -5; // Below minimum viable - penalty
-    } else if (budgetRatio <= 1.0) {
-      // 0-40% of max bonus (10 points) in optimal range
-      return Math.floor(((budgetRatio - 0.6) / 0.4) * 10);
-    } else if (budgetRatio <= 2.0) {
-      // 40-70% of max bonus (10-17.5 points) in luxury range
-      return Math.floor(10 + ((budgetRatio - 1.0) / 1.0) * 7.5);
-    } else if (budgetRatio <= 3.0) {
-      // 70-90% of max bonus (17.5-22.5 points) in premium range
-      return Math.floor(17.5 + ((budgetRatio - 2.0) / 1.0) * 5);
+    // Apply economies of scale for multi-song projects
+    if (songCount > 1) {
+      const economiesMultiplier = songCount >= 7 ? 0.8 :
+                                 songCount >= 4 ? 0.85 :
+                                 songCount >= 2 ? 0.9 : 1.0;
+      baseCostPerSong *= economiesMultiplier;
+    }
+    
+    // Don't apply producer and time multipliers to minimum viable cost
+    // These are already reflected in the actual project cost the player pays
+    // The minimum viable should represent the baseline quality expectation
+    
+    // Apply baseline quality multiplier for recording sessions
+    // This ensures minimum selectable budgets don't give quality bonuses
+    const baselineQualityMultiplier = (projectType === 'Single' || projectType === 'EP') ? 1.5 : 1.0;
+    
+    return Math.round(baseCostPerSong * baselineQualityMultiplier);
+  };
+  
+  // Calculate budget multiplier using new 5-segment piecewise function
+  const calculateBudgetMultiplier = (budgetPerSong: number, projectType: string, producerTier: string, timeInvestment: string, songCount: number): number => {
+    if (budgetPerSong <= 0) return 1.0;
+    
+    const minViableCost = calculateDynamicMinViableCost(projectType, producerTier, timeInvestment, songCount);
+    let efficiencyRatio = budgetPerSong / minViableCost;
+    
+    // Apply dampening factor (matching backend logic)
+    const dampeningFactor = 0.7; // Must match quality.json
+    efficiencyRatio = 1 + dampeningFactor * (efficiencyRatio - 1);
+    
+    // 5-segment piecewise function (simplified version of backend)
+    const breakpoints = {
+      penalty_threshold: 0.6,
+      minimum_viable: 0.8,
+      optimal_efficiency: 1.2,
+      luxury_threshold: 2.0,
+      diminishing_threshold: 3.5
+    };
+    
+    let multiplier: number;
+    
+    if (efficiencyRatio < breakpoints.penalty_threshold) {
+      // Segment 1: Heavy penalty for insufficient budget
+      // Should be flat 0.65 for anything under 0.6x
+      multiplier = 0.65;
+    } else if (efficiencyRatio < breakpoints.minimum_viable) {
+      // Segment 2: Below standard to minimum viable
+      // Should go from 0.65 to 0.85
+      const progress = (efficiencyRatio - breakpoints.penalty_threshold) / (breakpoints.minimum_viable - breakpoints.penalty_threshold);
+      const startMult = 0.65;
+      const endMult = 0.85;
+      multiplier = startMult + (endMult - startMult) * progress;
+    } else if (efficiencyRatio <= breakpoints.optimal_efficiency) {
+      // Segment 3: Minimum viable to optimal efficiency (best value)
+      // Should go from 0.85 to 1.05
+      const progress = (efficiencyRatio - breakpoints.minimum_viable) / (breakpoints.optimal_efficiency - breakpoints.minimum_viable);
+      const startMult = 0.85;
+      const endMult = 1.05;
+      multiplier = startMult + (endMult - startMult) * progress;
+    } else if (efficiencyRatio <= breakpoints.luxury_threshold) {
+      // Segment 4: Optimal to luxury threshold
+      // Should go from 1.05 to 1.20
+      const progress = (efficiencyRatio - breakpoints.optimal_efficiency) / (breakpoints.luxury_threshold - breakpoints.optimal_efficiency);
+      const startMult = 1.05;
+      const endMult = 1.20;
+      multiplier = startMult + (endMult - startMult) * progress;
+    } else if (efficiencyRatio <= breakpoints.diminishing_threshold) {
+      // Segment 5: Luxury to diminishing threshold
+      // Should go from 1.20 to 1.35
+      const progress = (efficiencyRatio - breakpoints.luxury_threshold) / (breakpoints.diminishing_threshold - breakpoints.luxury_threshold);
+      const startMult = 1.20;
+      const endMult = 1.35;
+      multiplier = startMult + (endMult - startMult) * progress;
     } else {
-      // 90-100% of max bonus (22.5-25 points) with diminishing returns
-      return Math.min(25, Math.floor(22.5 + ((budgetRatio - 3.0) / 1.0) * 2.5));
+      // Segment 6: Diminishing returns (logarithmic)
+      const baseMultiplier = 1.35;
+      const excessRatio = efficiencyRatio - breakpoints.diminishing_threshold;
+      const diminishingBonus = Math.log(1 + excessRatio) * 0.025;
+      multiplier = baseMultiplier + diminishingBonus;
+    }
+    
+    return Math.max(0.65, Math.min(1.35, multiplier));
+  };
+  
+  // Get budget efficiency rating for UI display
+  const getBudgetEfficiencyRating = (budgetPerSong: number, projectType: string, producerTier: string, timeInvestment: string, songCount: number): { rating: string, description: string, color: string } => {
+    if (budgetPerSong <= 0) return { rating: "Unknown", description: "Enter budget to see efficiency", color: "text-gray-400" };
+    
+    const minViableCost = calculateDynamicMinViableCost(projectType, producerTier, timeInvestment, songCount);
+    let efficiencyRatio = budgetPerSong / minViableCost;
+    
+    // Apply dampening factor (matching backend logic)
+    const dampeningFactor = 0.7; // Must match quality.json
+    efficiencyRatio = 1 + dampeningFactor * (efficiencyRatio - 1);
+    
+    if (efficiencyRatio < 0.6) {
+      return { rating: "Insufficient", description: "Budget too low for quality production", color: "text-red-500" };
+    } else if (efficiencyRatio < 0.8) {
+      return { rating: "Below Standard", description: "Minimal quality, corners will be cut", color: "text-orange-500" };
+    } else if (efficiencyRatio <= 1.2) {
+      return { rating: "Efficient", description: "Good value for money, solid quality", color: "text-green-500" };
+    } else if (efficiencyRatio <= 2.0) {
+      return { rating: "Premium", description: "High-end production, excellent quality", color: "text-blue-500" };
+    } else if (efficiencyRatio <= 3.5) {
+      return { rating: "Luxury", description: "Top-tier production, maximum quality", color: "text-purple-500" };
+    } else {
+      return { rating: "Excessive", description: "Diminishing returns, money could be better spent", color: "text-yellow-500" };
     }
   };
 
-  // Calculate estimated quality with budget bonus
-  const baseQuality = 50;
-  const producerBonus = selectedProducer?.qualityBonus || 0;
-  const timeBonus = selectedTimeOption?.qualityModifier || 0;
+  // Calculate estimated quality with new multiplicative formula
   // IMPORTANT: This preview calculation must match the backend formula in:
-  // shared/engine/game-engine.ts (calculateEnhancedSongQuality method, line ~1400)
-  // If you change this formula, update the backend calculation as well
-  const artistMoodBonus = selectedArtist ? Math.floor(((artists.find(a => a.id === selectedArtist)?.mood || 50) - 50) * 0.2) : 0;
-  const budgetBonus = selectedProjectType?.isRecording ? calculateBudgetQualityBonus(budgetPerSong, selectedType || '') : 0;
-  const estimatedQuality = Math.min(100, Math.max(20, baseQuality + producerBonus + timeBonus + artistMoodBonus + budgetBonus));
+  // shared/engine/game-engine.ts (calculateEnhancedSongQuality method, line ~1577)
+  const selectedArtistData = selectedArtist ? artists.find(a => a.id === selectedArtist) : null;
+  
+  // 1. Base quality (talent + producer skill)
+  const producerSkillMap: Record<string, number> = {
+    'local': 40,
+    'regional': 55,
+    'national': 75,
+    'legendary': 95
+  };
+  const producerSkill = producerSkillMap[selectedProducer?.id || 'local'] || 40;
+  const artistTalent = selectedArtistData?.talent || 50;
+  const baseQuality = (artistTalent * 0.65 + producerSkill * 0.35);
+  
+  // 2. Work ethic & time synergy
+  const timeMultipliers: Record<string, number> = {
+    'rushed': 0.7,
+    'standard': 1.0,
+    'extended': 1.1,
+    'perfectionist': 1.2
+  };
+  const artistWorkEthic = selectedArtistData?.workEthic || 50;
+  const workEthicBonus = (artistWorkEthic / 100) * 0.3;
+  const timeFactor = (timeMultipliers[selectedTimeOption?.id || 'standard'] || 1.0) * (1 + workEthicBonus);
+  
+  // 3. Popularity factor (balanced: 0.95x to 1.05x range)
+  const artistPopularity = selectedArtistData?.popularity || 0;
+  const popularityFactor = 0.95 + 0.1 * Math.sqrt(artistPopularity / 100);
+  
+  // 4. Session fatigue (quality drops for multiple songs)
+  const focusFactor = Math.pow(0.97, Math.max(0, songCount - 3));
+  
+  // 5. Budget factor
+  const budgetFactor = selectedProjectType?.isRecording ? 
+    calculateBudgetMultiplier(budgetPerSong, selectedType || '', selectedProducer?.id || 'local', selectedTimeOption?.id || 'standard', songCount) : 1.0;
+  
+  // Get budget efficiency information for display
+  const budgetEfficiency = selectedProjectType?.isRecording && budgetPerSong > 0 ?
+    getBudgetEfficiencyRating(budgetPerSong, selectedType || '', selectedProducer?.id || 'local', selectedTimeOption?.id || 'standard', songCount) :
+    null;
+  
+  // Calculate minimum viable cost for display
+  const minimumViableCost = selectedProjectType?.isRecording ?
+    calculateDynamicMinViableCost(selectedType || '', selectedProducer?.id || 'local', selectedTimeOption?.id || 'standard', songCount) :
+    0;
+  
+  // 6. Mood factor
+  const artistMood = selectedArtistData?.mood || 50;
+  const moodFactor = 0.9 + 0.2 * (artistMood / 100);
+  
+  // Combine all factors multiplicatively
+  let estimatedQuality = baseQuality * timeFactor * popularityFactor * focusFactor * budgetFactor * moodFactor;
+  
+  // Apply floor and ceiling
+  estimatedQuality = Math.round(Math.min(98, Math.max(25, estimatedQuality)));
 
   // Check if producer tier is unlocked
   const getUnlockedProducers = () => {
@@ -297,20 +413,27 @@ export function ProjectCreationModal({
     const fallbackProjectType = PROJECT_TYPES.find(p => p.id === type);
     
     if (apiProjectType) {
-      // Use API data for budget ranges
-      const minBudget = apiProjectType.min || 3000;
-      const maxBudget = apiProjectType.max || 12000;
-      const defaultBudget = Math.floor((minBudget + maxBudget) / 2);
-      setBudgetPerSong(defaultBudget);
+      // Use API data for song count first
+      const songCountDefault = (apiProjectType && 'song_count_default' in apiProjectType) ? apiProjectType.song_count_default : 1;
+      setSongCount(songCountDefault);
       
-      // Use API data for song count
-      if ('song_count_default' in apiProjectType) {
-        setSongCount(apiProjectType.song_count_default || 1);
+      // Calculate per-song budget from total budget
+      if (type === 'Single' || type === 'EP') {
+        // For recording projects, convert total to per-song
+        const minPerSong = Math.round(apiProjectType.min / songCountDefault);
+        const maxPerSong = Math.round(apiProjectType.max / songCountDefault);
+        const defaultPerSong = Math.floor((minPerSong + maxPerSong) / 2);
+        setBudgetPerSong(defaultPerSong);
+      } else {
+        // For tours, use total budget
+        const defaultBudget = Math.floor((apiProjectType.min + apiProjectType.max) / 2);
+        setBudgetPerSong(defaultBudget);
       }
     } else if (fallbackProjectType) {
       // Fallback to local data
-      setBudgetPerSong(fallbackProjectType.defaultBudgetPerSong);
       setSongCount(fallbackProjectType.defaultSongs);
+      // Calculate a reasonable default budget
+      setBudgetPerSong(type === 'Single' ? 5000 : type === 'EP' ? 5000 : 10000);
     }
   };
 
@@ -342,7 +465,24 @@ export function ProjectCreationModal({
   };
 
   const canAfford = finalTotalCost <= currentMoney;
-  const isValid = selectedType && selectedArtist && title && canAfford;
+  // Check if budget is within valid range
+  const isBudgetValid = (() => {
+    if (!selectedType) return true; // Don't validate if no type selected
+    const apiKey = selectedType === 'Single' ? 'single' : selectedType === 'EP' ? 'ep' : 'mini_tour';
+    const apiProjectType = projectTypesAPI[apiKey];
+    
+    if (apiProjectType && selectedProjectType?.isRecording) {
+      const defaultSongs = 'song_count_default' in apiProjectType ? apiProjectType.song_count_default : songCount;
+      const minPerSong = Math.round(apiProjectType.min / defaultSongs);
+      const maxPerSong = Math.round(apiProjectType.max / defaultSongs);
+      return budgetPerSong >= minPerSong && budgetPerSong <= maxPerSong;
+    } else if (apiProjectType) {
+      return budgetPerSong >= apiProjectType.min && budgetPerSong <= apiProjectType.max;
+    }
+    return true;
+  })();
+
+  const isValid = selectedType && selectedArtist && title && canAfford && isBudgetValid;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -382,9 +522,20 @@ export function ProjectCreationModal({
                   // Get budget range from API if available
                   const apiKey = type.id === 'Single' ? 'single' : type.id === 'EP' ? 'ep' : 'mini_tour';
                   const apiProjectType = projectTypesAPI[apiKey];
-                  const budgetRange = apiProjectType 
-                    ? `$${apiProjectType.min?.toLocaleString()} - $${apiProjectType.max?.toLocaleString()}`
-                    : type.budgetRange;
+                  
+                  // Calculate per-song budget range for recording projects
+                  let budgetRange;
+                  if (apiProjectType && type.isRecording) {
+                    const defaultSongCount = (apiProjectType && 'song_count_default' in apiProjectType ? apiProjectType.song_count_default : type.defaultSongs) || 1;
+                    const minPerSong = Math.round(apiProjectType.min / defaultSongCount);
+                    const maxPerSong = Math.round(apiProjectType.max / defaultSongCount);
+                    budgetRange = `$${minPerSong.toLocaleString()} - $${maxPerSong.toLocaleString()} per song`;
+                  } else if (apiProjectType) {
+                    budgetRange = `$${apiProjectType.min?.toLocaleString()} - $${apiProjectType.max?.toLocaleString()}`;
+                  } else {
+                    // No API data, show placeholder
+                    budgetRange = type.isRecording ? 'Loading...' : '$5k - $15k';
+                  }
                   
                   return (
                     <Card 
@@ -467,7 +618,6 @@ export function ProjectCreationModal({
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-semibold">+{tier.qualityBonus} Quality</p>
                               <p className="text-xs text-white/50">{tier.costMultiplier}x Cost</p>
                             </div>
                           </div>
@@ -505,9 +655,6 @@ export function ProjectCreationModal({
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-semibold">
-                              {option.qualityModifier > 0 ? '+' : ''}{option.qualityModifier} Quality
-                            </p>
                             <p className="text-xs text-white/50">{option.costMultiplier}x Cost</p>
                           </div>
                         </div>
@@ -521,14 +668,38 @@ export function ProjectCreationModal({
               <div>
                 <Label htmlFor="budgetPerSong">
                   {selectedProjectType?.isRecording ? 'Budget Per Song' : 'Budget'}
+                  {!isBudgetValid && budgetPerSong > 0 && (
+                    <span className="text-red-500 text-sm ml-2">
+                      (Outside valid range)
+                    </span>
+                  )}
                 </Label>
                 <Input
                   id="budgetPerSong"
                   type="number"
                   value={budgetPerSong}
                   onChange={(e) => setBudgetPerSong(Number(e.target.value))}
-                  min={selectedProjectType?.minBudgetPerSong}
-                  max={selectedProjectType?.maxBudgetPerSong}
+                  className={!isBudgetValid && budgetPerSong > 0 ? 'border-red-500' : ''}
+                  min={(() => {
+                    if (!selectedType) return undefined;
+                    const apiKey = selectedType === 'Single' ? 'single' : selectedType === 'EP' ? 'ep' : 'mini_tour';
+                    const apiProjectType = projectTypesAPI[apiKey];
+                    if (apiProjectType && selectedProjectType?.isRecording) {
+                      const defaultSongs = 'song_count_default' in apiProjectType ? apiProjectType.song_count_default : songCount;
+                      return Math.round(apiProjectType.min / defaultSongs);
+                    }
+                    return apiProjectType?.min;
+                  })()}
+                  max={(() => {
+                    if (!selectedType) return undefined;
+                    const apiKey = selectedType === 'Single' ? 'single' : selectedType === 'EP' ? 'ep' : 'mini_tour';
+                    const apiProjectType = projectTypesAPI[apiKey];
+                    if (apiProjectType && selectedProjectType?.isRecording) {
+                      const defaultSongs = 'song_count_default' in apiProjectType ? apiProjectType.song_count_default : songCount;
+                      return Math.round(apiProjectType.max / defaultSongs);
+                    }
+                    return apiProjectType?.max;
+                  })()}
                   placeholder={selectedProjectType?.isRecording ? "Investment per song" : "Total budget"}
                 />
                 <div className="mt-2 text-sm space-y-1">
@@ -573,35 +744,57 @@ export function ProjectCreationModal({
                     <h4 className="font-medium text-[#A75A5B] mb-2">Quality Preview:</h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-[#A75A5B]">Base quality:</span>
-                        <span className="font-mono">{baseQuality}</span>
+                        <span className="text-[#A75A5B]">Base (talent+producer):</span>
+                        <span className="font-mono">{Math.round(baseQuality)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#A75A5B]">Producer ({selectedProducerTier}):</span>
-                        <span className="font-mono">{producerBonus > 0 ? '+' : ''}{producerBonus}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#A75A5B]">Time ({selectedTimeInvestment}):</span>
-                        <span className="font-mono">{timeBonus > 0 ? '+' : ''}{timeBonus}</span>
+                        <span className="text-[#A75A5B]">Time & Work Ethic factor:</span>
+                        <span className="font-mono">×{timeFactor.toFixed(2)}</span>
                       </div>
                       {selectedArtist && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-[#A75A5B]">Popularity factor:</span>
+                            <span className="font-mono">×{popularityFactor.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[#A75A5B]">Mood factor:</span>
+                            <span className="font-mono">×{moodFactor.toFixed(2)}</span>
+                          </div>
+                        </>
+                      )}
+                      {songCount > 3 && (
                         <div className="flex justify-between">
-                          <span className="text-[#A75A5B]">Artist mood:</span>
-                          <span className="font-mono">{artistMoodBonus > 0 ? '+' : ''}{Math.round(artistMoodBonus)}</span>
+                          <span className="text-[#A75A5B]">Session fatigue:</span>
+                          <span className="font-mono text-amber-500">×{focusFactor.toFixed(2)}</span>
                         </div>
                       )}
                       {selectedProjectType?.isRecording && (
-                        <div className="flex justify-between">
-                          <span className="text-[#A75A5B]">Budget bonus:</span>
-                          <span className="font-mono font-semibold text-green-600">
-                            {budgetBonus > 0 ? '+' : ''}{budgetBonus}
-                          </span>
-                        </div>
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-[#A75A5B]">Budget factor:</span>
+                            <span className="font-mono font-semibold text-green-600">
+                              ×{budgetFactor.toFixed(2)}
+                            </span>
+                          </div>
+                          {budgetEfficiency && budgetEfficiency.rating !== 'Unknown' && (
+                            <div className="text-xs mt-1">
+                              <span className={`${budgetEfficiency.color} font-medium`}>{budgetEfficiency.rating}:</span>
+                              <span className="text-white/60 ml-1">{budgetEfficiency.description}</span>
+                            </div>
+                          )}
+                        </>
                       )}
                       <div className="flex justify-between border-t pt-1">
-                        <span className="text-[#A75A5B] font-medium">Total quality:</span>
+                        <span className="text-[#A75A5B] font-medium">Est. quality:</span>
                         <span className="font-mono font-bold text-[#A75A5B]">{Math.round(estimatedQuality)}</span>
                       </div>
+                      {selectedProjectType?.isRecording && selectedArtist && selectedProducer && (
+                        <div className="text-xs text-white/50 mt-1">
+                          <span>Variance: ±{Math.round(35 - 30 * ((selectedArtistData?.talent || 50) + (selectedProducer?.id === 'legendary' ? 95 : selectedProducer?.id === 'national' ? 75 : selectedProducer?.id === 'regional' ? 55 : 40)) / 200)}%</span>
+                          <span className="ml-1">(10% chance of outliers)</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -36,7 +36,8 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-green-500 text-white',
           description: 'Small independent playlists',
           benefits: ['Access to indie playlists', '1K-10K follower playlists', 'Genre-specific placements'],
-          requirements: '15+ Reputation, 1 released project'
+          requirements: '10+ Reputation',  // Fixed threshold
+          futureRequirements: '1 released project'  // Not implemented yet
         },
         { 
           name: 'Mid', 
@@ -44,7 +45,8 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-[#A75A5B]/100 text-white',
           description: 'Medium-sized curated playlists',
           benefits: ['Mid-tier playlist access', '10K-100K follower playlists', 'Editorial consideration'],
-          requirements: '35+ Reputation, 3 released projects'
+          requirements: '30+ Reputation',  // Fixed threshold
+          futureRequirements: '3 released projects'  // Not implemented yet
         },
         { 
           name: 'Flagship', 
@@ -52,7 +54,8 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-[#791014] text-white',
           description: 'Major platform editorial playlists',
           benefits: ['Flagship playlist access', '100K+ follower playlists', 'Algorithm boost'],
-          requirements: '60+ Reputation, 5 released projects, Major label status'
+          requirements: '60+ Reputation',  // Fixed threshold
+          futureRequirements: '5 released projects, Major label status'  // Not implemented yet
         }
       ]
     },
@@ -75,7 +78,8 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-green-500 text-white',
           description: 'Music blogs and online publications',
           benefits: ['Blog coverage', 'Online reviews', 'Social media mentions'],
-          requirements: '10+ Reputation, Press coverage from releases'
+          requirements: '8+ Reputation',  // Fixed threshold
+          futureRequirements: 'Press coverage from releases'  // Not implemented yet
         },
         { 
           name: 'Mid-Tier', 
@@ -83,7 +87,8 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-[#A75A5B]/100 text-white',
           description: 'Regional magazines and radio',
           benefits: ['Regional press', 'Radio interviews', 'Magazine features'],
-          requirements: '30+ Reputation, Consistent press coverage'
+          requirements: '25+ Reputation',  // Fixed threshold
+          futureRequirements: 'Consistent press coverage'  // Not implemented yet
         },
         { 
           name: 'Major', 
@@ -91,7 +96,8 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-[#791014] text-white',
           description: 'National media and major publications',
           benefits: ['National press', 'TV appearances', 'Major publication features'],
-          requirements: '55+ Reputation, Industry recognition'
+          requirements: '50+ Reputation',  // Fixed threshold
+          futureRequirements: 'Industry recognition'  // Not implemented yet
         }
       ]
     },
@@ -113,8 +119,9 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           level: 1, 
           color: 'bg-green-500 text-white',
           description: 'Small venues and clubs',
-          benefits: ['Club venues (100-500 capacity)', 'Local gig circuit', 'Fan base building'],
-          requirements: '20+ Reputation, Active artist roster'
+          benefits: ['Club venues (50-500 capacity)', 'Local gig circuit', 'Fan base building'],  // Fixed capacity
+          requirements: '5+ Reputation',  // Fixed threshold
+          futureRequirements: 'Active artist roster'  // Not implemented yet
         },
         { 
           name: 'Theaters', 
@@ -122,15 +129,17 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-[#A75A5B]/100 text-white',
           description: 'Mid-sized theaters and venues',
           benefits: ['Theater venues (500-2000 capacity)', 'Regional touring', 'Higher ticket prices'],
-          requirements: '40+ Reputation, Proven live draw'
+          requirements: '20+ Reputation',  // Fixed threshold
+          futureRequirements: 'Proven live draw'  // Not implemented yet
         },
         { 
           name: 'Arenas', 
           level: 3, 
           color: 'bg-[#791014] text-white',
           description: 'Large arenas and stadiums',
-          benefits: ['Arena venues (2000+ capacity)', 'National touring', 'Premium revenue'],
-          requirements: '65+ Reputation, Established fanbase'
+          benefits: ['Arena venues (2000-20000 capacity)', 'National touring', 'Premium revenue'],  // Fixed capacity
+          requirements: '45+ Reputation',  // Fixed threshold
+          futureRequirements: 'Established fanbase'  // Not implemented yet
         }
       ]
     }
@@ -178,9 +187,9 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
     
     // Simplified progress calculation based on reputation milestones
     const repRequirements = {
-      playlist: [15, 35, 60],
-      press: [10, 30, 55],
-      venue: [20, 40, 65]
+      playlist: [10, 30, 60],  // Actual thresholds from balance config
+      press: [8, 25, 50],      // Actual thresholds from balance config
+      venue: [5, 20, 45]       // Actual thresholds from balance config
     };
     
     const targetRep = repRequirements[tierType][currentTier.level];
@@ -282,6 +291,9 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
                           <p className="text-xs text-white/50">
                             <span className="font-medium">Requirements: </span>
                             {tier.requirements}
+                            {(tier as any).futureRequirements && (
+                              <span className="line-through opacity-50"> • {(tier as any).futureRequirements}</span>
+                            )}
                           </p>
                           {tier.benefits.length > 0 && (
                             <div className="mt-1">
@@ -305,6 +317,9 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
                 <div className="text-xs text-white/50">
                   <span className="font-medium">Next Unlock: </span>
                   {nextTier.requirements}
+                  {(nextTier as any).futureRequirements && (
+                    <span className="line-through opacity-50"> • {(nextTier as any).futureRequirements}</span>
+                  )}
                 </div>
               )}
             </div>

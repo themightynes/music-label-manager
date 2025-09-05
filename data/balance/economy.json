@@ -8,14 +8,14 @@
   
   "project_costs": {
     "single": {
-      "min": 3000,
-      "max": 12000,
+      "min": 3500,
+      "max": 8000,
       "song_count_default": 1
     },
     "ep": {
-      "min": 15000,
-      "max": 35000,
-      "song_count_default": 5
+      "min": 16000,
+      "max": 40000,
+      "song_count_default": 4
     },
     "mini_tour": {
       "min": 5000,
@@ -32,7 +32,7 @@
     "enabled": true,
     "description": "Cost calculations now based on per-song budgets with multipliers applied to total cost",
     "base_per_song_cost": {
-      "single": 2500,
+      "single": 3500,
       "ep": 4000
     },
     "economies_of_scale": {

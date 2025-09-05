@@ -1,275 +1,217 @@
 # Song Budget Quality Calculation System
 
-**Created: December 2024**  
-**Purpose: Document the current implementation of budget-to-quality calculations in FinancialSystem.ts**
+**Last Updated: September 2025**  
+**Location**: `shared/engine/FinancialSystem.ts` - `calculateBudgetQualityMultiplier()` method
 
 ---
 
 ## Overview
 
-The song budget quality calculation system determines how a project's budget affects the quality of individual songs. It uses a sophisticated diminishing returns model that compares the per-song budget against a calculated "minimum viable per-song cost" to determine quality bonuses.
+The budget quality calculation system determines how project budget affects song quality using a sophisticated piecewise function with efficiency-based scaling and dampening. The system compares actual budget against a dynamically calculated "minimum viable cost" to determine quality multipliers.
 
-## Core Function: `calculateBudgetQualityBonus`
+## Core Method: `calculateBudgetQualityMultiplier`
 
-**Location**: `shared/engine/FinancialSystem.ts` lines 270-342  
-**Purpose**: Calculate quality bonus based on budget efficiency using diminishing returns
+**Purpose**: Calculate quality multiplier based on budget efficiency with dampening to reduce budget's impact
 
 ### Input Parameters
-- `budgetPerSong`: The budget allocated per song (in currency units)
-- `projectType`: Type of project (Single, EP, Album, etc.)
-- `producerTier`: Producer quality tier (Local, Regional, National, Legendary)
-- `timeInvestment`: Time investment level (Rushed, Standard, Extended, Perfectionist)
-- `songCount`: Number of songs in the project (default: 1)
+- `budgetPerSong`: Budget allocated per song
+- `projectType`: Type of project (Single, EP, etc.)
+- `producerTier`: Producer quality tier (local, regional, national, legendary)
+- `timeInvestment`: Time level (rushed, standard, extended, perfectionist)
+- `songCount`: Number of songs (default: 1)
 
 ### Output
-- Quality bonus value (can be negative for under-budget projects)
-- Rounded to 2 decimal places
+- Quality multiplier (0.65x to ~1.5x range)
+- Rounded to 3 decimal places
 
 ---
 
 ## Calculation Process
 
-### Step 1: Calculate Minimum Viable Per-Song Cost
+### Step 1: Calculate Dynamic Minimum Viable Cost
 
-The system first determines what the "minimum viable per-song cost" would be for this specific project configuration:
+The system calculates what a baseline quality project would cost:
 
-```typescript
-const minTotalCost = this.calculateEnhancedProjectCost(projectType, producerTier, timeInvestment, 30, songCount);
-const minPerSongCost = minTotalCost / songCount;
+```javascript
+minViableCost = baseCost × economiesOfScale × 1.5
 ```
 
 **Key Points**:
-- Uses `quality = 30` as the baseline for minimum viable cost
-- Accounts for project type, producer tier, time investment, and song count
-- Includes economies of scale for multi-song projects
-- This creates a dynamic reference point that scales with project complexity
+- Base cost from economy.json project costs
+- Economies of scale for multi-song projects:
+  - Single (1 song): 1.0x
+  - Small (2-4 songs): 0.95x
+  - Medium (5-7 songs): 0.85x
+  - Large (8+ songs): 0.75x
+- 1.5x baseline multiplier ensures minimum budgets don't give quality bonuses
+- **NOT** affected by producer/time multipliers (avoids double-counting)
 
-### Step 2: Calculate Budget Efficiency Ratio
+### Step 2: Calculate Efficiency Ratio with Dampening
 
-```typescript
-const budgetRatio = budgetPerSong / minPerSongCost;
+```javascript
+rawEfficiencyRatio = budgetPerSong / minViableCost
+
+// Apply dampening to reduce budget impact
+dampeningFactor = 0.7  // From quality.json
+efficiencyRatio = 1 + dampeningFactor × (rawEfficiencyRatio - 1)
 ```
 
-**Interpretation**:
-- `ratio < 1.0`: Under-budget (below minimum viable)
-- `ratio = 1.0`: Exactly at minimum viable cost
-- `ratio > 1.0`: Over-budget (above minimum viable)
+**Dampening Effect**:
+- Reduces budget's impact by 30%
+- Keeps ratio=1 unchanged (neutral point)
+- Examples:
+  - 2.0x raw → 1.7x dampened
+  - 0.5x raw → 0.65x dampened
 
-### Step 3: Apply Piecewise Function with Diminishing Returns
+### Step 3: Apply Piecewise Function
 
-The system uses a 5-segment piecewise function based on the budget ratio:
+The efficiency ratio maps to a quality multiplier using a 6-segment function:
 
-#### Segment 1: Below Minimum Viable (Penalty)
-```typescript
-if (budgetRatio < breakpoints.minimum_viable) {
-  budgetBonus = -5;  // Fixed penalty
-}
-```
+| Efficiency Range | Quality Multiplier | Description |
+|-----------------|-------------------|-------------|
+| < 0.6x | 0.65x flat | Insufficient budget penalty |
+| 0.6-0.8x | 0.65x to 0.85x | Below standard, linear |
+| 0.8-1.2x | 0.85x to 1.05x | Efficient range, best value |
+| 1.2-2.0x | 1.05x to 1.20x | Premium investment |
+| 2.0-3.5x | 1.20x to 1.35x | Luxury production |
+| > 3.5x | 1.35x + log growth | Diminishing returns |
 
-#### Segment 2: Optimal Efficiency Range (Linear Growth)
-```typescript
-else if (budgetRatio <= breakpoints.optimal_efficiency) {
-  // Linear scaling from 0 to 40% of max bonus
-  budgetBonus = ((budgetRatio - breakpoints.minimum_viable) / 
-                 (breakpoints.optimal_efficiency - breakpoints.minimum_viable)) * 
-                (maxBonus * 0.4);
-}
-```
+### Step 4: Efficiency Rating System
 
-#### Segment 3: Luxury Range (Continued Linear Growth)
-```typescript
-else if (budgetRatio <= breakpoints.luxury_threshold) {
-  // Linear scaling from 40% to 80% of max bonus
-  const baseBonus = maxBonus * 0.4;
-  const luxuryBonus = ((budgetRatio - breakpoints.optimal_efficiency) / 
-                       (breakpoints.luxury_threshold - breakpoints.optimal_efficiency)) * 
-                      (maxBonus * 0.4);
-  budgetBonus = baseBonus + luxuryBonus;
-}
-```
+The `getBudgetEfficiencyRating()` method provides human-readable feedback:
 
-#### Segment 4: High-End Range (Final Linear Growth)
-```typescript
-else if (budgetRatio <= breakpoints.diminishing_threshold) {
-  // Linear scaling from 80% to 100% of max bonus
-  const baseBonus = maxBonus * 0.8;
-  const highEndBonus = ((budgetRatio - breakpoints.luxury_threshold) / 
-                        (breakpoints.diminishing_threshold - breakpoints.luxury_threshold)) * 
-                       (maxBonus * 0.2);
-  budgetBonus = baseBonus + highEndBonus;
-}
-```
-
-#### Segment 5: Diminishing Returns (Logarithmic)
-```typescript
-else {
-  // Logarithmic diminishing returns beyond threshold
-  const excessRatio = budgetRatio - breakpoints.diminishing_threshold;
-  const diminishingBonus = Math.log(1 + excessRatio) * 
-                           budgetSystem.diminishing_returns_factor * 
-                           maxBonus * 0.1;
-  budgetBonus = maxBonus + diminishingBonus;
+```javascript
+function getBudgetEfficiencyRating(budgetPerSong, ...params) {
+  // Applies same dampening as multiplier calculation
+  efficiencyRatio = 1 + 0.7 × (rawRatio - 1)
+  
+  if (ratio < 0.6) return "Insufficient"
+  if (ratio < 0.8) return "Below Standard"
+  if (ratio <= 1.2) return "Efficient"
+  if (ratio <= 2.0) return "Premium"
+  if (ratio <= 3.5) return "Luxury"
+  return "Excessive"
 }
 ```
 
 ---
 
-## Configuration Values
+## Configuration
 
-### Default Breakpoints (from `balance.json`)
+Located in `data/balance/quality.json`:
+
 ```json
 {
-  "minimum_viable": 0.6,
-  "optimal_efficiency": 1.0,
-  "luxury_threshold": 2.0,
-  "diminishing_threshold": 3.0,
-  "max_budget_bonus": 25,
-  "diminishing_returns_factor": 0.3
+  "budget_quality_system": {
+    "efficiency_breakpoints": {
+      "penalty_threshold": 0.6,
+      "minimum_viable": 0.8,
+      "optimal_efficiency": 1.2,
+      "luxury_threshold": 2.0,
+      "diminishing_threshold": 3.5
+    },
+    "efficiency_dampening": {
+      "enabled": true,
+      "factor": 0.7,
+      "description": "Reduces budget impact by dampening efficiency ratio"
+    }
+  }
 }
 ```
 
-### Breakpoint Interpretation
-- **0.6x minimum viable**: Below this threshold gets -5 penalty
-- **1.0x minimum viable**: Optimal efficiency point (0 bonus)
-- **2.0x minimum viable**: Luxury threshold (80% of max bonus)
-- **3.0x minimum viable**: Diminishing returns begin (100% of max bonus)
-- **Beyond 3.0x**: Logarithmic diminishing returns
+---
+
+## Example Scenarios
+
+### Scenario 1: Minimum Budget EP (5 songs)
+- **Project**: EP with local producer, rushed time
+- **Budget**: $4,000/song (minimum allowed)
+- **Min Viable**: $5,100 (base $4k × 0.85 economies × 1.5)
+- **Raw Efficiency**: 0.78x
+- **Dampened**: 0.85x (with 0.7 factor)
+- **Multiplier**: 0.87x (-13% quality)
+
+### Scenario 2: Premium Single
+- **Project**: Single with national producer, extended time
+- **Budget**: $12,000 (maximum allowed)
+- **Min Viable**: $5,250 (base $3.5k × 1.0 × 1.5)
+- **Raw Efficiency**: 2.29x
+- **Dampened**: 1.90x (with 0.7 factor)
+- **Multiplier**: 1.18x (+18% quality)
+
+### Scenario 3: Efficient EP
+- **Project**: EP with regional producer, standard time
+- **Budget**: $7,000/song
+- **Min Viable**: $5,100
+- **Raw Efficiency**: 1.37x
+- **Dampened**: 1.26x (with 0.7 factor)
+- **Multiplier**: 1.08x (+8% quality)
 
 ---
 
-## Example Calculations
+## UI Integration
 
-### Example 1: Under-Budget Project
-- **Project**: Single song, Local producer, Standard time
-- **Minimum viable cost**: $3,000/song
-- **Actual budget**: $1,500/song
-- **Ratio**: 0.5 (below 0.6 threshold)
-- **Result**: -5 quality penalty
+### ProjectCreationModal.tsx
+- Calculates identical efficiency ratios with dampening
+- Shows real-time efficiency rating with color coding
+- Displays budget multiplier in quality preview breakdown
+- Updates dynamically as user adjusts budget/producer/time
 
-### Example 2: Optimal Budget Project
-- **Project**: EP (4 songs), Regional producer, Extended time
-- **Minimum viable cost**: $8,000/song
-- **Actual budget**: $8,000/song
-- **Ratio**: 1.0 (at optimal efficiency)
-- **Result**: 0 quality bonus
-
-### Example 3: Luxury Budget Project
-- **Project**: Album (10 songs), National producer, Perfectionist time
-- **Minimum viable cost**: $12,000/song
-- **Actual budget**: $24,000/song
-- **Ratio**: 2.0 (at luxury threshold)
-- **Result**: +20 quality bonus (80% of max 25)
-
-### Example 4: Diminishing Returns Project
-- **Project**: Single song, Legendary producer, Perfectionist time
-- **Minimum viable cost**: $15,000/song
-- **Actual budget**: $60,000/song
-- **Ratio**: 4.0 (beyond 3.0 threshold)
-- **Result**: +25 + log(2) × 0.3 × 25 × 0.1 = +25.5 quality bonus
+### Visual Feedback
+- **Red**: Insufficient (<0.6x)
+- **Orange**: Below Standard (0.6-0.8x)
+- **Green**: Efficient (0.8-1.2x)
+- **Blue**: Premium (1.2-2.0x)
+- **Purple**: Luxury (2.0-3.5x)
+- **Yellow**: Excessive (>3.5x)
 
 ---
 
-## Integration with Song Quality
+## Recent Changes (September 2025)
 
-### How It Fits Into Overall Quality Calculation
-The budget bonus is one component of the total song quality calculation:
+### Budget Dampening System
+- Added configurable dampening factor (default 0.7)
+- Reduces budget's overall impact on quality by 30%
+- Prevents budget from dominating quality calculations
+- Maintains strategic importance while increasing other factors' relevance
 
-```typescript
-// From game-engine.ts calculateEnhancedSongQuality()
-const budgetBonus = this.financialSystem.calculateBudgetQualityBonus(
-  budgetPerSong, projectType, producerTier, timeInvestment, songCount
-);
+### Implementation Details
+1. **FinancialSystem.ts**: Core calculation with dampening
+2. **ProjectCreationModal.tsx**: UI preview with same dampening
+3. **QualityTester.tsx**: Testing interface updated
+4. **quality.json**: Configuration for dampening factor
 
-const finalQuality = baseQuality + producerBonus + timeBonus + moodBonus + budgetBonus;
+---
+
+## Integration with Quality System
+
+The budget multiplier is one of several multiplicative factors:
+
+```javascript
+Final Quality = Base × Time × Popularity × Focus × Budget × Mood × Variance
 ```
 
-### Quality Impact
-- **Positive bonus**: Increases final song quality
-- **Negative penalty**: Decreases final song quality
-- **Range**: Typically -5 to +30 quality points
-- **Scaling**: Direct addition to other quality factors
+With dampening at 0.7:
+- Budget can affect quality from 0.65x to ~1.35x
+- Down from previous 0.65x to 1.5x+ range
+- Other factors now have more relative impact
 
 ---
 
-## Design Rationale
+## Testing
 
-### Why This System Exists
-1. **Realistic Economics**: Higher budgets should generally improve quality, but with diminishing returns
-2. **Strategic Depth**: Players must balance budget allocation across multiple factors
-3. **Prevents Exploitation**: Diminishing returns prevent infinite quality scaling
-4. **Dynamic Scaling**: Minimum viable cost adapts to project complexity
-
-### Key Design Decisions
-1. **Dynamic Reference Point**: Uses project's own cost model rather than fixed thresholds
-2. **Piecewise Function**: Allows fine-tuning of different budget ranges
-3. **Logarithmic Diminishing Returns**: Prevents infinite scaling while allowing high-end investment
-4. **Configuration-Driven**: All values tunable via balance config files
-
----
-
-## Edge Cases and Safeguards
-
-### Input Validation
-```typescript
-if (budgetPerSong < 0 || songCount <= 0) {
-  return 0;  // Invalid inputs
-}
-```
-
-### Division by Zero Protection
-```typescript
-if (minPerSongCost <= 0) {
-  return 0;  // Safety check
-}
-```
-
-### Rounding
-```typescript
-return Math.round(budgetBonus * 100) / 100;  // Round to 2 decimal places
-```
-
----
-
-## Configuration Dependencies
-
-### Required Configuration Files
-- `balance.json`: Contains `budget_quality_system` configuration
-- Project cost configurations for minimum viable cost calculation
-- Producer tier and time investment multipliers
-
-### System Dependencies
-- `calculateEnhancedProjectCost()`: For minimum viable cost calculation
-- `calculateEconomiesOfScale()`: For multi-song project scaling
-- Producer and time investment systems: For cost multipliers
-
----
-
-## Performance Characteristics
-
-### Computational Complexity
-- **Time Complexity**: O(1) - constant time calculation
-- **Space Complexity**: O(1) - minimal memory usage
-- **Dependencies**: Calls `calculateEnhancedProjectCost()` which has O(1) complexity
-
-### Optimization Notes
-- Configuration values cached via `gameData`
-- Mathematical operations are simple arithmetic
-- No loops or recursive calls
-- Suitable for real-time UI calculations
+Use `/quality-tester` route to:
+- Test different budget/producer/time combinations
+- See efficiency ratios with dampening applied
+- Verify multiplier calculations match expectations
+- Run simulations to see quality distributions
 
 ---
 
 ## Future Considerations
 
-### Potential Enhancements
-- Genre-specific budget efficiency curves
-- Artist talent modifiers for budget utilization
-- Equipment quality impact on budget efficiency
-- Market condition modifiers (recession/boom periods)
-
-### Tuning Opportunities
-- Breakpoint values for different game modes
-- Diminishing returns curve adjustments
-- Minimum viable cost calculation refinements
-- Integration with other quality factors
-
+1. **Dynamic Dampening**: Could vary by game difficulty
+2. **Genre-Specific Costs**: Different music styles have different economics
+3. **Market Conditions**: Economic state could affect efficiency
+4. **Producer Relationships**: Discounts for repeat collaborations
+5. **Studio Equipment**: Owned equipment could reduce minimum viable costs

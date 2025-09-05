@@ -432,10 +432,10 @@ export class FinancialSystem {
   }
 
   /**
-   * Calculates budget bonus for song quality using diminishing returns
-   * Originally from game-engine.ts line 1559-1619
+   * Calculates budget multiplier for song quality using diminishing returns
+   * Returns a multiplicative factor (0.7 to 1.3) instead of additive bonus
    */
-  calculateBudgetQualityBonus(
+  calculateBudgetQualityMultiplier(
     budgetPerSong: number,
     projectType: string,
     producerTier: string,
@@ -446,67 +446,293 @@ export class FinancialSystem {
     const budgetSystem = balance.quality_system.budget_quality_system;
     
     if (!budgetSystem?.enabled) {
-      return 0;
+      return 1.0; // No impact if system disabled
     }
     
     // Validate input parameters
     if (budgetPerSong < 0 || songCount <= 0) {
-      // console.warn(`[BUDGET CALC] Invalid parameters: budgetPerSong=${budgetPerSong}, songCount=${songCount}`);
-      return 0;
+      return budgetSystem.neutral_multiplier || 1.0;
     }
     
-    // Calculate minimum viable per-song cost for this configuration
-    const minTotalCost = this.calculateEnhancedProjectCost(projectType, producerTier, timeInvestment, 30, songCount);
-    const minPerSongCost = minTotalCost / songCount;
+    // Calculate dynamic minimum viable cost
+    const minViableCost = this.calculateDynamicMinimumViableCost(
+      projectType,
+      producerTier,
+      timeInvestment,
+      songCount
+    );
     
-    // Safety check for division by zero
-    if (minPerSongCost <= 0) {
-      // console.warn(`[BUDGET CALC] Minimum per-song cost is zero or negative: ${minPerSongCost}`);
-      return 0;
+    // Calculate efficiency ratio
+    let efficiencyRatio = budgetPerSong / minViableCost;
+    
+    // Apply dampening factor if configured
+    const dampening = budgetSystem.efficiency_dampening;
+    if (dampening?.enabled && dampening?.factor !== undefined) {
+      // Apply dampening: new_ratio = 1 + factor * (original_ratio - 1)
+      // This keeps ratio=1 unchanged and reduces deviations from 1.0
+      efficiencyRatio = 1 + dampening.factor * (efficiencyRatio - 1);
     }
     
-    // Calculate budget ratio relative to minimum viable per-song cost
-    const budgetRatio = budgetPerSong / minPerSongCost;
+    // Apply 5-segment piecewise function
+    const budgetMultiplier = this.calculatePiecewiseBudgetMultiplier(
+      efficiencyRatio,
+      budgetSystem
+    );
     
-    let budgetBonus = 0;
-    const breakpoints = budgetSystem.efficiency_breakpoints;
-    const maxBonus = budgetSystem.max_budget_bonus;
+    // Log calculation for transparency
+    const originalRatio = budgetPerSong / minViableCost;
+    console.log(`[BUDGET CALC] Dynamic budget quality calculation:`, {
+      budgetPerSong: budgetPerSong.toFixed(0),
+      minViableCost: minViableCost.toFixed(0),
+      originalRatio: originalRatio.toFixed(2),
+      dampenedRatio: efficiencyRatio.toFixed(2),
+      dampening: dampening?.enabled ? dampening.factor : 'disabled',
+      budgetMultiplier: budgetMultiplier.toFixed(3),
+      projectType,
+      producerTier,
+      timeInvestment,
+      songCount
+    });
     
-    if (budgetRatio < breakpoints.minimum_viable) {
-      // Below minimum viable - penalty
-      budgetBonus = -5;
-    } else if (budgetRatio <= breakpoints.optimal_efficiency) {
-      // Linear scaling from 0 to 40% of max bonus in optimal range
-      budgetBonus = ((budgetRatio - breakpoints.minimum_viable) / (breakpoints.optimal_efficiency - breakpoints.minimum_viable)) * (maxBonus * 0.4);
-    } else if (budgetRatio <= breakpoints.luxury_threshold) {
-      // Linear scaling from 40% to 80% of max bonus in luxury range
-      const baseBonus = maxBonus * 0.4;
-      const luxuryBonus = ((budgetRatio - breakpoints.optimal_efficiency) / (breakpoints.luxury_threshold - breakpoints.optimal_efficiency)) * (maxBonus * 0.4);
-      budgetBonus = baseBonus + luxuryBonus;
-    } else if (budgetRatio <= breakpoints.diminishing_threshold) {
-      // Linear scaling from 80% to 100% of max bonus before diminishing returns
-      const baseBonus = maxBonus * 0.8;
-      const highEndBonus = ((budgetRatio - breakpoints.luxury_threshold) / (breakpoints.diminishing_threshold - breakpoints.luxury_threshold)) * (maxBonus * 0.2);
-      budgetBonus = baseBonus + highEndBonus;
+    return Math.round(budgetMultiplier * 1000) / 1000;
+  }
+
+  /**
+   * Calculates dynamic minimum viable cost based on project complexity
+   * This addresses the "UI misalignment" issue by providing a consistent reference
+   */
+  calculateDynamicMinimumViableCost(
+    projectType: string,
+    producerTier: string,
+    timeInvestment: string,
+    songCount: number = 1
+  ): number {
+    const balance = this.gameData.getBalanceConfigSync();
+    const economy = balance.economy;
+    const producerSystem = balance.producer_tier_system;
+    const timeSystem = balance.time_investment_system;
+    
+    // Base cost calculation using the same logic as project cost calculation
+    let baseCostPerSong: number;
+    
+    // Use per-song cost system if available and appropriate
+    const songCountSystem = economy.song_count_cost_system;
+    if (songCountSystem?.enabled && songCount > 1) {
+      baseCostPerSong = songCountSystem.base_per_song_cost[projectType.toLowerCase()] || 3500;
+      
+      // Apply economies of scale
+      const economiesMultiplier = this.calculateEconomiesOfScale(
+        songCount, 
+        songCountSystem.economies_of_scale
+      );
+      baseCostPerSong *= economiesMultiplier;
     } else {
-      // Diminishing returns beyond threshold
-      const excessRatio = budgetRatio - breakpoints.diminishing_threshold;
-      const diminishingBonus = Math.log(1 + excessRatio) * budgetSystem.diminishing_returns_factor * maxBonus * 0.1;
-      budgetBonus = maxBonus + diminishingBonus;
+      // Fallback to project-based calculation
+      const projectKey = projectType.toLowerCase() === 'single' ? 'single' : 
+                        projectType.toLowerCase() === 'ep' ? 'ep' : 'mini_tour';
+      const projectConfig = economy.project_costs[projectKey];
+      if (projectConfig) {
+        // Use minimum cost as base for single songs, average for multi-song
+        const defaultSongCount = projectConfig.song_count_default || songCount;
+        baseCostPerSong = songCount === 1 ? 
+          projectConfig.min / defaultSongCount :
+          ((projectConfig.min + projectConfig.max) / 2) / defaultSongCount;
+      } else {
+        baseCostPerSong = 3500; // Fallback value
+      }
     }
     
-    // console.log(`[BUDGET CALC] Per-song budget quality bonus calculation:`, {
-    //   budgetPerSong: budgetPerSong.toFixed(0),
-    //   minPerSongCost: minPerSongCost.toFixed(0),
-    //   songCount,
-    //   budgetRatio: budgetRatio.toFixed(2),
-    //   budgetBonus: budgetBonus.toFixed(2),
-    //   projectType,
-    //   producerTier,
-    //   timeInvestment
-    // });
+    // Don't apply producer and time multipliers to minimum viable cost
+    // These are already reflected in the actual project cost the player pays
+    // The minimum viable should represent the baseline quality expectation
     
-    return Math.round(budgetBonus * this.CONSTANTS.ROUNDING_FACTOR) / this.CONSTANTS.ROUNDING_FACTOR; // Round to 2 decimal places
+    // Apply baseline quality multiplier for recording sessions
+    // This ensures minimum selectable budgets don't give quality bonuses
+    const baselineQualityMultiplier = (projectType.toLowerCase() === 'single' || projectType.toLowerCase() === 'ep') ? 1.5 : 1.0;
+    
+    const finalMinViableCost = baseCostPerSong * baselineQualityMultiplier;
+    
+    return Math.round(finalMinViableCost);
+  }
+
+  /**
+   * Applies 5-segment piecewise function for budget efficiency
+   * This replaces the simple linear interpolation with sophisticated economic modeling
+   */
+  private calculatePiecewiseBudgetMultiplier(
+    efficiencyRatio: number,
+    budgetSystem: any
+  ): number {
+    const breakpoints = budgetSystem.efficiency_breakpoints;
+    const slopes = budgetSystem.segment_slopes;
+    const minMult = budgetSystem.min_multiplier || 0.65;
+    const maxMult = budgetSystem.max_multiplier || 1.35;
+    const neutralMult = budgetSystem.neutral_multiplier || 1.0;
+    
+    let multiplier: number;
+    
+    if (efficiencyRatio < breakpoints.penalty_threshold) {
+      // Segment 1: Heavy penalty for insufficient budget
+      // Should go from 0.65 at 0x to 0.65 at 0.6x (flat penalty)
+      multiplier = minMult; // 0.65
+      
+    } else if (efficiencyRatio < breakpoints.minimum_viable) {
+      // Segment 2: Below standard to minimum viable
+      // Should go from 0.65 to 0.85
+      const segmentRange = breakpoints.minimum_viable - breakpoints.penalty_threshold;
+      const progress = (efficiencyRatio - breakpoints.penalty_threshold) / segmentRange;
+      const startMult = 0.65; // minMult
+      const endMult = 0.85;
+      multiplier = startMult + (endMult - startMult) * progress;
+      
+    } else if (efficiencyRatio <= breakpoints.optimal_efficiency) {
+      // Segment 3: Minimum viable to optimal efficiency (best value)
+      // Should go from 0.85 to 1.05 (neutral + 0.05)
+      const segmentRange = breakpoints.optimal_efficiency - breakpoints.minimum_viable;
+      const progress = (efficiencyRatio - breakpoints.minimum_viable) / segmentRange;
+      const startMult = 0.85; // End of segment 2
+      const endMult = 1.05; // neutral + 0.05
+      multiplier = startMult + (endMult - startMult) * progress;
+      
+    } else if (efficiencyRatio <= breakpoints.luxury_threshold) {
+      // Segment 4: Optimal to luxury threshold
+      // Should go from 1.05 to 1.20
+      const segmentRange = breakpoints.luxury_threshold - breakpoints.optimal_efficiency;
+      const progress = (efficiencyRatio - breakpoints.optimal_efficiency) / segmentRange;
+      const startMult = 1.05; // End of segment 3
+      const endMult = 1.20;
+      multiplier = startMult + (endMult - startMult) * progress;
+      
+    } else if (efficiencyRatio <= breakpoints.diminishing_threshold) {
+      // Segment 5: Luxury to diminishing threshold
+      // Should go from 1.20 to 1.35
+      const segmentRange = breakpoints.diminishing_threshold - breakpoints.luxury_threshold;
+      const progress = (efficiencyRatio - breakpoints.luxury_threshold) / segmentRange;
+      const startMult = 1.20; // End of segment 4
+      const endMult = 1.35; // Max multiplier
+      multiplier = startMult + (endMult - startMult) * progress;
+      
+    } else {
+      // Segment 6: Diminishing returns (logarithmic)
+      const baseMultiplier = 1.35; // Max base multiplier
+      const excessRatio = efficiencyRatio - breakpoints.diminishing_threshold;
+      const diminishingBonus = Math.log(1 + excessRatio) * slopes.diminishing_factor * 0.1;
+      multiplier = baseMultiplier + diminishingBonus;
+    }
+    
+    // Enforce hard limits
+    return Math.max(minMult, Math.min(maxMult, multiplier));
+  }
+  
+  /**
+   * Legacy method for backward compatibility - redirects to new multiplier method
+   * @deprecated Use calculateBudgetQualityMultiplier instead
+   */
+  calculateBudgetQualityBonus(
+    budgetPerSong: number,
+    projectType: string,
+    producerTier: string,
+    timeInvestment: string,
+    songCount: number = 1
+  ): number {
+    // Convert multiplier back to additive bonus for legacy callers
+    const multiplier = this.calculateBudgetQualityMultiplier(budgetPerSong, projectType, producerTier, timeInvestment, songCount);
+    const neutralMult = this.gameData.getBalanceConfigSync().quality_system.budget_quality_system.neutral_multiplier || 1.0;
+    // Convert from multiplier to percentage bonus
+    return Math.round((multiplier - neutralMult) * 100);
+  }
+
+  /**
+   * Calculates economies of scale multiplier for cost reduction
+   * Helper method used by dynamic minimum viable cost calculation
+   */
+  private calculateEconomiesOfScale(songCount: number, economiesConfig: any): number {
+    if (!economiesConfig?.enabled) {
+      return 1.0;
+    }
+    
+    const thresholds = economiesConfig.thresholds;
+    const breakpoints = economiesConfig.breakpoints;
+    
+    if (songCount >= thresholds.large_project) {
+      return breakpoints.large_project;
+    } else if (songCount >= thresholds.medium_project) {
+      return breakpoints.medium_project;
+    } else if (songCount >= thresholds.small_project) {
+      return breakpoints.small_project;
+    } else {
+      return breakpoints.single_song;
+    }
+  }
+
+  /**
+   * Gets the dynamic minimum viable cost for UI display
+   * This solves the "UI misalignment" issue
+   */
+  getMinimumViableCostForUI(
+    projectType: string,
+    producerTier: string,
+    timeInvestment: string,
+    songCount: number = 1
+  ): number {
+    return this.calculateDynamicMinimumViableCost(
+      projectType,
+      producerTier,
+      timeInvestment,
+      songCount
+    );
+  }
+
+  /**
+   * Gets budget efficiency rating for transparency
+   * This helps make the system more "transparent to players"
+   */
+  getBudgetEfficiencyRating(
+    budgetPerSong: number,
+    projectType: string,
+    producerTier: string,
+    timeInvestment: string,
+    songCount: number = 1
+  ): { rating: string, description: string, efficiencyRatio: number } {
+    const minViableCost = this.calculateDynamicMinimumViableCost(
+      projectType, producerTier, timeInvestment, songCount
+    );
+    let efficiencyRatio = budgetPerSong / minViableCost;
+    const balance = this.gameData.getBalanceConfigSync();
+    const budgetSystem = balance.quality_system.budget_quality_system;
+    
+    // Apply dampening if configured (same as in calculateBudgetQualityMultiplier)
+    const dampening = budgetSystem.efficiency_dampening;
+    if (dampening?.enabled && dampening?.factor !== undefined) {
+      efficiencyRatio = 1 + dampening.factor * (efficiencyRatio - 1);
+    }
+    
+    const breakpoints = budgetSystem.efficiency_breakpoints;
+    
+    let rating: string;
+    let description: string;
+    
+    if (efficiencyRatio < breakpoints.penalty_threshold) {
+      rating = "Insufficient";
+      description = "Budget too low for quality production";
+    } else if (efficiencyRatio < breakpoints.minimum_viable) {
+      rating = "Below Standard";
+      description = "Minimal quality, corners will be cut";
+    } else if (efficiencyRatio <= breakpoints.optimal_efficiency) {
+      rating = "Efficient";
+      description = "Good value for money, solid quality";
+    } else if (efficiencyRatio <= breakpoints.luxury_threshold) {
+      rating = "Premium";
+      description = "High-end production, excellent quality";
+    } else if (efficiencyRatio <= breakpoints.diminishing_threshold) {
+      rating = "Luxury";
+      description = "Top-tier production, maximum quality";
+    } else {
+      rating = "Excessive";
+      description = "Diminishing returns, money could be better spent";
+    }
+    
+    return { rating, description, efficiencyRatio };
   }
 
   /**
@@ -640,28 +866,6 @@ export class FinancialSystem {
     return { baseCost, totalCost, breakdown };
   }
 
-  /**
-   * Calculates economies of scale multiplier for song count
-   * Originally from game-engine.ts line 3067-3084
-   */
-  private calculateEconomiesOfScale(songCount: number, economiesConfig: any): number {
-    if (!economiesConfig?.enabled) {
-      return 1.0;
-    }
-    
-    const breakpoints = economiesConfig.breakpoints;
-    const thresholds = economiesConfig.thresholds;
-    
-    if (songCount >= thresholds.large_project) {
-      return breakpoints.large_project;
-    } else if (songCount >= thresholds.medium_project) {
-      return breakpoints.medium_project;
-    } else if (songCount >= thresholds.small_project) {
-      return breakpoints.small_project;
-    } else {
-      return breakpoints.single_song;
-    }
-  }
 
   /**
    * Calculates monthly burn with detailed breakdown

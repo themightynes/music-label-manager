@@ -12,6 +12,7 @@ import TestDataPage from "@/pages/TestData";
 import LoginPage from "@/pages/LoginPage";
 import PlanReleasePage from "@/pages/PlanReleasePage";
 import ArtistPage from "@/pages/ArtistPage";
+import QualityTester from "@/pages/QualityTester";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/" component={GamePage} />
       <Route path="/plan-release" component={PlanReleasePage} />
       <Route path="/artist/:artistId" component={ArtistPage} />
+      <Route path="/quality-tester" component={QualityTester} />
       <Route path="/test-data" component={TestDataPage} />
       <Route component={NotFound} />
     </Switch>

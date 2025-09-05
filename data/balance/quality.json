@@ -5,23 +5,42 @@
     "artist_synergy_bonus": 10,
     "budget_quality_system": {
       "enabled": true,
-      "calculation_method": "diminishing_returns",
-      "max_budget_bonus": 25,
+      "calculation_method": "dynamic_minimum_viable_cost",
+      "max_multiplier": 1.35,
+      "min_multiplier": 0.65,
+      "neutral_multiplier": 1.0,
       "efficiency_breakpoints": {
-        "minimum_viable": 0.6,
-        "optimal_efficiency": 1.0,
+        "penalty_threshold": 0.6,
+        "minimum_viable": 0.8,
+        "optimal_efficiency": 1.2,
         "luxury_threshold": 2.0,
-        "diminishing_threshold": 3.0
+        "diminishing_threshold": 3.5
       },
-      "diminishing_returns_factor": 0.3,
-      "description": "Budget bonus uses diminishing returns on per-song investment - quality improvements per song based on individual song budget",
-      "per_song_examples": {
-        "$1,000_per_song": "Below minimum - quality penalty",
-        "$2,500_per_song": "Minimum viable - no bonus", 
-        "$3,500_per_song": "Optimal efficiency - good quality bonus",
-        "$5,000_per_song": "Luxury investment - excellent quality bonus",
-        "$7,500_per_song": "High-end investment - premium quality bonus",
-        "$10,000_per_song": "Diminishing returns begin - maximum quality bonus"
+      "segment_slopes": {
+        "penalty_range": -0.35,
+        "viable_range": 0.25,
+        "optimal_range": 0.15,
+        "luxury_range": 0.10,
+        "diminishing_factor": 0.25
+      },
+      "efficiency_dampening": {
+        "enabled": true,
+        "factor": 0.7,
+        "description": "Reduces budget impact by dampening efficiency ratio. 1.0 = no dampening, 0.5 = 50% impact"
+      },
+      "transparency": {
+        "show_breakdown": true,
+        "show_minimum_cost": true,
+        "show_efficiency_rating": true
+      },
+      "description": "Dynamic minimum viable cost system with 5-segment piecewise function for realistic budget scaling",
+      "efficiency_examples": {
+        "0.5x (50% of minimum)": "Major penalty - low quality",
+        "0.8x (80% of minimum)": "Minimum viable - baseline quality", 
+        "1.2x (120% of minimum)": "Optimal efficiency - good quality bonus",
+        "2.0x (200% of minimum)": "Luxury investment - excellent quality bonus",
+        "3.5x (350% of minimum)": "Premium investment - maximum efficiency",
+        "5.0x+ (500%+ of minimum)": "Diminishing returns - waste territory"
       }
     }
   },
@@ -78,19 +97,5 @@
       "quality_bonus": 15,
       "description": "Perfectionist approach with unlimited time for the highest quality"
     }
-  },
-
-  "producer_tier_bonus": {
-    "local": 0,
-    "regional": 5,
-    "national": 12,
-    "legendary": 20
-  },
-
-  "time_investment_bonus": {
-    "rushed": -10,
-    "standard": 0,
-    "extended": 8,
-    "perfectionist": 15
   }
 }

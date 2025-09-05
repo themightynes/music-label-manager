@@ -1,242 +1,162 @@
 # Song Quality Calculation System
 
+**Last Updated: September 2025**  
+**Location**: `shared/engine/game-engine.ts` - `calculateEnhancedSongQuality()` method
+
 ## Overview
 
-The song quality calculation system is a comprehensive formula that combines multiple factors to determine the final quality of a song (0-100 scale). The system uses additive bonuses for most factors, with one multiplicative factor for multi-song projects.
+The song quality calculation system uses a **multiplicative formula** that combines artist talent, producer skill, and various modifiers to determine final song quality (0-100 scale). The system includes skill-based variance with outlier events for dramatic outcomes.
 
 ## Core Formula
 
 ```text
-Song Quality = BASE QUALITY + PRODUCER TIER BONUS + TIME INVESTMENT BONUS + ARTIST MOOD BONUS + BUDGET MODIFIER
+Final Quality = Base × Time × Popularity × Focus × Budget × Mood × Variance
 ```
 
-Then:
-```text
-Final Song Quality = clamp( (Song Quality) × songCountImpact, 20, 100 )
-```
+Where:
+- **Base Quality** = Artist Talent (0-100) + Producer Skill Bonus
+- All factors are multiplicative (typically 0.5x to 1.5x range)
+- Final result is clamped between 25-98
 
 ## Component Breakdown
 
 ### 1. Base Quality
-- **Range**: 40-60
-- **Formula**: `40 + random(0, 20)`
-- **Purpose**: Provides baseline quality with RNG variance
-- **Implementation**: Uses seeded RNG for deterministic results
+- **Primary**: Artist's `talent` attribute (0-100)
+- **Producer Bonus**:
+  - Local: +0
+  - Regional: +5
+  - National: +12
+  - Legendary: +20
+- **Formula**: `baseQuality = talent + producerBonus`
 
-### 2. Producer Tier Bonus
-- **Source**: `producer_tier_system[producerTier].quality_bonus`
-- **Values**:
-  - Local: 0
-  - Regional: 5
-  - National: 12
-  - Legendary: 20
-- **Purpose**: Higher-tier producers provide better equipment, connections, and expertise
+### 2. Time & Work Ethic Factor
+Combines time investment with artist work ethic:
+- **Time Investment Multipliers**:
+  - Rushed: 0.9x
+  - Standard: 1.0x
+  - Extended: 1.08x
+  - Perfectionist: 1.15x
+- **Work Ethic Scaling**: `0.8 + (workEthic/100) * 0.4`
+- **Combined**: `timeFactor × workEthicFactor`
 
-### 3. Time Investment Bonus
-- **Source**: `time_investment_system[timeInvestment].quality_bonus`
-- **Values**:
-  - Rushed: -10
-  - Standard: 0
-  - Extended: 8
-  - Perfectionist: 15
-- **Purpose**: More time allows for better takes, mixing, and refinement
+### 3. Popularity Factor
+Artist popularity affects reach but not core quality:
+- **Formula**: `0.8 + (popularity/100) * 0.3`
+- **Range**: 0.8x to 1.1x
+- **Purpose**: Popular artists have slight quality advantages
 
-### 4. Artist Mood Bonus
-- **Formula**: `floor(((artist.mood || 50) - 50) * 0.2)`
-- **Range**: -10 to +10
-- **Purpose**: Artist's emotional state affects performance quality
-- **Note**: This formula is duplicated in the frontend preview calculation
+### 4. Focus Factor (Session Fatigue)
+Quality drops for recording multiple songs:
+- **Formula**: `0.97^(songCount - 3)` for songCount > 3
+- **Examples**:
+  - 1-3 songs: 1.0x (no fatigue)
+  - 4 songs: 0.97x
+  - 5 songs: 0.94x
+  - 10 songs: 0.81x
 
-### 5. Budget Modifier (Most Complex Component)
+### 5. Budget Factor (with Dampening)
+Complex piecewise function based on efficiency ratio:
 
-The budget modifier is the most sophisticated part of the system, using diminishing returns based on per-song budget efficiency.
+#### Efficiency Calculation:
+```javascript
+minViableCost = baseCost × economiesOfScale × 1.5
+rawEfficiency = budgetPerSong / minViableCost
 
-#### 5.1 Minimum Viable Per-Song Cost Calculation
-
-First, the system calculates a reference "minimum viable per-song cost" using the project's own cost model:
-
-```typescript
-// Mode 1: Per-song cost system (for multi-song projects)
-if (songCountSystem?.enabled && actualSongCount > 1) {
-  const baseCostPerSong = songCountSystem.base_per_song_cost[projectType.toLowerCase()] || projectCosts.min;
-  const economiesMultiplier = this.calculateEconomiesOfScale(actualSongCount, songCountSystem.economies_of_scale);
-  totalBaseCost = baseCostPerSong * actualSongCount * economiesMultiplier;
-} else {
-  // Mode 2: Single-song interpolation
-  totalBaseCost = projectCosts.min + ((projectCosts.max - projectCosts.min) * (quality / 100));
-}
-
-// Apply multipliers
-const producerMultiplier = producerSystem[producerTier]?.multiplier || 1.0;
-const timeMultiplier = timeSystem[timeInvestment]?.multiplier || 1.0;
-const finalCost = Math.floor(totalBaseCost * producerMultiplier * timeMultiplier);
-
-// Per-song cost
-const minPerSongCost = finalCost / songCount;
+// Apply dampening (reduces budget impact by 30%)
+efficiency = 1 + 0.7 × (rawEfficiency - 1)
 ```
 
-#### 5.2 Budget Efficiency Ratio
+#### Piecewise Multiplier:
+- **< 0.6x**: 0.65x (heavy penalty)
+- **0.6-0.8x**: 0.65x to 0.85x (below standard)
+- **0.8-1.2x**: 0.85x to 1.05x (efficient range)
+- **1.2-2.0x**: 1.05x to 1.20x (premium)
+- **2.0-3.5x**: 1.20x to 1.35x (luxury)
+- **> 3.5x**: 1.35x + logarithmic growth (diminishing returns)
 
-```typescript
-const budgetRatio = budgetPerSong / minPerSongCost;
+**Dampening Factor**: 0.7 (configurable in quality.json)
+- Reduces budget's impact on quality by 30%
+- Prevents budget from dominating quality calculations
+
+### 6. Mood Factor
+Artist's current mood affects performance:
+- **Formula**: `0.9 + 0.2 × (mood/100)`
+- **Range**: 0.9x to 1.1x
+- **Default**: 1.0x at 50 mood
+
+### 7. Variance System (Enhanced with Outliers)
+
+#### Base Variance (90% of the time):
+Skill-based random variance where higher combined skill = more consistency:
+```javascript
+combinedSkill = (artistTalent + producerSkill) / 2
+baseVarianceRange = 35 - (30 × (combinedSkill/100))
 ```
 
-#### 5.3 Piecewise Budget Bonus Calculation
+**Variance Ranges**:
+- Low skill (25): ±35% variance
+- Medium skill (50): ±20% variance
+- High skill (75): ±10% variance
+- Max skill (100): ±5% variance
 
-The budget bonus uses a piecewise function with different slopes for different efficiency ranges:
+#### Outlier Events (10% chance):
+- **5% Breakout Hit**: 
+  - Multiplier: 1.5x to 2.0x
+  - Low skill gets bigger boost potential
+- **5% Critical Failure**:
+  - Multiplier: 0.5x to 0.7x
+  - High skill has protection (less severe)
 
-```typescript
-if (budgetRatio < breakpoints.minimum_viable) {
-  // Below minimum viable - penalty
-  budgetBonus = -5;
-} else if (budgetRatio <= breakpoints.optimal_efficiency) {
-  // Linear scaling from 0 to 40% of max bonus in optimal range
-  budgetBonus = ((budgetRatio - breakpoints.minimum_viable) / (breakpoints.optimal_efficiency - breakpoints.minimum_viable)) * (maxBonus * 0.4);
-} else if (budgetRatio <= breakpoints.luxury_threshold) {
-  // Linear scaling from 40% to 80% of max bonus in luxury range
-  const baseBonus = maxBonus * 0.4;
-  const luxuryBonus = ((budgetRatio - breakpoints.optimal_efficiency) / (breakpoints.luxury_threshold - breakpoints.optimal_efficiency)) * (maxBonus * 0.4);
-  budgetBonus = baseBonus + luxuryBonus;
-} else if (budgetRatio <= breakpoints.diminishing_threshold) {
-  // Linear scaling from 80% to 100% of max bonus before diminishing returns
-  const baseBonus = maxBonus * 0.8;
-  const highEndBonus = ((budgetRatio - breakpoints.luxury_threshold) / (breakpoints.diminishing_threshold - breakpoints.luxury_threshold)) * (maxBonus * 0.2);
-  budgetBonus = baseBonus + highEndBonus;
-} else {
-  // Diminishing returns beyond threshold
-  const excessRatio = budgetRatio - breakpoints.diminishing_threshold;
-  const diminishingBonus = Math.log(1 + excessRatio) * budgetSystem.diminishing_returns_factor * maxBonus * 0.1;
-  budgetBonus = maxBonus + diminishingBonus;
-}
+## Quality Boundaries
+
+- **Floor**: 25 (no song is completely worthless)
+- **Ceiling**: 98 (leave room for legendary moments)
+
+## Example Calculation
+
+**Scenario**: Regional producer, standard time, efficient budget, 5-song EP
+- Artist: 70 talent, 60 work ethic, 40 popularity, 50 mood
+- Producer: Regional (55 skill, +5 bonus)
+- Budget: $7,000/song (1.37x efficiency, dampened to 1.26x)
+
+**Calculation**:
+```
+Base = 70 + 5 = 75
+Time = 1.0 × 0.92 = 0.92
+Popularity = 0.8 + 0.12 = 0.92
+Focus = 0.97^2 = 0.94 (5 songs)
+Budget = 1.08 (after dampening)
+Mood = 1.0
+Variance = ±17.5% (or outlier)
+
+Result = 75 × 0.92 × 0.92 × 0.94 × 1.08 × 1.0 × variance
+       = ~64 × variance
+       = 53-75 (normal) or 32-128 (outlier)
+Final = 53-75 (clamped)
 ```
 
-#### 5.4 Budget System Configuration
+## Configuration
 
-Default breakpoints and values:
-- `minimum_viable`: 0.6
-- `optimal_efficiency`: 1.0
-- `luxury_threshold`: 2.0
-- `diminishing_threshold`: 3.0
-- `max_budget_bonus`: 25
-- `diminishing_returns_factor`: 0.3
+All values are configurable in:
+- `data/balance/quality.json` - Quality system settings
+- `data/balance/economy.json` - Project costs and economies of scale
+- `data/producer-tiers.json` - Producer bonuses
+- `data/time-investment.json` - Time multipliers
 
-### 6. Song Count Impact (Multiplicative Factor)
+## Recent Changes (Sept 2025)
 
-For multi-song projects, quality is reduced due to divided attention:
+1. **Budget Dampening**: Added 0.7 factor to reduce budget's impact
+2. **Enhanced Variance**: Increased from ±20% max to ±35% max
+3. **Outlier System**: 10% chance of extreme outcomes
+4. **UI Preview**: Shows variance range and outlier possibility
 
-```typescript
-if (!songCountSystem?.enabled || songCount <= 1) {
-  return 1.0; // No impact for single songs
-}
+## Frontend-Backend Synchronization
 
-// Exponential decay: quality = baseQualityPerSong^(songCount-1)
-const qualityImpact = Math.pow(baseQualityPerSong, songCount - 1);
+The `ProjectCreationModal.tsx` accurately previews all factors:
+- Uses identical calculations for all multipliers
+- Applies same dampening factor (0.7) to budget
+- Shows expected variance range
+- Warns about 10% outlier chance
 
-// Ensure it doesn't go below minimum
-const finalImpact = Math.max(minMultiplier, qualityImpact);
-```
-
-## Implementation Locations
-
-### Core Calculation
-- **File**: `shared/engine/game-engine.ts`
-- **Method**: `calculateEnhancedSongQuality()`
-- **Lines**: 1555-1613
-
-### Budget and Cost Calculations
-- **File**: `shared/engine/FinancialSystem.ts`
-- **Methods**: 
-  - `calculateBudgetQualityBonus()` (lines 270-342)
-  - `calculateSongCountQualityImpact()` (lines 348-374)
-  - `calculateEnhancedProjectCost()` (lines 380-435)
-
-### Configuration Data
-- **File**: `data/balance/quality.json`
-- **Sections**: `producer_tier_system`, `time_investment_system`, `budget_quality_system`
-
-### System Access
-- **File**: `server/data/gameData.ts`
-- **Methods**: `getProducerTierSystemSync()`, `getTimeInvestmentSystemSync()`
-
-## Frontend Preview
-
-The frontend preview calculation in `client/src/components/ProjectCreationModal.tsx` (lines 244-284) uses a simplified version of the budget bonus calculation to provide real-time quality estimates.
-
-## Mathematical Formula (Spreadsheet-Ready)
-
-Let:
-- M = artist mood (0–100)
-- P_B = producer tier quality bonus
-- T_B = time investment quality bonus
-- N = songCount (≥1)
-- B_ps = per-song budget
-- PT = project type
-- rnd = RANDBETWEEN(0,20)
-
-### Step 1: Base Components
-```
-BASE_QUALITY = 40 + rnd
-ARTIST_MOOD_BONUS = INT((M - 50) * 0.2)
-PRODUCER_TIER_BONUS = P_B
-TIME_INVESTMENT_BONUS = T_B
-```
-
-### Step 2: Budget Modifier
-```
-minPerSongCost = calculateEnhancedProjectCost(PT, producerTier, timeInvestment, 30, N) / N
-R = B_ps / minPerSongCost
-
-// Piecewise function based on R vs breakpoints
-BUDGET_MODIFIER = piecewise_function(R, breakpoints, maxBonus, diminishingFactor)
-```
-
-### Step 3: Song Count Impact
-```
-if N <= 1: SONG_COUNT_IMPACT = 1.0
-else: SONG_COUNT_IMPACT = MAX(minMultiplier, baseQualityPerSong^(N-1))
-```
-
-### Step 4: Final Quality
-```
-PRE_COUNT_QUALITY = BASE_QUALITY + PRODUCER_TIER_BONUS + TIME_INVESTMENT_BONUS + ARTIST_MOOD_BONUS + BUDGET_MODIFIER
-RAW_QUALITY = PRE_COUNT_QUALITY * SONG_COUNT_IMPACT
-FINAL_QUALITY = MIN(100, MAX(20, RAW_QUALITY))
-```
-
-## Complexity Analysis
-
-The **budget modifier** is the most complex component because it:
-
-1. **Normalization Complexity**: Must calculate a reference "minimum viable per-song cost" using the project's own cost model, which varies by:
-   - Project type (Single, EP, etc.)
-   - Producer tier (affects cost multipliers)
-   - Time investment (affects cost multipliers)
-   - Song count (affects economies of scale)
-   - Cost system mode (per-song vs single-song)
-
-2. **Piecewise Function**: Uses a 5-segment piecewise function with different slopes and a logarithmic tail for diminishing returns
-
-3. **Configuration Coupling**: Depends on many balance configuration values that can change the behavior
-
-4. **Edge Cases**: Handles various input formats (total budget vs per-song budget) and validation
-
-All other components are straightforward lookups or simple mathematical formulas.
-
-## Design Principles
-
-1. **Deterministic**: Uses seeded RNG for reproducible results
-2. **Configurable**: All values come from balance configuration files
-3. **Realistic**: Diminishing returns prevent infinite quality scaling
-4. **Balanced**: Multiple factors prevent any single input from dominating
-5. **Transparent**: Detailed logging and metadata for debugging and UI display
-
-## Future Considerations
-
-The system is designed to be extensible. Potential future enhancements could include:
-- Artist talent/work ethic/creativity bonuses (currently only mood is used)
-- Genre-specific quality modifiers
-- Equipment quality bonuses
-- Collaboration bonuses for multiple artists
-- Seasonal or market condition modifiers
-
+The preview shows expected quality before randomness, which is appropriate for user planning.
 

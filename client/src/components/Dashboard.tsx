@@ -130,6 +130,16 @@ export function Dashboard() {
                 <span>Plan Release</span>
               </Button>
               
+              {/* Quality Tester Button */}
+              <Button
+                onClick={() => setLocation('/quality-tester')}
+                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] p-2 rounded-[10px]"
+                size="sm"
+                title="Quality Tester"
+              >
+                <i className="fas fa-flask text-sm"></i>
+              </Button>
+              
               <div className="flex items-center space-x-1">
                 {/* Mobile Plan Release Button */}
                 <Button

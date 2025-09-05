@@ -1475,17 +1475,13 @@ export class GameEngine {
     const economicDecisions = metadata.economicDecisions || {};
     const projectBudget = project.budgetPerSong ? (project.budgetPerSong * (project.songCount || 1)) : 
                           (project.totalCost || project.budget || economicDecisions.finalBudget || 0);
-    const budgetQualityBonus = economicDecisions.budgetQualityBonus || 0;
-    const songCountQualityImpact = economicDecisions.songCountQualityImpact || 1.0;
     
     console.log('[GENERATE SONG] Budget calculation resolved:', {
       finalProjectBudget: projectBudget,
       calculationMethod: project.budgetPerSong ? 'budgetPerSong * songCount' : 
                           (project.totalCost ? 'totalCost' :
                           (project.budget ? 'budget' : 
-                          (economicDecisions.finalBudget ? 'economicDecisions.finalBudget' : 'default 0'))),
-      budgetQualityBonus,
-      songCountQualityImpact
+                          (economicDecisions.finalBudget ? 'economicDecisions.finalBudget' : 'default 0')))
     });
     
     // Calculate enhanced song quality using new stacking formula with budget and song count
@@ -1506,23 +1502,22 @@ export class GameEngine {
     // Calculate per-song budget allocation for tracking
     const perSongBudget = project.songCount > 1 ? Math.round(projectBudget / project.songCount) : projectBudget;
     
-    console.log('[SONG GENERATION] Creating enhanced song with economic factors:', { 
+    console.log('[SONG GENERATION] Creating enhanced song with multiplicative quality:', { 
       gameId, 
       artistId, 
       projectId: project.id,
       projectTitle: project.title,
       artistName: artist?.name || 'Unknown',
+      artistTalent: artist?.talent || 50,
+      artistWorkEthic: artist?.workEthic || 50,
+      artistPopularity: artist?.popularity || 0,
       artistMood: artist?.mood || 50,
       producerTier,
       timeInvestment,
       finalQuality,
       projectBudget,
       perSongBudget,
-      songCount: project.songCount,
-      budgetQualityBonus,
-      songCountQualityImpact,
-      hasMetadata: !!metadata,
-      hasEconomicDecisions: !!economicDecisions.finalBudget
+      songCount: project.songCount
     });
     
     if (!gameId || !artistId) {
@@ -1555,14 +1550,21 @@ export class GameEngine {
       marketingAllocation: 0, // Will be set when release is planned
       // Simplified metadata - only quality calculation details
       metadata: {
-        artistMood: artist.mood || 50,
+        artistAttributes: {
+          talent: artist.talent || 50,
+          workEthic: artist.workEthic || 50,
+          popularity: artist.popularity || 0,
+          mood: artist.mood || 50
+        },
         qualityCalculation: {
-          base: baseQuality,
-          artistMoodBonus: Math.floor(((artist.mood || 50) - 50) * 0.2),
-          producerBonus: producerBonus,
-          timeBonus: timeBonus,
-          budgetBonus: budgetQualityBonus,
-          songCountImpact: songCountQualityImpact,
+          formula: 'multiplicative_v2',
+          baseQuality: Math.round((artist.talent || 50) * 0.65 + (producerTier === 'legendary' ? 95 : producerTier === 'national' ? 75 : producerTier === 'regional' ? 55 : 40) * 0.35),
+          factors: {
+            time: timeInvestment,
+            producer: producerTier,
+            songCount: project.songCount || 1,
+            budgetPerSong: perSongBudget
+          },
           final: finalQuality
         },
         generatedAt: new Date().toISOString()
@@ -1571,7 +1573,8 @@ export class GameEngine {
   }
 
   /**
-   * Calculates enhanced song quality using producer tier, time investment, and budget stacking formula
+   * Calculates enhanced song quality using multiplicative formula with artist attributes
+   * New formula incorporates talent, work ethic, and popularity
    */
   private calculateEnhancedSongQuality(
     artist: any, 
@@ -1581,52 +1584,134 @@ export class GameEngine {
     budgetAmount?: number,
     songCount?: number
   ): number {
-    // Base quality (40-60 range with RNG variance)
-    const baseQuality = 40 + Math.floor(this.getRandom(0, 20));
+    // 1. BASE QUALITY (Talent + Producer Skill hybrid)
+    const producerSkillMap: Record<string, number> = {
+      'local': 40,
+      'regional': 55,
+      'national': 75,
+      'legendary': 95
+    };
+    const producerSkill = producerSkillMap[producerTier] || 40;
     
-    // Artist mood bonus (-10 to +10 based on mood)
-    // IMPORTANT: If you change this formula, also update the preview calculation in:
-    // client/src/components/ProjectCreationModal.tsx (line ~277)
-    const artistMoodBonus = Math.floor(((artist.mood || 50) - 50) * 0.2);
+    // Weighted average: talent matters more than producer
+    const artistTalent = artist.talent || 50;
+    const baseQuality = (artistTalent * 0.65 + producerSkill * 0.35);
     
-    // Producer tier quality bonus
-    const producerSystem = this.gameData.getProducerTierSystemSync();
-    const producerBonus = producerSystem[producerTier]?.quality_bonus || 0;
+    // 2. WORK ETHIC & TIME SYNERGY
+    // Work ethic amplifies time investment effectiveness
+    const timeMultipliers: Record<string, number> = {
+      'rushed': 0.7,      // 70% efficiency
+      'standard': 1.0,    // 100% efficiency (baseline)
+      'extended': 1.1,    // 110% efficiency
+      'perfectionist': 1.2 // 120% efficiency
+    };
     
-    // Time investment quality bonus
-    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
-    const timeBonus = timeSystem[timeInvestment]?.quality_bonus || 0;
+    const artistWorkEthic = artist.workEthic || 50;
+    const workEthicBonus = (artistWorkEthic / 100) * 0.3; // up to 30% bonus
+    const timeFactor = (timeMultipliers[timeInvestment] || 1.0) * (1 + workEthicBonus);
     
-    // NEW: Budget quality bonus with diminishing returns (per-song basis)
+    // 3. POPULARITY IMPACT
+    // Popularity attracts better session musicians, engineers, features
+    const artistPopularity = artist.popularity || 0;
+    const popularityFactor = 0.95 + 0.1 * Math.sqrt(artistPopularity / 100);
+    // Results in 0.95x to 1.05x multiplier (10% total swing, more balanced)
+    
+    // 4. SESSION FATIGUE
+    // Quality drops 3% per song after 3rd song
+    const actualSongCount = songCount || project.songCount || 1;
+    const focusFactor = Math.pow(0.97, Math.max(0, actualSongCount - 3));
+    
+    // 5. BUDGET IMPACT (using new multiplier method)
     const totalBudget = budgetAmount || project.totalCost || project.budgetPerSong || 0;
-    const perSongBudget = totalBudget / (songCount || 1);
-    const budgetBonus = this.calculateBudgetQualityBonus(
+    const perSongBudget = totalBudget / actualSongCount;
+    const budgetFactor = this.financialSystem.calculateBudgetQualityMultiplier(
       perSongBudget,
       project.type || 'single',
       producerTier,
       timeInvestment,
-      songCount
+      actualSongCount
     );
     
-    // NEW: Song count impact on individual song quality
-    const songCountImpact = this.calculateSongCountQualityImpact(songCount || project.songCount || 1);
+    // 6. MOOD IMPACT (reduced influence)
+    // Mood is temporary, shouldn't dominate permanent attributes
+    const artistMood = artist.mood || 50;
+    const moodFactor = 0.9 + 0.2 * (artistMood / 100); // 0.9x to 1.1x
     
-    // Quality stacking formula: finalQuality = (baseQuality + artistMoodBonus + producerBonus + timeBonus + budgetBonus) * songCountImpact
-    const preCountQuality = baseQuality + artistMoodBonus + producerBonus + timeBonus + budgetBonus;
-    const rawQuality = preCountQuality * songCountImpact;
-    const finalQuality = Math.max(20, Math.min(100, rawQuality));
+    // 7. COMBINE WITH MULTIPLICATIVE APPROACH
+    let quality = baseQuality;
     
-    console.log(`[QUALITY CALC] Enhanced song quality calculation:`, {
-      baseQuality,
-      artistMoodBonus,
-      producerTier,
-      producerBonus,
-      timeInvestment,
-      timeBonus,
-      budgetBonus,
-      songCountImpact,
-      preCountQuality,
-      rawQuality,
+    // Apply multiplicative factors
+    quality *= timeFactor;        // 0.7x to 1.43x (with work ethic)
+    quality *= popularityFactor;  // 0.8x to 1.1x  
+    quality *= focusFactor;       // 0.85x to 1.0x (for typical 1-5 songs)
+    quality *= budgetFactor;      // 0.7x to 1.3x
+    quality *= moodFactor;        // 0.9x to 1.1x
+    
+    // 8. SKILL-BASED VARIANCE WITH OUTLIER SYSTEM
+    // Higher skill = more consistent results, Lower skill = more random
+    // Combine artist talent and producer skill to determine consistency
+    const combinedSkill = (artistTalent + producerSkill) / 2; // 0-100 scale
+    
+    // Calculate base variance range based on skill level
+    // Low skill (25): ±35% base variance (was 20%)
+    // Medium skill (50): ±20% base variance (was 10%)
+    // High skill (75): ±10% base variance (was 5%)
+    // Max skill (100): ±5% base variance (was 2%)
+    const baseVarianceRange = 35 - (30 * (combinedSkill / 100)); // 35% down to 5%
+    
+    // Check for outlier events (10% chance)
+    const outlierRoll = Math.random();
+    let variance: number;
+    let outlierType = '';
+    
+    if (outlierRoll < 0.05) {
+      // 5% chance of breakout hit (massive positive outlier)
+      // Skill still matters: low skill gets bigger boost potential
+      const outlierBoost = 1.5 + (0.5 * (1 - combinedSkill / 100)); // 1.5x to 2.0x for breakout
+      variance = outlierBoost;
+      outlierType = 'BREAKOUT HIT';
+    } else if (outlierRoll < 0.10) {
+      // 5% chance of critical failure (massive negative outlier)
+      // Skill protects: high skill has less severe failures
+      const outlierPenalty = 0.5 + (0.2 * (combinedSkill / 100)); // 0.5x to 0.7x for failure
+      variance = outlierPenalty;
+      outlierType = 'CRITICAL FAILURE';
+    } else {
+      // 90% normal variance within calculated range
+      variance = 1 + (this.getRandom(-baseVarianceRange, baseVarianceRange) / 100);
+    }
+    
+    quality *= variance;
+    
+    // Log the variance for debugging
+    console.log(`[QUALITY VARIANCE] Skill-based variance:`, {
+      artistTalent,
+      producerSkill,
+      combinedSkill: combinedSkill.toFixed(1),
+      baseVarianceRange: `±${baseVarianceRange.toFixed(1)}%`,
+      actualVariance: ((variance - 1) * 100).toFixed(1) + '%',
+      outlierType: outlierType || 'NORMAL'
+    });
+    
+    // 9. FLOOR AND CEILING
+    // Ensure minimum quality even with bad inputs
+    const QUALITY_FLOOR = 25;   // No song is completely worthless
+    const QUALITY_CEILING = 98;  // Leave room for legendary moments
+    
+    const finalQuality = Math.round(Math.min(QUALITY_CEILING, Math.max(QUALITY_FLOOR, quality)));
+    
+    console.log(`[QUALITY CALC] New multiplicative song quality calculation:`, {
+      baseQuality: baseQuality.toFixed(1),
+      artistTalent,
+      producerSkill,
+      artistWorkEthic,
+      timeFactor: timeFactor.toFixed(3),
+      popularityFactor: popularityFactor.toFixed(3),
+      focusFactor: focusFactor.toFixed(3),
+      budgetFactor: budgetFactor.toFixed(3),
+      moodFactor: moodFactor.toFixed(3),
+      variance: variance.toFixed(3),
+      rawQuality: quality.toFixed(1),
       finalQuality
     });
     
@@ -2307,16 +2392,20 @@ export class GameEngine {
   private calculateAccessTierBonus(): number {
     let bonus = 0;
     
-    // Playlist access bonus
-    if (this.gameState.playlistAccess === 'mid') bonus += 20;
+    // Playlist access bonus (progressive tiers)
+    if (this.gameState.playlistAccess === 'flagship') bonus += 30;
+    else if (this.gameState.playlistAccess === 'mid') bonus += 20;
     else if (this.gameState.playlistAccess === 'niche') bonus += 10;
     
-    // Press access bonus  
-    if (this.gameState.pressAccess === 'Mid-Tier') bonus += 20;
-    else if (this.gameState.pressAccess === 'Blogs') bonus += 10;
+    // Press access bonus (progressive tiers)
+    if (this.gameState.pressAccess === 'national') bonus += 30;
+    else if (this.gameState.pressAccess === 'mid_tier') bonus += 20;
+    else if (this.gameState.pressAccess === 'blogs') bonus += 10;
     
-    // Venue access bonus
-    if (this.gameState.venueAccess === 'Clubs') bonus += 15;
+    // Venue access bonus (progressive tiers)
+    if (this.gameState.venueAccess === 'arenas') bonus += 30;
+    else if (this.gameState.venueAccess === 'theaters') bonus += 20;
+    else if (this.gameState.venueAccess === 'clubs') bonus += 10;
     
     return bonus;
   }
@@ -2457,53 +2546,8 @@ export class GameEngine {
   // REMOVED: validateSongCountForProjectType method is redundant
   // Song count validation is now handled at UI creation time
   
-  /**
-   * Validates budget efficiency relative to song count to prevent exploits
-   */
-  private validateSongCountBudgetEfficiency(
-    budget: number,
-    songCount: number,
-    projectType: string,
-    producerTier: string,
-    timeInvestment: string
-  ): { valid: boolean; warning?: string; efficiency?: number } {
-    try {
-      const minBudget = this.calculateEnhancedProjectCost(
-        projectType,
-        producerTier,
-        timeInvestment,
-        30,
-        songCount
-      );
-      
-      const efficiency = budget / minBudget;
-      
-      // Flag potentially exploitative budget allocations
-      if (efficiency > 4.0) {
-        return {
-          valid: false,
-          warning: `Budget ${efficiency.toFixed(1)}x minimum cost may be inefficient for ${songCount} song${songCount > 1 ? 's' : ''}`,
-          efficiency
-        };
-      }
-      
-      if (efficiency < 0.8) {
-        return {
-          valid: false,
-          warning: `Budget too low for quality production (${efficiency.toFixed(1)}x minimum)`,
-          efficiency
-        };
-      }
-      
-      return { valid: true, efficiency };
-      
-    } catch (error) {
-      return {
-        valid: false,
-        warning: `Budget efficiency calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      };
-    }
-  }
+  // REMOVED: validateSongCountBudgetEfficiency - replaced by dynamic budget quality calculation
+  // Budget efficiency is now handled by FinancialSystem.getBudgetEfficiencyRating()
 
   /**
    * Calculates outcomes when a project completes
