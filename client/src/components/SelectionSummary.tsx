@@ -5,18 +5,19 @@ import { Progress } from '@/components/ui/progress';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useGameStore } from '@/store/gameStore';
 
-interface MonthlyAction {
+interface ExecutiveAction {
   id: string;
-  name: string;
-  type: string;
+  executiveId: string;
+  executiveName: string;
+  meetingId: string;
+  choiceId: string;
   icon: string;
-  description?: string;
-  category: string;
+  color: string;
 }
 
 interface SelectionSummaryProps {
   selectedActions: string[];
-  actions: MonthlyAction[];
+  actions: any[]; // Keep for now, will be removed later
   onRemoveAction: (actionId: string) => void;
   onReorderActions: (startIndex: number, endIndex: number) => void;
   onAdvanceMonth: () => void;
@@ -36,9 +37,33 @@ export function SelectionSummary({
   const usedSlots = gameState?.usedFocusSlots || 0;
   const availableSlots = totalSlots - usedSlots;
   
-  const selectedActionObjects = selectedActions.map(id => 
-    actions.find(action => action.id === id)
-  ).filter(Boolean) as MonthlyAction[];
+  // Parse executive actions from composite IDs
+  const selectedActionObjects = selectedActions.map(id => {
+    // Executive action format: executiveId_meetingId_choiceId
+    const parts = id.split('_');
+    
+    // Map executive data
+    const executives: Record<string, { name: string; icon: string; color: string }> = {
+      'ceo': { name: 'CEO', icon: 'fas fa-crown', color: '#FFD700' },
+      'head': { name: 'Head of A&R', icon: 'fas fa-music', color: '#A75A5B' },
+      'cmo': { name: 'CMO', icon: 'fas fa-bullhorn', color: '#5AA75A' },
+      'cco': { name: 'CCO', icon: 'fas fa-palette', color: '#5A75A7' },
+      'distribution': { name: 'Head of Distribution', icon: 'fas fa-truck', color: '#A75A85' }
+    };
+    
+    const executiveId = parts[0] === 'head' ? 'head' : parts[0];
+    const executive = executives[executiveId] || executives['ceo'];
+    
+    return {
+      id,
+      executiveId: parts[0],
+      executiveName: executive.name,
+      meetingId: parts[1] || 'meeting',
+      choiceId: parts[2] || 'choice',
+      icon: executive.icon,
+      color: executive.color
+    } as ExecutiveAction;
+  });
 
   const progress = (usedSlots / totalSlots) * 100;
 
@@ -133,10 +158,10 @@ export function SelectionSummary({
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2">
-                                  <i className={`${action.icon} text-[#A75A5B] text-sm`}></i>
-                                  <h4 className="font-medium text-sm text-white">{action.name}</h4>
+                                  <i className={`${action.icon} text-sm`} style={{ color: action.color }}></i>
+                                  <h4 className="font-medium text-sm text-white">{action.executiveName}</h4>
                                 </div>
-                                <p className="text-xs text-white/50 capitalize">{action.type.replace('_', ' ')}</p>
+                                <p className="text-xs text-white/50">Strategic Decision</p>
                               </div>
                             </div>
                             <Button
@@ -154,9 +179,9 @@ export function SelectionSummary({
                   ))
                 ) : (
                   <div className="text-center py-8 text-white/50">
-                    <i className="fas fa-hand-point-left text-2xl mb-2 block"></i>
-                    <p className="text-sm">Choose focus actions from the pool</p>
-                    <p className="text-xs">Each action uses one focus slot</p>
+                    <i className="fas fa-users text-2xl mb-2 block"></i>
+                    <p className="text-sm">Select executives to meet with</p>
+                    <p className="text-xs">Each executive meeting uses one focus slot</p>
                   </div>
                 )}
                 {provided.placeholder}

@@ -3,10 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useGameStore } from '@/store/gameStore';
-import { useState, useEffect } from 'react';
 import { AlertCircle, Loader2, Rocket } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { ActionSelectionPool } from './ActionSelectionPool';
+import { ExecutiveTeam } from './ExecutiveTeam';
 import { SelectionSummary } from './SelectionSummary';
 
 interface MonthPlannerProps {
@@ -41,40 +40,15 @@ interface MonthlyAction {
 }
 
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
-  const { gameState, selectedActions, selectAction, removeAction, reorderActions, clearActions, openDialogue, projects, artists } = useGameStore();
+  const { gameState, selectedActions, removeAction, reorderActions, openDialogue } = useGameStore();
   const [, setLocation] = useLocation();
   
-  // API state for monthly actions and categories
-  const [monthlyActions, setMonthlyActions] = useState<MonthlyAction[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Keep empty monthlyActions array for SelectionSummary compatibility
+  const monthlyActions: MonthlyAction[] = [];
+  const loading = false;
+  const error: string | null = null;
 
-  // Fetch monthly actions from API
-  const fetchMonthlyActions = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/actions/monthly');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch actions: ${response.status}`);
-      }
-      const data = await response.json();
-      setMonthlyActions(data.actions || []);
-      setCategories(data.categories || []);
-    } catch (err) {
-      console.error('Failed to fetch monthly actions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load actions');
-      // Fallback to empty array - component will show error state
-      setMonthlyActions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMonthlyActions();
-  }, []);
+  // No longer need to fetch actions - executives are defined in ExecutiveTeam component
 
   if (!gameState) return null;
 
@@ -249,20 +223,14 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
                   <p className="text-red-600 mb-4">Failed to load actions</p>
-                  <Button onClick={fetchMonthlyActions} variant="outline" size="sm">
+                  <Button onClick={() => window.location.reload()} variant="outline" size="sm">
                     Try Again
                   </Button>
                 </div>
               ) : (
-                <ActionSelectionPool
-                  actions={monthlyActions}
-                  categories={categories}
-                  getActionDetails={getActionDetails}
-                  getActionRecommendation={getActionRecommendation}
+                <ExecutiveTeam
                   selectedActions={selectedActions}
-                  onSelectAction={selectAction}
-                  onClearAll={clearActions}
-                  onAutoRecommend={handleAutoRecommend}
+                  maxSlots={gameState?.focusSlots || 3}
                 />
               )}
             </div>

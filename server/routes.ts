@@ -303,6 +303,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get role/executive data with all their meetings
+  app.get("/api/roles/:roleId", async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      const roles = await serverGameData.getAllRoles();
+      const role = roles.find((r: any) => r.id === req.params.roleId);
+      
+      if (!role) {
+        return res.status(404).json({ error: 'Role not found' });
+      }
+      
+      // Get all meetings for this role from actions.json
+      const actionsData = await serverGameData.getMonthlyActionsWithCategories();
+      const roleMeetings = actionsData.actions.filter((action: any) => 
+        action.type === 'role_meeting' && 
+        action.role_id === req.params.roleId
+      );
+      
+      res.json({
+        ...role,
+        meetings: roleMeetings
+      });
+    } catch (error) {
+      console.error('Failed to load role:', error);
+      res.status(500).json({ error: 'Failed to load role data' });
+    }
+  });
+
+  // Get specific meeting data for a role
+  app.get("/api/roles/:roleId/meetings/:meetingId", async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      const actionsData = await serverGameData.getMonthlyActionsWithCategories();
+      const actions = actionsData.actions || [];
+      
+      // Find the meeting in actions.json
+      const meeting = actions.find((action: any) => 
+        action.type === 'role_meeting' && 
+        action.role_id === req.params.roleId && 
+        action.meeting_id === req.params.meetingId
+      );
+      
+      if (!meeting) {
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+      
+      // Return the meeting data in the format DialogueModal expects
+      res.json({
+        id: meeting.meeting_id,
+        prompt: meeting.prompt,
+        choices: meeting.choices || []
+      });
+    } catch (error) {
+      console.error('Failed to load meeting:', error);
+      res.status(500).json({ error: 'Failed to load meeting data' });
+    }
+  });
+
+  // Process executive action/decision (Week 2 Task)
+  app.post("/api/game/:gameId/executive/:execId/action", getUserId, async (req, res) => {
+    try {
+      const { gameId, execId } = req.params;
+      const { action, metadata } = req.body;
+      
+      // Get the game state
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // TODO: Get executive from database once fully implemented
+      // For now, return a mock response
+      const executiveAction = {
+        executiveId: execId,
+        action: action,
+        gameId: gameId,
+        month: gameState.currentMonth,
+        result: {
+          success: true,
+          impact: {
+            mood: 5,
+            loyalty: 3,
+            reputation: 2
+          },
+          message: "Executive action processed successfully"
+        }
+      };
+      
+      res.json(executiveAction);
+    } catch (error) {
+      console.error('Failed to process executive action:', error);
+      res.status(500).json({ message: "Failed to process executive action" });
+    }
+  });
+
   // Get project types and configuration
   app.get("/api/project-types", async (req, res) => {
     try {
@@ -566,30 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Role endpoints for dialogue system
-  app.get("/api/roles/:roleId", async (req, res) => {
-    try {
-      const role = await serverGameData.getRoleById(req.params.roleId);
-      if (!role) {
-        return res.status(404).json({ message: "Role not found" });
-      }
-      res.json(role);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch role data" });
-    }
-  });
-
-  app.get("/api/roles/:roleId/meetings/:meetingId", async (req, res) => {
-    try {
-      const meeting = await serverGameData.getRoleMeetingById(req.params.roleId, req.params.meetingId);
-      if (!meeting) {
-        return res.status(404).json({ message: "Meeting not found" });
-      }
-      res.json(meeting);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch meeting data" });
-    }
-  });
+  // REMOVED: Duplicate role endpoints - using the implementation at lines 307-362 instead
 
   // Artist dialogue endpoints
   app.get("/api/artists/:archetype/dialogue", async (req, res) => {

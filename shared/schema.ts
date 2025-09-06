@@ -240,6 +240,18 @@ export const gameStates = pgTable("game_states", {
   userReputationIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_user_reputation" ON ${table} ("user_id", "reputation", "current_month")`,
 }));
 
+// Executives table
+export const executives = pgTable("executives", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  gameId: uuid("game_id").references(() => gameStates.id),
+  role: text("role"), // 'head_of_ar', 'cmo', 'cco', 'head_distribution'
+  level: integer("level").default(1),
+  mood: integer("mood").default(50), // 0-100
+  loyalty: integer("loyalty").default(50), // 0-100
+  lastActionMonth: integer("last_action_month"),
+  metadata: jsonb("metadata"), // For personality traits, history
+});
+
 // Monthly actions (for tracking player choices)
 export const monthlyActions = pgTable("monthly_actions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -374,6 +386,10 @@ export const insertGameStateSchema = createInsertSchema(gameStates).omit({
 export const insertMonthlyActionSchema = createInsertSchema(monthlyActions).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertExecutiveSchema = createInsertSchema(executives).omit({
+  id: true,
 });
 
 export const insertMoodEventSchema = createInsertSchema(moodEvents).omit({

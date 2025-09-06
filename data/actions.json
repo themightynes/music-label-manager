@@ -1,303 +1,640 @@
 {
-  "version": "1.0",
-  "generated": "2025-08-21",
-  "description": "Unified action system combining UI presentation and backend game logic",
+  "version": "2.0.0",
+  "generated": "2025-09-06",
+  "description": "All available actions including role meetings extracted from roles system",
   "monthly_actions": [
     {
-      "id": "meet_manager",
-      "name": "Meet Manager",
+      "id": "ceo_priorities",
+      "name": "CEO: Strategic Priorities",
       "type": "role_meeting",
       "icon": "fas fa-user-tie",
-      "description": "Strategic planning and resource allocation",
-      "role_id": "manager",
+      "description": "Discuss strategic priorities with CEO",
+      "role_id": "ceo",
+      "meeting_id": "mgr_priorities",
       "category": "business",
-      "details": {
-        "cost": "Free",
-        "duration": "1 week",
-        "prerequisites": "None",
-        "outcomes": ["Budget decisions", "Strategic direction", "Resource optimization"],
-        "benefits": ["Unlock budget decisions", "Strategic insights", "Team coordination"]
-      },
-      "recommendations": {
-        "urgent_when": {
-          "money_below": 20000
+      "prompt": "We can only push two tracks next month—what's the focus?",
+      "choices": [
+        {
+          "id": "studio_first",
+          "label": "Studio-first to polish the single",
+          "effects_immediate": { "money": -2000 },
+          "effects_delayed": { "quality_bonus": 5, "artist_mood": 2 }
         },
-        "recommended_when": {
-          "active_projects_above": 2
+        {
+          "id": "content_first",
+          "label": "Content-first to grow socials",
+          "effects_immediate": { "money": -1500 },
+          "effects_delayed": { "press_story_flag": 1, "reputation": 1 }
         },
-        "reasons": {
-          "low_money": "Low budget needs attention",
-          "many_projects": "Multiple projects need management"
+        {
+          "id": "tour_first",
+          "label": "Mini-tour to test markets",
+          "effects_immediate": { "money": -4000 },
+          "effects_delayed": { "sellthrough_hint": 1, "artist_mood": -1 }
         }
-      }
+      ]
     },
     {
-      "id": "meet_ar",
-      "name": "Meet A&R",
-      "type": "role_meeting", 
-      "icon": "fas fa-search",
-      "description": "Talent scouting and artist development strategy",
-      "role_id": "anr",
-      "category": "talent",
-      "details": {
-        "cost": "$2,000 - $5,000",
-        "duration": "1-2 weeks",
-        "prerequisites": "None",
-        "outcomes": ["Artist discovery", "Development planning", "Market positioning"],
-        "benefits": ["Access to new talent", "Artist development insights", "Market analysis"]
-      },
-      "recommendations": {
-        "urgent_when": {
-          "artists_equal": 0
-        },
-        "recommended_when": {
-          "artists_below": 3
-        },
-        "reasons": {
-          "no_artists": "No artists signed",
-          "few_artists": "Need more talent"
-        }
-      }
-    },
-    {
-      "id": "meet_producer",
-      "name": "Meet Producer",
+      "id": "ceo_crisis",
+      "name": "CEO: Crisis Management",
       "type": "role_meeting",
-      "icon": "fas fa-sliders-h", 
-      "description": "Music production planning and quality control",
-      "role_id": "producer",
-      "category": "production",
-      "details": {
-        "cost": "$1,000 - $3,000",
-        "duration": "1 week",
-        "prerequisites": "Active project recommended",
-        "outcomes": ["Production timeline", "Quality improvements", "Technical direction"],
-        "benefits": ["Enhanced project quality", "Production efficiency", "Technical expertise"]
-      },
-      "recommendations": {
-        "recommended_when": {
-          "active_projects_above": 0
+      "icon": "fas fa-user-tie",
+      "description": "Handle crisis situation with CEO",
+      "role_id": "ceo",
+      "meeting_id": "mgr_crisis",
+      "category": "business",
+      "prompt": "Your biggest artist just fired their last three backup dancers. The tour starts in two weeks.",
+      "choices": [
+        {
+          "id": "emergency_auditions",
+          "label": "Emergency auditions - whatever it costs",
+          "effects_immediate": { "money": -8000 },
+          "effects_delayed": { "artist_mood": 3, "reputation": 1 }
         },
-        "reasons": {
-          "has_projects": "Active projects need production"
+        {
+          "id": "local_talent",
+          "label": "Hire local dancers in each city",
+          "effects_immediate": { "money": -3000 },
+          "effects_delayed": { "venue_relationships": 1, "quality_risk": 1 }
+        },
+        {
+          "id": "acoustic_pivot",
+          "label": "Pivot to stripped-down acoustic shows",
+          "effects_immediate": { "creative_capital": -1 },
+          "effects_delayed": { "artist_mood": -2, "press_story_flag": 1 }
         }
-      }
+      ]
     },
     {
-      "id": "meet_pr",
-      "name": "Meet PR",
+      "id": "ceo_expansion",
+      "name": "CEO: Festival Strategy",
+      "type": "role_meeting",
+      "icon": "fas fa-user-tie",
+      "description": "Plan festival expansion strategy",
+      "role_id": "ceo",
+      "meeting_id": "mgr_expansion",
+      "category": "business",
+      "prompt": "Three major festivals want your act for next summer. We can only do one without burning out.",
+      "choices": [
+        {
+          "id": "coachella_prestige",
+          "label": "Coachella - maximum prestige play",
+          "effects_immediate": { "creative_capital": -2 },
+          "effects_delayed": { "reputation": 3, "artist_popularity": 2 }
+        },
+        {
+          "id": "euro_circuit",
+          "label": "European circuit - build international",
+          "effects_immediate": { "money": -12000 },
+          "effects_delayed": { "international_rep": 2, "artist_loyalty": 1 }
+        },
+        {
+          "id": "profitable_path",
+          "label": "Take the highest paying gig",
+          "effects_immediate": { "money": 25000 },
+          "effects_delayed": { "artist_mood": -1, "reputation": -1 }
+        }
+      ]
+    },
+    {
+      "id": "ar_single_choice",
+      "name": "A&R: Single Strategy",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Choose lead single approach with A&R",
+      "role_id": "head_ar",
+      "meeting_id": "anr_single_choice",
+      "category": "talent",
+      "prompt": "Pick the lead single approach.",
+      "choices": [
+        {
+          "id": "lean_commercial",
+          "label": "Lean commercial",
+          "effects_immediate": { "artist_mood": -2 },
+          "effects_delayed": { "playlist_bias": 2, "adds_bonus": 5 }
+        },
+        {
+          "id": "split_test",
+          "label": "A/B campaign (two contenders)",
+          "effects_immediate": { "money": -1000 },
+          "effects_delayed": { "learning_bonus": 1, "delay_risk": 1 }
+        },
+        {
+          "id": "greenlight_weird",
+          "label": "Greenlight the weird one",
+          "effects_immediate": { "creative_capital": -2 },
+          "effects_delayed": { "variance_up": 1, "quality_potential": 4 }
+        }
+      ]
+    },
+    {
+      "id": "ar_discovery",
+      "name": "A&R: New Talent Discovery",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Evaluate potential new signing",
+      "role_id": "head_ar",
+      "meeting_id": "anr_discovery",
+      "category": "talent",
+      "prompt": "I found our next superstar - she's 16, brilliant, but her parents want creative control.",
+      "choices": [
+        {
+          "id": "accept_terms",
+          "label": "Accept their terms - worth the risk",
+          "effects_immediate": { "money": -15000, "creative_capital": -3 },
+          "effects_delayed": { "talent_potential": 4, "control_issues": 1 }
+        },
+        {
+          "id": "negotiate_compromise",
+          "label": "Negotiate a compromise deal",
+          "effects_immediate": { "money": -8000 },
+          "effects_delayed": { "talent_potential": 2, "relationship_stability": 1 }
+        },
+        {
+          "id": "pass_on_talent",
+          "label": "Pass - too many red flags",
+          "effects_immediate": { "reputation": -1 },
+          "effects_delayed": { "competitor_gain": 1 }
+        }
+      ]
+    },
+    {
+      "id": "ar_genre_shift",
+      "name": "A&R: Genre Strategy",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Discuss genre positioning strategy",
+      "role_id": "head_ar",
+      "meeting_id": "anr_genre_shift",
+      "category": "talent",
+      "prompt": "Rock is dying in the charts. Should we push our guitar bands toward pop-rock crossover?",
+      "choices": [
+        {
+          "id": "chase_trends",
+          "label": "Follow the money - pivot to pop",
+          "effects_immediate": { "artist_mood": -3 },
+          "effects_delayed": { "commercial_potential": 2, "authenticity_loss": 1 }
+        },
+        {
+          "id": "double_down_rock",
+          "label": "Double down - rock will come back",
+          "effects_immediate": { "creative_capital": -2, "money": -5000 },
+          "effects_delayed": { "artist_loyalty": 3, "niche_dominance": 1 }
+        },
+        {
+          "id": "gradual_evolution",
+          "label": "Gradual evolution - keep the rock soul",
+          "effects_immediate": { "money": -2000 },
+          "effects_delayed": { "artistic_growth": 1, "chart_stability": 1 }
+        }
+      ]
+    },
+    {
+      "id": "cco_timeline",
+      "name": "CCO: Production Timeline",
+      "type": "role_meeting",
+      "icon": "fas fa-sliders-h",
+      "description": "Set production timeline with Creative Officer",
+      "role_id": "cco",
+      "meeting_id": "prod_timeline",
+      "category": "production",
+      "prompt": "Timeline is tight—what's the call?",
+      "choices": [
+        {
+          "id": "rush",
+          "label": "Rush to hit date",
+          "effects_immediate": { "money": 1000 },
+          "effects_delayed": { "quality_bonus": -5, "on_time": 1 }
+        },
+        {
+          "id": "standard",
+          "label": "Standard schedule",
+          "effects_immediate": {},
+          "effects_delayed": {}
+        },
+        {
+          "id": "add_revision",
+          "label": "Add a revision pass",
+          "effects_immediate": { "money": -1500 },
+          "effects_delayed": { "quality_bonus": 6, "delay_risk": 1 }
+        }
+      ]
+    },
+    {
+      "id": "cco_creative_clash",
+      "name": "CCO: Creative Direction",
+      "type": "role_meeting",
+      "icon": "fas fa-sliders-h",
+      "description": "Resolve creative differences in production",
+      "role_id": "cco",
+      "meeting_id": "prod_creative_clash",
+      "category": "production",
+      "prompt": "The artist wants to record everything live in one take. I think we need overdubs to compete.",
+      "choices": [
+        {
+          "id": "artist_vision",
+          "label": "Trust the artist's instincts",
+          "effects_immediate": { "artist_loyalty": 2 },
+          "effects_delayed": { "authenticity_bonus": 2, "commercial_risk": 1 }
+        },
+        {
+          "id": "producer_expertise",
+          "label": "Insist on professional overdubs",
+          "effects_immediate": { "money": -3000, "artist_mood": -2 },
+          "effects_delayed": { "quality_bonus": 3, "radio_ready": 1 }
+        },
+        {
+          "id": "hybrid_approach",
+          "label": "Compromise - live basics, key overdubs",
+          "effects_immediate": { "money": -1500 },
+          "effects_delayed": { "quality_bonus": 1, "artist_mood": 1 }
+        }
+      ]
+    },
+    {
+      "id": "cco_budget_crisis",
+      "name": "CCO: Budget Management",
+      "type": "role_meeting",
+      "icon": "fas fa-sliders-h",
+      "description": "Handle production budget crisis",
+      "role_id": "cco",
+      "meeting_id": "prod_budget_crisis",
+      "category": "production",
+      "prompt": "We're over budget and the vocals still aren't right. The label is breathing down my neck.",
+      "choices": [
+        {
+          "id": "demand_more_money",
+          "label": "Demand the budget we need to finish",
+          "effects_immediate": { "money": -10000 },
+          "effects_delayed": { "quality_bonus": 4, "reputation": 1 }
+        },
+        {
+          "id": "creative_solution",
+          "label": "Find a creative workaround",
+          "effects_immediate": { "creative_capital": -1 },
+          "effects_delayed": { "innovation_bonus": 2, "producer_rep": 1 }
+        },
+        {
+          "id": "release_as_is",
+          "label": "Call it done - character over perfection",
+          "effects_immediate": { "money": 2000 },
+          "effects_delayed": { "authenticity_bonus": 1, "quality_penalty": -2 }
+        }
+      ]
+    },
+    {
+      "id": "cmo_pr_angle",
+      "name": "CMO: PR Strategy",
       "type": "role_meeting",
       "icon": "fas fa-bullhorn",
-      "description": "Media strategy and publicity planning",
-      "role_id": "pr", 
+      "description": "Choose PR angle for campaign",
+      "role_id": "cmo",
+      "meeting_id": "pr_angle",
       "category": "marketing",
-      "details": {
-        "cost": "$2,000 - $6,000",
-        "duration": "2-3 weeks",
-        "prerequisites": "Project in marketing stage",
-        "outcomes": ["Press coverage", "Media relationships", "Brand positioning"],
-        "benefits": ["Increased visibility", "Media connections", "Brand awareness"]
-      },
-      "recommendations": {
-        "recommended_when": {
-          "released_projects_above": 0,
-          "reputation_below": 50
+      "prompt": "Choose the story angle for this cycle.",
+      "choices": [
+        {
+          "id": "safe",
+          "label": "Safe: craft-focused rise",
+          "effects_immediate": { "money": -1000 },
+          "effects_delayed": { "press_bias": 1 }
         },
-        "reasons": {
-          "build_reputation": "Build reputation from releases"
+        {
+          "id": "spicy",
+          "label": "Spicy: provocative narrative",
+          "effects_immediate": { "money": -1500 },
+          "effects_delayed": { "variance_up": 1, "rep_swing": 1 }
+        },
+        {
+          "id": "community",
+          "label": "Community: local hero",
+          "effects_immediate": { "money": -800 },
+          "effects_delayed": { "local_favor": 1, "ticket_bias": 1 }
         }
-      }
+      ]
     },
     {
-      "id": "meet_digital",
-      "name": "Digital Marketing",
+      "id": "cmo_scandal",
+      "name": "CMO: Scandal Management",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "Handle brewing scandal",
+      "role_id": "cmo",
+      "meeting_id": "pr_scandal_brewing",
+      "category": "marketing",
+      "prompt": "Paparazzi caught your artist leaving a rival's studio at 3am. The rumors are flying.",
+      "choices": [
+        {
+          "id": "damage_control",
+          "label": "Full damage control - deny everything",
+          "effects_immediate": { "money": -5000 },
+          "effects_delayed": { "reputation": -1, "media_skepticism": 1 }
+        },
+        {
+          "id": "spin_collaboration",
+          "label": "Spin it as a surprise collaboration",
+          "effects_immediate": { "creative_capital": -1 },
+          "effects_delayed": { "press_pickups": 2, "collab_pressure": 1 }
+        },
+        {
+          "id": "ignore_let_fade",
+          "label": "Ignore it - let it fade naturally",
+          "effects_immediate": {},
+          "effects_delayed": { "reputation": -2, "authenticity_bonus": 1 }
+        }
+      ]
+    },
+    {
+      "id": "cmo_awards",
+      "name": "CMO: Awards Campaign",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "Plan awards season strategy",
+      "role_id": "cmo",
+      "meeting_id": "pr_award_campaign",
+      "category": "marketing",
+      "prompt": "Award season is coming. Do we launch a campaign for the album or save money?",
+      "choices": [
+        {
+          "id": "full_campaign",
+          "label": "Full campaign - hire the best consultants",
+          "effects_immediate": { "money": -20000 },
+          "effects_delayed": { "award_chances": 3, "industry_respect": 2 }
+        },
+        {
+          "id": "grassroots_push",
+          "label": "Grassroots push - work our contacts",
+          "effects_immediate": { "money": -5000, "creative_capital": -1 },
+          "effects_delayed": { "award_chances": 1, "relationship_building": 2 }
+        },
+        {
+          "id": "skip_awards",
+          "label": "Skip it - focus on commercial success",
+          "effects_immediate": { "money": 3000 },
+          "effects_delayed": { "commercial_focus": 1, "prestige_loss": -1 }
+        }
+      ]
+    },
+    {
+      "id": "cmo_viral",
+      "name": "CMO: Viral Moment",
       "type": "role_meeting",
       "icon": "fas fa-chart-line",
-      "description": "Digital marketing and social media strategy",
-      "role_id": "digital",
+      "description": "Handle viral fan content",
+      "role_id": "cmo",
+      "meeting_id": "digital_viral_moment",
       "category": "marketing",
-      "details": {
-        "cost": "$1,000 - $8,000",
-        "duration": "1-4 weeks",
-        "prerequisites": "Released content recommended",
-        "outcomes": ["Online campaigns", "Social media growth", "Digital presence"],
-        "benefits": ["Digital reach", "Fan engagement", "Online visibility"]
-      },
-      "recommendations": {
-        "recommended_when": {
-          "released_projects_above": 0
+      "prompt": "A fan remix of your single is going viral on TikTok. Do we embrace it or shut it down?",
+      "choices": [
+        {
+          "id": "embrace_remix",
+          "label": "Embrace it - invite the fan to collaborate",
+          "effects_immediate": { "money": -2000 },
+          "effects_delayed": { "viral_boost": 3, "fan_loyalty": 2 }
         },
-        "reasons": {
-          "has_releases": "Promote released music digitally"
+        {
+          "id": "official_version",
+          "label": "Release our own official remix",
+          "effects_immediate": { "money": -8000 },
+          "effects_delayed": { "streaming_boost": 2, "remix_competition": 1 }
+        },
+        {
+          "id": "copyright_strike",
+          "label": "Copyright strike - protect the original",
+          "effects_immediate": {},
+          "effects_delayed": { "viral_kill": -2, "fan_backlash": -1 }
         }
-      }
+      ]
     },
     {
-      "id": "meet_streaming",
-      "name": "Streaming Pitch", 
+      "id": "cmo_platform_exclusive",
+      "name": "CMO: Platform Strategy",
+      "type": "role_meeting",
+      "icon": "fas fa-chart-line",
+      "description": "Negotiate platform exclusivity",
+      "role_id": "cmo",
+      "meeting_id": "digital_platform_exclusive",
+      "category": "marketing",
+      "prompt": "Spotify wants an exclusive window for the new album. Apple Music will match the offer.",
+      "choices": [
+        {
+          "id": "spotify_exclusive",
+          "label": "Take Spotify's deal - biggest reach",
+          "effects_immediate": { "money": 15000 },
+          "effects_delayed": { "streaming_boost": 2, "apple_relationship": -1 }
+        },
+        {
+          "id": "apple_exclusive",
+          "label": "Apple Music - higher revenue per stream",
+          "effects_immediate": { "money": 18000 },
+          "effects_delayed": { "premium_positioning": 1, "reach_limitation": -1 }
+        },
+        {
+          "id": "simultaneous_release",
+          "label": "Decline both - simultaneous release",
+          "effects_immediate": {},
+          "effects_delayed": { "platform_neutrality": 1, "discovery_challenge": 1 }
+        }
+      ]
+    },
+    {
+      "id": "distribution_pitch",
+      "name": "Distribution: Playlist Strategy",
       "type": "role_meeting",
       "icon": "fas fa-list-ul",
-      "description": "Playlist placement and streaming optimization",
-      "role_id": "streaming",
+      "description": "Choose playlist pitch strategy",
+      "role_id": "head_distribution",
+      "meeting_id": "pitch_strategy",
       "category": "distribution",
-      "details": {
-        "cost": "$500 - $2,000",
-        "duration": "1-2 weeks",
-        "prerequisites": "Playlist access tier",
-        "outcomes": ["Playlist submissions", "Streaming strategy", "Platform relationships"],
-        "benefits": ["Playlist placements", "Streaming growth", "Platform visibility"]
-      },
-      "recommendations": {
-        "recommended_when": {
-          "playlist_access_not": "None",
-          "released_projects_above": 0
+      "prompt": "Which track and context for editorial pitch?",
+      "choices": [
+        {
+          "id": "obvious_single",
+          "label": "Obvious single + clean assets",
+          "effects_immediate": {},
+          "effects_delayed": { "playlist_bias": 2 }
         },
-        "reasons": {
-          "leverage_access": "Leverage playlist access"
+        {
+          "id": "unexpected_cut",
+          "label": "Unexpected cut with a story",
+          "effects_immediate": { "creative_capital": -1 },
+          "effects_delayed": { "variance_up": 1, "press_story_flag": 1 }
+        },
+        {
+          "id": "hold",
+          "label": "Hold this month; build proof points",
+          "effects_immediate": {},
+          "effects_delayed": { "playlist_bias_next": 1 }
         }
-      }
+      ]
     },
     {
-      "id": "meet_booking",
-      "name": "Meet Booking",
-      "type": "role_meeting", 
-      "icon": "fas fa-calendar-alt",
-      "description": "Live performance and tour planning",
-      "role_id": "booking",
-      "category": "live",
-      "details": {
-        "cost": "$1,000 - $5,000",
-        "duration": "2-4 weeks",
-        "prerequisites": "Venue access tier",
-        "outcomes": ["Venue bookings", "Tour planning", "Live opportunities"],
-        "benefits": ["Live revenue", "Fan engagement", "Market expansion"]
-      },
-      "recommendations": {
-        "recommended_when": {
-          "venue_access_not": "None",
-          "artists_above": 0
-        },
-        "reasons": {
-          "book_shows": "Book shows for artists"
-        }
-      }
-    },
-    {
-      "id": "meet_operations",
-      "name": "Meet Operations",
+      "id": "distribution_politics",
+      "name": "Distribution: Playlist Politics",
       "type": "role_meeting",
-      "icon": "fas fa-cogs",
-      "description": "Business operations and efficiency optimization",
-      "role_id": "ops", 
-      "category": "business",
-      "details": {
-        "cost": "$500 - $2,000",
-        "duration": "1 week",
-        "prerequisites": "None",
-        "outcomes": ["Cost reduction", "Process improvement", "Team efficiency"],
-        "benefits": ["Operational efficiency", "Cost savings", "Team productivity"]
-      },
-      "recommendations": {
-        "urgent_when": {
-          "money_below": 30000
+      "icon": "fas fa-list-ul",
+      "description": "Navigate playlist curator politics",
+      "role_id": "head_distribution",
+      "meeting_id": "streaming_playlist_politics",
+      "category": "distribution",
+      "prompt": "The Today's Top Hits curator wants a 'favor' before considering our track. Wink, wink.",
+      "choices": [
+        {
+          "id": "play_the_game",
+          "label": "Play the game - arrange the 'favor'",
+          "effects_immediate": { "money": -10000, "reputation": -1 },
+          "effects_delayed": { "playlist_guaranteed": 1, "industry_compromise": 1 }
         },
-        "recommended_when": {
-          "active_projects_above": 1
+        {
+          "id": "alternative_playlists",
+          "label": "Focus on alternative playlists instead",
+          "effects_immediate": { "creative_capital": -1 },
+          "effects_delayed": { "niche_success": 2, "mainstream_miss": -1 }
         },
-        "reasons": {
-          "low_money": "Financial operations urgent",
-          "many_projects": "Manage multiple projects"
+        {
+          "id": "report_behavior",
+          "label": "Report the behavior to Spotify",
+          "effects_immediate": {},
+          "effects_delayed": { "industry_respect": 2, "blacklist_risk": -2 }
         }
-      }
+      ]
     },
     {
-      "id": "start_single",
-      "name": "Start Single",
-      "type": "project_creation",
-      "icon": "fas fa-music",
-      "description": "Begin production of a new single release",
-      "project_type": "single",
-      "category": "production"
+      "id": "distribution_algorithm",
+      "name": "Distribution: Algorithm Strategy",
+      "type": "role_meeting",
+      "icon": "fas fa-list-ul",
+      "description": "Handle algorithm exploitation opportunity",
+      "role_id": "head_distribution",
+      "meeting_id": "streaming_algorithm_hack",
+      "category": "distribution",
+      "prompt": "I found a loophole in the algorithm. We could game 10M streams, but it's ethically gray.",
+      "choices": [
+        {
+          "id": "exploit_loophole",
+          "label": "Exploit it before they patch it",
+          "effects_immediate": { "money": -5000 },
+          "effects_delayed": { "artificial_boost": 3, "detection_risk": 2 }
+        },
+        {
+          "id": "modified_approach",
+          "label": "Use a modified, cleaner approach",
+          "effects_immediate": { "money": -2000 },
+          "effects_delayed": { "moderate_boost": 1, "sustainable_growth": 1 }
+        },
+        {
+          "id": "organic_only",
+          "label": "Stick to organic growth only",
+          "effects_immediate": {},
+          "effects_delayed": { "authentic_growth": 1, "slow_building": 1 }
+        }
+      ]
     },
     {
-      "id": "start_ep", 
-      "name": "Start EP",
-      "type": "project_creation",
-      "icon": "fas fa-compact-disc",
-      "description": "Begin production of an EP (extended play)",
-      "project_type": "ep",
-      "category": "production"
+      "id": "distribution_tour_scale",
+      "name": "Distribution: Tour Planning",
+      "type": "role_meeting",
+      "icon": "fas fa-calendar-alt",
+      "description": "Plan tour scale and venues",
+      "role_id": "head_distribution",
+      "meeting_id": "tour_scale",
+      "category": "live",
+      "prompt": "Mini-tour scale choice?",
+      "choices": [
+        {
+          "id": "small_rooms",
+          "label": "Small rooms, aim for sell-outs",
+          "effects_immediate": { "money": -5000 },
+          "effects_delayed": { "venue_stability": 1, "artist_loyalty": 2 }
+        },
+        {
+          "id": "mid_rooms",
+          "label": "Mid rooms, stretch a bit",
+          "effects_immediate": { "money": -8000 },
+          "effects_delayed": { "prestige": 1, "sellthrough_risk": 1 }
+        },
+        {
+          "id": "big_bet",
+          "label": "Big bet showcase night",
+          "effects_immediate": { "money": -12000 },
+          "effects_delayed": { "prestige": 2, "rep_swing": 1 }
+        }
+      ]
     },
     {
-      "id": "start_tour",
-      "name": "Plan Tour",
-      "type": "project_creation", 
-      "icon": "fas fa-route",
-      "description": "Plan and schedule a mini-tour",
-      "project_type": "mini_tour",
-      "category": "live"
-    },
-    {
-      "id": "pr_push",
-      "name": "PR Push",
-      "type": "marketing_campaign",
-      "icon": "fas fa-newspaper", 
-      "description": "Launch targeted public relations campaign",
-      "campaign_type": "pr_push",
-      "category": "marketing"
-    },
-    {
-      "id": "digital_push",
-      "name": "Digital Campaign",
-      "type": "marketing_campaign",
-      "icon": "fas fa-ad",
-      "description": "Launch digital advertising and social media campaign", 
-      "campaign_type": "digital_ads",
-      "category": "marketing"
+      "id": "distribution_supply",
+      "name": "Distribution: Supply Chain",
+      "type": "role_meeting",
+      "icon": "fas fa-shipping-fast",
+      "description": "Handle physical distribution crisis",
+      "role_id": "head_distribution",
+      "meeting_id": "ops_supply_chain",
+      "category": "distribution",
+      "prompt": "Vinyl shortage is hitting everyone. We can get our allocation by paying 3x normal cost.",
+      "choices": [
+        {
+          "id": "pay_premium",
+          "label": "Pay the premium - vinyl collectors matter",
+          "effects_immediate": { "money": -12000 },
+          "effects_delayed": { "collector_loyalty": 2, "premium_positioning": 1 }
+        },
+        {
+          "id": "digital_focus",
+          "label": "Go all-digital for this release",
+          "effects_immediate": { "money": 3000 },
+          "effects_delayed": { "cost_savings": 1, "collector_disappointment": -2 }
+        },
+        {
+          "id": "delayed_vinyl",
+          "label": "Delay vinyl, release digital first",
+          "effects_immediate": {},
+          "effects_delayed": { "staggered_release": 1, "timeline_disruption": 1 }
+        }
+      ]
     }
   ],
   "action_categories": [
-    { 
-      "id": "business", 
-      "name": "Business Strategy", 
+    {
+      "id": "business",
+      "name": "Business Strategy",
       "icon": "fas fa-briefcase",
       "description": "Strategic planning and business development",
-      "color": "blue" 
+      "color": "blue"
     },
-    { 
-      "id": "talent", 
-      "name": "Artist & Talent", 
+    {
+      "id": "talent",
+      "name": "Artist & Talent",
       "icon": "fas fa-users",
       "description": "Artist scouting and talent development",
-      "color": "purple" 
+      "color": "purple"
     },
-    { 
-      "id": "production", 
-      "name": "Music Production", 
+    {
+      "id": "production",
+      "name": "Music Production",
       "icon": "fas fa-music",
       "description": "Recording and production activities",
-      "color": "green" 
+      "color": "green"
     },
-    { 
-      "id": "marketing", 
-      "name": "Marketing & PR", 
+    {
+      "id": "marketing",
+      "name": "Marketing & PR",
       "icon": "fas fa-bullhorn",
       "description": "Promotion and public relations",
-      "color": "orange" 
+      "color": "orange"
     },
-    { 
-      "id": "distribution", 
-      "name": "Distribution", 
+    {
+      "id": "distribution",
+      "name": "Distribution",
       "icon": "fas fa-shipping-fast",
       "description": "Release and distribution channels",
-      "color": "cyan" 
+      "color": "cyan"
     },
-    { 
-      "id": "live", 
-      "name": "Live Performance", 
+    {
+      "id": "live",
+      "name": "Live Performance",
       "icon": "fas fa-microphone-alt",
       "description": "Concerts and live events",
-      "color": "red" 
+      "color": "red"
     }
   ]
 }

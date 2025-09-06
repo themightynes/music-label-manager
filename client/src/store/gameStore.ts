@@ -491,7 +491,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       selectDialogueChoice: async (choiceId: string, effects: any) => {
-        const { gameState, currentDialogue } = get();
+        const { gameState, currentDialogue, selectedActions } = get();
         if (!gameState || !currentDialogue) return;
 
         try {
@@ -511,6 +511,14 @@ export const useGameStore = create<GameStore>()(
             await get().updateGameState({ flags });
           }
 
+          // Add this executive action to selected actions for the month
+          const executiveActionId = `${currentDialogue.roleType}_${currentDialogue.sceneId}_${choiceId}`;
+          const newSelectedActions = [...selectedActions, executiveActionId];
+          set({ 
+            selectedActions: newSelectedActions,
+            gameState: { ...gameState, usedFocusSlots: newSelectedActions.length }
+          });
+
           // Record the action
           await apiRequest('POST', `/api/game/${gameState.id}/actions`, {
             month: gameState.currentMonth,
@@ -520,6 +528,7 @@ export const useGameStore = create<GameStore>()(
             results: {
               ...effects,
               roleType: currentDialogue.roleType,
+              sceneId: currentDialogue.sceneId,
               choiceId: choiceId
             }
           });

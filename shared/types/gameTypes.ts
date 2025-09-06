@@ -49,6 +49,13 @@ export interface GameRole {
   meetings: RoleMeeting[];
 }
 
+export interface Executive {
+  role: string;
+  level: number;
+  mood: number;
+  loyalty: number;
+}
+
 export interface EventChoice {
   id: string;
   label: string;

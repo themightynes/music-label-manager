@@ -45,7 +45,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 
 ### Game Content (DO NOT MODIFY WITHOUT CAREFUL CONSIDERATION)
 - `data/balance.json` - All game balance numbers (includes project revenue formulas)
-- `data/roles.json` - 8 industry roles with meetings
+- `data/roles.json` - 5 industry roles 
 - `data/artists.json` - 6 unique artists with archetypes
 - `data/events.json` - 12 side events
 - `data/dialogue.json` - Additional artist dialogues

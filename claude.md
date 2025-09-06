@@ -49,7 +49,7 @@ Building **Top Roles: Music Label Manager** - browser-based music industry simul
 
 ## 🎮 JSON Systems Ready
 - `data/balance.ts` - Economic formulas, costs, quality bonuses
-- `data/roles.json` - 8 industry roles with 72+ dialogue choices
+- `data/roles.json` - 5 industry roles 
 - `data/artists.json` - Artist archetypes and development systems
 - `data/events.json` - 12 side stories with branching outcomes
 
