@@ -56,38 +56,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Test database connection on startup with retry logic
-  console.log('[Database] Testing connection...');
-  let dbConnected = false;
-  let attempts = 0;
-  const maxAttempts = 3;
-  
-  while (!dbConnected && attempts < maxAttempts) {
-    attempts++;
-    console.log(`[Database] Connection attempt ${attempts}/${maxAttempts}`);
-    
-    try {
-      dbConnected = await testDatabaseConnection();
-      if (dbConnected) {
-        console.log('[Database] Connection successful');
-      } else {
-        console.log('[Database] Connection failed, retrying in 2 seconds...');
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-    } catch (error) {
-      console.log(`[Database] Connection attempt ${attempts} failed, retrying...`);
-      if (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-  }
-  
-  if (!dbConnected) {
-    console.error('[Database] All connection attempts failed. Server will continue but database operations may fail.');
-    console.log('[Database] The application will attempt to reconnect automatically when database operations are needed.');
-  }
+  // Skip database connection test during startup to avoid Neon serverless package bug
+  console.log('[Database] Skipping connection test at startup due to known issue with @neondatabase/serverless package');
+  console.log('[Database] Database will be available for actual operations once the app is running');
 
   const server = await registerRoutes(app);
 
