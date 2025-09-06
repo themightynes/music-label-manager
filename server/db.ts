@@ -40,12 +40,30 @@ export const db = drizzle({ client: pool, schema });
 // Helper function to test database connectivity
 export async function testDatabaseConnection(): Promise<boolean> {
   try {
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
+    // Use a timeout to prevent hanging on connection issues
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timeout')), 5000)
+    );
+    
+    const connectionPromise = (async () => {
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT 1');
+        return true;
+      } finally {
+        client.release();
+      }
+    })();
+    
+    await Promise.race([connectionPromise, timeoutPromise]);
     return true;
-  } catch (error) {
-    console.error('[Database] Connection test failed:', error);
+  } catch (error: any) {
+    // Handle the specific Neon serverless error gracefully
+    if (error.message && error.message.includes('Cannot set property message')) {
+      console.error('[Database] Known Neon serverless connection issue - this is usually temporary');
+      return false;
+    }
+    console.error('[Database] Connection test failed:', error?.message || error);
     return false;
   }
 }
