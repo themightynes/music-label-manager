@@ -28,12 +28,18 @@
 
 ### 🚧 **In Progress This Week**
 - [x] Executive Team System - Phase 1 UI Implementation (Completed)
+- [x] Executive Team System - Phase 3 Game Engine Integration (Partial)
+  - [x] Initialize executives on game creation
+  - [x] Add executive salary deduction ($17K/month)
+  - [ ] Implement processExecutiveActions() for mood/loyalty
+  - [ ] Add mood/loyalty decay system
+  - [ ] Implement availability thresholds
 - [ ] Artist Mood Effects - Mood tracking system
 - [ ] Performance impact calculations
 - [ ] Mood management through gameplay
 
 ### 📋 **Next Week (Week 6)**
-- [ ] Executive Team System - Phase 3 Game Engine Integration
+- [ ] Complete Executive Team System - Phase 3 remaining items
 - [ ] Regional Market Barriers - Geographic progression
 - [ ] Market unlock mechanics
 - [ ] UI polish and integration testing
@@ -41,6 +47,24 @@
 ---
 
 ## ✅ **RECENTLY COMPLETED** (Last 30 Days)
+
+### **September 7, 2025 - Executive Team System Phase 3 (Partial)**
+- ✅ **Executive Initialization on Game Creation** - Auto-create executives for new games
+  - ✅ Modified POST /api/game endpoint to create 4 executives (excluding CEO)
+  - ✅ Each executive starts with mood=50, loyalty=50, level=1
+  - ✅ CEO excluded since player IS the CEO (no mood/loyalty tracking needed)
+- ✅ **Executive Salary Deduction System** - Monthly economic impact
+  - ✅ Implemented calculateExecutiveSalaries() in FinancialSystem module
+  - ✅ Salaries pulled from roles.json data (not hardcoded)
+  - ✅ Total monthly cost: $17,000 for 4 executives
+  - ✅ Added baseSalary field to GameRole interface and Zod validation
+  - ✅ Fixed expense tooltip in MetricsDashboard to show executive salaries
+  - ✅ CEO has $0 salary as player character
+- ⏳ **Deferred to Phase 3 Completion** - Remaining game engine work
+  - ⏳ processExecutiveActions() for mood/loyalty changes
+  - ⏳ Mood/loyalty decay system over time
+  - ⏳ Availability thresholds based on mood levels
+  - ⏳ Executive events and special interactions
 
 ### **September 7, 2025 - Executive Team System Phase 1**
 - ✅ **Executive Team UI Implementation** - Complete monthly planning transformation

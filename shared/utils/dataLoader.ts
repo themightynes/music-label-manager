@@ -33,7 +33,8 @@ const GameRoleSchema = z.object({
   relationship: z.number(),
   access: z.record(z.any()).default({}),
   kpis: z.array(z.string()),
-  meetings: z.array(RoleMeetingSchema).optional().default([])
+  meetings: z.array(RoleMeetingSchema).optional().default([]),
+  baseSalary: z.number().optional()
 });
 
 const GameArtistSchema = z.object({

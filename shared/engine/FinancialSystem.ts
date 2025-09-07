@@ -868,6 +868,90 @@ export class FinancialSystem {
 
 
   /**
+   * Calculates executive salaries for the month
+   * Gets executives from the database and looks up their salaries from roles.json
+   * @param gameId The game ID to get executives for
+   * @param storage The storage instance to fetch executives
+   * @returns Total executive salaries and breakdown by role
+   */
+  async calculateExecutiveSalaries(
+    gameId: string,
+    storage?: any
+  ): Promise<{
+    total: number;
+    breakdown: Array<{ role: string, name: string, salary: number }>;
+  }> {
+    console.log('\n========== EXECUTIVE SALARY CALCULATION START ==========');
+    console.log('[DEBUG] calculateExecutiveSalaries called with gameId:', gameId);
+    console.log('[DEBUG] Storage provided:', !!storage);
+    console.log('[DEBUG] Storage has getExecutivesByGame:', !!(storage && storage.getExecutivesByGame));
+    
+    let executiveBreakdown: Array<{ role: string, name: string, salary: number }> = [];
+    let totalSalaries = 0;
+
+    try {
+      if (storage && storage.getExecutivesByGame) {
+        console.log('[DEBUG] Calling storage.getExecutivesByGame...');
+        // Get executives from database
+        const executives = await storage.getExecutivesByGame(gameId);
+        console.log('[DEBUG] Executives returned from database:', executives);
+        console.log('[DEBUG] Number of executives found:', executives ? executives.length : 0);
+        
+        if (executives && executives.length > 0) {
+          console.log('[DEBUG] Processing executives to get salaries...');
+          console.log('[DEBUG] gameData available:', !!this.gameData);
+          console.log('[DEBUG] gameData.getRoleById available:', !!(this.gameData && this.gameData.getRoleById));
+          
+          // Map each executive to their salary from roles.json
+          executiveBreakdown = await Promise.all(executives.map(async (exec: any, index: number) => {
+            console.log(`[DEBUG] Processing executive ${index + 1}:`, exec);
+            // Get role data from roles.json using gameData
+            console.log(`[DEBUG] Calling gameData.getRoleById for role: "${exec.role}"`);
+            const roleData = await this.gameData.getRoleById(exec.role);
+            console.log(`[DEBUG] Role data for ${exec.role}:`, roleData);
+            const salary = roleData?.baseSalary || 0;
+            console.log(`[DEBUG] Salary for ${exec.role}: $${salary}`);
+            
+            return {
+              role: exec.role,
+              name: roleData?.title || roleData?.name || exec.role,
+              salary: salary
+            };
+          }));
+          
+          // Calculate total
+          totalSalaries = executiveBreakdown.reduce((sum, exec) => sum + exec.salary, 0);
+          
+          console.log('[DEBUG] Final executive salary breakdown:', executiveBreakdown);
+          console.log('[DEBUG] Total executive salaries calculated: $' + totalSalaries);
+        } else {
+          console.log('[DEBUG] No executives found for game:', gameId);
+          console.log('[DEBUG] executives value:', executives);
+        }
+      } else {
+        console.warn('[DEBUG] Storage not available or missing getExecutivesByGame method');
+        console.log('[DEBUG] Storage object:', storage);
+      }
+    } catch (error) {
+      console.error('[DEBUG] ERROR calculating executive salaries:', error);
+      console.error('[DEBUG] Error stack:', error.stack);
+      // Return empty breakdown on error
+      executiveBreakdown = [];
+      totalSalaries = 0;
+    }
+
+    const result = {
+      total: totalSalaries,
+      breakdown: executiveBreakdown
+    };
+    
+    console.log('[DEBUG] Returning result:', result);
+    console.log('========== EXECUTIVE SALARY CALCULATION END ==========\n');
+    
+    return result;
+  }
+
+  /**
    * Calculates monthly burn with detailed breakdown
    * Originally from game-engine.ts line 572-617
    * Now accepts optional artist data to maintain pure function principle
@@ -957,7 +1041,10 @@ export class FinancialSystem {
     const operations = { 
       base: summary.expenseBreakdown?.monthlyOperations || 0, 
       artists: summary.expenseBreakdown?.artistSalaries || 0, 
-      total: (summary.expenseBreakdown?.monthlyOperations || 0) + (summary.expenseBreakdown?.artistSalaries || 0)
+      executives: summary.expenseBreakdown?.executiveSalaries || 0,
+      total: (summary.expenseBreakdown?.monthlyOperations || 0) + 
+             (summary.expenseBreakdown?.artistSalaries || 0) + 
+             (summary.expenseBreakdown?.executiveSalaries || 0)
     };
     
     // Use actual values from summary expense breakdown
@@ -1009,6 +1096,9 @@ export class FinancialSystem {
     }
     if (f.operations.artists > 0) {
       parts.push(`- $${f.operations.artists.toLocaleString()} (artists)`);
+    }
+    if (f.operations.executives > 0) {
+      parts.push(`- $${f.operations.executives.toLocaleString()} (executives)`);
     }
     if (f.projects.costs > 0) {
       parts.push(`- $${f.projects.costs.toLocaleString()} (projects)`);

@@ -1,0 +1,28 @@
+// Test script to verify executive salary debugging
+console.log('=====================================================');
+console.log('EXECUTIVE SALARY DEBUGGING TEST');
+console.log('=====================================================');
+console.log('');
+console.log('This test will help debug why executive salaries are not being deducted.');
+console.log('');
+console.log('What to look for in the logs:');
+console.log('1. [STORAGE] - Shows database queries for executives');
+console.log('2. [DEBUG] calculateExecutiveSalaries - Shows the calculation process');
+console.log('3. [GAME-ENGINE] - Shows how salaries are added to expenses');
+console.log('4. [FINAL MONEY] - Shows the final money calculation');
+console.log('');
+console.log('Expected behavior:');
+console.log('- Should find 5 executives (CEO, Head of A&R, CMO, CCO, Head of Distribution)');
+console.log('- CEO salary: $8,000');
+console.log('- Head of A&R salary: $5,000');
+console.log('- CMO salary: $4,000');
+console.log('- CCO salary: $4,500');
+console.log('- Head of Distribution salary: $3,500');
+console.log('- Total executive salaries: $25,000');
+console.log('');
+console.log('To test:');
+console.log('1. Start a new game or load an existing one');
+console.log('2. Click "Advance Month"');
+console.log('3. Check the console logs for the debug output');
+console.log('');
+console.log('=====================================================');

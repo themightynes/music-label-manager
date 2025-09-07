@@ -12,7 +12,7 @@ tags:
 # the executive layer in the Music Label Manager.  It is a distilled
 # version of the relevant docs: System Architecture, Tech Stack,
 # Exec Team Design, Data Schema & Paths.
-
+```
 ## 1. Project Skeleton (paths that will be touched)
 - /shared/schema.ts                     ← add `executives` table
 - /shared/types/gameTypes.ts            ← extend `Executive` interface
@@ -31,7 +31,8 @@ tags:
 - Database: Drizzle ORM (`pgTable`) with UUID PKs and JSONB columns
 
 ## 3. Existing Game Engine Structure
-```
+
+```ts
 class GameEngine {
   constructor(gameState: GameState, gameData: ServerGameData) { … }
   advanceMonth(actions: GameEngineAction[]): Promise<{gameState, summary}>
@@ -81,7 +82,7 @@ interface Executive {
 ```
 
 ### 4.4 JSON Files
-- `/data/executives.json` – list of exec definitions (id, name, baseSalary, decisions)
+- `/data/roles.json` – list of exec definitions (id, name, baseSalary, decisions)
 ```json
 {
   "executives": [

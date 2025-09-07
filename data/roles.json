@@ -9,7 +9,6 @@
       "title": "Chief Executive Officer",
       "description": "Strategic leadership and overall business direction",
       "baseSalary": 0,
-      "relationship": 50,
       "access": {},
       "kpis": ["on_time_delivery", "efficient_spend", "revenue_growth", "market_share"],
       "expertise": ["strategic_planning", "crisis_management", "deal_negotiation", "festival_strategy"],

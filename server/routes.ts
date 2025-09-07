@@ -4,7 +4,7 @@ import passport from 'passport';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases, releaseSongs, roles } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases, releaseSongs, roles, executives } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -296,6 +296,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation);
       
       const gameState = await storage.createGameState(gameDataWithBalance);
+      
+      // Initialize executives for the new game (CEO excluded - player is the CEO)
+      console.log('🎭 Creating executives for game:', gameState.id);
+      try {
+        const executiveRecords = [
+          { gameId: gameState.id, role: 'head_ar', level: 1, mood: 50, loyalty: 50 },
+          { gameId: gameState.id, role: 'cmo', level: 1, mood: 50, loyalty: 50 },
+          { gameId: gameState.id, role: 'cco', level: 1, mood: 50, loyalty: 50 },
+          { gameId: gameState.id, role: 'head_distribution', level: 1, mood: 50, loyalty: 50 }
+        ];
+        await db.insert(executives).values(executiveRecords);
+        console.log('✅ Successfully created 4 executives for game:', gameState.id);
+      } catch (error) {
+        console.error('❌ Failed to create executives:', error);
+        // Continue anyway - don't break game creation
+      }
       
       // Initialize default roles for new game
       const defaultRoles = [

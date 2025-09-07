@@ -48,7 +48,7 @@ interface RNGConfig {
  */
 export interface MonthlyFinancials {
   startingBalance: number;
-  operations: { base: number; artists: number; total: number };
+  operations: { base: number; artists: number; executives: number; total: number };
   projects: { costs: number; revenue: number };
   marketing: { costs: number };
   roleEffects: { costs: number; revenue: number };
@@ -159,6 +159,7 @@ export class GameEngine {
       summary.expenseBreakdown = {
         monthlyOperations: 0,
         artistSalaries: 0,
+        executiveSalaries: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -167,8 +168,45 @@ export class GameEngine {
     summary.expenseBreakdown.monthlyOperations = monthlyBurnResult.baseBurn;
     summary.expenseBreakdown.artistSalaries = monthlyBurnResult.artistCosts;
     
-    // Add monthly burn to total expenses
+    // Calculate executive salaries
+    console.log('\n[GAME-ENGINE] About to call calculateExecutiveSalaries');
+    console.log('[GAME-ENGINE] gameStateId:', this.gameState.id);
+    console.log('[GAME-ENGINE] storage available:', !!this.storage);
+    console.log('[GAME-ENGINE] financialSystem available:', !!this.financialSystem);
+    
+    const executiveSalaryResult = await this.financialSystem.calculateExecutiveSalaries(
+      this.gameState.id,
+      this.storage
+    );
+    
+    console.log('[GAME-ENGINE] executiveSalaryResult received:', executiveSalaryResult);
+    console.log('[GAME-ENGINE] Total executive salaries:', executiveSalaryResult.total);
+    summary.expenseBreakdown.executiveSalaries = executiveSalaryResult.total;
+    
+    // Add monthly burn to total expenses (including base operations and artist salaries)
     summary.expenses += monthlyBurn;
+    
+    // Add executive salaries to total expenses
+    console.log('[GAME-ENGINE] Checking if executive salaries should be added to expenses');
+    console.log('[GAME-ENGINE] executiveSalaryResult.total > 0?', executiveSalaryResult.total > 0);
+    
+    if (executiveSalaryResult.total > 0) {
+      console.log('[GAME-ENGINE] Adding executive salaries to expenses');
+      console.log('[GAME-ENGINE] Current summary.expenses BEFORE adding executive salaries:', summary.expenses);
+      summary.expenses += executiveSalaryResult.total;
+      console.log('[GAME-ENGINE] Summary.expenses AFTER adding executive salaries:', summary.expenses);
+      
+      // Add change entry for executive salaries
+      console.log('[GAME-ENGINE] Adding change entry for executive salaries');
+      summary.changes.push({
+        type: 'expense',
+        description: 'Executive team salaries',
+        amount: -executiveSalaryResult.total
+      });
+      console.log('[GAME-ENGINE] Change entry added successfully');
+    } else {
+      console.log('[GAME-ENGINE] No executive salaries to add (total is 0)');
+    }
     
     summary.changes.push({
       type: 'expense',
@@ -212,6 +250,7 @@ export class GameEngine {
       expenseBreakdown: summary.expenseBreakdown || {
         monthlyOperations: 0,
         artistSalaries: 0,
+        executiveSalaries: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -231,9 +270,18 @@ export class GameEngine {
     
     // SINGLE POINT OF MONEY UPDATE - at the very end
     // All revenue and expenses have been accumulated in the summary
+    console.log('\n[FINAL MONEY CALCULATION]');
     const monthStartMoney = this.gameState.money || 0;
+    console.log('[FINAL MONEY] Month start money:', monthStartMoney);
+    console.log('[FINAL MONEY] Total revenue this month:', summary.revenue);
+    console.log('[FINAL MONEY] Total expenses this month:', summary.expenses);
+    console.log('[FINAL MONEY] Expense breakdown:', summary.expenseBreakdown);
+    
     const finalMoney = monthStartMoney + summary.revenue - summary.expenses;
+    console.log('[FINAL MONEY] Calculated final money:', finalMoney);
+    
     this.gameState.money = finalMoney;
+    console.log('[FINAL MONEY] Game state money updated to:', this.gameState.money);
     
     console.log(`[MONEY UPDATE] Starting: $${monthStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
     
@@ -344,6 +392,7 @@ export class GameEngine {
               summary.expenseBreakdown = {
                 monthlyOperations: 0,
                 artistSalaries: 0,
+                executiveSalaries: 0,
                 projectCosts: 0,
                 marketingCosts: 0,
                 roleMeetingCosts: 0
@@ -2252,6 +2301,7 @@ export class GameEngine {
       summary.expenseBreakdown = {
         monthlyOperations: 0,
         artistSalaries: 0,
+        executiveSalaries: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -2834,6 +2884,7 @@ export class GameEngine {
               summary.expenseBreakdown = {
                 monthlyOperations: 0,
                 artistSalaries: 0,
+                executiveSalaries: 0,
                 projectCosts: 0,
                 marketingCosts: 0,
                 roleMeetingCosts: 0
@@ -3362,6 +3413,7 @@ export interface MonthSummary {
   expenseBreakdown?: {
     monthlyOperations: number;
     artistSalaries: number;
+    executiveSalaries: number;
     projectCosts: number;
     marketingCosts: number;
     roleMeetingCosts: number;

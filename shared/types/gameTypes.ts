@@ -47,6 +47,7 @@ export interface GameRole {
   access: Record<string, any>;
   kpis: string[];
   meetings: RoleMeeting[];
+  baseSalary?: number;
 }
 
 export interface Executive {

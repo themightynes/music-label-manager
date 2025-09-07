@@ -1,6 +1,6 @@
 import { 
   users, gameSaves, artists, roles, projects, dialogueChoices, 
-  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs,
+  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs, executives,
   type User, type InsertUser, type GameSave, type InsertGameSave,
   type Artist, type InsertArtist, type Project, type InsertProject,
   type GameState, type InsertGameState, type MonthlyAction, type InsertMonthlyAction,
@@ -530,6 +530,15 @@ export class DatabaseStorage implements IStorage {
   async createMonthlyAction(action: InsertMonthlyAction): Promise<MonthlyAction> {
     const [newAction] = await db.insert(monthlyActions).values(action).returning();
     return newAction;
+  }
+
+  // Executives
+  async getExecutivesByGame(gameId: string): Promise<any[]> {
+    console.log('[STORAGE] getExecutivesByGame called with gameId:', gameId);
+    const result = await db.select().from(executives).where(eq(executives.gameId, gameId));
+    console.log('[STORAGE] Executives found:', result);
+    console.log('[STORAGE] Number of executives:', result ? result.length : 0);
+    return result;
   }
 }
 
