@@ -39,7 +39,8 @@
       "Bash(./scripts/run-all-validations.sh:*)",
       "Bash(npm uninstall:*)",
       "Bash(journalctl:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm view:*)"
     ],
     "deny": [],
     "ask": [],

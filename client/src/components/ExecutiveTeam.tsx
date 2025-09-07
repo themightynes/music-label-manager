@@ -93,13 +93,26 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
     
     // Fetch available meetings for this executive
     setLoadingMeetings(true);
+    setSelectedExecutive(executive); // Set executive first to show modal
+    
     try {
       const response = await apiRequest('GET', `/api/roles/${executive.id}`);
+      
+      // Check if response is ok
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error:', errorData);
+        throw new Error(errorData.error || 'Failed to load role');
+      }
+      
       const data = await response.json();
+      console.log('Full API response for', executive.id, ':', data);
+      console.log('Meetings array:', data.meetings);
       setAvailableMeetings(data.meetings || []);
-      setSelectedExecutive(executive);
     } catch (error) {
-      console.error('Failed to load meetings:', error);
+      console.error('Failed to load meetings for', executive.id, ':', error);
+      setAvailableMeetings([]); // Set empty array on error
+      // Could also show an error message here
     } finally {
       setLoadingMeetings(false);
     }
@@ -113,7 +126,7 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
     setAvailableMeetings([]);
     
     // Open dialogue modal for this specific meeting
-    await openDialogue(selectedExecutive.id, meeting.meeting_id);
+    await openDialogue(selectedExecutive.id, meeting.id);
   };
   
   const isDisabled = (executive: Executive) => {
@@ -151,7 +164,7 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
               className={`
                 relative p-6 rounded-lg border transition-all cursor-pointer
                 ${disabled 
-                  ? 'bg-[#3c252d]/30 border-[#65557c]/50 opacity-50 cursor-not-allowed' 
+                  ? 'bg-[#3c252d]/20 border-[#65557c]/30 opacity-30 cursor-not-allowed' 
                   : 'bg-[#3c252d]/[0.66] border-[#65557c] hover:border-[#A75A5B] hover:bg-[#3c252d]/[0.8]'
                 }
               `}
@@ -199,11 +212,11 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
                 </div>
               )}
               
-              {/* Disabled state overlay */}
+              {/* Disabled state overlay with stronger fade */}
               {disabled && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-lg">
-                  <div className="bg-black/60 px-3 py-1 rounded-full">
-                    <span className="text-white/70 text-xs">
+                <div className="absolute inset-0 bg-black/75 flex items-center justify-center rounded-lg">
+                  <div className="bg-black/80 px-3 py-1 rounded-full border border-gray-700/50">
+                    <span className="text-white/60 text-xs font-medium">
                       {slotsUsed >= maxSlots ? 'No slots available' : 
                        selectedActions.some(a => a.includes(executive.id)) ? 'Already selected' :
                        'Insufficient funds'}
@@ -226,6 +239,65 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
           </div>
         </div>
       </div>
+      
+      {/* Meeting Selection Modal */}
+      <Dialog open={!!selectedExecutive} onOpenChange={() => setSelectedExecutive(null)}>
+        <DialogContent className="bg-[#2c2c2c] border-[#65557c] text-white max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">
+              {selectedExecutive && (
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="w-12 h-12 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: selectedExecutive.color + '20', borderColor: selectedExecutive.color, borderWidth: '2px', borderStyle: 'solid' }}
+                  >
+                    <i className={`${selectedExecutive.icon} text-lg`} style={{ color: selectedExecutive.color }}></i>
+                  </div>
+                  <div>
+                    <p>{selectedExecutive.name} - Strategic Meetings</p>
+                    <p className="text-sm text-white/70 font-normal">{selectedExecutive.title}</p>
+                  </div>
+                </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3 mt-4">
+            {loadingMeetings ? (
+              <div className="text-center py-4">
+                <i className="fas fa-spinner fa-spin text-2xl text-[#A75A5B]"></i>
+                <p className="text-white/70 mt-2">Loading meetings...</p>
+              </div>
+            ) : availableMeetings.length > 0 ? (
+              availableMeetings.map((meeting) => (
+                <Button
+                  key={meeting.id}
+                  variant="outline"
+                  className="w-full text-left p-4 hover:bg-[#A75A5B]/10 hover:border-[#A75A5B] h-auto block"
+                  onClick={() => handleMeetingSelect(meeting)}
+                >
+                  <div className="flex items-start space-x-3 w-full">
+                    <i className={`${meeting.category === 'business' ? 'fas fa-briefcase' : 
+                                  meeting.category === 'talent' ? 'fas fa-star' :
+                                  meeting.category === 'production' ? 'fas fa-microphone' :
+                                  meeting.category === 'marketing' ? 'fas fa-bullhorn' :
+                                  meeting.category === 'distribution' ? 'fas fa-truck' :
+                                  'fas fa-comments'} text-[#A75A5B] mt-1 flex-shrink-0`}></i>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="font-semibold text-white text-left break-words">{meeting.name}</p>
+                      <p className="text-sm text-white/70 mt-1 text-left break-words whitespace-normal">{meeting.prompt || meeting.description}</p>
+                    </div>
+                  </div>
+                </Button>
+              ))
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-white/70">No meetings available for this executive.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

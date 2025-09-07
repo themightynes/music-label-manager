@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import passport from 'passport';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { storage } from "./storage";
 import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases, releaseSongs, roles } from "@shared/schema";
 import { z } from "zod";
@@ -25,6 +27,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Debug endpoint to test data loading
+  app.get('/api/debug/data-load', async (req, res) => {
+    const results: any = {};
+    
+    try {
+      // Test loading each file individually
+      const loader = gameDataLoader;
+      
+      try {
+        results.artists = await loader.loadArtistsData();
+        results.artistsStatus = 'OK';
+      } catch (e: any) {
+        results.artistsError = e.message;
+      }
+      
+      try {
+        results.balance = await loader.loadBalanceData();
+        results.balanceStatus = 'OK';
+      } catch (e: any) {
+        results.balanceError = e.message;
+      }
+      
+      try {
+        results.world = await loader.loadWorldData();
+        results.worldStatus = 'OK';
+      } catch (e: any) {
+        results.worldError = e.message;
+      }
+      
+      try {
+        results.dialogue = await loader.loadDialogueData();
+        results.dialogueStatus = 'OK';
+      } catch (e: any) {
+        results.dialogueError = e.message;
+      }
+      
+      try {
+        results.events = await loader.loadEventsData();
+        results.eventsStatus = 'OK';
+      } catch (e: any) {
+        results.eventsError = e.message;
+      }
+      
+      try {
+        results.roles = await loader.loadRolesData();
+        results.rolesStatus = 'OK';
+      } catch (e: any) {
+        results.rolesError = e.message;
+      }
+      
+      try {
+        results.actions = await loader.loadActionsData();
+        results.actionsStatus = 'OK';
+      } catch (e: any) {
+        results.actionsError = e.message;
+      }
+      
+      res.json({
+        success: true,
+        results
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        results
+      });
+    }
   });
   
   // Authentication endpoints
@@ -304,46 +376,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get role/executive data with all their meetings
+  // Following the rule: JSON = Content & Config, Database = State & Saves
   app.get("/api/roles/:roleId", async (req, res) => {
     try {
+      // Use serverGameData to load data properly
       await serverGameData.initialize();
-      const roles = await serverGameData.getAllRoles();
-      const role = roles.find((r: any) => r.id === req.params.roleId);
+      const rolesData = await serverGameData.getAllRoles();
+      const role = rolesData.find((r: any) => r.id === req.params.roleId);
       
       if (!role) {
-        return res.status(404).json({ error: 'Role not found' });
+        return res.status(404).json({ error: `Role ${req.params.roleId} not found` });
       }
       
-      // Get all meetings for this role from actions.json
+      // Load actions using serverGameData
       const actionsData = await serverGameData.getMonthlyActionsWithCategories();
       const roleMeetings = actionsData.actions.filter((action: any) => 
         action.type === 'role_meeting' && 
         action.role_id === req.params.roleId
       );
       
+      console.log(`Found ${roleMeetings.length} meetings for role ${req.params.roleId}`);
+      
       res.json({
         ...role,
         meetings: roleMeetings
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load role:', error);
-      res.status(500).json({ error: 'Failed to load role data' });
+      res.status(500).json({ 
+        error: 'Failed to load role data',
+        details: error.message || 'Unknown error',
+        roleId: req.params.roleId
+      });
     }
   });
 
   // Get specific meeting data for a role
+  // Following the rule: JSON = Content & Config, Database = State & Saves
   app.get("/api/roles/:roleId/meetings/:meetingId", async (req, res) => {
     try {
+      // Use the same serverGameData methods that work elsewhere
       await serverGameData.initialize();
       const actionsData = await serverGameData.getMonthlyActionsWithCategories();
-      const actions = actionsData.actions || [];
       
-      // Find the meeting in actions.json
-      const meeting = actions.find((action: any) => 
+      // Find the meeting in actions (getMonthlyActionsWithCategories returns actions array)
+      const meeting = actionsData.actions.find((action: any) => 
         action.type === 'role_meeting' && 
         action.role_id === req.params.roleId && 
-        action.meeting_id === req.params.meetingId
+        action.id === req.params.meetingId
       );
+      
+      console.log('Looking for meeting:', req.params.meetingId, 'for role:', req.params.roleId);
+      console.log('Found meeting:', meeting ? 'Yes' : 'No');
+      if (meeting) {
+        console.log('Meeting data:', JSON.stringify(meeting, null, 2));
+      }
       
       if (!meeting) {
         return res.status(404).json({ error: 'Meeting not found' });
@@ -351,8 +438,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Return the meeting data in the format DialogueModal expects
       res.json({
-        id: meeting.meeting_id,
-        prompt: meeting.prompt,
+        id: meeting.id,
+        prompt: meeting.prompt || '',
         choices: meeting.choices || []
       });
     } catch (error) {
@@ -365,7 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/game/:gameId/executive/:execId/action", getUserId, async (req, res) => {
     try {
       const { gameId, execId } = req.params;
-      const { action, metadata } = req.body;
+      const { actionId, meetingId, choiceId, metadata } = req.body;
       
       // Get the game state
       const gameState = await storage.getGameState(gameId);
@@ -373,25 +460,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Game not found" });
       }
       
-      // TODO: Get executive from database once fully implemented
-      // For now, return a mock response
+      // For Phase 1 minimal implementation:
+      // Store the executive action as a selected action for the month
       const executiveAction = {
-        executiveId: execId,
-        action: action,
-        gameId: gameId,
-        month: gameState.currentMonth,
-        result: {
-          success: true,
-          impact: {
-            mood: 5,
-            loyalty: 3,
-            reputation: 2
-          },
-          message: "Executive action processed successfully"
+        actionType: 'role_meeting' as const,
+        targetId: execId,
+        metadata: {
+          executiveId: execId,
+          meetingId: meetingId,
+          choiceId: choiceId,
+          ...metadata
         }
       };
       
-      res.json(executiveAction);
+      // Add to selected actions for this month
+      if (!gameState.selectedActions) {
+        gameState.selectedActions = [];
+      }
+      
+      // Check if focus slots are available
+      const usedSlots = gameState.selectedActions.length;
+      const totalSlots = gameState.focusSlots || 3;
+      
+      if (usedSlots >= totalSlots) {
+        return res.status(400).json({ 
+          message: "No focus slots available",
+          usedSlots,
+          totalSlots 
+        });
+      }
+      
+      // Add the executive action
+      gameState.selectedActions.push(executiveAction);
+      gameState.usedFocusSlots = gameState.selectedActions.length;
+      
+      // Save the updated game state
+      await storage.updateGameState(gameId, gameState);
+      
+      // Return success response with updated state
+      res.json({
+        success: true,
+        executiveId: execId,
+        actionId: actionId,
+        gameId: gameId,
+        month: gameState.currentMonth,
+        usedSlots: gameState.selectedActions.length,
+        totalSlots: totalSlots,
+        message: "Executive action added successfully"
+      });
     } catch (error) {
       console.error('Failed to process executive action:', error);
       res.status(500).json({ message: "Failed to process executive action" });

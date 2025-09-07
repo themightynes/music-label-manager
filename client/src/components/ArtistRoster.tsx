@@ -187,7 +187,7 @@ export function ArtistRoster() {
               <Button
                 onClick={() => setShowDiscoveryModal(true)}
                 size="sm"
-                className="bg-primary text-white hover:bg-primary/90"
+                className="bg-[#791014] text-white hover:bg-[#A75A5B] transition-colors"
               >
                 <i className="fas fa-search mr-1"></i>
                 Discover Artists
@@ -196,28 +196,45 @@ export function ArtistRoster() {
           )}
 
           {/* Enhanced Artist Cards */}
-          {artists && artists.length > 0 && artists.map(artist => {
-            const insights = getArtistInsights(artist);
-            const archetype = getArchetypeInfo(artist.archetype);
-            const relationship = getRelationshipStatus(artist.mood || 50, artist.loyalty || 50);
-            const isExpanded = expandedArtist === artist.id;
-            const StatusIcon = relationship.statusIcon;
+          {artists && artists.length > 0 && (
+            <>
+              {artists.map(artist => {
+                const insights = getArtistInsights(artist);
+                const archetype = getArchetypeInfo(artist.archetype);
+                const relationship = getRelationshipStatus(artist.mood || 50, artist.loyalty || 50);
+                const isExpanded = expandedArtist === artist.id;
 
-            return (
-              <ArtistCard
-                key={artist.id}
-                artist={artist}
-                insights={insights}
-                relationship={relationship}
-                archetype={archetype}
-                isExpanded={isExpanded}
-                onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
-                onMeet={() => handleArtistMeeting(artist)}
-                onNavigate={() => setLocation(`/artist/${artist.id}`)}
-                gameState={gameState}
-              />
-            );
-          })}
+                return (
+                  <ArtistCard
+                    key={artist.id}
+                    artist={artist}
+                    insights={insights}
+                    relationship={relationship}
+                    archetype={archetype}
+                    isExpanded={isExpanded}
+                    onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
+                    onMeet={() => handleArtistMeeting(artist)}
+                    onNavigate={() => setLocation(`/artist/${artist.id}`)}
+                    gameState={gameState}
+                  />
+                );
+              })}
+              
+              {/* Discover More Artists Button - shown when roster is not full */}
+              {artists.length < 3 && (
+                <div className="mt-3 text-center">
+                  <Button
+                    onClick={() => setShowDiscoveryModal(true)}
+                    size="sm"
+                    className="bg-[#791014] text-white hover:bg-[#A75A5B] transition-colors"
+                  >
+                    <i className="fas fa-plus mr-1"></i>
+                    Discover More Artists ({3 - artists.length} slots available)
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </CardContent>
 
@@ -546,19 +563,6 @@ function ArtistCard({
           <i className="fas fa-handshake mr-1"></i>
           Meet
         </Button>
-        {insights.projects === 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs text-green-600 hover:text-green-700"
-            onClick={() => {
-              console.log('Start project for', artist.name);
-            }}
-          >
-            <i className="fas fa-plus mr-1"></i>
-            Project
-          </Button>
-        )}
       </div>
     </div>
   );

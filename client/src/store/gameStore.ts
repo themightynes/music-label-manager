@@ -495,6 +495,10 @@ export const useGameStore = create<GameStore>()(
         if (!gameState || !currentDialogue) return;
 
         try {
+          // Check if this is an executive meeting
+          const executiveRoles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
+          const isExecutiveMeeting = executiveRoles.includes(currentDialogue.roleType);
+
           // Apply immediate effects
           const stateUpdates: any = {};
           if (effects.money) stateUpdates.money = gameState.money + effects.money;
@@ -511,13 +515,28 @@ export const useGameStore = create<GameStore>()(
             await get().updateGameState({ flags });
           }
 
-          // Add this executive action to selected actions for the month
+          // Create the action ID for both executive and non-executive meetings
           const executiveActionId = `${currentDialogue.roleType}_${currentDialogue.sceneId}_${choiceId}`;
           const newSelectedActions = [...selectedActions, executiveActionId];
+          
+          console.log('Adding executive action:', executiveActionId);
+          console.log('New selectedActions:', newSelectedActions);
+          
+          // Update local state immediately for both types
           set({ 
             selectedActions: newSelectedActions,
             gameState: { ...gameState, usedFocusSlots: newSelectedActions.length }
           });
+          
+          // For executive meetings, also call the executive action endpoint
+          if (isExecutiveMeeting) {
+            await apiRequest('POST', `/api/game/${gameState.id}/executive/${currentDialogue.roleType}/action`, {
+              actionId: executiveActionId,
+              meetingId: currentDialogue.sceneId,
+              choiceId: choiceId,
+              metadata: effects
+            });
+          }
 
           // Record the action
           await apiRequest('POST', `/api/game/${gameState.id}/actions`, {

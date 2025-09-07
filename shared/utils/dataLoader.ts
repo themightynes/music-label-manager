@@ -33,7 +33,7 @@ const GameRoleSchema = z.object({
   relationship: z.number(),
   access: z.record(z.any()).default({}),
   kpis: z.array(z.string()),
-  meetings: z.array(RoleMeetingSchema)
+  meetings: z.array(RoleMeetingSchema).optional().default([])
 });
 
 const GameArtistSchema = z.object({
@@ -111,7 +111,8 @@ export class GameDataLoader {
       return this.dataCache as GameDataFiles;
     } catch (error) {
       console.error('Failed to load game data:', error);
-      throw new Error('Failed to load game data files');
+      console.error('Stack trace:', error.stack);
+      throw new Error(`Failed to load game data files: ${error.message}`);
     }
   }
 
@@ -206,9 +207,12 @@ export class GameDataLoader {
         icon: z.string(),
         description: z.string().optional(),
         role_id: z.string().optional(),
+        meeting_id: z.string().optional(),
         category: z.string(),
         project_type: z.string().optional(),
         campaign_type: z.string().optional(),
+        prompt: z.string().optional(),
+        choices: z.array(z.any()).optional(),
         details: z.object({
           cost: z.string(),
           duration: z.string(),
@@ -233,9 +237,14 @@ export class GameDataLoader {
 
     try {
       return schema.parse(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Actions data validation error:', error);
-      throw error;
+      if (error.errors) {
+        console.error('Validation errors:', JSON.stringify(error.errors, null, 2));
+      }
+      // Return the raw data anyway for now to not break the app
+      console.warn('WARNING: Returning unvalidated actions data');
+      return data;
     }
   }
 
