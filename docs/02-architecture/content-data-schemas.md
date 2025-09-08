@@ -11,17 +11,18 @@ The game uses JSON files in `/data/` for all content, separated by concern:
 
 ```
 data/
-├── balance.ts           # Main balance configuration aggregator  
-├── balance/             # Modular balance configuration files
+├── balance.ts           # Browser-only TypeScript aggregator (Vite import)
+├── balance.json         # [DEPRECATED] Compiled balance (no longer needed)
+├── balance/             # Modular balance configuration files (SOURCE OF TRUTH)
 │   ├── config.json      # Version and metadata
 │   ├── economy.json     # Economic costs and formulas
 │   ├── progression.json # Reputation and access tier systems
 │   ├── quality.json     # Quality calculation rules
 │   ├── artists.json     # Artist archetype definitions
-│   ├── markets.json     # Market and seasonal modifiers
+│   ├── markets.json     # Market and seasonal modifiers (includes seasonal_modifiers)
 │   ├── projects.json    # Project durations and settings
 │   ├── events.json      # Random event configurations
-│   └── content.json     # Game content generation (NEW)
+│   └── content.json     # Game content generation (song names, moods)
 ├── actions.json         # Player actions and effects
 ├── artists.json         # Available artist pool and characteristics  
 ├── roles.json           # Industry role definitions and dialogue
@@ -29,6 +30,16 @@ data/
 ├── events.json          # Random events (future feature)
 └── world.json           # Global game configuration (future feature)
 ```
+
+### **Balance Data Loading Architecture** (Updated September 8, 2025)
+
+The balance data system now uses **dynamic assembly** instead of compilation:
+
+- **Browser/Client**: Uses `balance.ts` which imports and aggregates JSON modules
+- **Node.js/Server**: Uses `dataLoader.assembleBalanceData()` to dynamically load and structure JSONs
+- **Single Source of Truth**: Structure defined in `shared/utils/dataLoader.ts`
+- **No Compilation Needed**: Changes to JSON files take effect immediately
+- **Resilient**: GameEngine has fallback values for missing data
 
 ---
 

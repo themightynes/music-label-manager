@@ -514,10 +514,13 @@ class ServerGameData {
     return ServerGameData.instance;
   }
   
-  // Lazy loading with memory cache
+  // Dynamic balance assembly (Updated September 8, 2025)
   async getBalanceConfig(): Promise<any> {
     if (!this.balanceConfig) {
-      this.balanceConfig = await this.loadJSON('balance.json');
+      // Dynamically assembles from modular JSON files
+      // See dataLoader.assembleBalanceData() for implementation
+      const dataLoader = gameDataLoader;
+      this.balanceConfig = await dataLoader.assembleBalanceData();
     }
     return this.balanceConfig;
   }
