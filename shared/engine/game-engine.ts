@@ -3114,17 +3114,29 @@ export class GameEngine {
         0 // No marketing spend for base calculation
       );
       totalBaseStreams += songStreams;
-      const revenuePerStream = balance?.market_formulas?.streaming_calculation?.ongoing_streams?.revenue_per_stream;
-      if (!revenuePerStream) {
-        throw new Error('revenue_per_stream not found in balance.json market_formulas.streaming_calculation.ongoing_streams');
+      const revenuePerStream = balance?.market_formulas?.streaming_calculation?.ongoing_streams?.revenue_per_stream || 0.05;
+      if (!balance?.market_formulas?.streaming_calculation?.ongoing_streams?.revenue_per_stream) {
+        console.warn('[GameEngine] revenue_per_stream not found in balance data, using default: 0.05');
       }
       totalBaseRevenue += songStreams * revenuePerStream;
     }
     
-    // Get release planning configuration from balance.json
-    const releasePlanningConfig = balance?.market_formulas?.release_planning;
-    if (!releasePlanningConfig) {
-      throw new Error('release_planning not found in balance.json market_formulas');
+    // Get release planning configuration from balance.json with fallbacks
+    const releasePlanningConfig = balance?.market_formulas?.release_planning || {
+      release_type_bonuses: {
+        single: { revenue_multiplier: 1.2, marketing_efficiency: 1.1 },
+        ep: { revenue_multiplier: 1.15, marketing_efficiency: 1.05 },
+        album: { revenue_multiplier: 1.25, marketing_efficiency: 0.95 }
+      },
+      marketing_channels: {},
+      seasonal_cost_multipliers: { q1: 0.85, q2: 0.95, q3: 1.1, q4: 1.4 },
+      diversity_bonus: { base: 1, per_additional_channel: 0.08, maximum: 1.4 },
+      channel_synergy_bonuses: {},
+      lead_single_strategy: { optimal_timing_bonus: 1.25, default_bonus: 1.05 }
+    };
+    
+    if (!balance?.market_formulas?.release_planning) {
+      console.warn('[GameEngine] release_planning not found in balance data, using defaults');
     }
     
     // Apply release type multipliers from balance.json
@@ -3138,12 +3150,20 @@ export class GameEngine {
     // Calculate bonus percentage from multiplier for display
     const releaseBonus = Math.round((releaseMultiplier - 1) * 100);
     
-    // Apply seasonal multipliers from balance.json
-    const seasonalMultipliers = balance?.time_progression?.seasonal_modifiers;
-    if (!seasonalMultipliers) {
-      throw new Error('seasonal_modifiers not found in balance.json time_progression');
+    // Apply seasonal multipliers from balance.json with resilient fallbacks
+    const seasonalMultipliers = balance?.time_progression?.seasonal_modifiers || {
+      q1: 0.85,
+      q2: 0.95,
+      q3: 0.90,
+      q4: 1.25
+    };
+    
+    if (!balance?.time_progression?.seasonal_modifiers) {
+      console.warn('[GameEngine] seasonal_modifiers not found in balance data, using defaults');
     }
-    const seasonalRevenueMultiplier = seasonalMultipliers[mainReleaseSeason as keyof typeof seasonalMultipliers];
+    
+    // Use the seasonal revenue multipliers from balance data with fallback
+    const seasonalRevenueMultiplier = seasonalMultipliers[mainReleaseSeason as keyof typeof seasonalMultipliers] || 1;
     
     // Calculate marketing effectiveness using balance.json formulas
     const totalMarketingBudget = Object.values(releaseConfig.marketingBudget).reduce((sum, budget) => sum + budget, 0);

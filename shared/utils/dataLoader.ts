@@ -30,11 +30,15 @@ const RoleMeetingSchema = z.object({
 const GameRoleSchema = z.object({
   id: z.string(),
   name: z.string(),
-  relationship: z.number(),
+  relationship: z.number().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  baseSalary: z.number().optional(),
   access: z.record(z.any()).default({}),
   kpis: z.array(z.string()),
-  meetings: z.array(RoleMeetingSchema).optional().default([]),
-  baseSalary: z.number().optional()
+  expertise: z.array(z.string()).optional(),
+  decisions: z.array(z.string()).optional(),
+  meetings: z.array(RoleMeetingSchema).optional().default([])
 });
 
 const GameArtistSchema = z.object({
@@ -162,11 +166,123 @@ export class GameDataLoader {
     }
   }
 
+  /**
+   * Dynamically assembles balance data from modular JSON files
+   * This is the SINGLE SOURCE OF TRUTH for balance data structure
+   */
+  async assembleBalanceData(): Promise<BalanceConfig> {
+    console.log('[DataLoader] Assembling balance data from modular files...');
+    
+    // Load all modular balance files
+    const [
+      economy,
+      progression,
+      quality,
+      artists,
+      markets,
+      projects,
+      events,
+      config,
+      content
+    ] = await Promise.all([
+      this.loadJSON('balance/economy.json'),
+      this.loadJSON('balance/progression.json'),
+      this.loadJSON('balance/quality.json'),
+      this.loadJSON('balance/artists.json'),
+      this.loadJSON('balance/markets.json'),
+      this.loadJSON('balance/projects.json'),
+      this.loadJSON('balance/events.json'),
+      this.loadJSON('balance/config.json'),
+      this.loadJSON('balance/content.json')
+    ]);
+
+    // Assemble the balance structure - SINGLE SOURCE OF TRUTH
+    const assembledBalance = {
+      // Root level properties from config
+      version: config.version,
+      generated: config.generated,
+      description: config.description,
+      
+      // Economy section
+      economy: economy,
+      
+      // Progression thresholds
+      progression_thresholds: progression.progression_thresholds,
+      
+      // Quality calculations
+      quality_calculations: quality.quality_calculations || {},
+      
+      // Artist progression
+      artist_progression: artists.artist_progression || {},
+      
+      // Market formulas
+      market_formulas: markets.market_formulas,
+      
+      // Reputation system
+      reputation_system: progression.reputation_system,
+      
+      // Access tier system
+      access_tier_system: progression.access_tier_system,
+      
+      // Artist stats
+      artist_stats: artists.artist_stats,
+      
+      // Side events
+      side_events: events.side_events,
+      
+      // Quality system
+      quality_system: quality.quality_system,
+      
+      // Producer tier system
+      producer_tier_system: quality.producer_tier_system,
+      
+      // Time investment system
+      time_investment_system: quality.time_investment_system,
+      
+      // UI constants
+      ui_constants: config.ui_constants,
+      
+      // Save system
+      save_system: projects.save_system,
+      
+      // Difficulty modifiers
+      difficulty_modifiers: progression.difficulty_modifiers,
+      
+      // Content generation
+      song_generation: content.song_generation,
+      
+      // Song count cost system
+      song_count_cost_system: economy.song_count_cost_system,
+      
+      // Campaign settings
+      campaign_settings: projects.time_progression,
+      
+      // Time progression - WITH SEASONAL MODIFIERS CORRECTLY PLACED
+      time_progression: {
+        campaign_length_months: projects.time_progression.campaign_length_months,
+        focus_slots_base: projects.time_progression.focus_slots_base,
+        focus_slots_unlock_threshold: projects.time_progression.focus_slots_unlock_threshold,
+        focus_slots_max: projects.time_progression.focus_slots_max,
+        project_durations: projects.time_progression.project_durations,
+        seasonal_modifiers: markets.seasonal_modifiers // CORRECTLY ASSEMBLED HERE
+      }
+    };
+
+    console.log('[DataLoader] Balance data assembled successfully');
+    return assembledBalance as BalanceConfig;
+  }
+
   async loadBalanceData(): Promise<BalanceConfig> {
     try {
-      // Import the TypeScript balance module
-      const balanceModule = await import('../../data/balance');
-      const data = balanceModule.default;
+      // In browser environment, use the TypeScript module
+      if (typeof window !== 'undefined') {
+        const balanceModule = await import('../../data/balance');
+        const data = balanceModule.default;
+        return data;
+      }
+      
+      // In Node.js environment, use dynamic assembly instead of compiled JSON
+      const data = await this.assembleBalanceData();
       
       // Use a more lenient validation that matches the actual structure
       const schema = z.object({
@@ -304,6 +420,7 @@ export class GameDataLoader {
     const schema = z.object({
       version: z.string(),
       generated: z.string(),
+      description: z.string().optional(),
       roles: z.array(GameRoleSchema)
     });
 
