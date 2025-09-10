@@ -110,7 +110,8 @@ export class GameEngine {
       revenue: 0,
       expenses: 0,
       reputationChanges: {},
-      events: []
+      events: [],
+      usedExecutives: new Set<string>() // Track which executives were used this month
     };
 
     // Reset monthly values
@@ -145,6 +146,9 @@ export class GameEngine {
 
     // Process monthly mood changes
     await this.processMonthlyMoodChanges(summary);
+
+    // Process executive mood/loyalty decay
+    await this.processExecutiveMoodDecay(summary, dbTransaction);
 
     // Check for random events
     await this.checkForEvents(summary);
@@ -434,6 +438,9 @@ export class GameEngine {
     }
 
     console.log('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
+    
+    // Track that this executive was used this month
+    (summary as any).usedExecutives.add(executiveId);
     
     // Get executive from database
     const executive = await this.storage.getExecutive(executiveId);
@@ -2242,6 +2249,122 @@ export class GameEngine {
         });
       }
     }
+  }
+
+  /**
+   * Process monthly mood and loyalty decay for executives
+   * - Loyalty decays when executives are ignored for 3+ months
+   * - Mood naturally drifts toward neutral (50) over time
+   */
+  private async processExecutiveMoodDecay(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    try {
+      // Check if storage has executive methods
+      if (!this.storage || !this.storage.getExecutivesByGame) {
+        console.log('[GAME-ENGINE] No executive storage methods available, skipping decay');
+        return;
+      }
+      
+      const executives = await this.storage.getExecutivesByGame(this.gameState.id);
+      if (!executives || executives.length === 0) {
+        console.log('[GAME-ENGINE] No executives found for game, skipping decay');
+        return;
+      }
+      
+      const currentMonth = this.gameState.currentMonth || 1;
+      console.log(`[GAME-ENGINE] Processing executive decay for month ${currentMonth}, ${executives.length} executives`);
+      
+      for (const exec of executives) {
+      let moodChange = 0;
+      let loyaltyChange = 0;
+      const currentMood = exec.mood || 50;
+      const currentLoyalty = exec.loyalty || 50;
+      
+      // Calculate loyalty decay for inactivity
+      // If lastActionMonth is null/undefined, treat as never used (start from month 0)
+      const lastAction = exec.lastActionMonth || 0;
+      const monthsSinceAction = lastAction === 0 ? currentMonth : currentMonth - lastAction;
+      
+      // Check if executive was used this month using in-memory tracking
+      // This avoids database transaction isolation issues
+      const wasUsedThisMonth = (summary as any).usedExecutives.has(exec.id);
+      
+      console.log(`[DECAY] Executive ${exec.role}:`);
+      console.log(`  - Current mood: ${currentMood}, loyalty: ${currentLoyalty}`);
+      console.log(`  - Last used: Month ${lastAction === 0 ? 'Never' : lastAction}`);
+      console.log(`  - Months since action: ${monthsSinceAction}`);
+      console.log(`  - Used this month: ${wasUsedThisMonth}`);
+      
+      // Loyalty decay: -5 every month after being ignored for 3+ months
+      if (monthsSinceAction >= 3 && !wasUsedThisMonth) {
+        loyaltyChange = -5; // Consistent monthly penalty after 3 months of neglect
+      }
+      
+      // Natural mood normalization toward 50 - but NOT for executives used this month
+      // This prevents the +5/-5 conflict where used executives get cancelled out
+      if (!wasUsedThisMonth) {
+        if (currentMood > 55) {
+          // Happy executives gradually calm down
+          moodChange = -Math.min(5, currentMood - 50);
+        } else if (currentMood < 45) {
+          // Unhappy executives gradually recover
+          moodChange = Math.min(5, 50 - currentMood);
+        }
+      }
+      
+      console.log(`  - Calculated mood change: ${moodChange}`);
+      console.log(`  - Calculated loyalty change: ${loyaltyChange}`);
+      
+      // Apply changes if any
+      if (moodChange !== 0 || loyaltyChange !== 0) {
+        const newMood = Math.max(0, Math.min(100, currentMood + moodChange));
+        const newLoyalty = Math.max(0, Math.min(100, currentLoyalty + loyaltyChange));
+        
+        console.log(`  - Final values: mood ${currentMood} → ${newMood}, loyalty ${currentLoyalty} → ${newLoyalty}`);
+        
+        // Update executive in storage with transaction context
+        await this.storage.updateExecutive(exec.id, {
+          mood: newMood,
+          loyalty: newLoyalty
+        }, dbTransaction);
+        
+        // Log loyalty decay to summary for user feedback
+        if (loyaltyChange < 0) {
+          summary.changes.push({
+            type: 'executive_interaction',
+            description: `${this.formatExecutiveRole(exec.role)}'s loyalty decreased (ignored for ${monthsSinceAction} months)`,
+            amount: loyaltyChange
+          });
+        }
+        
+        // Log mood changes if significant
+        if (Math.abs(moodChange) >= 3) {
+          summary.changes.push({
+            type: 'executive_interaction',
+            description: `${this.formatExecutiveRole(exec.role)}'s mood ${moodChange > 0 ? 'improved' : 'declined'} naturally`,
+            amount: moodChange
+          });
+        }
+      } else {
+        console.log(`  - No changes needed for ${exec.role}`);
+      }
+    }
+    } catch (error) {
+      console.error('[GAME-ENGINE] Error in processExecutiveMoodDecay:', error);
+      // Don't throw - let the game continue even if executive decay fails
+    }
+  }
+
+  /**
+   * Helper to format executive role names for display
+   */
+  private formatExecutiveRole(role: string): string {
+    const roleNames: Record<string, string> = {
+      'head_ar': 'Head of A&R',
+      'cmo': 'Chief Marketing Officer',
+      'cco': 'Chief Creative Officer',
+      'head_distribution': 'Head of Distribution'
+    };
+    return roleNames[role] || role;
   }
 
   /**

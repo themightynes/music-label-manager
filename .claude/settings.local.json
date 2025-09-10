@@ -43,7 +43,8 @@
       "Bash(npm view:*)",
       "Bash(dir:*)",
       "WebSearch",
-      "mcp__sequential-thinking__sequentialthinking"
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": [],

@@ -30,8 +30,12 @@ This document outlines the implementation plan for Phase 3 of the Executive Team
 - **Meeting Costs**: $1000 deducted per meeting (STUB - hardcoded) ✅
 - **UI Integration**: Mood/loyalty displayed with color-coded indicators ✅
 
+### ✅ What's Been Completed (Phase 3 Recent)
+- **Mood/Loyalty Decay**: ✅ Implemented with proper transaction handling
+- **Executive Actions Processing**: ✅ processExecutiveActions() working with +5 mood/loyalty boosts
+- **Database Issues Fixed**: ✅ Resolved transaction isolation causing decay conflicts with used executives
+
 ### 🚧 What's Still Missing (Phase 3 Remaining)
-- **Mood/Loyalty Decay**: No decay when executives ignored for months
 - **Availability Logic**: All executives always available regardless of mood
 - **Data-Driven Actions**: Meeting costs/effects still use stub data
 - **Executive Events**: No special events triggered by executive states
@@ -112,9 +116,15 @@ const choice = {
 // TODO: Load actual action from actions.json by actionId
 ```
 
-### 4. 🔄 **Add Mood/Loyalty Decay System** - NEXT PRIORITY
-**File**: `shared/engine/game-engine.ts` (new method, call from advanceMonth)
-**Status**: 📋 Ready to implement
+### 4. ✅ **Add Mood/Loyalty Decay System** - COMPLETED
+**File**: `shared/engine/game-engine.ts` (lines 2255-2350)
+**Status**: ✅ Implemented with transaction handling and in-memory executive tracking
+
+**Key Implementation Details:**
+- **Fixed Transaction Issues**: Used in-memory `usedExecutives` tracking to avoid database isolation problems
+- **Proper Exclusions**: Used executives skip decay entirely (no mood +5/-5 cancellation)
+- **Fixed Loyalty Math**: Changed from compound decay to flat -5/month after 3 months ignored
+- **Mood Normalization**: Only applies to unused executives, drifts toward 50 at ±5/month
 
 ```typescript
 private async processExecutiveMoodDecay(summary: MonthSummary): Promise<void> {
