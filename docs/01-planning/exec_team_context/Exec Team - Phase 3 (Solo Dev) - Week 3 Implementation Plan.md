@@ -1,4 +1,4 @@
----
+/on---
 tags:
   - execteam
   - phase3
@@ -23,11 +23,17 @@ This document outlines the implementation plan for Phase 3 of the Executive Team
 - **API Endpoints**: Executive actions processed as role meetings
 - **Selection Display**: Shows executive names and meeting types
 
-### 🚧 What's Missing (Phase 3 Goals)
-- **Economic Impact**: No salary deduction from monthly budget
-- **Mood System**: Mood field exists but has no gameplay effects
-- **Loyalty System**: Loyalty field exists but doesn't decay or impact availability
+### ✅ What's Been Completed (Phase 3 Partial)
+- **Economic Impact**: Executive salaries ($17,000/month) deducted from monthly budget ✅
+- **Mood System**: +5 mood boost when executives are used in meetings ✅
+- **Loyalty System**: +5 loyalty boost when executives are used ✅
+- **Meeting Costs**: $1000 deducted per meeting (STUB - hardcoded) ✅
+- **UI Integration**: Mood/loyalty displayed with color-coded indicators ✅
+
+### 🚧 What's Still Missing (Phase 3 Remaining)
+- **Mood/Loyalty Decay**: No decay when executives ignored for months
 - **Availability Logic**: All executives always available regardless of mood
+- **Data-Driven Actions**: Meeting costs/effects still use stub data
 - **Executive Events**: No special events triggered by executive states
 
 ## Implementation Steps
@@ -81,50 +87,34 @@ summary.expenseBreakdown.executiveSalaries = executiveSalaryResult.total;
 summary.expenses += executiveSalaryResult.total;
 ```
 
-### 3. **Implement processExecutiveActions()**
-**File**: `shared/engine/game-engine.ts` (new method after line 328)
+### 3. ✅ **Implement processExecutiveActions()** - COMPLETED
+**File**: `shared/engine/game-engine.ts` (lines 418-503)
+**Status**: ✅ Implemented with mood/loyalty updates
 
+**Implementation Details**:
+- Skips CEO meetings (player IS the CEO)
+- Applies mood changes from choice effects (checks executive_mood, artist_mood)
+- Default +5 mood boost if no specific effect defined
+- Always adds +5 loyalty for interaction
+- Updates lastActionMonth for decay tracking
+- Saves changes within database transaction
+
+**Current Stub Elements**:
 ```typescript
-private async processExecutiveActions(
-  action: GameEngineAction, 
-  summary: MonthSummary,
-  dbTransaction?: any
-): Promise<void> {
-  const executiveId = action.metadata?.executiveId;
-  if (!executiveId) return;
-  
-  // Get executive from database
-  const executive = await this.storage.getExecutive(executiveId);
-  if (!executive) return;
-  
-  // Apply mood changes from the action
-  const moodChange = action.metadata?.moodEffect || 0;
-  executive.mood = Math.max(0, Math.min(100, executive.mood + moodChange));
-  
-  // Boost loyalty for being used
-  executive.loyalty = Math.min(100, executive.loyalty + 5);
-  
-  // Update last action month
-  executive.lastActionMonth = this.gameState.currentMonth;
-  
-  // Save changes
-  await this.storage.updateExecutive(executive.id, {
-    mood: executive.mood,
-    loyalty: executive.loyalty,
-    lastActionMonth: executive.lastActionMonth
-  }, dbTransaction);
-  
-  summary.changes.push({
-    type: 'executive_interaction',
-    description: `Met with ${executive.role}`,
-    moodChange,
-    newMood: executive.mood
-  });
-}
+// In processRoleMeeting() - lines 362-368
+const choice = {
+  effects_immediate: { 
+    money: -1000,  // STUB: Hardcoded meeting cost
+    artist_mood: 5  // STUB: Default mood effect
+  },
+  effects_delayed: {}
+};
+// TODO: Load actual action from actions.json by actionId
 ```
 
-### 4. **Add Mood/Loyalty Decay System**
+### 4. 🔄 **Add Mood/Loyalty Decay System** - NEXT PRIORITY
 **File**: `shared/engine/game-engine.ts` (new method, call from advanceMonth)
+**Status**: 📋 Ready to implement
 
 ```typescript
 private async processExecutiveMoodDecay(summary: MonthSummary): Promise<void> {
@@ -293,12 +283,13 @@ WHERE NOT EXISTS (
 ## Success Metrics
 
 ### Economic Impact
-- [ ] Executive salaries appear in monthly expense breakdown
-- [ ] Total monthly executive cost: $17,000
-- [ ] Salary deduction happens automatically each month
+- [x] Executive salaries appear in monthly expense breakdown
+- [x] Total monthly executive cost: $17,000
+- [x] Salary deduction happens automatically each month
 
 ### Mood/Loyalty System
-- [ ] Mood changes visible after executive meetings
+- [x] Mood changes visible after executive meetings (+5 default)
+- [x] Loyalty increases when executives used (+5 per interaction)
 - [ ] Loyalty decays when executives ignored for 3+ months
 - [ ] Mood naturally trends toward neutral (50) over time
 
@@ -308,9 +299,10 @@ WHERE NOT EXISTS (
 - [ ] Availability reason displayed to player
 
 ### Strategic Depth
-- [ ] Players must balance executive usage vs. costs
-- [ ] Ignoring executives has consequences
-- [ ] Economic pressure from executive salaries forces decisions
+- [x] Economic pressure from executive salaries ($17,000/month)
+- [x] Meeting costs apply pressure ($1000 per meeting - stub)
+- [ ] Ignoring executives has consequences (decay not implemented)
+- [ ] Players must balance executive usage vs. costs (partial)
 
 ## Risk Mitigation
 
@@ -328,6 +320,32 @@ WHERE NOT EXISTS (
 - Use clear visual indicators (opacity, disabled state)
 - Provide tooltips explaining why executives unavailable
 
+## Implementation Roadmap
+
+### Immediate Next Steps (Minimal PR-Ready Chunks)
+
+#### **Priority 1: Mood/Loyalty Decay System**
+- Add processExecutiveMoodDecay() to game-engine.ts
+- Integrate into advanceMonth() after financial calculations
+- Decay loyalty -5 per 3 months of inactivity
+- Natural mood drift toward 50 at ±5/month
+- **Effort**: 2-3 hours
+- **Testing**: Advance 3+ months without using executives
+
+#### **Priority 2: Availability Thresholds**
+- Add mood check to ExecutiveTeam.tsx (mood >= 30)
+- Disable cards with visual indication
+- Show "Too demoralized" message
+- **Effort**: 1-2 hours
+- **Testing**: Debug-set mood < 30, verify UI disabled
+
+#### **Priority 3: Remove Stub Data**
+- Load actual action data from actions.json
+- Replace hardcoded $1000 cost
+- Use real mood effects from choices
+- **Effort**: 2-3 hours
+- **Testing**: Verify different meetings have different effects
+
 ## Next Steps (Future Phases)
 
 ### Phase 4: Executive Progression
@@ -344,6 +362,18 @@ WHERE NOT EXISTS (
 - Inter-executive dynamics
 - Executive-artist relationships
 - Board of directors oversight layer
+
+## Current Status Summary
+
+**Phase 3 is ~60% Complete:**
+- ✅ Core mood/loyalty mechanics working
+- ✅ Economic impact fully integrated
+- ✅ UI displays real-time executive state
+- 🔄 Decay system ready to implement
+- 🔄 Availability thresholds pending
+- 🔄 Data-driven actions pending
+
+The foundation is solid and working. The remaining features can be added incrementally following the "One Layer at a Time" philosophy, with each addition being a small, shippable improvement that adds strategic depth without breaking existing functionality.
 
 ## Conclusion
 

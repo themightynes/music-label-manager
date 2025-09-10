@@ -13,6 +13,7 @@ interface GameStore {
   monthlyActions: MonthlyAction[];
   songs: any[];
   releases: any[];
+  executives: any[]; // Executive team members
   
   // UI state
   selectedActions: string[];
@@ -28,8 +29,8 @@ interface GameStore {
   updateGameState: (updates: Partial<GameState>) => Promise<void>;
   
   // Monthly actions
-  selectAction: (actionId: string) => void;
-  removeAction: (actionId: string) => void;
+  selectAction: (actionId: string) => Promise<void>;
+  removeAction: (actionId: string) => Promise<void>;
   reorderActions: (startIndex: number, endIndex: number) => void;
   clearActions: () => void;
   advanceMonth: () => Promise<void>;
@@ -62,6 +63,7 @@ export const useGameStore = create<GameStore>()(
       monthlyActions: [],
       songs: [],
       releases: [],
+      executives: [],
       selectedActions: [],
       isAdvancingMonth: false,
       currentDialogue: null,
@@ -71,22 +73,26 @@ export const useGameStore = create<GameStore>()(
       // Load existing game
       loadGame: async (gameId: string) => {
         try {
-          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+          const [gameResponse, songsResponse, releasesResponse, executivesResponse] = await Promise.all([
             apiRequest('GET', `/api/game/${gameId}`),
             apiRequest('GET', `/api/game/${gameId}/songs`),
-            apiRequest('GET', `/api/game/${gameId}/releases`)
+            apiRequest('GET', `/api/game/${gameId}/releases`),
+            apiRequest('GET', `/api/game/${gameId}/executives`)
           ]);
           
           const data = await gameResponse.json();
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
+          const executives = await executivesResponse.json();
           
           console.log('GameStore loadGame debug:', {
             gameId,
             gameData: !!data,
             songsCount: songs?.length || 0,
             releasesCount: releases?.length || 0,
-            releases: releases
+            releases: releases,
+            executivesCount: executives?.length || 0,
+            executives: executives
           });
           
           // Ensure usedFocusSlots is synced with selectedActions (should be 0 when loading)
@@ -103,6 +109,7 @@ export const useGameStore = create<GameStore>()(
             monthlyActions: data.monthlyActions,
             songs,
             releases,
+            executives,
             selectedActions: []
           });
         } catch (error) {
@@ -200,6 +207,7 @@ export const useGameStore = create<GameStore>()(
             monthlyActions: [],
             songs: [],
             releases: [],
+            executives: [],
             selectedActions: [],
             campaignResults: null,
             monthlyOutcome: null
@@ -220,37 +228,111 @@ export const useGameStore = create<GameStore>()(
 
         try {
           const response = await apiRequest('PATCH', `/api/game/${gameState.id}`, updates);
-          const updatedState = await response.json();
           
-          set({ gameState: updatedState });
+          // Clone response to safely read the body
+          const clonedResponse = response.clone();
+          let responseText;
+          try {
+            responseText = await clonedResponse.text();
+          } catch (e) {
+            console.error('[updateGameState] Failed to read response text:', e);
+            responseText = '';
+          }
+          
+          // If response body is empty or not valid JSON, merge updates locally
+          if (!responseText || responseText.trim() === '') {
+            console.warn('[updateGameState] Empty response from server, applying updates locally');
+            // Apply updates to local state
+            const updatedState = { ...gameState, ...updates };
+            set({ gameState: updatedState });
+            
+            // Try to sync with server in background
+            setTimeout(async () => {
+              try {
+                const syncResponse = await apiRequest('GET', `/api/game/${gameState.id}`);
+                const serverState = await syncResponse.json();
+                set({ gameState: serverState });
+                console.log('[updateGameState] Synced with server state');
+              } catch (syncError) {
+                console.error('[updateGameState] Failed to sync with server:', syncError);
+              }
+            }, 1000);
+            
+            return;
+          }
+          
+          // Try to parse the response
+          try {
+            const updatedState = JSON.parse(responseText);
+            set({ gameState: updatedState });
+          } catch (parseError) {
+            console.error('[updateGameState] Failed to parse response:', parseError);
+            // Apply updates locally as fallback
+            const updatedState = { ...gameState, ...updates };
+            set({ gameState: updatedState });
+          }
         } catch (error) {
           console.error('Failed to update game state:', error);
-          throw error;
+          // If it's a 404, the game doesn't exist in the database
+          if (error.status === 404) {
+            console.error('Game not found in database. You may need to create a new game.');
+            // Don't throw - just apply updates locally
+            const updatedState = { ...gameState, ...updates };
+            set({ gameState: updatedState });
+          } else {
+            throw error;
+          }
         }
       },
 
       // Monthly action selection
-      selectAction: (actionId: string) => {
+      selectAction: async (actionId: string) => {
         const { selectedActions, gameState } = get();
         const availableSlots = gameState?.focusSlots || 3;
         
-        if (selectedActions.length < availableSlots && !selectedActions.includes(actionId)) {
+        if (selectedActions.length < availableSlots && !selectedActions.includes(actionId) && gameState) {
           const newSelectedActions = [...selectedActions, actionId];
+          const newUsedSlots = newSelectedActions.length;
+          
+          // Update local state
           set({ 
             selectedActions: newSelectedActions,
-            gameState: gameState ? { ...gameState, usedFocusSlots: newSelectedActions.length } : gameState
+            gameState: { ...gameState, usedFocusSlots: newUsedSlots }
           });
+          
+          // Sync focus slots to server to prevent desync issues
+          try {
+            await apiRequest('PATCH', `/api/game/${gameState.id}`, {
+              usedFocusSlots: newUsedSlots
+            });
+          } catch (error) {
+            console.error('Failed to sync focus slots:', error);
+            // Don't fail the whole operation if sync fails
+          }
         }
       },
 
-      removeAction: (actionId: string) => {
+      removeAction: async (actionId: string) => {
         const { selectedActions, gameState } = get();
-        if (selectedActions.includes(actionId)) {
+        if (selectedActions.includes(actionId) && gameState) {
           const newSelectedActions = selectedActions.filter(id => id !== actionId);
+          const newUsedSlots = newSelectedActions.length;
+          
+          // Update local state
           set({ 
             selectedActions: newSelectedActions,
-            gameState: gameState ? { ...gameState, usedFocusSlots: newSelectedActions.length } : gameState
+            gameState: { ...gameState, usedFocusSlots: newUsedSlots }
           });
+          
+          // Sync focus slots to server to prevent desync issues
+          try {
+            await apiRequest('PATCH', `/api/game/${gameState.id}`, {
+              usedFocusSlots: newUsedSlots
+            });
+          } catch (error) {
+            console.error('Failed to sync focus slots:', error);
+            // Don't fail the whole operation if sync fails
+          }
         }
       },
 
@@ -277,16 +359,81 @@ export const useGameStore = create<GameStore>()(
 
         set({ isAdvancingMonth: true });
 
+        // Fetch executives fresh from API to ensure we have latest data
+        let executives = [];
         try {
+          const execResponse = await apiRequest('GET', `/api/game/${gameState.id}/executives`);
+          executives = await execResponse.json();
+          console.log('[DEBUG CLIENT] Fetched fresh executives:', executives);
+        } catch (error) {
+          console.error('[DEBUG CLIENT] Failed to fetch executives:', error);
+        }
+
+        console.log('[DEBUG CLIENT] advanceMonth - executives length:', executives?.length || 0);
+
+        try {
+          // Map executive roles to their IDs for metadata
+          const executivesByRole: Record<string, any> = {};
+          executives.forEach(exec => {
+            executivesByRole[exec.role] = exec;
+          });
+          
           // Use the NEW API endpoint with campaign completion logic
+          // DEBUG: Log all executives before mapping
+          console.log('[DEBUG CLIENT] All executives by role:', executivesByRole);
+          console.log('[DEBUG CLIENT] Selected actions:', selectedActions);
+          
           const advanceRequest = {
             gameId: gameState.id,
-            selectedActions: selectedActions.map(actionId => ({
-              actionType: 'role_meeting' as const,
-              targetId: actionId,
-              metadata: {}
-            }))
+            selectedActions: selectedActions.map(actionStr => {
+              // Parse the JSON string to get our structured data
+              let actionData: any;
+              try {
+                actionData = JSON.parse(actionStr);
+                console.log(`[DEBUG CLIENT] Parsed action data:`, actionData);
+              } catch (e) {
+                // Fallback for old format (shouldn't happen with new code)
+                console.log(`[DEBUG CLIENT] Failed to parse, using legacy format for: ${actionStr}`);
+                return {
+                  actionType: 'role_meeting' as const,
+                  targetId: actionStr,
+                  metadata: {}
+                };
+              }
+              
+              const { roleId, actionId, choiceId } = actionData;
+              
+              // Build complete metadata
+              const metadata: any = {
+                roleId,
+                actionId,
+                choiceId
+              };
+              
+              // Add executiveId if this is an executive role (not CEO)
+              if (roleId && roleId !== 'ceo') {
+                const executive = executivesByRole[roleId];
+                if (executive) {
+                  metadata.executiveId = executive.id;
+                  console.log(`[DEBUG CLIENT] ✅ Added executiveId ${executive.id} for role ${roleId}`);
+                } else {
+                  console.log(`[DEBUG CLIENT] ❌ No executive found for role ${roleId}`);
+                }
+              }
+              
+              const result = {
+                actionType: 'role_meeting' as const,
+                targetId: actionId,  // Use the clean action ID
+                metadata
+              };
+              
+              console.log(`[DEBUG CLIENT] Final action object:`, result);
+              
+              return result;
+            })
           };
+          
+          console.log('[DEBUG CLIENT] Complete advance request:', JSON.stringify(advanceRequest, null, 2));
 
           const response = await apiRequest('POST', '/api/advance-month', advanceRequest);
           const result = await response.json();
@@ -308,21 +455,30 @@ export const useGameStore = create<GameStore>()(
           }
           console.log('===============================');
           
-          // Reload game data to get updated projects, songs, AND releases
-          // CRITICAL FIX: Explicitly fetch releases to ensure state synchronization
-          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+          // Reload game data to get updated projects, songs, releases, AND executives
+          // CRITICAL FIX: Explicitly fetch all data including executives to ensure state synchronization
+          const [gameResponse, songsResponse, releasesResponse, executivesResponse] = await Promise.all([
             apiRequest('GET', `/api/game/${gameState.id}`),
             apiRequest('GET', `/api/game/${gameState.id}/songs`),
-            apiRequest('GET', `/api/game/${gameState.id}/releases`) // Explicit releases fetch
+            apiRequest('GET', `/api/game/${gameState.id}/releases`), // Explicit releases fetch
+            apiRequest('GET', `/api/game/${gameState.id}/executives`) // CRITICAL: Fetch updated executives
           ]);
           const gameData = await gameResponse.json();
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
+          const updatedExecutives = await executivesResponse.json();
           
           console.log('=== POST-ADVANCE MONTH STATE SYNC ===');
           console.log('Game data releases count:', (gameData.releases || []).length);
           console.log('Direct releases fetch count:', (releases || []).length);
           console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
+          console.log('Executives count:', (updatedExecutives || []).length);
+          console.log('Executive states:', updatedExecutives.map((e: any) => ({ 
+            id: e.id, 
+            role: e.role, 
+            mood: e.mood, 
+            loyalty: e.loyalty 
+          })));
           console.log('=====================================');
           
           // Ensure usedFocusSlots is reset to 0 for the new month
@@ -337,6 +493,7 @@ export const useGameStore = create<GameStore>()(
             projects: gameData.projects || [], // Update projects with current state
             songs: songs || [], // Update songs to include newly recorded ones
             releases: releases || [], // FIXED: Use explicit releases fetch for accurate status
+            executives: updatedExecutives || [], // CRITICAL: Update executives with new mood/loyalty values
             monthlyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],
@@ -515,11 +672,19 @@ export const useGameStore = create<GameStore>()(
             await get().updateGameState({ flags });
           }
 
-          // Create the action ID for both executive and non-executive meetings
-          const executiveActionId = `${currentDialogue.roleType}_${currentDialogue.sceneId}_${choiceId}`;
-          const newSelectedActions = [...selectedActions, executiveActionId];
+          // Store complete action data for the server
+          const actionData = {
+            roleId: currentDialogue.roleType,      // e.g., 'head_ar'
+            actionId: currentDialogue.sceneId,     // e.g., 'ar_single_choice' 
+            choiceId: choiceId,                    // e.g., 'lean_commercial'
+            // We'll add executiveId when processing for month advancement
+          };
           
-          console.log('Adding executive action:', executiveActionId);
+          // Store as JSON string so we preserve all the data
+          const actionJson = JSON.stringify(actionData);
+          const newSelectedActions = [...selectedActions, actionJson];
+          
+          console.log('Storing complete action data:', actionData);
           console.log('New selectedActions:', newSelectedActions);
           
           // Update local state immediately for both types
@@ -528,15 +693,8 @@ export const useGameStore = create<GameStore>()(
             gameState: { ...gameState, usedFocusSlots: newSelectedActions.length }
           });
           
-          // For executive meetings, also call the executive action endpoint
-          if (isExecutiveMeeting) {
-            await apiRequest('POST', `/api/game/${gameState.id}/executive/${currentDialogue.roleType}/action`, {
-              actionId: executiveActionId,
-              meetingId: currentDialogue.sceneId,
-              choiceId: choiceId,
-              metadata: effects
-            });
-          }
+          // NOTE: Executive actions are now processed during month advancement
+          // No need to call the executive action endpoint separately
 
           // Record the action
           await apiRequest('POST', `/api/game/${gameState.id}/actions`, {

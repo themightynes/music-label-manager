@@ -309,12 +309,12 @@ React components with full type safety
 ### **Development Environment**
 - **Frontend**: Vite dev server (port 5173)
 - **Backend**: Node.js with tsx (port 5000)
-- **Database**: PostgreSQL (local or Neon)
+- **Database**: PostgreSQL (local or Railway)
 - **Content**: Local JSON files
 
 ### **Production Considerations**
 - **Build process**: Vite production build with optimizations
-- **Database**: Neon PostgreSQL with connection pooling
+- **Database**: Railway PostgreSQL with connection pooling
 - **Authentication**: Secure session management with proper secrets
 - **Content delivery**: Static asset optimization
 - **Error monitoring**: Production error tracking and logging

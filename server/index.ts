@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from 'express-session';
 import passport from 'passport';
+import path from 'path';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { testDatabaseConnection } from "./db";
@@ -9,6 +10,9 @@ import './auth'; // Initialize passport configuration
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve static data files
+app.use('/data', express.static(path.join(process.cwd(), 'data')));
 
 // Session configuration
 app.use(session({
@@ -56,9 +60,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Skip database connection test during startup to avoid Neon serverless package bug
-  console.log('[Database] Skipping connection test at startup due to known issue with @neondatabase/serverless package');
-  console.log('[Database] Database will be available for actual operations once the app is running');
+  // Test database connection at startup
+  const { testDatabaseConnection } = await import('./db');
+  const isConnected = await testDatabaseConnection();
+  if (isConnected) {
+    console.log('[Database] Successfully connected to Railway PostgreSQL');
+  } else {
+    console.warn('[Database] Initial connection test failed, but will retry on operations');
+  }
 
   const server = await registerRoutes(app);
 

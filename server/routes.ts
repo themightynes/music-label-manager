@@ -340,10 +340,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/game/:id", getUserId, async (req, res) => {
     try {
+      console.log('[PATCH /api/game/:id] Request params:', req.params.id);
+      console.log('[PATCH /api/game/:id] Request body:', req.body);
+      
       const gameState = await storage.updateGameState(req.params.id, req.body);
+      
+      console.log('[PATCH /api/game/:id] Updated game state:', gameState);
+      
+      if (!gameState) {
+        console.error('[PATCH /api/game/:id] No game state returned from storage.updateGameState');
+        return res.status(404).json({ message: "Game not found or update failed" });
+      }
+      
       res.json(gameState);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update game state" });
+      console.error('[PATCH /api/game/:id] Error:', error);
+      res.status(500).json({ message: "Failed to update game state", error: error.message });
     }
   });
 
@@ -464,6 +476,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get executives for a game
+  app.get("/api/game/:gameId/executives", getUserId, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      console.log('[ROUTES] Fetching executives for game:', gameId);
+      
+      const executives = await storage.getExecutivesByGame(gameId);
+      console.log('[ROUTES] Found executives:', executives.length);
+      
+      res.json(executives);
+    } catch (error) {
+      console.error('[ROUTES] Error fetching executives:', error);
+      res.status(500).json({ message: "Failed to fetch executives" });
+    }
+  });
+
   // Process executive action/decision (Week 2 Task)
   app.post("/api/game/:gameId/executive/:execId/action", getUserId, async (req, res) => {
     try {
@@ -489,13 +517,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      // Add to selected actions for this month
-      if (!gameState.selectedActions) {
-        gameState.selectedActions = [];
-      }
-      
       // Check if focus slots are available
-      const usedSlots = gameState.selectedActions.length;
+      const usedSlots = gameState.usedFocusSlots || 0;
       const totalSlots = gameState.focusSlots || 3;
       
       if (usedSlots >= totalSlots) {
@@ -506,9 +529,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Add the executive action
-      gameState.selectedActions.push(executiveAction);
-      gameState.usedFocusSlots = gameState.selectedActions.length;
+      // Update the used focus slots count
+      gameState.usedFocusSlots = usedSlots + 1;
       
       // Save the updated game state
       await storage.updateGameState(gameId, gameState);
@@ -520,7 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionId: actionId,
         gameId: gameId,
         month: gameState.currentMonth,
-        usedSlots: gameState.selectedActions.length,
+        usedSlots: gameState.usedFocusSlots,
         totalSlots: totalSlots,
         message: "Executive action added successfully"
       });
@@ -1855,13 +1877,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let monthResult: Awaited<ReturnType<GameEngine['advanceMonth']>> | undefined;
         try {
           console.log('[DEBUG] Processing month advancement...');
-          const formattedActions = selectedActions.map(action => ({
-            actionType: action.actionType,
-            targetId: action.targetId,
-            metadata: action.metadata || {},
-            details: action.metadata || {} // Convert metadata to details for compatibility
-          }));
-          console.log('[DEBUG] Formatted actions:', JSON.stringify(formattedActions, null, 2));
+          console.log('[DEBUG SERVER] Raw selectedActions from client:', JSON.stringify(selectedActions, null, 2));
+          
+          const formattedActions = selectedActions.map(action => {
+            console.log(`[DEBUG SERVER] Processing action:`, action);
+            console.log(`[DEBUG SERVER] Action metadata:`, action.metadata);
+            console.log(`[DEBUG SERVER] ExecutiveId in metadata:`, action.metadata?.executiveId);
+            
+            const formatted = {
+              actionType: action.actionType,
+              targetId: action.targetId,
+              metadata: action.metadata || {},
+              details: action.metadata || {} // Convert metadata to details for compatibility
+            };
+            
+            console.log(`[DEBUG SERVER] Formatted action result:`, formatted);
+            return formatted;
+          });
+          console.log('[DEBUG SERVER] All formatted actions:', JSON.stringify(formattedActions, null, 2));
           
           // PHASE 4 MIGRATION: Project advancement now handled entirely by GameEngine
           console.log('[DEBUG] === PROJECT ADVANCEMENT DELEGATED TO GAMEENGINE ===');

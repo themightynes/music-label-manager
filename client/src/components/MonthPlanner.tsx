@@ -40,7 +40,7 @@ interface MonthlyAction {
 }
 
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
-  const { gameState, selectedActions, removeAction, reorderActions, openDialogue } = useGameStore();
+  const { gameState, selectedActions, selectAction, removeAction, reorderActions, openDialogue, artists, projects } = useGameStore();
   const [, setLocation] = useLocation();
   
   // Keep empty monthlyActions array for SelectionSummary compatibility

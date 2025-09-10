@@ -309,9 +309,15 @@ export class GameEngine {
    * Processes a single player action
    */
   private async processAction(action: GameEngineAction, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    console.log('[GAME-ENGINE processAction] Processing action:', JSON.stringify(action, null, 2));
+    console.log('[GAME-ENGINE processAction] Action type:', action.actionType);
+    console.log('[GAME-ENGINE processAction] Action metadata:', action.metadata);
+    console.log('[GAME-ENGINE processAction] ExecutiveId in metadata:', action.metadata?.executiveId);
+    
     switch (action.actionType) {
       case 'role_meeting':
-        await this.processRoleMeeting(action, summary);
+        console.log('[GAME-ENGINE processAction] ✅ MATCHED role_meeting - calling processRoleMeeting');
+        await this.processRoleMeeting(action, summary, dbTransaction);
         break;
       case 'start_project':
         // REDUNDANT: Projects are now handled via database advancement in advanceProjectStages()
@@ -332,18 +338,36 @@ export class GameEngine {
   /**
    * Processes a role meeting and applies effects
    */
-  private async processRoleMeeting(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+  private async processRoleMeeting(action: GameEngineAction, summary: MonthSummary, dbTransaction?: any): Promise<void> {
     if (!action.targetId) return;
     
-    // Get role data from serverGameData
-    const role = await this.gameData.getRoleById(action.targetId);
-    if (!role) return;
-
-    const meeting = role.meetings?.find(m => m.id === action.details?.meetingId);
-    if (!meeting) return;
-
-    const choice = meeting.choices.find(c => c.id === action.details?.choiceId);
-    if (!choice) return;
+    console.log(`[GAME-ENGINE] processRoleMeeting called with action:`, action);
+    
+    // Extract the clean IDs from metadata
+    const { roleId, actionId, choiceId } = action.metadata || {};
+    
+    if (!roleId || !actionId || !choiceId) {
+      console.log(`[GAME-ENGINE] Missing required IDs - roleId: ${roleId}, actionId: ${actionId}, choiceId: ${choiceId}`);
+      return;
+    }
+    
+    console.log(`[GAME-ENGINE] Processing meeting - Role: ${roleId}, Action: ${actionId}, Choice: ${choiceId}`);
+    
+    // Get the role data for the name
+    const role = await this.gameData.getRoleById(roleId);
+    const roleName = role?.name || roleId;
+    
+    // TODO: Look up the actual action from actions.json by actionId
+    // For now, use stub data to test the executive updates
+    const choice = {
+      effects_immediate: { 
+        money: -1000,  // Stub effect
+        artist_mood: 5  // This will be picked up for executive mood
+      },
+      effects_delayed: {}
+    };
+    
+    console.log(`[GAME-ENGINE] Using stub choice data (TODO: load from actions.json)`);
 
     // Apply immediate effects
     if (choice.effects_immediate) {
@@ -368,11 +392,122 @@ export class GameEngine {
       this.gameState.flags = flags;
     }
 
+    // Process executive-specific updates (mood, loyalty)
+    // This happens after choice effects are applied
+    // Pass choice data so we can extract mood effects
+    const actionWithChoice = {
+      ...action,
+      metadata: {
+        ...action.metadata,
+        choiceEffects: choice
+      }
+    };
+    await this.processExecutiveActions(actionWithChoice, summary, dbTransaction);
+
     summary.changes.push({
       type: 'meeting',
-      description: `Met with ${role.name}`,
-      roleId: role.id
+      description: `Met with ${roleName}`,
+      roleId: roleId
     });
+  }
+
+  /**
+   * Processes executive-specific effects from actions
+   * Updates mood, loyalty, and lastActionMonth when executives are used
+   */
+  private async processExecutiveActions(
+    action: GameEngineAction,
+    summary: MonthSummary,
+    dbTransaction?: any
+  ): Promise<void> {
+    // Skip CEO meetings - player IS the CEO, no executive to update
+    const roleId = action.metadata?.roleId;
+    if (roleId === 'ceo') {
+      console.log('[GAME-ENGINE] CEO meeting - player is the CEO, no executive to update');
+      return;
+    }
+    
+    const executiveId = action.metadata?.executiveId;
+    if (!executiveId) {
+      console.log('[GAME-ENGINE] No executiveId in action metadata, skipping executive processing');
+      return;
+    }
+
+    console.log('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
+    
+    // Get executive from database
+    const executive = await this.storage.getExecutive(executiveId);
+    if (!executive) {
+      console.log('[GAME-ENGINE] Executive not found:', executiveId);
+      return;
+    }
+
+    console.log('[GAME-ENGINE] Current executive state:', {
+      role: executive.role,
+      mood: executive.mood,
+      loyalty: executive.loyalty
+    });
+
+    // Apply mood changes from the action choice
+    // Look for executive_mood in choice effects (immediate or delayed)
+    let moodChange = 0;
+    const choiceEffects = action.metadata?.choiceEffects;
+    if (choiceEffects) {
+      // Check immediate effects for executive_mood
+      if (choiceEffects.effects_immediate?.executive_mood) {
+        moodChange = choiceEffects.effects_immediate.executive_mood;
+      }
+      // Check artist_mood as fallback (some choices use this)
+      else if (choiceEffects.effects_immediate?.artist_mood) {
+        moodChange = choiceEffects.effects_immediate.artist_mood;
+      }
+      // Default to small positive boost if no specific mood effect
+      else {
+        moodChange = 5; // Small boost for interaction
+      }
+    } else {
+      // Fallback if no choice data (shouldn't happen)
+      moodChange = 5;
+      console.log('[GAME-ENGINE] Warning: No choice effects found, using default mood boost');
+    }
+    
+    const newMood = Math.max(0, Math.min(100, executive.mood + moodChange));
+    
+    // Boost loyalty for being used (+5 for interaction)
+    const newLoyalty = Math.min(100, executive.loyalty + 5);
+    
+    // Update last action month
+    const currentMonth = this.gameState.currentMonth || 1;
+
+    console.log('[GAME-ENGINE] Updating executive:', {
+      moodChange,
+      newMood,
+      newLoyalty,
+      lastActionMonth: currentMonth
+    });
+
+    // Save changes to database
+    await this.storage.updateExecutive(
+      executive.id,
+      {
+        mood: newMood,
+        loyalty: newLoyalty,
+        lastActionMonth: currentMonth
+      },
+      dbTransaction
+    );
+
+    // Add to summary for UI feedback
+    summary.changes.push({
+      type: 'executive_interaction',
+      description: `Met with ${executive.role}`,
+      moodChange,
+      newMood,
+      loyaltyBoost: 5,
+      newLoyalty
+    });
+
+    console.log('[GAME-ENGINE] Executive updated successfully');
   }
 
   /**
@@ -1107,6 +1242,7 @@ export class GameEngine {
           summary.expenseBreakdown = {
             monthlyOperations: 0,
             artistSalaries: 0,
+            executiveSalaries: 0,
             projectCosts: 0,
             marketingCosts: 0,
             roleMeetingCosts: 0
@@ -3442,11 +3578,15 @@ export interface MonthSummary {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'executive_interaction';
   description: string;
   amount?: number;
   roleId?: string;
   projectId?: string;
+  moodChange?: number;
+  newMood?: number;
+  loyaltyBoost?: number;
+  newLoyalty?: number;
 }
 
 export interface EventOccurrence {

@@ -138,10 +138,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateGameState(id: string, gameState: Partial<InsertGameState>): Promise<GameState> {
-    const [state] = await db.update(gameStates)
+    console.log('[Storage.updateGameState] Updating game:', id);
+    console.log('[Storage.updateGameState] Updates:', gameState);
+    
+    const result = await db.update(gameStates)
       .set({ ...gameState, updatedAt: new Date() })
       .where(eq(gameStates.id, id))
       .returning();
+    
+    console.log('[Storage.updateGameState] Update result:', result);
+    console.log('[Storage.updateGameState] Number of rows updated:', result.length);
+    
+    if (!result || result.length === 0) {
+      console.error('[Storage.updateGameState] No rows updated for game ID:', id);
+      // Try to fetch the game to see if it exists
+      const [existingGame] = await db.select().from(gameStates).where(eq(gameStates.id, id));
+      if (!existingGame) {
+        console.error('[Storage.updateGameState] Game does not exist in database:', id);
+      }
+      return null;
+    }
+    
+    const [state] = result;
     return state;
   }
 
@@ -539,6 +557,28 @@ export class DatabaseStorage implements IStorage {
     console.log('[STORAGE] Executives found:', result);
     console.log('[STORAGE] Number of executives:', result ? result.length : 0);
     return result;
+  }
+
+  async getExecutive(execId: string): Promise<any | null> {
+    console.log('[STORAGE] getExecutive called with execId:', execId);
+    const result = await db.select().from(executives)
+      .where(eq(executives.id, execId))
+      .limit(1);
+    console.log('[STORAGE] Executive found:', result[0] || null);
+    return result[0] || null;
+  }
+
+  async updateExecutive(
+    execId: string, 
+    updates: Partial<any>, 
+    transaction?: any
+  ): Promise<void> {
+    console.log('[STORAGE] updateExecutive called with execId:', execId, 'updates:', updates);
+    const dbToUse = transaction || db;
+    await dbToUse.update(executives)
+      .set(updates)
+      .where(eq(executives.id, execId));
+    console.log('[STORAGE] Executive updated successfully');
   }
 }
 

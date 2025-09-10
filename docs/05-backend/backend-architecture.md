@@ -322,14 +322,24 @@ Efficient connection handling with Drizzle ORM:
 
 ```typescript
 // server/db.ts
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from '@shared/schema';
 
-const client = neon(process.env.DATABASE_URL!);
-export const db = drizzle(client, { schema });
+// Railway PostgreSQL configuration
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 10, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection cannot be acquired
+  ssl: {
+    rejectUnauthorized: false // Required for Railway's SSL certificates
+  }
+});
 
-// Connection pooling configured automatically by Neon
+export const db = drizzle(pool, { schema });
+
+// Connection pooling managed by pg Pool
 // Supports concurrent connections for multiple users
 ```
 
@@ -561,12 +571,15 @@ const config = {
 ### **Database Connection**
 ```typescript
 // server/db.ts
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from '@shared/schema';
 
-const client = neon(process.env.DATABASE_URL!);
-export const db = drizzle(client, { schema });
+const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false } // Required for Railway
+});
+export const db = drizzle(pool, { schema });
 ```
 
 This backend implementation provides the server infrastructure for the Music Label Manager game with focus on practical development and deployment needs.

@@ -77,7 +77,7 @@ interface ExecutiveTeamProps {
 }
 
 export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps) {
-  const { openDialogue, gameState } = useGameStore();
+  const { openDialogue, gameState, executives } = useGameStore();
   const [hoveredExec, setHoveredExec] = useState<string | null>(null);
   const [selectedExecutive, setSelectedExecutive] = useState<Executive | null>(null);
   const [availableMeetings, setAvailableMeetings] = useState<Meeting[]>([]);
@@ -85,6 +85,29 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
   
   const slotsUsed = selectedActions.length;
   const slotsAvailable = maxSlots - slotsUsed;
+  
+  // Map database executives to get mood/loyalty data
+  console.log('[ExecutiveTeam] Executives from store:', executives);
+  const executiveData: Record<string, any> = {};
+  executives?.forEach(exec => {
+    executiveData[exec.role] = exec;
+  });
+  console.log('[ExecutiveTeam] ExecutiveData mapping:', executiveData);
+  
+  // Helper functions for mood/loyalty colors
+  const getMoodColor = (mood: number) => {
+    if (mood >= 70) return '#4ade80'; // Green - Happy
+    if (mood >= 40) return '#fbbf24'; // Yellow - Neutral  
+    if (mood >= 20) return '#fb923c'; // Orange - Unhappy
+    return '#ef4444'; // Red - Very unhappy
+  };
+  
+  const getLoyaltyColor = (loyalty: number) => {
+    if (loyalty >= 70) return '#ec4899'; // Pink - Very loyal
+    if (loyalty >= 40) return '#a78bfa'; // Purple - Loyal
+    if (loyalty >= 20) return '#60a5fa'; // Blue - Neutral
+    return '#94a3b8'; // Gray - Disloyal
+  };
   
   const handleExecutiveClick = async (executive: Executive) => {
     if (slotsUsed >= maxSlots) {
@@ -199,6 +222,24 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
                       </Badge>
                     )}
                   </div>
+                  
+                  {/* Mood and Loyalty indicators */}
+                  {executiveData[executive.id] && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="flex items-center gap-1">
+                        <i className="fas fa-smile text-xs" style={{ color: getMoodColor(executiveData[executive.id].mood) }}></i>
+                        <span className="text-xs text-white/70">
+                          Mood: {executiveData[executive.id].mood || 0}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <i className="fas fa-heart text-xs" style={{ color: getLoyaltyColor(executiveData[executive.id].loyalty) }}></i>
+                        <span className="text-xs text-white/70">
+                          Loyalty: {executiveData[executive.id].loyalty || 0}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -285,7 +326,7 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
                                   'fas fa-comments'} text-[#A75A5B] mt-1 flex-shrink-0`}></i>
                     <div className="flex-1 text-left min-w-0">
                       <p className="font-semibold text-white text-left break-words">{meeting.name}</p>
-                      <p className="text-sm text-white/70 mt-1 text-left break-words whitespace-normal">{meeting.prompt || meeting.description}</p>
+                      <p className="text-sm text-white/70 mt-1 text-left break-words whitespace-normal">{meeting.prompt}</p>
                     </div>
                   </div>
                 </Button>

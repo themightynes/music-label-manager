@@ -32,7 +32,8 @@ Based on the essential documentation, here's your development-ready summary:
 
 ## 🏗️ **Tech Stack** (For Development Context)
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind + Zustand + React Query  
-- **Backend**: Node.js + Express + PostgreSQL (Neon) + Drizzle ORM
+- **Backend**: Node.js + Express + PostgreSQL (Railway) + Drizzle ORM
+- **Database**: Railway PostgreSQL with `pg` driver (migrated from Neon serverless)
 - **Game Logic**: Unified GameEngine (shared/) with deterministic calculations
 - **Content**: JSON-based (`data/` folder) - separates game content from code
 
@@ -41,6 +42,8 @@ Based on the essential documentation, here's your development-ready summary:
 2. **Use static analysis tools** (Read, Glob, Grep) for code exploration  
 3. **Ask before starting dev server**: "Should I start the dev server?"
 4. **Follow documentation governance** - check existing docs before creating new ones
+5. **Implementation approach** - Read `docs/claude-code-implementation-philosophy.md` before suggesting any code
+6. **Focus: One feature, one layer, working iteration first**
 
 ## 📁 **Key Information Sources**
 

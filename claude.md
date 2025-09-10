@@ -1,11 +1,13 @@
 # Music Label Manager - Claude Session Instructions
 
-## 🚨 Replit Environment Specifics
-**Critical for Replit sessions:**
-- Default port: The main application runs on port 5000 for Replit's webview preview
-- Port conflicts: Avoid starting servers on port 5000 if the main app is already running
-- Alternative ports: Use ports like 3000, 8000, or 8080 for testing/development servers
-- Server logs: Check running processes with `ps aux` or `lsof -i :5000` to see what's on port 5000
+## 🚨 Railway Deployment Environment
+**Critical for Railway PostgreSQL sessions:**
+- **Database**: Railway PostgreSQL with standard `pg` driver (migrated from Neon serverless)
+- **Connection**: Uses `DATABASE_URL` environment variable with SSL enabled
+- **Pool Settings**: Max 10 connections, 30s idle timeout, 10s connection timeout
+- **SSL Config**: `rejectUnauthorized: false` required for Railway's certificates
+- **Local Development**: Default port 5000 for main application
+- **Alternative ports**: Use ports like 3000, 8000, or 8080 for testing servers
 
 ## 🎵 Content Philosophy
 **Tone**: Heightened drama (Empire, Nashville, High Fidelity inspiration)  
@@ -20,6 +22,30 @@
 - `npm run check` - Run TypeScript compilation check
 - `npm run dev` - Starts both client and server with hot reload
 - `pkill -f "tsx server"` - Clean up any lingering server processes
+
+## Implementation Philosophy
+- **One Layer at a Time**: Never build multiple interdependent systems simultaneously
+- **Stub and Ship**: `return true; // TODO: make smarter` is valid first implementation  
+- **48-Hour Rule**: Any feature should show visible progress within 2 days
+- **One Decision**: Each iteration adds exactly ONE decision point for players
+- **Annotate Everything**: Mark all hardcoded values, stubs, and missing features with clear TODO/STUB/HARDCODED comments for easy identification later
+- Commit incomplete working code > complete non-working code
+
+**Annotation Standards:**
+```javascript
+// STUB: Will be replaced with complex logic in Phase 2
+return 50; 
+
+// HARDCODED: Should read from balance.json eventually  
+const approvalThreshold = 10000;
+
+// TODO: Add artist personality factors to mood calculation
+function calculateMood() { return Math.random() * 100; }
+
+// MISSING: Reputation system integration needed
+```
+
+This ensures we can easily grep for `STUB:`, `HARDCODED:`, `TODO:`, and `MISSING:` to find what needs enhancement in future iterations.
 
 ---
 *For project overview, current status, and documentation references, use the `/onboard` command*

@@ -40,7 +40,10 @@
       "Bash(npm uninstall:*)",
       "Bash(journalctl:*)",
       "Bash(git add:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(dir:*)",
+      "WebSearch",
+      "mcp__sequential-thinking__sequentialthinking"
     ],
     "deny": [],
     "ask": [],

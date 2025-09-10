@@ -9,6 +9,21 @@ import events from './balance/events.json';
 import config from './balance/config.json';
 import content from './balance/content.json';
 
+/**
+ * IMPORTANT: Structure Synchronization Required!
+ * 
+ * This file defines the structure for combining balance JSON modules.
+ * The structure below is MIRRORED in: shared/utils/dataLoader.ts (loadBalanceData method, lines ~197-270)
+ * 
+ * If you modify the structure here (add/remove/rename fields), you MUST also update:
+ * - shared/utils/dataLoader.ts -> loadBalanceData() -> Node.js environment section
+ * 
+ * This duplication is necessary because:
+ * - Browser/Vite builds can import this TypeScript module directly
+ * - Node.js/tsx runtime cannot dynamically import TS files with JSON imports
+ * - The dataLoader handles both environments appropriately
+ */
+
 // Reconstruct the exact original balance.json structure
 // This ensures 100% backward compatibility
 const balance = {

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from '../shared/schema';
 import { z } from 'zod';
 import fs from 'fs/promises';
@@ -47,6 +47,7 @@ interface SchemaDiscrepancy {
 
 class SchemaAnalyzer {
   private db: ReturnType<typeof drizzle>;
+  private pool: Pool;
   private discrepancies: SchemaDiscrepancy[] = [];
   private databaseColumns: Map<string, ColumnInfo[]> = new Map();
   private databaseConstraints: Map<string, ConstraintInfo[]> = new Map();
@@ -54,8 +55,11 @@ class SchemaAnalyzer {
   private zodSchemas: Map<string, any> = new Map();
 
   constructor(databaseUrl: string) {
-    const queryClient = neon(databaseUrl);
-    this.db = drizzle(queryClient, { schema });
+    this.pool = new Pool({ 
+      connectionString: databaseUrl,
+      ssl: { rejectUnauthorized: false } // Required for Railway
+    });
+    this.db = drizzle(this.pool, { schema });
   }
 
   async introspectDatabase() {
@@ -592,6 +596,9 @@ ${(this.databaseIndexes.get(tableName) || []).map(i => `- ${i.index_name} on ${i
     } catch (error) {
       console.error('❌ Analysis failed:', error);
       process.exit(1);
+    } finally {
+      // Close the pool connection
+      await this.pool.end();
     }
   }
 }
