@@ -361,17 +361,37 @@ export class GameEngine {
     const role = await this.gameData.getRoleById(roleId);
     const roleName = role?.name || roleId;
     
-    // TODO: Look up the actual action from actions.json by actionId
-    // For now, use stub data to test the executive updates
-    const choice = {
-      effects_immediate: { 
-        money: -1000,  // Stub effect
-        artist_mood: 5  // This will be picked up for executive mood
-      },
-      effects_delayed: {}
-    };
+    // Load the actual action and choice from actions.json
+    const choice = await this.gameData.getChoiceById(actionId, choiceId);
     
-    console.log(`[GAME-ENGINE] Using stub choice data (TODO: load from actions.json)`);
+    if (!choice) {
+      console.error(`[GAME-ENGINE] Choice not found for actionId: ${actionId}, choiceId: ${choiceId}`);
+      // Fallback to minimal stub to prevent crashes
+      const fallbackChoice = {
+        effects_immediate: { money: -1000 },
+        effects_delayed: {}
+      };
+      console.log(`[GAME-ENGINE] Using fallback choice data`);
+      
+      // Apply fallback effects and return
+      if (fallbackChoice.effects_immediate) {
+        const effects: Record<string, number> = {};
+        for (const [key, value] of Object.entries(fallbackChoice.effects_immediate)) {
+          if (typeof value === 'number') {
+            effects[key] = value;
+          }
+        }
+        this.applyEffects(effects, summary);
+      }
+      return;
+    }
+    
+    console.log(`[GAME-ENGINE] Loaded real choice data:`, {
+      actionId,
+      choiceId,
+      immediateEffects: choice.effects_immediate,
+      delayedEffects: choice.effects_delayed
+    });
 
     // Apply immediate effects
     if (choice.effects_immediate) {

@@ -125,6 +125,41 @@ export class ServerGameData {
     }
   }
 
+  // Get specific action by ID
+  async getActionById(actionId: string): Promise<any | undefined> {
+    await this.initialize();
+    try {
+      const actions = await this.getMonthlyActions();
+      return actions.find(action => action.id === actionId);
+    } catch (error) {
+      console.error('Failed to get action by ID:', actionId, error);
+      return undefined;
+    }
+  }
+
+  // Get specific choice from action
+  async getChoiceById(actionId: string, choiceId: string): Promise<any | undefined> {
+    await this.initialize();
+    try {
+      const action = await this.getActionById(actionId);
+      if (!action || !action.choices) {
+        console.error('Action not found or has no choices:', actionId);
+        return undefined;
+      }
+      
+      const choice = action.choices.find((choice: any) => choice.id === choiceId);
+      if (!choice) {
+        console.error('Choice not found:', choiceId, 'in action:', actionId);
+        return undefined;
+      }
+      
+      return choice;
+    } catch (error) {
+      console.error('Failed to get choice by ID:', { actionId, choiceId }, error);
+      return undefined;
+    }
+  }
+
   // Project types data access  
   async getProjectTypes(): Promise<any> {
     await this.initialize();
