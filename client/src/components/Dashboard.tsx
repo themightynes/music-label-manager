@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export function Dashboard() {
-  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, monthlyOutcome, createNewGame, selectedActions, artists, createProject } = useGameStore();
+  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, backToMeetingSelection, monthlyOutcome, createNewGame, selectedActions, artists, createProject } = useGameStore();
   const [, setLocation] = useLocation();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showMonthSummary, setShowMonthSummary] = useState(false);
@@ -220,6 +220,7 @@ export function Dashboard() {
           onChoiceSelect={async (choiceId: string, effects: any) => {
             await selectDialogueChoice(choiceId, effects);
           }}
+          onBack={backToMeetingSelection}
         />
       )}
       
@@ -238,25 +239,27 @@ export function Dashboard() {
       {/* New Game Confirmation Modal */}
       {showNewGameConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-[#2C222A] border border-[#4e324c] rounded-lg p-6 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="text-4xl mb-4">⚠️</div>
               <h3 className="text-lg font-semibold text-white mb-2">Start New Game?</h3>
               <p className="text-sm text-white/70 mb-6">
-                This will permanently delete your current progress (Month {gameState.currentMonth}). Are you sure you want to continue?
+                This will permanently delete your current progress.<br />
+                <span className="font-medium text-[#A75A5B]">Month {gameState.currentMonth}</span><br />
+                Are you sure you want to continue?
               </p>
               <div className="flex space-x-3">
                 <Button
                   variant="outline"
                   onClick={() => setShowNewGameConfirm(false)}
-                  className="flex-1"
+                  className="flex-1 bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#2a1923]"
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={confirmNewGame}
-                  className="flex-1"
+                  className="flex-1 bg-[#A75A5B] hover:bg-[#D99696] text-white border-0"
                 >
                   Start New Game
                 </Button>

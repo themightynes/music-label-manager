@@ -44,12 +44,17 @@
       "Bash(dir:*)",
       "WebSearch",
       "mcp__sequential-thinking__sequentialthinking",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "mcp__browsermcp__browser_screenshot"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
       "/tmp"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "browsermcp"
+  ]
 }

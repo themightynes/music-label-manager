@@ -1093,11 +1093,10 @@ export default function PlanReleasePage() {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-white/90 mb-1 block">Release Title</label>
-                      <input
+                      <Input
                         type="text"
                         value={releaseTitle}
                         onChange={(e) => setReleaseTitle(e.target.value)}
-                        className="w-full px-3 py-2 border border-[#65557c]/60 rounded-md text-sm"
                         placeholder="Enter release title"
                       />
                     </div>

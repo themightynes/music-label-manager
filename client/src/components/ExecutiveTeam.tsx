@@ -77,11 +77,29 @@ interface ExecutiveTeamProps {
 }
 
 export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps) {
-  const { openDialogue, gameState, executives } = useGameStore();
+  const { openDialogue, gameState, executives, backToMeetingsFor } = useGameStore();
   const [hoveredExec, setHoveredExec] = useState<string | null>(null);
   const [selectedExecutive, setSelectedExecutive] = useState<Executive | null>(null);
   const [availableMeetings, setAvailableMeetings] = useState<Meeting[]>([]);
   const [loadingMeetings, setLoadingMeetings] = useState(false);
+  
+  // Method to reopen meeting selection for a specific executive
+  const reopenMeetingSelection = async (executiveId: string) => {
+    const executive = EXECUTIVES.find(exec => exec.id === executiveId);
+    if (executive) {
+      await handleExecutiveClick(executive);
+    }
+  };
+  
+  // Watch for back navigation trigger
+  useEffect(() => {
+    if (backToMeetingsFor) {
+      // Automatically reopen meeting selection for the specified executive
+      reopenMeetingSelection(backToMeetingsFor);
+      // Clear the trigger flag
+      useGameStore.setState({ backToMeetingsFor: null });
+    }
+  }, [backToMeetingsFor]);
   
   const slotsUsed = selectedActions.length;
   const slotsAvailable = maxSlots - slotsUsed;

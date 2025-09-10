@@ -12,9 +12,10 @@ interface DialogueModalProps {
   gameId: string;
   onClose: () => void;
   onChoiceSelect: (choiceId: string, effects: any) => Promise<void>;
+  onBack?: () => void; // Optional back handler to return to meeting selection
 }
 
-export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSelect }: DialogueModalProps) {
+export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSelect, onBack }: DialogueModalProps) {
   // Load role and meeting data from API
   const { data: roleData, isLoading: roleLoading } = useQuery({
     queryKey: ['role', roleId],
@@ -99,16 +100,29 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
         <DialogHeader className="border-b border-[#4e324c] pb-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-[#A75A5B] rounded-lg flex items-center justify-center">
-              <i className={`${roleInfo?.icon || 'fas fa-user'} text-white text-xl`}></i>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-[#A75A5B] rounded-lg flex items-center justify-center">
+                <i className={`${roleInfo?.icon || 'fas fa-user'} text-white text-xl`}></i>
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold text-white">
+                  Meeting with {roleInfo?.name || roleData.name}
+                </DialogTitle>
+                <p className="text-sm text-white/70">Industry Professional</p>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-lg font-semibold text-white">
-                Meeting with {roleInfo?.name || roleData.name}
-              </DialogTitle>
-              <p className="text-sm text-white/70">Industry Professional</p>
-            </div>
+            {onBack && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBack}
+                className="text-white/70 hover:text-white hover:bg-[#A75A5B]/10 hover:border-[#A75A5B]"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to Meetings
+              </Button>
+            )}
           </div>
         </DialogHeader>
 

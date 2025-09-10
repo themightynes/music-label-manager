@@ -21,6 +21,7 @@ interface GameStore {
   currentDialogue: any | null;
   monthlyOutcome: any | null;
   campaignResults: any | null;
+  backToMeetingsFor: string | null; // Executive ID to reopen meetings for
   
   // Actions
   loadGame: (gameId: string) => Promise<void>;
@@ -47,6 +48,7 @@ interface GameStore {
   openDialogue: (roleType: string, sceneId?: string) => Promise<void>;
   selectDialogueChoice: (choiceId: string, effects: any) => Promise<void>;
   closeDialogue: () => void;
+  backToMeetingSelection: () => void;
   
   // Save management
   saveGame: (name: string) => Promise<void>;
@@ -69,6 +71,7 @@ export const useGameStore = create<GameStore>()(
       currentDialogue: null,
       monthlyOutcome: null,
       campaignResults: null,
+      backToMeetingsFor: null,
 
       // Load existing game
       loadGame: async (gameId: string) => {
@@ -638,6 +641,7 @@ export const useGameStore = create<GameStore>()(
             currentDialogue: {
               roleType: roleId,  // DialogueModal expects this field name
               sceneId: meetingId || 'monthly_check_in',
+              executiveId: roleId, // Store executive ID for back navigation
               choices: []  // Will be loaded by DialogueModal
             }
           });
@@ -719,6 +723,20 @@ export const useGameStore = create<GameStore>()(
 
       closeDialogue: () => {
         set({ currentDialogue: null });
+      },
+
+      backToMeetingSelection: () => {
+        const { currentDialogue } = get();
+        if (currentDialogue && currentDialogue.executiveId) {
+          // Set a flag to trigger meeting selection modal reopening
+          set({ 
+            currentDialogue: null,
+            backToMeetingsFor: currentDialogue.executiveId  // Add this field to trigger meeting modal
+          });
+        } else {
+          // Fallback to just closing dialogue
+          set({ currentDialogue: null });
+        }
       },
 
       // Save game
