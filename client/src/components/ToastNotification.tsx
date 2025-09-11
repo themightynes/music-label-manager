@@ -179,6 +179,14 @@ export function ToastNotification() {
       const projectCompletions = monthlyOutcome.changes.filter((c: any) => c.type === 'project_complete');
       const revenueChanges = monthlyOutcome.changes.filter((c: any) => c.type === 'revenue');
       const achievements = monthlyOutcome.changes.filter((c: any) => c.type === 'unlock');
+      
+      // Enhanced: Filter mood and loyalty changes from executive meetings
+      const moodChanges = monthlyOutcome.changes.filter((c: any) => 
+        c.type === 'mood' && c.description.includes('meeting decision')
+      );
+      const loyaltyChanges = monthlyOutcome.changes.filter((c: any) => 
+        c.type === 'mood' && c.loyaltyBoost && c.description.includes('meeting decision')
+      );
 
       // Enhanced project completion notifications
       projectCompletions.forEach((change: any, index: number) => {
@@ -241,6 +249,48 @@ export function ToastNotification() {
             }
           });
         }, (projectCompletions.length + revenueChanges.length) * 1500 + index * 1000);
+      });
+
+      // Enhanced: Artist mood change notifications from executive meetings
+      moodChanges.forEach((change: any, index: number) => {
+        setTimeout(() => {
+          const isPositive = (change.amount || 0) > 0;
+          const moodValue = Math.abs(change.amount || 0);
+          
+          showEnhancedToast({
+            title: `${isPositive ? '😊' : '😔'} Artist Morale ${isPositive ? 'Improved' : 'Declined'}`,
+            description: `Executive meeting decision ${isPositive ? 'boosted' : 'lowered'} all artists' mood by ${moodValue} points.`,
+            type: isPositive ? 'success' : 'warning',
+            duration: 4000,
+            action: {
+              label: 'View Artists',
+              onClick: () => {
+                console.log('Navigate to artist roster');
+              }
+            }
+          });
+        }, (projectCompletions.length + revenueChanges.length + achievements.length) * 1500 + index * 800);
+      });
+
+      // Enhanced: Artist loyalty change notifications from executive meetings  
+      loyaltyChanges.forEach((change: any, index: number) => {
+        setTimeout(() => {
+          const isPositive = (change.loyaltyBoost || 0) > 0;
+          const loyaltyValue = Math.abs(change.loyaltyBoost || 0);
+          
+          showEnhancedToast({
+            title: `${isPositive ? '💖' : '💔'} Artist Loyalty ${isPositive ? 'Increased' : 'Decreased'}`,
+            description: `Executive meeting decision ${isPositive ? 'strengthened' : 'weakened'} all artists' loyalty by ${loyaltyValue} points.`,
+            type: isPositive ? 'success' : 'warning',
+            duration: 4000,
+            action: {
+              label: 'View Artists',
+              onClick: () => {
+                console.log('Navigate to artist roster');
+              }
+            }
+          });
+        }, (projectCompletions.length + revenueChanges.length + achievements.length + moodChanges.length) * 1500 + index * 800);
       });
 
       // Show month summary action if significant activity

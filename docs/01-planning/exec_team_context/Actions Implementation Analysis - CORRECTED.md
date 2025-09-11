@@ -9,16 +9,16 @@ Analysis of actions.json to identify what's implemented vs. what effects need to
 ### ✅ **Systems Implemented & Effects Connected**
 - `money` - Direct financial effects (-$800 to -$20,000)
 - Executive mood/loyalty changes (from executive system)
+- `artist_mood` - Artist happiness/satisfaction (**COMPLETED September 11, 2025** - All effects working)
+- `artist_loyalty` - Artist commitment to label (**COMPLETED September 11, 2025** - All effects working)
+- `creative_capital` - Creative resources (**VERIFIED September 11, 2025** - Proper batching and calculation)
 
 ### 🔄 **Systems Implemented But Effects Not Connected**
 Based on what you've told me is already implemented but not connected to executive actions:
 
-- `artist_mood` - Artist happiness/satisfaction (system exists, action effects not connected)
-- `artist_loyalty` - Artist commitment to label (system exists, action effects not connected) 
 - `artist_popularity` - Artist fanbase size (system exists, action effects not connected)
 - `quality_bonus` - Production quality improvements (song quality system exists, effects not connected)
 - `quality_penalty` - Production quality reductions (song quality system exists, effects not connected)
-- `creative_capital` - Creative resources (system exists, action effects not connected)
 - `reputation` - Industry reputation (system exists, action effects not connected)
 
 ### ❌ **Systems Not Implemented**

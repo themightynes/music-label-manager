@@ -98,6 +98,9 @@ export const useGameStore = create<GameStore>()(
             executives: executives
           });
           
+          console.log('[DEBUG] loadGame executives response status:', executivesResponse.ok);
+          console.log('[DEBUG] loadGame executives data:', executives);
+          
           // Ensure usedFocusSlots is synced with selectedActions (should be 0 when loading)
           const syncedGameState = {
             ...data.gameState,

@@ -86,9 +86,42 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
 
   const renderEffectBadge = (effect: string, value: number) => {
     const isPositive = value > 0;
-    const color = isPositive ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger';
     const sign = isPositive ? '+' : '';
     
+    // Enhanced handling for artist mood and loyalty effects
+    if (effect === 'artist_mood') {
+      const color = isPositive ? 'bg-green-400/20 text-green-400 border border-green-400/30' : 'bg-red-400/20 text-red-400 border border-red-400/30';
+      return (
+        <Badge className={`text-xs px-2 py-1 rounded-full ${color} flex items-center gap-1`}>
+          <i className="fas fa-smile text-xs"></i>
+          Mood: {sign}{value}
+        </Badge>
+      );
+    }
+    
+    if (effect === 'artist_loyalty') {
+      const color = isPositive ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-red-400/20 text-red-400 border border-red-400/30';
+      return (
+        <Badge className={`text-xs px-2 py-1 rounded-full ${color} flex items-center gap-1`}>
+          <i className="fas fa-heart text-xs"></i>
+          Loyalty: {sign}{value}
+        </Badge>
+      );
+    }
+    
+    // Special handling for money effects
+    if (effect === 'money') {
+      const color = isPositive ? 'bg-green-400/20 text-green-400 border border-green-400/30' : 'bg-red-400/20 text-red-400 border border-red-400/30';
+      return (
+        <Badge className={`text-xs px-2 py-1 rounded-full ${color} flex items-center gap-1`}>
+          <i className="fas fa-dollar-sign text-xs"></i>
+          ${Math.abs(value).toLocaleString()}
+        </Badge>
+      );
+    }
+    
+    // Default handling for other effects
+    const color = isPositive ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger';
     return (
       <Badge className={`text-xs px-2 py-1 rounded-full ${color}`}>
         {sign}{value} {effect}
@@ -149,14 +182,16 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
                   </div>
                   <div className="ml-4 flex flex-col items-end space-y-1">
                     {Object.entries(choice.effects_immediate || {}).map(([effect, value]) => (
-                      <div key={effect}>
+                      <div key={effect} className="flex items-center gap-1">
+                        <span className="text-xs text-green-400">IMMEDIATE:</span>
                         {renderEffectBadge(effect, value as number)}
                       </div>
                     ))}
                     {Object.entries(choice.effects_delayed || {}).map(([effect, value]) => (
-                      <Badge key={effect} className="text-xs bg-warning/10 text-warning px-2 py-1 rounded-full">
-                        Later: {(value as number) > 0 ? '+' : ''}{value as number} {effect}
-                      </Badge>
+                      <div key={effect} className="flex items-center gap-1">
+                        <span className="text-xs text-orange-400">Later:</span>
+                        {renderEffectBadge(effect, value as number)}
+                      </div>
                     ))}
                   </div>
                 </div>

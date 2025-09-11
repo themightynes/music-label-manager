@@ -110,16 +110,31 @@ export class GameEngine {
       revenue: 0,
       expenses: 0,
       reputationChanges: {},
-      events: [],
-      usedExecutives: new Set<string>() // Track which executives were used this month
+      events: []
     };
+
+    // Initialize runtime tracking for executive usage (not in interface)
+    (summary as any).usedExecutives = new Set<string>();
 
     // Reset monthly values
     this.gameState.usedFocusSlots = 0;
     this.gameState.currentMonth = (this.gameState.currentMonth || 0) + 1;
 
-    // Process each action
-    for (const action of monthlyActions) {
+    // PHASE 1: Process role_meeting actions first (executive meetings)
+    const meetingActions = monthlyActions.filter(action => action.actionType === 'role_meeting');
+    const otherActions = monthlyActions.filter(action => action.actionType !== 'role_meeting');
+    
+    console.log(`[MONTHLY ADVANCE] Processing ${meetingActions.length} meeting actions first, then ${otherActions.length} other actions`);
+    
+    for (const action of meetingActions) {
+      await this.processAction(action, summary, dbTransaction);
+    }
+    
+    // Apply any artist mood/loyalty changes from meetings immediately to database
+    await this.applyArtistChangesToDatabase(summary, dbTransaction);
+    
+    // PHASE 2: Process all other actions
+    for (const action of otherActions) {
       await this.processAction(action, summary, dbTransaction);
     }
 
@@ -571,14 +586,47 @@ export class GameEngine {
           this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + value);
           break;
         case 'artist_mood':
-          // Store artist mood changes in the summary for database update
+          // Enhanced effect processing with validation and logging
           if (!summary.artistChanges) summary.artistChanges = {};
-          summary.artistChanges.mood = (summary.artistChanges.mood || 0) + value;
+          const previousMoodChange = summary.artistChanges.mood || 0;
+          summary.artistChanges.mood = previousMoodChange + value;
+          
+          // Add comprehensive logging
+          console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.mood})`);
+          
+          // Add to summary changes for UI display
+          summary.changes.push({
+            type: 'mood',
+            description: `Artist morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            amount: value
+          });
+          
+          // Validation: Warn if accumulated changes are extreme
+          if (Math.abs(summary.artistChanges.mood) > 10) {
+            console.warn(`[EFFECT VALIDATION] Large accumulated mood change: ${summary.artistChanges.mood}`);
+          }
           break;
+          
         case 'artist_loyalty':
-          // Store artist loyalty changes in the summary for database update
+          // Enhanced effect processing with validation and logging
           if (!summary.artistChanges) summary.artistChanges = {};
-          summary.artistChanges.loyalty = (summary.artistChanges.loyalty || 0) + value;
+          const previousLoyaltyChange = summary.artistChanges.loyalty || 0;
+          summary.artistChanges.loyalty = previousLoyaltyChange + value;
+          
+          // Add comprehensive logging
+          console.log(`[EFFECT PROCESSING] Artist loyalty effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.loyalty})`);
+          
+          // Add to summary changes for UI display (using mood type with loyaltyBoost field)
+          summary.changes.push({
+            type: 'mood',
+            description: `Artist loyalty ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            loyaltyBoost: value
+          });
+          
+          // Validation: Warn if accumulated changes are extreme
+          if (Math.abs(summary.artistChanges.loyalty) > 10) {
+            console.warn(`[EFFECT VALIDATION] Large accumulated loyalty change: ${summary.artistChanges.loyalty}`);
+          }
           break;
       }
     }
@@ -2196,6 +2244,87 @@ export class GameEngine {
     this.gameState.flags = flags.filter(
       (f: any) => f.triggerMonth !== this.gameState.currentMonth
     ) as any;
+  }
+
+  /**
+   * Apply global artist mood/loyalty changes from executive meetings to database
+   * This processes changes accumulated in summary.artistChanges.mood/loyalty
+   * and applies them to ALL artists immediately
+   */
+  private async applyArtistChangesToDatabase(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    // Check if there are any artist changes to apply
+    if (!summary.artistChanges || (!summary.artistChanges.mood && !summary.artistChanges.loyalty)) {
+      return;
+    }
+
+    // Get artists from storage
+    if (!this.storage || !this.storage.getArtistsByGame) {
+      console.warn('[ARTIST CHANGES] Storage not available for artist updates');
+      return;
+    }
+    
+    const artists = await this.storage.getArtistsByGame(this.gameState.id);
+    if (!artists || artists.length === 0) {
+      console.log('[ARTIST CHANGES] No artists found for mood/loyalty updates');
+      return;
+    }
+
+    const moodChange = summary.artistChanges.mood || 0;
+    const loyaltyChange = summary.artistChanges.loyalty || 0;
+
+    console.log(`[ARTIST CHANGES] Applying global changes: mood ${moodChange}, loyalty ${loyaltyChange} to ${artists.length} artists`);
+
+    // Apply changes to all artists
+    for (const artist of artists) {
+      const updates: any = {};
+      let hasUpdates = false;
+
+      // Apply mood change
+      if (moodChange !== 0) {
+        const currentMood = artist.mood || 50;
+        const newMood = Math.max(0, Math.min(100, currentMood + moodChange));
+        updates.mood = newMood;
+        hasUpdates = true;
+        
+        console.log(`[ARTIST CHANGES] ${artist.name}: mood ${currentMood} → ${newMood} (${moodChange > 0 ? '+' : ''}${moodChange})`);
+      }
+
+      // Apply loyalty change
+      if (loyaltyChange !== 0) {
+        const currentLoyalty = artist.loyalty || 50;
+        const newLoyalty = Math.max(0, Math.min(100, currentLoyalty + loyaltyChange));
+        updates.loyalty = newLoyalty;
+        hasUpdates = true;
+        
+        console.log(`[ARTIST CHANGES] ${artist.name}: loyalty ${currentLoyalty} → ${newLoyalty} (${loyaltyChange > 0 ? '+' : ''}${loyaltyChange})`);
+      }
+
+      // Update the artist in database
+      if (hasUpdates && this.storage.updateArtist) {
+        await this.storage.updateArtist(artist.id, updates);
+      }
+    }
+
+    // Add summary entries for the changes
+    if (moodChange !== 0) {
+      summary.changes.push({
+        type: 'mood',
+        description: `Executive meeting ${moodChange > 0 ? 'boosted' : 'lowered'} all artists' mood (${moodChange > 0 ? '+' : ''}${moodChange})`,
+        amount: moodChange
+      });
+    }
+
+    if (loyaltyChange !== 0) {
+      summary.changes.push({
+        type: 'mood',
+        description: `Executive meeting ${loyaltyChange > 0 ? 'boosted' : 'lowered'} all artists' loyalty (${loyaltyChange > 0 ? '+' : ''}${loyaltyChange})`,
+        loyaltyBoost: loyaltyChange
+      });
+    }
+
+    // Clear the global changes since they've been applied
+    summary.artistChanges.mood = 0;
+    summary.artistChanges.loyalty = 0;
   }
 
   /**

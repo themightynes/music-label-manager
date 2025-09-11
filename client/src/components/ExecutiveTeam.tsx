@@ -77,11 +77,12 @@ interface ExecutiveTeamProps {
 }
 
 export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps) {
-  const { openDialogue, gameState, executives, backToMeetingsFor } = useGameStore();
+  const { openDialogue, gameState, executives, backToMeetingsFor, loadGame } = useGameStore();
   const [hoveredExec, setHoveredExec] = useState<string | null>(null);
   const [selectedExecutive, setSelectedExecutive] = useState<Executive | null>(null);
   const [availableMeetings, setAvailableMeetings] = useState<Meeting[]>([]);
   const [loadingMeetings, setLoadingMeetings] = useState(false);
+  const [executivesLoaded, setExecutivesLoaded] = useState(false);
   
   // Method to reopen meeting selection for a specific executive
   const reopenMeetingSelection = async (executiveId: string) => {
@@ -101,14 +102,36 @@ export function ExecutiveTeam({ selectedActions, maxSlots }: ExecutiveTeamProps)
     }
   }, [backToMeetingsFor]);
   
+  // Load executives if they're missing but we have a game state
+  useEffect(() => {
+    const loadExecutivesIfMissing = async () => {
+      if (gameState?.id && (!executives || executives.length === 0) && !executivesLoaded) {
+        console.log('[ExecutiveTeam] Executives missing, triggering reload for gameId:', gameState.id);
+        setExecutivesLoaded(true); // Prevent infinite loops
+        try {
+          await loadGame(gameState.id);
+          console.log('[ExecutiveTeam] Executives reload completed');
+        } catch (error) {
+          console.error('[ExecutiveTeam] Failed to reload executives:', error);
+          setExecutivesLoaded(false); // Allow retry on next render
+        }
+      }
+    };
+    
+    loadExecutivesIfMissing();
+  }, [gameState?.id, executives, executivesLoaded, loadGame]);
+  
   const slotsUsed = selectedActions.length;
   const slotsAvailable = maxSlots - slotsUsed;
   
   // Map database executives to get mood/loyalty data
   console.log('[ExecutiveTeam] Executives from store:', executives);
+  console.log('[ExecutiveTeam] Executives count:', executives?.length || 0);
+  console.log('[ExecutiveTeam] First executive sample:', executives?.[0]);
   const executiveData: Record<string, any> = {};
   executives?.forEach(exec => {
     executiveData[exec.role] = exec;
+    console.log('[ExecutiveTeam] Mapping executive:', exec.role, 'mood:', exec.mood, 'loyalty:', exec.loyalty);
   });
   console.log('[ExecutiveTeam] ExecutiveData mapping:', executiveData);
   
