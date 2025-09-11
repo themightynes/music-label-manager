@@ -7,45 +7,52 @@ This document outlines the implementation plan for integrating artist mood effec
 
 ## 🎯 Objective
 
-Implement artist mood mechanics from existing `data/actions.json` definitions into the current user meeting choice system, ensuring mood effects are properly processed during monthly advances and reflected in the UI.
+Implement artist mood and loyalty mechanics from existing `data/actions.json` definitions into the current user meeting choice system, ensuring both types of effects are properly processed during monthly advances and reflected in the UI. **Key requirement**: Executive meeting effects must be applied BEFORE any project processing to ensure artist state changes affect subsequent game mechanics.
 
 ## 📊 Current State Analysis
 
-### Artist Mood Effects in actions.json
+### Artist Mood & Loyalty Effects in actions.json
 
-From comprehensive analysis of `data/actions.json`, the following artist mood effects exist:
+From comprehensive analysis of `data/actions.json`, the following artist effects exist:
 
-| Action | Choice | Effect Type | Mood Change | Context |
-|--------|--------|-------------|-------------|---------|
-| ceo_priorities | studio_first | delayed | +2 | Quality focus boosts morale |
-| ceo_priorities | tour_first | delayed | -1 | Market testing stress |
-| ceo_crisis | emergency_auditions | delayed | +3 | Crisis resolution relieves artists |
-| ceo_crisis | acoustic_pivot | delayed | -2 | Forced creative change |
-| ceo_expansion | profitable_path | delayed | -1 | Commercialization disappointment |
-| ar_single_choice | lean_commercial | immediate | -2 | Creative compromise |
-| ar_genre_shift | chase_trends | immediate | -3 | Artistic integrity loss |
-| cco_creative_clash | producer_expertise | immediate | -2 | Creative control conflict |
-| cco_creative_clash | hybrid_approach | delayed | +1 | Collaborative resolution |
+| Action | Choice | Mood Change | Loyalty Change | Context |
+|--------|--------|-------------|----------------|---------|
+| ceo_priorities | studio_first | +2 | - | Quality focus boosts morale |
+| ceo_priorities | tour_first | -1 | - | Market testing stress |
+| ceo_crisis | emergency_auditions | +3 | - | Crisis resolution relieves artists |
+| ceo_crisis | acoustic_pivot | -2 | - | Forced creative change |
+| ceo_expansion | profitable_path | -1 | - | Commercialization disappointment |
+| ar_single_choice | lean_commercial | -2 | - | Creative compromise |
+| ar_genre_shift | chase_trends | -3 | - | Artistic integrity loss |
+| cco_creative_clash | artist_vision | - | +2 | Trust in artist instincts |
+| cco_creative_clash | producer_expertise | -2 | - | Creative control conflict |
+| cco_creative_clash | hybrid_approach | +1 | - | Collaborative resolution |
 
 **Key Patterns:**
-- **Range**: -3 to +3 mood changes
-- **Timing**: Both immediate and delayed effects
+- **Mood Range**: -3 to +3 changes
+- **Loyalty Range**: +2 (only positive loyalty effects found)
+- **Timing**: All effects are immediate (applied during month processing)
 - **Context**: Generally negative for commercial/restrictive choices, positive for supportive/creative choices
 
 ### Existing Infrastructure Assessment
 
 #### ✅ **Database Layer - COMPLETE**
 ```typescript
-// shared/schema.ts:31
-mood: integer("mood").default(50), // 0-100 range, default 50
+// shared/schema.ts:31-32 
+mood: integer("mood").default(50),     // 0-100 range, default 50
+loyalty: integer("loyalty").default(50), // 0-100 range, default 50
 ```
 
 #### ✅ **Game Engine Processing - COMPLETE**
 ```typescript
-// shared/engine/game-engine.ts:573-576
+// shared/engine/game-engine.ts:573-582
 case 'artist_mood':
   if (!summary.artistChanges) summary.artistChanges = {};
   summary.artistChanges.mood = (summary.artistChanges.mood || 0) + value;
+  break;
+case 'artist_loyalty':
+  if (!summary.artistChanges) summary.artistChanges = {};
+  summary.artistChanges.loyalty = (summary.artistChanges.loyalty || 0) + value;
   break;
 ```
 
@@ -93,21 +100,25 @@ mood: artist.mood || 50,
 
 ## 🏗️ Implementation Architecture
 
-### Flow Diagram
+### Flow Diagram (Updated Order of Operations)
 ```
-User Meeting Choice
+Monthly Advance Starts
        ↓
-Choice Effects (artist_mood: +/-X)
+PHASE 1: Process ALL Executive Meeting Choices
        ↓
-GameEngine.processAction()
+User Meeting Choice → Choice Effects (artist_mood/loyalty: +/-X)
        ↓
-applyEffects() → summary.artistChanges.mood
+GameEngine.processAction() → applyEffects()
        ↓
-processMonthlyMoodChanges()
+summary.artistChanges.{mood,loyalty} accumulation
        ↓
-Database Update (artists.mood)
+Apply Artist Changes to Database (BEFORE project processing)
        ↓
-UI Refresh (mood display updates)
+PHASE 2: Project Processing (with updated artist states)
+       ↓
+Project Advancement, Releases, etc.
+       ↓
+PHASE 3: Final calculations and UI updates
 ```
 
 ### Technical Integration Points
@@ -126,93 +137,138 @@ UI Refresh (mood display updates)
 - Player-selected (choose which artist is affected)
 
 #### 3. Effect Timing Implementation
-**Immediate Effects**: Applied during `applyEffects()` processing
-**Delayed Effects**: Applied during `processMonthlyMoodChanges()`
-**Status**: ✅ Both patterns already implemented
+**All Effects**: Immediate - applied during `applyEffects()` processing in PHASE 1
+**Database Update**: Applied immediately after effect accumulation, before project processing
+**Status**: ✅ Simplified to immediate-only for clearer cause-and-effect relationships
 
 ## 📋 Step-by-Step Implementation Roadmap
 
-### Phase 1: Verification & Testing ⏱️ 2-3 hours
+### Phase 1: Order of Operations & Unified Effect Processing ⏱️ 6-8 hours
 
-#### 1.1 Verify Choice Effect Flow
+#### 1.1 Restructure Monthly Advance Flow
 ```typescript
-// Test in shared/engine/game-engine.ts
-console.log('[ARTIST MOOD] Processing choice effects:', choiceEffects);
-if (choiceEffects.effects_immediate?.artist_mood) {
-  console.log('[ARTIST MOOD] Immediate effect:', choiceEffects.effects_immediate.artist_mood);
+// shared/engine/game-engine.ts:97-200 - RESTRUCTURED advanceMonth()
+async advanceMonth(monthlyActions: GameEngineAction[], dbTransaction?: any) {
+  console.log('[GAME-ENGINE] Starting month advancement - PHASE 1: Executive Decisions');
+  
+  // PHASE 1: Process ALL executive meeting choices FIRST
+  for (const action of monthlyActions) {
+    if (action.actionType === 'role_meeting') {
+      console.log('[GAME-ENGINE] Processing executive meeting:', action);
+      await this.processAction(action, summary, dbTransaction);
+    }
+  }
+  
+  // Apply artist mood/loyalty changes to database BEFORE project processing
+  if (summary.artistChanges) {
+    await this.applyArtistChangesToDatabase(summary.artistChanges, dbTransaction);
+  }
+  
+  console.log('[GAME-ENGINE] Starting PHASE 2: Project Processing');
+  
+  // PHASE 2: Now process projects with updated artist states
+  await this.advanceProjectStages(summary, dbTransaction);
+  await this.processPlannedReleases(summary, dbTransaction);
+  
+  // PHASE 3: Process remaining non-meeting actions
+  for (const action of monthlyActions) {
+    if (action.actionType !== 'role_meeting') {
+      await this.processAction(action, summary, dbTransaction);
+    }
+  }
+  
+  // PHASE 4: Final calculations and cleanup
+  await this.processMonthlyMoodChanges(summary);
 }
 ```
 
-**Tasks:**
-- [ ] Add logging to `processAction()` and `applyEffects()`
-- [ ] Test executive meeting with cco_creative_clash action
-- [ ] Verify mood effects appear in `summary.artistChanges.mood`
-- [ ] Confirm database updates occur
-
-#### 1.2 Artist Targeting Investigation
-**Investigate current behavior:**
+#### 1.2 Add Unified Artist Database Update Method
 ```typescript
-// In processMonthlyMoodChanges()
-for (const artist of artists) {
-  // Does this apply mood changes to ALL artists?
-  // Should it be more targeted?
+// shared/engine/game-engine.ts - NEW METHOD
+private async applyArtistChangesToDatabase(
+  artistChanges: { mood?: number; loyalty?: number }, 
+  dbTransaction: any
+): Promise<void> {
+  if (!this.storage || !artistChanges) return;
+  
+  // Get all artists for the game (global effects for now)
+  const artists = await this.storage.getArtistsByGame(this.gameState.id);
+  
+  for (const artist of artists) {
+    const updates: any = {};
+    
+    if (artistChanges.mood !== undefined) {
+      const newMood = Math.max(0, Math.min(100, (artist.mood || 50) + artistChanges.mood));
+      updates.mood = newMood;
+      console.log(`[ARTIST MOOD] ${artist.name}: ${artist.mood || 50} → ${newMood}`);
+    }
+    
+    if (artistChanges.loyalty !== undefined) {
+      const newLoyalty = Math.max(0, Math.min(100, (artist.loyalty || 50) + artistChanges.loyalty));
+      updates.loyalty = newLoyalty;
+      console.log(`[ARTIST LOYALTY] ${artist.name}: ${artist.loyalty || 50} → ${newLoyalty}`);
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      await this.storage.updateArtist(artist.id, updates);
+    }
+  }
 }
 ```
 
-**Decision Points:**
-- Global mood effects (all artists affected equally)
-- OR contextual targeting (specific artists based on meeting context)
-
-### Phase 2: Artist Targeting Implementation ⏱️ 4-6 hours
-
-#### 2.1 Implement Artist Context Association
+#### 1.3 Enhance Effect Processing (Single Touch)
 ```typescript
-// Option 1: Global Effects (Simplest - RECOMMENDED)
-// Current implementation in applyEffects() applies to summary.artistChanges.mood
-// processMonthlyMoodChanges() applies to all artists
-
-// Option 2: Contextual Targeting (More Complex)
-interface ArtistMoodEffect {
-  artistId?: string;    // Specific artist
-  moodChange: number;
-  reason: string;
-}
-```
-
-**Recommended Approach**: Start with global effects for simplicity, matching how reputation and other game-wide effects work.
-
-#### 2.2 Update Effect Processing
-```typescript
-// shared/engine/game-engine.ts - enhance existing applyEffects()
+// shared/engine/game-engine.ts:573-582 - Enhanced applyEffects()
 case 'artist_mood':
   if (!summary.artistChanges) summary.artistChanges = {};
   summary.artistChanges.mood = (summary.artistChanges.mood || 0) + value;
-  // Add context logging
   summary.changes.push({
     type: 'artist_mood',
     description: `Artist morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision`,
     amount: value
   });
   break;
+case 'artist_loyalty':
+  if (!summary.artistChanges) summary.artistChanges = {};
+  summary.artistChanges.loyalty = (summary.artistChanges.loyalty || 0) + value;
+  summary.changes.push({
+    type: 'artist_loyalty',
+    description: `Artist loyalty ${value > 0 ? 'increased' : 'decreased'} from meeting decision`,
+    amount: value
+  });
+  break;
 ```
 
-### Phase 3: UI Integration Enhancement ⏱️ 3-4 hours
+### Phase 2: UI Integration Enhancement ⏱️ 3-4 hours
 
-#### 3.1 Meeting Choice Feedback
+#### 2.1 Unified Choice Effect Preview (Single Touch)
 ```typescript
-// client/src/components/ExecutiveTeam.tsx
-// Add mood effect preview to choice buttons
-{choice.effects_immediate?.artist_mood && (
-  <div className="text-xs text-orange-400">
-    Artist Mood: {choice.effects_immediate.artist_mood > 0 ? '+' : ''}{choice.effects_immediate.artist_mood}
+// client/src/components/ExecutiveTeam.tsx - Enhanced choice preview
+const renderEffectPreviews = (choice) => (
+  <div className="effects-preview text-xs space-y-1">
+    {choice.effects_immediate?.money && (
+      <div className="money-effect text-green-400">
+        ${choice.effects_immediate.money.toLocaleString()}
+      </div>
+    )}
+    {choice.effects_immediate?.artist_mood && (
+      <div className={`artist-effect ${choice.effects_immediate.artist_mood > 0 ? 'text-green-400' : 'text-red-400'}`}>
+        Mood: {choice.effects_immediate.artist_mood > 0 ? '+' : ''}{choice.effects_immediate.artist_mood}
+      </div>
+    )}
+    {choice.effects_immediate?.artist_loyalty && (
+      <div className={`artist-effect ${choice.effects_immediate.artist_loyalty > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+        Loyalty: {choice.effects_immediate.artist_loyalty > 0 ? '+' : ''}{choice.effects_immediate.artist_loyalty}
+      </div>
+    )}
   </div>
-)}
+);
 ```
 
-#### 3.2 Month Summary Integration
+#### 2.2 Enhanced Month Summary (Unified Display)
 ```typescript
-// Enhance month summary to show mood changes
-{summary.changes.filter(c => c.type === 'artist_mood').map(change => (
+// Enhance month summary to show both mood and loyalty changes
+{summary.changes.filter(c => c.type === 'artist_mood' || c.type === 'artist_loyalty').map(change => (
   <div key={change.description} className="flex justify-between">
     <span>{change.description}</span>
     <span className={change.amount > 0 ? 'text-green-500' : 'text-red-500'}>
@@ -222,38 +278,56 @@ case 'artist_mood':
 ))}
 ```
 
-#### 3.3 Artist Roster Updates
+#### 2.3 Artist Roster Updates
 **Status**: ✅ Already displays mood with color coding
-**Enhancement**: Add mood change indicators after meetings
+**Enhancement**: Add mood AND loyalty change indicators after meetings
 
-### Phase 4: Testing & Validation ⏱️ 2-3 hours
+### Phase 3: Testing & Validation ⏱️ 2-3 hours
 
-#### 4.1 Integration Testing
+#### 3.1 Integration Testing (Unified Test Cases)
 ```typescript
-// Test script: scripts/test-artist-mood-integration.ts
-const testScenarios = [
+// Test script: scripts/test-artist-mood-loyalty-integration.ts
+const testCcoCreativeClash = [
   {
-    action: 'cco_creative_clash',
-    choice: 'producer_expertise',
-    expectedMoodChange: -2,
-    effectType: 'immediate'
+    choice: 'artist_vision',
+    expectedMoodChange: 0,
+    expectedLoyaltyChange: +2,
+    description: 'Trust in artist instincts should boost loyalty'
   },
   {
-    action: 'cco_creative_clash', 
+    choice: 'producer_expertise', 
+    expectedMoodChange: -2,
+    expectedLoyaltyChange: 0,
+    description: 'Creative control conflict should hurt mood'
+  },
+  {
     choice: 'hybrid_approach',
     expectedMoodChange: +1,
-    effectType: 'delayed'
+    expectedLoyaltyChange: 0,
+    description: 'Collaborative resolution should improve mood'
   }
 ];
 ```
 
-#### 4.2 Validation Checklist
-- [ ] Immediate mood effects apply during month processing
-- [ ] Delayed mood effects apply in next month
-- [ ] UI shows updated mood values
-- [ ] Database persists mood changes
-- [ ] Multiple mood effects accumulate correctly
-- [ ] Mood stays within 0-100 bounds
+#### 3.2 Order of Operations Validation
+```typescript
+// Verify executive meetings process BEFORE projects
+const validateOrderOfOperations = async () => {
+  // 1. Start month with artist mood = 50
+  // 2. Select choice that changes mood to 48 (producer_expertise: -2)
+  // 3. Verify artist mood = 48 BEFORE project processing starts
+  // 4. Confirm project quality calculations use updated mood value
+};
+```
+
+#### 3.3 Validation Checklist
+- [ ] Executive meeting effects process BEFORE project advancement
+- [ ] Both mood and loyalty effects apply correctly
+- [ ] UI shows updated mood/loyalty values immediately
+- [ ] Database persists both mood and loyalty changes
+- [ ] Multiple effects accumulate correctly in single month
+- [ ] Mood and loyalty stay within 0-100 bounds
+- [ ] Project processing uses updated artist states
 
 ## 🎛️ Technical Specifications
 
@@ -275,38 +349,50 @@ const testScenarios = [
 
 ## 📋 Implementation Examples
 
-### Example 1: cco_creative_clash Integration
+### Example 1: cco_creative_clash Full Integration
 ```typescript
-// When user selects "producer_expertise" choice
-const choiceEffects = {
-  effects_immediate: { 
-    money: -3000, 
-    artist_mood: -2 
-  },
-  effects_delayed: { 
-    quality_bonus: 3, 
-    radio_ready: 1 
-  }
+// All three choices from cco_creative_clash action:
+
+// Choice 1: "artist_vision" - Trust the artist's instincts
+const choice1Effects = {
+  effects_immediate: { artist_loyalty: 2 },
+  effects_delayed: { authenticity_bonus: 2, commercial_risk: 1 }
 };
 
-// GameEngine.applyEffects() processes both money and artist_mood
-// Result: $3000 deducted, artist mood decreases by 2 points immediately
+// Choice 2: "producer_expertise" - Insist on professional overdubs  
+const choice2Effects = {
+  effects_immediate: { money: -3000, artist_mood: -2 },
+  effects_delayed: { quality_bonus: 3, radio_ready: 1 }
+};
+
+// Choice 3: "hybrid_approach" - Compromise solution
+const choice3Effects = {
+  effects_immediate: { money: -1500, artist_mood: 1 },
+  effects_delayed: { quality_bonus: 1 }
+};
+
+// GameEngine processes all immediate effects in PHASE 1 before project processing
 ```
 
-### Example 2: UI Choice Preview
+### Example 2: Unified UI Choice Preview
 ```tsx
-// In ExecutiveTeam.tsx choice button
+// In ExecutiveTeam.tsx choice button - handles both mood and loyalty
 <button onClick={() => selectChoice(choice)}>
   <div>{choice.label}</div>
   <div className="effects-preview">
     {choice.effects_immediate?.money && (
-      <span className="money-effect">
+      <span className="money-effect text-green-400">
         ${choice.effects_immediate.money.toLocaleString()}
       </span>
     )}
     {choice.effects_immediate?.artist_mood && (
-      <span className={`mood-effect ${choice.effects_immediate.artist_mood > 0 ? 'positive' : 'negative'}`}>
+      <span className={`artist-effect ${choice.effects_immediate.artist_mood > 0 ? 'text-green-400' : 'text-red-400'}`}>
         Mood: {choice.effects_immediate.artist_mood > 0 ? '+' : ''}{choice.effects_immediate.artist_mood}
+      </span>
+    )}
+    {choice.effects_immediate?.artist_loyalty && (
+      <span className={`artist-effect ${choice.effects_immediate.artist_loyalty > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+        Loyalty: {choice.effects_immediate.artist_loyalty > 0 ? '+' : ''}{choice.effects_immediate.artist_loyalty}
       </span>
     )}
   </div>
@@ -374,33 +460,35 @@ const choiceEffects = {
 
 ## 🚀 Deployment Strategy
 
-### Phase 1: Backend Integration (Week 1)
-1. Implement verification and testing
-2. Enhance artist targeting logic
-3. Add comprehensive logging
+### Phase 1: Backend Integration (Days 1-2)
+1. Restructure monthly advance order of operations
+2. Implement unified mood+loyalty processing
+3. Add comprehensive logging and validation
 
-### Phase 2: Frontend Enhancement (Week 2)  
-1. Add choice effect previews
-2. Enhance month summary display
-3. Improve mood change feedback
+### Phase 2: Frontend Enhancement (Days 3-4)  
+1. Add unified choice effect previews (mood + loyalty)
+2. Enhance month summary display for both systems
+3. Improve artist state change feedback
 
-### Phase 3: Testing & Polish (Week 3)
-1. Comprehensive integration testing
-2. Performance validation
-3. User experience refinement
+### Phase 3: Testing & Polish (Days 4-5)
+1. Comprehensive integration testing with order validation
+2. Test all mood and loyalty effects from actions.json
+3. Performance validation and user experience refinement
 
 ## 📝 Conclusion
 
-The artist mood integration implementation is primarily a **verification and enhancement task** rather than new system development. The core infrastructure already exists and functions correctly. 
+The unified artist mood & loyalty integration is primarily an **order of operations fix and single-touch enhancement** rather than new system development. The core infrastructure already exists for both mood and loyalty systems.
 
 **Key Success Factors:**
-1. Leverage existing patterns and systems
-2. Start with simple global effects
-3. Focus on user feedback and transparency
-4. Thorough testing of timing and accumulation
+1. **Unified Approach**: Handle both mood and loyalty in single implementation
+2. **Correct Order**: Executive meetings process BEFORE project advancement
+3. **Immediate Effects**: All effects apply during PHASE 1 for clear causality
+4. **Global Application**: Effects apply to all artists for simplicity
 
-**Estimated Timeline**: 2-3 weeks for complete implementation
-**Estimated Effort**: 12-16 hours of development time
-**Risk Level**: Low (building on proven infrastructure)
+**Revised Estimates:**
+- **Timeline**: 5 days for complete implementation  
+- **Development Effort**: 11-15 hours total
+- **Risk Level**: Low (building on proven infrastructure with simplified approach)
 
-This implementation will significantly enhance the user experience by making artist mood a tangible consequence of executive meeting decisions, adding strategic depth to the choice system while requiring minimal new infrastructure.
+**Enhanced Value:**
+This implementation makes both artist mood AND loyalty tangible consequences of executive meeting decisions, with correct timing ensuring that artist state changes affect subsequent project processing. The unified approach delivers maximum impact with minimal development complexity.
