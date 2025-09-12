@@ -22,76 +22,135 @@ Based on what you've told me is already implemented but not connected to executi
 - `quality_penalty` - Production quality reductions (song quality system exists, effects not connected)
 
 ### ❌ **Systems Not Implemented**
-All other effects from actions.json that don't have underlying systems:
+67 effects from actions.json that don't have underlying systems, organized by logical category:
 
-- `quality_risk` - Risk of quality issues
-- `quality_potential` - Potential for high quality outcomes
-- `industry_respect` - Professional standing (+2)
-- `prestige` - Label prestige level (+1, +2)
-- `authenticity_bonus` - Authentic/organic reputation (+2, +1)
+## 🎯 **Marketing & Media Systems** (15 effects)
+**Core Marketing:**
 - `press_story_flag` - Generates press coverage
-- `press_bias` - Media favorability (+1)
+- `press_bias` - Media favorability (+1)  
 - `press_pickups` - Media pickup likelihood (+2)
 - `viral_boost` - Viral marketing effects (+3)
-- `streaming_boost` - Streaming platform benefits (+2)
-- `playlist_bias` - Playlist placement likelihood (+2)
-- `playlist_guaranteed` - Guaranteed playlist placement
-- `adds_bonus` - Radio/playlist adds bonus (+5)
-- `chart_stability` - Chart position stability (+1)
-- `venue_relationships` - Venue booking relationships (+1)
-- `relationship_stability` - General business relationships (+1)
-- `relationship_building` - Building industry connections (+2)
-- `delay_risk` - Risk of project delays (+1)
-- `variance_up` - Increased outcome variability (+1)
-- `rep_swing` - Reputation volatility (+1)
-- `sellthrough_risk` - Ticket sales risk (+1)
-- `sellthrough_hint` - Ticket sales indicator (+1)
-- `on_time` - On-schedule delivery (+1)
-- `learning_bonus` - Knowledge/experience gain (+1)
-- `talent_potential` - New artist potential (+4, +2)
-- `fan_loyalty` - Fan commitment (+2)
-- `international_rep` - Global reputation (+2)
-- `innovation_bonus` - Creative innovation (+2)
-- `commercial_potential` - Commercial success likelihood (+2)
-- `authenticity_loss` - Loss of authenticity (-1)
-- `niche_dominance` - Dominance in specific genre (+1)
-- `artistic_growth` - Artist development (+1)
-- `radio_ready` - Radio-friendly production (+1)
-- `commercial_risk` - Risk to commercial appeal (+1)
-- `producer_rep` - Producer reputation (+1)
-- `local_favor` - Local market favorability (+1)
-- `ticket_bias` - Ticket sales favorability (+1)
-- `media_skepticism` - Media distrust (+1)
-- `collab_pressure` - Collaboration expectations (+1)
-- `award_chances` - Awards likelihood (+3, +1)
-- `commercial_focus` - Commercial orientation (+1)
-- `prestige_loss` - Loss of prestige (-1)
-- `fan_backlash` - Fan negative reaction (-1)
 - `viral_kill` - Stopping viral content (-2)
-- `apple_relationship` - Apple Music relationship (-1)
+- `media_skepticism` - Media distrust (+1)
+
+**Digital Marketing:**
+- `streaming_boost` - Streaming platform benefits (+2)
+- `artificial_boost` - Artificial metrics boost (+3)
+- `detection_risk` - Risk of detection (+2)
+- `moderate_boost` - Moderate performance boost (+1)
+
+**Brand Positioning:**
 - `premium_positioning` - Premium brand positioning (+1)
 - `reach_limitation` - Limited audience reach (-1)
 - `platform_neutrality` - Platform independence (+1)
 - `discovery_challenge` - Content discovery difficulty (+1)
+- `authenticity_bonus` - Authentic/organic reputation (+2, +1)
+
+## 🎵 **Music Industry Systems** (12 effects)
+**Charts & Radio:**
+- `adds_bonus` - Radio/playlist adds bonus (+5)
+- `chart_stability` - Chart position stability (+1)
+- `playlist_bias` - Playlist placement likelihood (+2)
+- `playlist_guaranteed` - Guaranteed playlist placement  
 - `playlist_bias_next` - Future playlist favorability (+1)
+- `radio_ready` - Radio-friendly production (+1)
+
+**Music Quality & Innovation:**
+- `quality_risk` - Risk of quality issues
+- `quality_potential` - Potential for high quality outcomes
+- `innovation_bonus` - Creative innovation (+2)
+- `commercial_potential` - Commercial success likelihood (+2)
+- `commercial_risk` - Risk to commercial appeal (+1)
+- `commercial_focus` - Commercial orientation (+1)
+
+## 🏆 **Industry Standing Systems** (8 effects)
+**Professional Recognition:**
+- `industry_respect` - Professional standing (+2)
+- `prestige` - Label prestige level (+1, +2)
+- `prestige_loss` - Loss of prestige (-1)
+- `award_chances` - Awards likelihood (+3, +1)
+- `producer_rep` - Producer reputation (+1)
+- `international_rep` - Global reputation (+2)
+
+**Industry Relationships:**
+- `relationship_stability` - General business relationships (+1)
+- `relationship_building` - Building industry connections (+2)
+
+## 🎤 **Live Performance Systems** (5 effects)
+**Venue & Tour Management:**
+- `venue_relationships` - Venue booking relationships (+1)
+- `venue_stability` - Venue relationship stability (+1)
+- `sellthrough_risk` - Ticket sales risk (+1)
+- `sellthrough_hint` - Ticket sales indicator (+1)
+- `ticket_bias` - Ticket sales favorability (+1)
+
+## 👥 **Fan & Artist Systems** (10 effects)
+**Fan Engagement:**
+- `fan_loyalty` - Fan commitment (+2)
+- `fan_backlash` - Fan negative reaction (-1)
+- `collector_loyalty` - Collector fanbase loyalty (+2)
+- `collector_disappointment` - Collector dissatisfaction (-2)
+
+**Artist Development:**
+- `talent_potential` - New artist potential (+4, +2)
+- `artistic_growth` - Artist development (+1)
+- `authenticity_loss` - Loss of authenticity (-1)
+- `control_issues` - Creative control problems (+1)
+- `collab_pressure` - Collaboration expectations (+1)
+
+**Market Positioning:**
+- `local_favor` - Local market favorability (+1)
+
+## ⚡ **Risk & Variance Systems** (8 effects)
+**Project Risk Management:**
+- `delay_risk` - Risk of project delays (+1)
+- `variance_up` - Increased outcome variability (+1)
+- `rep_swing` - Reputation volatility (+1)
+- `timeline_disruption` - Schedule disruption (+1)
+- `blacklist_risk` - Risk of industry blacklisting (-2)
+
+**Performance Variability:**
+- `on_time` - On-schedule delivery (+1)
+- `learning_bonus` - Knowledge/experience gain (+1)
+- `competitor_gain` - Competitor advantage (+1)
+
+## 🎯 **Market Strategy Systems** (6 effects)
+**Genre & Niche:**
+- `niche_dominance` - Dominance in specific genre (+1)
 - `niche_success` - Success in niche markets (+2)
 - `mainstream_miss` - Missing mainstream appeal (-1)
-- `blacklist_risk` - Risk of industry blacklisting (-2)
-- `artificial_boost` - Artificial metrics boost (+3)
-- `detection_risk` - Risk of detection (+2)
-- `moderate_boost` - Moderate performance boost (+1)
+
+**Growth Strategy:**
 - `sustainable_growth` - Sustainable development (+1)
 - `authentic_growth` - Organic growth (+1)
 - `slow_building` - Gradual development (+1)
-- `venue_stability` - Venue relationship stability (+1)
-- `collector_loyalty` - Collector fanbase loyalty (+2)
+
+## 💰 **Business Operations Systems** (3 effects)
+**Financial Management:**
 - `cost_savings` - Financial savings (+1)
-- `collector_disappointment` - Collector dissatisfaction (-2)
 - `staggered_release` - Phased release strategy (+1)
-- `timeline_disruption` - Schedule disruption (+1)
-- `control_issues` - Creative control problems (+1)
-- `competitor_gain` - Competitor advantage (+1)
 - `remix_competition` - Competition from remixes (+1)
+
+## 📱 **Platform Relations Systems** (1 effect)
+**Streaming Platform Management:**
+- `apple_relationship` - Apple Music relationship (-1)
+
+## 📊 **Implementation Priority Assessment**
+
+**High Priority (Game-Ready):**
+1. **Marketing & Media Systems** - Core to music industry simulation
+2. **Music Industry Systems** - Charts, playlists, radio - essential mechanics  
+3. **Fan & Artist Systems** - Direct player engagement impact
+
+**Medium Priority (Strategic):**
+4. **Industry Standing Systems** - Long-term progression mechanics
+5. **Live Performance Systems** - Extends existing venue access system
+6. **Risk & Variance Systems** - Adds strategic depth
+
+**Lower Priority (Polish):**
+7. **Market Strategy Systems** - Niche optimization features
+8. **Business Operations Systems** - Quality-of-life improvements  
+9. **Platform Relations Systems** - Specific platform mechanics
 
 ## Complete Effects List by Action
 
