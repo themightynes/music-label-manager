@@ -9,6 +9,7 @@ import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { MonthSummary } from './MonthSummary';
 import { ProjectCreationModal } from './ProjectCreationModal';
+import { LivePerformanceModal } from './LivePerformanceModal';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -21,6 +22,7 @@ export function Dashboard() {
   const [showMonthSummary, setShowMonthSummary] = useState(false);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [showLivePerformanceModal, setShowLivePerformanceModal] = useState(false);
 
   if (!gameState) {
     return (
@@ -62,6 +64,14 @@ export function Dashboard() {
     } catch (error) {
       console.error('Failed to create new game:', error);
     }
+  };
+
+  // STUB: Live performance creation - will integrate with backend later
+  const handleCreateTour = async (tourData: any) => {
+    console.log('Creating tour:', tourData);
+    // TODO: Integrate with actual tour creation API
+    // For now, just log and close modal
+    setShowLivePerformanceModal(false);
   };
 
   return (
@@ -119,6 +129,15 @@ export function Dashboard() {
               >
                 <i className="fas fa-plus text-sm"></i>
                 <span>Recording Session</span>
+              </Button>
+              
+              {/* Live Performance Button */}
+              <Button
+                onClick={() => setShowLivePerformanceModal(true)}
+                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2"
+              >
+                <i className="fas fa-microphone text-sm"></i>
+                <span>Live Performance</span>
               </Button>
               
               {/* Plan Release Button */}
@@ -283,6 +302,18 @@ export function Dashboard() {
           isCreating={false}
           open={showProjectModal}
           onOpenChange={setShowProjectModal}
+        />
+      )}
+      
+      {/* Live Performance Modal */}
+      {gameState && (
+        <LivePerformanceModal
+          gameState={gameState}
+          artists={artists}
+          onCreateTour={handleCreateTour}
+          isCreating={false}
+          open={showLivePerformanceModal}
+          onOpenChange={setShowLivePerformanceModal}
         />
       )}
       

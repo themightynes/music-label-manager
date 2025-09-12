@@ -20,7 +20,7 @@ interface ProjectCreationModalProps {
 
 export interface ProjectCreationData {
   title: string;
-  type: 'Single' | 'EP' | 'Mini-Tour';
+  type: 'Single' | 'EP';
   artistId: string;
   budgetPerSong: number;  // Per-song budget investment
   totalCost?: number;     // Calculated total project cost
@@ -31,6 +31,7 @@ export interface ProjectCreationData {
 
 // PROJECT_TYPES moved to API - will be fetched from /api/project-types
 // Temporary fallback data with defensive programming
+// NOTE: Mini-Tour removed - now handled by dedicated Live Performance system
 const PROJECT_TYPES_FALLBACK = [
   {
     id: 'Single' as const,
@@ -53,17 +54,6 @@ const PROJECT_TYPES_FALLBACK = [
     minSongs: 3,
     maxSongs: 5,
     defaultSongs: 4
-  },
-  {
-    id: 'Mini-Tour' as const,
-    name: 'Mini-Tour',
-    icon: MapPin,
-    description: 'Small venue tour',
-    duration: '1-2 months',
-    isRecording: false,
-    minSongs: 0,
-    maxSongs: 0,
-    defaultSongs: 0
   }
 ];
 
@@ -167,7 +157,7 @@ export function ProjectCreationModal({
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = open !== undefined ? open : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;
-  const [selectedType, setSelectedType] = useState<'Single' | 'EP' | 'Mini-Tour' | null>(null);
+  const [selectedType, setSelectedType] = useState<'Single' | 'EP' | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string>('');
   const [title, setTitle] = useState('');
   const [budgetPerSong, setBudgetPerSong] = useState(0);
@@ -404,11 +394,11 @@ export function ProjectCreationModal({
     return PRODUCER_TIERS.filter(tier => currentReputation >= tier.unlockReputation);
   };
 
-  const handleTypeSelect = (type: 'Single' | 'EP' | 'Mini-Tour') => {
+  const handleTypeSelect = (type: 'Single' | 'EP') => {
     setSelectedType(type);
     
     // Use API data if available, otherwise fallback to local data
-    const apiKey = type === 'Single' ? 'single' : type === 'EP' ? 'ep' : 'mini_tour';
+    const apiKey = type === 'Single' ? 'single' : 'ep';
     const apiProjectType = projectTypesAPI[apiKey];
     const fallbackProjectType = PROJECT_TYPES.find(p => p.id === type);
     
@@ -417,23 +407,16 @@ export function ProjectCreationModal({
       const songCountDefault = (apiProjectType && 'song_count_default' in apiProjectType) ? apiProjectType.song_count_default : 1;
       setSongCount(songCountDefault);
       
-      // Calculate per-song budget from total budget
-      if (type === 'Single' || type === 'EP') {
-        // For recording projects, convert total to per-song
-        const minPerSong = Math.round(apiProjectType.min / songCountDefault);
-        const maxPerSong = Math.round(apiProjectType.max / songCountDefault);
-        const defaultPerSong = Math.floor((minPerSong + maxPerSong) / 2);
-        setBudgetPerSong(defaultPerSong);
-      } else {
-        // For tours, use total budget
-        const defaultBudget = Math.floor((apiProjectType.min + apiProjectType.max) / 2);
-        setBudgetPerSong(defaultBudget);
-      }
+      // For recording projects, convert total to per-song
+      const minPerSong = Math.round(apiProjectType.min / songCountDefault);
+      const maxPerSong = Math.round(apiProjectType.max / songCountDefault);
+      const defaultPerSong = Math.floor((minPerSong + maxPerSong) / 2);
+      setBudgetPerSong(defaultPerSong);
     } else if (fallbackProjectType) {
       // Fallback to local data
       setSongCount(fallbackProjectType.defaultSongs);
       // Calculate a reasonable default budget
-      setBudgetPerSong(type === 'Single' ? 5000 : type === 'EP' ? 5000 : 10000);
+      setBudgetPerSong(type === 'Single' ? 5000 : 5000);
     }
   };
 
@@ -468,7 +451,7 @@ export function ProjectCreationModal({
   // Check if budget is within valid range
   const isBudgetValid = (() => {
     if (!selectedType) return true; // Don't validate if no type selected
-    const apiKey = selectedType === 'Single' ? 'single' : selectedType === 'EP' ? 'ep' : 'mini_tour';
+    const apiKey = selectedType === 'Single' ? 'single' : 'ep';
     const apiProjectType = projectTypesAPI[apiKey];
     
     if (apiProjectType && selectedProjectType?.isRecording) {
@@ -476,8 +459,6 @@ export function ProjectCreationModal({
       const minPerSong = Math.round(apiProjectType.min / defaultSongs);
       const maxPerSong = Math.round(apiProjectType.max / defaultSongs);
       return budgetPerSong >= minPerSong && budgetPerSong <= maxPerSong;
-    } else if (apiProjectType) {
-      return budgetPerSong >= apiProjectType.min && budgetPerSong <= apiProjectType.max;
     }
     return true;
   })();
@@ -503,14 +484,14 @@ export function ProjectCreationModal({
           {/* Project Type Selection */}
           <div>
             <Label className="text-base font-semibold">Project Type</Label>
-            <div className="grid grid-cols-3 gap-4 mt-2">
+            <div className="grid grid-cols-2 gap-4 mt-2">
               {loadingProjectTypes ? (
-                <div className="col-span-3 text-center py-8">
+                <div className="col-span-2 text-center py-8">
                   <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
                   <p className="text-white/70">Loading project types...</p>
                 </div>
               ) : projectTypesError ? (
-                <div className="col-span-3 text-center py-8">
+                <div className="col-span-2 text-center py-8">
                   <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
                   <p className="text-red-600 mb-4">Failed to load project types</p>
                   <Button onClick={fetchProjectTypes} variant="outline" size="sm">
@@ -520,7 +501,7 @@ export function ProjectCreationModal({
               ) : (
                 PROJECT_TYPES.map((type) => {
                   // Get budget range from API if available
-                  const apiKey = type.id === 'Single' ? 'single' : type.id === 'EP' ? 'ep' : 'mini_tour';
+                  const apiKey = type.id === 'Single' ? 'single' : 'ep';
                   const apiProjectType = projectTypesAPI[apiKey];
                   
                   // Calculate per-song budget range for recording projects
@@ -682,7 +663,7 @@ export function ProjectCreationModal({
                   className={!isBudgetValid && budgetPerSong > 0 ? 'border-red-500' : ''}
                   min={(() => {
                     if (!selectedType) return undefined;
-                    const apiKey = selectedType === 'Single' ? 'single' : selectedType === 'EP' ? 'ep' : 'mini_tour';
+                    const apiKey = selectedType === 'Single' ? 'single' : 'ep';
                     const apiProjectType = projectTypesAPI[apiKey];
                     if (apiProjectType && selectedProjectType?.isRecording) {
                       const defaultSongs = 'song_count_default' in apiProjectType ? apiProjectType.song_count_default : songCount;
@@ -692,7 +673,7 @@ export function ProjectCreationModal({
                   })()}
                   max={(() => {
                     if (!selectedType) return undefined;
-                    const apiKey = selectedType === 'Single' ? 'single' : selectedType === 'EP' ? 'ep' : 'mini_tour';
+                    const apiKey = selectedType === 'Single' ? 'single' : 'ep';
                     const apiProjectType = projectTypesAPI[apiKey];
                     if (apiProjectType && selectedProjectType?.isRecording) {
                       const defaultSongs = 'song_count_default' in apiProjectType ? apiProjectType.song_count_default : songCount;
