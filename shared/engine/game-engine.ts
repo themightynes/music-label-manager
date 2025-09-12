@@ -628,6 +628,28 @@ export class GameEngine {
             console.warn(`[EFFECT VALIDATION] Large accumulated loyalty change: ${summary.artistChanges.loyalty}`);
           }
           break;
+          
+        case 'artist_popularity':
+          // Enhanced effect processing with validation and logging
+          if (!summary.artistChanges) summary.artistChanges = {};
+          const previousPopularityChange = summary.artistChanges.popularity || 0;
+          summary.artistChanges.popularity = previousPopularityChange + value;
+          
+          // Add comprehensive logging
+          console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.popularity})`);
+          
+          // Add to summary changes for UI display
+          summary.changes.push({
+            type: 'popularity',
+            description: `Artist popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            amount: value
+          });
+          
+          // Validation: Warn if accumulated changes are extreme
+          if (Math.abs(summary.artistChanges.popularity) > 10) {
+            console.warn(`[EFFECT VALIDATION] Large accumulated popularity change: ${summary.artistChanges.popularity}`);
+          }
+          break;
       }
     }
   }
@@ -2253,7 +2275,7 @@ export class GameEngine {
    */
   private async applyArtistChangesToDatabase(summary: MonthSummary, dbTransaction?: any): Promise<void> {
     // Check if there are any artist changes to apply
-    if (!summary.artistChanges || (!summary.artistChanges.mood && !summary.artistChanges.loyalty)) {
+    if (!summary.artistChanges || (!summary.artistChanges.mood && !summary.artistChanges.loyalty && !summary.artistChanges.popularity)) {
       return;
     }
 
@@ -2271,8 +2293,9 @@ export class GameEngine {
 
     const moodChange = summary.artistChanges.mood || 0;
     const loyaltyChange = summary.artistChanges.loyalty || 0;
+    const popularityChange = summary.artistChanges.popularity || 0;
 
-    console.log(`[ARTIST CHANGES] Applying global changes: mood ${moodChange}, loyalty ${loyaltyChange} to ${artists.length} artists`);
+    console.log(`[ARTIST CHANGES] Applying global changes: mood ${moodChange}, loyalty ${loyaltyChange}, popularity ${popularityChange} to ${artists.length} artists`);
 
     // Apply changes to all artists
     for (const artist of artists) {
@@ -2299,6 +2322,16 @@ export class GameEngine {
         console.log(`[ARTIST CHANGES] ${artist.name}: loyalty ${currentLoyalty} → ${newLoyalty} (${loyaltyChange > 0 ? '+' : ''}${loyaltyChange})`);
       }
 
+      // Apply popularity change
+      if (popularityChange !== 0) {
+        const currentPopularity = artist.popularity || 0;
+        const newPopularity = Math.max(0, Math.min(100, currentPopularity + popularityChange));
+        updates.popularity = newPopularity;
+        hasUpdates = true;
+        
+        console.log(`[ARTIST CHANGES] ${artist.name}: popularity ${currentPopularity} → ${newPopularity} (${popularityChange > 0 ? '+' : ''}${popularityChange})`);
+      }
+
       // Update the artist in database
       if (hasUpdates && this.storage.updateArtist) {
         await this.storage.updateArtist(artist.id, updates);
@@ -2322,9 +2355,18 @@ export class GameEngine {
       });
     }
 
+    if (popularityChange !== 0) {
+      summary.changes.push({
+        type: 'popularity',
+        description: `Executive meeting ${popularityChange > 0 ? 'boosted' : 'lowered'} all artists' popularity (${popularityChange > 0 ? '+' : ''}${popularityChange})`,
+        amount: popularityChange
+      });
+    }
+
     // Clear the global changes since they've been applied
     summary.artistChanges.mood = 0;
     summary.artistChanges.loyalty = 0;
+    summary.artistChanges.popularity = 0;
   }
 
   /**
@@ -3850,7 +3892,7 @@ export interface MonthSummary {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'executive_interaction';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction';
   description: string;
   amount?: number;
   roleId?: string;

@@ -79,8 +79,8 @@
         {
           "id": "coachella_prestige",
           "label": "Coachella - maximum prestige play",
-          "effects_immediate": { "creative_capital": -2 },
-          "effects_delayed": { "reputation": 3, "artist_popularity": 2 }
+          "effects_immediate": { "creative_capital": -2, "artist_popularity": 2 },
+          "effects_delayed": { "reputation": 3 }
         },
         {
           "id": "euro_circuit",

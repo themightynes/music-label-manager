@@ -109,6 +109,16 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
       );
     }
     
+    if (effect === 'artist_popularity') {
+      const color = isPositive ? 'bg-purple-400/20 text-purple-400 border border-purple-400/30' : 'bg-red-400/20 text-red-400 border border-red-400/30';
+      return (
+        <Badge className={`text-xs px-2 py-1 rounded-full ${color} flex items-center gap-1`}>
+          <i className="fas fa-star text-xs"></i>
+          Popularity: {sign}{value}
+        </Badge>
+      );
+    }
+    
     // Special handling for money effects
     if (effect === 'money') {
       const color = isPositive ? 'bg-green-400/20 text-green-400 border border-green-400/30' : 'bg-red-400/20 text-red-400 border border-red-400/30';
@@ -116,6 +126,17 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
         <Badge className={`text-xs px-2 py-1 rounded-full ${color} flex items-center gap-1`}>
           <i className="fas fa-dollar-sign text-xs"></i>
           ${Math.abs(value).toLocaleString()}
+        </Badge>
+      );
+    }
+    
+    // Special handling for creative capital effects
+    if (effect === 'creative_capital') {
+      const color = isPositive ? 'bg-orange-400/20 text-orange-400 border border-orange-400/30' : 'bg-red-400/20 text-red-400 border border-red-400/30';
+      return (
+        <Badge className={`text-xs px-2 py-1 rounded-full ${color} flex items-center gap-1`}>
+          <i className="fas fa-lightbulb text-xs"></i>
+          Creative: {sign}{value}
         </Badge>
       );
     }
