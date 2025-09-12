@@ -141,6 +141,17 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
       );
     }
     
+    // Special handling for reputation effects
+    if (effect === 'reputation') {
+      const color = isPositive ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30' : 'bg-red-400/20 text-red-400 border border-red-400/30';
+      return (
+        <Badge className={`text-xs px-2 py-1 rounded-full ${color} flex items-center gap-1`}>
+          <i className="fas fa-trophy text-xs"></i>
+          Reputation: {sign}{value}
+        </Badge>
+      );
+    }
+    
     // Default handling for other effects
     const color = isPositive ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger';
     return (

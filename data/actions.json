@@ -23,8 +23,8 @@
         {
           "id": "content_first",
           "label": "Content-first to grow socials",
-          "effects_immediate": { "money": -1500 },
-          "effects_delayed": { "press_story_flag": 1, "reputation": 1 }
+          "effects_immediate": { "money": -1500, "reputation": 1 },
+          "effects_delayed": { "press_story_flag": 1 }
         },
         {
           "id": "tour_first",
@@ -48,8 +48,8 @@
         {
           "id": "emergency_auditions",
           "label": "Emergency auditions - whatever it costs",
-          "effects_immediate": { "money": -8000 },
-          "effects_delayed": { "artist_mood": 3, "reputation": 1 }
+          "effects_immediate": { "money": -8000, "reputation": 1 },
+          "effects_delayed": { "artist_mood": 3 }
         },
         {
           "id": "local_talent",
@@ -79,8 +79,8 @@
         {
           "id": "coachella_prestige",
           "label": "Coachella - maximum prestige play",
-          "effects_immediate": { "creative_capital": -2, "artist_popularity": 2 },
-          "effects_delayed": { "reputation": 3 }
+          "effects_immediate": { "creative_capital": -2, "artist_popularity": 2, "reputation": 3 },
+          "effects_delayed": {}
         },
         {
           "id": "euro_circuit",
@@ -91,8 +91,8 @@
         {
           "id": "profitable_path",
           "label": "Take the highest paying gig",
-          "effects_immediate": { "money": 25000 },
-          "effects_delayed": { "artist_mood": -1, "reputation": -1 }
+          "effects_immediate": { "money": 25000, "reputation": -1 },
+          "effects_delayed": { "artist_mood": -1 }
         }
       ]
     },
@@ -265,8 +265,8 @@
         {
           "id": "demand_more_money",
           "label": "Demand the budget we need to finish",
-          "effects_immediate": { "money": -10000 },
-          "effects_delayed": { "quality_bonus": 4, "reputation": 1 }
+          "effects_immediate": { "money": -10000, "reputation": 1 },
+          "effects_delayed": { "quality_bonus": 4 }
         },
         {
           "id": "creative_solution",
@@ -327,8 +327,8 @@
         {
           "id": "damage_control",
           "label": "Full damage control - deny everything",
-          "effects_immediate": { "money": -5000 },
-          "effects_delayed": { "reputation": -1, "media_skepticism": 1 }
+          "effects_immediate": { "money": -5000, "reputation": -1 },
+          "effects_delayed": { "media_skepticism": 1 }
         },
         {
           "id": "spin_collaboration",
@@ -339,8 +339,8 @@
         {
           "id": "ignore_let_fade",
           "label": "Ignore it - let it fade naturally",
-          "effects_immediate": {},
-          "effects_delayed": { "reputation": -2, "authenticity_bonus": 1 }
+          "effects_immediate": { "reputation": -2 },
+          "effects_delayed": { "authenticity_bonus": 1 }
         }
       ]
     },

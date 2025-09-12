@@ -562,6 +562,12 @@ export class GameEngine {
           // Note: Money changes will be handled by consolidated financial calculation
           if (value > 0) {
             summary.revenue += value;
+            // Add change record for positive money from role meetings so it shows in revenue breakdown
+            summary.changes.push({
+              type: 'revenue',
+              description: 'Executive meeting benefit',
+              amount: value
+            });
           } else {
             summary.expenses += Math.abs(value);
             // Track role meeting costs in breakdown
