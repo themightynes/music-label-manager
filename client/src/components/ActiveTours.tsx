@@ -10,33 +10,9 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, DollarSign, Users, Calculator } from 'lucide-react';
 
 // Completed Tours Table Component (integrated into main Tours UI)
-function CompletedToursTable() {
-  const { projects, artists } = useGameStore();
+function CompletedToursTable({ completedTours, getArtistName }: { completedTours: any[], getArtistName: (id: string) => string }) {
 
-  // Get completed tours with detailed city data (same logic as main component)
-  const getCompletedTours = () => {
-    return projects.filter(p => {
-      if (p.type !== 'Mini-Tour') {
-        return false;
-      }
-
-      if (p.stage === 'recorded' || p.stage === 'released' || p.stage === 'cancelled') {
-        return true;
-      }
-
-      if (p.stage === 'production') {
-        const tourStats = p.metadata?.tourStats;
-        const citiesCompleted = tourStats?.cities?.length || 0;
-        const citiesPlanned = p.metadata?.cities || 1;
-
-        return citiesCompleted > 0 && citiesCompleted >= citiesPlanned;
-      }
-
-      return false;
-    });
-  };
-
-  const allCompletedTours = getCompletedTours();
+  const allCompletedTours = completedTours;
   const [sortBy, setSortBy] = useState<'city' | 'revenue' | 'profit' | 'attendance'>('city');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
@@ -59,11 +35,6 @@ function CompletedToursTable() {
 
 
 
-  // Get artist name
-  const getArtistName = (artistId: string) => {
-    const artist = artists.find(a => a.id === artistId);
-    return artist?.name || 'Unknown Artist';
-  };
 
   const sortedCities = [...cities].sort((a, b) => {
     let aVal, bVal;
@@ -357,32 +328,13 @@ export function ActiveTours() {
     }
   };
 
-  const getCancellationDetails = (project: any) => {
-    if (!project) return null;
-
-    const tourStats = project.metadata?.tourStats;
-    const citiesPlanned = project.metadata?.cities || 1;
-    const citiesCompleted = tourStats?.cities?.length || 0;
-    const remainingCities = Math.max(0, citiesPlanned - citiesCompleted);
-
-    const refundPercentage = 0.6;
-    const costPerCity = project.totalCost / citiesPlanned;
-    const refundAmount = Math.round(remainingCities * costPerCity * refundPercentage);
-    const sunkCosts = project.totalCost - refundAmount;
-
-    return {
-      citiesPlanned,
-      citiesCompleted,
-      remainingCities,
-      refundAmount,
-      sunkCosts,
-      costPerCity
-    };
-  };
+  // REMOVED: getCancellationDetails - inlined since only used once
 
   const getProjectProgress = (project: any) => {
-    const stages = ['planning', 'writing', 'recording'];
+    // FIXED: Use correct tour stages instead of music project stages
+    const stages = ['planning', 'production'];
     const currentStageIndex = stages.indexOf(project.stage || 'planning');
+    if (currentStageIndex === -1) return 100; // Completed stages
     return ((currentStageIndex + 1) / stages.length) * 100;
   };
 
@@ -541,7 +493,7 @@ export function ActiveTours() {
           {/* Tours List */}
           <div className="space-y-3">
             {activeTab === 'completed' ? (
-              <CompletedToursTable />
+              <CompletedToursTable completedTours={completedTours} getArtistName={getArtistName} />
             ) : currentTours.length === 0 ? (
               <div className="text-center py-8 text-white/50">
                 <i className="fas fa-route text-2xl mb-2 block text-white/50"></i>
@@ -828,8 +780,15 @@ export function ActiveTours() {
           </DialogHeader>
 
           {projectToCancel && (() => {
-            const details = getCancellationDetails(projectToCancel);
-            if (!details) return null;
+            // INLINED: Cancellation details calculation
+            const tourStats = projectToCancel.metadata?.tourStats;
+            const citiesPlanned = projectToCancel.metadata?.cities || 1;
+            const citiesCompleted = tourStats?.cities?.length || 0;
+            const remainingCities = Math.max(0, citiesPlanned - citiesCompleted);
+            const refundPercentage = 0.6;
+            const costPerCity = projectToCancel.totalCost / citiesPlanned;
+            const refundAmount = Math.round(remainingCities * costPerCity * refundPercentage);
+            const sunkCosts = projectToCancel.totalCost - refundAmount;
 
             return (
               <div className="space-y-4">
@@ -850,29 +809,29 @@ export function ActiveTours() {
 
                     <div className="flex justify-between">
                       <span className="text-white/70">Cities Planned:</span>
-                      <span className="font-mono text-white">{details.citiesPlanned}</span>
+                      <span className="font-mono text-white">{citiesPlanned}</span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="text-white/70">Cities Completed:</span>
-                      <span className="font-mono text-white">{details.citiesCompleted}</span>
+                      <span className="font-mono text-white">{citiesCompleted}</span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="text-white/70">Remaining Cities:</span>
-                      <span className="font-mono text-white">{details.remainingCities}</span>
+                      <span className="font-mono text-white">{remainingCities}</span>
                     </div>
 
                     <hr className="border-[#4e324c]" />
 
                     <div className="flex justify-between">
                       <span className="text-red-400">Sunk Costs (non-refundable):</span>
-                      <span className="font-mono text-red-400">-${details.sunkCosts.toLocaleString()}</span>
+                      <span className="font-mono text-red-400">-${sunkCosts.toLocaleString()}</span>
                     </div>
 
                     <div className="flex justify-between font-semibold">
                       <span className="text-green-400">Refund (60% of remaining):</span>
-                      <span className="font-mono text-green-400">+${details.refundAmount.toLocaleString()}</span>
+                      <span className="font-mono text-green-400">+${refundAmount.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
