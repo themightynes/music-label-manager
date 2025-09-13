@@ -729,22 +729,6 @@ export class GameEngine {
   /**
    * Calculates tour revenue
    */
-  // DELEGATED TO FinancialSystem (originally lines 469-493)
-  calculateTourRevenue(
-    venueTier: string,
-    artistPopularity: number,
-    localReputation: number,
-    cities: number,
-    marketingBudgetTotal: number = 0
-  ): number {
-    return this.financialSystem.calculateTourRevenue(
-      venueTier,
-      artistPopularity,
-      localReputation,
-      cities,
-      marketingBudgetTotal
-    );
-  }
 
   /**
    * Gets random number using seeded RNG
@@ -2771,97 +2755,66 @@ export class GameEngine {
       // Extract parameters for FinancialSystem
       const venueAccess = currentMetadata.venueAccess || 'none';
       const artistPopularity = artist.popularity || 50;
-      const reputation = this.currentGameState?.reputation || 0;
+      const reputation = this.gameState.reputation || 0;
       const totalCities = currentMetadata.cities || 1;
 
-      // Extract marketing budget from total cost
-      const venueCapacity = this.financialSystem.getVenueCapacity(venueAccess);
-      const venueFees = venueCapacity * 4 * totalCities;
-      const productionFees = venueCapacity * 2.7 * totalCities;
-      const marketingBudget = Math.max(0, (project.totalCost || 0) - venueFees - productionFees);
-
-      console.log(`[UNIFIED TOUR] Parameters: venue=${venueAccess}, capacity=${venueCapacity}, popularity=${artistPopularity}, reputation=${reputation}, cities=${totalCities}, marketing=$${marketingBudget}`);
-
-      // Calculate total tour revenue using unified system
-      const totalRevenue = this.financialSystem.calculateTourRevenue(
-        venueAccess,
-        artistPopularity,
-        reputation,
-        totalCities,
-        marketingBudget
-      );
-
-      console.log(`[UNIFIED TOUR] Total calculated revenue: $${totalRevenue}`);
-
-      // Create city data structures for UI compatibility
-      const revenuePerCity = Math.round(totalRevenue / totalCities);
-
-      // Calculate sell-through rate using unified formula (extracted from FinancialSystem)
-      const marketingBudgetPerCity = marketingBudget / totalCities;
-      const baseRate = 0.15;
-      const reputationBonus = reputation / 100 * 0.05;
-      const popularityBonus = (artistPopularity / 100) * 0.6;
-      const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15 : 0;
-      const sellThroughRate = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
-
-      // Get tour config for pricing calculations
-      const tourConfig = this.gameData.getTourConfigSync();
-      const ticketPrice = tourConfig.ticket_price_base + (venueCapacity * tourConfig.ticket_price_per_capacity);
-
-      // Pre-calculate all cities with consistent data
-      const preCalculatedCities = [];
-      for (let i = 1; i <= totalCities; i++) {
-        const ticketsSold = Math.round(venueCapacity * sellThroughRate);
-        const attendanceRate = Math.round(sellThroughRate * 100);
-
-        // Calculate detailed economic breakdown for each city
-        const ticketRevenue = ticketsSold * ticketPrice;
-        const merchRevenue = Math.round(ticketRevenue * tourConfig.merch_percentage);
-        const totalCityRevenue = ticketRevenue + merchRevenue;
-
-        // Calculate cost breakdown
-        const venueFee = venueCapacity * 4;
-        const productionFee = Math.round(venueCapacity * 2.7);
-        const totalCosts = venueFee + productionFee + marketingBudgetPerCity;
-        const profit = totalCityRevenue - totalCosts;
-
-        preCalculatedCities.push({
-          cityNumber: i,
-          venue: this.getVenueNameFromAccess(venueAccess),
-          capacity: venueCapacity,
-          revenue: revenuePerCity, // Keep existing for compatibility
-          ticketsSold: ticketsSold,
-          attendanceRate: attendanceRate,
-          // Enhanced economic breakdown
-          economics: {
-            sellThrough: {
-              rate: Math.round(sellThroughRate * 100),
-              baseRate: Math.round(baseRate * 100),
-              reputationBonus: Math.round(reputationBonus * 100),
-              popularityBonus: Math.round(popularityBonus * 100),
-              marketingBonus: Math.round(budgetQualityBonus * 100)
-            },
-            pricing: {
-              ticketPrice: Math.round(ticketPrice),
-              basePrice: tourConfig.ticket_price_base,
-              capacityBonus: Math.round(venueCapacity * tourConfig.ticket_price_per_capacity)
-            },
-            revenue: {
-              tickets: ticketRevenue,
-              merch: merchRevenue,
-              total: totalCityRevenue,
-              merchRate: Math.round(tourConfig.merch_percentage * 100)
-            },
-            costs: {
-              venue: venueFee,
-              production: productionFee,
-              marketing: Math.round(marketingBudgetPerCity),
-              total: totalCosts
-            },
-            profit: profit
-          }
-        });
+      // Extract marketing budget - CRASH if totalCost is invalid
+      if (!project.totalCost || project.totalCost < 0) {
+        throw new Error(`Tour ${project.title} has invalid total cost: ${project.totalCost}`);
       }
+
+      // Calculate costs to extract marketing budget - LET IT CRASH IF INVALID
+      const costBreakdown = this.financialSystem.calculateTourCosts(venueAccess, totalCities, 0);
+      const marketingBudget = Math.max(0, project.totalCost - costBreakdown.totalCosts);
+
+      console.log(`[TOUR EXECUTION] Pre-calculated ${totalCities} cities for ${project.title}`);
+
+      // SINGLE SOURCE OF TRUTH - GET ALL DATA FROM FINANCIALSYSTEM
+      const detailedBreakdown = this.financialSystem.calculateDetailedTourBreakdown({
+        venueTier: venueAccess,
+        artistPopularity,
+        localReputation: reputation,
+        cities: totalCities,
+        marketingBudget
+      });
+
+      // Store pre-calculated cities - NO MANUAL CALCULATIONS
+      const preCalculatedCities = detailedBreakdown.cities.map((city: any, index: number) => ({
+        cityNumber: index + 1,
+        venue: this.getVenueNameFromAccess(venueAccess),
+        capacity: city.venueCapacity,
+        revenue: city.totalRevenue, // Use calculated revenue from FinancialSystem
+        ticketsSold: Math.round(city.venueCapacity * city.sellThroughRate),
+        attendanceRate: Math.round(city.sellThroughRate * 100),
+        // Enhanced economic breakdown from FinancialSystem
+        economics: {
+          sellThrough: {
+            rate: Math.round(city.sellThroughRate * 100),
+            baseRate: Math.round(detailedBreakdown.sellThroughAnalysis.baseRate * 100),
+            reputationBonus: Math.round(detailedBreakdown.sellThroughAnalysis.reputationBonus * 100),
+            popularityBonus: Math.round(detailedBreakdown.sellThroughAnalysis.popularityBonus * 100),
+            marketingBonus: Math.round(detailedBreakdown.sellThroughAnalysis.budgetQualityBonus * 100)
+          },
+          pricing: {
+            ticketPrice: Math.round(city.ticketRevenue / Math.max(1, Math.round(city.venueCapacity * city.sellThroughRate))),
+            basePrice: 0, // Will be calculated by FinancialSystem
+            capacityBonus: 0 // Will be calculated by FinancialSystem
+          },
+          revenue: {
+            tickets: city.ticketRevenue,
+            merch: city.merchRevenue,
+            total: city.totalRevenue,
+            merchRate: 0 // Will be calculated by FinancialSystem
+          },
+          costs: {
+            venue: city.venueFee,
+            production: city.productionFee,
+            marketing: city.marketingCost,
+            total: city.totalCosts
+          },
+          profit: city.profit
+        }
+      }));
 
       // Store pre-calculated results
       tourStats.preCalculatedCities = preCalculatedCities;
@@ -3317,14 +3270,14 @@ export class GameEngine {
         
       case 'Mini-Tour':
       case 'mini_tour':
-        // Calculate tour revenue
-        revenue = this.calculateTourRevenue(
-          this.gameState.venueAccess || 'none',
-          project.artistPopularity || 50,
-          this.gameState.reputation || 5,
-          project.cities || 3,
-          project.totalCost || 0
-        );
+        // NO CALCULATIONS HERE - just check if tour generated revenue
+        const tourStats = project.metadata?.tourStats;
+        if (tourStats?.cities && tourStats.cities.length > 0) {
+          // Sum revenue from completed cities - NO RECALCULATION
+          revenue = tourStats.cities.reduce((sum: number, city: any) => sum + (city.revenue || 0), 0);
+        } else {
+          revenue = 0; // No cities completed yet
+        }
         
         description = `$${Math.round(revenue).toLocaleString()} tour revenue`;
         break;

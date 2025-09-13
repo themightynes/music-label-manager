@@ -9,6 +9,7 @@ import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
 import { GameEngine } from "../shared/engine/game-engine";
+import { FinancialSystem } from "../shared/engine/FinancialSystem";
 import { 
   AdvanceMonthRequest, 
   AdvanceMonthResponse,
@@ -1834,6 +1835,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tour estimation endpoint - Phase 3: API Bridge
+  app.post('/api/tour/estimate', getUserId, async (req, res) => {
+    try {
+      const { artistId, cities, budgetPerCity, gameId } = req.body;
+
+      // VALIDATE INPUTS - CRASH IF INVALID
+      if (!artistId || !cities || budgetPerCity === undefined || !gameId) {
+        return res.status(400).json({
+          error: 'Missing required parameters: artistId, cities, budgetPerCity, gameId'
+        });
+      }
+
+      // Get game state - CRASH IF MISSING
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) {
+        return res.status(404).json({ error: `Game not found: ${gameId}` });
+      }
+
+      // Get artist - CRASH IF MISSING
+      const artist = await storage.getArtist(artistId);
+      if (!artist) {
+        return res.status(404).json({ error: `Artist not found: ${artistId}` });
+      }
+
+      // Get venue access - CRASH IF MISSING
+      const venueAccess = gameState.venueAccess;
+      if (!venueAccess || venueAccess === 'none') {
+        return res.status(400).json({ error: `Invalid venue access: ${venueAccess}` });
+      }
+
+      // Calculate marketing budget from cost structure
+      const financialSystem = new FinancialSystem(serverGameData, () => Math.random());
+
+      // Get base costs to determine marketing budget
+      const baseCosts = financialSystem.calculateTourCosts(venueAccess, cities, 0);
+      const totalMarketingBudget = budgetPerCity * cities;
+      const totalBudget = baseCosts.totalCosts + totalMarketingBudget;
+
+      // CALCULATE ESTIMATE - LET IT CRASH IF INVALID
+      const estimate = financialSystem.calculateTourEstimate({
+        venueTier: venueAccess,
+        artistPopularity: artist.popularity || 0,
+        localReputation: gameState.reputation || 0,
+        cities,
+        marketingBudget: totalMarketingBudget
+      });
+
+      // Add affordability check
+      estimate.canAfford = totalBudget <= (gameState.money || 0);
+      (estimate as any).totalBudget = totalBudget;
+
+      res.json(estimate);
+
+    } catch (error) {
+      // LOG ERROR BUT DON'T HIDE IT
+      console.error('[TOUR ESTIMATE ERROR]', (error as Error).message);
+      res.status(500).json({
+        error: 'Tour estimation failed',
+        details: (error as Error).message
+      });
+    }
+  });
 
   // Month advancement with action processing using GameEngine and transactions
   app.post("/api/advance-month", getUserId, async (req, res) => {

@@ -16,6 +16,72 @@
 import type { MonthSummary, MonthlyFinancials } from './game-engine';
 
 /**
+ * Types for tour calculation parameters and results
+ */
+export interface TourCalculationParams {
+  venueTier: string;
+  artistPopularity: number;
+  localReputation: number;
+  cities: number;
+  marketingBudget: number;
+}
+
+export interface CityBreakdown {
+  cityNumber: number;
+  venueCapacity: number;
+  sellThroughRate: number;
+  ticketRevenue: number;
+  merchRevenue: number;
+  totalRevenue: number;
+  venueFee: number;
+  productionFee: number;
+  marketingCost: number;
+  totalCosts: number;
+  profit: number;
+}
+
+export interface SellThroughAnalysis {
+  baseRate: number;
+  reputationBonus: number;
+  popularityBonus: number;
+  budgetQualityBonus: number;
+  finalRate: number;
+}
+
+export interface DetailedTourBreakdown {
+  totalRevenue: number;
+  totalCosts: number;
+  netProfit: number;
+  cities: CityBreakdown[];
+  costBreakdown: {
+    totalCosts: number;
+    venueFees: number;
+    productionFees: number;
+    marketingBudget: number;
+    breakdown: {
+      venueFeePerCity: number;
+      productionFeePerCity: number;
+      marketingBudgetPerCity: number;
+    };
+  };
+  sellThroughAnalysis: SellThroughAnalysis;
+}
+
+export interface TourEstimate {
+  estimatedRevenue: number;
+  totalCosts: number;
+  estimatedProfit: number;
+  roi: number;
+  canAfford: boolean;
+  breakdown: DetailedTourBreakdown['costBreakdown'];
+  sellThroughRate: number;
+}
+
+export interface TourEstimationParams extends TourCalculationParams {
+  // Identical to TourCalculationParams for now
+}
+
+/**
  * Tracks production and marketing investments at the song level for ROI analysis
  */
 export class InvestmentTracker {
@@ -203,7 +269,10 @@ export class FinancialSystem {
   constructor(gameData: any, rng: () => number, storage?: any) {
     this.gameData = gameData;
     this.rng = rng;
-    
+
+    // VALIDATE CONFIGURATION ON STARTUP - CRASH IF INCOMPLETE
+    this.validateConfiguration();
+
     // Initialize InvestmentTracker if storage is provided
     if (storage) {
       this.investmentTracker = new InvestmentTracker(storage);
@@ -216,6 +285,179 @@ export class FinancialSystem {
    */
   private getRandom(min: number, max: number): number {
     return min + (this.rng() * (max - min));
+  }
+
+  /**
+   * Validates tour calculation parameters with strict validation - NO FALLBACKS
+   * PHASE 1: Input validation that throws errors for invalid inputs
+   */
+  validateTourParameters(params: TourCalculationParams): void {
+    // FAIL FAST - no fallbacks
+    if (!params.venueTier || params.venueTier === 'none') {
+      throw new Error(`Invalid venue tier: ${params.venueTier}`);
+    }
+    if (params.artistPopularity < 0 || params.artistPopularity > 100) {
+      throw new Error(`Invalid artist popularity: ${params.artistPopularity}`);
+    }
+    if (params.localReputation < 0) {
+      throw new Error(`Invalid reputation: ${params.localReputation}`);
+    }
+    if (params.cities < 1 || params.cities > 10) {
+      throw new Error(`Invalid cities count: ${params.cities}`);
+    }
+    if (params.marketingBudget < 0) {
+      throw new Error(`Invalid marketing budget: ${params.marketingBudget}`);
+    }
+  }
+
+  /**
+   * Validates configuration completeness on startup
+   * PHASE 1: Configuration validation that ensures all required fields exist
+   */
+  private validateConfiguration(): void {
+    const tourConfig = this.gameData.getTourConfigSync();
+    const venueConfig = this.gameData.getAccessTiersSync().venue_access;
+
+    // Required tour config fields
+    const requiredTourFields = [
+      'sell_through_base', 'reputation_modifier', 'local_popularity_weight',
+      'ticket_price_base', 'ticket_price_per_capacity', 'merch_percentage'
+    ];
+
+    for (const field of requiredTourFields) {
+      if (tourConfig[field] === undefined) {
+        throw new Error(`Tour configuration missing required field: ${field}`);
+      }
+    }
+
+    // Required venue tiers
+    const requiredVenueTiers = ['theaters', 'clubs', 'arenas'];
+    for (const tier of requiredVenueTiers) {
+      if (!venueConfig[tier] || !venueConfig[tier].capacity_range) {
+        throw new Error(`Venue configuration missing or incomplete for tier: ${tier}`);
+      }
+    }
+  }
+
+  /**
+   * Calculates detailed tour breakdown with comprehensive city-by-city analysis
+   * PHASE 1: Central calculation method with strict validation
+   */
+  calculateDetailedTourBreakdown(params: TourCalculationParams): DetailedTourBreakdown {
+    // VALIDATE FIRST - CRASH IF INVALID
+    this.validateTourParameters(params);
+
+    // Get configuration - CRASH if missing
+    const config = this.gameData.getTourConfigSync();
+    if (!config.sell_through_base) {
+      throw new Error('Tour configuration missing sell_through_base');
+    }
+
+    // Calculate with NO fallbacks
+    const venueCapacity = this.getVenueCapacity(params.venueTier); // Will throw if invalid tier
+    const costBreakdown = this.calculateTourCosts(params.venueTier, params.cities, params.marketingBudget);
+    const revenueCalculation = this.calculateTourRevenue(
+      params.venueTier,
+      params.artistPopularity,
+      params.localReputation,
+      params.cities,
+      params.marketingBudget
+    );
+
+    // Return detailed breakdown with city-by-city data
+    return {
+      totalRevenue: revenueCalculation,
+      totalCosts: costBreakdown.totalCosts,
+      netProfit: revenueCalculation - costBreakdown.totalCosts,
+      cities: this.generateCityBreakdowns(params, venueCapacity, config),
+      costBreakdown,
+      sellThroughAnalysis: this.calculateSellThroughBreakdown(params, venueCapacity, config)
+    };
+  }
+
+  /**
+   * Generates city-by-city breakdown for tour analysis
+   */
+  private generateCityBreakdowns(params: TourCalculationParams, venueCapacity: number, config: any): CityBreakdown[] {
+    const cities: CityBreakdown[] = [];
+    const marketingBudgetPerCity = params.marketingBudget > 0 ? params.marketingBudget / params.cities : 0;
+
+    // Calculate sell-through components once
+    const sellThroughAnalysis = this.calculateSellThroughBreakdown(params, venueCapacity, config);
+
+    for (let i = 1; i <= params.cities; i++) {
+      const venueFee = venueCapacity * 4;
+      const productionFee = venueCapacity * 2.7;
+
+      // Calculate revenue per show
+      const ticketPrice = config.ticket_price_base + (venueCapacity * config.ticket_price_per_capacity);
+      const ticketRevenue = venueCapacity * sellThroughAnalysis.finalRate * ticketPrice;
+      const merchRevenue = ticketRevenue * config.merch_percentage;
+      const totalRevenue = ticketRevenue + merchRevenue;
+
+      const totalCosts = venueFee + productionFee + marketingBudgetPerCity;
+
+      cities.push({
+        cityNumber: i,
+        venueCapacity,
+        sellThroughRate: sellThroughAnalysis.finalRate,
+        ticketRevenue,
+        merchRevenue,
+        totalRevenue,
+        venueFee,
+        productionFee,
+        marketingCost: marketingBudgetPerCity,
+        totalCosts,
+        profit: totalRevenue - totalCosts
+      });
+    }
+
+    return cities;
+  }
+
+  /**
+   * Calculates sell-through rate breakdown for transparency
+   */
+  private calculateSellThroughBreakdown(params: TourCalculationParams, venueCapacity: number, config: any): SellThroughAnalysis {
+    const marketingBudgetPerCity = params.marketingBudget > 0 ? params.marketingBudget / params.cities : 0;
+
+    const baseRate = config.sell_through_base;
+    const reputationBonus = (params.localReputation / 100) * config.reputation_modifier;
+    const popularityBonus = (params.artistPopularity / 100) * config.local_popularity_weight;
+    const budgetQualityBonus = marketingBudgetPerCity > 0
+      ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15
+      : 0;
+
+    const finalRate = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
+
+    return {
+      baseRate,
+      reputationBonus,
+      popularityBonus,
+      budgetQualityBonus,
+      finalRate
+    };
+  }
+
+  /**
+   * Frontend estimation method for tour planning
+   * PHASE 1: Provides estimates for UI without client-side calculations
+   */
+  calculateTourEstimate(params: TourEstimationParams): TourEstimate {
+    // STRICT validation - no fallbacks
+    this.validateTourParameters(params);
+
+    const breakdown = this.calculateDetailedTourBreakdown(params);
+
+    return {
+      estimatedRevenue: breakdown.totalRevenue,
+      totalCosts: breakdown.totalCosts,
+      estimatedProfit: breakdown.netProfit,
+      roi: breakdown.totalCosts > 0 ? (breakdown.netProfit / breakdown.totalCosts) * 100 : 0,
+      canAfford: false, // Will be set by caller who knows current money
+      breakdown: breakdown.costBreakdown,
+      sellThroughRate: breakdown.sellThroughAnalysis.finalRate
+    };
   }
 
   /**
@@ -235,18 +477,24 @@ export class FinancialSystem {
   }
 
   /**
-   * Helper to get venue capacity
+   * Helper to get venue capacity with strict validation - NO FALLBACKS
    * Originally from game-engine.ts line 535-544
    */
   private getVenueCapacity(tier: string): number {
     const tiers = this.gameData.getAccessTiersSync();
     const venueData = tiers.venue_access as any;
     const venueConfig = venueData[tier];
-    if (venueConfig?.capacity_range) {
-      const [min, max] = venueConfig.capacity_range;
-      return Math.round(this.getRandom(min, max));
+
+    // FAIL FAST - no fallbacks
+    if (!venueConfig) {
+      throw new Error(`Invalid venue tier: ${tier}. Available tiers: ${Object.keys(venueData)}`);
     }
-    return this.CONSTANTS.DEFAULT_VENUE_CAPACITY;
+    if (!venueConfig.capacity_range) {
+      throw new Error(`Venue tier ${tier} missing capacity_range configuration`);
+    }
+
+    const [min, max] = venueConfig.capacity_range;
+    return Math.round(this.getRandom(min, max));
   }
 
   /**
@@ -975,7 +1223,7 @@ export class FinancialSystem {
         console.warn('[DEBUG] Storage not available or missing getExecutivesByGame method');
         console.log('[DEBUG] Storage object:', storage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DEBUG] ERROR calculating executive salaries:', error);
       console.error('[DEBUG] Error stack:', error.stack);
       // Return empty breakdown on error

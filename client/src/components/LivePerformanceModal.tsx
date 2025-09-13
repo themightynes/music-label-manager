@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,27 @@ export interface TourCreationData {
   venueAccess?: string; // Capture current venue access for historical tracking
   // TODO: Add venue selection when venue booking system is implemented
   // TODO: Add date selection when calendar system is implemented
+}
+
+interface TourEstimate {
+  estimatedRevenue: number;
+  totalCosts: number;
+  estimatedProfit: number;
+  roi: number;
+  canAfford: boolean;
+  breakdown: {
+    totalCosts: number;
+    venueFees: number;
+    productionFees: number;
+    marketingBudget: number;
+    breakdown: {
+      venueFeePerCity: number;
+      productionFeePerCity: number;
+      marketingBudgetPerCity: number;
+    };
+  };
+  sellThroughRate: number;
+  totalBudget?: number;
 }
 
 // Performance types - costs now calculated dynamically using venue_capacity * 4 + user budget
@@ -190,69 +211,82 @@ export function LivePerformanceModal({
     return (min + max) / 2;
   };
 
-  // Revenue calculation using venue capacity from unified function
-  const calculateEstimatedRevenue = () => {
-    if (!tourConfig || !venueAccessConfig || !selectedType || !selectedArtist || !budgetPerCity) return 0;
+  // API Integration - Phase 4: Replace calculations with API calls
+  const [estimateData, setEstimateData] = useState<TourEstimate | null>(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
 
-    const artistPopularity = selectedArtistData?.popularity || 50;
-    const venueCapacity = getVenueCapacity(); // Use centralized capacity calculation
-    
-    // SELL-THROUGH FORMULA using config values from markets.json
-    // Sell-Through Rate = Base Rate (config) + (Reputation * config modifier) + (Artist_Popularity * config weight) + (Budget_Per_City/Venue_Capacity*11/100*0.15)
-    const baseRate = tourConfig.sell_through_base;
-    const reputationBonus = ((gameState.reputation || 0) / 100) * tourConfig.reputation_modifier;
-    const popularityBonus = (artistPopularity / 100) * tourConfig.local_popularity_weight;
-    const budgetQualityBonus = (budgetPerCity / venueCapacity) * 11 / 100 * 0.15;
-    
-    const sellThroughRate = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
-    
-    // Calculate revenue using sell-through rate
-    // Use config values from markets.json
-    const ticketPrice = tourConfig.ticket_price_base + (venueCapacity * tourConfig.ticket_price_per_capacity);
-    const capacityUsed = Math.round(venueCapacity * sellThroughRate);
-    const ticketRevenue = capacityUsed * ticketPrice;
-    const merchRevenue = ticketRevenue * tourConfig.merch_percentage;
-    const revenuePerCity = ticketRevenue + merchRevenue;
-    
-    // Return detailed breakdown
-    return {
-      totalRevenue: Math.round(revenuePerCity * cities),
-      breakdown: {
-        venueCapacity,
-        capacityUsed,
-        sellThroughRate: Math.round(sellThroughRate * 100),
-        ticketPrice: Math.round(ticketPrice),
-        ticketRevenuePerCity: Math.round(ticketRevenue),
-        merchRevenuePerCity: Math.round(merchRevenue),
-        totalRevenuePerCity: Math.round(revenuePerCity),
-        cities
+  // Fetch estimate from API - NO CLIENT CALCULATIONS
+  const fetchTourEstimate = useCallback(async () => {
+    if (!selectedArtist || !budgetPerCity || !gameState?.id) return;
+
+    setEstimateLoading(true);
+    setEstimateError(null);
+
+    try {
+      const response = await fetch('/api/tour/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          artistId: selectedArtist,
+          cities,
+          budgetPerCity,
+          gameId: gameState.id
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Failed to calculate tour estimate');
       }
-    };
-  };
 
-  const estimatedRevenue = useMemo(() => calculateEstimatedRevenue(), [
-    selectedType, selectedArtist, budgetPerCity, cities, gameState.reputation, currentVenueAccess, tourConfig, venueAccessConfig
-  ]);
+      const estimate = await response.json();
+      setEstimateData(estimate);
 
-  // Calculate costs: Fixed venue fees (capacity * 4) + Production fees (capacity * 2.7) + User marketing budget
-  // Only calculate when configuration is loaded
-  const costCalculation = useMemo(() => {
-    if (!venueAccessConfig) {
-      return { totalCosts: 0, venueFeePerCity: 0, productionFeePerCity: 0, totalVenueFees: 0, totalProductionFees: 0, totalMarketingCosts: 0 };
+    } catch (error) {
+      console.error('[TOUR ESTIMATE]', error instanceof Error ? error.message : 'Unknown error');
+      setEstimateError(error instanceof Error ? error.message : 'Unknown error');
+      setEstimateData(null);
+    } finally {
+      setEstimateLoading(false);
     }
+  }, [selectedArtist, budgetPerCity, cities, gameState?.id]);
 
-    const venueCapacity = getVenueCapacity();
-    const venueFeePerCity = venueCapacity * 4; // Fixed infrastructure cost
-    const productionFeePerCity = venueCapacity * 2.7; // Fixed production cost
-    const totalVenueFees = venueFeePerCity * cities;
-    const totalProductionFees = productionFeePerCity * cities;
-    const totalMarketingCosts = budgetPerCity * cities; // User-controlled marketing budget
-    const totalCosts = totalVenueFees + totalProductionFees + totalMarketingCosts;
+  // Trigger estimate fetch when parameters change
+  useEffect(() => {
+    const timeoutId = setTimeout(fetchTourEstimate, 500); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [fetchTourEstimate]);
 
-    return { totalCosts, venueFeePerCity, productionFeePerCity, totalVenueFees, totalProductionFees, totalMarketingCosts };
-  }, [venueAccessConfig, currentVenueAccess, cities, budgetPerCity]);
+  // Display estimate data - NO CALCULATIONS
+  const renderEstimate = () => {
+    if (estimateLoading) return <div className="text-white/60">Calculating...</div>;
+    if (estimateError) return <div className="text-red-400">Error: {estimateError}</div>;
+    if (!estimateData) return <div className="text-white/60">Enter tour parameters</div>;
 
-  const estimatedProfit = (typeof estimatedRevenue === 'object' ? estimatedRevenue.totalRevenue : 0) - costCalculation.totalCosts;
+    return (
+      <div className="space-y-3">
+        <div className="flex justify-between">
+          <span className="text-white/70">Estimated Revenue:</span>
+          <span className="font-mono text-green-400">${estimateData.estimatedRevenue.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-white/70">Total Costs:</span>
+          <span className="font-mono text-red-400">${estimateData.totalCosts.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between font-bold">
+          <span className="text-white">Estimated Profit:</span>
+          <span className={`font-mono ${estimateData.estimatedProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            ${estimateData.estimatedProfit.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-white/60">ROI:</span>
+          <span className="font-mono text-white/80">{estimateData.roi.toFixed(1)}%</span>
+        </div>
+      </div>
+    );
+  };
 
   const handleTypeSelect = (type: 'single_show' | 'mini_tour') => {
     setSelectedType(type);
@@ -277,7 +311,7 @@ export function LivePerformanceModal({
       title,
       type: selectedType,
       artistId: selectedArtist,
-      budget: costCalculation.totalCosts, // Pass total costs (venue fees + budget)
+      budget: estimateData?.totalBudget || 0, // Pass total budget from API
       cities: selectedType === 'single_show' ? 1 : cities,
       venueAccess: currentVenueAccess // Capture current venue access tier
     };
@@ -293,8 +327,8 @@ export function LivePerformanceModal({
     setIsOpen(false);
   };
 
-  const canAfford = costCalculation.totalCosts <= currentMoney;
-  const isValid = tourConfig && venueAccessConfig && selectedType && selectedArtist && title && budgetPerCity > 0 && canAfford && availableArtists.length > 0;
+  const canAfford = estimateData?.canAfford ?? false;
+  const isValid = selectedType && selectedArtist && title && budgetPerCity > 0 && canAfford && availableArtists.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -474,100 +508,17 @@ export function LivePerformanceModal({
                 </div>
               )}
 
-              {/* Revenue Projection */}
-              {selectedArtist && budgetPerCity > 0 && typeof estimatedRevenue === 'object' && (
-                <div className="bg-[#A75A5B]/10 rounded-lg p-4 border">
-                  <h4 className="font-medium text-[#A75A5B] mb-3">Revenue Projection</h4>
-                  <div className="space-y-3 text-sm">
-
-                    {/* Per City Breakdown */}
-                    <div className="bg-black/20 rounded p-3">
-                      <h5 className="font-medium text-white/90 mb-2">Per City Performance:</h5>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Venue Capacity:</span>
-                          <span className="font-mono text-white/80">{estimatedRevenue.breakdown.venueCapacity.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Expected Attendance ({estimatedRevenue.breakdown.sellThroughRate}%):</span>
-                          <span className="font-mono text-white/80">{estimatedRevenue.breakdown.capacityUsed.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Ticket Price:</span>
-                          <span className="font-mono text-white/80">${estimatedRevenue.breakdown.ticketPrice}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Ticket Revenue:</span>
-                          <span className="font-mono text-blue-400">${estimatedRevenue.breakdown.ticketRevenuePerCity.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Merch Revenue (15%):</span>
-                          <span className="font-mono text-blue-400">${estimatedRevenue.breakdown.merchRevenuePerCity.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between border-t border-white/20 pt-1 font-medium">
-                          <span className="text-white/70">Total Per City:</span>
-                          <span className="font-mono text-blue-300">${estimatedRevenue.breakdown.totalRevenuePerCity.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cost Breakdown */}
-                    <div className="bg-black/20 rounded p-3">
-                      <h5 className="font-medium text-white/90 mb-2">Cost Breakdown:</h5>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Venue Fees ({cities} cities × ${costCalculation.venueFeePerCity.toLocaleString()}):</span>
-                          <span className="font-mono text-red-400">${costCalculation.totalVenueFees.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Production Fees ({cities} cities × ${costCalculation.productionFeePerCity.toLocaleString()}):</span>
-                          <span className="font-mono text-red-400">${costCalculation.totalProductionFees.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Marketing & Logistics ({cities} cities × ${budgetPerCity.toLocaleString()}):</span>
-                          <span className="font-mono text-red-400">${costCalculation.totalMarketingCosts.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between border-t border-white/20 pt-1 font-medium">
-                          <span className="text-white/70">Total Costs:</span>
-                          <span className="font-mono text-red-300">${costCalculation.totalCosts.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Total Summary */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-white/70">Total Gross Revenue ({cities} cities):</span>
-                        <span className="font-mono text-green-400">${estimatedRevenue.totalRevenue.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/70">Total Costs:</span>
-                        <span className="font-mono text-red-400">-${costCalculation.totalCosts.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2 font-semibold">
-                        <span className="text-white">Estimated Profit:</span>
-                        <span className={`font-mono ${estimatedProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          ${estimatedProfit.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {selectedArtistData && (
-                      <div className="text-xs text-white/50 mt-2">
-                        <p>Based on: {selectedArtistData.name}'s popularity ({selectedArtistData.popularity || 0}), 
-                           venue access ({venueInfo.name}), and {cities} {cities === 1 ? 'show' : 'cities'}</p>
-                        <p className="text-amber-500 mt-1">💡 Calculations now match backend logic (venue fees: capacity × 4 + production budget)</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              {/* Tour Financial Overview - API Integration */}
+              <div className="bg-[#A75A5B]/10 rounded-lg p-4 border">
+                <h4 className="font-medium text-[#A75A5B] mb-3">Tour Financial Overview</h4>
+                {renderEstimate()}
+              </div>
 
               {/* Budget Warning */}
-              {!canAfford && budgetPerCity > 0 && (
+              {!canAfford && estimateData && (
                 <div className="p-4 bg-red-100 border border-red-300 rounded-md">
                   <p className="text-red-800">
-                    Insufficient funds! Need ${costCalculation.totalCosts.toLocaleString()} but only have ${currentMoney.toLocaleString()}
+                    Insufficient funds! Need ${estimateData.totalBudget?.toLocaleString()} but only have ${currentMoney.toLocaleString()}
                   </p>
                 </div>
               )}
