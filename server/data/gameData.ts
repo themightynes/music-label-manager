@@ -293,12 +293,12 @@ export class ServerGameData {
     const balance = await this.getBalanceConfig();
     const tour = balance.market_formulas.tour_revenue;
     return {
-      sell_through_base: tour?.sell_through_base || 0.60,
-      reputation_modifier: tour?.reputation_modifier || 0.003,
-      local_popularity_weight: tour?.local_popularity_weight || 0.40,
-      merch_percentage: tour?.merch_percentage || 0.15,
-      ticket_price_base: 25,
-      ticket_price_per_capacity: 0.03
+      sell_through_base: tour.sell_through_base,
+      reputation_modifier: tour.reputation_modifier,
+      local_popularity_weight: tour.local_popularity_weight,
+      merch_percentage: tour.merch_percentage,
+      ticket_price_base: tour.ticket_price_base,
+      ticket_price_per_capacity: tour.ticket_price_per_capacity
     };
   }
 
@@ -461,14 +461,7 @@ export class ServerGameData {
 
   getTourConfigSync() {
     if (!this.balanceData) {
-      return {
-        sell_through_base: 0.60,
-        reputation_modifier: 0.003,
-        local_popularity_weight: 0.40,
-        merch_percentage: 0.15,
-        ticket_price_base: 25,
-        ticket_price_per_capacity: 0.03
-      };
+      throw new Error('Balance data not loaded. Cannot get tour configuration.');
     }
 
     const tour = this.balanceData.market_formulas.tour_revenue;

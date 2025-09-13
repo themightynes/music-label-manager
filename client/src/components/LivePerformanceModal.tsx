@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info, Target, TrendingUp, TrendingDown } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 
 interface LivePerformanceModalProps {
@@ -26,6 +27,7 @@ export interface TourCreationData {
   budget: number;
   cities: number;
   venueAccess?: string; // Capture current venue access for historical tracking
+  venueCapacity?: number; // PHASE 3: Selected venue capacity
   // TODO: Add venue selection when venue booking system is implemented
   // TODO: Add date selection when calendar system is implemented
 }
@@ -75,6 +77,11 @@ interface TourEstimate {
   cities?: CityBreakdown[];
   sellThroughAnalysis?: SellThroughAnalysis;
   venueCapacity?: number;
+  // PHASE 2 ENHANCEMENTS: New fields from enhanced API
+  selectedCapacity?: number;
+  tierRange?: { min: number; max: number };
+  pricePerTicket?: number;
+  playerTier?: string;
 }
 
 // Performance types - costs now calculated dynamically using venue_capacity * 4 + user budget
@@ -122,6 +129,7 @@ export function LivePerformanceModal({
   const [tourConfig, setTourConfig] = useState<any>(null);
   const [venueAccessConfig, setVenueAccessConfig] = useState<any>(null);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [selectedCapacity, setSelectedCapacity] = useState<number>(500); // Default capacity
 
   const currentMoney = gameState.money || 75000;
   const currentVenueAccess = gameState.venueAccess || 'none';
@@ -242,7 +250,7 @@ export function LivePerformanceModal({
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
 
-  // Fetch estimate from API - NO CLIENT CALCULATIONS
+  // Fetch estimate from API with venueCapacity - PHASE 3 ENHANCEMENT
   const fetchTourEstimate = useCallback(async () => {
     if (!selectedArtist || !budgetPerCity || !gameState?.id) return;
 
@@ -257,7 +265,8 @@ export function LivePerformanceModal({
           artistId: selectedArtist,
           cities,
           budgetPerCity,
-          gameId: gameState.id
+          gameId: gameState.id,
+          venueCapacity: selectedCapacity // PHASE 3: Send selected capacity
         })
       });
 
@@ -276,7 +285,7 @@ export function LivePerformanceModal({
     } finally {
       setEstimateLoading(false);
     }
-  }, [selectedArtist, budgetPerCity, cities, gameState?.id]);
+  }, [selectedArtist, budgetPerCity, cities, gameState?.id, selectedCapacity]); // PHASE 3: Include selectedCapacity in dependency
 
   // Trigger estimate fetch when parameters change
   useEffect(() => {
@@ -294,6 +303,28 @@ export function LivePerformanceModal({
 
     return (
       <div className="space-y-4">
+        {/* Phase 3: Enhanced display with capacity-specific data */}
+        {estimateData.selectedCapacity && (
+          <div className="bg-blue-500/20 rounded p-2 mb-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-blue-300">Selected Venue Size:</span>
+              <span className="font-mono text-blue-100">{estimateData.selectedCapacity.toLocaleString()} capacity</span>
+            </div>
+            {estimateData.pricePerTicket && (
+              <div className="flex items-center justify-between text-xs mt-1">
+                <span className="text-blue-400/80">Ticket Price:</span>
+                <span className="font-mono text-blue-200">${estimateData.pricePerTicket}</span>
+              </div>
+            )}
+            {estimateData.playerTier && (
+              <div className="flex items-center justify-between text-xs mt-1">
+                <span className="text-blue-400/80">Player Tier:</span>
+                <span className="text-blue-200">{estimateData.playerTier}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* High-level summary */}
         <div className="space-y-2">
           <div className="flex justify-between">
@@ -428,6 +459,45 @@ export function LivePerformanceModal({
     );
   };
 
+  // PHASE 3: Capacity range and strategic guidance helpers
+  const getCapacityRange = () => {
+    if (!venueAccessConfig || !estimateData?.tierRange) {
+      return { min: 50, max: 2000 }; // Fallback range
+    }
+    return estimateData.tierRange;
+  };
+
+  const getVenueCategoryInfo = (capacity: number) => {
+    if (capacity <= 200) {
+      return {
+        category: 'Intimate Club',
+        description: 'Small, personal setting',
+        riskLevel: 'low',
+        icon: Users,
+        advice: 'Lower revenue but easier to sell out. Great for building fan loyalty.',
+        color: 'text-green-500'
+      };
+    } else if (capacity <= 800) {
+      return {
+        category: 'Mid-Size Venue',
+        description: 'Balanced capacity',
+        riskLevel: 'medium',
+        icon: Target,
+        advice: 'Balanced risk/reward. Good revenue potential with manageable fill requirements.',
+        color: 'text-yellow-500'
+      };
+    } else {
+      return {
+        category: 'Large Venue',
+        description: 'High capacity venue',
+        riskLevel: 'high',
+        icon: TrendingUp,
+        advice: 'High revenue potential but requires strong popularity to sell out.',
+        color: 'text-red-500'
+      };
+    }
+  };
+
   const handleTypeSelect = (type: 'single_show' | 'mini_tour') => {
     setSelectedType(type);
     const performanceType = PERFORMANCE_TYPES.find(p => p.id === type);
@@ -441,6 +511,9 @@ export function LivePerformanceModal({
         const titleSuffix = type === 'single_show' ? 'Live' : 'Tour';
         setTitle(`${selectedArtistData.name} ${titleSuffix}`);
       }
+      // PHASE 3: Reset capacity to middle of range when type changes
+      const range = getCapacityRange();
+      setSelectedCapacity(Math.round((range.min + range.max) / 2));
     }
   };
 
@@ -451,9 +524,10 @@ export function LivePerformanceModal({
       title,
       type: selectedType,
       artistId: selectedArtist,
-      budget: estimateData?.totalBudget || 0, // Pass total budget from API
+      budget: Math.round(estimateData?.totalBudget || 0), // Pass total budget from API (rounded to integer)
       cities: selectedType === 'single_show' ? 1 : cities,
-      venueAccess: currentVenueAccess // Capture current venue access tier
+      venueAccess: currentVenueAccess, // Capture current venue access tier
+      venueCapacity: selectedCapacity // PHASE 3: Include selected capacity
     };
 
     onCreateTour(tourData);
@@ -464,6 +538,7 @@ export function LivePerformanceModal({
     setTitle('');
     setBudgetPerCity(0);
     setCities(1);
+    setSelectedCapacity(500); // Reset capacity to default
     setIsOpen(false);
   };
 
@@ -647,6 +722,104 @@ export function LivePerformanceModal({
                   </p>
                 </div>
               )}
+
+              {/* PHASE 3: Venue Capacity Selection */}
+              <div className="bg-purple-500/10 rounded-lg p-4 border">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="font-medium text-purple-300 mb-1">Venue Capacity Selection</h4>
+                    <p className="text-xs text-white/60">Choose your target venue size</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-white">{selectedCapacity.toLocaleString()}</p>
+                    <p className="text-xs text-white/50">capacity</p>
+                  </div>
+                </div>
+
+                {/* Capacity Slider */}
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-xs text-white/50 mb-2">
+                      <span>{getCapacityRange().min}</span>
+                      <span>{getCapacityRange().max}</span>
+                    </div>
+                    <Slider
+                      value={[selectedCapacity]}
+                      onValueChange={(value) => setSelectedCapacity(value[0])}
+                      min={getCapacityRange().min}
+                      max={getCapacityRange().max}
+                      step={25}
+                      className="mb-2"
+                    />
+
+                    {/* Alternative number input */}
+                    <div className="mt-3">
+                      <Input
+                        type="number"
+                        value={selectedCapacity}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          const range = getCapacityRange();
+                          if (value >= range.min && value <= range.max) {
+                            setSelectedCapacity(value);
+                          }
+                        }}
+                        min={getCapacityRange().min}
+                        max={getCapacityRange().max}
+                        className="text-center"
+                        placeholder="Enter capacity"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Strategic Guidance */}
+                  {(() => {
+                    const venueInfo = getVenueCategoryInfo(selectedCapacity);
+                    const IconComponent = venueInfo.icon;
+                    return (
+                      <div className="bg-black/30 rounded p-3">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <IconComponent className={`w-4 h-4 ${venueInfo.color}`} />
+                          <span className={`font-medium ${venueInfo.color}`}>{venueInfo.category}</span>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              venueInfo.riskLevel === 'low' ? 'border-green-500 text-green-400' :
+                              venueInfo.riskLevel === 'medium' ? 'border-yellow-500 text-yellow-400' :
+                              'border-red-500 text-red-400'
+                            }`}
+                          >
+                            {venueInfo.riskLevel} risk
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-white/70 mb-1">{venueInfo.description}</p>
+                        <p className="text-xs text-white/60">{venueInfo.advice}</p>
+
+                        {/* Real-time feedback if estimate is available */}
+                        {estimateData && estimateData.selectedCapacity && (
+                          <div className="mt-2 pt-2 border-t border-white/10">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-white/60">Expected attendance:</span>
+                              <span className="font-mono text-blue-300">
+                                {Math.round(estimateData.selectedCapacity * (estimateData.sellThroughRate || 0.7)).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs mt-1">
+                              <span className="text-white/60">Sell-through rate:</span>
+                              <span className={`font-mono ${
+                                (estimateData.sellThroughRate || 0) > 0.8 ? 'text-green-400' :
+                                (estimateData.sellThroughRate || 0) > 0.6 ? 'text-yellow-400' : 'text-red-400'
+                              }`}>
+                                {((estimateData.sellThroughRate || 0) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
 
               {/* Comprehensive Tour Analysis - Enhanced API Integration */}
               <div className="bg-[#A75A5B]/10 rounded-lg p-4 border">

@@ -53,7 +53,8 @@
       "mcp__browsermcp__browser_wait",
       "mcp__browsermcp__browser_snapshot",
       "Bash(python:*)",
-      "mcp__browsermcp__browser_type"
+      "mcp__browsermcp__browser_type",
+      "Bash(npx kill-port:*)"
     ],
     "deny": [],
     "ask": [],

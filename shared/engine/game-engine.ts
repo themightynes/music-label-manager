@@ -2752,8 +2752,9 @@ export class GameEngine {
     if (cityNumber === 1 && !tourStats.preCalculatedCities) {
       console.log(`[UNIFIED TOUR] Pre-calculating all cities using FinancialSystem`);
 
-      // Extract parameters for FinancialSystem
+      // ENHANCED: Extract parameters for FinancialSystem with capacity support
       const venueAccess = currentMetadata.venueAccess || 'none';
+      const storedVenueCapacity = currentMetadata.venueCapacity; // New: stored capacity from tour creation
       const artistPopularity = artist.popularity || 50;
       const reputation = this.gameState.reputation || 0;
       const totalCities = currentMetadata.cities || 1;
@@ -2769,9 +2770,16 @@ export class GameEngine {
 
       console.log(`[TOUR EXECUTION] Pre-calculated ${totalCities} cities for ${project.title}`);
 
-      // SINGLE SOURCE OF TRUTH - GET ALL DATA FROM FINANCIALSYSTEM
+      if (storedVenueCapacity) {
+        console.log(`[TOUR EXECUTION] Using stored venue capacity: ${storedVenueCapacity}`);
+      } else {
+        console.log(`[TOUR EXECUTION] Using fallback tier-based capacity for: ${venueAccess}`);
+      }
+
+      // ENHANCED: SINGLE SOURCE OF TRUTH with capacity support
       const detailedBreakdown = this.financialSystem.calculateDetailedTourBreakdown({
-        venueTier: venueAccess,
+        venueCapacity: storedVenueCapacity || 0, // Use stored capacity or fallback to tier
+        venueTier: venueAccess, // Keep for backward compatibility
         artistPopularity,
         localReputation: reputation,
         cities: totalCities,

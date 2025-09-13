@@ -76,7 +76,7 @@ export function Dashboard() {
         title: tourData.title,
         type: 'Mini-Tour' as const, // Always use Mini-Tour type for live performances
         artistId: tourData.artistId,
-        totalCost: tourData.budget, // Map budget to totalCost
+        totalCost: Math.round(tourData.budget), // Map budget to totalCost (rounded to integer)
         budgetPerSong: 0, // Not applicable for tours
         songCount: 0, // Tours don't have songs
         producerTier: 'local' as const, // Default for tours

@@ -1838,13 +1838,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tour estimation endpoint - Phase 3: API Bridge
   app.post('/api/tour/estimate', getUserId, async (req, res) => {
     try {
-      const { artistId, cities, budgetPerCity, gameId } = req.body;
+      const { artistId, cities, budgetPerCity, gameId, venueCapacity } = req.body;
 
       // VALIDATE INPUTS - CRASH IF INVALID
       if (!artistId || !cities || budgetPerCity === undefined || !gameId) {
         return res.status(400).json({
           error: 'Missing required parameters: artistId, cities, budgetPerCity, gameId'
         });
+      }
+
+      // ENHANCED: Validate venueCapacity if provided
+      if (venueCapacity !== undefined) {
+        if (typeof venueCapacity !== 'number' || venueCapacity < 50) {
+          return res.status(400).json({
+            error: 'venueCapacity must be a number >= 50'
+          });
+        }
       }
 
       // Get game state - CRASH IF MISSING
@@ -1865,22 +1874,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: `Invalid venue access: ${venueAccess}` });
       }
 
-      // Calculate marketing budget from cost structure
+      // Initialize serverGameData before creating financial system
+      await serverGameData.initialize();
+
+      // Initialize financial system for validation and calculations
       const financialSystem = new FinancialSystem(serverGameData, () => Math.random());
+
+      // ENHANCED: Validate venueCapacity against player's tier limits
+      if (venueCapacity !== undefined) {
+        try {
+          // Get tier capacity ranges from financial system
+          const tierRanges = financialSystem.getTierCapacityRanges();
+
+          // Map venue access to tier range
+          const tierMap: Record<string, keyof typeof tierRanges> = {
+            'clubs': 'small',
+            'theaters': 'medium',
+            'arenas': 'large'
+          };
+
+          const playerTier = tierMap[venueAccess];
+          if (!playerTier) {
+            return res.status(400).json({
+              error: `Unknown venue access tier: ${venueAccess}`
+            });
+          }
+
+          const tierRange = tierRanges[playerTier];
+          if (venueCapacity < tierRange.min || venueCapacity > tierRange.max) {
+            return res.status(400).json({
+              error: `Venue capacity ${venueCapacity} is outside your ${venueAccess} access range (${tierRange.min}-${tierRange.max})`,
+              tierRange,
+              playerTier: venueAccess
+            });
+          }
+
+          // Additional validation through FinancialSystem
+          financialSystem.validateVenueCapacity(venueCapacity, playerTier);
+
+        } catch (error) {
+          return res.status(400).json({
+            error: `Venue capacity validation failed: ${(error as Error).message}`
+          });
+        }
+      }
 
       // Get base costs to determine marketing budget
       const baseCosts = financialSystem.calculateTourCosts(venueAccess, cities, 0);
       const totalMarketingBudget = budgetPerCity * cities;
       const totalBudget = baseCosts.totalCosts + totalMarketingBudget;
 
-      // CALCULATE DETAILED BREAKDOWN - LET IT CRASH IF INVALID
+      // ENHANCED: Calculate detailed breakdown with specific capacity or tier fallback
       const detailedBreakdown = financialSystem.calculateDetailedTourBreakdown({
-        venueTier: venueAccess,
+        venueCapacity: venueCapacity || 0, // Use provided capacity or fallback to tier
+        venueTier: venueAccess, // Keep for backward compatibility and fallback
         artistPopularity: artist.popularity || 0,
         localReputation: gameState.reputation || 0,
         cities,
         marketingBudget: totalMarketingBudget
       });
+
+      // Get tier ranges for response
+      const tierRanges = financialSystem.getTierCapacityRanges();
+      const tierMap: Record<string, keyof typeof tierRanges> = {
+        'clubs': 'small',
+        'theaters': 'medium',
+        'arenas': 'large'
+      };
+      const playerTier = tierMap[venueAccess];
+      const tierRange = tierRanges[playerTier] || { min: 50, max: 20000 };
+
+      // Calculate price per ticket from first city (all cities have same pricing)
+      const firstCity = detailedBreakdown.cities[0];
+      const pricePerTicket = firstCity
+        ? Math.round((firstCity.ticketRevenue / (firstCity.venueCapacity * firstCity.sellThroughRate)) || 0)
+        : 0;
 
       // Create enhanced response with detailed breakdown
       const response = {
@@ -1895,7 +1963,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // ENHANCED: Include detailed city-by-city breakdown
         cities: detailedBreakdown.cities,
         sellThroughAnalysis: detailedBreakdown.sellThroughAnalysis,
-        venueCapacity: detailedBreakdown.cities[0]?.venueCapacity || 0
+        venueCapacity: detailedBreakdown.cities[0]?.venueCapacity || 0,
+        // PHASE 2 ENHANCEMENTS: New fields for capacity selection
+        selectedCapacity: detailedBreakdown.cities[0]?.venueCapacity || 0,
+        tierRange,
+        pricePerTicket,
+        playerTier: venueAccess
       };
 
       res.json(response);

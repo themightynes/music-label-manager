@@ -17,9 +17,11 @@ import type { MonthSummary, MonthlyFinancials } from './game-engine';
 
 /**
  * Types for tour calculation parameters and results
+ * ENHANCED: Now supports granular venue capacity selection instead of tier-based
  */
 export interface TourCalculationParams {
-  venueTier: string;
+  venueCapacity: number; // CHANGED: Direct capacity instead of tier
+  venueTier?: string; // LEGACY: Keep for backward compatibility during transition
   artistPopularity: number;
   localReputation: number;
   cities: number;
@@ -264,6 +266,17 @@ export class FinancialSystem {
     DEFAULT_ARTIST_FEE: 1200,
     DEFAULT_PRESS_CHANCE: 0.05,
     REPUTATION_GAIN_MULTIPLIER: 2,
+    // ENHANCED VENUE CAPACITY SELECTION CONSTANTS
+    VENUE_TIERS: {
+      small: { min: 50, max: 3000 },
+      medium: { min: 50, max: 8000 },
+      large: { min: 50, max: 20000 }
+    },
+    VENUE_SCALING: {
+      popularity_scaling_factor: 0.3,
+      venue_size_bonus: 0.5,
+      ticket_price_capacity_multiplier: 0.003 // Changed from 0.03
+    }
   };
   
   constructor(gameData: any, rng: () => number, storage?: any) {
@@ -353,15 +366,27 @@ export class FinancialSystem {
       throw new Error('Tour configuration missing sell_through_base');
     }
 
-    // Calculate with NO fallbacks
-    const venueCapacity = this.getVenueCapacity(params.venueTier); // Will throw if invalid tier
-    const costBreakdown = this.calculateTourCosts(params.venueTier, params.cities, params.marketingBudget);
-    const revenueCalculation = this.calculateTourRevenue(
-      params.venueTier,
+    // ENHANCED: Use direct venue capacity or fallback to legacy tier system
+    let venueCapacity = params.venueCapacity;
+    if (!venueCapacity && params.venueTier) {
+      // Legacy fallback for backward compatibility
+      venueCapacity = this.getVenueCapacityFromTier(params.venueTier);
+    }
+    if (!venueCapacity) {
+      throw new Error('Either venueCapacity or venueTier must be provided');
+    }
+
+    // Validate capacity is within allowed ranges
+    this.validateVenueCapacity(venueCapacity, params.venueTier);
+
+    const costBreakdown = this.calculateTourCostsWithCapacity(venueCapacity, params.cities, params.marketingBudget);
+    const revenueCalculation = this.calculateTourRevenueWithCapacity(
+      venueCapacity,
       params.artistPopularity,
       params.localReputation,
       params.cities,
-      params.marketingBudget
+      params.marketingBudget,
+      params.venueTier
     );
 
     // Return detailed breakdown with city-by-city data
@@ -371,7 +396,7 @@ export class FinancialSystem {
       netProfit: revenueCalculation - costBreakdown.totalCosts,
       cities: this.generateCityBreakdowns(params, venueCapacity, config),
       costBreakdown,
-      sellThroughAnalysis: this.calculateSellThroughBreakdown(params, venueCapacity, config)
+      sellThroughAnalysis: this.calculateSellThroughBreakdown(params, venueCapacity, config, params.venueTier)
     };
   }
 
@@ -389,8 +414,8 @@ export class FinancialSystem {
       const venueFee = venueCapacity * 4;
       const productionFee = venueCapacity * 2.7;
 
-      // Calculate revenue per show
-      const ticketPrice = config.ticket_price_base + (venueCapacity * config.ticket_price_per_capacity);
+      // ENHANCED: Calculate revenue per show using scarcity-based pricing
+      const ticketPrice = this.calculateTicketPrice(venueCapacity, params.artistPopularity, config, params.venueTier);
       const ticketRevenue = venueCapacity * sellThroughAnalysis.finalRate * ticketPrice;
       const merchRevenue = ticketRevenue * config.merch_percentage;
       const totalRevenue = ticketRevenue + merchRevenue;
@@ -418,22 +443,80 @@ export class FinancialSystem {
   /**
    * Calculates sell-through rate breakdown for transparency
    */
-  private calculateSellThroughBreakdown(params: TourCalculationParams, venueCapacity: number, config: any): SellThroughAnalysis {
+  /**
+   * ENHANCED: Calculate scarcity-based ticket pricing
+   */
+  private calculateTicketPrice(venueCapacity: number, artistPopularity: number, config: any, venueTier?: string): number {
+    // Determine tier capacity range for scarcity calculation
+    let maxCapacityInTier = 20000;
+    if (venueTier && this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
+      maxCapacityInTier = this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS].max;
+    } else {
+      // Auto-detect tier based on capacity
+      if (venueCapacity <= 3000) {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.small.max;
+      } else if (venueCapacity <= 8000) {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.medium.max;
+      } else {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.large.max;
+      }
+    }
+
+    const venuePositionInTier = (venueCapacity - 50) / (maxCapacityInTier - 50);
+
+    // Base price calculation using enhanced multiplier
+    const basePrice = config.ticket_price_base + (venueCapacity * this.CONSTANTS.VENUE_SCALING.ticket_price_capacity_multiplier);
+
+    // Scarcity-based pricing: Popular artists in smaller venues charge premium
+    const scarcityMultiplier = 1 + (artistPopularity / 100) * (2.5 - venuePositionInTier * 2.0);
+
+    return basePrice * scarcityMultiplier;
+  }
+
+  /**
+   * ENHANCED: Calculate sell-through with venue size effects and popularity scaling
+   */
+  private calculateSellThroughBreakdown(params: TourCalculationParams, venueCapacity: number, config: any, venueTier?: string): SellThroughAnalysis {
     const marketingBudgetPerCity = params.marketingBudget > 0 ? params.marketingBudget / params.cities : 0;
 
+    // Determine tier capacity range for venue size effects
+    let maxCapacityInTier = 20000; // Default to largest tier
+    if (venueTier && this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
+      maxCapacityInTier = this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS].max;
+    } else {
+      // Auto-detect tier based on capacity
+      if (venueCapacity <= 3000) {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.small.max;
+      } else if (venueCapacity <= 8000) {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.medium.max;
+      } else {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.large.max;
+      }
+    }
+
+    // ENHANCED: Venue size effects
+    const venuePositionInTier = (venueCapacity - 50) / (maxCapacityInTier - 50);
+    const popularityEffectiveness = 1.0 - (venuePositionInTier * this.CONSTANTS.VENUE_SCALING.popularity_scaling_factor);
+    const venueSizeModifier = (1 - venuePositionInTier) * this.CONSTANTS.VENUE_SCALING.venue_size_bonus;
+
+    // Base calculations
     const baseRate = config.sell_through_base;
     const reputationBonus = (params.localReputation / 100) * config.reputation_modifier;
-    const popularityBonus = (params.artistPopularity / 100) * config.local_popularity_weight;
+
+    // ENHANCED: Adjusted popularity bonus with venue size effects
+    const adjustedPopularityBonus = (params.artistPopularity / 100) * config.local_popularity_weight * popularityEffectiveness;
+
     const budgetQualityBonus = marketingBudgetPerCity > 0
       ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15
       : 0;
 
-    const finalRate = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
+    // Add venue size modifier to final calculation
+    const finalRate = Math.min(1.0, baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier);
 
     return {
       baseRate,
       reputationBonus,
-      popularityBonus,
+      popularityBonus: adjustedPopularityBonus, // Return the adjusted value
       budgetQualityBonus,
       finalRate
     };
@@ -477,10 +560,35 @@ export class FinancialSystem {
   }
 
   /**
-   * Helper to get venue capacity with strict validation - NO FALLBACKS
-   * Originally from game-engine.ts line 535-544
+   * ENHANCED: Get tier capacity ranges for venue selection UI
    */
-  private getVenueCapacity(tier: string): number {
+  getTierCapacityRanges(): Record<string, { min: number; max: number }> {
+    return this.CONSTANTS.VENUE_TIERS;
+  }
+
+  /**
+   * ENHANCED: Validate venue capacity is within allowed tier range
+   */
+  private validateVenueCapacity(capacity: number, tier?: string): void {
+    if (capacity < 50) {
+      throw new Error(`Venue capacity ${capacity} is below minimum (50)`);
+    }
+
+    // If tier is provided, validate capacity is within tier range
+    if (tier && this.CONSTANTS.VENUE_TIERS[tier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
+      const tierRange = this.CONSTANTS.VENUE_TIERS[tier as keyof typeof this.CONSTANTS.VENUE_TIERS];
+      if (capacity < tierRange.min || capacity > tierRange.max) {
+        throw new Error(`Venue capacity ${capacity} is outside ${tier} tier range (${tierRange.min}-${tierRange.max})`);
+      }
+    }
+  }
+
+  /**
+   * LEGACY: Helper to get venue capacity with strict validation - NO FALLBACKS
+   * Originally from game-engine.ts line 535-544
+   * DEPRECATED: Use direct capacity parameter instead
+   */
+  private getVenueCapacityFromTier(tier: string): number {
     const tiers = this.gameData.getAccessTiersSync();
     const venueData = tiers.venue_access as any;
     const venueConfig = venueData[tier];
@@ -566,7 +674,7 @@ export class FinancialSystem {
     marketingBudgetTotal: number = 0
   ): number {
     const config = this.gameData.getTourConfigSync();
-    const venueCapacity = this.getVenueCapacity(venueTier);
+    const venueCapacity = this.getVenueCapacityFromTier(venueTier);
     
     // Fixed costs per city
     const venueFeePerCity = venueCapacity * 4;        // Infrastructure cost
@@ -585,8 +693,8 @@ export class FinancialSystem {
     
     const sellThrough = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
     
-    // Calculate revenue per show using config
-    const ticketPrice = config.ticket_price_base + (venueCapacity * config.ticket_price_per_capacity);
+    // ENHANCED: Calculate revenue per show using scarcity-based pricing
+    const ticketPrice = this.calculateTicketPrice(venueCapacity, artistPopularity, config, venueTier);
     const ticketRevenue = venueCapacity * sellThrough * ticketPrice;
     const merchRevenue = ticketRevenue * config.merch_percentage;
     
@@ -607,7 +715,7 @@ export class FinancialSystem {
     cities: number,
     marketingBudgetTotal: number = 0
   ): { totalCosts: number; venueFees: number; productionFees: number; marketingBudget: number; breakdown: { venueFeePerCity: number; productionFeePerCity: number; marketingBudgetPerCity: number } } {
-    const venueCapacity = this.getVenueCapacity(venueTier);
+    const venueCapacity = this.getVenueCapacityFromTier(venueTier);
     const venueFeePerCity = venueCapacity * 4;
     const productionFeePerCity = venueCapacity * 2.7;
     const totalVenueFees = venueFeePerCity * cities;
@@ -625,6 +733,92 @@ export class FinancialSystem {
         marketingBudgetPerCity
       }
     };
+  }
+
+  /**
+   * ENHANCED: Calculate tour costs with direct venue capacity
+   */
+  calculateTourCostsWithCapacity(
+    venueCapacity: number,
+    cities: number,
+    marketingBudgetTotal: number = 0
+  ): { totalCosts: number; venueFees: number; productionFees: number; marketingBudget: number; breakdown: { venueFeePerCity: number; productionFeePerCity: number; marketingBudgetPerCity: number } } {
+    const venueFeePerCity = venueCapacity * 4;
+    const productionFeePerCity = venueCapacity * 2.7;
+    const totalVenueFees = venueFeePerCity * cities;
+    const totalProductionFees = productionFeePerCity * cities;
+    const marketingBudgetPerCity = marketingBudgetTotal / cities;
+
+    return {
+      totalCosts: totalVenueFees + totalProductionFees + marketingBudgetTotal,
+      venueFees: totalVenueFees,
+      productionFees: totalProductionFees,
+      marketingBudget: marketingBudgetTotal,
+      breakdown: {
+        venueFeePerCity,
+        productionFeePerCity,
+        marketingBudgetPerCity
+      }
+    };
+  }
+
+  /**
+   * ENHANCED: Calculate tour revenue with direct venue capacity
+   */
+  calculateTourRevenueWithCapacity(
+    venueCapacity: number,
+    artistPopularity: number,
+    localReputation: number,
+    cities: number,
+    marketingBudgetTotal: number = 0,
+    venueTier?: string
+  ): number {
+    const config = this.gameData.getTourConfigSync();
+    const marketingBudgetPerCity = marketingBudgetTotal > 0 ? marketingBudgetTotal / cities : 0;
+
+    // ENHANCED: Use venue size effects for sell-through calculation
+    const venuePositionInTier = this.calculateVenuePositionInTier(venueCapacity, venueTier);
+    const popularityEffectiveness = 1.0 - (venuePositionInTier * this.CONSTANTS.VENUE_SCALING.popularity_scaling_factor);
+    const venueSizeModifier = (1 - venuePositionInTier) * this.CONSTANTS.VENUE_SCALING.venue_size_bonus;
+
+    // Enhanced sell-through calculation
+    const baseRate = config.sell_through_base;
+    const reputationBonus = (localReputation / 100) * config.reputation_modifier;
+    const adjustedPopularityBonus = (artistPopularity / 100) * config.local_popularity_weight * popularityEffectiveness;
+    const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15 : 0;
+
+    const sellThrough = Math.min(1.0, baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier);
+
+    // ENHANCED: Calculate revenue per show using scarcity-based pricing
+    const ticketPrice = this.calculateTicketPrice(venueCapacity, artistPopularity, config, venueTier);
+    const ticketRevenue = venueCapacity * sellThrough * ticketPrice;
+    const merchRevenue = ticketRevenue * config.merch_percentage;
+
+    // Total revenue for all cities
+    const totalRevenue = (ticketRevenue + merchRevenue) * cities;
+
+    return Math.round(totalRevenue);
+  }
+
+  /**
+   * Helper method to calculate venue position within tier (0-1)
+   */
+  private calculateVenuePositionInTier(venueCapacity: number, venueTier?: string): number {
+    let maxCapacityInTier = 20000;
+    if (venueTier && this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
+      maxCapacityInTier = this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS].max;
+    } else {
+      // Auto-detect tier based on capacity
+      if (venueCapacity <= 3000) {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.small.max;
+      } else if (venueCapacity <= 8000) {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.medium.max;
+      } else {
+        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.large.max;
+      }
+    }
+
+    return (venueCapacity - 50) / (maxCapacityInTier - 50);
   }
 
   /**
