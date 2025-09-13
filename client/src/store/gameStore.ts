@@ -43,6 +43,7 @@ interface GameStore {
   // Project management
   createProject: (projectData: any) => Promise<void>;
   updateProject: (projectId: string, updates: any) => Promise<void>;
+  cancelProject: (projectId: string, cancellationData: { refundAmount: number }) => Promise<void>;
   
   // Dialogue
   openDialogue: (roleType: string, sceneId?: string) => Promise<void>;
@@ -612,8 +613,21 @@ export const useGameStore = create<GameStore>()(
             stage: 'planning'
           });
           const newProject = await response.json();
-          
+
+          // Update projects array
           set({ projects: [...projects, newProject] });
+
+          // CRITICAL: Immediately update gameState to reflect cost deduction
+          // The server has already deducted the project cost, so we need to sync our local state
+          const projectCost = projectData.totalCost || projectData.budgetPerSong || 0;
+          if (projectCost > 0) {
+            const updatedGameState = {
+              ...gameState,
+              money: gameState.money - projectCost
+            };
+            set({ gameState: updatedGameState });
+            console.log(`[FRONTEND] Synced money deduction: -$${projectCost}, new balance: $${updatedGameState.money}`);
+          }
         } catch (error) {
           console.error('Failed to create project:', error);
           throw error;
@@ -632,6 +646,41 @@ export const useGameStore = create<GameStore>()(
           });
         } catch (error) {
           console.error('Failed to update project:', error);
+          throw error;
+        }
+      },
+
+      // Cancel project with refund calculation
+      cancelProject: async (projectId: string, cancellationData: { refundAmount: number }) => {
+        const { projects, gameState } = get();
+        if (!gameState) return;
+
+        try {
+          console.log('[CANCEL PROJECT] Sending cancellation request:', { projectId, cancellationData });
+          
+          // Call the real API endpoint
+          const response = await apiRequest('DELETE', `/api/projects/${projectId}/cancel`, cancellationData);
+          const result = await response.json();
+          
+          console.log('[CANCEL PROJECT] API response:', result);
+          
+          // Remove project from local state
+          const updatedProjects = projects.filter(p => p.id !== projectId);
+          
+          // Update game state with new balance from server
+          const updatedGameState = {
+            ...gameState,
+            money: result.newBalance
+          };
+          
+          set({
+            projects: updatedProjects,
+            gameState: updatedGameState
+          });
+          
+          console.log(`[CANCEL PROJECT] Project cancelled. Refund: $${result.refundAmount}, New balance: $${result.newBalance}`);
+        } catch (error) {
+          console.error('Failed to cancel project:', error);
           throw error;
         }
       },

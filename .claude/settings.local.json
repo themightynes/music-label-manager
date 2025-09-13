@@ -51,7 +51,9 @@
       "mcp__browsermcp__browser_get_console_logs",
       "mcp__browsermcp__browser_press_key",
       "mcp__browsermcp__browser_wait",
-      "mcp__browsermcp__browser_snapshot"
+      "mcp__browsermcp__browser_snapshot",
+      "Bash(python:*)",
+      "mcp__browsermcp__browser_type"
     ],
     "deny": [],
     "ask": [],

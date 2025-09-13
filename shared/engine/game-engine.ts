@@ -44,6 +44,13 @@ interface RNGConfig {
 }
 
 /**
+ * Tour venue capacity and economics configuration
+ */
+// LEGACY CONSTANTS REMOVED - now using unified FinancialSystem
+// Venue capacity, ticket prices, and venue cuts are now calculated by FinancialSystem
+// using configuration from data/balance/markets.json
+
+/**
  * Consolidated financial tracking for monthly calculations
  */
 export interface MonthlyFinancials {
@@ -727,13 +734,15 @@ export class GameEngine {
     venueTier: string,
     artistPopularity: number,
     localReputation: number,
-    cities: number
+    cities: number,
+    marketingBudgetTotal: number = 0
   ): number {
     return this.financialSystem.calculateTourRevenue(
       venueTier,
       artistPopularity,
       localReputation,
-      cities
+      cities,
+      marketingBudgetTotal
     );
   }
 
@@ -2729,6 +2738,194 @@ export class GameEngine {
   // REMOVED: getDefaultSongCount method is redundant
   // Default song counts are now handled via database project_costs.song_count_default
 
+  // LEGACY METHOD REMOVED - calculateCityRevenue()
+  // Replaced with unified FinancialSystem calculations in processUnifiedTourRevenue()
+
+  /**
+   * Processes tour revenue using unified FinancialSystem calculations
+   * Replaces legacy random-based city revenue system
+   */
+  private async processUnifiedTourRevenue(project: any, cityNumber: number, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    console.log(`[UNIFIED TOUR] Processing city ${cityNumber} for tour "${project.title}"`);
+
+    // Get artist data for popularity
+    let artist;
+    try {
+      artist = await this.gameData.getArtistById(project.artistId);
+      if (!artist) {
+        console.error(`[UNIFIED TOUR] Artist not found for project: ${project.artistId}`);
+        return;
+      }
+    } catch (error) {
+      console.error(`[UNIFIED TOUR] Error getting artist:`, error);
+      return;
+    }
+
+    const currentMetadata = project.metadata || {};
+    let tourStats = currentMetadata.tourStats || { cities: [] };
+
+    // Pre-calculate all tour cities using unified system on first call (city 1)
+    if (cityNumber === 1 && !tourStats.preCalculatedCities) {
+      console.log(`[UNIFIED TOUR] Pre-calculating all cities using FinancialSystem`);
+
+      // Extract parameters for FinancialSystem
+      const venueAccess = currentMetadata.venueAccess || 'none';
+      const artistPopularity = artist.popularity || 50;
+      const reputation = this.currentGameState?.reputation || 0;
+      const totalCities = currentMetadata.cities || 1;
+
+      // Extract marketing budget from total cost
+      const venueCapacity = this.financialSystem.getVenueCapacity(venueAccess);
+      const venueFees = venueCapacity * 4 * totalCities;
+      const productionFees = venueCapacity * 2.7 * totalCities;
+      const marketingBudget = Math.max(0, (project.totalCost || 0) - venueFees - productionFees);
+
+      console.log(`[UNIFIED TOUR] Parameters: venue=${venueAccess}, capacity=${venueCapacity}, popularity=${artistPopularity}, reputation=${reputation}, cities=${totalCities}, marketing=$${marketingBudget}`);
+
+      // Calculate total tour revenue using unified system
+      const totalRevenue = this.financialSystem.calculateTourRevenue(
+        venueAccess,
+        artistPopularity,
+        reputation,
+        totalCities,
+        marketingBudget
+      );
+
+      console.log(`[UNIFIED TOUR] Total calculated revenue: $${totalRevenue}`);
+
+      // Create city data structures for UI compatibility
+      const revenuePerCity = Math.round(totalRevenue / totalCities);
+
+      // Calculate sell-through rate using unified formula (extracted from FinancialSystem)
+      const marketingBudgetPerCity = marketingBudget / totalCities;
+      const baseRate = 0.15;
+      const reputationBonus = reputation / 100 * 0.05;
+      const popularityBonus = (artistPopularity / 100) * 0.6;
+      const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15 : 0;
+      const sellThroughRate = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
+
+      // Get tour config for pricing calculations
+      const tourConfig = this.gameData.getTourConfigSync();
+      const ticketPrice = tourConfig.ticket_price_base + (venueCapacity * tourConfig.ticket_price_per_capacity);
+
+      // Pre-calculate all cities with consistent data
+      const preCalculatedCities = [];
+      for (let i = 1; i <= totalCities; i++) {
+        const ticketsSold = Math.round(venueCapacity * sellThroughRate);
+        const attendanceRate = Math.round(sellThroughRate * 100);
+
+        // Calculate detailed economic breakdown for each city
+        const ticketRevenue = ticketsSold * ticketPrice;
+        const merchRevenue = Math.round(ticketRevenue * tourConfig.merch_percentage);
+        const totalCityRevenue = ticketRevenue + merchRevenue;
+
+        // Calculate cost breakdown
+        const venueFee = venueCapacity * 4;
+        const productionFee = Math.round(venueCapacity * 2.7);
+        const totalCosts = venueFee + productionFee + marketingBudgetPerCity;
+        const profit = totalCityRevenue - totalCosts;
+
+        preCalculatedCities.push({
+          cityNumber: i,
+          venue: this.getVenueNameFromAccess(venueAccess),
+          capacity: venueCapacity,
+          revenue: revenuePerCity, // Keep existing for compatibility
+          ticketsSold: ticketsSold,
+          attendanceRate: attendanceRate,
+          // Enhanced economic breakdown
+          economics: {
+            sellThrough: {
+              rate: Math.round(sellThroughRate * 100),
+              baseRate: Math.round(baseRate * 100),
+              reputationBonus: Math.round(reputationBonus * 100),
+              popularityBonus: Math.round(popularityBonus * 100),
+              marketingBonus: Math.round(budgetQualityBonus * 100)
+            },
+            pricing: {
+              ticketPrice: Math.round(ticketPrice),
+              basePrice: tourConfig.ticket_price_base,
+              capacityBonus: Math.round(venueCapacity * tourConfig.ticket_price_per_capacity)
+            },
+            revenue: {
+              tickets: ticketRevenue,
+              merch: merchRevenue,
+              total: totalCityRevenue,
+              merchRate: Math.round(tourConfig.merch_percentage * 100)
+            },
+            costs: {
+              venue: venueFee,
+              production: productionFee,
+              marketing: Math.round(marketingBudgetPerCity),
+              total: totalCosts
+            },
+            profit: profit
+          }
+        });
+      }
+
+      // Store pre-calculated results
+      tourStats.preCalculatedCities = preCalculatedCities;
+      console.log(`[UNIFIED TOUR] Pre-calculated ${preCalculatedCities.length} cities`);
+    }
+
+    // Reveal one city per month from pre-calculated results
+    if (tourStats.preCalculatedCities && tourStats.preCalculatedCities.length >= cityNumber) {
+      const cityData = tourStats.preCalculatedCities[cityNumber - 1];
+
+      // Add to revealed cities
+      tourStats.cities = tourStats.cities || [];
+      tourStats.cities.push(cityData);
+
+      console.log(`[UNIFIED TOUR] Revealed city ${cityNumber}: $${cityData.revenue} revenue, ${cityData.attendanceRate}% attendance`);
+
+      // Add revenue to monthly summary
+      const revenue = cityData.revenue;
+      summary.revenue += revenue;
+      if (!summary.revenueBreakdown) {
+        summary.revenueBreakdown = {
+          streamingRevenue: 0,
+          tourRevenue: 0,
+          releaseRevenue: 0,
+          marketingRevenue: 0
+        };
+      }
+      summary.revenueBreakdown.tourRevenue += revenue;
+
+      summary.changes.push({
+        type: 'revenue',
+        description: `${project.title} - City ${cityNumber} performance: $${revenue.toLocaleString()} (${cityData.attendanceRate}% attendance)`,
+        amount: revenue,
+        projectId: project.id,
+        source: 'tour_performance'
+      });
+    }
+
+    // Update project metadata
+    const updatedMetadata = { ...currentMetadata, tourStats };
+    try {
+      await this.storage.updateProject(project.id, { metadata: updatedMetadata }, dbTransaction);
+      console.log(`[UNIFIED TOUR] Updated project metadata for city ${cityNumber}`);
+    } catch (error) {
+      console.error(`[UNIFIED TOUR] Error updating project metadata:`, error);
+    }
+  }
+
+  /**
+   * Helper method to get venue name from access tier
+   */
+  private getVenueNameFromAccess(venueAccess: string): string {
+    const venueNames = {
+      'none': 'Small Venues',
+      'clubs': 'Club Venues',
+      'theaters': 'Theater Venues',
+      'arenas': 'Arena Venues'
+    };
+    return venueNames[venueAccess as keyof typeof venueNames] || 'Small Venues';
+  }
+
+  // LEGACY METHOD REMOVED - processTourCityRevenue()
+  // Replaced with processUnifiedTourRevenue() using FinancialSystem calculations
+
   /**
    * Processes marketing campaigns (PR, Digital Ads, etc.)
    */
@@ -3125,7 +3322,8 @@ export class GameEngine {
           this.gameState.venueAccess || 'none',
           project.artistPopularity || 50,
           this.gameState.reputation || 5,
-          project.cities || 3
+          project.cities || 3,
+          project.totalCost || 0
         );
         
         description = `$${Math.round(revenue).toLocaleString()} tour revenue`;
@@ -3333,9 +3531,13 @@ export class GameEngine {
           newStageIndex = 1;
           advancementReason = `Planning complete after ${monthsElapsed} month${monthsElapsed > 1 ? 's' : ''}`;
           
-          // Track the project cost for consolidated calculation
+          // NOTE: Project costs are now deducted immediately upon creation (see routes.ts)
+          // This prevents timing exploits where users cancel before month advance
+          // We track the expense for monthly reporting but DON'T deduct money again
           if (project.totalCost) {
-            summary.expenses += project.totalCost;
+            // DO NOT add to summary.expenses - money already deducted at creation!
+            // summary.expenses += project.totalCost; // <-- REMOVED to fix double-charging bug
+
             if (!summary.expenseBreakdown) {
               summary.expenseBreakdown = {
                 monthlyOperations: 0,
@@ -3346,18 +3548,56 @@ export class GameEngine {
                 roleMeetingCosts: 0
               };
             }
+            // Track for reporting but don't affect final money calculation
             summary.expenseBreakdown.projectCosts += project.totalCost;
-            
+
             summary.changes.push({
-              type: 'expense',
-              description: `Started ${project.type}: ${project.title} - $${project.totalCost.toLocaleString()}`,
-              amount: -project.totalCost
+              type: 'expense_tracking',
+              description: `${project.title} production started (cost previously deducted at creation)`,
+              amount: -project.totalCost,
+              projectId: project.id,
+              note: 'Cost deducted at project creation, tracked here for reporting only - no additional money deduction'
             });
           }
         } else if (currentStageIndex === 1) {
-          // production -> marketing
-          if (!isRecordingProject) {
-            // Non-recording projects (tours) - simple time-based
+          // production -> marketing/completed
+          if (!isRecordingProject && project.type === 'Mini-Tour') {
+            // Enhanced tour logic: 1 month per city + planning month
+            const citiesPlanned = project.metadata?.cities || 1;
+            const monthsInProduction = monthsElapsed - 1; // Subtract planning month
+            
+            if (monthsInProduction > citiesPlanned) {
+              // Tour complete - skip marketing, go directly to completed
+              newStageIndex = 3; // Skip stage 2 (marketing), go to 'recorded' which acts as 'completed' for tours
+              advancementReason = `Tour completed after ${citiesPlanned} cities (${monthsElapsed} total months)`;
+              
+              // Generate final tour completion summary
+              const tourStats = project.metadata?.tourStats;
+              if (tourStats && tourStats.cities) {
+                const totalRevenue = tourStats.cities.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0);
+                const avgAttendance = Math.round(tourStats.cities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / tourStats.cities.length);
+                
+                // Save total revenue for ROI calculation
+                if (this.storage?.updateProject) {
+                  await this.storage.updateProject(project.id, { 
+                    totalRevenue,
+                    completionStatus: 'completed'
+                  }, dbTransaction);
+                }
+                
+                summary.changes.push({
+                  type: 'project_complete',
+                  description: `${project.title} tour completed - ${tourStats.cities.length} cities, ${avgAttendance}% avg attendance, $${totalRevenue.toLocaleString()} total revenue`,
+                  amount: 0, // Revenue already counted monthly
+                  projectId: project.id
+                });
+              }
+            } else if (monthsInProduction > 0) {
+              // Process this month's city performance using unified system
+              await this.processUnifiedTourRevenue(project, monthsInProduction, summary, dbTransaction);
+            }
+          } else if (!isRecordingProject) {
+            // Other non-recording projects - simple time-based
             if (monthsElapsed >= 2) {
               newStageIndex = 2;
               advancementReason = `Production complete after ${monthsElapsed} months`;

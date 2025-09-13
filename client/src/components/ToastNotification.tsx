@@ -97,9 +97,11 @@ export function ToastNotification() {
     if (prevMoney !== currentMoney) {
       const change = currentMoney - prevMoney;
       const isPositive = change > 0;
-      const key = `money-${currentMoney}`;
-      
+      // Use timestamp to prevent duplicate toasts for same amount but different transactions
+      const key = `money-${currentMoney}-${Date.now()}`;
+
       if (shouldShowToast(key)) {
+        console.log(`[TOAST] Money change detected: ${formatCurrency(prevMoney)} → ${formatCurrency(currentMoney)} (${isPositive ? '+' : ''}${formatCurrency(change)})`);
         showEnhancedToast({
           title: `${isPositive ? '💰' : '💸'} ${isPositive ? 'Revenue' : 'Expense'} ${formatCurrency(Math.abs(change))}`,
           description: `Current balance: ${formatCurrency(currentMoney)}${currentMoney < 10000 ? ' ⚠️ Low funds' : ''}`,

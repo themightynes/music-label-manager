@@ -685,7 +685,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameId: validatedData.gameId
       }, null, 2));
       
+      // Check if user has sufficient funds BEFORE creating project
+      const gameState = await storage.getGameState(validatedData.gameId);
+      if (!gameState) {
+        throw new Error('Game state not found');
+      }
+      
+      const projectCost = validatedData.totalCost || validatedData.budgetPerSong || 0;
+      if (projectCost > gameState.money) {
+        throw new Error(`Insufficient funds. Project costs $${projectCost.toLocaleString()} but you only have $${gameState.money.toLocaleString()}`);
+      }
+      
       const project = await storage.createProject(validatedData);
+      
+      // IMMEDIATELY deduct project cost to prevent timing exploit
+      if (projectCost > 0) {
+        await storage.updateGameState(validatedData.gameId, {
+          money: gameState.money - projectCost
+        });
+        console.log(`[PROJECT CREATION] Immediately deducted $${projectCost} for project "${project.title}"`);
+      }
       
       console.log('[PROJECT CREATION] Project created in database:', JSON.stringify({
         id: project.id,
@@ -696,7 +715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         songCount: project.songCount,
         producerTier: project.producerTier,
         timeInvestment: project.timeInvestment,
-        artistId: project.artistId
+        artistId: project.artistId,
+        costDeducted: projectCost
       }, null, 2));
       
       res.json(project);
@@ -717,6 +737,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(project);
     } catch (error) {
       res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  // Cancel project (tours) with refund calculation
+  app.delete("/api/projects/:id/cancel", getUserId, async (req, res) => {
+    try {
+      const projectId = req.params.id;
+      const { refundAmount } = req.body;
+      
+      console.log(`[CANCEL PROJECT] Cancelling project ${projectId} with refund $${refundAmount}`);
+      
+      // Get the project details before deletion
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Verify this is a tour project
+      if (project.type !== 'Mini-Tour') {
+        return res.status(400).json({ message: "Only tours can be cancelled" });
+      }
+      
+      // Get game state to update money
+      const gameState = await storage.getGameState(project.gameId);
+      if (!gameState) {
+        return res.status(404).json({ message: "Game state not found" });
+      }
+      
+      // Update project with cancellation data (keep for ROI tracking)
+      await storage.updateProject(projectId, {
+        totalRevenue: -(project.totalCost - refundAmount), // Loss = total cost minus refund
+        completionStatus: 'cancelled',
+        stage: 'cancelled' // Mark as cancelled instead of deleting
+      });
+      
+      // Update game state with refund
+      const updatedGameState = await storage.updateGameState(project.gameId, {
+        money: gameState.money + refundAmount
+      });
+      
+      console.log(`[CANCEL PROJECT] Project ${project.title} cancelled. Refund: $${refundAmount}`);
+      
+      res.json({ 
+        success: true, 
+        refundAmount,
+        newBalance: updatedGameState.money,
+        message: `Tour "${project.title}" cancelled successfully`
+      });
+      
+    } catch (error) {
+      console.error('[CANCEL PROJECT] Error:', error);
+      res.status(500).json({ message: "Failed to cancel project" });
     }
   });
 

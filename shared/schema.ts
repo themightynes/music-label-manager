@@ -98,6 +98,17 @@ export const projects = pgTable("projects", {
   // Project-level economic decision fields
   producerTier: text("producer_tier").default("local"), // local, regional, national, legendary  
   timeInvestment: text("time_investment").default("standard"), // rushed, standard, extended, perfectionist
+  
+  // Tour ROI tracking (mirrors song ROI system)
+  totalRevenue: integer("total_revenue").default(0), // Aggregated revenue for tours
+  roiPercentage: real("roi_percentage").generatedAlwaysAs(sql`
+    CASE 
+      WHEN total_cost > 0 THEN 
+        ((total_revenue - total_cost)::REAL / total_cost::REAL * 100)
+      ELSE NULL 
+    END
+  `), // Auto-calculated ROI percentage
+  completionStatus: text("completion_status").default("active"), // active, completed, cancelled
 });
 
 // Songs (Individual tracks)

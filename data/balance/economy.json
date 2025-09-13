@@ -19,7 +19,7 @@
     },
     "mini_tour": {
       "min": 5000,
-      "max": 15000,
+      "max": 500000,
       "venue_tier_multiplier": {
         "clubs": 1.0,
         "theaters": 1.8,

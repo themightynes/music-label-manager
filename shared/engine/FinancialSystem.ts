@@ -198,7 +198,6 @@ export class FinancialSystem {
     DEFAULT_ARTIST_FEE: 1200,
     DEFAULT_PRESS_CHANCE: 0.05,
     REPUTATION_GAIN_MULTIPLIER: 2,
-    ROUNDING_FACTOR: 100
   };
   
   constructor(gameData: any, rng: () => number, storage?: any) {
@@ -307,33 +306,77 @@ export class FinancialSystem {
   }
 
   /**
-   * Calculates tour revenue based on venue, popularity, reputation and cities
+   * Calculates tour revenue and costs based on venue, popularity, reputation and cities
+   * Now separates venue fees from production budget as per user requirements
    * Originally from game-engine.ts line 469-493
    */
   calculateTourRevenue(
     venueTier: string,
     artistPopularity: number,
     localReputation: number,
-    cities: number
+    cities: number,
+    marketingBudgetTotal: number = 0
   ): number {
     const config = this.gameData.getTourConfigSync();
     const venueCapacity = this.getVenueCapacity(venueTier);
     
-    // Calculate sell-through rate
-    let sellThrough = config.sell_through_base;
-    sellThrough += (localReputation * config.reputation_modifier);
-    sellThrough *= (1 + (artistPopularity / 100) * config.local_popularity_weight);
-    sellThrough = Math.min(1, sellThrough);
+    // Fixed costs per city
+    const venueFeePerCity = venueCapacity * 4;        // Infrastructure cost
+    const productionFeePerCity = venueCapacity * 2.7; // Production cost
+
+    // Marketing budget per city (affects quality)
+    const marketingBudgetPerCity = marketingBudgetTotal > 0 ? marketingBudgetTotal / cities : 0;
+
+    // SELL-THROUGH FORMULA using config values from markets.json
+    // Note: Only marketing budget affects quality, venue/production fees are fixed costs
+    // Sell-Through Rate = Base Rate (config) + (Reputation * config modifier) + (Artist_Popularity * config weight) + (Marketing_Budget_Per_City/Venue_Capacity*11/100*0.15)
+    const baseRate = config.sell_through_base;
+    const reputationBonus = (localReputation / 100) * config.reputation_modifier;
+    const popularityBonus = (artistPopularity / 100) * config.local_popularity_weight;
+    const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15 : 0;
     
-    // Calculate revenue per show using real config
+    const sellThrough = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
+    
+    // Calculate revenue per show using config
     const ticketPrice = config.ticket_price_base + (venueCapacity * config.ticket_price_per_capacity);
     const ticketRevenue = venueCapacity * sellThrough * ticketPrice;
     const merchRevenue = ticketRevenue * config.merch_percentage;
     
-    // Total for all cities
+    // Total revenue for all cities
     const totalRevenue = (ticketRevenue + merchRevenue) * cities;
     
     return Math.round(totalRevenue);
+  }
+
+  /**
+   * Calculates total tour costs including venue fees, production fees, and marketing budget
+   * Venue fees: venue_capacity * 4 per city (fixed infrastructure cost)
+   * Production fees: venue_capacity * 2.7 per city (fixed production cost)
+   * Marketing budget: user-specified amount for promotion, crew, logistics
+   */
+  calculateTourCosts(
+    venueTier: string,
+    cities: number,
+    marketingBudgetTotal: number = 0
+  ): { totalCosts: number; venueFees: number; productionFees: number; marketingBudget: number; breakdown: { venueFeePerCity: number; productionFeePerCity: number; marketingBudgetPerCity: number } } {
+    const venueCapacity = this.getVenueCapacity(venueTier);
+    const venueFeePerCity = venueCapacity * 4;
+    const productionFeePerCity = venueCapacity * 2.7;
+    const totalVenueFees = venueFeePerCity * cities;
+    const totalProductionFees = productionFeePerCity * cities;
+    const marketingBudgetPerCity = marketingBudgetTotal / cities;
+
+    return {
+      totalCosts: totalVenueFees + totalProductionFees + marketingBudgetTotal,
+      venueFees: totalVenueFees,
+      productionFees: totalProductionFees,
+      marketingBudget: marketingBudgetTotal,
+      breakdown: {
+        venueFeePerCity,
+        productionFeePerCity,
+        marketingBudgetPerCity
+      }
+    };
   }
 
   /**

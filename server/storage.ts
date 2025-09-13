@@ -40,6 +40,7 @@ export interface IStorage {
   getProject(id: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
+  deleteProject(id: string): Promise<void>;
   getActiveRecordingProjects(gameId: string): Promise<Project[]>;
 
   // Songs 
@@ -207,6 +208,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(projects.id, id))
       .returning();
     return updatedProject;
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    await db.delete(projects).where(eq(projects.id, id));
   }
 
   async getActiveRecordingProjects(gameId: string): Promise<Project[]> {

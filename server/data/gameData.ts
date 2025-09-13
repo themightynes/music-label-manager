@@ -297,8 +297,8 @@ export class ServerGameData {
       reputation_modifier: tour?.reputation_modifier || 0.003,
       local_popularity_weight: tour?.local_popularity_weight || 0.40,
       merch_percentage: tour?.merch_percentage || 0.15,
-      ticket_price_base: 30,
-      ticket_price_per_capacity: 0.01
+      ticket_price_base: 25,
+      ticket_price_per_capacity: 0.03
     };
   }
 
@@ -466,19 +466,19 @@ export class ServerGameData {
         reputation_modifier: 0.003,
         local_popularity_weight: 0.40,
         merch_percentage: 0.15,
-        ticket_price_base: 30,
-        ticket_price_per_capacity: 0.01
+        ticket_price_base: 25,
+        ticket_price_per_capacity: 0.03
       };
     }
-    
+
     const tour = this.balanceData.market_formulas.tour_revenue;
     return {
       sell_through_base: tour.sell_through_base,
       reputation_modifier: tour.reputation_modifier,
       local_popularity_weight: tour.local_popularity_weight,
       merch_percentage: tour.merch_percentage,
-      ticket_price_base: 30,
-      ticket_price_per_capacity: 0.01
+      ticket_price_base: tour.ticket_price_base,
+      ticket_price_per_capacity: tour.ticket_price_per_capacity
     };
   }
 

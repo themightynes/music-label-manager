@@ -2,21 +2,22 @@ import { MetricsDashboard } from './MetricsDashboard';
 import { AccessTierBadges } from './AccessTierBadges';
 import { MonthPlanner } from './MonthPlanner';
 import { ArtistRoster } from './ArtistRoster';
-import { ActiveProjects } from './ActiveProjects';
+import { ActiveRecordingSessions } from './ActiveRecordingSessions';
+import { ActiveTours } from './ActiveTours';
 import { ActiveReleases } from './ActiveReleases';
 import { DialogueModal } from './DialogueModal';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { MonthSummary } from './MonthSummary';
 import { ProjectCreationModal } from './ProjectCreationModal';
-import { LivePerformanceModal } from './LivePerformanceModal';
+import { LivePerformanceModal, type TourCreationData } from './LivePerformanceModal';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export function Dashboard() {
-  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, backToMeetingSelection, monthlyOutcome, createNewGame, selectedActions, artists, createProject } = useGameStore();
+  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, backToMeetingSelection, monthlyOutcome, createNewGame, selectedActions, artists, projects, createProject } = useGameStore();
   const [, setLocation] = useLocation();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showMonthSummary, setShowMonthSummary] = useState(false);
@@ -66,12 +67,38 @@ export function Dashboard() {
     }
   };
 
-  // STUB: Live performance creation - will integrate with backend later
-  const handleCreateTour = async (tourData: any) => {
-    console.log('Creating tour:', tourData);
-    // TODO: Integrate with actual tour creation API
-    // For now, just log and close modal
-    setShowLivePerformanceModal(false);
+  // Live performance creation - uses existing project creation flow
+  const handleCreateTour = async (tourData: TourCreationData) => {
+    try {
+      // Map TourCreationData to ProjectCreationData format
+      // Tours are stored as projects with type 'Mini-Tour'
+      const projectData = {
+        title: tourData.title,
+        type: 'Mini-Tour' as const, // Always use Mini-Tour type for live performances
+        artistId: tourData.artistId,
+        totalCost: tourData.budget, // Map budget to totalCost
+        budgetPerSong: 0, // Not applicable for tours
+        songCount: 0, // Tours don't have songs
+        producerTier: 'local' as const, // Default for tours
+        timeInvestment: 'standard' as const, // Default for tours
+        metadata: {
+          performanceType: 'mini_tour', // Always store as mini_tour (single shows are just 1-city tours)
+          cities: tourData.cities, // 1 for single shows, 3+ for multi-city tours
+          venueAccess: tourData.venueAccess || 'none', // Store venue access at time of booking
+          createdFrom: 'LivePerformanceModal' // Track source for debugging
+        }
+      };
+
+      // Use existing createProject method from gameStore
+      await createProject(projectData);
+      setShowLivePerformanceModal(false);
+      
+      // Show success notification
+      console.log(`✅ Tour "${tourData.title}" created successfully`);
+    } catch (error) {
+      console.error('Failed to create tour:', error);
+      // TODO: Show error notification to user
+    }
   };
 
   return (
@@ -206,7 +233,7 @@ export function Dashboard() {
 
         {/* Supporting Information Grid - Responsive */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
-          
+
           {/* Artist Management */}
           <div className="lg:col-span-1">
             <ArtistRoster />
@@ -214,8 +241,13 @@ export function Dashboard() {
 
           {/* Recording Sessions */}
           <div className="lg:col-span-1">
-            <ActiveProjects />
+            <ActiveRecordingSessions />
           </div>
+        </div>
+
+        {/* Tours Section - Full Width */}
+        <div className="mb-6">
+          <ActiveTours />
         </div>
 
         {/* Releases Section - Full Width */}
@@ -310,6 +342,7 @@ export function Dashboard() {
         <LivePerformanceModal
           gameState={gameState}
           artists={artists}
+          projects={projects}
           onCreateTour={handleCreateTour}
           isCreating={false}
           open={showLivePerformanceModal}
