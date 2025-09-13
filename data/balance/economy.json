@@ -18,7 +18,7 @@
       "song_count_default": 4
     },
     "mini_tour": {
-      "min": 5000,
+      "min": 5,
       "max": 500000,
       "venue_tier_multiplier": {
         "clubs": 1.0,

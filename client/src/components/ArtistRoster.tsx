@@ -389,7 +389,7 @@ function ArtistCard({
       </div>
 
       {/* Condensed Metrics */}
-      <div className="grid grid-cols-4 gap-2 mb-2 text-center">
+      <div className="grid grid-cols-5 gap-2 mb-2 text-center">
         <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
           <div className="font-medium text-white">{insights.projects}</div>
           <div className="text-white/50">Projects</div>
@@ -411,6 +411,12 @@ function ArtistCard({
             {artist.loyalty || 50}%
           </div>
           <div className="text-white/50">Loyalty</div>
+        </div>
+        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
+          <div className={`font-medium ${(artist.popularity || 0) >= 70 ? 'text-green-600' : (artist.popularity || 0) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+            {artist.popularity || 0}%
+          </div>
+          <div className="text-white/50">Popularity</div>
         </div>
       </div>
 

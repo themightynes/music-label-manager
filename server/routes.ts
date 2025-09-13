@@ -2154,7 +2154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .update(gameStates)
           .set({
             currentMonth: monthResult.gameState.currentMonth,
-            money: monthResult.gameState.money,
+            money: Math.round(monthResult.gameState.money || 0), // Ensure integer for database
             reputation: monthResult.gameState.reputation,
             creativeCapital: monthResult.gameState.creativeCapital,
             focusSlots: monthResult.gameState.focusSlots,

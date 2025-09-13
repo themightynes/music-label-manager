@@ -305,7 +305,7 @@ export class GameEngine {
     
     const finalMoney = monthStartMoney + summary.revenue - summary.expenses;
     console.log('[FINAL MONEY] Calculated final money:', finalMoney);
-    
+
     this.gameState.money = finalMoney;
     console.log('[FINAL MONEY] Game state money updated to:', this.gameState.money);
     
@@ -2773,12 +2773,12 @@ export class GameEngine {
       if (storedVenueCapacity) {
         console.log(`[TOUR EXECUTION] Using stored venue capacity: ${storedVenueCapacity}`);
       } else {
-        console.log(`[TOUR EXECUTION] Using fallback tier-based capacity for: ${venueAccess}`);
+        throw new Error(`[TOUR EXECUTION] Missing stored venue capacity for tour ${project.title}. Project metadata: ${JSON.stringify(currentMetadata)}`);
       }
 
       // ENHANCED: SINGLE SOURCE OF TRUTH with capacity support
       const detailedBreakdown = this.financialSystem.calculateDetailedTourBreakdown({
-        venueCapacity: storedVenueCapacity || 0, // Use stored capacity or fallback to tier
+        venueCapacity: storedVenueCapacity, // Use stored capacity - NO FALLBACK
         venueTier: venueAccess, // Keep for backward compatibility
         artistPopularity,
         localReputation: reputation,

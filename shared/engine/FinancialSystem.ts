@@ -411,13 +411,13 @@ export class FinancialSystem {
     const sellThroughAnalysis = this.calculateSellThroughBreakdown(params, venueCapacity, config);
 
     for (let i = 1; i <= params.cities; i++) {
-      const venueFee = venueCapacity * 4;
-      const productionFee = venueCapacity * 2.7;
+      const venueFee = Math.round(venueCapacity * 4);
+      const productionFee = Math.round(venueCapacity * 2.7);
 
       // ENHANCED: Calculate revenue per show using scarcity-based pricing
       const ticketPrice = this.calculateTicketPrice(venueCapacity, params.artistPopularity, config, params.venueTier);
-      const ticketRevenue = venueCapacity * sellThroughAnalysis.finalRate * ticketPrice;
-      const merchRevenue = ticketRevenue * config.merch_percentage;
+      const ticketRevenue = Math.round(venueCapacity * sellThroughAnalysis.finalRate * ticketPrice);
+      const merchRevenue = Math.round(ticketRevenue * config.merch_percentage);
       const totalRevenue = ticketRevenue + merchRevenue;
 
       const totalCosts = venueFee + productionFee + marketingBudgetPerCity;
@@ -743,8 +743,8 @@ export class FinancialSystem {
     cities: number,
     marketingBudgetTotal: number = 0
   ): { totalCosts: number; venueFees: number; productionFees: number; marketingBudget: number; breakdown: { venueFeePerCity: number; productionFeePerCity: number; marketingBudgetPerCity: number } } {
-    const venueFeePerCity = venueCapacity * 4;
-    const productionFeePerCity = venueCapacity * 2.7;
+    const venueFeePerCity = Math.round(venueCapacity * 4);
+    const productionFeePerCity = Math.round(venueCapacity * 2.7);
     const totalVenueFees = venueFeePerCity * cities;
     const totalProductionFees = productionFeePerCity * cities;
     const marketingBudgetPerCity = marketingBudgetTotal / cities;

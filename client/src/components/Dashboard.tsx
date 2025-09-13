@@ -85,6 +85,7 @@ export function Dashboard() {
           performanceType: 'mini_tour', // Always store as mini_tour (single shows are just 1-city tours)
           cities: tourData.cities, // 1 for single shows, 3+ for multi-city tours
           venueAccess: tourData.venueAccess || 'none', // Store venue access at time of booking
+          venueCapacity: tourData.venueCapacity, // Store selected venue capacity
           createdFrom: 'LivePerformanceModal' // Track source for debugging
         }
       };
