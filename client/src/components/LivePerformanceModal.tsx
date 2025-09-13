@@ -30,6 +30,28 @@ export interface TourCreationData {
   // TODO: Add date selection when calendar system is implemented
 }
 
+interface CityBreakdown {
+  cityNumber: number;
+  venueCapacity: number;
+  sellThroughRate: number;
+  ticketRevenue: number;
+  merchRevenue: number;
+  totalRevenue: number;
+  venueFee: number;
+  productionFee: number;
+  marketingCost: number;
+  totalCosts: number;
+  profit: number;
+}
+
+interface SellThroughAnalysis {
+  baseRate: number;
+  reputationBonus: number;
+  popularityBonus: number;
+  budgetQualityBonus: number;
+  finalRate: number;
+}
+
 interface TourEstimate {
   estimatedRevenue: number;
   totalCosts: number;
@@ -49,6 +71,10 @@ interface TourEstimate {
   };
   sellThroughRate: number;
   totalBudget?: number;
+  // ENHANCED: Rich breakdown data from FinancialSystem
+  cities?: CityBreakdown[];
+  sellThroughAnalysis?: SellThroughAnalysis;
+  venueCapacity?: number;
 }
 
 // Performance types - costs now calculated dynamically using venue_capacity * 4 + user budget
@@ -258,32 +284,146 @@ export function LivePerformanceModal({
     return () => clearTimeout(timeoutId);
   }, [fetchTourEstimate]);
 
-  // Display estimate data - NO CALCULATIONS
+  // Display comprehensive estimate data - NO CLIENT CALCULATIONS
   const renderEstimate = () => {
     if (estimateLoading) return <div className="text-white/60">Calculating...</div>;
     if (estimateError) return <div className="text-red-400">Error: {estimateError}</div>;
     if (!estimateData) return <div className="text-white/60">Enter tour parameters</div>;
 
+    const hasDetailedData = estimateData.cities && estimateData.sellThroughAnalysis;
+
     return (
-      <div className="space-y-3">
-        <div className="flex justify-between">
-          <span className="text-white/70">Estimated Revenue:</span>
-          <span className="font-mono text-green-400">${estimateData.estimatedRevenue.toLocaleString()}</span>
+      <div className="space-y-4">
+        {/* High-level summary */}
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-white/70">Estimated Revenue:</span>
+            <span className="font-mono text-green-400">${estimateData.estimatedRevenue.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Total Costs:</span>
+            <span className="font-mono text-red-400">${estimateData.totalCosts.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between font-bold">
+            <span className="text-white">Estimated Profit:</span>
+            <span className={`font-mono ${estimateData.estimatedProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              ${estimateData.estimatedProfit.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/60">ROI:</span>
+            <span className="font-mono text-white/80">{estimateData.roi.toFixed(1)}%</span>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span className="text-white/70">Total Costs:</span>
-          <span className="font-mono text-red-400">${estimateData.totalCosts.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between font-bold">
-          <span className="text-white">Estimated Profit:</span>
-          <span className={`font-mono ${estimateData.estimatedProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            ${estimateData.estimatedProfit.toLocaleString()}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-white/60">ROI:</span>
-          <span className="font-mono text-white/80">{estimateData.roi.toFixed(1)}%</span>
-        </div>
+
+        {/* Enhanced breakdown if available */}
+        {hasDetailedData && (
+          <>
+            {/* Sell-Through Analysis */}
+            <div className="bg-black/20 rounded p-3">
+              <h5 className="font-medium text-white/90 mb-2">Sell-Through Analysis:</h5>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-white/60">Base Rate:</span>
+                  <span className="font-mono text-white/80">{(estimateData.sellThroughAnalysis!.baseRate * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Reputation Bonus:</span>
+                  <span className="font-mono text-white/80">+{(estimateData.sellThroughAnalysis!.reputationBonus * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Popularity Bonus:</span>
+                  <span className="font-mono text-white/80">+{(estimateData.sellThroughAnalysis!.popularityBonus * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Budget Quality Bonus:</span>
+                  <span className="font-mono text-white/80">+{(estimateData.sellThroughAnalysis!.budgetQualityBonus * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between border-t border-white/20 pt-1 font-medium">
+                  <span className="text-white/70">Final Sell-Through:</span>
+                  <span className="font-mono text-blue-300">{(estimateData.sellThroughAnalysis!.finalRate * 100).toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Per City Breakdown */}
+            <div className="bg-black/20 rounded p-3">
+              <h5 className="font-medium text-white/90 mb-2">Per City Performance:</h5>
+              {estimateData.cities!.slice(0, 3).map((city, index) => (
+                <div key={city.cityNumber} className="space-y-1 text-xs mb-3">
+                  <div className="font-medium text-white/90">City {city.cityNumber}:</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Venue Capacity:</span>
+                      <span className="font-mono text-white/80">{city.venueCapacity.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Ticket Revenue:</span>
+                      <span className="font-mono text-blue-400">${city.ticketRevenue.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Attendance:</span>
+                      <span className="font-mono text-white/80">{Math.round(city.venueCapacity * city.sellThroughRate).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Merch Revenue:</span>
+                      <span className="font-mono text-blue-400">${city.merchRevenue.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Total Costs:</span>
+                      <span className="font-mono text-red-400">${city.totalCosts.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span className="text-white/70">City Profit:</span>
+                      <span className={`font-mono ${city.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        ${city.profit.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  {index < Math.min(2, estimateData.cities!.length - 1) && (
+                    <div className="border-t border-white/10 mt-2"></div>
+                  )}
+                </div>
+              ))}
+              {estimateData.cities!.length > 3 && (
+                <div className="text-xs text-white/50 text-center mt-2">
+                  ... and {estimateData.cities!.length - 3} more cities with similar performance
+                </div>
+              )}
+            </div>
+
+            {/* Cost Breakdown */}
+            <div className="bg-black/20 rounded p-3">
+              <h5 className="font-medium text-white/90 mb-2">Cost Breakdown:</h5>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-white/60">Venue Fees ({cities} cities):</span>
+                  <span className="font-mono text-red-400">${estimateData.breakdown.venueFees.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Production Fees ({cities} cities):</span>
+                  <span className="font-mono text-red-400">${estimateData.breakdown.productionFees.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Marketing & Logistics:</span>
+                  <span className="font-mono text-red-400">${estimateData.breakdown.marketingBudget.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-white/20 pt-1 font-medium">
+                  <span className="text-white/70">Total Costs:</span>
+                  <span className="font-mono text-red-300">${estimateData.breakdown.totalCosts.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {selectedArtistData && (
+              <div className="text-xs text-white/50 mt-2">
+                <p>Analysis based on: {selectedArtistData.name}'s popularity ({selectedArtistData.popularity || 0}),
+                   venue access ({venueInfo.name}), {gameState.reputation || 0} reputation, and {cities} {cities === 1 ? 'show' : 'cities'}</p>
+                <p className="text-green-500 mt-1">✅ Comprehensive projections powered by unified calculation engine</p>
+              </div>
+            )}
+          </>
+        )}
       </div>
     );
   };
@@ -508,9 +648,9 @@ export function LivePerformanceModal({
                 </div>
               )}
 
-              {/* Tour Financial Overview - API Integration */}
+              {/* Comprehensive Tour Analysis - Enhanced API Integration */}
               <div className="bg-[#A75A5B]/10 rounded-lg p-4 border">
-                <h4 className="font-medium text-[#A75A5B] mb-3">Tour Financial Overview</h4>
+                <h4 className="font-medium text-[#A75A5B] mb-3">Comprehensive Tour Analysis</h4>
                 {renderEstimate()}
               </div>
 

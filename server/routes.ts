@@ -1873,8 +1873,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalMarketingBudget = budgetPerCity * cities;
       const totalBudget = baseCosts.totalCosts + totalMarketingBudget;
 
-      // CALCULATE ESTIMATE - LET IT CRASH IF INVALID
-      const estimate = financialSystem.calculateTourEstimate({
+      // CALCULATE DETAILED BREAKDOWN - LET IT CRASH IF INVALID
+      const detailedBreakdown = financialSystem.calculateDetailedTourBreakdown({
         venueTier: venueAccess,
         artistPopularity: artist.popularity || 0,
         localReputation: gameState.reputation || 0,
@@ -1882,11 +1882,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         marketingBudget: totalMarketingBudget
       });
 
-      // Add affordability check
-      estimate.canAfford = totalBudget <= (gameState.money || 0);
-      (estimate as any).totalBudget = totalBudget;
+      // Create enhanced response with detailed breakdown
+      const response = {
+        estimatedRevenue: detailedBreakdown.totalRevenue,
+        totalCosts: detailedBreakdown.totalCosts,
+        estimatedProfit: detailedBreakdown.netProfit,
+        roi: detailedBreakdown.totalCosts > 0 ? (detailedBreakdown.netProfit / detailedBreakdown.totalCosts) * 100 : 0,
+        canAfford: totalBudget <= (gameState.money || 0),
+        totalBudget,
+        breakdown: detailedBreakdown.costBreakdown,
+        sellThroughRate: detailedBreakdown.sellThroughAnalysis.finalRate,
+        // ENHANCED: Include detailed city-by-city breakdown
+        cities: detailedBreakdown.cities,
+        sellThroughAnalysis: detailedBreakdown.sellThroughAnalysis,
+        venueCapacity: detailedBreakdown.cities[0]?.venueCapacity || 0
+      };
 
-      res.json(estimate);
+      res.json(response);
 
     } catch (error) {
       // LOG ERROR BUT DON'T HIDE IT
