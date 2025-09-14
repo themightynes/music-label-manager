@@ -82,6 +82,12 @@ interface TourEstimate {
   tierRange?: { min: number; max: number };
   pricePerTicket?: number;
   playerTier?: string;
+  venueCategory?: {
+    category: string;
+    description: string;
+    riskLevel: 'low'|'medium'|'high';
+    advice: string;
+  };
 }
 
 // Performance types - costs now calculated dynamically using venue_capacity * 4 + user budget
@@ -468,34 +474,32 @@ export function LivePerformanceModal({
   };
 
   const getVenueCategoryInfo = (capacity: number) => {
-    if (capacity <= 200) {
+    // Use venueCategory from API response if available (configuration-driven)
+    if (estimateData?.venueCategory) {
+      const apiCategory = estimateData.venueCategory;
       return {
-        category: 'Intimate Club',
-        description: 'Small, personal setting',
-        riskLevel: 'low',
-        icon: Users,
-        advice: 'Lower revenue but easier to sell out. Great for building fan loyalty.',
-        color: 'text-green-500'
-      };
-    } else if (capacity <= 800) {
-      return {
-        category: 'Mid-Size Venue',
-        description: 'Balanced capacity',
-        riskLevel: 'medium',
-        icon: Target,
-        advice: 'Balanced risk/reward. Good revenue potential with manageable fill requirements.',
-        color: 'text-yellow-500'
-      };
-    } else {
-      return {
-        category: 'Large Venue',
-        description: 'High capacity venue',
-        riskLevel: 'high',
-        icon: TrendingUp,
-        advice: 'High revenue potential but requires strong popularity to sell out.',
-        color: 'text-red-500'
+        category: apiCategory.category,
+        description: apiCategory.description,
+        riskLevel: apiCategory.riskLevel,
+        icon: apiCategory.riskLevel === 'low' ? Users :
+              apiCategory.riskLevel === 'medium' ? Target : TrendingUp,
+        advice: apiCategory.advice,
+        color: apiCategory.riskLevel === 'low' ? 'text-green-500' :
+               apiCategory.riskLevel === 'medium' ? 'text-yellow-500' : 'text-red-500'
       };
     }
+
+    // Temporary fallback - API not loaded yet or missing venueCategory
+    // This will help us debug what's happening with the API response
+    console.warn('API venueCategory missing, using temporary fallback. EstimateData:', estimateData);
+    return {
+      category: 'Loading...',
+      description: 'Calculating venue category...',
+      riskLevel: 'medium' as const,
+      icon: Target,
+      advice: 'Loading venue analysis from server...',
+      color: 'text-gray-400'
+    };
   };
 
   const handleTypeSelect = (type: 'single_show' | 'mini_tour') => {

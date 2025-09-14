@@ -84,6 +84,158 @@ export interface TourEstimationParams extends TourCalculationParams {
 }
 
 /**
+ * VenueCapacityManager - Configuration-driven venue capacity management
+ * Single source of truth for all venue capacity logic, derived from progression.json
+ */
+export class VenueCapacityManager {
+  /**
+   * Get tier ranges directly from progression.json - NO HARDCODED VALUES
+   */
+  static getTierRanges(gameData: any): Record<string, {min: number, max: number}> {
+    const venueAccess = gameData.getAccessTiersSync().venue_access;
+    return {
+      small: {
+        min: venueAccess.clubs.capacity_range[0],
+        max: venueAccess.clubs.capacity_range[1]
+      },
+      medium: {
+        min: venueAccess.theaters.capacity_range[0],
+        max: venueAccess.theaters.capacity_range[1]
+      },
+      large: {
+        min: venueAccess.arenas.capacity_range[0],
+        max: venueAccess.arenas.capacity_range[1]
+      }
+    };
+  }
+
+  /**
+   * Get absolute minimum capacity from config
+   */
+  static getMinimumCapacity(gameData: any): number {
+    const venueAccess = gameData.getAccessTiersSync().venue_access;
+    const allRanges = Object.values(venueAccess).map((tier: any) => tier.capacity_range[0]);
+    return Math.min(...allRanges);
+  }
+
+  /**
+   * Auto-detect tier from capacity using actual config ranges
+   */
+  static detectTierFromCapacity(capacity: number, gameData: any): string {
+    const venueAccess = gameData.getAccessTiersSync().venue_access;
+
+    for (const [tierName, config] of Object.entries(venueAccess)) {
+      const [min, max] = (config as any).capacity_range;
+      if (capacity >= min && capacity <= max) {
+        return tierName;
+      }
+    }
+    throw new Error(`No tier found for capacity ${capacity}`);
+  }
+
+  /**
+   * Get category thresholds dynamically from config
+   */
+  static getCategoryThresholds(gameData: any): {intimate: number, midSize: number} {
+    const ranges = VenueCapacityManager.getTierRanges(gameData);
+    return {
+      intimate: Math.round(ranges.small.max * 0.4),  // 40% of club max
+      midSize: Math.round(ranges.medium.max * 0.4)   // 40% of theater max
+    };
+  }
+
+  static getCapacityRangeFromTier(tier: string, gameData: any): {min: number, max: number} {
+    const venueConfig = gameData.getAccessTiersSync().venue_access;
+    const tierConfig = venueConfig[tier];
+    if (!tierConfig?.capacity_range) {
+      throw new Error(`Invalid venue tier: ${tier}. Available: ${Object.keys(venueConfig)}`);
+    }
+    const [min, max] = tierConfig.capacity_range;
+    return { min, max };
+  }
+
+  static generateCapacityFromTier(tier: string, gameData: any, rng: () => number): number {
+    const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(tier, gameData);
+    return Math.round(min + (rng() * (max - min)));
+  }
+
+  static validateCapacity(capacity: number, tier?: string, gameData?: any): void {
+    if (!gameData) {
+      throw new Error('GameData required for capacity validation');
+    }
+
+    const minCapacity = VenueCapacityManager.getMinimumCapacity(gameData);
+    if (capacity < minCapacity) {
+      throw new Error(`Venue capacity ${capacity} below minimum (${minCapacity})`);
+    }
+
+    if (tier) {
+      const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(tier, gameData);
+      if (capacity < min || capacity > max) {
+        throw new Error(`Capacity ${capacity} outside ${tier} range (${min}-${max})`);
+      }
+    }
+  }
+
+  static calculatePositionInTier(capacity: number, tier?: string, gameData?: any): number {
+    if (!gameData) {
+      throw new Error('GameData required for position calculation');
+    }
+
+    const ranges = VenueCapacityManager.getTierRanges(gameData);
+    const minCapacity = VenueCapacityManager.getMinimumCapacity(gameData);
+
+    let maxInTier = ranges.large.max;
+    if (tier) {
+      const tierKey = VenueCapacityManager.mapTierToRangeKey(tier);
+      maxInTier = ranges[tierKey]?.max || ranges.large.max;
+    } else {
+      // Auto-detect based on capacity and config
+      if (capacity <= ranges.small.max) maxInTier = ranges.small.max;
+      else if (capacity <= ranges.medium.max) maxInTier = ranges.medium.max;
+      else maxInTier = ranges.large.max;
+    }
+
+    return (capacity - minCapacity) / (maxInTier - minCapacity);
+  }
+
+  static categorizeVenue(capacity: number, gameData: any): {
+    category: string; description: string; riskLevel: 'low'|'medium'|'high'; advice: string;
+  } {
+    const thresholds = VenueCapacityManager.getCategoryThresholds(gameData);
+
+    if (capacity <= thresholds.intimate) {
+      return {
+        category: 'Intimate Club', description: 'Small, personal setting',
+        riskLevel: 'low', advice: 'Lower revenue but easier to sell out. Great for building fan loyalty.'
+      };
+    } else if (capacity <= thresholds.midSize) {
+      return {
+        category: 'Mid-Size Venue', description: 'Balanced capacity',
+        riskLevel: 'medium', advice: 'Balanced risk/reward. Good revenue potential with manageable fill requirements.'
+      };
+    } else {
+      return {
+        category: 'Large Venue', description: 'High capacity venue',
+        riskLevel: 'high', advice: 'High revenue potential but requires strong popularity to sell out.'
+      };
+    }
+  }
+
+  /**
+   * Maps venue access tiers to range keys
+   */
+  private static mapTierToRangeKey(tier: string): 'small' | 'medium' | 'large' {
+    const mapping: Record<string, 'small' | 'medium' | 'large'> = {
+      'clubs': 'small',
+      'theaters': 'medium',
+      'arenas': 'large'
+    };
+    return mapping[tier] || 'large';
+  }
+}
+
+/**
  * Tracks production and marketing investments at the song level for ROI analysis
  */
 export class InvestmentTracker {
@@ -266,12 +418,7 @@ export class FinancialSystem {
     DEFAULT_ARTIST_FEE: 1200,
     DEFAULT_PRESS_CHANCE: 0.05,
     REPUTATION_GAIN_MULTIPLIER: 2,
-    // ENHANCED VENUE CAPACITY SELECTION CONSTANTS
-    VENUE_TIERS: {
-      small: { min: 50, max: 3000 },
-      medium: { min: 50, max: 8000 },
-      large: { min: 50, max: 20000 }
-    },
+    // VENUE CAPACITY SCALING - configuration-driven via VenueCapacityManager
     VENUE_SCALING: {
       popularity_scaling_factor: 0.3,
       venue_size_bonus: 0.5,
@@ -343,12 +490,12 @@ export class FinancialSystem {
       }
     }
 
-    // Required venue tiers
-    const requiredVenueTiers = ['theaters', 'clubs', 'arenas'];
-    for (const tier of requiredVenueTiers) {
-      if (!venueConfig[tier] || !venueConfig[tier].capacity_range) {
-        throw new Error(`Venue configuration missing or incomplete for tier: ${tier}`);
-      }
+    // Validate venue configuration using VenueCapacityManager
+    try {
+      VenueCapacityManager.getTierRanges(this.gameData);
+      VenueCapacityManager.getMinimumCapacity(this.gameData);
+    } catch (error) {
+      throw new Error(`Venue configuration validation failed: ${(error as Error).message}`);
     }
   }
 
@@ -370,14 +517,14 @@ export class FinancialSystem {
     let venueCapacity = params.venueCapacity;
     if (!venueCapacity && params.venueTier) {
       // Legacy fallback for backward compatibility
-      venueCapacity = this.getVenueCapacityFromTier(params.venueTier);
+      venueCapacity = VenueCapacityManager.generateCapacityFromTier(params.venueTier, this.gameData, this.rng);
     }
     if (!venueCapacity) {
       throw new Error('Either venueCapacity or venueTier must be provided');
     }
 
     // Validate capacity is within allowed ranges
-    this.validateVenueCapacity(venueCapacity, params.venueTier);
+    VenueCapacityManager.validateCapacity(venueCapacity, params.venueTier, this.gameData);
 
     const costBreakdown = this.calculateTourCostsWithCapacity(venueCapacity, params.cities, params.marketingBudget);
     const revenueCalculation = this.calculateTourRevenueWithCapacity(
@@ -447,22 +594,8 @@ export class FinancialSystem {
    * ENHANCED: Calculate scarcity-based ticket pricing
    */
   private calculateTicketPrice(venueCapacity: number, artistPopularity: number, config: any, venueTier?: string): number {
-    // Determine tier capacity range for scarcity calculation
-    let maxCapacityInTier = 20000;
-    if (venueTier && this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
-      maxCapacityInTier = this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS].max;
-    } else {
-      // Auto-detect tier based on capacity
-      if (venueCapacity <= 3000) {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.small.max;
-      } else if (venueCapacity <= 8000) {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.medium.max;
-      } else {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.large.max;
-      }
-    }
-
-    const venuePositionInTier = (venueCapacity - 50) / (maxCapacityInTier - 50);
+    // Use VenueCapacityManager for position calculation
+    const venuePositionInTier = VenueCapacityManager.calculatePositionInTier(venueCapacity, venueTier, this.gameData);
 
     // Base price calculation using enhanced multiplier
     const basePrice = config.ticket_price_base + (venueCapacity * this.CONSTANTS.VENUE_SCALING.ticket_price_capacity_multiplier);
@@ -479,23 +612,8 @@ export class FinancialSystem {
   private calculateSellThroughBreakdown(params: TourCalculationParams, venueCapacity: number, config: any, venueTier?: string): SellThroughAnalysis {
     const marketingBudgetPerCity = params.marketingBudget > 0 ? params.marketingBudget / params.cities : 0;
 
-    // Determine tier capacity range for venue size effects
-    let maxCapacityInTier = 20000; // Default to largest tier
-    if (venueTier && this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
-      maxCapacityInTier = this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS].max;
-    } else {
-      // Auto-detect tier based on capacity
-      if (venueCapacity <= 3000) {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.small.max;
-      } else if (venueCapacity <= 8000) {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.medium.max;
-      } else {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.large.max;
-      }
-    }
-
-    // ENHANCED: Venue size effects
-    const venuePositionInTier = (venueCapacity - 50) / (maxCapacityInTier - 50);
+    // Use VenueCapacityManager for position calculation
+    const venuePositionInTier = VenueCapacityManager.calculatePositionInTier(venueCapacity, venueTier, this.gameData);
     const popularityEffectiveness = 1.0 - (venuePositionInTier * this.CONSTANTS.VENUE_SCALING.popularity_scaling_factor);
     const venueSizeModifier = (1 - venuePositionInTier) * this.CONSTANTS.VENUE_SCALING.venue_size_bonus;
 
@@ -559,51 +677,8 @@ export class FinancialSystem {
     return this.CONSTANTS.DEFAULT_PLAYLIST_MULTIPLIER;
   }
 
-  /**
-   * ENHANCED: Get tier capacity ranges for venue selection UI
-   */
-  getTierCapacityRanges(): Record<string, { min: number; max: number }> {
-    return this.CONSTANTS.VENUE_TIERS;
-  }
 
-  /**
-   * ENHANCED: Validate venue capacity is within allowed tier range
-   */
-  private validateVenueCapacity(capacity: number, tier?: string): void {
-    if (capacity < 50) {
-      throw new Error(`Venue capacity ${capacity} is below minimum (50)`);
-    }
 
-    // If tier is provided, validate capacity is within tier range
-    if (tier && this.CONSTANTS.VENUE_TIERS[tier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
-      const tierRange = this.CONSTANTS.VENUE_TIERS[tier as keyof typeof this.CONSTANTS.VENUE_TIERS];
-      if (capacity < tierRange.min || capacity > tierRange.max) {
-        throw new Error(`Venue capacity ${capacity} is outside ${tier} tier range (${tierRange.min}-${tierRange.max})`);
-      }
-    }
-  }
-
-  /**
-   * LEGACY: Helper to get venue capacity with strict validation - NO FALLBACKS
-   * Originally from game-engine.ts line 535-544
-   * DEPRECATED: Use direct capacity parameter instead
-   */
-  private getVenueCapacityFromTier(tier: string): number {
-    const tiers = this.gameData.getAccessTiersSync();
-    const venueData = tiers.venue_access as any;
-    const venueConfig = venueData[tier];
-
-    // FAIL FAST - no fallbacks
-    if (!venueConfig) {
-      throw new Error(`Invalid venue tier: ${tier}. Available tiers: ${Object.keys(venueData)}`);
-    }
-    if (!venueConfig.capacity_range) {
-      throw new Error(`Venue tier ${tier} missing capacity_range configuration`);
-    }
-
-    const [min, max] = venueConfig.capacity_range;
-    return Math.round(this.getRandom(min, max));
-  }
 
   /**
    * Calculates streaming revenue outcome for a release
@@ -674,7 +749,7 @@ export class FinancialSystem {
     marketingBudgetTotal: number = 0
   ): number {
     const config = this.gameData.getTourConfigSync();
-    const venueCapacity = this.getVenueCapacityFromTier(venueTier);
+    const venueCapacity = VenueCapacityManager.generateCapacityFromTier(venueTier, this.gameData, this.rng);
     
     // Fixed costs per city
     const venueFeePerCity = venueCapacity * 4;        // Infrastructure cost
@@ -715,7 +790,7 @@ export class FinancialSystem {
     cities: number,
     marketingBudgetTotal: number = 0
   ): { totalCosts: number; venueFees: number; productionFees: number; marketingBudget: number; breakdown: { venueFeePerCity: number; productionFeePerCity: number; marketingBudgetPerCity: number } } {
-    const venueCapacity = this.getVenueCapacityFromTier(venueTier);
+    const venueCapacity = VenueCapacityManager.generateCapacityFromTier(venueTier, this.gameData, this.rng);
     const venueFeePerCity = venueCapacity * 4;
     const productionFeePerCity = venueCapacity * 2.7;
     const totalVenueFees = venueFeePerCity * cities;
@@ -777,7 +852,7 @@ export class FinancialSystem {
     const marketingBudgetPerCity = marketingBudgetTotal > 0 ? marketingBudgetTotal / cities : 0;
 
     // ENHANCED: Use venue size effects for sell-through calculation
-    const venuePositionInTier = this.calculateVenuePositionInTier(venueCapacity, venueTier);
+    const venuePositionInTier = VenueCapacityManager.calculatePositionInTier(venueCapacity, venueTier, this.gameData);
     const popularityEffectiveness = 1.0 - (venuePositionInTier * this.CONSTANTS.VENUE_SCALING.popularity_scaling_factor);
     const venueSizeModifier = (1 - venuePositionInTier) * this.CONSTANTS.VENUE_SCALING.venue_size_bonus;
 
@@ -800,26 +875,6 @@ export class FinancialSystem {
     return Math.round(totalRevenue);
   }
 
-  /**
-   * Helper method to calculate venue position within tier (0-1)
-   */
-  private calculateVenuePositionInTier(venueCapacity: number, venueTier?: string): number {
-    let maxCapacityInTier = 20000;
-    if (venueTier && this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS]) {
-      maxCapacityInTier = this.CONSTANTS.VENUE_TIERS[venueTier as keyof typeof this.CONSTANTS.VENUE_TIERS].max;
-    } else {
-      // Auto-detect tier based on capacity
-      if (venueCapacity <= 3000) {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.small.max;
-      } else if (venueCapacity <= 8000) {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.medium.max;
-      } else {
-        maxCapacityInTier = this.CONSTANTS.VENUE_TIERS.large.max;
-      }
-    }
-
-    return (venueCapacity - 50) / (maxCapacityInTier - 50);
-  }
 
   /**
    * Common decay calculation logic for both projects and individual songs

@@ -9,7 +9,7 @@ import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
 import { GameEngine } from "../shared/engine/game-engine";
-import { FinancialSystem } from "../shared/engine/FinancialSystem";
+import { FinancialSystem, VenueCapacityManager } from "../shared/engine/FinancialSystem";
 import { 
   AdvanceMonthRequest, 
   AdvanceMonthResponse,
@@ -1880,38 +1880,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Initialize financial system for validation and calculations
       const financialSystem = new FinancialSystem(serverGameData, () => Math.random());
 
-      // ENHANCED: Validate venueCapacity against player's tier limits
+      // ENHANCED: Validate venueCapacity using VenueCapacityManager
       if (venueCapacity !== undefined) {
         try {
-          // Get tier capacity ranges from financial system
-          const tierRanges = financialSystem.getTierCapacityRanges();
-
-          // Map venue access to tier range
-          const tierMap: Record<string, keyof typeof tierRanges> = {
-            'clubs': 'small',
-            'theaters': 'medium',
-            'arenas': 'large'
-          };
-
-          const playerTier = tierMap[venueAccess];
-          if (!playerTier) {
-            return res.status(400).json({
-              error: `Unknown venue access tier: ${venueAccess}`
-            });
-          }
-
-          const tierRange = tierRanges[playerTier];
-          if (venueCapacity < tierRange.min || venueCapacity > tierRange.max) {
-            return res.status(400).json({
-              error: `Venue capacity ${venueCapacity} is outside your ${venueAccess} access range (${tierRange.min}-${tierRange.max})`,
-              tierRange,
-              playerTier: venueAccess
-            });
-          }
-
-          // Additional validation through FinancialSystem
-          financialSystem.validateVenueCapacity(venueCapacity, playerTier);
-
+          VenueCapacityManager.validateCapacity(venueCapacity, venueAccess, serverGameData);
         } catch (error) {
           return res.status(400).json({
             error: `Venue capacity validation failed: ${(error as Error).message}`
@@ -1934,21 +1906,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         marketingBudget: totalMarketingBudget
       });
 
-      // Get tier ranges for response
-      const tierRanges = financialSystem.getTierCapacityRanges();
-      const tierMap: Record<string, keyof typeof tierRanges> = {
-        'clubs': 'small',
-        'theaters': 'medium',
-        'arenas': 'large'
-      };
-      const playerTier = tierMap[venueAccess];
-      const tierRange = tierRanges[playerTier] || { min: 50, max: 20000 };
+      // Get tier range for response using VenueCapacityManager
+      const tierRange = VenueCapacityManager.getCapacityRangeFromTier(venueAccess, serverGameData);
 
       // Calculate price per ticket from first city (all cities have same pricing)
       const firstCity = detailedBreakdown.cities[0];
       const pricePerTicket = firstCity
         ? Math.round((firstCity.ticketRevenue / (firstCity.venueCapacity * firstCity.sellThroughRate)) || 0)
         : 0;
+
+      // Get venue categorization using VenueCapacityManager
+      console.log('[TOUR ESTIMATE] Getting venue categorization for capacity:', venueCapacity || 500);
+      const venueCategory = VenueCapacityManager.categorizeVenue(venueCapacity || 500, serverGameData);
+      console.log('[TOUR ESTIMATE] Venue category result:', venueCategory);
 
       // Create enhanced response with detailed breakdown
       const response = {
@@ -1968,7 +1938,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedCapacity: detailedBreakdown.cities[0]?.venueCapacity || 0,
         tierRange,
         pricePerTicket,
-        playerTier: venueAccess
+        playerTier: venueAccess,
+        venueCategory // NEW: Configuration-driven venue categorization
       };
 
       res.json(response);

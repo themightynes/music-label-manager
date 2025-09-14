@@ -6,7 +6,7 @@ Analysis of actions.json to identify what's implemented vs. what effects need to
 
 ## Effect Categories Found in Actions.json
 
-### ✅ **Systems Implemented & Effects Connected**
+## ✅ **Systems Implemented & Effects Connected**
 - `money` - Direct financial effects (-$800 to -$20,000)
 - Executive mood/loyalty changes (from executive system)
 - `artist_mood` - Artist happiness/satisfaction (**COMPLETED September 11, 2025** - All effects working)
@@ -15,13 +15,23 @@ Analysis of actions.json to identify what's implemented vs. what effects need to
 - `creative_capital` - Creative resources (**VERIFIED September 11, 2025** - Proper batching and calculation)
 - `reputation` - Industry reputation (system exists, action effects not connected)
 
-### 🔄 **Systems Implemented But Effects Not Connected**
+## 🔄 **Systems Implemented But Effects Not Connected**
 Based on what you've told me is already implemented but not connected to executive actions:
 
 - `quality_bonus` - Production quality improvements (song quality system exists, effects not connected)
 - `quality_penalty` - Production quality reductions (song quality system exists, effects not connected)
 
-### ❌ **Systems Not Implemented**
+## 🎤 **Live Performance Systems** (5 effects)
+Tour System Implemented V1 - 9/14/2025
+
+**Venue & Tour Management:**
+- `venue_relationships` - Venue booking relationships (+1)
+- `venue_stability` - Venue relationship stability (+1)
+- `sellthrough_risk` - Ticket sales risk (+1)
+- `sellthrough_hint` - Ticket sales indicator (+1)
+- `ticket_bias` - Ticket sales favorability (+1)
+
+## ❌ **Systems Not Implemented**
 67 effects from actions.json that don't have underlying systems, organized by logical category:
 
 ## 🎯 **Marketing & Media Systems** (15 effects)
@@ -75,14 +85,6 @@ Based on what you've told me is already implemented but not connected to executi
 **Industry Relationships:**
 - `relationship_stability` - General business relationships (+1)
 - `relationship_building` - Building industry connections (+2)
-
-## 🎤 **Live Performance Systems** (5 effects)
-**Venue & Tour Management:**
-- `venue_relationships` - Venue booking relationships (+1)
-- `venue_stability` - Venue relationship stability (+1)
-- `sellthrough_risk` - Ticket sales risk (+1)
-- `sellthrough_hint` - Ticket sales indicator (+1)
-- `ticket_bias` - Ticket sales favorability (+1)
 
 ## 👥 **Fan & Artist Systems** (10 effects)
 **Fan Engagement:**
