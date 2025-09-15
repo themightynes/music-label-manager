@@ -4,16 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X } from 'lucide-react';
 
 interface MonthSummaryProps {
   monthlyStats: any;
   onAdvanceMonth: () => void;
   isAdvancing?: boolean;
   isMonthResults?: boolean;
+  onClose?: () => void;
 }
 
-export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMonthResults }: MonthSummaryProps) {
+export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMonthResults, onClose }: MonthSummaryProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'projects'>('overview');
 
   const formatCurrency = (amount: number) => {
@@ -87,6 +88,18 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
               Your financial performance and key achievements
             </p>
           </div>
+
+          {/* Close button - only show if onClose is provided */}
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
           
           {/* Big prominent net income display */}
           <div className="text-right">

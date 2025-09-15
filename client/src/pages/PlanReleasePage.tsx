@@ -11,6 +11,7 @@ import { ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star
 import { useGameStore } from '@/store/gameStore';
 import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
+import GameLayout from '@/layouts/GameLayout';
 
 // Mock data types
 interface Song {
@@ -588,36 +589,12 @@ export default function PlanReleasePage() {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-[#2C222A] shadow-sm border-b border-[#4e324c]/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLocation('/')}
-                className="flex items-center space-x-2 text-white hover:text-white hover:bg-white/10"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
-              </Button>
-              <div className="h-6 w-px opacity-30 bg-white" />
-              <h1 className="text-xl font-bold text-white">Plan Release</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 bg-[#23121c] border border-[#4e324c] px-3 py-1 rounded-[10px]">
-                <DollarSign className="w-4 h-4 text-green-400" />
-                <span className="font-mono font-semibold text-white">${(gameState?.money || 0).toLocaleString()}</span>
-              </div>
-              <div className="text-sm text-white/70">Month {gameState?.currentMonth || 1}</div>
-            </div>
-          </div>
+    <GameLayout>
+      <div className="min-h-screen">
+        <div className="bg-[#2C222A] border-b border-[#4e324c]/50 px-4 sm:px-6 lg:px-8 py-4">
+          <h1 className="text-xl font-bold text-white">Plan Release</h1>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Left Column - Release Planning */}
@@ -1312,7 +1289,8 @@ export default function PlanReleasePage() {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </GameLayout>
   );
 }

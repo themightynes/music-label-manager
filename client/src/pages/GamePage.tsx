@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Dashboard } from '../components/Dashboard';
 import { CampaignResultsModal } from '../components/CampaignResultsModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import GameLayout from '@/layouts/GameLayout';
 import { useGameStore } from '../store/gameStore';
 import { useGameContext } from '../contexts/GameContext';
 
 export default function GamePage() {
   const [showCampaignResults, setShowCampaignResults] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [showLivePerformanceModal, setShowLivePerformanceModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
   const { gameState, campaignResults, createNewGame, isAdvancingMonth, loadGame } = useGameStore();
   const { gameId, setGameId } = useGameContext();
   
@@ -57,6 +61,15 @@ export default function GamePage() {
       setShowCampaignResults(true);
     }
   }, [campaignResults]);
+
+  // Handle URL parameters to open modals
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const open = params.get('open');
+    if (open === 'recording') setShowProjectModal(true);
+    if (open === 'tour') setShowLivePerformanceModal(true);
+    if (open === 'save') setShowSaveModal(true);
+  }, []);
   
   if (isInitializing || !gameState) {
     return (
@@ -83,18 +96,29 @@ export default function GamePage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen">
-        <Dashboard />
-        
-        {/* Campaign Results Modal */}
-        {showCampaignResults && campaignResults && (
-          <CampaignResultsModal
-            campaignResults={campaignResults}
-            onClose={() => setShowCampaignResults(false)}
-            onNewGame={handleNewGame}
-          />
-        )}
-      </div>
+      <GameLayout
+        onShowProjectModal={() => setShowProjectModal(true)}
+        onShowLivePerformanceModal={() => setShowLivePerformanceModal(true)}
+        onShowSaveModal={() => setShowSaveModal(true)}
+      >
+        <Dashboard
+          showProjectModal={showProjectModal}
+          setShowProjectModal={setShowProjectModal}
+          showLivePerformanceModal={showLivePerformanceModal}
+          setShowLivePerformanceModal={setShowLivePerformanceModal}
+          showSaveModal={showSaveModal}
+          setShowSaveModal={setShowSaveModal}
+        />
+      </GameLayout>
+
+      {/* Campaign Results Modal - keep outside layout */}
+      {showCampaignResults && campaignResults && (
+        <CampaignResultsModal
+          campaignResults={campaignResults}
+          onClose={() => setShowCampaignResults(false)}
+          onNewGame={handleNewGame}
+        />
+      )}
     </ErrorBoundary>
   );
 }

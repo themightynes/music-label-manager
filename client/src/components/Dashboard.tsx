@@ -16,14 +16,32 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
-export function Dashboard() {
-  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, backToMeetingSelection, monthlyOutcome, createNewGame, selectedActions, artists, projects, createProject } = useGameStore();
+interface DashboardProps {
+  showProjectModal?: boolean;
+  setShowProjectModal?: (show: boolean) => void;
+  showLivePerformanceModal?: boolean;
+  setShowLivePerformanceModal?: (show: boolean) => void;
+  showSaveModal?: boolean;
+  setShowSaveModal?: (show: boolean) => void;
+}
+
+export function Dashboard({
+  showProjectModal = false,
+  setShowProjectModal = () => {},
+  showLivePerformanceModal = false,
+  setShowLivePerformanceModal = () => {},
+  showSaveModal = false,
+  setShowSaveModal = () => {}
+}: DashboardProps) {
+  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, backToMeetingSelection, monthlyOutcome, selectedActions, artists, projects, createProject } = useGameStore();
   const [, setLocation] = useLocation();
-  const [showSaveModal, setShowSaveModal] = useState(false);
   const [showMonthSummary, setShowMonthSummary] = useState(false);
-  const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
-  const [showProjectModal, setShowProjectModal] = useState(false);
-  const [showLivePerformanceModal, setShowLivePerformanceModal] = useState(false);
+
+  useEffect(() => {
+    if (monthlyOutcome && !isAdvancingMonth) {
+      setShowMonthSummary(true);
+    }
+  }, [monthlyOutcome, isAdvancingMonth]);
 
   if (!gameState) {
     return (
@@ -50,22 +68,6 @@ export function Dashboard() {
     setShowMonthSummary(false);
   };
 
-  const handleNewGame = async () => {
-    if (gameState.currentMonth && gameState.currentMonth > 1) {
-      setShowNewGameConfirm(true);
-    } else {
-      await confirmNewGame();
-    }
-  };
-
-  const confirmNewGame = async () => {
-    try {
-      await createNewGame('standard');
-      setShowNewGameConfirm(false);
-    } catch (error) {
-      console.error('Failed to create new game:', error);
-    }
-  };
 
   // Live performance creation - uses existing project creation flow
   const handleCreateTour = async (tourData: TourCreationData) => {
@@ -103,126 +105,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen font-sans">
-      {/* Header - Responsive */}
-      <header className="bg-[#2C222A] shadow-sm border-b border-[#4e324c]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <div className="flex items-center space-x-2">
-                <img 
-                  src="/logo4.png" 
-                  alt="Music Label Manager" 
-                  className="h-10 md:h-12 w-auto"
-                />
-              </div>
-              <div className="flex items-center space-x-1 md:space-x-2 text-xs md:text-sm text-white/70">
-                <span className="hidden md:inline">Month</span>
-                <span className="md:hidden">M</span>
-                <span className="font-mono font-semibold text-[#A75A5B]">{gameState.currentMonth || 1}</span>
-                <span className="hidden md:inline">of 36</span>
-                <span className="md:hidden">/36</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <div className="flex items-center space-x-1 md:space-x-2 bg-[#23121c] border border-[#4e324c] px-2 md:px-3 py-1 rounded-[10px]">
-                <i className="fas fa-dollar-sign text-green-400 text-sm"></i>
-                <span className="font-mono font-semibold text-sm md:text-base text-white">${(gameState.money || 0).toLocaleString()}</span>
-              </div>
-              
-              {/* Advance to Next Month Button */}
-              <Button
-                onClick={handleAdvanceMonth}
-                disabled={selectedActions.length === 0 || isAdvancingMonth}
-                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isAdvancingMonth ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin text-sm"></i>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-forward text-sm"></i>
-                    <span>Advance Month</span>
-                  </>
-                )}
-              </Button>
-              
-              {/* Recording Session Button */}
-              <Button
-                onClick={() => setShowProjectModal(true)}
-                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2"
-              >
-                <i className="fas fa-plus text-sm"></i>
-                <span>Recording Session</span>
-              </Button>
-              
-              {/* Live Performance Button */}
-              <Button
-                onClick={() => setShowLivePerformanceModal(true)}
-                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2"
-              >
-                <i className="fas fa-microphone text-sm"></i>
-                <span>Live Performance</span>
-              </Button>
-              
-              {/* Plan Release Button */}
-              <Button
-                onClick={() => setLocation('/plan-release')}
-                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] px-3 md:px-4 py-2 text-sm font-medium rounded-[10px] hidden sm:flex items-center space-x-2"
-              >
-                <i className="fas fa-rocket text-sm"></i>
-                <span>Plan Release</span>
-              </Button>
-              
-              {/* Quality Tester Button */}
-              <Button
-                onClick={() => setLocation('/quality-tester')}
-                className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#D99696] p-2 rounded-[10px]"
-                size="sm"
-                title="Quality Tester"
-              >
-                <i className="fas fa-flask text-sm"></i>
-              </Button>
-              
-              <div className="flex items-center space-x-1">
-                {/* Mobile Plan Release Button */}
-                <Button
-                  onClick={() => setLocation('/plan-release')}
-                  className="bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#2a1923] p-2 sm:hidden rounded-[10px]"
-                  size="sm"
-                  title="Plan Release"
-                >
-                  <i className="fas fa-rocket text-sm"></i>
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleNewGame}
-                  className="p-2 text-white hover:text-white hover:bg-white/10"
-                  title="Start New Game"
-                >
-                  <i className="fas fa-plus text-sm"></i>
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSaveModal(true)}
-                  className="p-2 text-white hover:text-white hover:bg-white/10"
-                  title="Save & Load Game"
-                >
-                  <i className="fas fa-save text-sm"></i>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <>
       {/* Floating Metrics Dashboard */}
       <MetricsDashboard />
 
@@ -288,39 +171,6 @@ export function Dashboard() {
         </div>
       )}
       
-      {/* New Game Confirmation Modal */}
-      {showNewGameConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-[#2C222A] border border-[#4e324c] rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="text-center">
-              <div className="text-4xl mb-4">⚠️</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Start New Game?</h3>
-              <p className="text-sm text-white/70 mb-6">
-                This will permanently delete your current progress.<br />
-                <span className="font-medium text-[#A75A5B]">Month {gameState.currentMonth}</span><br />
-                Are you sure you want to continue?
-              </p>
-              <div className="flex space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowNewGameConfirm(false)}
-                  className="flex-1 bg-[#23121c] border border-[#4e324c] text-white hover:bg-[#2a1923]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={confirmNewGame}
-                  className="flex-1 bg-[#A75A5B] hover:bg-[#D99696] text-white border-0"
-                >
-                  Start New Game
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <SaveGameModal open={showSaveModal} onOpenChange={setShowSaveModal} />
       
       {/* Project Creation Modal */}
@@ -350,8 +200,8 @@ export function Dashboard() {
           onOpenChange={setShowLivePerformanceModal}
         />
       )}
-      
+
       <ToastNotification />
-    </div>
+    </>
   );
 }

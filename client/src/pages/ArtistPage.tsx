@@ -8,17 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReleaseWorkflowCard } from '@/components/ReleaseWorkflowCard';
-import { 
-  ArrowLeft, 
-  User, 
-  Music, 
-  Calendar, 
-  DollarSign, 
-  TrendingUp, 
-  Heart, 
-  Star, 
-  Play, 
-  AlertCircle, 
+import GameLayout from '@/layouts/GameLayout';
+import {
+  ArrowLeft,
+  User,
+  Music,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  Heart,
+  Star,
+  Play,
+  AlertCircle,
   Loader2,
   BarChart3,
   Activity,
@@ -331,62 +332,45 @@ export default function ArtistPage() {
   const { releasedSongs: songsByRelease, unreleasedSongs } = getSongsByRelease();
   
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-[#2C222A] shadow-sm border-b border-[#4e324c]/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLocation('/')}
-                className="flex items-center space-x-2 text-white hover:text-white hover:bg-white/10"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
-              </Button>
-              <div className="h-6 w-px opacity-30 bg-white" />
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#A75A5B]/80 to-[#791014]/80 flex items-center justify-center">
-                  <User className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-white">{artist.name}</h1>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-xs bg-white/10 text-white border-white/20">{artist.archetype}</Badge>
-                    {artist.isSigned && (
-                      <Badge className="text-xs bg-green-500/20 text-green-400 border-0">Signed</Badge>
-                    )}
-                  </div>
+    <GameLayout>
+      <div className="min-h-screen">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Move artist header info here as hero section */}
+          <div className="mb-8">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#A75A5B]/80 to-[#791014]/80 flex items-center justify-center">
+                <User className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">{artist.name}</h1>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Badge variant="outline" className="text-xs bg-white/10 text-white border-white/20">{artist.archetype}</Badge>
+                  {artist.isSigned && (
+                    <Badge className="text-xs bg-green-500/20 text-green-400 border-0">Signed</Badge>
+                  )}
                 </div>
               </div>
             </div>
-            
-            {/* Quick Stats */}
-            <div className="hidden lg:flex items-center space-x-6">
-              <div className="text-center">
+            {/* Move quick stats here */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
                 <div className="text-lg font-bold text-white">{songs.length}</div>
                 <div className="text-xs text-white/70">Total Songs</div>
               </div>
-              <div className="text-center">
+              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
                 <div className="text-lg font-bold text-green-600">{releasedSongs}</div>
                 <div className="text-xs text-white/70">Released</div>
               </div>
-              <div className="text-center">
+              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
                 <div className="text-lg font-bold text-blue-600">${(totalRevenue / 1000).toFixed(1)}k</div>
                 <div className="text-xs text-white/70">Total Revenue</div>
               </div>
-              <div className="text-center">
+              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
                 <div className="text-lg font-bold text-[#791014]">{(totalStreams / 1000).toFixed(0)}k</div>
                 <div className="text-xs text-white/70">Total Streams</div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid grid-cols-5 w-full max-w-2xl">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
@@ -1017,8 +1001,9 @@ export default function ArtistPage() {
             </div>
           </TabsContent>
         </Tabs>
-      </main>
-    </div>
+        </main>
+      </div>
+    </GameLayout>
   );
 }
 
