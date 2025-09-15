@@ -11,6 +11,7 @@ import GamePage from "@/pages/GamePage";
 import TestDataPage from "@/pages/TestData";
 import LoginPage from "@/pages/LoginPage";
 import PlanReleasePage from "@/pages/PlanReleasePage";
+import ArtistsLandingPage from "@/pages/ArtistsLandingPage";
 import ArtistPage from "@/pages/ArtistPage";
 import QualityTester from "@/pages/QualityTester";
 import ToursTest from "@/pages/ToursTest";
@@ -34,6 +35,7 @@ function Router() {
     <Switch>
       <Route path="/" component={GamePage} />
       <Route path="/plan-release" component={PlanReleasePage} />
+      <Route path="/artists" component={ArtistsLandingPage} />
       <Route path="/artist/:artistId" component={ArtistPage} />
       <Route path="/quality-tester" component={QualityTester} />
       <Route path="/tours-test" component={ToursTest} />

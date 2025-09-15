@@ -27,7 +27,8 @@ import {
   Play,
   Save,
   Beaker,
-  BarChart3
+  BarChart3,
+  Users
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -104,6 +105,7 @@ export function GameSidebar({
         </SidebarHeader>
 
         <SidebarContent>
+          {/* Group 1: Dashboard, Advance Month, Monthly Results */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -120,12 +122,12 @@ export function GameSidebar({
 
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => setLocation('/plan-release')}
-                    isActive={currentPath === '/plan-release'}
-                    tooltip="Plan Release"
+                    onClick={handleAdvanceMonth}
+                    disabled={selectedActions.length === 0 || isAdvancingMonth}
+                    tooltip="Advance Month"
                   >
-                    <Rocket />
-                    <span>Plan Release</span>
+                    <FastForward />
+                    <span>{isAdvancingMonth ? 'Processing...' : 'Advance Month'}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -145,17 +147,38 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
+          {/* Group 2: Artists */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={handleAdvanceMonth}
-                    disabled={selectedActions.length === 0 || isAdvancingMonth}
-                    tooltip="Advance Month"
+                    onClick={() => setLocation('/artists')}
+                    isActive={currentPath === '/artists' || currentPath.startsWith('/artist')}
+                    tooltip="Artists"
                   >
-                    <FastForward />
-                    <span>{isAdvancingMonth ? 'Processing...' : 'Advance Month'}</span>
+                    <Users />
+                    <span>Artists</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarSeparator />
+
+          {/* Group 3: Plan Release, Recording Sessions, Live Performance */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation('/plan-release')}
+                    isActive={currentPath === '/plan-release'}
+                    tooltip="Plan Release"
+                  >
+                    <Rocket />
+                    <span>Plan Release</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -184,20 +207,10 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
+          {/* Group 4: Start New Game, Save Game */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => setLocation('/quality-tester')}
-                    isActive={currentPath === '/quality-tester'}
-                    tooltip="Quality Tester"
-                  >
-                    <Beaker />
-                    <span>Quality Tester</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={handleNewGame}
@@ -215,6 +228,26 @@ export function GameSidebar({
                   >
                     <Save />
                     <span>Save Game</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarSeparator />
+
+          {/* Group 5: Quality Tester */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation('/quality-tester')}
+                    isActive={currentPath === '/quality-tester'}
+                    tooltip="Quality Tester"
+                  >
+                    <Beaker />
+                    <span>Quality Tester</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
