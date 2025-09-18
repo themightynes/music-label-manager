@@ -2,37 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Trophy, TrendingUp, Clock, BarChart3 } from 'lucide-react';
+import { RefreshCw, Trophy, BarChart3 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { apiRequest } from '@/lib/queryClient';
-import {
-  formatChartPosition,
-  formatChartMovement,
-  getChartPositionColor,
-  getMovementColor,
-  getChartPositionBadgeVariant,
-  formatWeeksOnChart,
-  getChartPositionOrdinal,
-  isPlayerSongHighlight,
-  getChartExitRisk,
-  getChartExitRiskColor,
-  getChartExitRiskBgColor
-} from '../../../shared/utils/chartUtils';
+import { ChartDataTable } from '@/components/chart/ChartDataTable';
+import { ChartEntry, chartColumns } from '@/components/chart/chartColumns';
+import { isPlayerSongHighlight } from '../../../shared/utils/chartUtils';
 
-interface Top10Entry {
-  position: number;
-  songId: string | null;
-  songTitle: string;
-  artistName: string;
-  movement: number;
-  weeksOnChart: number;
-  peakPosition: number | null;
-  isPlayerSong: boolean;
-  isCompetitorSong: boolean;
-  competitorTitle?: string;
-  competitorArtist?: string;
-  isDebut: boolean;
-}
+type Top10Entry = ChartEntry;
 
 interface Top10ChartData {
   chartWeek: string;
@@ -213,95 +190,17 @@ export function Top10ChartDisplay() {
         )}
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        {chartData.top10.map((entry, index) => {
-          const isHighlighted = isPlayerSongHighlight(entry.isPlayerSong, entry.position);
-          const exitRisk = getChartExitRisk(entry.movement, entry.weeksOnChart);
+      <CardContent className="space-y-6">
+        <ChartDataTable<Top10Entry>
+          columns={chartColumns}
+          data={chartData.top10}
+          rowHighlight={entry => isPlayerSongHighlight(entry.isPlayerSong, entry.position)}
+          initialSort={{ columnId: 'position', direction: 'asc' }}
+          getRowKey={entry => entry.songId ?? `${entry.position}-${entry.songTitle}`}
+        />
 
-          return (
-            <div
-              key={entry.songId}
-              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                isHighlighted
-                  ? 'bg-[#A75A5B]/10 border-[#A75A5B]/20 ring-1 ring-[#A75A5B]/30'
-                  : 'bg-[#3c252d]/20 border-[#4e324c]/50 hover:bg-[#3c252d]/30'
-              }`}
-            >
-              {/* Left side - Position and Song info */}
-              <div className="flex items-center space-x-4 flex-1">
-                {/* Chart Position */}
-                <div className="flex-shrink-0">
-                  {entry.position === 1 ? (
-                    <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-sm font-bold text-yellow-900">1</span>
-                    </div>
-                  ) : (
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${getChartPositionColor(entry.position)}`}>
-                      {entry.position}
-                    </div>
-                  )}
-                </div>
-
-                {/* Song Details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <h4 className={`font-medium text-sm truncate ${isHighlighted ? 'text-white' : 'text-white/90'}`}>
-                      {entry.songTitle}
-                    </h4>
-                    {entry.isDebut && (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 px-1">
-                        NEW
-                      </Badge>
-                    )}
-                    {isHighlighted && (
-                      <Badge variant="secondary" className="text-xs bg-[#A75A5B] text-white px-1">
-                        YOURS
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-3 text-xs text-white/50 mt-1">
-                    <span>{entry.artistName}</span>
-                    {entry.weeksOnChart > 0 && (
-                      <span>• {formatWeeksOnChart(entry.weeksOnChart)}</span>
-                    )}
-                    {entry.peakPosition && entry.peakPosition !== entry.position && (
-                      <span>• Peak {formatChartPosition(entry.peakPosition)}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right side - Movement and stats */}
-              <div className="flex items-center space-x-3 flex-shrink-0">
-                {/* Movement indicator - always shown */}
-                <div className="flex items-center space-x-1">
-                  <span className={`text-xs font-medium ${getMovementColor(entry.movement)}`}>
-                    {formatChartMovement(entry.movement)}
-                  </span>
-                </div>
-
-                {/* Chart exit risk indicator */}
-                {exitRisk !== 'low' && (
-                  <div
-                    className={`w-2 h-2 rounded-full ${getChartExitRiskBgColor(exitRisk)}`}
-                    title={`${exitRisk === 'high' ? 'High' : 'Medium'} chart exit risk`}
-                  />
-                )}
-
-                {/* Ordinal position */}
-                <div className="text-right">
-                  <div className="text-xs text-white/50 font-mono">
-                    {getChartPositionOrdinal(entry.position)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Chart summary */}
         {chartData.top10.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-[#4e324c]">
+          <div className="pt-3 border-t border-[#4e324c]">
             <div className="grid grid-cols-3 gap-4 text-center text-xs">
               <div>
                 <div className="font-semibold text-white/90">{playerSongs.length}</div>
