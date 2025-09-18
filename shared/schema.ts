@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, uuid, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, uuid, real, date, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -263,6 +263,33 @@ export const executives = pgTable("executives", {
   metadata: jsonb("metadata"), // For personality traits, history
 });
 
+// Chart entries table for music charts
+export const chartEntries = pgTable("chart_entries", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  songId: uuid("song_id").references(() => songs.id, { onDelete: "cascade" }), // Made optional for competitor songs
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
+  chartWeek: date("chart_week").notNull(), // DATE format for monthly snapshots
+  streams: integer("streams").notNull(), // Stream count for chart calculation
+  position: integer("position"), // Chart position 1-100+, nullable if not charting
+  isCharting: boolean("is_charting").generatedAlwaysAs(sql`position IS NOT NULL AND position <= 100`),
+  isDebut: boolean("is_debut").default(false), // First-time charting
+  movement: integer("movement").default(0), // Position change from previous week
+  isCompetitorSong: boolean("is_competitor_song").default(false), // Distinguishes competitor vs player songs
+  competitorTitle: text("competitor_title"), // Title for competitor songs (when songId is null)
+  competitorArtist: text("competitor_artist"), // Artist for competitor songs (when songId is null)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to enforce idempotency and prevent duplicates with game partitioning
+  // For player songs: unique by gameId + songId + chartWeek
+  chartEntriesUniquePlayerIdx: uniqueIndex('idx_chart_entries_unique_player').on(table.gameId, table.songId, table.chartWeek),
+  // For competitor songs: unique by gameId + chartWeek + competitorTitle + competitorArtist (where songId IS NULL)
+  chartEntriesUniqueCompetitorIdx: sql`CREATE UNIQUE INDEX IF NOT EXISTS "idx_chart_entries_unique_competitor" ON ${table} ("game_id", "chart_week", "competitor_title", "competitor_artist") WHERE "song_id" IS NULL`,
+  // Performance indexes for chart queries
+  chartEntriesGameWeekPositionIdx: sql`CREATE INDEX IF NOT EXISTS "idx_chart_entries_game_week_position" ON ${table} ("game_id", "chart_week", "position") WHERE "position" IS NOT NULL`,
+  chartEntriesWeekPositionIdx: sql`CREATE INDEX IF NOT EXISTS "idx_chart_entries_week_position" ON ${table} ("chart_week", "position") WHERE "position" IS NOT NULL`,
+  chartEntriesStreamRankIdx: sql`CREATE INDEX IF NOT EXISTS "idx_chart_entries_stream_rank" ON ${table} ("chart_week", "streams" DESC)`,
+}));
+
 // Monthly actions (for tracking player choices)
 export const monthlyActions = pgTable("monthly_actions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -355,6 +382,17 @@ export const moodEventsRelations = relations(moodEvents, ({ one }) => ({
   }),
 }));
 
+export const chartEntriesRelations = relations(chartEntries, ({ one }) => ({
+  song: one(songs, {
+    fields: [chartEntries.songId],
+    references: [songs.id],
+  }),
+  gameState: one(gameStates, {
+    fields: [chartEntries.gameId],
+    references: [gameStates.id],
+  }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -408,6 +446,12 @@ export const insertMoodEventSchema = createInsertSchema(moodEvents).omit({
   createdAt: true,
 });
 
+export const insertChartEntrySchema = createInsertSchema(chartEntries).omit({
+  id: true,
+  createdAt: true,
+  isCharting: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -444,3 +488,6 @@ export type InsertMonthlyAction = z.infer<typeof insertMonthlyActionSchema>;
 
 export type MoodEvent = typeof moodEvents.$inferSelect;
 export type InsertMoodEvent = z.infer<typeof insertMoodEventSchema>;
+
+export type ChartEntry = typeof chartEntries.$inferSelect;
+export type InsertChartEntry = z.infer<typeof insertChartEntrySchema>;

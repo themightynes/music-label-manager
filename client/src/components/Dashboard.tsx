@@ -5,6 +5,7 @@ import { ArtistRoster } from './ArtistRoster';
 import { ActiveRecordingSessions } from './ActiveRecordingSessions';
 import { ActiveTours } from './ActiveTours';
 import { ActiveReleases } from './ActiveReleases';
+import { Top10ChartDisplay } from './Top10ChartDisplay';
 import { DialogueModal } from './DialogueModal';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
@@ -36,12 +37,20 @@ export function Dashboard({
   const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, backToMeetingSelection, monthlyOutcome, selectedActions, artists, projects, createProject } = useGameStore();
   const [, setLocation] = useLocation();
   const [showMonthSummary, setShowMonthSummary] = useState(false);
+  const [lastProcessedMonth, setLastProcessedMonth] = useState<number | null>(null);
 
   useEffect(() => {
-    if (monthlyOutcome && !isAdvancingMonth) {
-      setShowMonthSummary(true);
+    // Only auto-show if this is a fresh monthly outcome (not from page refresh)
+    if (monthlyOutcome && !isAdvancingMonth && gameState) {
+      const isCurrentMonthResult = monthlyOutcome.month === gameState.currentMonth - 1;
+      const isNewResult = lastProcessedMonth !== monthlyOutcome.month;
+
+      if (isCurrentMonthResult && isNewResult) {
+        setShowMonthSummary(true);
+        setLastProcessedMonth(monthlyOutcome.month);
+      }
     }
-  }, [monthlyOutcome, isAdvancingMonth]);
+  }, [monthlyOutcome, isAdvancingMonth, gameState, lastProcessedMonth]);
 
   if (!gameState) {
     return (
@@ -139,6 +148,11 @@ export function Dashboard({
           <ActiveReleases />
         </div>
 
+        {/* Top 10 Chart Section - Full Width */}
+        <div className="mb-6">
+          <Top10ChartDisplay />
+        </div>
+
         {/* Access Tiers - Full Width Horizontal */}
         <div className="mb-6">
           <AccessTierBadges gameState={gameState} />
@@ -161,13 +175,22 @@ export function Dashboard({
       
       {/* Month Summary Modal */}
       {showMonthSummary && monthlyOutcome && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <MonthSummary 
-            monthlyStats={monthlyOutcome} 
-            onAdvanceMonth={handleCloseSummary}
-            isAdvancing={false}
-            isMonthResults={true}
-          />
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={handleCloseSummary}
+        >
+          <div
+            className="bg-[#2C222A] border border-[#4e324c] rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MonthSummary
+              monthlyStats={monthlyOutcome}
+              onAdvanceMonth={handleCloseSummary}
+              isAdvancing={false}
+              isMonthResults={true}
+              onClose={handleCloseSummary}
+            />
+          </div>
         </div>
       )}
       

@@ -13,6 +13,8 @@
 import { GameState, Artist, Project, Role, MonthlyAction, Song, Release, ReleaseSong } from '../schema';
 import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
+import { ChartService } from './ChartService';
+import type { MonthSummary, ChartUpdate, GameChange, EventOccurrence } from '../types/gameTypes';
 import seedrandom from 'seedrandom';
 
 // Extended MonthlyAction interface for game engine
@@ -159,6 +161,9 @@ export class GameEngine {
 
     // Process planned releases scheduled for this month
     await this.processPlannedReleases(summary, dbTransaction);
+
+    // Process monthly charts after releases
+    await this.processMonthlyCharts(summary, dbTransaction);
 
     // PHASE 1 MIGRATION: Handle project stage advancement within GameEngine
     await this.advanceProjectStages(summary, dbTransaction);
@@ -2996,6 +3001,45 @@ export class GameEngine {
   }
 
   /**
+   * Process monthly charts after releases have been processed
+   */
+  private async processMonthlyCharts(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    try {
+      // Generate chart week from current month
+      const chartWeek = ChartService.generateChartWeekFromGameMonth(this.gameState.currentMonth || 1);
+
+      // Create ChartService instance
+      const chartService = new ChartService(
+        this.gameData,
+        this.rng,
+        this.storage,
+        this.gameState.id
+      );
+
+      // Generate monthly chart
+      await chartService.generateMonthlyChart(chartWeek, dbTransaction);
+
+      // Fetch current week entries and map to ChartUpdate objects
+      const currentWeekEntries = await chartService.getCurrentWeekChartEntries(chartWeek, dbTransaction);
+
+      summary.chartUpdates = currentWeekEntries.map(entry => ({
+        songTitle: entry.songTitle,
+        artistName: entry.artistName,
+        position: entry.position,
+        movement: entry.movement,
+        isDebut: entry.isDebut,
+        weeksOnChart: entry.weeksOnChart,
+        isCompetitorSong: entry.isCompetitorSong
+      }));
+
+      console.log(`[CHART PROCESSING] Generated chart for week ${chartWeek} with ${summary.chartUpdates.length} player entries`);
+    } catch (error) {
+      console.error('[CHART PROCESSING] Error generating monthly chart:', error);
+      // Don't throw - chart generation should not break monthly processing
+    }
+  }
+
+  /**
    * Check if the 12-month campaign has been completed and calculate final results
    */
   private async checkCampaignCompletion(summary: MonthSummary): Promise<CampaignResults | undefined> {
@@ -4075,46 +4119,6 @@ export class GameEngine {
 
 }
 
-/**
- * Summary of changes that occurred during a month
- */
-export interface MonthSummary {
-  month: number;
-  changes: GameChange[];
-  revenue: number;
-  expenses: number;
-  streams?: number;
-  reputationChanges: Record<string, number>;
-  events: EventOccurrence[];
-  artistChanges?: Record<string, number>;
-  expenseBreakdown?: {
-    monthlyOperations: number;
-    artistSalaries: number;
-    executiveSalaries: number;
-    projectCosts: number;
-    marketingCosts: number;
-    roleMeetingCosts: number;
-  };
-  financialBreakdown?: string; // Human-readable financial calculation
-}
-
-export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction';
-  description: string;
-  amount?: number;
-  roleId?: string;
-  projectId?: string;
-  moodChange?: number;
-  newMood?: number;
-  loyaltyBoost?: number;
-  newLoyalty?: number;
-}
-
-export interface EventOccurrence {
-  id: string;
-  title: string;
-  occurred: boolean;
-}
 
 /**
  * Campaign completion results and scoring

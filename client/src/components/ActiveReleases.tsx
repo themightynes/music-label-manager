@@ -2,8 +2,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle, BarChart3 } from 'lucide-react';
 import { ReleaseWorkflowCard } from './ReleaseWorkflowCard';
+import {
+  formatChartPosition,
+  formatChartMovement,
+  getChartPositionColor,
+  getMovementColor,
+  getMovementArrow
+} from '../../../shared/utils/chartUtils';
 
 export function ActiveReleases() {
   const { releases, artists, songs, gameState } = useGameStore();
@@ -135,6 +142,46 @@ export function ActiveReleases() {
     return `Month ${month}`;
   };
 
+  const getSongChartInfo = (songId: string) => {
+    const song = songs.find(s => s.id === songId);
+    if (!song) return null;
+
+    return {
+      position: song.chartPosition,
+      movement: song.chartMovement,
+      weeksOnChart: song.weeksOnChart,
+      peakPosition: song.peakPosition
+    };
+  };
+
+  const renderChartBadge = (song: any) => {
+    const chartInfo = getSongChartInfo(song.id);
+    if (!chartInfo || !chartInfo.position) return null;
+
+    return (
+      <div className="flex items-center space-x-2">
+        <span className={`px-2 py-1 text-xs font-semibold rounded ${getChartPositionColor(chartInfo.position)}`}>
+          {formatChartPosition(chartInfo.position)}
+        </span>
+        {chartInfo.movement && chartInfo.movement !== 0 && (
+          <span className={`text-xs ${getMovementColor(chartInfo.movement)}`}>
+            {formatChartMovement(chartInfo.movement)}
+          </span>
+        )}
+        {chartInfo.weeksOnChart && (
+          <span className="text-xs text-white/50">
+            {chartInfo.weeksOnChart}w
+          </span>
+        )}
+        {chartInfo.peakPosition && (
+          <span className="text-xs text-white/50">
+            Peak {formatChartPosition(chartInfo.peakPosition)}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   const upcomingReleases = getUpcomingReleases();
   const releasedReleases = getReleasedReleases();
   const currentMonth = gameState?.currentMonth || 1;
@@ -227,15 +274,70 @@ export function ActiveReleases() {
                   <p className="text-sm text-white/50">Complete planned releases to see them here</p>
                 </div>
               ) : (
-                releasedReleases.map(release => (
-                  <ReleaseWorkflowCard
-                    key={release.id}
-                    release={release}
-                    currentMonth={currentMonth}
-                    artistName={getArtistName(release.artistId)}
-                    songs={songs}
-                  />
-                ))
+                <>
+                  {/* Chart Performance Summary for Released Songs */}
+                  {(() => {
+                    const releasedSongs = songs.filter(s => s.isReleased && s.chartPosition);
+                    const chartingSongs = releasedSongs.filter(s => s.chartPosition);
+                    const top10Songs = chartingSongs.filter(s => s.chartPosition && s.chartPosition <= 10);
+                    const top40Songs = chartingSongs.filter(s => s.chartPosition && s.chartPosition <= 40);
+
+                    return chartingSongs.length > 0 ? (
+                      <div className="mb-6 p-4 bg-[#3c252d]/30 rounded-lg border border-[#A75A5B]/20">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-semibold text-white flex items-center space-x-2">
+                            <BarChart3 className="w-4 h-4 text-[#A75A5B]" />
+                            <span>Chart Performance</span>
+                          </h4>
+                          <div className="text-xs text-white/50">
+                            {chartingSongs.length} song{chartingSongs.length !== 1 ? 's' : ''} charting
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-yellow-500">{top10Songs.length}</div>
+                            <div className="text-xs text-white/70">Top 10</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-blue-500">{top40Songs.length}</div>
+                            <div className="text-xs text-white/70">Top 40</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-green-500">{chartingSongs.length}</div>
+                            <div className="text-xs text-white/70">Charting</div>
+                          </div>
+                        </div>
+
+                        {/* Top performing songs */}
+                        <div className="space-y-2">
+                          {chartingSongs
+                            .sort((a, b) => (a.chartPosition || 101) - (b.chartPosition || 101))
+                            .slice(0, 3)
+                            .map(song => (
+                              <div key={song.id} className="flex items-center justify-between p-2 bg-black/20 rounded">
+                                <div className="flex-1">
+                                  <div className="text-sm font-medium text-white">{song.title}</div>
+                                  <div className="text-xs text-white/60">{getArtistName(song.artistId)}</div>
+                                </div>
+                                {renderChartBadge(song)}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {releasedReleases.map(release => (
+                    <ReleaseWorkflowCard
+                      key={release.id}
+                      release={release}
+                      currentMonth={currentMonth}
+                      artistName={getArtistName(release.artistId)}
+                      songs={songs}
+                    />
+                  ))}
+                </>
               )}
             </>
           )}

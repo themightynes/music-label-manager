@@ -28,7 +28,8 @@ import {
   Save,
   Beaker,
   BarChart3,
-  Users
+  Users,
+  Trophy
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -248,6 +249,26 @@ export function GameSidebar({
                   >
                     <Beaker />
                     <span>Quality Tester</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarSeparator />
+
+          {/* Group 6: Charts */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation('/charts/top100')}
+                    isActive={currentPath === '/charts/top100'}
+                    tooltip="Top 100 Chart"
+                  >
+                    <Trophy />
+                    <span>Top 100 Chart</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

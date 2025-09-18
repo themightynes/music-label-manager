@@ -10,6 +10,8 @@ import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
 import { GameEngine } from "../shared/engine/game-engine";
 import { FinancialSystem, VenueCapacityManager } from "../shared/engine/FinancialSystem";
+import { ChartService } from "../shared/engine/ChartService";
+import { Song } from "../shared/models/Song";
 import { 
   AdvanceMonthRequest, 
   AdvanceMonthResponse,
@@ -960,18 +962,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('[API] Fetching songs for artist:', artistId, 'game:', gameId);
-      const songs = await serverGameData.getSongsByArtist(artistId, gameId);
-      console.log('[API] Found songs:', songs?.length || 0);
-      
+      const rawSongs = await serverGameData.getSongsByArtist(artistId, gameId);
+      console.log('[API] Found songs:', rawSongs?.length || 0);
+
       // Ensure we always return an array, even if no songs found
-      const songArray = Array.isArray(songs) ? songs : [];
-      res.json(songArray);
+      const songsArray = Array.isArray(rawSongs) ? rawSongs : [];
+
+      // Enhance songs with chart data
+      try {
+        // Create ChartService instance for this game
+        const chartService = new ChartService(
+          serverGameData,
+          () => Math.random(), // Use simple RNG for API calls
+          storage,
+          gameId
+        );
+
+        // Batch fetch chart data for all songs to avoid N+1 queries
+        const songIds = songsArray.map(song => song.id);
+        const batchChartData = await chartService.getBatchChartData(songIds);
+
+        // Enrich songs with chart data from batch
+        const enrichedSongs = songsArray.map(rawSong => ({
+          ...rawSong,
+          currentChartPosition: batchChartData.get(rawSong.id)?.currentPosition || null,
+          chartMovement: batchChartData.get(rawSong.id)?.movement || 0,
+          weeksOnChart: batchChartData.get(rawSong.id)?.weeksOnChart || 0,
+          peakPosition: batchChartData.get(rawSong.id)?.peakPosition || null,
+          isChartDebut: batchChartData.get(rawSong.id)?.isDebut || false
+        }));
+
+        res.json(enrichedSongs);
+        console.log('[API] Returned enriched songs with chart data:', enrichedSongs.length);
+
+      } catch (chartError) {
+        console.error('[API] Error enriching songs with chart data:', chartError);
+        // Fallback to raw songs if chart enrichment fails
+        res.json(songsArray);
+      }
       
     } catch (error) {
       console.error('[API] Error fetching artist songs:', error);
       res.status(500).json({ 
         message: "Failed to fetch artist songs", 
         error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // Get Top 10 chart data for a game
+  app.get("/api/game/:gameId/charts/top10", getUserId, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const userId = req.userId!;
+
+      // Verify user has access to this game
+      const [gameOwnership] = await db.select()
+        .from(gameStates)
+        .where(and(
+          eq(gameStates.id, gameId),
+          eq(gameStates.userId, userId)
+        ))
+        .limit(1);
+
+      if (!gameOwnership) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      // Get current game to determine chart week
+      const game = await storage.getGameState(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      // Create ChartService instance
+      const rng = () => Math.random(); // Simple RNG for chart generation
+      const chartService = new ChartService(serverGameData, rng, storage, gameId);
+
+      // Calculate current chart week from game month
+      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth);
+
+      // Get Top 10 chart data
+      const top10Data = await chartService.getTop10ChartData(currentChartWeek);
+
+      console.log(`[API] Top 10 chart data fetched for game ${gameId}, week ${currentChartWeek}:`, {
+        totalEntries: top10Data.length,
+        playerSongs: top10Data.filter(entry => entry.isPlayerSong).length,
+        competitorSongs: top10Data.filter(entry => entry.isCompetitorSong).length,
+        debuts: top10Data.filter(entry => entry.isDebut).length
+      });
+
+      res.json({
+        chartWeek: currentChartWeek,
+        currentMonth: game.currentMonth,
+        top10: top10Data
+      });
+
+    } catch (error) {
+      console.error('[API] Error fetching Top 10 chart data:', error);
+      res.status(500).json({
+        message: "Failed to fetch Top 10 chart data",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get Top 100 chart data for a game
+  app.get("/api/game/:gameId/charts/top100", getUserId, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const userId = req.userId!;
+
+      // Verify user has access to this game
+      const [gameOwnership] = await db.select()
+        .from(gameStates)
+        .where(and(
+          eq(gameStates.id, gameId),
+          eq(gameStates.userId, userId)
+        ))
+        .limit(1);
+
+      if (!gameOwnership) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      // Get current game to determine chart week
+      const game = await storage.getGameState(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      // Create ChartService instance
+      const rng = () => Math.random(); // Simple RNG for chart generation
+      const chartService = new ChartService(serverGameData, rng, storage, gameId);
+
+      // Calculate current chart week from game month
+      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth);
+
+      // Get Top 100 chart data (all charting songs)
+      const currentEntries = await chartService.getCurrentWeekChartEntries(currentChartWeek);
+      const top100Entries = currentEntries
+        .filter(entry => entry.position !== null && entry.position >= 1 && entry.position <= 100)
+        .sort((a, b) => (a.position || 101) - (b.position || 101))
+        .map(entry => ({
+          position: entry.position!,
+          songId: entry.songId || entry.competitorTitle || 'unknown',
+          songTitle: entry.songTitle,
+          artistName: entry.artistName,
+          movement: entry.movement ?? 0,
+          weeksOnChart: entry.weeksOnChart,
+          peakPosition: null, // TODO: Implement peak tracking
+          isPlayerSong: !entry.isCompetitorSong,
+          isDebut: entry.isDebut ?? false
+        }));
+
+      console.log(`[API] Top 100 chart data fetched for game ${gameId}, week ${currentChartWeek}:`, {
+        totalEntries: top100Entries.length,
+        playerSongs: top100Entries.filter(entry => entry.isPlayerSong).length,
+        competitorSongs: top100Entries.filter(entry => !entry.isPlayerSong).length,
+        debuts: top100Entries.filter(entry => entry.isDebut).length
+      });
+
+      res.json({
+        chartWeek: currentChartWeek,
+        currentMonth: game.currentMonth,
+        top100: top100Entries
+      });
+
+    } catch (error) {
+      console.error('[API] Error fetching Top 100 chart data:', error);
+      res.status(500).json({
+        message: "Failed to fetch Top 100 chart data",
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

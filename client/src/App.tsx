@@ -15,6 +15,7 @@ import ArtistsLandingPage from "@/pages/ArtistsLandingPage";
 import ArtistPage from "@/pages/ArtistPage";
 import QualityTester from "@/pages/QualityTester";
 import ToursTest from "@/pages/ToursTest";
+import Top100ChartPage from "@/pages/Top100ChartPage";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/artists" component={ArtistsLandingPage} />
       <Route path="/artist/:artistId" component={ArtistPage} />
       <Route path="/quality-tester" component={QualityTester} />
+      <Route path="/charts/top100" component={Top100ChartPage} />
       <Route path="/tours-test" component={ToursTest} />
       <Route path="/test-data" component={TestDataPage} />
       <Route component={NotFound} />

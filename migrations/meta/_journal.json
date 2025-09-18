@@ -36,6 +36,20 @@
       "when": 1757735222831,
       "tag": "0004_curvy_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1758078436109,
+      "tag": "0005_moaning_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1758091858513,
+      "tag": "0006_perpetual_doctor_doom",
+      "breakpoints": true
     }
   ]
 }

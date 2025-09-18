@@ -1,15 +1,16 @@
-import { 
-  users, gameSaves, artists, roles, projects, dialogueChoices, 
-  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs, executives,
+import {
+  users, gameSaves, artists, roles, projects, dialogueChoices,
+  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs, executives, chartEntries,
   type User, type InsertUser, type GameSave, type InsertGameSave,
   type Artist, type InsertArtist, type Project, type InsertProject,
   type GameState, type InsertGameState, type MonthlyAction, type InsertMonthlyAction,
   type DialogueChoice, type GameEvent, type Role,
-  type Song, type InsertSong, type Release, type InsertRelease, 
-  type ReleaseSong, type InsertReleaseSong
+  type Song, type InsertSong, type Release, type InsertRelease,
+  type ReleaseSong, type InsertReleaseSong, type ChartEntry as DbChartEntry, type InsertChartEntry
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
+import type { ReleasedSongData } from "@shared/engine/ChartService";
 
 export interface IStorage {
   // User management
@@ -80,6 +81,13 @@ export interface IStorage {
   // Monthly actions
   getMonthlyActions(gameId: string, month?: number): Promise<MonthlyAction[]>;
   createMonthlyAction(action: InsertMonthlyAction): Promise<MonthlyAction>;
+
+  // Chart operations
+  getReleasedSongsByGame(gameId: string, dbTransaction?: any): Promise<ReleasedSongData[]>;
+  createChartEntries(entries: InsertChartEntry[], dbTransaction?: any): Promise<void>;
+  getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
+  getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
+  getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -574,8 +582,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateExecutive(
-    execId: string, 
-    updates: Partial<any>, 
+    execId: string,
+    updates: Partial<any>,
     transaction?: any
   ): Promise<void> {
     console.log('[STORAGE] updateExecutive called with execId:', execId, 'updates:', updates);
@@ -584,6 +592,114 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(executives.id, execId));
     console.log('[STORAGE] Executive updated successfully');
+  }
+
+  // Chart operations implementation
+  async getReleasedSongsByGame(gameId: string, dbTransaction?: any): Promise<ReleasedSongData[]> {
+    const dbToUse = dbTransaction || db;
+    const releasedSongs = await dbToUse
+      .select({
+        id: songs.id,
+        title: songs.title,
+        artistName: artists.name,
+        totalStreams: songs.totalStreams,
+        monthlyStreams: songs.monthlyStreams
+      })
+      .from(songs)
+      .innerJoin(artists, eq(songs.artistId, artists.id))
+      .where(
+        and(
+          eq(songs.gameId, gameId),
+          eq(songs.isReleased, true)
+        )
+      );
+
+    return releasedSongs.map(song => ({
+      id: song.id,
+      title: song.title,
+      artistName: song.artistName,
+      totalStreams: song.totalStreams || 0,
+      monthlyStreams: song.monthlyStreams || 0
+    }));
+  }
+
+  async createChartEntries(entries: InsertChartEntry[], dbTransaction?: any): Promise<void> {
+    if (entries.length === 0) return;
+
+    const dbToUse = dbTransaction || db;
+
+    // Split entries by type to use different conflict targets
+    const playerEntries = entries.filter(e => !e.isCompetitorSong);
+    const competitorEntries = entries.filter(e => e.isCompetitorSong);
+
+    // Insert player entries with songId-based conflict resolution
+    if (playerEntries.length > 0) {
+      await dbToUse
+        .insert(chartEntries)
+        .values(playerEntries)
+        .onConflictDoNothing({
+          target: [chartEntries.gameId, chartEntries.songId, chartEntries.chartWeek]
+        });
+    }
+
+    // Insert competitor entries with competitor-specific conflict resolution
+    if (competitorEntries.length > 0) {
+      await dbToUse
+        .insert(chartEntries)
+        .values(competitorEntries)
+        .onConflictDoNothing();
+        // Note: Competitor uniqueness is enforced by the partial unique index on the database level
+    }
+  }
+
+  async getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
+    const dbToUse = dbTransaction || db;
+    return await dbToUse
+      .select()
+      .from(chartEntries)
+      .where(
+        and(
+          eq(chartEntries.songId, songId),
+          eq(chartEntries.gameId, gameId)
+        )
+      )
+      .orderBy(desc(chartEntries.chartWeek));
+  }
+
+  async getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
+    const dbToUse = dbTransaction || db;
+    return await dbToUse
+      .select()
+      .from(chartEntries)
+      .where(
+        and(
+          eq(chartEntries.chartWeek, chartWeek),
+          eq(chartEntries.gameId, gameId)
+        )
+      )
+      .orderBy(
+        sql`${chartEntries.position} IS NULL ASC`, // Nulls last
+        chartEntries.position // Then by position ascending
+      );
+  }
+
+  async getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
+    if (songIds.length === 0) return [];
+
+    const dbToUse = dbTransaction || db;
+    return await dbToUse
+      .select()
+      .from(chartEntries)
+      .where(
+        and(
+          inArray(chartEntries.songId, songIds),
+          eq(chartEntries.gameId, gameId)
+        )
+      )
+      .orderBy(
+        chartEntries.songId,
+        desc(chartEntries.chartWeek)
+      );
   }
 }
 

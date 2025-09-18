@@ -33,6 +33,12 @@ import {
   type TrackBreakdown,
   type CampaignOutcome
 } from '@/lib/releaseAnalytics';
+import {
+  formatChartPosition,
+  formatChartMovement,
+  getChartPositionColor,
+  getMovementColor
+} from '../../../shared/utils/chartUtils';
 
 interface ReleaseWorkflowCardProps {
   release: any;
@@ -120,9 +126,37 @@ export function ReleaseWorkflowCard({
   };
 
   const timeline = getTimelineProgress();
-  
+
   // Calculate enhanced metrics for ALL released items
   const isReleased = timeline.phase === 'released' || timeline.phase === 'fully-released';
+
+  // Chart badge rendering function - consistent with ActiveReleases
+  const renderChartBadge = (song: any) => {
+    if (!song.chartPosition) return null;
+
+    return (
+      <div className="flex items-center space-x-2">
+        <span className={`px-2 py-1 text-xs font-semibold rounded ${getChartPositionColor(song.chartPosition)}`}>
+          {formatChartPosition(song.chartPosition)}
+        </span>
+        {song.chartMovement && song.chartMovement !== 0 && (
+          <span className={`text-xs ${getMovementColor(song.chartMovement)}`}>
+            {formatChartMovement(song.chartMovement)}
+          </span>
+        )}
+        {song.weeksOnChart && (
+          <span className="text-xs text-white/50">
+            {song.weeksOnChart}w
+          </span>
+        )}
+        {song.peakPosition && (
+          <span className="text-xs text-white/50">
+            Peak {formatChartPosition(song.peakPosition)}
+          </span>
+        )}
+      </div>
+    );
+  };
   
   let performanceMetrics: PerformanceMetrics | null = null;
   let trackBreakdown: TrackBreakdown | null = null;
@@ -298,7 +332,10 @@ export function ReleaseWorkflowCard({
               <div className="flex items-center space-x-2">
                 <Star className="w-4 h-4 text-[#A75A5B]" />
                 <div>
-                  <div className="font-medium text-sm">{trackBreakdown.leadSingle.song.title}</div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium text-sm">{trackBreakdown.leadSingle.song.title}</span>
+                    {renderChartBadge(trackBreakdown.leadSingle.song)}
+                  </div>
                   <div className="text-xs text-[#A75A5B]">Lead Single</div>
                 </div>
               </div>
@@ -318,7 +355,10 @@ export function ReleaseWorkflowCard({
                 <div className="flex items-center space-x-2">
                   <span className="text-xs text-white/50 w-4">#{track.rank}</span>
                   <div>
-                    <div className="text-sm font-medium">{track.song.title}</div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">{track.song.title}</span>
+                      {renderChartBadge(track.song)}
+                    </div>
                     <div className="text-xs text-white/50">Quality: {track.song.quality || 'N/A'}</div>
                   </div>
                 </div>

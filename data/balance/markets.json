@@ -103,6 +103,20 @@
           "marketing_efficiency": 0.95
         }
       }
+    },
+
+    "chart_system": {
+      "competitor_variance_range": [0.8, 1.2],
+      "chart_generation_timing": "post_releases",
+      "top_chart_positions": 100,
+      "bubbling_under_positions": 200,
+      "chart_exit": {
+        "max_chart_position": 100,
+        "long_tenure_weeks": 30,
+        "long_tenure_position_threshold": 80,
+        "low_streams_threshold": 1000,
+        "low_streams_position_threshold": 90
+      }
     }
   },
 

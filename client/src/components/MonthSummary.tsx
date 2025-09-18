@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3 } from 'lucide-react';
+import { ChartPerformanceCard } from './ChartPerformanceCard';
+import { MonthSummary as MonthSummaryType, GameChange } from '../../../shared/types/gameTypes';
 
 interface MonthSummaryProps {
-  monthlyStats: any;
+  monthlyStats: MonthSummaryType;
   onAdvanceMonth: () => void;
   isAdvancing?: boolean;
   isMonthResults?: boolean;
@@ -43,12 +45,12 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
     }
   };
 
-  const categorizeChanges = (changes: any[]) => {
+  const categorizeChanges = (changes: GameChange[]) => {
     const categories = {
-      revenue: [] as any[],
-      expenses: [] as any[],
-      achievements: [] as any[],
-      other: [] as any[]
+      revenue: [] as GameChange[],
+      expenses: [] as GameChange[],
+      achievements: [] as GameChange[],
+      other: [] as GameChange[]
     };
 
     changes.forEach(change => {
@@ -219,12 +221,16 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
 
       {/* Main Content Area */}
       <div className="px-8 py-6">
-        {isMonthResults && changes.length > 0 ? (
+        {isMonthResults && (changes.length > 0 || (monthlyStats?.chartUpdates?.length ?? 0) > 0) ? (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="overview" className="flex items-center space-x-2">
                 <Trophy className="h-4 w-4" />
                 <span>Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="charts" className="flex items-center space-x-2">
+                <BarChart3 className="h-4 w-4" />
+                <span>Charts</span>
               </TabsTrigger>
               <TabsTrigger value="projects" className="flex items-center space-x-2">
                 <Music className="h-4 w-4" />
@@ -234,7 +240,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
 
             <TabsContent value="overview" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
+
                 {/* Revenue Sources */}
                 {categorizedChanges.revenue.length > 0 && (
                   <Card>
@@ -245,7 +251,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {categorizedChanges.revenue.map((change: any, index: number) => (
+                      {categorizedChanges.revenue.map((change: GameChange, index: number) => (
                         <div key={index} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                           <div className="flex items-center space-x-3">
                             <span className="text-sm">{getChangeIcon(change.type)}</span>
@@ -260,6 +266,27 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                   </Card>
                 )}
 
+                {/* Chart Performance Summary for Overview */}
+                {monthlyStats?.chartUpdates && monthlyStats.chartUpdates.filter((update: any) => !update.isCompetitorSong).length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-yellow-700 text-sm">
+                        <BarChart3 className="h-4 w-4" />
+                        <span>Chart Highlights</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ChartPerformanceCard
+                        chartUpdates={monthlyStats.chartUpdates?.filter((update: any) => !update.isCompetitorSong) || []}
+                        showHeader={false}
+                        compact={true}
+                        variant="dark"
+                        className="border-0 p-0 bg-transparent"
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Achievements */}
                 {categorizedChanges.achievements.length > 0 && (
                   <Card>
@@ -270,7 +297,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {categorizedChanges.achievements.map((change: any, index: number) => (
+                      {categorizedChanges.achievements.map((change: GameChange, index: number) => (
                         <div key={index} className="flex items-center space-x-3 p-3 bg-[#A75A5B]/10 rounded-lg border border-[#A75A5B]/20">
                           <span className="text-sm">{getChangeIcon(change.type)}</span>
                           <span className="text-sm font-medium text-[#A75A5B]">{change.description}</span>
@@ -305,10 +332,65 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
               </Card>
             </TabsContent>
 
+            <TabsContent value="charts" className="space-y-6">
+              {monthlyStats?.chartUpdates && monthlyStats.chartUpdates.filter((update: any) => !update.isCompetitorSong).length > 0 ? (
+                <div className="space-y-6">
+                  <ChartPerformanceCard
+                    chartUpdates={monthlyStats.chartUpdates?.filter((update: any) => !update.isCompetitorSong) || []}
+                    variant="dark"
+                    className="border-[#4e324c]"
+                  />
+
+                  {/* Chart Movement Summary */}
+                  <Card className="border-[#4e324c]">
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-white text-sm">
+                        <BarChart3 className="h-4 w-4" />
+                        <span>Chart Movement Analysis</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-yellow-500">
+                            {monthlyStats.chartUpdates.filter((u: any) => u.isDebut && !u.isCompetitorSong).length}
+                          </div>
+                          <div className="text-sm text-white/70">New Debuts</div>
+                          <div className="text-xs text-white/50 mt-1">Your songs entering charts</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-500">
+                            {monthlyStats.chartUpdates.filter((u: any) => u.movement && u.movement > 0 && !u.isCompetitorSong).length}
+                          </div>
+                          <div className="text-sm text-white/70">Climbing</div>
+                          <div className="text-xs text-white/50 mt-1">Your songs moving up</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-500">
+                            {monthlyStats.chartUpdates.filter((u: any) => u.position && u.position <= 10 && !u.isCompetitorSong).length}
+                          </div>
+                          <div className="text-sm text-white/70">Top 10</div>
+                          <div className="text-xs text-white/50 mt-1">Your songs in elite positions</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <Card className="border-[#4e324c]">
+                  <CardContent className="p-12 text-center">
+                    <BarChart3 className="h-10 w-10 text-white/50 mx-auto mb-4" />
+                    <h3 className="text-sm font-semibold text-white/70 mb-2">No Chart Activity</h3>
+                    <p className="text-xs text-white/50">No songs charted this month</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             <TabsContent value="projects" className="space-y-4">
-              {changes.filter((c: any) => c.type === 'project_complete' || c.type === 'song_release').length > 0 ? (
+              {changes.filter((c: GameChange) => c.type === 'project_complete' || c.type === 'song_release').length > 0 ? (
                 <div className="grid gap-4">
-                  {changes.filter((c: any) => c.type === 'project_complete' || c.type === 'song_release').map((change: any, index: number) => (
+                  {changes.filter((c: GameChange) => c.type === 'project_complete' || c.type === 'song_release').map((change: GameChange, index: number) => (
                     <Card key={index} className="border-[#4e324c] hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">

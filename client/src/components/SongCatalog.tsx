@@ -2,8 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Music, Calendar, TrendingUp, DollarSign, PlayCircle } from 'lucide-react';
+import { Music, Calendar, TrendingUp, DollarSign, PlayCircle, Award, Target } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
+import {
+  getChartPositionColor,
+  formatChartMovement,
+  getMovementColor,
+  formatChartPosition
+} from '@shared/utils/chartUtils';
 
 interface Song {
   id: string;
@@ -16,7 +22,7 @@ interface Song {
   isReleased: boolean;
   releaseId?: string | null;
   metadata?: any;
-  
+
   // Individual song revenue and streaming metrics
   initialStreams?: number;
   totalStreams?: number;
@@ -24,6 +30,13 @@ interface Song {
   monthlyStreams?: number;
   lastMonthRevenue?: number;
   releaseMonth?: number;
+
+  // Chart-related fields
+  currentChartPosition?: number | null;
+  chartMovement?: number;
+  weeksOnChart?: number;
+  peakPosition?: number | null;
+  isChartDebut?: boolean;
 }
 
 interface SongCatalogProps {
@@ -134,6 +147,55 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       return <Badge variant="secondary" className="bg-green-900/30 text-green-300 border border-green-600/40">Ready</Badge>;
     }
     return <Badge variant="outline">Recording</Badge>;
+  };
+
+  const getChartPositionBadge = (song: Song) => {
+    if (!song.isReleased || !song.currentChartPosition) {
+      return null;
+    }
+
+    const position = song.currentChartPosition;
+    const badgeClass = getChartPositionColor(position);
+    let icon = <Target className="w-3 h-3 mr-1" />;
+
+    // Gold tier gets special Award icon
+    if (position >= 1 && position <= 10) {
+      icon = <Award className="w-3 h-3 mr-1" />;
+    }
+
+    return (
+      <Badge variant="outline" className={`text-xs ${badgeClass}`}>
+        {icon}
+        {formatChartPosition(position)}
+      </Badge>
+    );
+  };
+
+  const getMovementIndicator = (song: Song) => {
+    if (!song.isReleased || !song.currentChartPosition || song.chartMovement === undefined) {
+      return null;
+    }
+
+    const movement = song.chartMovement;
+    const movementText = formatChartMovement(movement);
+    const colorClass = getMovementColor(movement);
+
+    return (
+      <span className={`text-xs ${colorClass} font-medium`}>
+        {movementText}
+      </span>
+    );
+  };
+
+  const getChartDebut = (song: Song) => {
+    if (song.isChartDebut && song.currentChartPosition) {
+      return (
+        <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800 border border-purple-300">
+          🎉 DEBUT
+        </Badge>
+      );
+    }
+    return null;
   };
 
   if (loading) {
@@ -276,8 +338,31 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                     {song.title}
                   </span>
                 </div>
-                {getStatusBadge(song)}
+                <div className="flex items-center space-x-1">
+                  {getStatusBadge(song)}
+                  {getChartPositionBadge(song)}
+                  {getChartDebut(song)}
+                </div>
               </div>
+
+              {/* Chart Information Row */}
+              {song.isReleased && song.currentChartPosition && (
+                <div className="flex items-center justify-between text-xs mb-2 p-2 bg-gradient-to-r from-purple-900/20 to-indigo-900/20 border border-purple-600/30 rounded">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-white/70">Chart:</span>
+                    <span className="font-medium text-white">#{song.currentChartPosition}</span>
+                    {getMovementIndicator(song)}
+                  </div>
+                  <div className="flex items-center space-x-3 text-white/50">
+                    {song.weeksOnChart && song.weeksOnChart > 0 && (
+                      <span>{song.weeksOnChart} weeks</span>
+                    )}
+                    {song.peakPosition && (
+                      <span>Peak: #{song.peakPosition}</span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between text-xs mb-2">
                 <div className="flex items-center space-x-3 text-white/50">

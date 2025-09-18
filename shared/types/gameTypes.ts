@@ -227,3 +227,83 @@ export interface MarketCalculation {
   rngVariance: number;
   finalOutcome: number;
 }
+
+// Chart system types
+export interface ChartEntryDTO {
+  id: string;
+  songId: string;
+  chartWeek: string; // ISO date string (YYYY-MM-DD format)
+  streams: number;
+  position: number | null;
+  isCharting: boolean;
+  isDebut: boolean;
+  movement: number;
+}
+
+export interface CompetitorSong {
+  id: string;
+  title: string;
+  artist: string;
+  baseStreams: number;
+  genre: string;
+}
+
+export interface SongPerformance {
+  id: string;
+  title: string;
+  artist: string;
+  streams: number;
+  isPlayerSong: boolean;
+  songId?: string;
+}
+
+// Game Engine types - unified location for shared interfaces
+export interface ChartUpdate {
+  songTitle: string;
+  artistName: string;
+  position: number | null;
+  movement?: number;
+  isDebut: boolean;
+  weeksOnChart?: number;
+  peakPosition?: number;
+  isCompetitorSong?: boolean;
+}
+
+export interface GameChange {
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction';
+  description: string;
+  amount?: number;
+  roleId?: string;
+  projectId?: string;
+  moodChange?: number;
+  newMood?: number;
+  loyaltyBoost?: number;
+  newLoyalty?: number;
+}
+
+export interface EventOccurrence {
+  id: string;
+  title: string;
+  occurred: boolean;
+}
+
+export interface MonthSummary {
+  month: number;
+  changes: GameChange[];
+  revenue: number;
+  expenses: number;
+  streams?: number;
+  reputationChanges: Record<string, number>;
+  events: EventOccurrence[];
+  artistChanges?: Record<string, number>;
+  expenseBreakdown?: {
+    monthlyOperations: number;
+    artistSalaries: number;
+    executiveSalaries: number;
+    projectCosts: number;
+    marketingCosts: number;
+    roleMeetingCosts: number;
+  };
+  financialBreakdown?: string; // Human-readable financial calculation
+  chartUpdates?: ChartUpdate[]; // Chart position changes, debuts, and movements
+}
