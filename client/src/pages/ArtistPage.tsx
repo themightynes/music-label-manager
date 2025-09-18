@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReleaseWorkflowCard } from '@/components/ReleaseWorkflowCard';
+import { ArtistCard, getArchetypeInfo as getArtistCardArchetypeInfo, getRelationshipStatus } from '@/components/ArtistCard';
 import GameLayout from '@/layouts/GameLayout';
 import {
   ArrowLeft,
@@ -115,7 +116,10 @@ export default function ArtistPage() {
   const artistId = params.artistId;
   const [, setLocation] = useLocation();
   const { gameState, artists, projects, releases } = useGameStore();
-  
+
+  // Fetch ROI data once at top level to avoid duplicate calls
+  const { data: roiData } = useArtistROI(artistId || '');
+
   // Data state
   const [artist, setArtist] = useState<Artist | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
@@ -133,6 +137,9 @@ export default function ArtistPage() {
   const [songFilter, setSongFilter] = useState<'all' | 'recorded' | 'released'>('all');
   const [qualityFilter, setQualityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [sortBy, setSortBy] = useState<'creation' | 'quality' | 'streams' | 'revenue'>('creation');
+
+  // Artist card state
+  const [expandedArtist, setExpandedArtist] = useState<boolean>(false);
   
   // Load artist data
   useEffect(() => {
@@ -287,6 +294,28 @@ export default function ArtistPage() {
     };
     return archetypeData[archetype] || { color: 'text-white/70', icon: User, description: 'Unique artist' };
   };
+
+  // Enhanced artist analytics (for artist card)
+  const getArtistInsights = (artist: Artist) => {
+    const mood = artist.mood || 50;
+    const loyalty = artist.loyalty || 50;
+    const popularity = artist.popularity || 0;
+
+    // Total revenue from songs
+    const totalRevenue = songs.reduce((sum, song) => {
+      return sum + (song.totalRevenue || 0);
+    }, 0);
+
+    return {
+      projects: artistProjects.length,
+      releasedProjects: songs.filter(s => s.isReleased).length,
+      totalRevenue,
+      archetype: artist.archetype,
+      mood,
+      loyalty,
+      popularity
+    };
+  };
   
   if (loadingArtist) {
     return (
@@ -330,6 +359,17 @@ export default function ArtistPage() {
     : { status: 'Unhappy', color: 'text-red-600', bgColor: 'bg-red-500/10' };
   
   const { releasedSongs: songsByRelease, unreleasedSongs } = getSongsByRelease();
+
+  // Artist card handlers
+  const handleArtistMeeting = async () => {
+    const { openDialogue } = useGameStore.getState();
+    await openDialogue('Artist', `meeting_${artist.id}`);
+  };
+
+  const handleNavigateToArtist = () => {
+    // Already on artist page, so scroll to top or refresh
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   
   return (
     <GameLayout>
@@ -397,6 +437,30 @@ export default function ArtistPage() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Rich Artist Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <User className="w-5 h-5" />
+                  <span>Artist Overview</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ArtistCard
+                  artist={artist}
+                  insights={getArtistInsights(artist)}
+                  relationship={getRelationshipStatus(artist.mood || 50, artist.loyalty || 50)}
+                  archetype={getArtistCardArchetypeInfo(artist.archetype)}
+                  isExpanded={expandedArtist}
+                  onToggleExpand={() => setExpandedArtist(!expandedArtist)}
+                  onMeet={handleArtistMeeting}
+                  onNavigate={handleNavigateToArtist}
+                  gameState={gameState}
+                  roiData={roiData}
+                />
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Artist Stats */}
               <Card>
@@ -453,12 +517,13 @@ export default function ArtistPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <PerformanceMetrics 
+                  <PerformanceMetrics
                     artistId={artistId || ''}
                     avgQuality={avgQuality}
                     projectCount={artistProjects.length}
                     readySongs={songs.filter(s => s.isRecorded && !s.isReleased).length}
                     popularity={artist.popularity || 0}
+                    roiData={roiData}
                   />
                 </CardContent>
               </Card>
@@ -1008,21 +1073,22 @@ export default function ArtistPage() {
 }
 
 // Component to display performance metrics with backend ROI
-function PerformanceMetrics({ 
-  artistId, 
-  avgQuality, 
-  projectCount, 
-  readySongs, 
-  popularity 
+function PerformanceMetrics({
+  artistId,
+  avgQuality,
+  projectCount,
+  readySongs,
+  popularity,
+  roiData
 }: {
   artistId: string;
   avgQuality: number;
   projectCount: number;
   readySongs: number;
   popularity: number;
+  roiData?: any;
 }) {
-  // Fetch ROI from backend
-  const { data: roiData } = useArtistROI(artistId);
+  // Use passed roiData to avoid duplicate API calls
   const overallROI = roiData?.overallROI ?? 0;
   const totalRevenue = roiData?.totalRevenue ?? 0;
   const totalStreams = roiData?.totalStreams ?? 0;

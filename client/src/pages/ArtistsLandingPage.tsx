@@ -4,13 +4,15 @@ import { useLocation } from 'wouter';
 import type { Artist } from '@shared/schema';
 import GameLayout from '../layouts/GameLayout';
 import { ArtistDiscoveryModal } from '../components/ArtistDiscoveryModal';
+import { ArtistCard as RichArtistCard, getArchetypeInfo, getRelationshipStatus } from '../components/ArtistCard';
 import { useGameStore } from '../store/gameStore';
 import { usePortfolioROI, useArtistROI } from '../hooks/useAnalytics';
 
 const ArtistsLandingPage: React.FC = () => {
   const [, setLocation] = useLocation();
   const [isDiscoveryModalOpen, setIsDiscoveryModalOpen] = useState(false);
-  const { gameState, artists, signArtist } = useGameStore();
+  const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
+  const { gameState, artists, signArtist, openDialogue, projects } = useGameStore();
   const { data: portfolioROI, isLoading: portfolioLoading, error: portfolioError } = usePortfolioROI();
 
   const signedArtists = artists || [];
@@ -23,6 +25,42 @@ const ArtistsLandingPage: React.FC = () => {
 
   const handleDiscoverArtists = () => {
     setIsDiscoveryModalOpen(true);
+  };
+
+  // Helper function to get artist insights for rich cards
+  const getArtistInsights = (artist: Artist) => {
+    const mood = artist.mood || 50;
+    const loyalty = artist.loyalty || 50;
+    const popularity = artist.popularity || 0;
+
+    // Get projects for this artist
+    const artistProjects = projects?.filter(p => p.artistId === artist.id) || [];
+    const releasedProjects = artistProjects.filter(p => p.stage === 'released');
+
+    // Calculate total revenue from projects (keeping for backward compatibility)
+    const totalRevenue = releasedProjects.reduce((sum, project) => {
+      const metadata = project.metadata as any || {};
+      return sum + (metadata.revenue || 0);
+    }, 0);
+
+    return {
+      projects: artistProjects.length,
+      releasedProjects: releasedProjects.length,
+      totalRevenue,
+      archetype: artist.archetype,
+      mood,
+      loyalty,
+      popularity
+    };
+  };
+
+  // Event handlers for rich artist cards
+  const handleArtistMeeting = async (artist: Artist) => {
+    await openDialogue('Artist', `meeting_${artist.id}`);
+  };
+
+  const handleNavigateToArtist = (artistId: string) => {
+    setLocation(`/artist/${artistId}`);
   };
 
 
@@ -138,14 +176,28 @@ const ArtistsLandingPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {signedArtists.map((artist) => (
-                <ArtistCard
-                  key={artist.id}
-                  artist={artist}
-                  onViewDetails={() => handleViewArtistDetails(artist.id)}
-                />
-              ))}
+            <div className="space-y-4">
+              {signedArtists.map((artist) => {
+                const insights = getArtistInsights(artist);
+                const relationship = getRelationshipStatus(artist.mood || 50, artist.loyalty || 50);
+                const archetype = getArchetypeInfo(artist.archetype);
+                const isExpanded = expandedArtist === artist.id;
+
+                return (
+                  <RichArtistCard
+                    key={artist.id}
+                    artist={artist}
+                    insights={insights}
+                    relationship={relationship}
+                    archetype={archetype}
+                    isExpanded={isExpanded}
+                    onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
+                    onMeet={() => handleArtistMeeting(artist)}
+                    onNavigate={() => handleNavigateToArtist(artist.id)}
+                    gameState={gameState}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -165,98 +217,5 @@ const ArtistsLandingPage: React.FC = () => {
   );
 };
 
-interface ArtistCardProps {
-  artist: Artist;
-  onViewDetails: () => void;
-}
-
-const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onViewDetails }) => {
-  const { data: artistROI, isLoading: roiLoading } = useArtistROI(artist.id);
-  const roi = artistROI?.overallROI ?? 0;
-  const roiColor = roi > 0 ? 'text-green-400' : roi < 0 ? 'text-red-400' : 'text-gray-300';
-
-  // Get mood and loyalty colors
-  const getMoodColor = (mood: number) => {
-    if (mood >= 75) return 'text-green-400';
-    if (mood >= 50) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
-  const getLoyaltyColor = (loyalty: number) => {
-    if (loyalty >= 75) return 'text-green-400';
-    if (loyalty >= 50) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
-  return (
-    <div className="bg-[#3c252d]/[0.66] border border-[#65557c] rounded-lg p-6 hover:border-[#7a6a8a] transition-colors">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-1">{artist.name}</h3>
-          <p className="text-sm text-gray-400">{artist.archetype}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-400">Popularity</p>
-          <p className="text-lg font-semibold text-white">{artist.popularity}</p>
-        </div>
-      </div>
-
-      {/* Artist Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="text-xs text-gray-400 mb-1">Mood</p>
-          <p className={`text-sm font-medium ${getMoodColor(artist.mood)}`}>
-            {artist.mood || 50}%
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-400 mb-1">Loyalty</p>
-          <p className={`text-sm font-medium ${getLoyaltyColor(artist.loyalty)}`}>
-            {artist.loyalty || 50}%
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-400 mb-1">Reputation</p>
-          <p className="text-sm font-medium text-white">{artist.reputation}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-400 mb-1">ROI</p>
-          <p className={`text-sm font-medium ${roiColor}`}>
-            {roiLoading ? 'Loading...' : `${roi.toFixed(1)}%`}
-          </p>
-        </div>
-      </div>
-
-      {/* Revenue Information */}
-      {artistROI && !roiLoading && (
-        <div className="mb-4 p-3 bg-[#2C222A] rounded border border-gray-700">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-400">Total Revenue</span>
-            <span className="text-sm font-medium text-white">
-              ${artistROI.totalRevenue?.toLocaleString() || '0'}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">Total Investment</span>
-            <span className="text-sm font-medium text-white">
-              ${artistROI.totalInvestment?.toLocaleString() || '0'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        <button
-          onClick={onViewDetails}
-          className="flex-1 bg-[#A75A5B] hover:bg-[#B86B6C] text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          <Eye className="w-4 h-4" />
-          View Details
-        </button>
-      </div>
-    </div>
-  );
-};
 
 export default ArtistsLandingPage;
