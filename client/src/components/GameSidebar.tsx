@@ -16,7 +16,7 @@ import { useGameStore } from '@/store/gameStore';
 import { useGameContext } from '@/contexts/GameContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { MonthSummary } from './MonthSummary';
-import { SignOutButton, useUser } from '@clerk/clerk-react';
+import { UserButton, useUser } from '@clerk/clerk-react';
 import {
   Home,
   Rocket,
@@ -29,7 +29,6 @@ import {
   BarChart3,
   Users,
   Trophy,
-  LogOut,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -59,7 +58,6 @@ export function GameSidebar({
 
   const displayName = user?.username || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
   const displayEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress || null;
-  const avatarUrl = user?.imageUrl || user?.profileImageUrl || null;
 
   const handleAdvanceMonth = async () => {
     try {
@@ -284,13 +282,18 @@ export function GameSidebar({
 
           <div className="px-3 pb-4 space-y-3">
             <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
-              <div className="h-10 w-10 rounded-full border border-white/10 overflow-hidden bg-white/10 flex items-center justify-center text-white/70 text-sm">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-                ) : (
-                  <span>{displayName.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
+              <UserButton
+                userProfileMode="navigation"
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: 'h-10 w-10',
+                    userButtonTrigger: 'focus:ring-2 focus:ring-[#A75A5B] rounded-full transition-shadow',
+                    userButtonPopoverCard: 'bg-[#1A111A] text-white border border-white/10 shadow-xl',
+                    userButtonPopoverFooter: 'hidden',
+                  },
+                }}
+              />
               <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                 <p className="text-sm font-medium text-white truncate">{displayName}</p>
                 {displayEmail && (
@@ -298,12 +301,6 @@ export function GameSidebar({
                 )}
               </div>
             </div>
-            <SignOutButton redirectUrl="/">
-              <Button variant="ghost" className="w-full justify-start gap-2 text-white hover:bg-white/10">
-                <LogOut className="h-4 w-4" />
-                <span className="group-data-[collapsible=icon]:hidden">Sign out</span>
-              </Button>
-            </SignOutButton>
           </div>
         </SidebarContent>
       </Sidebar>
