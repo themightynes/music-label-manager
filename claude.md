@@ -18,6 +18,11 @@
 - All JSON data must validate with Zod schemas
 - Use small, incremental changes: Plan → Propose → Build → Verify
 
+## 🔐 Authentication & API Integration
+- Authentication is powered by Clerk; rely on Clerk React hooks and components (`useUser()`, `useAuth()`, `<SignedIn>`, `<SignedOut>`, `<UserButton>`)
+- Never roll your own auth helpers—extend behavior by composing Clerk primitives and reference Clerk documentation for additional components
+- When calling backend endpoints, always go through the shared `apiRequest()` helper in `queryClient.ts`; it attaches Clerk JWT tokens automatically and prevents duplicate auth logic
+
 ## ✅ Validation Commands
 - `npm run check` - Run TypeScript compilation check
 - `npm run dev` - Starts both client and server with hot reload
