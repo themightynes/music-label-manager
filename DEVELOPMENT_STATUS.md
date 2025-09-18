@@ -34,8 +34,13 @@
   - [x] Implement processExecutiveActions() for mood/loyalty
   - [x] Add mood/loyalty decay system
   - [x] **Dynamic Money Loading**: Replaced hardcoded meeting costs with real data from actions.json
-  - [x] **Data-Driven Actions**: Executive meetings now use actual costs (-800 to -20000 range)
-  - [⏭️] Implement availability thresholds (**SKIPPED** - player preferred effectiveness modifiers)
+- [x] **Data-Driven Actions**: Executive meetings now use actual costs (-800 to -20000 range)
+- [⏭️] Implement availability thresholds (**SKIPPED** - player preferred effectiveness modifiers)
+- [x] **Authentication Refactor – Clerk Integration (September 18, 2025)**
+  - [x] Replaced Passport/session auth with Clerk JWT flows across all API routes
+  - [x] Migrated user persistence to Clerk-linked identities with automatic game restoration
+  - [x] Updated landing/register experience to themed Clerk components
+  - [x] Added Clerk `UserButton` profile dropdown to the in-app sidebar
 - [x] **Tour System - Complete Implementation** (**COMPLETED September 14, 2025**)
   - [x] LivePerformanceModal.tsx (862 lines) - Sophisticated tour creation interface
   - [x] ActiveTours.tsx (878 lines) - Complete tour management and analytics
