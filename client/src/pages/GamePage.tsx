@@ -22,6 +22,11 @@ export default function GamePage() {
   const { setGameId } = useGameContext();
   
   useEffect(() => {
+    if (gameState) {
+      setIsInitializing(false);
+      return;
+    }
+
     let isCancelled = false;
 
     const initializeGame = async () => {
@@ -73,7 +78,7 @@ export default function GamePage() {
     return () => {
       isCancelled = true;
     };
-  }, [createNewGame, loadGame, setGameId]);
+  }, [gameState, createNewGame, loadGame, setGameId]);
   
   // Check for campaign results from Zustand store
   useEffect(() => {
