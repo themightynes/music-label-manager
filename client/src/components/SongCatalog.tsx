@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Music, Calendar, TrendingUp, DollarSign, PlayCircle, Award, Target } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
+import { apiRequest } from '@/lib/queryClient';
 import {
   getChartPositionColor,
   formatChartMovement,
@@ -77,33 +78,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       console.log(`[SongCatalog] Loading songs for artist ${artistId} in game ${gameId}`);
       
       // Phase 1: Use real API endpoint for artist songs
-      const response = await fetch(`/api/game/${gameId}/artists/${artistId}/songs`, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        // Try to parse error message from response
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          }
-        } catch {
-          // If we can't parse JSON, use the default error message
-        }
-        throw new Error(errorMessage);
-      }
-      
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Server returned non-JSON response. Check server status.');
-      }
-      
+      const response = await apiRequest('GET', `/api/game/${gameId}/artists/${artistId}/songs`);
       const songData = await response.json();
       console.log(`[SongCatalog] Successfully loaded ${songData?.length || 0} songs`);
       

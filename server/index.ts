@@ -1,33 +1,21 @@
-import express, { type Request, Response, NextFunction } from "express";
-import session from 'express-session';
-import passport from 'passport';
+import express, { type Request, type Response, type NextFunction } from "express";
 import path from 'path';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { testDatabaseConnection } from "./db";
-import './auth'; // Initialize passport configuration
 
 const app = express();
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    if (req.originalUrl?.startsWith('/api/webhooks/clerk')) {
+      req.rawBody = buf;
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: false }));
 
 // Serve static data files
 app.use('/data', express.static(path.join(process.cwd(), 'data')));
-
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'music-label-manager-secret-dev-only',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
-// Initialize passport
-app.use(passport.initialize());
-app.use(passport.session());
 
 app.use((req, res, next) => {
   const start = Date.now();

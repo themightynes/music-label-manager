@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import {
-  useSidebar,
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -17,19 +16,20 @@ import { useGameStore } from '@/store/gameStore';
 import { useGameContext } from '@/contexts/GameContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { MonthSummary } from './MonthSummary';
+import { SignOutButton, useUser } from '@clerk/clerk-react';
 import {
   Home,
   Rocket,
   FastForward,
   Mic,
   Plus,
-  FileText,
   Play,
   Save,
   Beaker,
   BarChart3,
   Users,
-  Trophy
+  Trophy,
+  LogOut,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -55,6 +55,11 @@ export function GameSidebar({
     createNewGame,
     monthlyOutcome
   } = useGameStore();
+  const { user } = useUser();
+
+  const displayName = user?.username || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
+  const displayEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress || null;
+  const avatarUrl = user?.imageUrl || user?.profileImageUrl || null;
 
   const handleAdvanceMonth = async () => {
     try {
@@ -239,11 +244,11 @@ export function GameSidebar({
 
           {/* Group 5: Quality Tester */}
           <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => setLocation('/quality-tester')}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setLocation('/quality-tester')}
                     isActive={currentPath === '/quality-tester'}
                     tooltip="Quality Tester"
                   >
@@ -274,6 +279,32 @@ export function GameSidebar({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          <SidebarSeparator />
+
+          <div className="px-3 pb-4 space-y-3">
+            <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
+              <div className="h-10 w-10 rounded-full border border-white/10 overflow-hidden bg-white/10 flex items-center justify-center text-white/70 text-sm">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                ) : (
+                  <span>{displayName.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+                <p className="text-sm font-medium text-white truncate">{displayName}</p>
+                {displayEmail && (
+                  <p className="text-xs text-white/60 truncate">{displayEmail}</p>
+                )}
+              </div>
+            </div>
+            <SignOutButton redirectUrl="/">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-white hover:bg-white/10">
+                <LogOut className="h-4 w-4" />
+                <span className="group-data-[collapsible=icon]:hidden">Sign out</span>
+              </Button>
+            </SignOutButton>
+          </div>
         </SidebarContent>
       </Sidebar>
 

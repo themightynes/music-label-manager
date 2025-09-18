@@ -3,18 +3,19 @@ import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, uuid, real,
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table (for save games)
+// Users table (linked to Clerk identities)
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  clerkId: text("clerk_id").notNull().unique(),
+  email: text("email").notNull(),
+  username: text("username"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Game saves
 export const gameSaves = pgTable("game_saves", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   gameState: jsonb("game_state").notNull(),
   month: integer("month").notNull(),
@@ -395,8 +396,9 @@ export const chartEntriesRelations = relations(chartEntries, ({ one }) => ({
 
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
+  clerkId: true,
+  email: true,
   username: true,
-  password: true,
 });
 
 export const insertGameSaveSchema = createInsertSchema(gameSaves).omit({

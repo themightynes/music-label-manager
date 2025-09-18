@@ -1,6 +1,5 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import passport from 'passport';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
@@ -22,10 +21,13 @@ import {
 } from "@shared/api/contracts";
 import { db } from "./db";
 import { eq, desc, and, sql, inArray, ne } from "drizzle-orm";
-import { requireAuth, getUserId, registerUser, loginUser, registerSchema, loginSchema } from './auth';
+import { requireClerkUser, handleClerkWebhook } from './auth';
 import analyticsRouter from './routes/analytics';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  // Clerk webhooks
+  app.post('/api/webhooks/clerk', handleClerkWebhook);
   
   // Health check endpoint
   app.get('/api/health', (req, res) => {
@@ -99,66 +101,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message,
         results
       });
-    }
-  });
-  
-  // Authentication endpoints
-  app.post('/api/auth/register', async (req, res) => {
-    try {
-      const user = await registerUser(req.body.username, req.body.password);
-      res.json({ 
-        success: true, 
-        user: { id: user.id, username: user.username } 
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: 'Invalid input', errors: error.errors });
-      } else {
-        res.status(400).json({ message: error instanceof Error ? error.message : 'Registration failed' });
-      }
-    }
-  });
-
-  app.post('/api/auth/login', (req, res, next) => {
-    passport.authenticate('local', (err: any, user: any, info: any) => {
-      if (err) {
-        return res.status(500).json({ message: 'Authentication error' });
-      }
-      if (!user) {
-        return res.status(401).json({ message: info?.message || 'Login failed' });
-      }
-      
-      req.logIn(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: 'Login session error' });
-        }
-        return res.json({ 
-          success: true, 
-          user: { id: user.id, username: user.username } 
-        });
-      });
-    })(req, res, next);
-  });
-
-  app.post('/api/auth/logout', (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: 'Logout error' });
-      }
-      res.json({ success: true });
-    });
-  });
-
-  app.get('/api/auth/me', (req, res) => {
-    if (req.user) {
-      res.json({ 
-        user: { 
-          id: (req.user as any).id, 
-          username: (req.user as any).username 
-        } 
-      });
-    } else {
-      res.status(401).json({ message: 'Not authenticated' });
     }
   });
   
@@ -246,9 +188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-
   // Game state routes
-  app.get("/api/game/:id", getUserId, async (req, res) => {
+  app.get("/api/game/:id", requireClerkUser, async (req, res) => {
     try {
       const gameState = await storage.getGameState(req.params.id);
       if (!gameState) {
@@ -275,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/game", getUserId, async (req, res) => {
+  app.post("/api/game", requireClerkUser, async (req, res) => {
     console.log('🚀 [GAME CREATION] Starting new game creation...');
     try {
       const validatedData = insertGameStateSchema.parse(req.body);
@@ -341,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/game/:id", getUserId, async (req, res) => {
+  app.patch("/api/game/:id", requireClerkUser, async (req, res) => {
     try {
       console.log('[PATCH /api/game/:id] Request params:', req.params.id);
       console.log('[PATCH /api/game/:id] Request body:', req.body);
@@ -480,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get executives for a game
-  app.get("/api/game/:gameId/executives", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/executives", requireClerkUser, async (req, res) => {
     try {
       const { gameId } = req.params;
       console.log('[ROUTES] Fetching executives for game:', gameId);
@@ -496,7 +437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Process executive action/decision (Week 2 Task)
-  app.post("/api/game/:gameId/executive/:execId/action", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/executive/:execId/action", requireClerkUser, async (req, res) => {
     try {
       const { gameId, execId } = req.params;
       const { actionId, meetingId, choiceId, metadata } = req.body;
@@ -568,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Artist routes
-  app.post("/api/game/:gameId/artists", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/artists", requireClerkUser, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const signingCost = req.body.signingCost || 0;
@@ -618,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/artists/:id", getUserId, async (req, res) => {
+  app.patch("/api/artists/:id", requireClerkUser, async (req, res) => {
     try {
       const artist = await storage.updateArtist(req.params.id, req.body);
       res.json(artist);
@@ -628,7 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project routes
-  app.post("/api/game/:gameId/projects", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/projects", requireClerkUser, async (req, res) => {
     try {
       console.log('[PROJECT CREATION] Raw request body received:', JSON.stringify({
         title: req.body.title,
@@ -734,7 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/projects/:id", getUserId, async (req, res) => {
+  app.patch("/api/projects/:id", requireClerkUser, async (req, res) => {
     try {
       const project = await storage.updateProject(req.params.id, req.body);
       res.json(project);
@@ -744,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cancel project (tours) with refund calculation
-  app.delete("/api/projects/:id/cancel", getUserId, async (req, res) => {
+  app.delete("/api/projects/:id/cancel", requireClerkUser, async (req, res) => {
     try {
       const projectId = req.params.id;
       const { refundAmount } = req.body;
@@ -797,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Monthly action routes
-  app.post("/api/game/:gameId/actions", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/actions", requireClerkUser, async (req, res) => {
     try {
       const validatedData = insertMonthlyActionSchema.parse({
         ...req.body,
@@ -818,7 +759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // This endpoint did not have 12-month campaign completion logic
 
   // Save game routes
-  app.get("/api/saves", getUserId, async (req, res) => {
+  app.get("/api/saves", requireClerkUser, async (req, res) => {
     try {
       const saves = await storage.getGameSaves(req.userId!);
       res.json(saves);
@@ -827,7 +768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/saves", getUserId, async (req, res) => {
+  app.post("/api/saves", requireClerkUser, async (req, res) => {
     try {
       const validatedData = insertGameSaveSchema.parse(req.body);
       // Add userId from middleware
@@ -847,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/saves/:saveId", getUserId, async (req, res) => {
+  app.delete("/api/saves/:saveId", requireClerkUser, async (req, res) => {
     try {
       const saveId = req.params.saveId;
       const userId = req.userId!;
@@ -930,7 +871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Phase 1: Song and Release Management API Routes
   
   // Get songs for a game
-  app.get("/api/game/:gameId/songs", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/songs", requireClerkUser, async (req, res) => {
     try {
       const songs = await serverGameData.getSongsByGame(req.params.gameId);
       res.json(songs);
@@ -940,7 +881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get songs for a specific artist
-  app.get("/api/game/:gameId/artists/:artistId/songs", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/artists/:artistId/songs", requireClerkUser, async (req, res) => {
     try {
       const { gameId, artistId } = req.params;
       
@@ -1011,7 +952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Top 10 chart data for a game
-  app.get("/api/game/:gameId/charts/top10", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/charts/top10", requireClerkUser, async (req, res) => {
     try {
       const { gameId } = req.params;
       const userId = req.userId!;
@@ -1071,7 +1012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Top 100 chart data for a game
-  app.get("/api/game/:gameId/charts/top100", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/charts/top100", requireClerkUser, async (req, res) => {
     try {
       const { gameId } = req.params;
       const userId = req.userId!;
@@ -1145,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get releases for a game
-  app.get("/api/game/:gameId/releases", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/releases", requireClerkUser, async (req, res) => {
     try {
       const releases = await serverGameData.getReleasesByGame(req.params.gameId);
       res.json(releases);
@@ -1155,7 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new release (Single/EP/Album)
-  app.post("/api/game/:gameId/releases", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/releases", requireClerkUser, async (req, res) => {
     try {
       const releaseData = {
         ...req.body,
@@ -1187,7 +1128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PLAN RELEASE ENDPOINTS
 
   // Get artists with ready songs for release planning
-  app.get("/api/game/:gameId/artists/ready-for-release", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/artists/ready-for-release", requireClerkUser, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const minSongs = parseInt(req.query.minSongs as string) || 1;
@@ -1248,7 +1189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get ready songs for a specific artist
-  app.get("/api/game/:gameId/artists/:artistId/songs/ready", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/artists/:artistId/songs/ready", requireClerkUser, async (req, res) => {
     try {
       const { gameId, artistId } = req.params;
       const includeDrafts = req.query.includeDrafts === 'true';
@@ -1343,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Calculate release preview metrics
-  app.post("/api/game/:gameId/releases/preview", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/releases/preview", requireClerkUser, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const {
@@ -1464,7 +1405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create planned release
-  app.post("/api/game/:gameId/releases/plan", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/releases/plan", requireClerkUser, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const {
@@ -1712,7 +1653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Song conflict resolution endpoints
-  app.get("/api/game/:gameId/songs/conflicts", getUserId, async (req, res) => {
+  app.get("/api/game/:gameId/songs/conflicts", requireClerkUser, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       
@@ -1761,7 +1702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update song title
-  app.patch("/api/songs/:songId", getUserId, async (req, res) => {
+  app.patch("/api/songs/:songId", requireClerkUser, async (req, res) => {
     try {
       const { songId } = req.params;
       const { title } = req.body;
@@ -1851,7 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Clear all song reservations (for debugging/testing)
-  app.post("/api/game/:gameId/songs/clear-reservations", getUserId, async (req, res) => {
+  app.post("/api/game/:gameId/songs/clear-reservations", requireClerkUser, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       
@@ -1884,7 +1825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Delete a planned release and free up its songs
-  app.delete("/api/game/:gameId/releases/:releaseId", getUserId, async (req, res) => {
+  app.delete("/api/game/:gameId/releases/:releaseId", requireClerkUser, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const releaseId = req.params.releaseId;
@@ -1952,7 +1893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Phase 2: Turn System Endpoints
   
   // Get current game state  
-  app.get("/api/game-state", getUserId, async (req, res) => {
+  app.get("/api/game-state", requireClerkUser, async (req, res) => {
     try {
       const userId = req.userId!;
       
@@ -2004,7 +1945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tour estimation endpoint - Phase 3: API Bridge
-  app.post('/api/tour/estimate', getUserId, async (req, res) => {
+  app.post('/api/tour/estimate', requireClerkUser, async (req, res) => {
     try {
       const { artistId, cities, budgetPerCity, gameId, venueCapacity } = req.body;
 
@@ -2123,7 +2064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Month advancement with action processing using GameEngine and transactions
-  app.post("/api/advance-month", getUserId, async (req, res) => {
+  app.post("/api/advance-month", requireClerkUser, async (req, res) => {
     try {
       // Validate request using shared contract
       const request = validateRequest(AdvanceMonthRequest, req.body);
@@ -2499,7 +2440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register analytics routes
-  app.use(analyticsRouter);
+  app.use('/api/analytics', requireClerkUser, analyticsRouter);
 
   const httpServer = createServer(app);
   return httpServer;

@@ -1,163 +1,196 @@
-import passport from 'passport';
-import { Strategy as LocalStrategy } from 'passport-local';
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import { ClerkExpressRequireAuth } from '@clerk/clerk-sdk-node';
+import { Webhook, type WebhookRequiredHeaders } from 'svix';
+import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { users } from '../shared/schema';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
+import { clerkClient } from './clerkClient';
 
-// User validation schemas
-export const registerSchema = z.object({
-  username: z.string().min(3).max(50),
-  password: z.string().min(6).max(100)
-});
+type ClerkLikeUser = {
+  id: string;
+  username?: string | null;
+  emailAddresses?: Array<{ id: string; emailAddress: string }>;
+  primaryEmailAddressId?: string | null;
+  primaryEmailAddress?: { emailAddress: string } | null;
+  email_addresses?: Array<{ id: string; email_address: string }>;
+  primary_email_address_id?: string | null;
+};
 
-export const loginSchema = z.object({
-  username: z.string(),
-  password: z.string()
-});
+function resolveEmail(clerkUser: ClerkLikeUser): string | null {
+  if (clerkUser.primaryEmailAddress?.emailAddress) {
+    return clerkUser.primaryEmailAddress.emailAddress;
+  }
 
-// Simple password hashing (in production, use bcrypt or similar)
-function hashPassword(password: string): string {
-  return Buffer.from(password).toString('base64');
-}
-
-function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash;
-}
-
-// Passport configuration
-passport.use(new LocalStrategy(
-  async (username, password, done) => {
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-
-      if (!user) {
-        return done(null, false, { message: 'User not found' });
-      }
-
-      if (!verifyPassword(password, user.password)) {
-        return done(null, false, { message: 'Invalid password' });
-      }
-
-      return done(null, user);
-    } catch (error) {
-      return done(error);
+  if (clerkUser.primaryEmailAddressId && Array.isArray(clerkUser.emailAddresses)) {
+    const match = clerkUser.emailAddresses.find((email) => email.id === clerkUser.primaryEmailAddressId);
+    if (match) {
+      return match.emailAddress;
     }
   }
-));
 
-passport.serializeUser((user: any, done) => {
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id: string, done) => {
-  try {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, id));
-
-    done(null, user || null);
-  } catch (error) {
-    done(error);
+  if (Array.isArray(clerkUser.emailAddresses) && clerkUser.emailAddresses.length > 0) {
+    return clerkUser.emailAddresses[0].emailAddress;
   }
-});
 
-// Middleware to ensure user is authenticated
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({ 
-      message: 'Authentication required',
-      error: 'UNAUTHORIZED' 
-    });
+  if (clerkUser.primary_email_address_id && Array.isArray(clerkUser.email_addresses)) {
+    const match = clerkUser.email_addresses.find((email) => email.id === clerkUser.primary_email_address_id);
+    if (match) {
+      return match.email_address;
+    }
   }
-  next();
+
+  if (Array.isArray(clerkUser.email_addresses) && clerkUser.email_addresses.length > 0) {
+    return clerkUser.email_addresses[0].email_address;
+  }
+
+  return null;
 }
 
-// Middleware to get user ID from session or create demo user
-export async function getUserId(req: Request, res: Response, next: NextFunction) {
-  try {
-    // If user is authenticated, use their ID
-    if (req.user) {
-      req.userId = (req.user as any).id;
-      return next();
-    }
-
-    // For demo/development purposes, create or get demo user
-    let [demoUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, 'demo-user'));
-
-    if (!demoUser) {
-      [demoUser] = await db
-        .insert(users)
-        .values({
-          username: 'demo-user',
-          password: hashPassword('demo-password')
-        })
-        .returning();
-    }
-
-    req.userId = demoUser.id;
-    next();
-  } catch (error) {
-    console.error('Error getting user ID:', error);
-    res.status(500).json({ message: 'Authentication error' });
+function resolveUsername(clerkUser: ClerkLikeUser, email: string | null): string | null {
+  if (clerkUser.username) {
+    return clerkUser.username;
   }
+
+  if (email) {
+    return email.split('@')[0];
+  }
+
+  return null;
 }
 
-// Authentication routes
-export async function registerUser(username: string, password: string) {
-  // Validate input
-  const validatedData = registerSchema.parse({ username, password });
-  
-  // Check if user already exists
-  const [existingUser] = await db
-    .select()
-    .from(users)
-    .where(eq(users.username, validatedData.username));
+export async function getOrCreateUserFromClerk(clerkId: string) {
+  const clerkUser = await clerkClient.users.getUser(clerkId);
+  const email = resolveEmail({
+    id: clerkUser.id,
+    username: clerkUser.username,
+    emailAddresses: clerkUser.emailAddresses?.map(({ id, emailAddress }) => ({ id, emailAddress })),
+    primaryEmailAddressId: clerkUser.primaryEmailAddressId,
+    primaryEmailAddress: clerkUser.primaryEmailAddress
+  });
 
-  if (existingUser) {
-    throw new Error('Username already exists');
+  if (!email) {
+    throw new Error('Clerk user is missing a primary email address.');
   }
 
-  // Create new user
-  const [newUser] = await db
+  const username = resolveUsername({ username: clerkUser.username }, email);
+
+  const [userRecord] = await db
     .insert(users)
     .values({
-      username: validatedData.username,
-      password: hashPassword(validatedData.password)
+      clerkId: clerkUser.id,
+      email,
+      username,
+    })
+    .onConflictDoUpdate({
+      target: users.clerkId,
+      set: {
+        email,
+        username,
+      },
     })
     .returning();
 
-  return newUser;
+  return userRecord;
 }
 
-export async function loginUser(username: string, password: string) {
-  const validatedData = loginSchema.parse({ username, password });
-  
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.username, validatedData.username));
+const requireSession = ClerkExpressRequireAuth({ clerkClient });
 
-  if (!user || !verifyPassword(validatedData.password, user.password)) {
-    throw new Error('Invalid credentials');
+export function requireClerkUser(req: Request, res: Response, next: NextFunction) {
+  requireSession(req, res, async (sessionError?: any) => {
+    if (sessionError) {
+      if (sessionError.status === 401 || sessionError.statusCode === 401) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      return next(sessionError);
+    }
+
+    try {
+      const clerkId = (req as any).auth?.userId;
+
+      if (!clerkId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const userRecord = await getOrCreateUserFromClerk(clerkId);
+
+      req.userId = userRecord.id;
+      (req as any).clerkUserId = clerkId;
+      next();
+    } catch (error) {
+      console.error('[Clerk] Failed to resolve authenticated user', error);
+      res.status(500).json({ message: 'Failed to resolve authenticated user' });
+    }
+  });
+}
+
+export async function handleClerkWebhook(req: Request, res: Response) {
+  const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.warn('[Clerk] CLERK_WEBHOOK_SECRET is not configured. Skipping webhook handling.');
+    return res.status(200).json({ skipped: true });
   }
 
-  return user;
+  const payload = (req as any).rawBody as Buffer | undefined;
+  if (!payload) {
+    return res.status(400).json({ message: 'Missing webhook payload' });
+  }
+
+  const headers = req.headers as WebhookRequiredHeaders;
+
+  try {
+    const webhook = new Webhook(webhookSecret);
+    const event = webhook.verify(payload.toString('utf8'), headers) as { type: string; data: ClerkLikeUser & { deleted?: boolean } };
+
+    if (!event?.type || !event?.data?.id) {
+      return res.status(400).json({ message: 'Invalid webhook event' });
+    }
+
+    const clerkUser = event.data;
+
+    if (event.type === 'user.deleted') {
+      await db.delete(users).where(eq(users.clerkId, clerkUser.id));
+      return res.status(200).json({ success: true });
+    }
+
+    const email = resolveEmail(clerkUser);
+    if (!email) {
+      return res.status(400).json({ message: 'Clerk webhook payload missing email' });
+    }
+
+    const username = resolveUsername(clerkUser, email);
+
+    await db
+      .insert(users)
+      .values({
+        clerkId: clerkUser.id,
+        email,
+        username,
+      })
+      .onConflictDoUpdate({
+        target: users.clerkId,
+        set: {
+          email,
+          username,
+        },
+      });
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('[Clerk] Webhook verification failed', error);
+    return res.status(400).json({ message: 'Invalid webhook signature' });
+  }
 }
 
-// Extend Express Request type
 declare global {
   namespace Express {
     interface Request {
       userId?: string;
+      rawBody?: Buffer;
+      clerkUserId?: string;
+      auth?: {
+        userId: string | null;
+        sessionId: string | null;
+      };
     }
   }
 }

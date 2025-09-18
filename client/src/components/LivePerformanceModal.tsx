@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info, Target, TrendingUp, TrendingDown } from 'lucide-react';
 import type { GameState } from '@shared/schema';
+import { apiRequest } from '@/lib/queryClient';
 
 interface LivePerformanceModalProps {
   gameState: GameState;
@@ -264,22 +265,13 @@ export function LivePerformanceModal({
     setEstimateError(null);
 
     try {
-      const response = await fetch('/api/tour/estimate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          artistId: selectedArtist,
-          cities,
-          budgetPerCity,
-          gameId: gameState.id,
-          venueCapacity: selectedCapacity // PHASE 3: Send selected capacity
-        })
+      const response = await apiRequest('POST', '/api/tour/estimate', {
+        artistId: selectedArtist,
+        cities,
+        budgetPerCity,
+        gameId: gameState.id,
+        venueCapacity: selectedCapacity,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to calculate tour estimate');
-      }
 
       const estimate = await response.json();
       setEstimateData(estimate);

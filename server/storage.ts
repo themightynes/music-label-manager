@@ -15,7 +15,7 @@ import type { ReleasedSongData } from "@shared/engine/ChartService";
 export interface IStorage {
   // User management
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByClerkId(clerkId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
   // Game saves
@@ -96,8 +96,8 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByClerkId(clerkId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.clerkId, clerkId));
     return user || undefined;
   }
 

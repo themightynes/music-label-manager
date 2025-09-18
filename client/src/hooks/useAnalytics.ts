@@ -7,6 +7,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '@/store/gameStore';
+import { apiRequest } from '@/lib/queryClient';
 
 // Base API URL - adjust if needed for your environment
 const API_BASE = '';
@@ -14,18 +15,8 @@ const API_BASE = '';
 /**
  * Helper function to make API requests with error handling
  */
-async function apiRequest(url: string) {
-  const response = await fetch(url, {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
-  }
-  
+async function fetchAnalytics(url: string) {
+  const response = await apiRequest('GET', url);
   return response.json();
 }
 
@@ -41,7 +32,7 @@ export function useArtistROI(artistId: string | undefined) {
       if (!artistId || !gameState?.id) {
         throw new Error('Missing artist ID or game ID');
       }
-      return apiRequest(`${API_BASE}/api/analytics/artist/${artistId}/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(`${API_BASE}/api/analytics/artist/${artistId}/roi?gameId=${gameState.id}`);
     },
     enabled: !!artistId && !!gameState?.id,
     staleTime: 60000, // 1 minute
@@ -61,7 +52,7 @@ export function useProjectROI(projectId: string | undefined) {
       if (!projectId || !gameState?.id) {
         throw new Error('Missing project ID or game ID');
       }
-      return apiRequest(`${API_BASE}/api/analytics/project/${projectId}/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(`${API_BASE}/api/analytics/project/${projectId}/roi?gameId=${gameState.id}`);
     },
     enabled: !!projectId && !!gameState?.id,
     staleTime: 60000, // 1 minute
@@ -81,7 +72,7 @@ export function useReleaseROI(releaseId: string | undefined) {
       if (!releaseId || !gameState?.id) {
         throw new Error('Missing release ID or game ID');
       }
-      return apiRequest(`${API_BASE}/api/analytics/release/${releaseId}/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(`${API_BASE}/api/analytics/release/${releaseId}/roi?gameId=${gameState.id}`);
     },
     enabled: !!releaseId && !!gameState?.id,
     staleTime: 120000, // 2 minutes
@@ -101,7 +92,7 @@ export function usePortfolioROI() {
       if (!gameState?.id) {
         throw new Error('Missing game ID');
       }
-      return apiRequest(`${API_BASE}/api/analytics/portfolio/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(`${API_BASE}/api/analytics/portfolio/roi?gameId=${gameState.id}`);
     },
     enabled: !!gameState?.id,
     staleTime: 30000, // 30 seconds for dashboard

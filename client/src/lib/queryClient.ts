@@ -1,5 +1,19 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+async function getClerkToken(): Promise<string | null> {
+  const clerk = (window as any).Clerk;
+  if (!clerk?.session) {
+    return null;
+  }
+
+  try {
+    return await clerk.session.getToken();
+  } catch (error) {
+    console.warn('[Clerk] Failed to get session token', error);
+    return null;
+  }
+}
+
 async function throwIfResNotOk(res: Response, options?: { silent401?: boolean }) {
   if (!res.ok) {
     // Skip verbose logging for expected 401s during auth checks
@@ -118,11 +132,20 @@ export async function apiRequest(
     console.log('[REQUEST] Data:', data);
   }
   
+  const headers: Record<string, string> = {};
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const token = await getClerkToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const requestConfig: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include" as RequestCredentials,
   };
   
   if (!isAuthCheck) {
@@ -189,8 +212,14 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const token = await getClerkToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
+      headers: Object.keys(headers).length > 0 ? headers : undefined,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

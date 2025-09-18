@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle } from 'lucide-react';
 import type { GameState } from '@shared/schema';
+import { apiRequest } from '@/lib/queryClient';
 
 interface ProjectCreationModalProps {
   gameState: GameState;
@@ -175,10 +176,7 @@ export function ProjectCreationModal({
     setLoadingProjectTypes(true);
     setProjectTypesError(null);
     try {
-      const response = await fetch('/api/project-types');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch project types: ${response.status}`);
-      }
+      const response = await apiRequest('GET', '/api/project-types');
       const data = await response.json();
       setProjectTypesAPI(data.projectTypes || {});
     } catch (err) {

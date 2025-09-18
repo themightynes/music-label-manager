@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Trophy, TrendingUp, Clock, BarChart3 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
+import { apiRequest } from '@/lib/queryClient';
 import {
   formatChartPosition,
   formatChartMovement,
@@ -64,12 +65,7 @@ export function Top10ChartDisplay() {
       const apiUrl = `/api/game/${gameState.id}/charts/top10`;
       console.log('📍 Fetching from URL:', apiUrl);
 
-      const response = await fetch(apiUrl);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch chart data: ${response.statusText}`);
-      }
-
+      const response = await apiRequest('GET', apiUrl);
       const data = await response.json();
       setChartData(data);
       setError(null);

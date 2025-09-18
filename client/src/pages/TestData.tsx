@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { apiRequest } from '@/lib/queryClient';
 
 export default function TestDataPage() {
   const [testResults, setTestResults] = useState<any>(null);
@@ -11,7 +12,7 @@ export default function TestDataPage() {
   const runTestData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/test-data');
+      const response = await apiRequest('GET', '/api/test-data');
       const data = await response.json();
       setTestResults(data);
     } catch (error) {
@@ -24,7 +25,7 @@ export default function TestDataPage() {
   const runValidationTest = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/validate-types');
+      const response = await apiRequest('GET', '/api/validate-types');
       const data = await response.json();
       setValidationResults(data);
     } catch (error) {

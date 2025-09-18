@@ -5,6 +5,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import GameLayout from '@/layouts/GameLayout';
 import { useGameStore } from '../store/gameStore';
 import { useGameContext } from '../contexts/GameContext';
+import { Button } from '@/components/ui/button';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function GamePage() {
   const [showCampaignResults, setShowCampaignResults] = useState(false);
@@ -12,48 +14,66 @@ export default function GamePage() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showLivePerformanceModal, setShowLivePerformanceModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [isCreatingNewGame, setIsCreatingNewGame] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
 
   const { gameState, campaignResults, createNewGame, isAdvancingMonth, loadGame } = useGameStore();
-  const { gameId, setGameId } = useGameContext();
+  const { setGameId } = useGameContext();
   
-  // Initialize game on startup
   useEffect(() => {
+    let isCancelled = false;
+
     const initializeGame = async () => {
       setIsInitializing(true);
-      
+      setInitializationError(null);
+
       try {
-        // If we have a gameId and matching gameState, we're good
-        if (gameId && gameState?.id === gameId) {
-          setIsInitializing(false);
+        const response = await apiRequest('GET', '/api/game-state');
+        const serverGameState = await response.json();
+
+        if (isCancelled) {
           return;
         }
-        
-        // If we have a gameId but no matching gameState, try to load it
-        if (gameId) {
-          try {
-            await loadGame(gameId);
-            setIsInitializing(false);
+
+        setGameId(serverGameState.id);
+        await loadGame(serverGameState.id);
+      } catch (error) {
+        console.error('Failed to load existing game state from server:', error);
+
+        if (isCancelled) {
+          return;
+        }
+
+        try {
+          const newGameState = await createNewGame('standard');
+
+          if (isCancelled) {
             return;
-          } catch (error) {
-            console.warn('Failed to load specified game:', gameId, error);
-            // Continue to create new game
+          }
+
+          setGameId(newGameState.id);
+          await loadGame(newGameState.id);
+        } catch (fallbackError) {
+          console.error('Fallback game creation failed:', fallbackError);
+
+          if (!isCancelled) {
+            setInitializationError('Unable to load or create a game. Please try again.');
           }
         }
-        
-        // No valid game found, create a new one
-        console.log('No valid game found, creating new game...');
-        const newGameState = await createNewGame('standard');
-        setGameId(newGameState.id);
-        
-      } catch (error) {
-        console.error('Failed to initialize game:', error);
       } finally {
-        setIsInitializing(false);
+        if (!isCancelled) {
+          setIsInitializing(false);
+        }
       }
     };
-    
+
     initializeGame();
-  }, [gameId, gameState, loadGame, createNewGame, setGameId]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [createNewGame, loadGame, setGameId]);
   
   // Check for campaign results from Zustand store
   useEffect(() => {
@@ -71,14 +91,51 @@ export default function GamePage() {
     if (open === 'save') setShowSaveModal(true);
   }, []);
   
-  if (isInitializing || !gameState) {
+  if (isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-primary text-xl mb-4">🎵 Music Label Manager</div>
-          <div className="text-white/70">
-            {isInitializing ? 'Initializing game...' : 'Please create or load a game to continue'}
-          </div>
+          <div className="text-white/70">Initializing game...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!gameState) {
+    const handleCreateGameFromEmpty = async () => {
+      try {
+        setCreationError(null);
+        setIsCreatingNewGame(true);
+        const newGame = await createNewGame('standard');
+        setGameId(newGame.id);
+        await loadGame(newGame.id);
+      } catch (error) {
+        console.error('Failed to create new game:', error);
+        setCreationError('Failed to create a new game. Please try again.');
+      } finally {
+        setIsCreatingNewGame(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-primary text-xl">🎵 Music Label Manager</div>
+          <div className="text-white/70">Please create or load a game to continue.</div>
+          <Button onClick={handleCreateGameFromEmpty} disabled={isCreatingNewGame}>
+            {isCreatingNewGame ? 'Creating game…' : 'Create New Game'}
+          </Button>
+          {creationError && (
+            <div className="text-sm text-red-400">
+              {creationError}
+            </div>
+          )}
+          {initializationError && !creationError && (
+            <div className="text-sm text-red-400">
+              {initializationError}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -86,11 +143,17 @@ export default function GamePage() {
 
   const handleNewGame = async () => {
     try {
+      setCreationError(null);
+      setIsCreatingNewGame(true);
       const newGameState = await createNewGame('standard');
       setGameId(newGameState.id);
       setShowCampaignResults(false);
+      await loadGame(newGameState.id);
     } catch (error) {
       console.error('Failed to create new game:', error);
+      setCreationError('Failed to create a new game. Please try again.');
+    } finally {
+      setIsCreatingNewGame(false);
     }
   };
 

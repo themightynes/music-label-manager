@@ -5,6 +5,7 @@ import { useGameStore } from '@/store/gameStore';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
+import { apiRequest } from '@/lib/queryClient';
 
 interface SaveGameModalProps {
   open: boolean;
@@ -22,8 +23,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   const { data: saves = [], refetch: refetchSaves } = useQuery({
     queryKey: ['api', 'saves'],
     queryFn: async () => {
-      const response = await fetch('/api/saves', { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed to fetch saves');
+      const response = await apiRequest('GET', '/api/saves');
       return response.json();
     },
     enabled: open
@@ -90,19 +90,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
     setDeleting(saveId);
     try {
-      const response = await fetch(`/api/saves/${saveId}`, { 
-        method: 'DELETE',
-        credentials: 'include' 
-      });
-      
-      console.log('Delete response status:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log('Delete error response:', errorData);
-        throw new Error(errorData.message || 'Failed to delete save');
-      }
-      
+      const response = await apiRequest('DELETE', `/api/saves/${saveId}`);
       const result = await response.json();
       console.log('Delete success response:', result);
       

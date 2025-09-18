@@ -17,6 +17,7 @@ import {
   getChartExitRiskColor,
   getChartExitRiskBgColor
 } from '../../../shared/utils/chartUtils';
+import { apiRequest } from '@/lib/queryClient';
 
 interface Top100Entry {
   position: number;
@@ -65,12 +66,7 @@ export function Top100ChartDisplay() {
       const apiUrl = `/api/game/${gameState.id}/charts/top100`;
       console.log('📍 Fetching from URL:', apiUrl);
 
-      const response = await fetch(apiUrl);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch chart data: ${response.statusText}`);
-      }
-
+      const response = await apiRequest('GET', apiUrl);
       const data = await response.json();
       setChartData(data);
       setError(null);

@@ -13,7 +13,7 @@ const router = Router();
 /**
  * Get ROI metrics for a specific artist
  */
-router.get('/api/analytics/artist/:artistId/roi', async (req, res) => {
+router.get('/artist/:artistId/roi', async (req, res) => {
   try {
     const { artistId } = req.params;
     const { gameId } = req.query;
@@ -37,7 +37,7 @@ router.get('/api/analytics/artist/:artistId/roi', async (req, res) => {
 /**
  * Get ROI metrics for a specific project
  */
-router.get('/api/analytics/project/:projectId/roi', async (req, res) => {
+router.get('/project/:projectId/roi', async (req, res) => {
   try {
     const { projectId } = req.params;
     const { gameId } = req.query;
@@ -61,7 +61,7 @@ router.get('/api/analytics/project/:projectId/roi', async (req, res) => {
 /**
  * Get ROI metrics for a specific release
  */
-router.get('/api/analytics/release/:releaseId/roi', async (req, res) => {
+router.get('/release/:releaseId/roi', async (req, res) => {
   try {
     const { releaseId } = req.params;
     const { gameId } = req.query;
@@ -85,7 +85,7 @@ router.get('/api/analytics/release/:releaseId/roi', async (req, res) => {
 /**
  * Get portfolio-wide ROI metrics
  */
-router.get('/api/analytics/portfolio/roi', async (req, res) => {
+router.get('/portfolio/roi', async (req, res) => {
   try {
     const { gameId } = req.query;
     

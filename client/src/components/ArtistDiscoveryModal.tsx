@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Search, Music, TrendingUp, Zap, Heart, Star, AlertCircle } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { ARTIST_ARCHETYPES } from '@/lib/gameData';
+import { apiRequest } from '@/lib/queryClient';
 
 interface Artist {
   id: string;
@@ -53,10 +54,7 @@ export function ArtistDiscoveryModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/artists/available');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch artists: ${response.status}`);
-      }
+      const response = await apiRequest('GET', '/api/artists/available');
       const data = await response.json();
       const filtered = (data.artists || []).filter((artist: Artist) => 
         !signedArtists.some(signed => signed.id === artist.id || signed.name === artist.name)
