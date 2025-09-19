@@ -1,10 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
-import { ClerkExpressRequireAuth } from '@clerk/clerk-sdk-node';
+import { ClerkExpressRequireAuth, clerkClient } from '@clerk/clerk-sdk-node';
 import { Webhook, type WebhookRequiredHeaders } from 'svix';
 import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { users } from '../shared/schema';
-import { clerkClient } from './clerkClient';
 
 type ClerkLikeUser = {
   id: string;
