@@ -13,15 +13,12 @@ interface GameStore {
   monthlyActions: MonthlyAction[];
   songs: any[];
   releases: any[];
-  executives: any[]; // Executive team members
-  
+
   // UI state
   selectedActions: string[];
   isAdvancingMonth: boolean;
-  currentDialogue: any | null;
   monthlyOutcome: any | null;
   campaignResults: any | null;
-  backToMeetingsFor: string | null; // Executive ID to reopen meetings for
   
   // Actions
   loadGame: (gameId: string) => Promise<void>;
@@ -45,12 +42,6 @@ interface GameStore {
   updateProject: (projectId: string, updates: any) => Promise<void>;
   cancelProject: (projectId: string, cancellationData: { refundAmount: number }) => Promise<void>;
   
-  // Dialogue
-  openDialogue: (roleType: string, sceneId?: string) => Promise<void>;
-  selectDialogueChoice: (choiceId: string, effects: any) => Promise<void>;
-  closeDialogue: () => void;
-  backToMeetingSelection: () => void;
-  
   // Save management
   saveGame: (name: string) => Promise<void>;
 }
@@ -66,41 +57,31 @@ export const useGameStore = create<GameStore>()(
       monthlyActions: [],
       songs: [],
       releases: [],
-      executives: [],
       selectedActions: [],
       isAdvancingMonth: false,
-      currentDialogue: null,
       monthlyOutcome: null,
       campaignResults: null,
-      backToMeetingsFor: null,
 
       // Load existing game
       loadGame: async (gameId: string) => {
         try {
-          const [gameResponse, songsResponse, releasesResponse, executivesResponse] = await Promise.all([
+          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
             apiRequest('GET', `/api/game/${gameId}`),
             apiRequest('GET', `/api/game/${gameId}/songs`),
-            apiRequest('GET', `/api/game/${gameId}/releases`),
-            apiRequest('GET', `/api/game/${gameId}/executives`)
+            apiRequest('GET', `/api/game/${gameId}/releases`)
           ]);
-          
+
           const data = await gameResponse.json();
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
-          const executives = await executivesResponse.json();
-          
+
           console.log('GameStore loadGame debug:', {
             gameId,
             gameData: !!data,
             songsCount: songs?.length || 0,
             releasesCount: releases?.length || 0,
-            releases: releases,
-            executivesCount: executives?.length || 0,
-            executives: executives
+            releases: releases
           });
-          
-          console.log('[DEBUG] loadGame executives response status:', executivesResponse.ok);
-          console.log('[DEBUG] loadGame executives data:', executives);
           
           // Ensure usedFocusSlots is synced with selectedActions (should be 0 when loading)
           const syncedGameState = {
@@ -116,7 +97,6 @@ export const useGameStore = create<GameStore>()(
             monthlyActions: data.monthlyActions,
             songs,
             releases,
-            executives,
             selectedActions: []
           });
         } catch (error) {
@@ -214,7 +194,6 @@ export const useGameStore = create<GameStore>()(
             monthlyActions: [],
             songs: [],
             releases: [],
-            executives: [],
             selectedActions: [],
             campaignResults: null,
             monthlyOutcome: null
@@ -366,30 +345,10 @@ export const useGameStore = create<GameStore>()(
 
         set({ isAdvancingMonth: true });
 
-        // Fetch executives fresh from API to ensure we have latest data
-        let executives = [];
         try {
-          const execResponse = await apiRequest('GET', `/api/game/${gameState.id}/executives`);
-          executives = await execResponse.json();
-          console.log('[DEBUG CLIENT] Fetched fresh executives:', executives);
-        } catch (error) {
-          console.error('[DEBUG CLIENT] Failed to fetch executives:', error);
-        }
-
-        console.log('[DEBUG CLIENT] advanceMonth - executives length:', executives?.length || 0);
-
-        try {
-          // Map executive roles to their IDs for metadata
-          const executivesByRole: Record<string, any> = {};
-          executives.forEach(exec => {
-            executivesByRole[exec.role] = exec;
-          });
-          
           // Use the NEW API endpoint with campaign completion logic
-          // DEBUG: Log all executives before mapping
-          console.log('[DEBUG CLIENT] All executives by role:', executivesByRole);
           console.log('[DEBUG CLIENT] Selected actions:', selectedActions);
-          
+
           const advanceRequest = {
             gameId: gameState.id,
             selectedActions: selectedActions.map(actionStr => {
@@ -416,18 +375,7 @@ export const useGameStore = create<GameStore>()(
                 actionId,
                 choiceId
               };
-              
-              // Add executiveId if this is an executive role (not CEO)
-              if (roleId && roleId !== 'ceo') {
-                const executive = executivesByRole[roleId];
-                if (executive) {
-                  metadata.executiveId = executive.id;
-                  console.log(`[DEBUG CLIENT] ✅ Added executiveId ${executive.id} for role ${roleId}`);
-                } else {
-                  console.log(`[DEBUG CLIENT] ❌ No executive found for role ${roleId}`);
-                }
-              }
-              
+
               const result = {
                 actionType: 'role_meeting' as const,
                 targetId: actionId,  // Use the clean action ID
@@ -462,32 +410,22 @@ export const useGameStore = create<GameStore>()(
           }
           console.log('===============================');
           
-          // Reload game data to get updated projects, songs, releases, AND executives
-          // CRITICAL FIX: Explicitly fetch all data including executives to ensure state synchronization
-          const [gameResponse, songsResponse, releasesResponse, executivesResponse] = await Promise.all([
+          // Reload game data to get updated projects, songs, and releases after processing
+          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
             apiRequest('GET', `/api/game/${gameState.id}`),
             apiRequest('GET', `/api/game/${gameState.id}/songs`),
-            apiRequest('GET', `/api/game/${gameState.id}/releases`), // Explicit releases fetch
-            apiRequest('GET', `/api/game/${gameState.id}/executives`) // CRITICAL: Fetch updated executives
+            apiRequest('GET', `/api/game/${gameState.id}/releases`) // Explicit releases fetch
           ]);
           const gameData = await gameResponse.json();
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
-          const updatedExecutives = await executivesResponse.json();
-          
+
           console.log('=== POST-ADVANCE MONTH STATE SYNC ===');
           console.log('Game data releases count:', (gameData.releases || []).length);
           console.log('Direct releases fetch count:', (releases || []).length);
           console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
-          console.log('Executives count:', (updatedExecutives || []).length);
-          console.log('Executive states:', updatedExecutives.map((e: any) => ({ 
-            id: e.id, 
-            role: e.role, 
-            mood: e.mood, 
-            loyalty: e.loyalty 
-          })));
           console.log('=====================================');
-          
+
           // Ensure usedFocusSlots is reset to 0 for the new month
           const syncedGameState = {
             ...result.gameState,
@@ -500,7 +438,6 @@ export const useGameStore = create<GameStore>()(
             projects: gameData.projects || [], // Update projects with current state
             songs: songs || [], // Update songs to include newly recorded ones
             releases: releases || [], // FIXED: Use explicit releases fetch for accurate status
-            executives: updatedExecutives || [], // CRITICAL: Update executives with new mood/loyalty values
             monthlyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],
@@ -682,112 +619,6 @@ export const useGameStore = create<GameStore>()(
         } catch (error) {
           console.error('Failed to cancel project:', error);
           throw error;
-        }
-      },
-
-      // Dialogue system
-      openDialogue: async (roleId: string, meetingId?: string) => {
-        try {
-          // Set the dialogue state for the DialogueModal to pick up
-          set({
-            currentDialogue: {
-              roleType: roleId,  // DialogueModal expects this field name
-              sceneId: meetingId || 'monthly_check_in',
-              executiveId: roleId, // Store executive ID for back navigation
-              choices: []  // Will be loaded by DialogueModal
-            }
-          });
-        } catch (error) {
-          console.error('Failed to load dialogue:', error);
-          throw error;
-        }
-      },
-
-      selectDialogueChoice: async (choiceId: string, effects: any) => {
-        const { gameState, currentDialogue, selectedActions } = get();
-        if (!gameState || !currentDialogue) return;
-
-        try {
-          // Check if this is an executive meeting
-          const executiveRoles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
-          const isExecutiveMeeting = executiveRoles.includes(currentDialogue.roleType);
-
-          // Apply immediate effects
-          const stateUpdates: any = {};
-          if (effects.money) stateUpdates.money = gameState.money + effects.money;
-          if (effects.reputation) stateUpdates.reputation = Math.max(0, Math.min(100, gameState.reputation + effects.reputation));
-          if (effects.creativeCapital) stateUpdates.creativeCapital = Math.max(0, Math.min(100, gameState.creativeCapital + effects.creativeCapital));
-
-          if (Object.keys(stateUpdates).length > 0) {
-            await get().updateGameState(stateUpdates);
-          }
-
-          // Store delayed effects in flags
-          if (effects.delayed && Object.keys(effects.delayed).length > 0) {
-            const flags = { ...gameState.flags as object, ...effects.delayed };
-            await get().updateGameState({ flags });
-          }
-
-          // Store complete action data for the server
-          const actionData = {
-            roleId: currentDialogue.roleType,      // e.g., 'head_ar'
-            actionId: currentDialogue.sceneId,     // e.g., 'ar_single_choice' 
-            choiceId: choiceId,                    // e.g., 'lean_commercial'
-            // We'll add executiveId when processing for month advancement
-          };
-          
-          // Store as JSON string so we preserve all the data
-          const actionJson = JSON.stringify(actionData);
-          const newSelectedActions = [...selectedActions, actionJson];
-          
-          console.log('Storing complete action data:', actionData);
-          console.log('New selectedActions:', newSelectedActions);
-          
-          // Update local state immediately for both types
-          set({ 
-            selectedActions: newSelectedActions,
-            gameState: { ...gameState, usedFocusSlots: newSelectedActions.length }
-          });
-          
-          // NOTE: Executive actions are now processed during month advancement
-          // No need to call the executive action endpoint separately
-
-          // Record the action
-          await apiRequest('POST', `/api/game/${gameState.id}/actions`, {
-            month: gameState.currentMonth,
-            actionType: 'dialogue',
-            // targetId and choiceId are optional UUIDs, but we have string IDs
-            // Store the dialogue details in results instead
-            results: {
-              ...effects,
-              roleType: currentDialogue.roleType,
-              sceneId: currentDialogue.sceneId,
-              choiceId: choiceId
-            }
-          });
-
-          set({ currentDialogue: null });
-        } catch (error) {
-          console.error('Failed to process dialogue choice:', error);
-          throw error;
-        }
-      },
-
-      closeDialogue: () => {
-        set({ currentDialogue: null });
-      },
-
-      backToMeetingSelection: () => {
-        const { currentDialogue } = get();
-        if (currentDialogue && currentDialogue.executiveId) {
-          // Set a flag to trigger meeting selection modal reopening
-          set({ 
-            currentDialogue: null,
-            backToMeetingsFor: currentDialogue.executiveId  // Add this field to trigger meeting modal
-          });
-        } else {
-          // Fallback to just closing dialogue
-          set({ currentDialogue: null });
         }
       },
 

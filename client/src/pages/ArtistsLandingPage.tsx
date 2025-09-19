@@ -12,7 +12,7 @@ const ArtistsLandingPage: React.FC = () => {
   const [, setLocation] = useLocation();
   const [isDiscoveryModalOpen, setIsDiscoveryModalOpen] = useState(false);
   const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
-  const { gameState, artists, signArtist, openDialogue, projects } = useGameStore();
+  const { gameState, artists, signArtist, projects } = useGameStore();
   const { data: portfolioROI, isLoading: portfolioLoading, error: portfolioError } = usePortfolioROI();
 
   const signedArtists = artists || [];
@@ -55,8 +55,8 @@ const ArtistsLandingPage: React.FC = () => {
   };
 
   // Event handlers for rich artist cards
-  const handleArtistMeeting = async (artist: Artist) => {
-    await openDialogue('Artist', `meeting_${artist.id}`);
+  const handleArtistMeeting = (artist: Artist) => {
+    console.info(`[ArtistsLandingPage] Artist meetings temporarily unavailable for ${artist.name}.`);
   };
 
   const handleNavigateToArtist = (artistId: string) => {

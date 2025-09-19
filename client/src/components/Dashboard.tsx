@@ -6,14 +6,12 @@ import { ActiveRecordingSessions } from './ActiveRecordingSessions';
 import { ActiveTours } from './ActiveTours';
 import { ActiveReleases } from './ActiveReleases';
 import { Top10ChartDisplay } from './Top10ChartDisplay';
-import { DialogueModal } from './DialogueModal';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { MonthSummary } from './MonthSummary';
 import { ProjectCreationModal } from './ProjectCreationModal';
 import { LivePerformanceModal, type TourCreationData } from './LivePerformanceModal';
 import { useGameStore } from '@/store/gameStore';
-import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
@@ -34,7 +32,7 @@ export function Dashboard({
   showSaveModal = false,
   setShowSaveModal = () => {}
 }: DashboardProps) {
-  const { gameState, isAdvancingMonth, advanceMonth, currentDialogue, selectDialogueChoice, closeDialogue, backToMeetingSelection, monthlyOutcome, selectedActions, artists, projects, createProject } = useGameStore();
+  const { gameState, isAdvancingMonth, advanceMonth, monthlyOutcome, artists, projects, createProject } = useGameStore();
   const [, setLocation] = useLocation();
   const [showMonthSummary, setShowMonthSummary] = useState(false);
   const [lastProcessedMonth, setLastProcessedMonth] = useState<number | null>(null);
@@ -159,20 +157,6 @@ export function Dashboard({
         </div>
       </main>
 
-      {/* Modals */}
-      {currentDialogue && (
-        <DialogueModal
-          roleId={currentDialogue.roleType}
-          meetingId={currentDialogue.sceneId || 'monthly_check_in'}
-          gameId={gameState.id}
-          onClose={closeDialogue}
-          onChoiceSelect={async (choiceId: string, effects: any) => {
-            await selectDialogueChoice(choiceId, effects);
-          }}
-          onBack={backToMeetingSelection}
-        />
-      )}
-      
       {/* Month Summary Modal */}
       {showMonthSummary && monthlyOutcome && (
         <div

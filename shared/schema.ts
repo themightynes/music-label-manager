@@ -204,6 +204,7 @@ export const releaseSongs = pgTable("release_songs", {
   leadSinglesIdx: sql`CREATE INDEX IF NOT EXISTS "idx_release_songs_lead_singles" ON ${table} ("release_id") WHERE "is_single" = true`,
 }));
 
+// TODO: Remove or redesign legacy dialogue storage after rebuilding the executive system UI (removed 2025-09-19).
 // Dialogue choices and effects
 export const dialogueChoices = pgTable("dialogue_choices", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -252,6 +253,7 @@ export const gameStates = pgTable("game_states", {
   userReputationIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_user_reputation" ON ${table} ("user_id", "reputation", "current_month")`,
 }));
 
+// TODO: Legacy executive state persisted for compatibility while the client UI is rebuilt (UI removed 2025-09-19).
 // Executives table
 export const executives = pgTable("executives", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -439,6 +441,7 @@ export const insertMonthlyActionSchema = createInsertSchema(monthlyActions).omit
   createdAt: true,
 });
 
+// TODO: Remove once executive persistence is retired with the new systems rollout.
 export const insertExecutiveSchema = createInsertSchema(executives).omit({
   id: true,
 });
@@ -478,6 +481,7 @@ export type InsertRelease = z.infer<typeof insertReleaseSchema>;
 export type ReleaseSong = typeof releaseSongs.$inferSelect;
 export type InsertReleaseSong = z.infer<typeof insertReleaseSongSchema>;
 
+// TODO: Clean up once the dialogue schema is retired with the executive system overhaul.
 export type DialogueChoice = typeof dialogueChoices.$inferSelect;
 
 export type GameEvent = typeof gameEvents.$inferSelect;
