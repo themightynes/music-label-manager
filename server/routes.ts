@@ -35,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug endpoint to test data loading
-  app.get('/api/debug/data-load', async (req, res) => {
+  app.get('/api/debug/data-load', requireClerkUser, async (req, res) => {
     const results: any = {};
     
     try {
@@ -105,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Data verification endpoints
-  app.get("/api/test-data", async (req, res) => {
+  app.get("/api/test-data", requireClerkUser, async (req, res) => {
     try {
       await serverGameData.initialize();
       
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/validate-types", async (req, res) => {
+  app.get("/api/validate-types", requireClerkUser, async (req, res) => {
     try {
       await serverGameData.initialize();
       
@@ -316,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get available monthly actions with enriched role data and categories
-  app.get("/api/actions/monthly", async (req, res) => {
+  app.get("/api/actions/monthly", requireClerkUser, async (req, res) => {
     try {
       await serverGameData.initialize();
       const actionsData = await serverGameData.getMonthlyActionsWithCategories();
@@ -349,7 +349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get role/executive data with all their meetings
   // Following the rule: JSON = Content & Config, Database = State & Saves
-  app.get("/api/roles/:roleId", async (req, res) => {
+  app.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
     try {
       // Use serverGameData to load data properly
       await serverGameData.initialize();
@@ -385,7 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get specific meeting data for a role
   // Following the rule: JSON = Content & Config, Database = State & Saves
-  app.get("/api/roles/:roleId/meetings/:meetingId", async (req, res) => {
+  app.get("/api/roles/:roleId/meetings/:meetingId", requireClerkUser, async (req, res) => {
     try {
       // Use the same serverGameData methods that work elsewhere
       await serverGameData.initialize();
@@ -497,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get project types and configuration
-  app.get("/api/project-types", async (req, res) => {
+  app.get("/api/project-types", requireClerkUser, async (req, res) => {
     try {
       await serverGameData.initialize();
       const projectTypes = await serverGameData.getProjectTypes();
