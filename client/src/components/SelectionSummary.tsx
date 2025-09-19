@@ -25,6 +25,36 @@ interface SelectionSummaryProps {
   isAdvancing: boolean;
 }
 
+// Helper function to parse selected actions (both JSON and legacy formats)
+function parseSelectedAction(id: string):
+  | { format: 'json'; roleId: string; actionId: string; choiceId: string }
+  | { format: 'legacy'; parts: string[] } {
+  try {
+    const parsed = JSON.parse(id);
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      typeof parsed.roleId === 'string' &&
+      typeof parsed.actionId === 'string' &&
+      typeof parsed.choiceId === 'string'
+    ) {
+      return {
+        format: 'json',
+        roleId: parsed.roleId,
+        actionId: parsed.actionId,
+        choiceId: parsed.choiceId
+      };
+    }
+  } catch {
+    // Not valid JSON, fall through to legacy format
+  }
+
+  return {
+    format: 'legacy',
+    parts: id.split('_')
+  };
+}
+
 export function SelectionSummary({
   selectedActions,
   actions,
@@ -40,13 +70,26 @@ export function SelectionSummary({
   
   console.log('SelectionSummary - selectedActions:', selectedActions);
   console.log('SelectionSummary - usedSlots:', usedSlots);
+
+  // Unit tests via console.assert for both formats
+  console.assert(
+    parseSelectedAction('{"roleId":"ceo","actionId":"mgr_priorities","choiceId":"studio_first"}').format === 'json',
+    'JSON format should be detected correctly'
+  );
+  console.assert(
+    parseSelectedAction('ceo_mgr_priorities_studio_first').format === 'legacy',
+    'Legacy format should be detected correctly'
+  );
+  console.assert(
+    parseSelectedAction('{"roleId":"head_ar","actionId":"ar_single_choice","choiceId":"accept_terms"}').roleId === 'head_ar',
+    'JSON format should parse roleId correctly'
+  );
   
   // Parse executive actions from composite IDs
   const selectedActionObjects = selectedActions.map(id => {
-    // Executive action format: executiveId_meetingId_choiceId
-    const parts = id.split('_');
-    
-    // Map executive data - handle both old and new ID formats
+    const parsed = parseSelectedAction(id);
+
+    // Map executive data for both formats
     const executives: Record<string, { name: string; icon: string; color: string }> = {
       'ceo': { name: 'CEO', icon: 'fas fa-crown', color: '#FFD700' },
       'head': { name: 'Head of A&R', icon: 'fas fa-music', color: '#A75A5B' },
@@ -56,60 +99,83 @@ export function SelectionSummary({
       'head_distribution': { name: 'Head of Distribution', icon: 'fas fa-truck', color: '#A75A85' },
       'distribution': { name: 'Head of Distribution', icon: 'fas fa-truck', color: '#A75A85' }
     };
-    
-    // Map meeting names based on meeting IDs
-    const meetingNames: Record<string, string> = {
-      // CEO meetings
-      'ceo_vision': 'Strategic Vision',
-      'ceo_crisis': 'Crisis Management',
-      'ceo_investor': 'Investor Relations',
-      
-      // Head of A&R meetings
-      'ar_single_choice': 'Single Strategy',
-      'ar_discovery': 'New Talent Discovery',
-      'ar_genre_shift': 'Genre Strategy',
-      
-      // CMO meetings
-      'cmo_campaign': 'Marketing Campaign',
-      'cmo_pr_crisis': 'PR Crisis',
-      'cmo_brand': 'Brand Partnership',
-      
-      // CCO meetings
-      'cco_timeline': 'Production Timeline',
-      'cco_creative': 'Creative Direction',
-      'cco_budget': 'Budget Management',
-      
-      // Head of Distribution meetings
-      'distribution_strategy': 'Release Strategy',
-      'distribution_playlist': 'Playlist Pitch',
-      'distribution_tour': 'Tour Planning'
-    };
-    
-    // Get the executive based on the first part of the ID
-    const executiveKey = parts[0] + (parts[0] === 'head' && parts[1] === 'ar' ? '_ar' : 
-                                     parts[0] === 'head' && parts[1] === 'distribution' ? '_distribution' : '');
-    const executive = executives[executiveKey] || executives[parts[0]] || executives['ceo'];
-    
-    // Build meeting ID from parts (e.g., ar_discovery from head_ar_ar_discovery_accept_terms)
-    let meetingId = '';
-    if (parts[0] === 'head' && parts[1] === 'ar') {
-      meetingId = parts.slice(2, -1).join('_'); // Skip head_ar and choice at end
+
+    if (parsed.format === 'json') {
+      // Handle new JSON format: { roleId, actionId, choiceId }
+      const { roleId, actionId, choiceId } = parsed;
+      const executive = executives[roleId] || executives['ceo'];
+
+      // Convert actionId to readable meeting name
+      const meetingName = actionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+      return {
+        id,
+        executiveId: roleId,
+        executiveName: executive.name,
+        meetingId: actionId,
+        meetingName: meetingName,
+        choiceId: choiceId,
+        icon: executive.icon,
+        color: executive.color
+      } as ExecutiveAction;
     } else {
-      meetingId = parts.slice(1, -1).join('_'); // Skip executive and choice at end
+      // Handle legacy underscore format for backward compatibility
+      const parts = parsed.parts;
+
+      // Map meeting names based on meeting IDs
+      const meetingNames: Record<string, string> = {
+        // CEO meetings
+        'ceo_vision': 'Strategic Vision',
+        'ceo_crisis': 'Crisis Management',
+        'ceo_investor': 'Investor Relations',
+
+        // Head of A&R meetings
+        'ar_single_choice': 'Single Strategy',
+        'ar_discovery': 'New Talent Discovery',
+        'ar_genre_shift': 'Genre Strategy',
+
+        // CMO meetings
+        'cmo_campaign': 'Marketing Campaign',
+        'cmo_pr_crisis': 'PR Crisis',
+        'cmo_brand': 'Brand Partnership',
+
+        // CCO meetings
+        'cco_timeline': 'Production Timeline',
+        'cco_creative': 'Creative Direction',
+        'cco_budget': 'Budget Management',
+
+        // Head of Distribution meetings
+        'distribution_strategy': 'Release Strategy',
+        'distribution_playlist': 'Playlist Pitch',
+        'distribution_tour': 'Tour Planning'
+      };
+
+      // Get the executive based on the first part of the ID
+      const executiveKey = parts[0] + (parts[0] === 'head' && parts[1] === 'ar' ? '_ar' :
+                                       parts[0] === 'head' && parts[1] === 'distribution' ? '_distribution' : '');
+      const executive = executives[executiveKey] || executives[parts[0]] || executives['ceo'];
+
+      // Build meeting ID from parts (e.g., ar_discovery from head_ar_ar_discovery_accept_terms)
+      let meetingId = '';
+      if (parts[0] === 'head' && parts[1] === 'ar') {
+        meetingId = parts.slice(2, -1).join('_'); // Skip head_ar and choice at end
+      } else {
+        meetingId = parts.slice(1, -1).join('_'); // Skip executive and choice at end
+      }
+
+      const meetingName = meetingNames[meetingId] || meetingId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+      return {
+        id,
+        executiveId: parts[0],
+        executiveName: executive.name,
+        meetingId: meetingId,
+        meetingName: meetingName,
+        choiceId: parts[parts.length - 1],
+        icon: executive.icon,
+        color: executive.color
+      } as ExecutiveAction;
     }
-    
-    const meetingName = meetingNames[meetingId] || meetingId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    
-    return {
-      id,
-      executiveId: parts[0],
-      executiveName: executive.name,
-      meetingId: meetingId,
-      meetingName: meetingName,
-      choiceId: parts[parts.length - 1],
-      icon: executive.icon,
-      color: executive.color
-    } as ExecutiveAction;
   });
 
   const progress = (usedSlots / totalSlots) * 100;

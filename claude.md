@@ -28,6 +28,11 @@
 - `npm run dev` - Starts both client and server with hot reload
 - `pkill -f "tsx server"` - Clean up any lingering server processes
 
+## XState & Stately Runtime Notes
+- `xstate` drives multi-step decision flows; prefer typed machine definitions and actor logic over ad-hoc reducer state.
+- Co-locate machines with the feature they support and share cross-tier contracts through `shared/` when both client and server dispatch the same events.
+- Attach `@statelyai/inspect` only in dev contexts (e.g., guard with `if (import.meta.env.DEV)` or `process.env.NODE_ENV !== 'production'`) so visualization tooling stays out of production bundles.
+
 ## Implementation Philosophy
 - **One Layer at a Time**: Never build multiple interdependent systems simultaneously
 - **Stub and Ship**: `return true; // TODO: make smarter` is valid first implementation  

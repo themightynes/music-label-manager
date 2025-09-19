@@ -1,0 +1,93 @@
+import { apiRequest } from '../lib/queryClient';
+import type { Executive, RoleMeeting, DialogueChoice } from '../../../shared/types/gameTypes';
+
+export async function fetchExecutives(gameId: string): Promise<Executive[]> {
+  try {
+    const response = await apiRequest('GET', `/api/game/${gameId}/executives`);
+    const dbExecutives = await response.json();
+
+    // Add CEO executive since player is the CEO but CEO has meetings/decisions
+    // CEO is not stored in database but should be available for meetings
+    const ceoExecutive: Executive = {
+      role: 'ceo',
+      level: 0, // CEO has no level - they are the player
+      mood: 0, // CEO has no mood - they are the player
+      loyalty: 0 // CEO has no loyalty - they are the player
+    };
+
+    return [ceoExecutive, ...dbExecutives];
+  } catch (error) {
+    console.error('Failed to fetch executives:', error);
+    throw error;
+  }
+}
+
+export async function fetchRoleMeetings(roleId: string): Promise<RoleMeeting[]> {
+  try {
+    console.log('[EXECUTIVE SERVICE] Fetching meetings for role:', roleId);
+
+    // Use the proper API endpoint that loads from roles.json and actions.json
+    const response = await apiRequest('GET', `/api/roles/${roleId}`);
+    const roleData = await response.json();
+
+    console.log('[EXECUTIVE SERVICE] Role data received:', roleData);
+
+    // The API should return meetings from actions.json filtered by role_id
+    // Transform the action data to our RoleMeeting format
+    const meetings = (roleData.meetings || []).map((action: any) => ({
+      id: action.id,
+      prompt: action.prompt,
+      choices: action.choices || []
+    }));
+
+    console.log('[EXECUTIVE SERVICE] Transformed meetings:', meetings);
+    return meetings;
+  } catch (error) {
+    console.error('Failed to fetch role meetings:', error);
+    // Don't return mock data - let the error propagate so we can see what's wrong
+    throw error;
+  }
+}
+
+export async function fetchMeetingDialogue(roleId: string, meetingId: string): Promise<{
+  prompt: string;
+  choices: DialogueChoice[];
+}> {
+  try {
+    console.log('[EXECUTIVE SERVICE] Fetching dialogue for role:', roleId, 'meeting:', meetingId);
+
+    // Use the proper API endpoint that loads specific meeting from actions.json
+    const response = await apiRequest('GET', `/api/roles/${roleId}/meetings/${meetingId}`);
+    const meetingData = await response.json();
+
+    console.log('[EXECUTIVE SERVICE] Meeting dialogue data received:', meetingData);
+
+    return {
+      prompt: meetingData.prompt,
+      choices: meetingData.choices || []
+    };
+  } catch (error) {
+    console.error('Failed to fetch meeting dialogue from API:', error);
+    // Don't return mock data - let the error propagate so we can see what's wrong
+    throw error;
+  }
+}
+
+export async function processExecutiveAction(
+  gameId: string,
+  execId: string,
+  actionData: {
+    roleId: string;
+    actionId: string;
+    choiceId: string;
+  }
+): Promise<any> {
+  try {
+    const response = await apiRequest('POST', `/api/game/${gameId}/executive/${execId}/action`, actionData);
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Failed to process executive action:', error);
+    throw error;
+  }
+}

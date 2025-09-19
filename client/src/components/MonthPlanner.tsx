@@ -6,7 +6,8 @@ import { useGameStore } from '@/store/gameStore';
 import { AlertCircle, Loader2, Rocket } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { SelectionSummary } from './SelectionSummary';
-import { ExecutiveSystemPlaceholder } from './placeholders/ExecutiveSystemPlaceholder';
+import { ExecutiveMeetings } from './executive-meetings/ExecutiveMeetings';
+import { useGameContext } from '@/contexts/GameContext';
 
 interface MonthPlannerProps {
   onAdvanceMonth: () => Promise<void>;
@@ -40,17 +41,18 @@ interface MonthlyAction {
 }
 
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
-  const { gameState, selectedActions, removeAction, reorderActions } = useGameStore();
+  const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
+  const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
-  
+
   // Executive meetings removed - keep empty structure for SelectionSummary compatibility
   const monthlyActions: MonthlyAction[] = [];
   const loading = false;
   const error: string | null = null;
 
-  // No longer fetching actions while the executive system is offline
+  // Executive loading is now handled by ExecutiveMeetings component
 
-  if (!gameState) return null;
+  if (!gameState || !gameId) return null;
 
   return (
     <Card className="shadow-lg">
@@ -91,7 +93,14 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                   </Button>
                 </div>
               ) : (
-                <ExecutiveSystemPlaceholder />
+                <ExecutiveMeetings
+                  gameId={gameId}
+                  onActionSelected={selectAction}
+                  focusSlots={{
+                    total: gameState.focusSlots || 3,
+                    used: gameState.usedFocusSlots || 0,
+                  }}
+                />
               )}
             </div>
 
