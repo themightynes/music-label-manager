@@ -15,6 +15,7 @@
 
 import type { InsertChartEntry, ChartEntry as DbChartEntry } from '../schema';
 import type { CompetitorSong, SongPerformance } from '../types/gameTypes';
+import { calculateChartMovement } from '../utils/chartUtils';
 
 // Song data interface for chart operations
 export interface ReleasedSongData {
@@ -282,6 +283,7 @@ export class ChartService {
     );
 
     const chartEntries: InsertChartEntry[] = [];
+    const currentWeekTime = normalizedChartWeek.getTime();
 
     // Build position map for O(1) position lookup
     const positionMap = new Map<string, number>();
@@ -301,6 +303,9 @@ export class ChartService {
     // Group entries by songId for efficient lookup
     const chartHistoryMap = new Map<string, any[]>();
     batchChartHistory.forEach(entry => {
+      if (!entry.songId) {
+        return;
+      }
       if (!chartHistoryMap.has(entry.songId)) {
         chartHistoryMap.set(entry.songId, []);
       }
@@ -347,16 +352,33 @@ export class ChartService {
         }
 
         // Only consider it a debut if the song is actually charting (position is not null)
-        // Use pre-calculated chart history to determine debut status
-        let isDebut = false;
-        if (chartPosition !== null) {
-          const songHistory = chartHistoryMap.get(song.songId) || [];
-          const priorChartingEntries = songHistory.filter(entry =>
-            entry.position !== null &&
-            new Date(entry.chartWeek) < normalizedChartWeek
-          );
-          isDebut = priorChartingEntries.length === 0;
+        // Use pre-calculated chart history to determine debut status and previous position
+        const songHistory = chartHistoryMap.get(song.songId) || [];
+        let hasPriorChartingEntry = false;
+        let previousPosition: number | null = null;
+        let latestPreviousTime = -Infinity;
+
+        for (const historyEntry of songHistory) {
+          if (historyEntry.position === null) {
+            continue;
+          }
+
+          const entryTime = new Date(historyEntry.chartWeek).getTime();
+          if (entryTime >= currentWeekTime) {
+            continue;
+          }
+
+          hasPriorChartingEntry = true;
+          if (entryTime > latestPreviousTime) {
+            latestPreviousTime = entryTime;
+            previousPosition = historyEntry.position;
+          }
         }
+
+        const isDebut = chartPosition !== null ? !hasPriorChartingEntry : false;
+        const movement = chartPosition !== null
+          ? calculateChartMovement(chartPosition, previousPosition)
+          : 0;
 
         // Always insert a row for player songs - use null position for non-charting songs
         chartEntries.push({
@@ -366,7 +388,7 @@ export class ChartService {
           streams: song.streams,
           position: chartPosition, // null when not charting
           isDebut,
-          movement: 0, // TODO: Calculate from previous week
+          movement,
           isCompetitorSong: false
         });
 
@@ -528,40 +550,69 @@ export class ChartService {
    * Gets chart entries for the current week with song details for summary display
    * @param dbTransaction Optional database transaction
    */
-  async getCurrentWeekChartEntries(chartWeek: Date | string, dbTransaction?: any): Promise<Array<DbChartEntry & { songTitle: string; artistName: string; weeksOnChart: number }>> {
+  async getCurrentWeekChartEntries(chartWeek: Date | string, dbTransaction?: any): Promise<Array<DbChartEntry & {
+    songTitle: string;
+    artistName: string;
+    weeksOnChart: number;
+    peakPosition: number | null;
+    movement: number;
+  }>> {
     try {
       const normalizedChartWeek = this.toDbDate(chartWeek);
       const currentEntries = await this.storage.getChartEntriesByWeekAndGame(normalizedChartWeek, this.gameId, dbTransaction);
       const songsMap = await this.buildSongsMap(dbTransaction);
 
+      const playerSongIds = Array.from(new Set(
+        currentEntries
+          .filter(entry => !entry.isCompetitorSong && entry.songId)
+          .map(entry => entry.songId as string)
+      ));
+
+      const batchData = await this.getBatchChartData(playerSongIds, dbTransaction);
+
       // Build result with song details and weeks on chart calculation
-      const entriesWithDetails = await Promise.all(
-        currentEntries.map(async (entry) => {
-          let songTitle: string;
-          let artistName: string;
-          let weeksOnChart: number;
+      const entriesWithDetails = currentEntries.map(entry => {
+        let songTitle: string;
+        let artistName: string;
+        let weeksOnChart = 0;
+        let peakPosition: number | null = null;
+        let movement = entry.movement ?? 0;
+        let isDebut = entry.isDebut ?? false;
 
-          if (entry.isCompetitorSong) {
-            // Competitor song - use stored title and artist
-            songTitle = entry.competitorTitle || 'Unknown Song';
-            artistName = entry.competitorArtist || 'Unknown Artist';
-            weeksOnChart = 1; // Competitors don't have historical tracking yet
+        if (entry.isCompetitorSong) {
+          // Competitor song - use stored title and artist
+          songTitle = entry.competitorTitle || 'Unknown Song';
+          artistName = entry.competitorArtist || 'Unknown Artist';
+          weeksOnChart = entry.position !== null ? 1 : 0;
+          peakPosition = entry.position ?? null;
+        } else {
+          // Player song - lookup from songs table
+          const songData = entry.songId ? songsMap.get(entry.songId) : undefined;
+          songTitle = songData?.title || 'Unknown Song';
+          artistName = songData?.artistName || 'Unknown Artist';
+
+          const chartStats = entry.songId ? batchData.get(entry.songId) : undefined;
+          if (chartStats) {
+            weeksOnChart = chartStats.weeksOnChart;
+            peakPosition = chartStats.peakPosition;
+            movement = chartStats.movement;
+            isDebut = chartStats.isDebut;
           } else {
-            // Player song - lookup from songs table
-            const songData = songsMap.get(entry.songId);
-            songTitle = songData?.title || 'Unknown Song';
-            artistName = songData?.artistName || 'Unknown Artist';
-            weeksOnChart = await this.calculateWeeksOnChart(entry.songId, normalizedChartWeek, dbTransaction);
+            weeksOnChart = entry.position !== null ? 1 : 0;
+            peakPosition = entry.position ?? null;
           }
+        }
 
-          return {
-            ...entry,
-            songTitle,
-            artistName,
-            weeksOnChart
-          };
-        })
-      );
+        return {
+          ...entry,
+          songTitle,
+          artistName,
+          weeksOnChart,
+          peakPosition,
+          movement,
+          isDebut
+        };
+      });
 
       return entriesWithDetails;
     } catch (error) {
@@ -621,6 +672,9 @@ export class ChartService {
       // Group entries by song ID
       const entriesBySong = new Map<string, DbChartEntry[]>();
       allEntries.forEach(entry => {
+        if (!entry.songId) {
+          return;
+        }
         if (!entriesBySong.has(entry.songId)) {
           entriesBySong.set(entry.songId, []);
         }
@@ -755,11 +809,11 @@ export class ChartService {
           artistName: entry.artistName,
           movement: entry.movement ?? 0,
           weeksOnChart: entry.weeksOnChart,
-          peakPosition: null, // TODO: Implement peak tracking for universal system
+          peakPosition: entry.peakPosition ?? (entry.position ?? null),
           isPlayerSong: !entry.isCompetitorSong,
           isCompetitorSong: entry.isCompetitorSong ?? false,
-          competitorTitle: entry.competitorTitle,
-          competitorArtist: entry.competitorArtist,
+          competitorTitle: entry.competitorTitle ?? undefined,
+          competitorArtist: entry.competitorArtist ?? undefined,
           isDebut: entry.isDebut ?? false
         };
       });
