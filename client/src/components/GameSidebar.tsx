@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { fetchExecutives, fetchRoleMeetings } from '@/services/executiveService';
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +13,7 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { useGameStore } from '@/store/gameStore';
 import { useGameContext } from '@/contexts/GameContext';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -32,6 +34,7 @@ import {
   Building2,
   Trophy,
   TrendingUp,
+  Zap,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -55,9 +58,77 @@ export function GameSidebar({
     isAdvancingMonth,
     advanceMonth,
     createNewGame,
-    monthlyOutcome
+    monthlyOutcome,
+    selectAction
   } = useGameStore();
   const { user } = useUser();
+  const { gameId } = useGameContext();
+  const [isAutoSelecting, setIsAutoSelecting] = useState(false);
+
+  // Simple AUTO function for sidebar
+  const handleAutoSelect = async () => {
+    if (!gameId || isAutoSelecting) return;
+
+    setIsAutoSelecting(true);
+    try {
+      console.log('[SIDEBAR AUTO] Starting auto-selection...');
+
+      // Fetch executives and meetings
+      const executives = await fetchExecutives(gameId);
+      const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
+      const allMeetings = {};
+
+      for (const role of roles) {
+        try {
+          allMeetings[role] = await fetchRoleMeetings(role);
+        } catch (error) {
+          allMeetings[role] = [];
+        }
+      }
+
+      // Score and select top options
+      const options = [];
+      executives.forEach(executive => {
+        const meetings = allMeetings[executive.role] || [];
+        if (meetings.length > 0) {
+          const meeting = meetings[0];
+          if (meeting.choices && meeting.choices.length > 0) {
+            const choice = meeting.choices[0];
+
+            const roleScores = {
+              'ceo': 50, 'head_ar': 40, 'cmo': 30, 'cco': 20, 'head_distribution': 10
+            };
+
+            const score = (100 - (executive.mood || 50)) + (100 - (executive.loyalty || 50)) + (roleScores[executive.role] || 0);
+
+            const actionData = {
+              roleId: executive.role,
+              actionId: meeting.id,
+              choiceId: choice.id,
+              ...(executive.role !== 'ceo' && { executiveId: executive.id })
+            };
+
+            options.push({ score, actionData });
+          }
+        }
+      });
+
+      // Select top options for remaining slots
+      const remainingSlots = (gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0);
+      const topOptions = options.sort((a, b) => b.score - a.score).slice(0, remainingSlots);
+
+      // Apply selections
+      for (const option of topOptions) {
+        await selectAction(JSON.stringify(option.actionData));
+      }
+
+      console.log(`[SIDEBAR AUTO] Selected ${topOptions.length} actions`);
+    } catch (error) {
+      console.error('[SIDEBAR AUTO] Error:', error);
+    } finally {
+      setIsAutoSelecting(false);
+    }
+  };
 
   const displayName = user?.username || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
   const displayEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress || null;
@@ -170,14 +241,55 @@ export function GameSidebar({
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => setLocation('/executives')}
-                    isActive={currentPath === '/executives'} 
-                    tooltip="Executive Suite"
-                  >
-                    <Users2 />
-                    <span>Executive Suite</span>
-                  </SidebarMenuButton>
+                  <div className="flex items-center">
+                    <SidebarMenuButton
+                      onClick={() => setLocation('/executives')}
+                      isActive={currentPath === '/executives'}
+                      tooltip="Executive Suite"
+                      className="flex-1"
+                    >
+                      <Users2 />
+                      <span>Executive Suite</span>
+                    </SidebarMenuButton>
+
+                    {((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) > 0 && (
+                      <HoverCard openDelay={300}>
+                        <HoverCardTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="ml-1 px-2 h-6 text-xs bg-burgundy-600/20 border-burgundy-400/30 hover:bg-burgundy-600/30"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAutoSelect();
+                            }}
+                            disabled={isAutoSelecting}
+                          >
+                            {isAutoSelecting ? (
+                              <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <Zap className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </HoverCardTrigger>
+                        <HoverCardContent
+                          side="right"
+                          className="w-48 border-burgundy-600/50 text-white shadow-xl"
+                          style={{ backgroundColor: '#1d0e18' }}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Zap className="h-3.5 w-3.5 text-yellow-400" />
+                              <span className="font-medium text-sm">AUTO</span>
+                            </div>
+                            <p className="text-xs text-white/80">
+                              Smart-fills {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} slot{((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) !== 1 ? 's' : ''} with executives who need attention most.
+                            </p>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    )}
+                  </div>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>

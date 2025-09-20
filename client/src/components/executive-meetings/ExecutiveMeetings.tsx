@@ -169,9 +169,6 @@ export function ExecutiveMeetings({
                   AUTO
                 </Button>
               )}
-              <span className="text-sm font-normal text-muted-foreground">
-                {context.focusSlotsUsed}/{context.focusSlotsTotal} slots used
-              </span>
             </div>
           </CardTitle>
         </CardHeader>

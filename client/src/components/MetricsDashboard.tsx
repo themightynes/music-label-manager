@@ -1,39 +1,119 @@
 import { useGameStore } from '@/store/gameStore';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { fetchMeetingDialogue } from '@/services/executiveService';
 
 export function MetricsDashboard() {
-  const { gameState } = useGameStore();
+  const { gameState, selectedActions } = useGameStore();
+  const [impactPreview, setImpactPreview] = useState({
+    immediate: {},
+    delayed: {},
+    selectedChoices: []
+  });
+
+  // Calculate real impact preview when selectedActions change
+  useEffect(() => {
+    const calculateImpactPreview = async () => {
+      if (selectedActions.length === 0) {
+        setImpactPreview({ immediate: {}, delayed: {}, selectedChoices: [] });
+        return;
+      }
+
+      const immediate = {};
+      const delayed = {};
+      const selectedChoices = [];
+
+      try {
+        for (const actionString of selectedActions) {
+          const actionData = JSON.parse(actionString);
+          const { roleId, actionId, choiceId } = actionData;
+
+          // Fetch the meeting dialogue to get choice effects
+          const dialogue = await fetchMeetingDialogue(roleId, actionId);
+          const choice = dialogue.choices.find(c => c.id === choiceId);
+
+          if (choice) {
+            selectedChoices.push({
+              executiveName: roleId.toUpperCase(),
+              meetingName: actionId.replace(/_/g, ' '),
+              choiceLabel: choice.label,
+              effects_immediate: choice.effects_immediate,
+              effects_delayed: choice.effects_delayed
+            });
+
+            // Accumulate immediate effects
+            Object.entries(choice.effects_immediate).forEach(([effect, value]) => {
+              if (value !== undefined) {
+                immediate[effect] = (immediate[effect] || 0) + value;
+              }
+            });
+
+            // Accumulate delayed effects
+            Object.entries(choice.effects_delayed).forEach(([effect, value]) => {
+              if (value !== undefined) {
+                delayed[effect] = (delayed[effect] || 0) + value;
+              }
+            });
+          }
+        }
+
+        setImpactPreview({ immediate, delayed, selectedChoices });
+      } catch (error) {
+        console.error('[METRICS IMPACT PREVIEW] Error:', error);
+        setImpactPreview({ immediate: {}, delayed: {}, selectedChoices: [] });
+      }
+    };
+
+    calculateImpactPreview();
+  }, [selectedActions]);
 
   if (!gameState) return null;
 
-  // Industry Standing calculations
-  const getCurrentTier = (tierType: 'playlist' | 'press' | 'venue') => {
-    const accessTiers = {
-      playlist: [
-        { name: 'None', level: 0 },
-        { name: 'Niche', level: 1 },
-        { name: 'Mid', level: 2 },
-        { name: 'Flagship', level: 3 }
-      ],
-      press: [
-        { name: 'None', level: 0 },
-        { name: 'Blogs', level: 1 },
-        { name: 'Mid-Tier', level: 2 },
-        { name: 'Major', level: 3 }
-      ],
-      venue: [
-        { name: 'None', level: 0 },
-        { name: 'Clubs', level: 1 },
-        { name: 'Theaters', level: 2 },
-        { name: 'Arenas', level: 3 }
-      ]
-    };
+  // Tier mapping - copied from AccessTierBadges for consistency
+  const tierNameMap: Record<string, string> = {
+    'none': 'None',
+    'niche': 'Niche',
+    'mid': 'Mid',
+    'flagship': 'Flagship',
+    'blogs': 'Blogs',
+    'mid_tier': 'Mid-Tier',
+    'national': 'Major',
+    'clubs': 'Clubs',
+    'theaters': 'Theaters',
+    'arenas': 'Arenas'
+  };
 
+  const accessTiers = {
+    playlist: [
+      { name: 'None', level: 0 },
+      { name: 'Niche', level: 1 },
+      { name: 'Mid', level: 2 },
+      { name: 'Flagship', level: 3 }
+    ],
+    press: [
+      { name: 'None', level: 0 },
+      { name: 'Blogs', level: 1 },
+      { name: 'Mid-Tier', level: 2 },
+      { name: 'Major', level: 3 }
+    ],
+    venue: [
+      { name: 'None', level: 0 },
+      { name: 'Clubs', level: 1 },
+      { name: 'Theaters', level: 2 },
+      { name: 'Arenas', level: 3 }
+    ]
+  };
+
+  const getCurrentTier = (tierType: 'playlist' | 'press' | 'venue') => {
     const currentTierName = tierType === 'playlist' ? gameState.playlistAccess :
                            tierType === 'press' ? gameState.pressAccess :
                            gameState.venueAccess;
-    
-    return accessTiers[tierType].find(t => t.name === currentTierName) || accessTiers[tierType][0];
+
+    // Map lowercase tier names from gameState to UI tier names (same as AccessTierBadges)
+    const mappedName = currentTierName ? (tierNameMap[currentTierName] || 'None') : 'None';
+    return accessTiers[tierType].find(t => t.name === mappedName) || accessTiers[tierType][0];
   };
 
   const getAccessLevel = () => {
@@ -45,6 +125,40 @@ export function MetricsDashboard() {
     const pressUnlocks = getCurrentTier('press').level + 1;
     const venueUnlocks = getCurrentTier('venue').level + 1;
     return playlistUnlocks + pressUnlocks + venueUnlocks - 3; // Subtract 3 to exclude the "None" tiers
+  };
+
+  // Tier color functions matching AccessTierBadges logic
+  const getPlaylistTierColor = () => {
+    const currentTier = getCurrentTier('playlist');
+    switch (currentTier.level) {
+      case 0: return 'bg-[#65557c] text-white';
+      case 1: return 'bg-green-500 text-white';
+      case 2: return 'bg-[#A75A5B]/100 text-white';
+      case 3: return 'bg-[#791014] text-white';
+      default: return 'bg-[#65557c] text-white';
+    }
+  };
+
+  const getPressTierColor = () => {
+    const currentTier = getCurrentTier('press');
+    switch (currentTier.level) {
+      case 0: return 'bg-[#65557c] text-white';
+      case 1: return 'bg-green-500 text-white';
+      case 2: return 'bg-[#A75A5B]/100 text-white';
+      case 3: return 'bg-[#791014] text-white';
+      default: return 'bg-[#65557c] text-white';
+    }
+  };
+
+  const getVenueTierColor = () => {
+    const currentTier = getCurrentTier('venue');
+    switch (currentTier.level) {
+      case 0: return 'bg-[#65557c] text-white';
+      case 1: return 'bg-green-500 text-white';
+      case 2: return 'bg-[#A75A5B]/100 text-white';
+      case 3: return 'bg-[#791014] text-white';
+      default: return 'bg-[#65557c] text-white';
+    }
   };
 
   const getReputationChange = () => {
@@ -242,7 +356,6 @@ export function MetricsDashboard() {
                 <div className="text-center">
                   <div className="text-lg font-bold text-[#A75A5B]">{gameState.creativeCapital || 0}</div>
                   <div className="text-xs text-white/50">Creative Capital</div>
-                  <div className="text-xs text-white/70">for projects</div>
                 </div>
               </div>
             </div>
@@ -297,24 +410,30 @@ export function MetricsDashboard() {
               </div>
             </div>
 
-            {/* Industry Standing Section */}
+            {/* Access Tiers Section */}
             <div className="col-span-3 bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
                 <i className="fas fa-trophy mr-2 text-[#791014]"></i>
-                Industry Standing
+                Access Tiers
               </h3>
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center">
-                  <div className="text-lg font-bold text-[#A75A5B]">{gameState.reputation || 0}</div>
-                  <div className="text-xs text-white/50">Reputation</div>
+                  <Badge className={`text-xs px-2 py-1 ${getPlaylistTierColor()}`}>
+                    {getCurrentTier('playlist').name}
+                  </Badge>
+                  <div className="text-xs text-white/50 mt-1">Playlist Level</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-[#791014]">{getAccessLevel()}</div>
-                  <div className="text-xs text-white/50">Access Level</div>
+                  <Badge className={`text-xs px-2 py-1 ${getPressTierColor()}`}>
+                    {getCurrentTier('press').name}
+                  </Badge>
+                  <div className="text-xs text-white/50 mt-1">Press Level</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">{getTotalUnlocks()}</div>
-                  <div className="text-xs text-white/50">Total Unlocks</div>
+                  <Badge className={`text-xs px-2 py-1 ${getVenueTierColor()}`}>
+                    {getCurrentTier('venue').name}
+                  </Badge>
+                  <div className="text-xs text-white/50 mt-1">Venue Level</div>
                 </div>
               </div>
             </div>
@@ -350,7 +469,6 @@ export function MetricsDashboard() {
                 <div className="text-center p-2 bg-[#A75A5B]/10 rounded-lg">
                   <div className="text-lg font-bold text-[#A75A5B]">{gameState.creativeCapital || 0}</div>
                   <div className="text-xs text-white/50">Creative Capital</div>
-                  <div className="text-xs text-white/70">for projects</div>
                 </div>
               </div>
             </div>
@@ -405,26 +523,43 @@ export function MetricsDashboard() {
               </div>
             </div>
 
-            {/* Industry Standing Row */}
+            {/* Impact Preview Row */}
             <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
-                <i className="fas fa-trophy mr-2 text-[#791014]"></i>
-                Industry Standing
+                <BarChart3 className="h-3.5 w-3.5 mr-2 text-[#D4A373]" />
+                Impact Preview
               </h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-2 bg-[#A75A5B]/10 rounded-lg">
-                  <div className="text-lg font-bold text-[#A75A5B]">{gameState.reputation || 0}</div>
-                  <div className="text-xs text-white/50">Reputation</div>
+
+              {gameState.usedFocusSlots && gameState.usedFocusSlots > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Zap className="h-3 w-3 text-orange-300" />
+                    <span className="text-xs font-medium text-white/70">This Month</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    <Badge variant="outline" className="text-xs text-red-400 border-red-400/30">
+                      -$15,000
+                    </Badge>
+                    <Badge variant="outline" className="text-xs text-green-400 border-green-400/30">
+                      +2 rep
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center gap-1 mb-1">
+                    <Clock className="h-3 w-3 text-blue-300" />
+                    <span className="text-xs font-medium text-white/70">Next Month</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="outline" className="text-xs border-blue-400/30 bg-blue-400/10 text-blue-300">
+                      +3 mood
+                    </Badge>
+                  </div>
                 </div>
-                <div className="text-center p-2 bg-[#791014]/10 rounded-lg">
-                  <div className="text-lg font-bold text-[#791014]">{getAccessLevel()}</div>
-                  <div className="text-xs text-white/50">Access Level</div>
+              ) : (
+                <div className="text-center py-2 text-white/40">
+                  <p className="text-xs">No focus slots selected</p>
                 </div>
-                <div className="text-center p-2 bg-green-50 rounded-lg">
-                  <div className="text-lg font-bold text-green-600">{getTotalUnlocks()}</div>
-                  <div className="text-xs text-white/50">Total Unlocks</div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -513,24 +648,30 @@ export function MetricsDashboard() {
               </div>
             </div>
 
-            {/* Industry Standing */}
+            {/* Access Tiers Mobile */}
             <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
               <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
                 <i className="fas fa-trophy mr-2 text-[#791014]"></i>
-                Industry Standing
+                Access Tiers
               </h4>
               <div className="grid grid-cols-3 gap-2">
-                <div className="text-center p-2 bg-[#A75A5B]/10 rounded">
-                  <div className="text-sm font-bold text-[#A75A5B]">{gameState.reputation || 0}</div>
-                  <div className="text-xs text-white/50">reputation</div>
+                <div className="text-center">
+                  <Badge className={`text-xs px-2 py-1 ${getPlaylistTierColor()}`}>
+                    {getCurrentTier('playlist').name}
+                  </Badge>
+                  <div className="text-xs text-white/50 mt-1">Playlist</div>
                 </div>
-                <div className="text-center p-2 bg-[#791014]/10 rounded">
-                  <div className="text-sm font-bold text-[#791014]">{getAccessLevel()}</div>
-                  <div className="text-xs text-white/50">access level</div>
+                <div className="text-center">
+                  <Badge className={`text-xs px-2 py-1 ${getPressTierColor()}`}>
+                    {getCurrentTier('press').name}
+                  </Badge>
+                  <div className="text-xs text-white/50 mt-1">Press</div>
                 </div>
-                <div className="text-center p-2 bg-green-50 rounded">
-                  <div className="text-sm font-bold text-green-600">{getTotalUnlocks()}</div>
-                  <div className="text-xs text-white/50">unlocks</div>
+                <div className="text-center">
+                  <Badge className={`text-xs px-2 py-1 ${getVenueTierColor()}`}>
+                    {getCurrentTier('venue').name}
+                  </Badge>
+                  <div className="text-xs text-white/50 mt-1">Venue</div>
                 </div>
               </div>
             </div>
@@ -538,6 +679,56 @@ export function MetricsDashboard() {
         </div>
 
         </div>
+
+        {/* Impact Preview - Bottom Section */}
+        {gameState.usedFocusSlots && gameState.usedFocusSlots > 0 && (
+          <div className="mt-4">
+            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
+              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
+                <BarChart3 className="h-3.5 w-3.5 mr-2 text-[#D4A373]" />
+                Executive Meetings Impact Preview
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* This Month Column */}
+                <div>
+                  <div className="flex items-center gap-1 mb-2">
+                    <Zap className="h-3 w-3 text-orange-300" />
+                    <span className="text-xs font-medium text-white/70">This Month</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(impactPreview.immediate).map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className={`text-xs ${value > 0 ? 'text-green-400 border-green-400/30' : 'text-red-400 border-red-400/30'}`}>
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                    {Object.keys(impactPreview.immediate).length === 0 && (
+                      <span className="text-xs text-white/40">No immediate effects</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Delayed Effects Column */}
+                <div>
+                  <div className="flex items-center gap-1 mb-2">
+                    <Clock className="h-3 w-3 text-blue-300" />
+                    <span className="text-xs font-medium text-white/70">Delayed Effects</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(impactPreview.delayed).map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className="text-xs border-blue-400/30 bg-blue-400/10 text-blue-300">
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                    {Object.keys(impactPreview.delayed).length === 0 && (
+                      <span className="text-xs text-white/40">No delayed effects</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
