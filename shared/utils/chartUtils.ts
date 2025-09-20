@@ -259,3 +259,26 @@ export function getChartExitRiskBgColor(risk: 'low' | 'medium' | 'high'): string
     default: return 'bg-gray-500';
   }
 }
+
+/**
+ * Formats streaming numbers for display with appropriate suffixes
+ */
+export function formatStreamCount(streams: number): string {
+  if (streams >= 1000000) {
+    return `${(streams / 1000000).toFixed(1)}M`;
+  }
+  if (streams >= 1000) {
+    return `${(streams / 1000).toFixed(0)}K`;
+  }
+  return streams.toLocaleString();
+}
+
+/**
+ * Formats last week position display (handles null/undefined for debuts/non-charting)
+ */
+export function formatLastWeekPosition(position: number | null | undefined): string {
+  if (position === null || position === undefined) {
+    return '—'; // En dash for no previous position
+  }
+  return `#${position}`;
+}

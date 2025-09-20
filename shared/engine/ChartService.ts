@@ -555,6 +555,7 @@ export class ChartService {
     artistName: string;
     weeksOnChart: number;
     peakPosition: number | null;
+    lastWeekPosition: number | null;
     movement: number;
   }>> {
     try {
@@ -576,6 +577,7 @@ export class ChartService {
         let artistName: string;
         let weeksOnChart = 0;
         let peakPosition: number | null = null;
+        let lastWeekPosition: number | null = null;
         let movement = entry.movement ?? 0;
         let isDebut = entry.isDebut ?? false;
 
@@ -585,6 +587,7 @@ export class ChartService {
           artistName = entry.competitorArtist || 'Unknown Artist';
           weeksOnChart = entry.position !== null ? 1 : 0;
           peakPosition = entry.position ?? null;
+          lastWeekPosition = null; // Competitors don't have historical tracking yet
         } else {
           // Player song - lookup from songs table
           const songData = entry.songId ? songsMap.get(entry.songId) : undefined;
@@ -595,11 +598,13 @@ export class ChartService {
           if (chartStats) {
             weeksOnChart = chartStats.weeksOnChart;
             peakPosition = chartStats.peakPosition;
+            lastWeekPosition = chartStats.lastWeekPosition;
             movement = chartStats.movement;
             isDebut = chartStats.isDebut;
           } else {
             weeksOnChart = entry.position !== null ? 1 : 0;
             peakPosition = entry.position ?? null;
+            lastWeekPosition = null;
           }
         }
 
@@ -609,6 +614,7 @@ export class ChartService {
           artistName,
           weeksOnChart,
           peakPosition,
+          lastWeekPosition,
           movement,
           isDebut
         };
@@ -659,6 +665,7 @@ export class ChartService {
     movement: number;
     weeksOnChart: number;
     peakPosition: number | null;
+    lastWeekPosition: number | null;
     isDebut: boolean;
   }>> {
     try {
@@ -687,6 +694,7 @@ export class ChartService {
         movement: number;
         weeksOnChart: number;
         peakPosition: number | null;
+        lastWeekPosition: number | null;
         isDebut: boolean;
       }>();
 
@@ -702,11 +710,13 @@ export class ChartService {
         const currentEntry = sortedEntries.length > 0 ? sortedEntries[0] : null;
         const currentPosition = currentEntry?.position || null;
 
-        // Calculate movement (difference from previous week)
+        // Calculate movement (difference from previous week) and capture last week position
         let movement = 0;
+        let lastWeekPosition: number | null = null;
         if (sortedEntries.length >= 2) {
           const current = sortedEntries[0];
           const previous = sortedEntries[1];
+          lastWeekPosition = previous.position; // Capture last week position
           if (current.position && previous.position) {
             movement = previous.position - current.position; // Positive = moved up
           }
@@ -729,6 +739,7 @@ export class ChartService {
           movement,
           weeksOnChart,
           peakPosition,
+          lastWeekPosition,
           isDebut
         });
       }
@@ -780,9 +791,11 @@ export class ChartService {
     songId: string | null;
     songTitle: string;
     artistName: string;
+    streams: number;
     movement: number;
     weeksOnChart: number;
     peakPosition: number | null;
+    lastWeekPosition: number | null;
     isPlayerSong: boolean;
     isCompetitorSong: boolean;
     competitorTitle?: string;
@@ -807,9 +820,11 @@ export class ChartService {
           songId: entry.isCompetitorSong ? null : entry.songId, // null for competitors
           songTitle: entry.songTitle,
           artistName: entry.artistName,
+          streams: entry.streams,
           movement: entry.movement ?? 0,
           weeksOnChart: entry.weeksOnChart,
           peakPosition: entry.peakPosition ?? (entry.position ?? null),
+          lastWeekPosition: entry.lastWeekPosition ?? null,
           isPlayerSong: !entry.isCompetitorSong,
           isCompetitorSong: entry.isCompetitorSong ?? false,
           competitorTitle: entry.competitorTitle ?? undefined,

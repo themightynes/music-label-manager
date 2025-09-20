@@ -1059,9 +1059,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           songId: entry.songId || entry.competitorTitle || 'unknown',
           songTitle: entry.songTitle,
           artistName: entry.artistName,
+          streams: entry.streams,
           movement: entry.movement ?? 0,
           weeksOnChart: entry.weeksOnChart,
           peakPosition: entry.peakPosition ?? (entry.position ?? null),
+          lastWeekPosition: entry.lastWeekPosition ?? null,
           isPlayerSong: !entry.isCompetitorSong,
           isCompetitorSong: entry.isCompetitorSong ?? false,
           isDebut: entry.isDebut ?? false
@@ -1073,6 +1075,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         competitorSongs: top100Entries.filter(entry => !entry.isPlayerSong).length,
         debuts: top100Entries.filter(entry => entry.isDebut).length
       });
+
+      // Debug: Log first few entries to check lastWeekPosition
+      if (top100Entries.length > 0) {
+        console.log('[API] First 3 entries with lastWeekPosition:', top100Entries.slice(0, 3).map(entry => ({
+          position: entry.position,
+          songTitle: entry.songTitle,
+          lastWeekPosition: entry.lastWeekPosition,
+          movement: entry.movement
+        })));
+      }
 
       res.json({
         chartWeek: currentChartWeek,

@@ -6,6 +6,8 @@ import {
   formatChartMovement,
   formatChartPosition,
   formatWeeksOnChart,
+  formatStreamCount,
+  formatLastWeekPosition,
   getChartExitRisk,
   getChartExitRiskBgColor,
   getChartPositionColor,
@@ -22,9 +24,11 @@ export interface ChartEntry {
   songId: string | null;
   songTitle: string;
   artistName: string;
+  streams: number;
   movement: number;
   weeksOnChart: number;
   peakPosition: number | null;
+  lastWeekPosition: number | null | undefined;
   isPlayerSong: boolean;
   isCompetitorSong: boolean;
   competitorTitle?: string;
@@ -129,6 +133,26 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
     }
   },
   {
+    id: 'streams',
+    sortable: true,
+    sortAccessor: entry => entry.streams,
+    header: ({ direction, toggleSort }) => (
+      <button
+        type="button"
+        className={cn(headerButtonClasses, 'justify-end')}
+        onClick={toggleSort}
+      >
+        Streams
+        <SortIndicator direction={direction} />
+      </button>
+    ),
+    cell: entry => (
+      <div className="text-right text-xs font-mono text-white/70">
+        {formatStreamCount(entry.streams)}
+      </div>
+    )
+  },
+  {
     id: 'weeksOnChart',
     sortable: true,
     sortAccessor: entry => (entry.weeksOnChart > 0 ? entry.weeksOnChart : entry.isDebut ? -1 : 0),
@@ -168,6 +192,34 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
         {entry.peakPosition ? formatChartPosition(entry.peakPosition) : '—'}
       </div>
     )
+  },
+  {
+    id: 'lastWeekPosition',
+    sortable: true,
+    sortAccessor: entry => {
+      const calculatedLastWeekPosition = entry.movement !== 0 ? entry.position + entry.movement : null;
+      return calculatedLastWeekPosition ?? 9999;
+    },
+    header: ({ direction, toggleSort }) => (
+      <button
+        type="button"
+        className={cn(headerButtonClasses, 'justify-end')}
+        onClick={toggleSort}
+      >
+        LW Pos
+        <SortIndicator direction={direction} />
+      </button>
+    ),
+    cell: entry => {
+      // Calculate last week position from current position and movement
+      // movement = previousPosition - currentPosition, so previousPosition = currentPosition + movement
+      const calculatedLastWeekPosition = entry.movement !== 0 ? entry.position + entry.movement : null;
+      return (
+        <div className="text-right text-xs font-mono text-white/70">
+          {formatLastWeekPosition(calculatedLastWeekPosition)}
+        </div>
+      );
+    }
   },
   {
     id: 'movement',

@@ -103,7 +103,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
           <div className="space-y-2">
             {significantMovements.map((update, index) => {
               const movement = update.movement || 0;
-              const previousPosition = update.position !== null && update.position !== undefined ? update.position - movement : null;
+              const previousPosition = update.position !== null && update.position !== undefined ? update.position + movement : null;
 
               return (
                 <div key={index} className={`flex items-center justify-between p-2 ${movementBgClasses} rounded-md border`}>
