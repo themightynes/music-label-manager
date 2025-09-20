@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useGameStore } from '@/store/gameStore';
+import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
 
 interface ExecutiveAction {
   id: string;
@@ -23,6 +24,17 @@ interface SelectionSummaryProps {
   onReorderActions: (startIndex: number, endIndex: number) => void;
   onAdvanceMonth: () => void;
   isAdvancing: boolean;
+  impactPreview?: {
+    immediate: Record<string, number>;
+    delayed: Record<string, number>;
+    selectedChoices: Array<{
+      executiveName: string;
+      meetingName: string;
+      choiceLabel: string;
+      effects_immediate: Record<string, number>;
+      effects_delayed: Record<string, number>;
+    }>;
+  };
 }
 
 // Helper function to parse selected actions (both JSON and legacy formats)
@@ -62,7 +74,8 @@ export function SelectionSummary({
   onRemoveAction,
   onReorderActions,
   onAdvanceMonth,
-  isAdvancing
+  isAdvancing,
+  impactPreview
 }: SelectionSummaryProps) {
   const { gameState } = useGameStore();
   const totalSlots = gameState?.focusSlots || 3;
@@ -306,6 +319,57 @@ export function SelectionSummary({
             )}
           </Droppable>
         </DragDropContext>
+
+        {/* Impact Preview */}
+        {selectedActions.length > 0 && (
+          <Card className="bg-[#3c252d]/30 border-[#65557c]/30">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-[#D4A373]" />
+                <span className="text-sm font-medium text-white">Impact Preview</span>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                {/* Immediate Effects */}
+                <div>
+                  <div className="flex items-center gap-1 mb-2">
+                    <Zap className="h-3 w-3 text-orange-300" />
+                    <span className="text-xs font-medium text-white/70">This Month</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(impactPreview?.immediate || {}).map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className={`text-xs ${value > 0 ? 'text-green-400 border-green-400/30' : 'text-red-400 border-red-400/30'}`}>
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                    {Object.keys(impactPreview?.immediate || {}).length === 0 && (
+                      <span className="text-xs text-white/40">No immediate effects</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Delayed Effects */}
+                <div>
+                  <div className="flex items-center gap-1 mb-2">
+                    <Clock className="h-3 w-3 text-blue-300" />
+                    <span className="text-xs font-medium text-white/70">Next Month</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(impactPreview?.delayed || {}).map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className="text-xs border-blue-400/30 bg-blue-400/10 text-blue-300">
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                    {Object.keys(impactPreview?.delayed || {}).length === 0 && (
+                      <span className="text-xs text-white/40">No delayed effects</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Advance Month Button */}
         <div className="space-y-3">

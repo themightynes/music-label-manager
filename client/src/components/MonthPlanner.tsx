@@ -113,6 +113,11 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                 onReorderActions={reorderActions}
                 onAdvanceMonth={onAdvanceMonth}
                 isAdvancing={isAdvancing}
+                impactPreview={{
+                  immediate: {},
+                  delayed: {},
+                  selectedChoices: []
+                }}
               />
             </div>
           </div>

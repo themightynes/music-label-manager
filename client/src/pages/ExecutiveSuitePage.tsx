@@ -9,6 +9,7 @@ import { SelectionSummary } from '../components/SelectionSummary';
 import { ExecutiveMeetings } from '../components/executive-meetings/ExecutiveMeetings';
 import { useGameContext } from '@/contexts/GameContext';
 import GameLayout from '@/layouts/GameLayout';
+import { useState } from 'react';
 
 interface ExecutiveSuitePageProps {
   onAdvanceMonth?: () => Promise<void>;
@@ -45,6 +46,11 @@ export default function ExecutiveSuitePage({ onAdvanceMonth, isAdvancing }: Exec
   const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
   const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
+  const [impactPreview, setImpactPreview] = useState({
+    immediate: {},
+    delayed: {},
+    selectedChoices: []
+  });
 
   // Executive meetings removed - keep empty structure for SelectionSummary compatibility
   const monthlyActions: MonthlyAction[] = [];
@@ -109,6 +115,7 @@ export default function ExecutiveSuitePage({ onAdvanceMonth, isAdvancing }: Exec
                           total: gameState.focusSlots || 3,
                           used: gameState.usedFocusSlots || 0,
                         }}
+                        onImpactPreviewUpdate={setImpactPreview}
                       />
                     )}
                   </div>
@@ -122,6 +129,7 @@ export default function ExecutiveSuitePage({ onAdvanceMonth, isAdvancing }: Exec
                       onReorderActions={reorderActions}
                       onAdvanceMonth={handleAdvanceMonth}
                       isAdvancing={handleIsAdvancing}
+                      impactPreview={impactPreview}
                     />
                   </div>
                 </div>

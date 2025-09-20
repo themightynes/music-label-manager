@@ -18,12 +18,24 @@ interface ExecutiveMeetingsProps {
     total: number;
     used: number;
   };
+  onImpactPreviewUpdate?: (preview: {
+    immediate: Record<string, number>;
+    delayed: Record<string, number>;
+    selectedChoices: Array<{
+      executiveName: string;
+      meetingName: string;
+      choiceLabel: string;
+      effects_immediate: Record<string, number>;
+      effects_delayed: Record<string, number>;
+    }>;
+  }) => void;
 }
 
 export function ExecutiveMeetings({
   gameId,
   onActionSelected,
   focusSlots,
+  onImpactPreviewUpdate,
 }: ExecutiveMeetingsProps) {
   const [executives, setExecutives] = useState<Executive[]>([]);
   const [executivesLoading, setExecutivesLoading] = useState(true);
@@ -89,6 +101,22 @@ export function ExecutiveMeetings({
       total: focusSlots.total
     });
   }, [focusSlots.used, focusSlots.total, send]);
+
+  // Calculate impact preview when selectedActions change
+  const { selectedActions } = useGameStore();
+  useEffect(() => {
+    send({
+      type: 'CALCULATE_IMPACT_PREVIEW',
+      selectedActions
+    });
+  }, [selectedActions, send]);
+
+  // Send impact preview to parent when it updates
+  useEffect(() => {
+    if (onImpactPreviewUpdate && context.impactPreview) {
+      onImpactPreviewUpdate(context.impactPreview);
+    }
+  }, [context.impactPreview, onImpactPreviewUpdate]);
 
   // Track when we complete a meeting to trigger executives refetch
   const [lastCompletedMeeting, setLastCompletedMeeting] = useState<string | null>(null);

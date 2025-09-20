@@ -22,6 +22,17 @@ export interface ExecutiveMeetingContext {
     score: number;
     actionData: object;
   }>;
+  impactPreview: {
+    immediate: Record<string, number>;
+    delayed: Record<string, number>;
+    selectedChoices: Array<{
+      executiveName: string;
+      meetingName: string;
+      choiceLabel: string;
+      effects_immediate: Record<string, number>;
+      effects_delayed: Record<string, number>;
+    }>;
+  };
 }
 
 export type ExecutiveMeetingEvent =
@@ -32,7 +43,8 @@ export type ExecutiveMeetingEvent =
   | { type: 'BACK_TO_MEETINGS' }
   | { type: 'RESET' }
   | { type: 'SYNC_SLOTS'; used: number; total: number }
-  | { type: 'AUTO_SELECT' };
+  | { type: 'AUTO_SELECT' }
+  | { type: 'CALCULATE_IMPACT_PREVIEW'; selectedActions: string[] };
 
 export const executiveMeetingMachine = createMachine({
   types: {} as {
@@ -54,6 +66,11 @@ export const executiveMeetingMachine = createMachine({
     gameId: input.gameId,
     onActionSelected: input.onActionSelected,
     autoOptions: [],
+    impactPreview: {
+      immediate: {},
+      delayed: {},
+      selectedChoices: []
+    },
   }),
   on: {
     RESET: {
@@ -76,6 +93,9 @@ export const executiveMeetingMachine = createMachine({
         focusSlotsUsed: ({ event }) => event.used,
         focusSlotsTotal: ({ event }) => event.total
       })
+    },
+    CALCULATE_IMPACT_PREVIEW: {
+      target: '.fetchingImpactPreview'
     }
   },
   states: {
@@ -238,6 +258,80 @@ export const executiveMeetingMachine = createMachine({
         }
       }
     },
+    fetchingImpactPreview: {
+      invoke: {
+        src: fromPromise(async ({ input }) => {
+          console.log('[IMPACT PREVIEW] Fetching effects for actions:', input.selectedActions);
+          const immediate: Record<string, number> = {};
+          const delayed: Record<string, number> = {};
+          const selectedChoices = [];
+
+          // Fetch dialogue data for each selected action
+          for (const actionString of input.selectedActions) {
+            try {
+              const actionData = JSON.parse(actionString);
+              const { roleId, actionId, choiceId } = actionData;
+
+              // Fetch the meeting dialogue to get choice effects
+              const dialogue = await fetchMeetingDialogue(roleId, actionId);
+              const choice = dialogue.choices.find(c => c.id === choiceId);
+
+              if (choice) {
+                console.log(`[IMPACT PREVIEW] Found choice for ${roleId}/${actionId}/${choiceId}:`, choice);
+
+                selectedChoices.push({
+                  executiveName: roleId.toUpperCase(),
+                  meetingName: actionId.replace(/_/g, ' '),
+                  choiceLabel: choice.label,
+                  effects_immediate: choice.effects_immediate,
+                  effects_delayed: choice.effects_delayed
+                });
+
+                // Accumulate immediate effects
+                Object.entries(choice.effects_immediate).forEach(([effect, value]) => {
+                  if (value !== undefined) {
+                    immediate[effect] = (immediate[effect] || 0) + value;
+                  }
+                });
+
+                // Accumulate delayed effects
+                Object.entries(choice.effects_delayed).forEach(([effect, value]) => {
+                  if (value !== undefined) {
+                    delayed[effect] = (delayed[effect] || 0) + value;
+                  }
+                });
+              } else {
+                console.warn(`[IMPACT PREVIEW] Choice ${choiceId} not found in ${roleId}/${actionId}`);
+              }
+            } catch (error) {
+              console.error('[IMPACT PREVIEW] Error processing action:', actionString, error);
+            }
+          }
+
+          return { immediate, delayed, selectedChoices };
+        }),
+        input: ({ context, event }) => ({
+          ...context,
+          selectedActions: event.type === 'CALCULATE_IMPACT_PREVIEW' ? event.selectedActions : []
+        }),
+        onDone: {
+          target: 'idle',
+          actions: assign(({ event }) => ({
+            impactPreview: event.output
+          }))
+        },
+        onError: {
+          target: 'idle',
+          actions: assign({
+            impactPreview: {
+              immediate: {},
+              delayed: {},
+              selectedChoices: []
+            }
+          })
+        }
+      }
+    },
   },
 }, {
   guards: {
@@ -277,6 +371,23 @@ export const executiveMeetingMachine = createMachine({
       currentDialogue: null,
       error: null,
       autoOptions: [],
+      impactPreview: {
+        immediate: {},
+        delayed: {},
+        selectedChoices: []
+      },
+    }),
+    calculateImpactPreview: assign(({ context, event }) => {
+      if (event.type !== 'CALCULATE_IMPACT_PREVIEW') return {};
+
+      // Return empty preview for now - will be populated by async service
+      return {
+        impactPreview: {
+          immediate: {},
+          delayed: {},
+          selectedChoices: []
+        }
+      };
     }),
     calculateAutoOptions: assign(({ context, event }) => {
       console.log('[AUTO] calculateAutoOptions called', { context, event });
