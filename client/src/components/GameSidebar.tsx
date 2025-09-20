@@ -35,6 +35,7 @@ import {
   Trophy,
   TrendingUp,
   Zap,
+  Settings,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -429,6 +430,16 @@ export function GameSidebar({
                   >
                     <TrendingUp />
                     <span>Popularity Tester</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setLocation('/markets-editor')}
+                    isActive={currentPath === '/markets-editor'}
+                    tooltip="Markets.json Editor"
+                  >
+                    <Settings />
+                    <span>Markets Editor</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

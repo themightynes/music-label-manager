@@ -1138,13 +1138,13 @@ export default function PlanReleasePage() {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-white/70">Estimated Streams:</span>
                         <span className="font-mono font-semibold text-[#A75A5B]">
-                          {metrics.estimatedStreams.toLocaleString()}
+                          {metrics.estimatedStreams?.toLocaleString() || '0'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-white/70">Estimated Revenue:</span>
                         <span className="font-mono font-semibold text-green-600">
-                          ${metrics.estimatedRevenue.toLocaleString()}
+                          ${metrics.estimatedRevenue?.toLocaleString() || '0'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">

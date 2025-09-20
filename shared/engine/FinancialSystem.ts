@@ -688,7 +688,8 @@ export class FinancialSystem {
     quality: number,
     playlistAccess: string,
     reputation: number,
-    adSpend: number
+    adSpend: number,
+    artistPopularity: number
   ): number {
     const config = this.gameData.getStreamingConfigSync();
     // console.log(`[DEBUG] Streaming config loaded:`, {
@@ -703,30 +704,42 @@ export class FinancialSystem {
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
     // console.log(`[DEBUG] Access multiplier for ${playlistAccess}:`, playlistMultiplier);
     
-    // Calculate base streams using proper formula
-    const baseStreams = 
+    // Calculate base streams using updated formula with popularity
+    const baseStreams =
       (quality * config.quality_weight) +
       (playlistMultiplier * config.playlist_weight * this.CONSTANTS.PLAYLIST_COMPONENT_SCALE) +
       (reputation * config.reputation_weight) +
-      (Math.sqrt(adSpend / this.CONSTANTS.MARKETING_SCALE.DIVISOR) * config.marketing_weight * this.CONSTANTS.MARKETING_SCALE.MULTIPLIER);
+      (Math.sqrt(adSpend / this.CONSTANTS.MARKETING_SCALE.DIVISOR) * config.marketing_weight * this.CONSTANTS.MARKETING_SCALE.MULTIPLIER) +
+      (artistPopularity * config.popularity_weight);
     
+    // Apply star power amplification if enabled
+    let amplifiedStreams = baseStreams;
+    if (config.star_power_amplification?.enabled) {
+      const starPowerMultiplier = 1 + (artistPopularity / 100) * config.star_power_amplification.max_multiplier;
+      amplifiedStreams = baseStreams * starPowerMultiplier;
+    }
+
     // console.log(`[DEBUG] Stream calculation components:`, {
     //   quality: quality,
     //   qualityComponent: quality * config.quality_weight,
     //   playlistComponent: playlistMultiplier * config.playlist_weight * 100,
     //   reputationComponent: reputation * config.reputation_weight,
     //   marketingComponent: Math.sqrt(adSpend / 1000) * config.marketing_weight * 50,
-    //   baseStreams: baseStreams
+    //   popularityComponent: artistPopularity * config.popularity_weight,
+    //   baseStreams: baseStreams,
+    //   starPowerMultiplier: config.star_power_amplification?.enabled ? 1 + (artistPopularity / 100) * config.star_power_amplification.max_multiplier : 1,
+    //   amplifiedStreams: amplifiedStreams
     // });
-    
+
     // Apply RNG variance from balance config
     const variance = this.getRandom(this.CONSTANTS.VARIANCE_RANGE.MIN, this.CONSTANTS.VARIANCE_RANGE.MAX);
     
-    // Apply first week multiplier
-    const streams = baseStreams * variance * config.first_week_multiplier * config.base_streams_per_point;
+    // Apply first week multiplier using amplified streams
+    const streams = amplifiedStreams * variance * config.first_week_multiplier * config.base_streams_per_point;
     
     // console.log(`[DEBUG] Final stream calculation:`, {
     //   baseStreams,
+    //   amplifiedStreams,
     //   variance,
     //   firstWeekMultiplier: config.first_week_multiplier,
     //   baseStreamsPerPoint: config.base_streams_per_point,

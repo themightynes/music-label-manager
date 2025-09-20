@@ -18,6 +18,7 @@ import TourVarianceTesterPage from "@/pages/TourVarianceTesterPage";
 import PopularityTester from "@/pages/PopularityTester";
 import ToursTest from "@/pages/ToursTest";
 import Top100ChartPage from "@/pages/Top100ChartPage";
+import MarketsEditor from "@/pages/MarketsEditor";
 import LandingPage from "@/pages/LandingPage";
 
 function Router() {
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/charts/top100" component={Top100ChartPage} />
       <Route path="/tours-test" component={ToursTest} />
       <Route path="/test-data" component={TestDataPage} />
+      <Route path="/markets-editor" component={MarketsEditor} />
       <Route component={NotFound} />
     </Switch>
   );

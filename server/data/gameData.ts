@@ -268,12 +268,14 @@ export class ServerGameData {
     const balance = await this.getBalanceConfig();
     const streaming = balance.market_formulas.streaming_calculation;
     return {
-      quality_weight: streaming?.quality_weight || 0.35,
-      playlist_weight: streaming?.playlist_weight || 0.25,
-      reputation_weight: streaming?.reputation_weight || 0.20,
-      marketing_weight: streaming?.marketing_weight || 0.20,
+      quality_weight: streaming?.quality_weight || 0.25,
+      playlist_weight: streaming?.playlist_weight || 0.20,
+      reputation_weight: streaming?.reputation_weight || 0.10,
+      marketing_weight: streaming?.marketing_weight || 0.25,
+      popularity_weight: streaming?.popularity_weight || 0.20,
       first_week_multiplier: streaming?.first_week_multiplier || 2.5,
-      base_streams_per_point: 1000
+      base_streams_per_point: 1000,
+      star_power_amplification: streaming?.star_power_amplification || { enabled: true, max_multiplier: 0.3 }
     };
   }
 
@@ -420,8 +422,10 @@ export class ServerGameData {
       playlist_weight: streaming.playlist_weight,
       reputation_weight: streaming.reputation_weight,
       marketing_weight: streaming.marketing_weight,
+      popularity_weight: streaming.popularity_weight,
       first_week_multiplier: streaming.first_week_multiplier,
       base_streams_per_point: 1000,
+      star_power_amplification: streaming.star_power_amplification,
       ongoing_streams: streaming.ongoing_streams
     };
   }

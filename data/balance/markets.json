@@ -1,13 +1,18 @@
 {
   "market_formulas": {
     "streaming_calculation": {
-      "base_formula": "quality * playlist_access * reputation * ad_spend * rng",
-      "quality_weight": 0.35,
-      "playlist_weight": 0.25,
-      "reputation_weight": 0.20,
-      "marketing_weight": 0.20,
+      "base_formula": "quality * playlist_access * reputation * marketing * popularity * rng",
+      "quality_weight": 0.25,
+      "playlist_weight": 0.20,
+      "reputation_weight": 0.10,
+      "marketing_weight": 0.25,
+      "popularity_weight": 0.20,
       "first_week_multiplier": 2.5,
       "longevity_decay": 0.85,
+      "star_power_amplification": {
+        "enabled": true,
+        "max_multiplier": 0.3
+      },
       "ongoing_streams": {
         "monthly_decay_rate": 0.85,
         "revenue_per_stream": 0.05,

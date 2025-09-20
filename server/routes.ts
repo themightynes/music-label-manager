@@ -1262,8 +1262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         producerTier: song.producerTier || 'local',
         timeInvestment: song.timeInvestment || 'standard',
         estimatedMetrics: {
-          streams: song.monthlyStreams || Math.floor(song.quality * 1000 + Math.random() * 50000),
-          revenue: song.totalRevenue || Math.floor(song.quality * 50 + Math.random() * 500),
+          streams: song.monthlyStreams || 0, // Use actual streams if available, otherwise 0 (will be calculated properly in release preview)
+          revenue: song.totalRevenue || 0, // Use actual revenue if available, otherwise 0
           chartPotential: Math.min(100, Math.max(0, song.quality + ((artist.mood || 50) - 50) / 2))
         },
         metadata: {
@@ -2452,6 +2452,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'SELECT_ACTIONS_ERROR',
         error instanceof Error ? error.message : 'Failed to save action selection'
       ));
+    }
+  });
+
+  // Developer tools endpoints
+  app.get('/api/dev/markets-config', requireClerkUser, async (req, res) => {
+    try {
+      const marketsPath = path.join(process.cwd(), 'data', 'balance', 'markets.json');
+      const configData = await fs.readFile(marketsPath, 'utf8');
+      const config = JSON.parse(configData);
+      res.json(config);
+    } catch (error) {
+      console.error('Failed to load markets config:', error);
+      res.status(500).json({ error: 'Failed to load markets configuration' });
+    }
+  });
+
+  app.post('/api/dev/markets-config', requireClerkUser, async (req, res) => {
+    try {
+      const { config } = req.body;
+
+      if (!config) {
+        return res.status(400).json({ error: 'Configuration data is required' });
+      }
+
+      // Validate the structure
+      if (!config.market_formulas || !config.seasonal_modifiers) {
+        return res.status(400).json({ error: 'Invalid configuration structure' });
+      }
+
+      const marketsPath = path.join(process.cwd(), 'data', 'balance', 'markets.json');
+      const formattedConfig = JSON.stringify(config, null, 2);
+
+      await fs.writeFile(marketsPath, formattedConfig, 'utf8');
+
+      res.json({ success: true, message: 'Markets configuration updated successfully' });
+    } catch (error) {
+      console.error('Failed to save markets config:', error);
+      res.status(500).json({ error: 'Failed to save markets configuration' });
     }
   });
 

@@ -674,13 +674,15 @@ export class GameEngine {
     quality: number,
     playlistAccess: string,
     reputation: number,
-    adSpend: number
+    adSpend: number,
+    artistPopularity: number
   ): number {
     return this.financialSystem.calculateStreamingOutcome(
       quality,
       playlistAccess,
       reputation,
-      adSpend
+      adSpend,
+      artistPopularity
     );
   }
 
@@ -1098,18 +1100,24 @@ export class GameEngine {
             console.log(`[LEAD SINGLE] 💵 Total lead single budget: $${leadSingleBudget}`);
             
             console.log(`[LEAD SINGLE] 📈 Calculating streaming outcome...`);
+            // Get artist popularity
+            const artist = await this.storage?.getArtist(leadSong.artistId);
+            const artistPopularity = artist?.popularity || 0;
+
             console.log(`[LEAD SINGLE] 📊 Input parameters:`, {
               songQuality: leadSong.quality || 50,
               playlistAccess: this.gameState.playlistAccess || 'none',
               reputation: this.gameState.reputation || 0,
-              marketingBudget: leadSingleBudget
+              marketingBudget: leadSingleBudget,
+              artistPopularity: artistPopularity
             });
-            
+
             const initialStreams = this.calculateStreamingOutcome(
               leadSong.quality || 50,
-              this.gameState.playlistAccess || 'none', 
+              this.gameState.playlistAccess || 'none',
               this.gameState.reputation || 0,
-              leadSingleBudget
+              leadSingleBudget,
+              artistPopularity
             );
             console.log(`[LEAD SINGLE] 🎯 Calculated initial streams: ${initialStreams}`);
             
@@ -1297,13 +1305,18 @@ export class GameEngine {
           }
           
           console.log(`[PLANNED RELEASE] 🎯 Processing song: "${song.title}" (ID: ${song.id})`)
-          
+
+          // Get artist popularity
+          const artist = await this.storage?.getArtist(song.artistId);
+          const artistPopularity = artist?.popularity || 0;
+
           // Calculate initial streams using existing streaming calculation
           const initialStreams = this.calculateStreamingOutcome(
             song.quality || 50,
             this.gameState.playlistAccess || 'none',
             this.gameState.reputation || 0,
-            marketingBudget / releaseSongs.length // Distribute marketing budget across songs
+            marketingBudget / releaseSongs.length, // Distribute marketing budget across songs
+            artistPopularity
           );
           
           // Lead single boost: if this release had a successful lead single, boost remaining songs
@@ -2182,12 +2195,17 @@ export class GameEngine {
       playlistAccess: currentGameState.playlistAccess
     });
     
+    // Get artist popularity
+    const artist = await this.storage?.getArtist(song.artistId);
+    const artistPopularity = artist?.popularity || 0;
+
     // Calculate initial streams using individual song quality (not project quality)
     const initialStreams = this.calculateStreamingOutcome(
       song.quality || 40,
       currentGameState.playlistAccess || 'none',
       currentGameState.reputation || 5,
-      0 // For now, marketing spend is at project level; future enhancement for per-song marketing
+      0, // For now, marketing spend is at project level; future enhancement for per-song marketing
+      artistPopularity
     );
     
     // Calculate initial revenue from streams using balance.json configuration
@@ -3518,19 +3536,25 @@ export class GameEngine {
       case 'single':
       case 'EP':
       case 'ep':
+        // Get artist popularity
+        const artist = await this.storage?.getArtist(project.artistId);
+        const artistPopularity = artist?.popularity || 0;
+
         // Calculate streaming outcome
         console.log(`[DEBUG] Calculating streams for ${project.type} project:`, {
           quality: project.quality || 40,
           playlistAccess: this.gameState.playlistAccess || 'none',
           reputation: this.gameState.reputation || 5,
-          marketingSpend: project.marketingSpend || 0
+          marketingSpend: project.marketingSpend || 0,
+          artistPopularity: artistPopularity
         });
-        
+
         streams = this.calculateStreamingOutcome(
           project.quality || 40,
           this.gameState.playlistAccess || 'none',
           this.gameState.reputation || 5,
-          project.marketingSpend || 0
+          project.marketingSpend || 0,
+          artistPopularity
         );
         
         console.log(`[DEBUG] Calculated ${streams} streams for project ${project.name}`);
@@ -4044,7 +4068,8 @@ export class GameEngine {
         song.quality,
         this.gameState.playlistAccess || 'none',
         this.gameState.reputation || 0,
-        0 // No marketing spend for base calculation
+        0, // No marketing spend for base calculation
+        artist.popularity || 0
       );
       totalBaseStreams += songStreams;
       const revenuePerStream = balance?.market_formulas?.streaming_calculation?.ongoing_streams?.revenue_per_stream || 0.05;
