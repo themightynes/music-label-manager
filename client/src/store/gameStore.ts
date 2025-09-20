@@ -453,6 +453,8 @@ export const useGameStore = create<GameStore>()(
           await queryClient.invalidateQueries({ queryKey: ['project-roi'] });
           await queryClient.invalidateQueries({ queryKey: ['portfolio-roi'] });
           await queryClient.invalidateQueries({ queryKey: ['release-roi'] });
+          // CRITICAL: Invalidate executives cache to refresh mood/loyalty after meetings
+          await queryClient.invalidateQueries({ queryKey: ['executives'] });
         } catch (error) {
           console.error('=== ADVANCE MONTH ERROR ===');
           console.error('Error occurred during month advancement');

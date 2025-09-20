@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { fetchExecutives, fetchAllRoles } from '../../services/executiveService';
+import { useGameStore } from '../../store/gameStore';
 import type { Executive } from '../../../../shared/types/gameTypes';
 
 interface ExecutiveMeetingsProps {
@@ -29,6 +30,9 @@ export function ExecutiveMeetings({
   const [executivesError, setExecutivesError] = useState<string | null>(null);
   const [roleSalaries, setRoleSalaries] = useState<Record<string, number>>({});
 
+  // Watch for month changes to refresh executive data
+  const { gameState } = useGameStore();
+
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
       gameId,
@@ -40,6 +44,7 @@ export function ExecutiveMeetings({
   const { context } = state;
   const hasAvailableSlots = context.focusSlotsUsed < context.focusSlotsTotal;
 
+  // Refetch executives when game loads or month changes
   useEffect(() => {
     async function loadExecutivesAndRoles() {
       try {
@@ -74,7 +79,7 @@ export function ExecutiveMeetings({
     if (gameId) {
       loadExecutivesAndRoles();
     }
-  }, [gameId]);
+  }, [gameId, gameState?.currentMonth]); // Added currentMonth dependency
 
   // Sync focus slots with the machine
   useEffect(() => {
@@ -84,6 +89,38 @@ export function ExecutiveMeetings({
       total: focusSlots.total
     });
   }, [focusSlots.used, focusSlots.total, send]);
+
+  // Track when we complete a meeting to trigger executives refetch
+  const [lastCompletedMeeting, setLastCompletedMeeting] = useState<string | null>(null);
+
+  // Monitor state transitions to detect meeting completion
+  useEffect(() => {
+    if (state.matches('complete')) {
+      // Store a marker that a meeting was completed
+      const meetingKey = `${context.selectedExecutive?.id}-${context.selectedMeeting?.id}`;
+      setLastCompletedMeeting(meetingKey);
+    }
+  }, [state.value, context.selectedExecutive, context.selectedMeeting]);
+
+  // Refetch executives when returning to idle after a completed meeting
+  useEffect(() => {
+    if (state.matches('idle') && lastCompletedMeeting) {
+      // A meeting just completed, refetch executive data to get updated mood/loyalty
+      async function refetchExecutives() {
+        try {
+          setExecutivesLoading(true);
+          const fetchedExecutives = await fetchExecutives(gameId);
+          setExecutives(fetchedExecutives);
+          setLastCompletedMeeting(null); // Clear the completion marker
+        } catch (error) {
+          console.error('Failed to refetch executives after meeting:', error);
+        } finally {
+          setExecutivesLoading(false);
+        }
+      }
+      refetchExecutives();
+    }
+  }, [state.value, lastCompletedMeeting, gameId]);
 
   if (state.matches('idle')) {
     return (

@@ -37,7 +37,19 @@ export async function fetchExecutives(gameId: string): Promise<Executive[]> {
       id: exec.id,
     })) as Executive[];
 
-    return [ceoExecutive, ...executives];
+    // Define consistent executive display order
+    const roleOrder = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
+
+    // Sort all executives by the defined order
+    const allExecutives = [ceoExecutive, ...executives];
+    const sortedExecutives = allExecutives.sort((a, b) => {
+      const orderA = roleOrder.indexOf(a.role);
+      const orderB = roleOrder.indexOf(b.role);
+      // If role not found in order, put it at the end
+      return (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB);
+    });
+
+    return sortedExecutives;
   } catch (error) {
     console.error('Failed to fetch executives:', error);
     throw error;

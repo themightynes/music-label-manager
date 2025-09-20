@@ -502,27 +502,17 @@ export class GameEngine {
       loyalty: executive.loyalty
     });
 
-    // Apply mood changes from the action choice
-    // Look for executive_mood in choice effects (immediate or delayed)
+    // Apply mood changes from executive-specific choice effects
     let moodChange = 0;
     const choiceEffects = action.metadata?.choiceEffects;
-    if (choiceEffects) {
-      // Check immediate effects for executive_mood
-      if (choiceEffects.effects_immediate?.executive_mood) {
-        moodChange = choiceEffects.effects_immediate.executive_mood;
-      }
-      // Check artist_mood as fallback (some choices use this)
-      else if (choiceEffects.effects_immediate?.artist_mood) {
-        moodChange = choiceEffects.effects_immediate.artist_mood;
-      }
-      // Default to small positive boost if no specific mood effect
-      else {
-        moodChange = 5; // Small boost for interaction
-      }
+    if (choiceEffects?.effects_immediate?.executive_mood) {
+      // Use executive-specific mood effect if available
+      moodChange = choiceEffects.effects_immediate.executive_mood;
+      console.log('[GAME-ENGINE] Applied executive_mood effect:', moodChange);
     } else {
-      // Fallback if no choice data (shouldn't happen)
+      // Default positive boost for interaction (removed artist_mood fallback)
       moodChange = 5;
-      console.log('[GAME-ENGINE] Warning: No choice effects found, using default mood boost');
+      console.log('[GAME-ENGINE] Applied default executive interaction boost: +5');
     }
     
     const newMood = Math.max(0, Math.min(100, executive.mood + moodChange));

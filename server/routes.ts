@@ -448,37 +448,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Game not found" });
       }
       
-      // For Phase 1 minimal implementation:
       // Store the executive action as a selected action for the month
       const executiveAction = {
         actionType: 'role_meeting' as const,
         targetId: execId,
         metadata: {
-          executiveId: execId,
-          meetingId: meetingId,
+          roleId: metadata?.roleId || 'unknown',
+          actionId: actionId,
           choiceId: choiceId,
+          executiveId: execId,
           ...metadata
         }
       };
-      
+
       // Check if focus slots are available
       const usedSlots = gameState.usedFocusSlots || 0;
       const totalSlots = gameState.focusSlots || 3;
-      
+
       if (usedSlots >= totalSlots) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "No focus slots available",
           usedSlots,
-          totalSlots 
+          totalSlots
         });
       }
-      
+
+      // NOTE: Executive mood/loyalty processing now handled during month advancement
+      // This ensures single source of truth and prevents duplicate processing
+
       // Update the used focus slots count
       gameState.usedFocusSlots = usedSlots + 1;
-      
+
       // Save the updated game state
       await storage.updateGameState(gameId, gameState);
-      
+
       // Return success response with updated state
       res.json({
         success: true,
@@ -488,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         month: gameState.currentMonth,
         usedSlots: gameState.usedFocusSlots,
         totalSlots: totalSlots,
-        message: "Executive action added successfully"
+        message: "Executive action processed successfully"
       });
     } catch (error) {
       console.error('Failed to process executive action:', error);
