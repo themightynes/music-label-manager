@@ -2782,42 +2782,49 @@ export class GameEngine {
       });
 
       // Store pre-calculated cities - NO MANUAL CALCULATIONS
-      const preCalculatedCities = detailedBreakdown.cities.map((city: any, index: number) => ({
-        cityNumber: index + 1,
-        venue: this.getVenueNameFromAccess(venueAccess),
-        capacity: city.venueCapacity,
-        revenue: city.totalRevenue, // Use calculated revenue from FinancialSystem
-        ticketsSold: Math.round(city.venueCapacity * city.sellThroughRate),
-        attendanceRate: Math.round(city.sellThroughRate * 100),
-        // Enhanced economic breakdown from FinancialSystem
-        economics: {
-          sellThrough: {
-            rate: Math.round(city.sellThroughRate * 100),
-            baseRate: Math.round(detailedBreakdown.sellThroughAnalysis.baseRate * 100),
-            reputationBonus: Math.round(detailedBreakdown.sellThroughAnalysis.reputationBonus * 100),
-            popularityBonus: Math.round(detailedBreakdown.sellThroughAnalysis.popularityBonus * 100),
-            marketingBonus: Math.round(detailedBreakdown.sellThroughAnalysis.budgetQualityBonus * 100)
-          },
-          pricing: {
-            ticketPrice: Math.round(city.ticketRevenue / Math.max(1, Math.round(city.venueCapacity * city.sellThroughRate))),
-            basePrice: 0, // Will be calculated by FinancialSystem
-            capacityBonus: 0 // Will be calculated by FinancialSystem
-          },
-          revenue: {
-            tickets: city.ticketRevenue,
-            merch: city.merchRevenue,
-            total: city.totalRevenue,
-            merchRate: 0 // Will be calculated by FinancialSystem
-          },
-          costs: {
-            venue: city.venueFee,
-            production: city.productionFee,
-            marketing: city.marketingCost,
-            total: city.totalCosts
-          },
-          profit: city.profit
-        }
-      }));
+      const preCalculatedCities = detailedBreakdown.cities.map((city: any, index: number) => {
+        // Add variance to actual tour performance (±20% attendance variance)
+        const varianceFactor = 0.8 + (Math.random() * 0.4);
+        const actualSellThrough = city.sellThroughRate * varianceFactor;
+        const actualRevenue = Math.round(city.totalRevenue * varianceFactor);
+
+        return {
+          cityNumber: index + 1,
+          venue: this.getVenueNameFromAccess(venueAccess),
+          capacity: city.venueCapacity,
+          revenue: actualRevenue, // Apply variance to actual revenue
+          ticketsSold: Math.round(city.venueCapacity * actualSellThrough),
+          attendanceRate: Math.round(actualSellThrough * 100),
+          // Enhanced economic breakdown from FinancialSystem
+          economics: {
+            sellThrough: {
+              rate: Math.round(actualSellThrough * 100), // Show actual variance result
+              baseRate: Math.round(detailedBreakdown.sellThroughAnalysis.baseRate * 100),
+              reputationBonus: Math.round(detailedBreakdown.sellThroughAnalysis.reputationBonus * 100),
+              popularityBonus: Math.round(detailedBreakdown.sellThroughAnalysis.popularityBonus * 100),
+              marketingBonus: Math.round(detailedBreakdown.sellThroughAnalysis.budgetQualityBonus * 100)
+            },
+            pricing: {
+              ticketPrice: Math.round(city.ticketRevenue / Math.max(1, Math.round(city.venueCapacity * actualSellThrough))),
+              basePrice: 0, // Will be calculated by FinancialSystem
+              capacityBonus: 0 // Will be calculated by FinancialSystem
+            },
+            revenue: {
+              tickets: Math.round(city.ticketRevenue * varianceFactor),
+              merch: Math.round(city.merchRevenue * varianceFactor),
+              total: actualRevenue,
+              merchRate: 0 // Will be calculated by FinancialSystem
+            },
+            costs: {
+              venue: city.venueFee, // Costs don't vary
+              production: city.productionFee, // Costs don't vary
+              marketing: city.marketingCost, // Costs don't vary
+              total: city.totalCosts // Costs don't vary
+            },
+            profit: actualRevenue - city.totalCosts // Actual profit with variance
+          }
+        };
+      });
 
       // Store pre-calculated results
       tourStats.preCalculatedCities = preCalculatedCities;
@@ -3501,7 +3508,7 @@ export class GameEngine {
       console.log(`[PROJECT ADVANCEMENT] Found ${projectList.length} projects to evaluate`);
 
       for (const project of projectList) {
-        const stages = ['planning', 'production', 'marketing', 'recorded'];
+        const stages = ['planning', 'production', 'recorded'];
         const currentStageIndex = stages.indexOf(project.stage || 'planning');
         const monthsElapsed = (this.gameState.currentMonth || 1) - (project.startMonth || 1);
         const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
@@ -3523,7 +3530,7 @@ export class GameEngine {
         let advancementReason = '';
 
         // Stage advancement logic
-        if (currentStageIndex === 0 && monthsElapsed >= 1) {
+        if (currentStageIndex === 0 && monthsElapsed >= 0) {
           // planning -> production (simple time-based)
           newStageIndex = 1;
           advancementReason = `Planning complete after ${monthsElapsed} month${monthsElapsed > 1 ? 's' : ''}`;
@@ -3565,7 +3572,7 @@ export class GameEngine {
             
             if (monthsInProduction > citiesPlanned) {
               // Tour complete - skip marketing, go directly to completed
-              newStageIndex = 3; // Skip stage 2 (marketing), go to 'recorded' which acts as 'completed' for tours
+              newStageIndex = 2; // Go directly to 'recorded' which acts as 'completed' for tours
               advancementReason = `Tour completed after ${citiesPlanned} cities (${monthsElapsed} total months)`;
               
               // Generate final tour completion summary
@@ -3609,10 +3616,6 @@ export class GameEngine {
               advancementReason = `Maximum production time reached (${monthsElapsed} months, ${songsCreated}/${songCount} songs)`;
             }
           }
-        } else if (currentStageIndex === 2 && monthsElapsed >= 3) {
-          // marketing -> released
-          newStageIndex = 3;
-          advancementReason = `Marketing complete after ${monthsElapsed} months`;
         }
 
         // Advance stage if needed

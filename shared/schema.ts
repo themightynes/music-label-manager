@@ -82,7 +82,7 @@ export const projects = pgTable("projects", {
   title: text("title").notNull(),
   type: text("type").notNull(), // Single, EP, Mini-Tour
   artistId: uuid("artist_id").references(() => artists.id),
-  stage: text("stage").default("planning"), // planning, production, marketing, released
+  stage: text("stage").default("planning"), // planning, production, released
   quality: integer("quality").default(0),
   budget: integer("budget").default(0), // Total budget allocated for the project
   budgetUsed: integer("budget_used").default(0), // Budget already spent

@@ -315,6 +315,7 @@ export function ActiveTours() {
           performanceType: 'mini_tour',
           cities: tourData.cities,
           venueAccess: tourData.venueAccess || 'none',
+          venueCapacity: tourData.venueCapacity, // Store selected venue capacity
           createdFrom: 'ActiveTours'
         }
       };
@@ -382,7 +383,7 @@ export function ActiveTours() {
         return false;
       }
 
-      if (p.stage === 'planning' || p.stage === 'marketing') {
+      if (p.stage === 'planning') {
         return true;
       }
 

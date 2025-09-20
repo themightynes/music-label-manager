@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
 import { ProjectCreationModal, type ProjectCreationData } from './ProjectCreationModal';
 import { useState } from 'react';
-import { useProjectROI } from '@/hooks/useAnalytics';
 
 export function ActiveRecordingSessions() {
   const { projects, artists, createProject, gameState, songs } = useGameStore();
@@ -82,8 +81,7 @@ export function ActiveRecordingSessions() {
         p.stage === 'planning' ||
         p.stage === 'writing' ||
         p.stage === 'recording' ||
-        p.stage === 'production' ||
-        p.stage === 'marketing'
+        p.stage === 'production'
       )
     );
   };
@@ -104,47 +102,11 @@ export function ActiveRecordingSessions() {
     });
   };
 
-  const formatROI = (roi: number) => {
-    const sign = roi >= 0 ? '+' : '';
-    return `${sign}${roi.toFixed(1)}%`;
-  };
-
   const getArtistName = (artistId: string) => {
     const artist = artists.find(a => a.id === artistId);
     return artist?.name || 'Unknown Artist';
   };
 
-  const ProjectROIDisplay = ({ project }: { project: any }) => {
-    const { data: metrics, isLoading } = useProjectROI(project.id);
-
-    if (isLoading) return null;
-    if (!metrics || !metrics.totalRevenue) return null;
-
-    return (
-      <div className="pt-2 border-t border-[#4e324c] space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-white/50">Total Revenue</span>
-          <span className="font-mono text-green-600">
-            ${metrics.totalRevenue.toLocaleString()}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-white/50">ROI</span>
-          <span className={`font-mono font-medium ${metrics.roi >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-            {formatROI(metrics.roi)}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-white/50">Songs Released</span>
-          <span className="font-mono text-[#791014]">
-            {metrics.songCount} song{metrics.songCount > 1 ? 's' : ''}
-          </span>
-        </div>
-      </div>
-    );
-  };
 
   const activeRecordingSessions = getActiveRecordingSessions();
   const completedRecordingSessions = getCompletedRecordingSessions();
@@ -243,72 +205,40 @@ export function ActiveRecordingSessions() {
                     </>
                   )}
 
-                  {/* Simple info for completed sessions */}
-                  {activeTab === 'completed' && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Session Complete</span>
-                      <span className="font-mono text-green-600">
-                        {(() => {
-                          const projectSongs = getProjectSongs(project.id);
-                          const recordedSongs = projectSongs.filter(song => song.isRecorded);
-                          return `${recordedSongs.length} song${recordedSongs.length !== 1 ? 's' : ''} recorded`;
-                        })()}
-                      </span>
-                    </div>
-                  )}
 
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-white/50">
-                      {(project.songCount || 1) > 1 ? 'Budget per song' : 'Budget'}
-                    </span>
-                    <span className="font-mono">
-                      {(project.songCount || 1) > 1
-                        ? `$${(project.budgetPerSong || 0).toLocaleString()} × ${project.songCount || 1} = $${(project.totalCost || 0).toLocaleString()}`
-                        : `$${(project.costUsed || 0).toLocaleString()} / $${(project.totalCost || project.budgetPerSong || 0).toLocaleString()}`
-                      }
-                    </span>
-                  </div>
 
                   {/* Information for Completed Projects */}
                   {project.stage === 'recorded' && (() => {
                     const projectSongs = getProjectSongs(project.id);
-                    const recordedSongs = projectSongs.filter(song => song.isRecorded);
-                    const readySongs = projectSongs.filter(song => song.isRecorded && !song.isReleased);
+                    const releasedSongs = projectSongs.filter(song => song.isReleased);
+                    const songsRecorded = project.songsCreated || project.songCount || 0;
 
                     return (
                       <div className="pt-2 border-t border-[#4e324c] space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Songs Recorded</span>
                           <span className="font-mono text-green-600">
-                            {recordedSongs.length} song{recordedSongs.length !== 1 ? 's' : ''}
+                            {songsRecorded} song{songsRecorded !== 1 ? 's' : ''}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/50">Ready for Release</span>
-                          <span className="font-mono text-[#A75A5B]">
-                            {readySongs.length} song{readySongs.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/50">Total Production Cost</span>
+                          <span className="text-white/50">Session Cost</span>
                           <span className="font-mono text-white/70">
-                            ${((project.budgetPerSong || 0) * (project.songCount || 1)).toLocaleString()}
+                            ${(project.totalCost || 0).toLocaleString()}
                           </span>
                         </div>
 
-                        {readySongs.length > 0 && (
-                          <div className="text-xs text-white/70 italic mt-1">
-                            Use Plan Release to publish these songs
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-white/50">Songs Released</span>
+                          <span className="font-mono text-[#A75A5B]">
+                            {releasedSongs.length} song{releasedSongs.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                       </div>
                     );
                   })()}
 
-                  {/* ROI Display for completed projects */}
-                  {project.stage === 'recorded' && <ProjectROIDisplay project={project} />}
                 </div>
               </div>
             ))

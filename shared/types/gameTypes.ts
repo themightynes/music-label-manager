@@ -102,7 +102,7 @@ export interface GameProject {
   title: string;
   type: 'Single' | 'EP' | 'Mini-Tour';
   artistId: string;
-  stage: 'planning' | 'production' | 'marketing' | 'released';
+  stage: 'planning' | 'production' | 'released';
   quality: number;
   budget: number;
   budgetUsed: number;

@@ -238,7 +238,7 @@ export class MigrationValidator {
     reason: string;
     shouldAdvance: boolean;
   } {
-    const stages = ['planning', 'production', 'marketing', 'released'];
+    const stages = ['planning', 'production', 'released'];
     const currentStageIndex = stages.indexOf(project.stage || 'planning');
     const monthsElapsed = currentMonth - (project.startMonth || 1);
     const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
@@ -289,7 +289,7 @@ export class MigrationValidator {
     shouldAdvance: boolean;
   } {
     // This should match the logic in GameEngine.advanceProjectStages()
-    const stages = ['planning', 'production', 'marketing', 'released'];
+    const stages = ['planning', 'production', 'released'];
     const currentStageIndex = stages.indexOf(project.stage || 'planning');
     const monthsElapsed = currentMonth - (project.startMonth || 1);
     const isRecordingProject = ['Single', 'EP'].includes(project.type || '');

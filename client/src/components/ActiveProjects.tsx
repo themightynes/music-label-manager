@@ -190,8 +190,7 @@ export function ActiveProjects() {
         p.stage === 'planning' || 
         p.stage === 'writing' || 
         p.stage === 'recording' ||
-        p.stage === 'production' || // Legacy support
-        p.stage === 'marketing' // Legacy support
+        p.stage === 'production' // Legacy support
       )
     );
   };
@@ -211,8 +210,8 @@ export function ActiveProjects() {
         return false;
       }
 
-      // Always show planning and marketing stage tours as active
-      if (p.stage === 'planning' || p.stage === 'marketing') {
+      // Always show planning stage tours as active
+      if (p.stage === 'planning') {
         return true;
       }
 

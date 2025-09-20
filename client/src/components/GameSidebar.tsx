@@ -240,7 +240,7 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
-          {/* Group 5: Quality Tester */}
+          {/* Group 5: Testing Tools */}
           <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -252,6 +252,16 @@ export function GameSidebar({
                   >
                     <Beaker />
                     <span>Quality Tester</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setLocation('/tour-variance-tester')}
+                    isActive={currentPath === '/tour-variance-tester'}
+                    tooltip="Tour Variance Tester"
+                  >
+                    <BarChart3 />
+                    <span>Tour Variance Tester</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
