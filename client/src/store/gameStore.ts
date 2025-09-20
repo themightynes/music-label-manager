@@ -367,14 +367,18 @@ export const useGameStore = create<GameStore>()(
                 };
               }
               
-              const { roleId, actionId, choiceId } = actionData;
-              
+              const { roleId, actionId, choiceId, executiveId } = actionData;
+
               // Build complete metadata
               const metadata: any = {
                 roleId,
                 actionId,
                 choiceId
               };
+
+              if (executiveId) {
+                metadata.executiveId = executiveId;
+              }
 
               const result = {
                 actionType: 'role_meeting' as const,

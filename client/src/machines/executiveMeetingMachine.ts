@@ -193,11 +193,20 @@ export const executiveMeetingMachine = createMachine({
       const { selectedExecutive, selectedMeeting, onActionSelected } = context;
       if (!selectedExecutive || !selectedMeeting) return;
 
-      const actionData = {
+      const actionData: {
+        roleId: string;
+        actionId: string;
+        choiceId: string;
+        executiveId?: string;
+      } = {
         roleId: selectedExecutive.role,
         actionId: selectedMeeting.id,
         choiceId: event.choice.id,
       };
+
+      if (selectedExecutive.role !== 'ceo') {
+        actionData.executiveId = selectedExecutive.id;
+      }
 
       if (onActionSelected) {
         onActionSelected(JSON.stringify(actionData));

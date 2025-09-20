@@ -20,18 +20,24 @@ export async function fetchAllRoles(): Promise<GameRole[]> {
 export async function fetchExecutives(gameId: string): Promise<Executive[]> {
   try {
     const response = await apiRequest('GET', `/api/game/${gameId}/executives`);
-    const dbExecutives = await response.json();
+    const dbExecutives = (await response.json()) as Array<Executive & Record<string, unknown>>;
 
     // Add CEO executive since player is the CEO but CEO has meetings/decisions
     // CEO is not stored in database but should be available for meetings
     const ceoExecutive: Executive = {
+      id: 'ceo',
       role: 'ceo',
       level: 0, // CEO has no level - they are the player
       mood: 0, // CEO has no mood - they are the player
       loyalty: 0 // CEO has no loyalty - they are the player
     };
 
-    return [ceoExecutive, ...dbExecutives];
+    const executives = dbExecutives.map(exec => ({
+      ...exec,
+      id: exec.id,
+    })) as Executive[];
+
+    return [ceoExecutive, ...executives];
   } catch (error) {
     console.error('Failed to fetch executives:', error);
     throw error;
