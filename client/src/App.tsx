@@ -12,6 +12,7 @@ import TestDataPage from "@/pages/TestData";
 import PlanReleasePage from "@/pages/PlanReleasePage";
 import ArtistsLandingPage from "@/pages/ArtistsLandingPage";
 import ArtistPage from "@/pages/ArtistPage";
+import ExecutiveSuitePage from "@/pages/ExecutiveSuitePage";
 import QualityTester from "@/pages/QualityTester";
 import TourVarianceTesterPage from "@/pages/TourVarianceTesterPage";
 import PopularityTester from "@/pages/PopularityTester";
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/plan-release" component={PlanReleasePage} />
       <Route path="/artists" component={ArtistsLandingPage} />
       <Route path="/artist/:artistId" component={ArtistPage} />
+      <Route path="/executives" component={ExecutiveSuitePage} />
       <Route path="/quality-tester" component={QualityTester} />
       <Route path="/tour-variance-tester" component={TourVarianceTesterPage} />
       <Route path="/popularity-tester" component={PopularityTester} />

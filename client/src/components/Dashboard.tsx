@@ -1,6 +1,5 @@
 import { MetricsDashboard } from './MetricsDashboard';
 import { AccessTierBadges } from './AccessTierBadges';
-import { MonthPlanner } from './MonthPlanner';
 import { ArtistRoster } from './ArtistRoster';
 import { ActiveRecordingSessions } from './ActiveRecordingSessions';
 import { ActiveTours } from './ActiveTours';
@@ -61,15 +60,6 @@ export function Dashboard({
     );
   }
 
-  const handleAdvanceMonth = async () => {
-    try {
-      await advanceMonth();
-      // Show month summary after advancing
-      setShowMonthSummary(true);
-    } catch (error) {
-      console.error('Failed to advance month:', error);
-    }
-  };
 
   const handleCloseSummary = () => {
     setShowMonthSummary(false);
@@ -117,11 +107,6 @@ export function Dashboard({
       <MetricsDashboard />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 md:py-2">
-        {/* Hero Section - Month Planner */}
-        <div className="mb-6 md:mb-8">
-          <MonthPlanner onAdvanceMonth={handleAdvanceMonth} isAdvancing={isAdvancingMonth} />
-        </div>
-
         {/* Supporting Information Grid - Responsive */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
 

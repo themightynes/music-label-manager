@@ -28,6 +28,8 @@ import {
   Beaker,
   BarChart3,
   Users,
+  Users2,
+  Building2,
   Trophy,
   TrendingUp,
 } from 'lucide-react';
@@ -152,10 +154,32 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
-          {/* Group 2: Artists */}
+          {/* Group 2: The Office, Executives, Artists */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation('/office')} 
+                    isActive={currentPath === '/office'}
+                    tooltip="The Office"
+                  >
+                    <Building2 />
+                    <span>The Office</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation('/executives')}
+                    isActive={currentPath === '/executives'} 
+                    tooltip="Executive Suite"
+                  >
+                    <Users2 />
+                    <span>Executive Suite</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() => setLocation('/artists')}
@@ -212,7 +236,27 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
-          {/* Group 4: Start New Game, Save Game */}
+          {/* Group 4: Charts */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation('/charts/top100')}
+                    isActive={currentPath === '/charts/top100'}
+                    tooltip="Top 100 Chart"
+                  >
+                    <Trophy />
+                    <span>Top 100 Chart</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarSeparator />
+
+          {/* Group 5: Start New Game, Save Game */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -241,7 +285,7 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
-          {/* Group 5: Testing Tools */}
+          {/* Group 6: Testing Tools */}
           <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -281,25 +325,6 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
-          {/* Group 6: Charts */}
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => setLocation('/charts/top100')}
-                    isActive={currentPath === '/charts/top100'}
-                    tooltip="Top 100 Chart"
-                  >
-                    <Trophy />
-                    <span>Top 100 Chart</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          <SidebarSeparator />
 
           <div className="px-3 pb-4 space-y-3">
             <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">

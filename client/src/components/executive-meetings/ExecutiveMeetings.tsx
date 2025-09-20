@@ -6,7 +6,7 @@ import { MeetingSelector } from './MeetingSelector';
 import { DialogueInterface } from './DialogueInterface';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Zap } from 'lucide-react';
 import { fetchExecutives, fetchAllRoles } from '../../services/executiveService';
 import { useGameStore } from '../../store/gameStore';
 import type { Executive } from '../../../../shared/types/gameTypes';
@@ -128,16 +128,32 @@ export function ExecutiveMeetings({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Executive Meetings
-            <span className="text-sm font-normal text-muted-foreground">
-              {context.focusSlotsUsed}/{context.focusSlotsTotal} slots used
-            </span>
+            <div className="flex items-center gap-3">
+              {hasAvailableSlots && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => send({ type: 'AUTO_SELECT' })}
+                  disabled={!hasAvailableSlots || executives.length === 0}
+                  className="flex items-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  AUTO
+                </Button>
+              )}
+              <span className="text-sm font-normal text-muted-foreground">
+                {context.focusSlotsUsed}/{context.focusSlotsTotal} slots used
+              </span>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {executivesLoading ? (
+          {(executivesLoading || state.matches('autoSelecting')) ? (
             <div className="text-center p-8">
               <Loader2 className="w-6 w-6 animate-spin mx-auto mb-2 text-white" />
-              <p className="text-white/70">Loading executives...</p>
+              <p className="text-white/70">
+                {state.matches('autoSelecting') ? 'Auto-selecting focus slots...' : 'Loading executives...'}
+              </p>
             </div>
           ) : executivesError ? (
             <div className="text-center p-8">
