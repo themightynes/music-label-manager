@@ -819,6 +819,41 @@ export class GameEngine {
   // }
 
   /**
+   * Calculate streaming-based popularity bonus using optimized formula
+   * Implements the formula from PopularityTester: dynamic threshold, log points, diminishing returns
+   */
+  private calculateStreamingPopularityBonus(
+    monthlyStreams: number,
+    currentPopularity: number,
+    baseThreshold: number = 3000,
+    useDynamicThreshold: boolean = true,
+    saturationPoint: number = 35
+  ): number {
+    // Calculate dynamic threshold based on popularity (exponential scaling)
+    const actualThreshold = useDynamicThreshold
+      ? Math.round(baseThreshold * Math.pow(2, currentPopularity / 25))
+      : baseThreshold;
+
+    // Convert streams to popularity points using logarithmic scaling
+    if (monthlyStreams < actualThreshold) {
+      return 0; // No bonus below threshold
+    }
+
+    const streamPoints = Math.log10(monthlyStreams / actualThreshold);
+
+    // Cap total bonus at reasonable level (per song)
+    const cappedPoints = Math.min(streamPoints, 10);
+
+    // Apply diminishing returns multiplier
+    const baseMultiplier = 1 / (1 + Math.pow(currentPopularity / saturationPoint, 4));
+    const multiplier = 0.2 + (baseMultiplier * 1.3); // Scales from 1.5x to 0.2x
+
+    const finalBonus = Math.max(0.1, cappedPoints * multiplier);
+
+    return finalBonus;
+  }
+
+  /**
    * Processes ongoing revenue from individual released songs (streaming decay)
    * This simulates realistic revenue patterns where each song generates declining revenue over time
    */
@@ -835,7 +870,21 @@ export class GameEngine {
         console.log('[INDIVIDUAL SONG DECAY] No released songs found, skipping ongoing revenue processing');
         return;
       }
-      
+
+      // Cache artists to avoid repeated DB lookups in the loop
+      let artistMap: Map<string, any> = new Map();
+      if (this.storage?.getArtistsByGame) {
+        try {
+          const artists = await this.storage.getArtistsByGame(this.gameState.id);
+          if (artists && artists.length > 0) {
+            artists.forEach(artist => artistMap.set(artist.id, artist));
+            console.log(`[STREAMING POPULARITY] Cached ${artistMap.size} artists for popularity calculations`);
+          }
+        } catch (error) {
+          console.error('[STREAMING POPULARITY] Error caching artists, will fallback to individual lookups:', error);
+        }
+      }
+
       let totalOngoingRevenue = 0;
       const songUpdates = [];
       
@@ -851,14 +900,56 @@ export class GameEngine {
           // Get revenue per stream from balance.json configuration
           const streamingConfig = this.gameData.getStreamingConfigSync();
           const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
-          
+
+          // Guard against misconfigured revenue_per_stream being zero
+          if (!revenuePerStream || revenuePerStream <= 0) {
+            console.warn('Invalid revenue_per_stream; skipping streams/popularity calc.');
+            continue;
+          }
+
+          const monthlyStreams = Math.round(ongoingRevenue / revenuePerStream);
+
+          // Apply streaming-based popularity bonus using optimized formula
+          if (song.artistId) {
+            try {
+              // Use cached artist if available, fallback to individual lookup
+              let artist = artistMap.get(song.artistId);
+              if (!artist && this.storage?.getArtist) {
+                artist = await this.storage.getArtist(song.artistId);
+              }
+
+              if (artist) {
+                const popularityBonus = this.calculateStreamingPopularityBonus(
+                  monthlyStreams,
+                  artist.popularity || 0,
+                  3000, // baseThreshold
+                  true, // useDynamicThreshold
+                  35   // saturationPoint
+                );
+
+                if (popularityBonus > 0) {
+                  // Accumulate popularity bonus in summary.artistChanges for processing by processMonthlyPopularityChanges
+                  const popularityKey = `${song.artistId}_popularity`;
+                  if (!summary.artistChanges) {
+                    summary.artistChanges = {};
+                  }
+                  summary.artistChanges[popularityKey] = (summary.artistChanges[popularityKey] || 0) + popularityBonus;
+
+                  console.log(`[STREAMING POPULARITY] "${song.title}" (${monthlyStreams.toLocaleString()} streams) adds +${popularityBonus.toFixed(2)} popularity to ${artist.name}`);
+                }
+              }
+            } catch (error) {
+              console.error(`[STREAMING POPULARITY] Error getting artist ${song.artistId} for song "${song.title}":`, error);
+            }
+          }
+
           // Track song updates for batch processing
           songUpdates.push({
             songId: song.id,
-            monthlyStreams: Math.round(ongoingRevenue / revenuePerStream), // Reverse calculate streams
+            monthlyStreams: monthlyStreams,
             lastMonthRevenue: Math.round(ongoingRevenue),
             totalRevenue: Math.round((song.totalRevenue || 0) + ongoingRevenue),
-            totalStreams: (song.totalStreams || 0) + Math.round(ongoingRevenue / revenuePerStream)
+            totalStreams: (song.totalStreams || 0) + monthlyStreams
           });
           
           // Add to summary changes for transparency
@@ -2388,11 +2479,11 @@ export class GameEngine {
       
       // Apply any release-based mood changes (from processPlannedReleases)
       const releaseMoodBoost = summary.artistChanges?.[artist.id] || 0;
-      if (releaseMoodBoost > 0) {
+      if (releaseMoodBoost !== 0) {
         moodChange += releaseMoodBoost;
         summary.changes.push({
           type: 'mood',
-          description: `${artist.name}'s mood improved from successful release (+${releaseMoodBoost})`,
+          description: `${artist.name}'s mood ${releaseMoodBoost > 0 ? 'improved from successful release' : 'decreased from poor tour performance'} (${releaseMoodBoost > 0 ? '+' : ''}${releaseMoodBoost})`,
           amount: releaseMoodBoost
         });
       }
@@ -2456,15 +2547,15 @@ export class GameEngine {
       let popularityChange = 0;
       const currentPopularity = artist.popularity || 0;
 
-      // Apply any tour-based popularity changes accumulated in summary
-      const tourPopularityBoost = summary.artistChanges?.[`${artist.id}_popularity`] || 0;
-      if (tourPopularityBoost > 0) {
-        popularityChange += tourPopularityBoost;
+      // Apply any popularity changes accumulated in summary (tours, streaming, etc.)
+      const popularityBoost = summary.artistChanges?.[`${artist.id}_popularity`] || 0;
+      if (popularityBoost > 0) {
+        popularityChange += popularityBoost;
       }
 
       // Apply popularity change
       if (popularityChange !== 0) {
-        const newPopularity = Math.max(0, Math.min(100, currentPopularity + popularityChange));
+        const newPopularity = Math.round(Math.max(0, Math.min(100, currentPopularity + popularityChange)));
 
         // Update artist popularity in storage
         if (this.storage.updateArtist) {
@@ -2474,7 +2565,7 @@ export class GameEngine {
         // Track change - always show the total popularity change
         summary.changes.push({
           type: 'popularity',
-          description: `${artist.name}'s popularity increased from tour performances (+${popularityChange})`,
+          description: `${artist.name}'s popularity increased (+${popularityChange.toFixed(1)})`,
           amount: popularityChange
         });
       }
@@ -2947,7 +3038,8 @@ export class GameEngine {
     dbTransaction: any
   ): Promise<void> {
     try {
-      const artist = this.artists.find(a => a.id === artistId);
+      // Get artist data from storage since this.artists is not initialized
+      const artist = await this.storage?.getArtist?.(artistId);
       if (!artist) {
         console.warn(`[TOUR IMPACTS] Artist ${artistId} not found`);
         return;

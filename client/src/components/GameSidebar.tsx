@@ -29,6 +29,7 @@ import {
   BarChart3,
   Users,
   Trophy,
+  TrendingUp,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -262,6 +263,16 @@ export function GameSidebar({
                   >
                     <BarChart3 />
                     <span>Tour Variance Tester</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setLocation('/popularity-tester')}
+                    isActive={currentPath === '/popularity-tester'}
+                    tooltip="Popularity Tester"
+                  >
+                    <TrendingUp />
+                    <span>Popularity Tester</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
