@@ -12,7 +12,7 @@ import { useLocation } from 'wouter';
 import { useArtistROI } from '@/hooks/useAnalytics';
 
 export function ArtistRoster() {
-  const { gameState, artists, signArtist, openDialogue, projects } = useGameStore();
+  const { gameState, artists, signArtist, projects } = useGameStore();
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
   const [, setLocation] = useLocation();
@@ -26,8 +26,8 @@ export function ArtistRoster() {
     }
   };
 
-  const handleArtistMeeting = async (artist: any) => {
-    await openDialogue('Artist', `meeting_${artist.id}`);
+  const handleArtistMeeting = (artist: any) => {
+    console.info(`[ArtistRoster] Artist meetings temporarily unavailable for ${artist.name}.`);
   };
 
   // Enhanced artist analytics (ROI moved to backend)

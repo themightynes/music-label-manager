@@ -361,9 +361,8 @@ export default function ArtistPage() {
   const { releasedSongs: songsByRelease, unreleasedSongs } = getSongsByRelease();
 
   // Artist card handlers
-  const handleArtistMeeting = async () => {
-    const { openDialogue } = useGameStore.getState();
-    await openDialogue('Artist', `meeting_${artist.id}`);
+  const handleArtistMeeting = () => {
+    console.info(`[ArtistPage] Artist meetings temporarily unavailable for ${artist.name}.`);
   };
 
   const handleNavigateToArtist = () => {

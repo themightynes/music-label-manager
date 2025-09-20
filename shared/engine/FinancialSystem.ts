@@ -1413,6 +1413,7 @@ export class FinancialSystem {
    * @param gameId The game ID to get executives for
    * @param storage The storage instance to fetch executives
    * @returns Total executive salaries and breakdown by role
+   * TODO: Executive meetings UI was removed on 2025-09-19; confirm salaries should still run without player control.
    */
   async calculateExecutiveSalaries(
     gameId: string,
@@ -1578,9 +1579,10 @@ export class FinancialSystem {
     
     // Use the already-calculated operations costs from the expense breakdown
     // This ensures we don't recalculate with a different random value
-    const operations = { 
-      base: summary.expenseBreakdown?.monthlyOperations || 0, 
-      artists: summary.expenseBreakdown?.artistSalaries || 0, 
+    // TODO: Executive costs remain in the breakdown even though the client UI no longer surfaces executive actions.
+    const operations = {
+      base: summary.expenseBreakdown?.monthlyOperations || 0,
+      artists: summary.expenseBreakdown?.artistSalaries || 0,
       executives: summary.expenseBreakdown?.executiveSalaries || 0,
       total: (summary.expenseBreakdown?.monthlyOperations || 0) + 
              (summary.expenseBreakdown?.artistSalaries || 0) + 
@@ -1638,6 +1640,7 @@ export class FinancialSystem {
       parts.push(`- $${f.operations.artists.toLocaleString()} (artists)`);
     }
     if (f.operations.executives > 0) {
+      // TODO: Revisit once the executive system redesign ships; this line still reports hidden salaries to players.
       parts.push(`- $${f.operations.executives.toLocaleString()} (executives)`);
     }
     if (f.projects.costs > 0) {

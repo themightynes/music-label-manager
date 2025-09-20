@@ -5,8 +5,9 @@ import { Progress } from '@/components/ui/progress';
 import { useGameStore } from '@/store/gameStore';
 import { AlertCircle, Loader2, Rocket } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { ExecutiveTeam } from './ExecutiveTeam';
 import { SelectionSummary } from './SelectionSummary';
+import { ExecutiveMeetings } from './executive-meetings/ExecutiveMeetings';
+import { useGameContext } from '@/contexts/GameContext';
 
 interface MonthPlannerProps {
   onAdvanceMonth: () => Promise<void>;
@@ -40,154 +41,18 @@ interface MonthlyAction {
 }
 
 export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
-  const { gameState, selectedActions, selectAction, removeAction, reorderActions, openDialogue, artists, projects } = useGameStore();
+  const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
+  const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
-  
-  // Keep empty monthlyActions array for SelectionSummary compatibility
+
+  // Executive meetings removed - keep empty structure for SelectionSummary compatibility
   const monthlyActions: MonthlyAction[] = [];
   const loading = false;
   const error: string | null = null;
 
-  // No longer need to fetch actions - executives are defined in ExecutiveTeam component
+  // Executive loading is now handled by ExecutiveMeetings component
 
-  if (!gameState) return null;
-
-  // Use action data from API with details
-  const getActionDetails = (actionId: string) => {
-    const action = monthlyActions.find(a => a.id === actionId);
-    if (!action) {
-      // Fallback for unknown actions
-      return { 
-        id: actionId, 
-        name: actionId.replace(/_/g, ' '), 
-        type: 'unknown', 
-        icon: 'fas fa-question',
-        description: 'Action details not available',
-        category: 'unknown'
-      };
-    }
-    
-    // Build ActionDetails from MonthlyAction
-    const actionDetails = {
-      id: action.id,
-      name: action.name,
-      type: action.type,
-      icon: action.icon,
-      description: action.description || 'No description available',
-      category: action.category,
-      outcomes: action.details?.outcomes,
-      cost: action.details?.cost,
-      duration: action.details?.duration,
-      prerequisites: action.details?.prerequisites,
-      benefits: action.details?.benefits
-    };
-    
-    // Add runtime data for specific actions
-    if (action.id === 'meet_streaming') {
-      actionDetails.prerequisites = `${gameState.playlistAccess || 'None'} playlist access`;
-    }
-    if (action.id === 'meet_booking') {
-      actionDetails.prerequisites = `${gameState.venueAccess || 'None'} venue access`;
-    }
-    
-    return actionDetails;
-  };
-
-  // Use recommendation data from actions.json
-  const getActionRecommendation = (actionId: string) => {
-    const action = monthlyActions.find(a => a.id === actionId);
-    if (!action?.recommendations) {
-      return { isUrgent: false, isRecommended: false, reason: '' };
-    }
-    
-    const activeProjects = projects.filter(p => p.stage !== 'released' && p.stage !== 'recorded').length;
-    const releasedProjects = projects.filter(p => p.stage === 'released' || p.stage === 'recorded').length;
-    const artistCount = artists.length;
-    const currentMoney = gameState.money || 0;
-    const currentRep = gameState.reputation || 0;
-    
-    const { recommendations } = action;
-    let isUrgent = false;
-    let isRecommended = false;
-    let reason = '';
-    
-    // Check urgent conditions
-    if (recommendations.urgent_when) {
-      if (recommendations.urgent_when.money_below && currentMoney < recommendations.urgent_when.money_below) {
-        isUrgent = true;
-        reason = recommendations.reasons?.low_money || 'Low budget needs attention';
-      }
-      if (recommendations.urgent_when.artists_equal !== undefined && artistCount === recommendations.urgent_when.artists_equal) {
-        isUrgent = true;
-        reason = recommendations.reasons?.no_artists || 'No artists signed';
-      }
-    }
-    
-    // Check recommended conditions
-    if (recommendations.recommended_when && !isUrgent) {
-      if (recommendations.recommended_when.active_projects_above !== undefined && activeProjects > recommendations.recommended_when.active_projects_above) {
-        isRecommended = true;
-        reason = recommendations.reasons?.many_projects || recommendations.reasons?.has_projects || 'Projects need attention';
-      }
-      if (recommendations.recommended_when.artists_below !== undefined && artistCount < recommendations.recommended_when.artists_below) {
-        isRecommended = true;
-        reason = recommendations.reasons?.few_artists || 'Need more talent';
-      }
-      if (recommendations.recommended_when.artists_above !== undefined && artistCount > recommendations.recommended_when.artists_above) {
-        isRecommended = true;
-        reason = recommendations.reasons?.book_shows || 'Artists available';
-      }
-      if (recommendations.recommended_when.released_projects_above !== undefined && releasedProjects > recommendations.recommended_when.released_projects_above) {
-        if (recommendations.recommended_when.reputation_below) {
-          isRecommended = currentRep < recommendations.recommended_when.reputation_below;
-          reason = isRecommended ? (recommendations.reasons?.build_reputation || 'Build reputation') : '';
-        } else {
-          isRecommended = true;
-          reason = recommendations.reasons?.has_releases || 'Releases available';
-        }
-      }
-      if (recommendations.recommended_when.playlist_access_not && gameState.playlistAccess !== recommendations.recommended_when.playlist_access_not) {
-        isRecommended = isRecommended && releasedProjects > 0;
-        reason = isRecommended ? (recommendations.reasons?.leverage_access || 'Leverage access') : '';
-      }
-      if (recommendations.recommended_when.venue_access_not && gameState.venueAccess !== recommendations.recommended_when.venue_access_not) {
-        isRecommended = isRecommended && artistCount > 0;
-        reason = isRecommended ? (recommendations.reasons?.book_shows || 'Book shows') : '';
-      }
-    }
-    
-    return { isUrgent, isRecommended, reason };
-  };
-
-
-  const handleAutoRecommend = () => {
-    const totalSlots = gameState?.focusSlots || 3;
-    const usedSlots = gameState?.usedFocusSlots || 0;
-    const availableSlots = totalSlots - usedSlots;
-    
-    const recommendedActions = monthlyActions
-      .filter(action => {
-        const recommendation = getActionRecommendation(action.id);
-        return (recommendation.isRecommended || recommendation.isUrgent) && !selectedActions.includes(action.id);
-      })
-      .slice(0, availableSlots)
-      .map(action => action.id);
-    
-    recommendedActions.forEach(actionId => selectAction(actionId));
-  };
-
-  const handleActionClick = async (actionId: string) => {
-    const action = monthlyActions.find(a => a.id === actionId);
-    if (!action) return;
-
-    selectAction(actionId);
-    
-    // Use enriched data from API for role meetings
-    if (action.type === 'role_meeting' && action.role_id && action.firstMeetingId) {
-      await openDialogue(action.role_id, action.firstMeetingId);
-    }
-  };
-
+  if (!gameState || !gameId) return null;
 
   return (
     <Card className="shadow-lg">
@@ -228,9 +93,13 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
                   </Button>
                 </div>
               ) : (
-                <ExecutiveTeam
-                  selectedActions={selectedActions}
-                  maxSlots={gameState?.focusSlots || 3}
+                <ExecutiveMeetings
+                  gameId={gameId}
+                  onActionSelected={selectAction}
+                  focusSlots={{
+                    total: gameState.focusSlots || 3,
+                    used: gameState.usedFocusSlots || 0,
+                  }}
                 />
               )}
             </div>

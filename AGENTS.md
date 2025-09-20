@@ -8,12 +8,17 @@
 - `tests/`: Feature-level TypeScript suites run directly with `tsx`.
 
 ## Build, Test, and Development Commands
-- `npm run dev` – Launches client + server hot reload stack on port 5000.
-- `npm run build` – Bundles the React client and emits the server to `dist/`.
-- `npm run start` – Serves the bundled backend (run `build` first).
-- `npm run check` – TypeScript project check; catches drift before commits.
-- `npm run db:push` – Applies Drizzle migrations to the configured PostgreSQL instance.
-- `npm run compile-balance` – Recomputes balance data consumed by gameplay logic.
+- `npm run dev` - Launches client + server hot reload stack on port 5000.
+- `npm run build` - Bundles the React client and emits the server to `dist/`.
+- `npm run start` - Serves the bundled backend (run `build` first).
+- `npm run check` - TypeScript project check; catches drift before commits.
+- `npm run db:push` - Applies Drizzle migrations to the configured PostgreSQL instance.
+- `npm run compile-balance` - Recomputes balance data consumed by gameplay logic.
+
+## State Management & Inspection Tools
+- `XState` drives workflow coordination in both client and server layers; define state machines alongside the feature they power and export re-usable types through `shared/` when necessary.
+- Prefer strongly typed machine definitions, exhaustive transition handling, and guarded actions instead of ad-hoc boolean flags.
+- Wire `@statelyai/inspect` only in development builds (e.g., behind `if (import.meta.env.DEV)`), so state visualizers never reach production bundles.
 
 ## Coding Style & Naming Conventions
 - Stick to TypeScript ES modules with two-space indentation and the existing import ordering.
