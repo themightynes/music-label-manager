@@ -174,6 +174,9 @@ export class GameEngine {
     // Process monthly mood changes
     await this.processMonthlyMoodChanges(summary);
 
+    // Process monthly popularity changes
+    await this.processMonthlyPopularityChanges(summary);
+
     // Process executive mood/loyalty decay
     await this.processExecutiveMoodDecay(summary, dbTransaction);
 
@@ -2437,6 +2440,48 @@ export class GameEngine {
   }
 
   /**
+   * Process monthly popularity changes for all artists
+   * Mirrors processMonthlyMoodChanges pattern for consistency
+   */
+  private async processMonthlyPopularityChanges(summary: MonthSummary): Promise<void> {
+    // Get artists from storage if available
+    if (!this.storage || !this.storage.getArtistsByGame) {
+      return;
+    }
+
+    const artists = await this.storage.getArtistsByGame(this.gameState.id);
+    if (!artists || artists.length === 0) return;
+
+    for (const artist of artists) {
+      let popularityChange = 0;
+      const currentPopularity = artist.popularity || 0;
+
+      // Apply any tour-based popularity changes accumulated in summary
+      const tourPopularityBoost = summary.artistChanges?.[`${artist.id}_popularity`] || 0;
+      if (tourPopularityBoost > 0) {
+        popularityChange += tourPopularityBoost;
+      }
+
+      // Apply popularity change
+      if (popularityChange !== 0) {
+        const newPopularity = Math.max(0, Math.min(100, currentPopularity + popularityChange));
+
+        // Update artist popularity in storage
+        if (this.storage.updateArtist) {
+          await this.storage.updateArtist(artist.id, { popularity: newPopularity });
+        }
+
+        // Track change - always show the total popularity change
+        summary.changes.push({
+          type: 'popularity',
+          description: `${artist.name}'s popularity increased from tour performances (+${popularityChange})`,
+          amount: popularityChange
+        });
+      }
+    }
+  }
+
+  /**
    * Process monthly mood and loyalty decay for executives
    * - Loyalty decays when executives are ignored for 3+ months
    * - Mood naturally drifts toward neutral (50) over time
@@ -2841,6 +2886,11 @@ export class GameEngine {
 
       console.log(`[UNIFIED TOUR] Revealed city ${cityNumber}: $${cityData.revenue} revenue, ${cityData.attendanceRate}% attendance`);
 
+      // Apply artist mood and popularity impacts based on performance
+      console.log(`[TOUR IMPACTS] About to apply impacts for artist ${project.artistId}, city data:`, cityData);
+      await this.applyTourPerformanceImpacts(project.artistId, cityData, summary, dbTransaction);
+      console.log(`[TOUR IMPACTS] Completed applying impacts for artist ${project.artistId}`);
+
       // Add revenue to monthly summary
       const revenue = cityData.revenue;
       summary.revenue += revenue;
@@ -2884,6 +2934,101 @@ export class GameEngine {
       'arenas': 'Arena Venues'
     };
     return venueNames[venueAccess as keyof typeof venueNames] || 'Small Venues';
+  }
+
+  /**
+   * Apply artist mood and popularity impacts based on tour performance
+   * Uses summary accumulation pattern to avoid conflicts with processMonthlyMoodChanges
+   */
+  private async applyTourPerformanceImpacts(
+    artistId: string,
+    cityData: any,
+    summary: MonthSummary,
+    dbTransaction: any
+  ): Promise<void> {
+    try {
+      const artist = this.artists.find(a => a.id === artistId);
+      if (!artist) {
+        console.warn(`[TOUR IMPACTS] Artist ${artistId} not found`);
+        return;
+      }
+
+      const attendanceRate = cityData.attendanceRate || 0;
+      const actualAttendees = Math.round((cityData.capacity || 0) * (attendanceRate / 100));
+
+      // Calculate mood impact based on attendance rate
+      let moodChange = 0;
+      if (attendanceRate < 30) {
+        moodChange = -3; // Disappointing show
+      } else if (attendanceRate >= 30 && attendanceRate <= 50) {
+        moodChange = 0; // Neutral
+      } else if (attendanceRate > 50 && attendanceRate <= 85) {
+        moodChange = 5; // Good show
+      } else if (attendanceRate > 85) {
+        moodChange = 8; // Amazing show
+      }
+
+      // Calculate popularity impact based on attendance rate and venue size
+      let popularityChange = 0;
+      if (attendanceRate > 70) {
+        if (actualAttendees < 500) {
+          popularityChange = 1;
+        } else if (actualAttendees < 2000) {
+          popularityChange = 2;
+        } else if (actualAttendees < 5000) {
+          popularityChange = 3;
+        } else if (actualAttendees < 10000) {
+          popularityChange = 5;
+        } else {
+          popularityChange = 7;
+        }
+      }
+
+      // FIXED: Accumulate changes in summary using established pattern
+      // This prevents processMonthlyMoodChanges from overwriting our changes
+      if (!summary.artistChanges) {
+        summary.artistChanges = {};
+      }
+
+      // Store per-artist mood changes for later processing by processMonthlyMoodChanges
+      if (!summary.artistChanges[artistId]) {
+        summary.artistChanges[artistId] = 0;
+      }
+      summary.artistChanges[artistId] += moodChange;
+
+      // Store per-artist popularity changes for later processing by processMonthlyPopularityChanges
+      if (popularityChange > 0) {
+        const popularityKey = `${artistId}_popularity`;
+        if (!summary.artistChanges[popularityKey]) {
+          summary.artistChanges[popularityKey] = 0;
+        }
+        summary.artistChanges[popularityKey] += popularityChange;
+      }
+
+      // Add changes to summary for player visibility
+      if (moodChange !== 0) {
+        summary.changes.push({
+          type: 'mood',
+          description: `${artist.name}: ${moodChange > 0 ? '+' : ''}${moodChange} mood from ${attendanceRate}% attendance performance`,
+          amount: moodChange,
+          artistId: artistId
+        });
+      }
+
+      if (popularityChange > 0) {
+        summary.changes.push({
+          type: 'popularity',
+          description: `${artist.name}: +${popularityChange} popularity from ${actualAttendees.toLocaleString()} attendees (${attendanceRate}% capacity)`,
+          amount: popularityChange,
+          artistId: artistId
+        });
+      }
+
+      console.log(`[TOUR IMPACTS] ${artist.name}: Mood ${moodChange > 0 ? '+' : ''}${moodChange} (${attendanceRate}% attendance), Popularity +${popularityChange} (${actualAttendees} attendees) - accumulated in summary`);
+
+    } catch (error) {
+      console.error(`[TOUR IMPACTS] Error applying performance impacts:`, error);
+    }
   }
 
   // LEGACY METHOD REMOVED - processTourCityRevenue()
