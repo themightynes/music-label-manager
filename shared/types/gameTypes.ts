@@ -266,7 +266,7 @@ export interface ChartUpdate {
   movement?: number;
   isDebut: boolean;
   weeksOnChart?: number;
-  peakPosition?: number;
+  peakPosition?: number | null;
   isCompetitorSong?: boolean;
 }
 

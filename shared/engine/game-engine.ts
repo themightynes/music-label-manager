@@ -3016,13 +3016,15 @@ export class GameEngine {
         songTitle: entry.songTitle,
         artistName: entry.artistName,
         position: entry.position,
-        movement: entry.movement,
-        isDebut: entry.isDebut,
+        movement: entry.movement ?? 0,
+        isDebut: !!entry.isDebut,
         weeksOnChart: entry.weeksOnChart,
-        isCompetitorSong: entry.isCompetitorSong
+        peakPosition: entry.peakPosition ?? (entry.position ?? null),
+        isCompetitorSong: entry.isCompetitorSong ?? false
       }));
 
-      console.log(`[CHART PROCESSING] Generated chart for week ${chartWeek} with ${summary.chartUpdates.length} player entries`);
+      const chartUpdateCount = summary.chartUpdates?.length ?? 0;
+      console.log(`[CHART PROCESSING] Generated chart for week ${chartWeek} with ${chartUpdateCount} player entries`);
     } catch (error) {
       console.error('[CHART PROCESSING] Error generating monthly chart:', error);
       // Don't throw - chart generation should not break monthly processing

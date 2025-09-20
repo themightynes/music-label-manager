@@ -1061,8 +1061,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           artistName: entry.artistName,
           movement: entry.movement ?? 0,
           weeksOnChart: entry.weeksOnChart,
-          peakPosition: null, // TODO: Implement peak tracking
+          peakPosition: entry.peakPosition ?? (entry.position ?? null),
           isPlayerSong: !entry.isCompetitorSong,
+          isCompetitorSong: entry.isCompetitorSong ?? false,
           isDebut: entry.isDebut ?? false
         }));
 
