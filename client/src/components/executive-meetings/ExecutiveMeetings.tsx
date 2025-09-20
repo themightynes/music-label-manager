@@ -7,7 +7,7 @@ import { DialogueInterface } from './DialogueInterface';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { fetchExecutives } from '../../services/executiveService';
+import { fetchExecutives, fetchAllRoles } from '../../services/executiveService';
 import type { Executive } from '../../../../shared/types/gameTypes';
 
 interface ExecutiveMeetingsProps {
@@ -47,23 +47,21 @@ export function ExecutiveMeetings({
         setExecutivesError(null);
 
         // Load executives and roles data in parallel
-        const [fetchedExecutives, rolesResponse] = await Promise.all([
+        const [fetchedExecutives, rolesData] = await Promise.all([
           fetchExecutives(gameId),
-          fetch('/api/debug/data-load').then(res => res.json()).catch(() => null)
+          fetchAllRoles().catch(() => [])
         ]);
 
         setExecutives(fetchedExecutives);
 
-        // Extract salary data from roles if available
-        if (rolesResponse?.results?.roles) {
-          const salaryMap: Record<string, number> = {};
-          rolesResponse.results.roles.roles?.forEach((role: any) => {
-            if (role.baseSalary !== undefined) {
-              salaryMap[role.id] = role.baseSalary;
-            }
-          });
-          setRoleSalaries(salaryMap);
-        }
+        // Extract salary data from roles
+        const salaryMap: Record<string, number> = {};
+        rolesData.forEach((role: any) => {
+          if (role.baseSalary !== undefined) {
+            salaryMap[role.id] = role.baseSalary;
+          }
+        });
+        setRoleSalaries(salaryMap);
       } catch (error) {
         console.error('Failed to load executives:', error);
         setExecutivesError(error instanceof Error ? error.message : 'Failed to load executives');

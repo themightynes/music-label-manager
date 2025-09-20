@@ -1,5 +1,21 @@
 import { apiRequest } from '../lib/queryClient';
-import type { Executive, RoleMeeting, DialogueChoice } from '../../../shared/types/gameTypes';
+import type { Executive, RoleMeeting, DialogueChoice, GameRole } from '../../../shared/types/gameTypes';
+
+export async function fetchAllRoles(): Promise<GameRole[]> {
+  try {
+    // Use the existing roles API endpoints to get all role data
+    const roleIds = ['ceo', 'head_ar', 'cco', 'cmo', 'head_distribution'];
+    const rolePromises = roleIds.map(roleId =>
+      apiRequest('GET', `/api/roles/${roleId}`).then(res => res.json()).catch(() => null)
+    );
+
+    const roleResults = await Promise.all(rolePromises);
+    return roleResults.filter(role => role !== null);
+  } catch (error) {
+    console.error('Failed to fetch all roles:', error);
+    throw error;
+  }
+}
 
 export async function fetchExecutives(gameId: string): Promise<Executive[]> {
   try {
