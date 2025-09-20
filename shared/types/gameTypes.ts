@@ -51,6 +51,7 @@ export interface GameRole {
 }
 
 export interface Executive {
+  id: string;
   role: string;
   level: number;
   mood: number;

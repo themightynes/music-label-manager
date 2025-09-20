@@ -27,7 +27,7 @@ interface SelectionSummaryProps {
 
 // Helper function to parse selected actions (both JSON and legacy formats)
 function parseSelectedAction(id: string):
-  | { format: 'json'; roleId: string; actionId: string; choiceId: string }
+  | { format: 'json'; roleId: string; actionId: string; choiceId: string; executiveId?: string }
   | { format: 'legacy'; parts: string[] } {
   try {
     const parsed = JSON.parse(id);
@@ -42,7 +42,8 @@ function parseSelectedAction(id: string):
         format: 'json',
         roleId: parsed.roleId,
         actionId: parsed.actionId,
-        choiceId: parsed.choiceId
+        choiceId: parsed.choiceId,
+        executiveId: typeof parsed.executiveId === 'string' ? parsed.executiveId : undefined
       };
     }
   } catch {
@@ -81,7 +82,10 @@ export function SelectionSummary({
     'Legacy format should be detected correctly'
   );
   console.assert(
-    parseSelectedAction('{"roleId":"head_ar","actionId":"ar_single_choice","choiceId":"accept_terms"}').roleId === 'head_ar',
+    (() => {
+      const parsed = parseSelectedAction('{"roleId":"head_ar","actionId":"ar_single_choice","choiceId":"accept_terms"}');
+      return parsed.format === 'json' && parsed.roleId === 'head_ar';
+    })(),
     'JSON format should parse roleId correctly'
   );
   
@@ -102,7 +106,7 @@ export function SelectionSummary({
 
     if (parsed.format === 'json') {
       // Handle new JSON format: { roleId, actionId, choiceId }
-      const { roleId, actionId, choiceId } = parsed;
+      const { roleId, actionId, choiceId, executiveId } = parsed;
       const executive = executives[roleId] || executives['ceo'];
 
       // Convert actionId to readable meeting name
@@ -110,7 +114,7 @@ export function SelectionSummary({
 
       return {
         id,
-        executiveId: roleId,
+        executiveId: executiveId || roleId,
         executiveName: executive.name,
         meetingId: actionId,
         meetingName: meetingName,
