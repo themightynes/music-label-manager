@@ -530,34 +530,41 @@ export function MetricsDashboard() {
                 Impact Preview
               </h3>
 
-              {gameState.usedFocusSlots && gameState.usedFocusSlots > 0 ? (
+              {selectedActions.length > 0 ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-1 mb-1">
                     <Zap className="h-3 w-3 text-orange-300" />
                     <span className="text-xs font-medium text-white/70">This Month</span>
                   </div>
                   <div className="flex flex-wrap gap-1 mb-2">
-                    <Badge variant="outline" className="text-xs text-red-400 border-red-400/30">
-                      -$15,000
-                    </Badge>
-                    <Badge variant="outline" className="text-xs text-green-400 border-green-400/30">
-                      +2 rep
-                    </Badge>
+                    {Object.entries(impactPreview.immediate).map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className={`text-xs ${value > 0 ? 'text-green-400 border-green-400/30' : 'text-red-400 border-red-400/30'}`}>
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                    {Object.keys(impactPreview.immediate).length === 0 && (
+                      <span className="text-xs text-white/40">No immediate effects</span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 mb-1">
                     <Clock className="h-3 w-3 text-blue-300" />
-                    <span className="text-xs font-medium text-white/70">Next Month</span>
+                    <span className="text-xs font-medium text-white/70">Delayed Effects</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    <Badge variant="outline" className="text-xs border-blue-400/30 bg-blue-400/10 text-blue-300">
-                      +3 mood
-                    </Badge>
+                    {Object.entries(impactPreview.delayed).map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className="text-xs border-blue-400/30 bg-blue-400/10 text-blue-300">
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                    {Object.keys(impactPreview.delayed).length === 0 && (
+                      <span className="text-xs text-white/40">No delayed effects</span>
+                    )}
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-2 text-white/40">
-                  <p className="text-xs">No focus slots selected</p>
+                  <p className="text-xs">No executive meeting choices made</p>
                 </div>
               )}
             </div>
@@ -681,7 +688,7 @@ export function MetricsDashboard() {
         </div>
 
         {/* Impact Preview - Bottom Section */}
-        {gameState.usedFocusSlots && gameState.usedFocusSlots > 0 && (
+        {selectedActions.length > 0 && (
           <div className="mt-4">
             <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">

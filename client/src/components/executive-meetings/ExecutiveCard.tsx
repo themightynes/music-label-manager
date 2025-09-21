@@ -17,26 +17,31 @@ const roleConfig = {
     icon: Star,
     color: 'bg-purple-500',
     title: 'Chief Executive Officer',
+    avatar: undefined,
   },
   head_ar: {
     icon: Users,
     color: 'bg-blue-500',
     title: 'Head of A&R',
+    avatar: '/avatars/marcus_rodriguez_exec@0.5x.png',
   },
   cco: {
     icon: Brain,
     color: 'bg-green-500',
     title: 'Chief Creative Officer',
+    avatar: '/avatars/dante_washingtong_exec@0.5x.png',
   },
   cmo: {
     icon: DollarSign,
     color: 'bg-orange-500',
     title: 'Chief Marketing Officer',
+    avatar: '/avatars/samara_chen_exec@0.5x.png',
   },
   head_distribution: {
     icon: DollarSign,
     color: 'bg-teal-500',
     title: 'Head of Distribution & Operations',
+    avatar: '/avatars/patricia_williams_exec@0.5x.png',
   },
 } as const;
 
@@ -45,67 +50,103 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, monthlySa
     icon: Users,
     color: 'bg-gray-500',
     title: executive.role,
+    avatar: undefined,
   };
 
   const IconComponent = config.icon;
   const isCEO = executive.role === 'ceo';
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md ${
-      disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'
+    <Card className={`transition-all duration-200 hover:shadow-md bg-[#8B6B70]/20 border-[#65557c] ${
+      disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg hover:bg-[#8B6B70]/30'
     }`}>
       <CardContent className="p-4">
-        <div className="flex items-start gap-3 mb-3">
-          <div className={`p-1.5 rounded-lg ${config.color} text-white`}>
-            <IconComponent className="h-4 w-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-white text-sm">{executive.role.toUpperCase()}</div>
-            <div className="text-xs text-white/60 truncate">
-              {config.title}
+        <div className="flex items-center space-x-4">
+          {/* Avatar/Icon column */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center">
+            {/* Avatar/Icon Box */}
+            <div className="w-36 h-36 bg-[#8B6B70]/30 border border-[#65557c] rounded-lg overflow-hidden relative">
+              {config.avatar ? (
+                <img
+                  src={config.avatar}
+                  alt={`${config.title} avatar`}
+                  className="absolute w-full object-cover"
+                  style={{
+                    height: '244px',
+                    top: '-20px',
+                    imageRendering: 'auto'
+                  }}
+                />
+              ) : (
+                <div className={`w-full h-full bg-[#3c252d]/50 flex items-center justify-center`}>
+                  <div className={`p-3 rounded-lg ${config.color} text-white`}>
+                    <IconComponent className="h-12 w-12" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Executive information content */}
+          <div className="flex-1 min-w-0">
+            <div className="mb-2 flex items-start justify-between">
+              <div>
+                <div className="font-semibold text-white text-base">{executive.role.toUpperCase()}</div>
+                <div className="text-sm text-white/70">
+                  {config.title}
+                </div>
+              </div>
+
+              {/* Meet button in top right */}
+              <Button
+                onClick={onSelect}
+                disabled={disabled}
+                className="py-1 px-3 text-xs"
+                variant={disabled ? "secondary" : "default"}
+                size="sm"
+              >
+                {disabled ? "No Slots" : isCEO ? "Strategic" : "Meet"}
+              </Button>
+            </div>
+
+            {/* Metrics */}
+            {!isCEO ? (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="p-2 bg-[#3c252d]/30 rounded text-center text-xs">
+                  <div className={`font-medium ${(executive.loyalty || 50) >= 70 ? 'text-green-600' : (executive.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    {executive.loyalty || 50}
+                  </div>
+                  <div className="text-white/50">Loyalty</div>
+                </div>
+                <div className="p-2 bg-[#3c252d]/30 rounded text-center text-xs">
+                  <div className={`font-medium ${(executive.mood || 50) >= 70 ? 'text-green-600' : (executive.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    {executive.mood || 50}
+                  </div>
+                  <div className="text-white/50">Mood</div>
+                </div>
+                <div className="p-2 bg-[#3c252d]/30 rounded text-center text-xs">
+                  <div className="font-medium text-white">
+                    Lv.{executive.level || 1}
+                  </div>
+                  <div className="text-white/50">Level</div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-start mb-3">
+                <Badge variant="secondary" className="text-xs px-3 py-1 bg-purple-500/20 text-purple-200 border-purple-300/30">
+                  You
+                </Badge>
+              </div>
+            )}
+
+            {/* Salary */}
+            {!isCEO && monthlySalary !== undefined && (
+              <div className="text-sm text-white/60">
+                Monthly Salary: {monthlySalary === 0 ? 'Equity Only' : `$${monthlySalary.toLocaleString()}`}
+              </div>
+            )}
+          </div>
         </div>
-
-        {!isCEO && (
-          <div className="flex flex-wrap justify-center gap-1 mb-3">
-            <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-white/10 text-white/80 border-white/20">
-              💖 {executive.loyalty}
-            </Badge>
-            <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-white/10 text-white/80 border-white/20">
-              😊 {executive.mood}
-            </Badge>
-            <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-white/10 text-white/80 border-white/20">
-              Lv.{executive.level}
-            </Badge>
-          </div>
-        )}
-
-        {isCEO && (
-          <div className="flex justify-center mb-3">
-            <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-200 border-purple-300/30">
-              You
-            </Badge>
-          </div>
-        )}
-
-        {!isCEO && monthlySalary !== undefined && (
-          <div className="text-center mb-3">
-            <span className="text-xs text-white/50">
-              {monthlySalary === 0 ? 'Equity Only' : `$${monthlySalary.toLocaleString()}/mo`}
-            </span>
-          </div>
-        )}
-
-        <Button
-          onClick={onSelect}
-          disabled={disabled}
-          className="w-full"
-          variant={disabled ? "secondary" : "default"}
-          size="sm"
-        >
-          {disabled ? "No Slots" : isCEO ? "Strategic" : "Meet"}
-        </Button>
       </CardContent>
     </Card>
   );

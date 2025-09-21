@@ -198,7 +198,7 @@ export function ExecutiveMeetings({
               <p className="text-sm text-white/50">Hire executives to unlock meeting opportunities.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
               {executives.map((executive) => (
                 <ExecutiveCard
                   key={executive.role}

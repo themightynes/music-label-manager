@@ -263,27 +263,6 @@ export function ArtistCard({
         </div>
       )}
 
-      {/* Compact Action Buttons */}
-      <div className="flex space-x-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={onNavigate}
-        >
-          <ExternalLink className="w-3 h-3 mr-1" />
-          Details
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={onMeet}
-        >
-          <i className="fas fa-handshake mr-1"></i>
-          Meet
-        </Button>
-      </div>
     </div>
   );
 }

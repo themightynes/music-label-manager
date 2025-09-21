@@ -78,10 +78,10 @@ export default function ExecutiveSuitePage({ onAdvanceMonth, isAdvancing }: Exec
                   <i className="fas fa-calendar-alt text-white text-xl md:text-2xl"></i>
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl md:text-2xl font-bold text-white">Month {gameState.currentMonth} Focus Strategy</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-white">Month {gameState.currentMonth} Executive Meetings</h2>
                   <p className="text-sm md:text-base text-white/70">
                     Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
-                    {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th slot unlocked!)</span>}
+                    {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th Slot Unlocked!)</span>}
                   </p>
                 </div>
                 <div className="hidden md:block" title="Focus Slots are your monthly action points. Each strategic action requires one focus slot.">

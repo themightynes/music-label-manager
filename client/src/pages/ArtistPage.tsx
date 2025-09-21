@@ -295,6 +295,26 @@ export default function ArtistPage() {
     return archetypeData[archetype] || { color: 'text-white/70', icon: User, description: 'Unique artist' };
   };
 
+  // Dynamic avatar function based on artist name
+  const getAvatarUrl = (artistName: string) => {
+    // Convert "Nova Sterling" -> "nova_sterling_full.png"
+    const filename = artistName
+      .toLowerCase()
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^a-z0-9_]/g, '') // Remove any non-alphanumeric characters except underscores
+      + '_full.png';
+
+    return `/avatars/${filename}`;
+  };
+
+  // Function to handle image load error and fallback to blank_full.png
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const img = e.target as HTMLImageElement;
+    if (img.src !== '/avatars/blank_full.png') {
+      img.src = '/avatars/blank_full.png';
+    }
+  };
+
   // Enhanced artist analytics (for artist card)
   const getArtistInsights = (artist: Artist) => {
     const mood = artist.mood || 50;
@@ -375,7 +395,7 @@ export default function ArtistPage() {
       <div className="min-h-screen">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Move artist header info here as hero section */}
-          <div className="mb-8">
+          <div className="mb-8 mt-8">
             <div className="flex items-center space-x-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#A75A5B]/80 to-[#791014]/80 flex items-center justify-center">
                 <User className="w-8 h-8 text-white" />
@@ -390,75 +410,68 @@ export default function ArtistPage() {
                 </div>
               </div>
             </div>
-            {/* Move quick stats here */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-white">{songs.length}</div>
-                <div className="text-xs text-white/70">Total Songs</div>
-              </div>
-              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-green-600">{releasedSongs}</div>
-                <div className="text-xs text-white/70">Released</div>
-              </div>
-              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-blue-600">${(totalRevenue / 1000).toFixed(1)}k</div>
-                <div className="text-xs text-white/70">Total Revenue</div>
-              </div>
-              <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-[#791014]">{(totalStreams / 1000).toFixed(0)}k</div>
-                <div className="text-xs text-white/70">Total Streams</div>
-              </div>
-            </div>
           </div>
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
-            <TabsTrigger value="overview" className="flex items-center space-x-2">
-              <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="discography" className="flex items-center space-x-2">
-              <Music className="w-4 h-4" />
-              <span className="hidden sm:inline">Discography</span>
-            </TabsTrigger>
-            <TabsTrigger value="releases" className="flex items-center space-x-2">
-              <PlayCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Releases</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
-            <TabsTrigger value="management" className="flex items-center space-x-2">
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Manage</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="relative">
+            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+              {/* Nova Sterling positioned relative to tab menu */}
+              <div className="absolute -top-40 -right-20 z-10">
+                <img
+                  src={getAvatarUrl(artist.name)}
+                  alt={`${artist.name} avatar`}
+                  className="w-[600px] h-auto object-cover object-top"
+                  style={{ height: '300px' }}
+                  onError={handleImageError}
+                />
+              </div>
+              <TabsTrigger value="overview" className="flex items-center space-x-2">
+                <Eye className="w-4 h-4" />
+                <span className="hidden sm:inline">Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="discography" className="flex items-center space-x-2">
+                <Music className="w-4 h-4" />
+                <span className="hidden sm:inline">Discography</span>
+              </TabsTrigger>
+              <TabsTrigger value="releases" className="flex items-center space-x-2">
+                <PlayCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Releases</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center space-x-2">
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="management" className="flex items-center space-x-2">
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Manage</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Rich Artist Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="w-5 h-5" />
-                  <span>Artist Overview</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ArtistCard
-                  artist={artist}
-                  insights={getArtistInsights(artist)}
-                  relationship={getRelationshipStatus(artist.mood || 50, artist.loyalty || 50)}
-                  archetype={getArtistCardArchetypeInfo(artist.archetype)}
-                  isExpanded={expandedArtist}
-                  onToggleExpand={() => setExpandedArtist(!expandedArtist)}
-                  onMeet={handleArtistMeeting}
-                  onNavigate={handleNavigateToArtist}
-                  gameState={gameState}
-                  roiData={roiData}
-                />
-              </CardContent>
-            </Card>
+            <Card className="relative z-20">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-center space-x-2">
+                    <User className="w-5 h-5" />
+                    <span>Artist Overview</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ArtistCard
+                    artist={artist}
+                    insights={getArtistInsights(artist)}
+                    relationship={getRelationshipStatus(artist.mood || 50, artist.loyalty || 50)}
+                    archetype={getArtistCardArchetypeInfo(artist.archetype)}
+                    isExpanded={expandedArtist}
+                    onToggleExpand={() => setExpandedArtist(!expandedArtist)}
+                    onMeet={handleArtistMeeting}
+                    onNavigate={handleNavigateToArtist}
+                    gameState={gameState}
+                    roiData={roiData}
+                  />
+                </CardContent>
+              </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Artist Stats */}
@@ -573,7 +586,7 @@ export default function ArtistPage() {
           </TabsContent>
           
           {/* Discography Tab - Reorganized with releases grouping */}
-          <TabsContent value="discography" className="space-y-6">
+          <TabsContent value="discography" className="space-y-6 relative z-20">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -755,7 +768,7 @@ export default function ArtistPage() {
           </TabsContent>
           
           {/* Releases Tab */}
-          <TabsContent value="releases" className="space-y-6">
+          <TabsContent value="releases" className="space-y-6 relative z-20">
             {/* Upcoming Releases */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
@@ -827,7 +840,7 @@ export default function ArtistPage() {
           </TabsContent>
           
           {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
+          <TabsContent value="analytics" className="space-y-6 relative z-20">
             <div className="space-y-6">
               {/* Total Streams Table */}
               <Card>
@@ -970,7 +983,7 @@ export default function ArtistPage() {
           </TabsContent>
           
           {/* Management Tab */}
-          <TabsContent value="management" className="space-y-6">
+          <TabsContent value="management" className="space-y-6 relative z-20">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Artist Status */}
               <Card>

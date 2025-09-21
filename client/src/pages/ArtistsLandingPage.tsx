@@ -27,6 +27,26 @@ const ArtistsLandingPage: React.FC = () => {
     setIsDiscoveryModalOpen(true);
   };
 
+  // Dynamic avatar function based on artist name
+  const getAvatarUrl = (artistName: string) => {
+    // Convert "Nova Sterling" -> "nova_sterling_full.png"
+    const filename = artistName
+      .toLowerCase()
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^a-z0-9_]/g, '') // Remove any non-alphanumeric characters except underscores
+      + '_full.png';
+
+    return `/avatars/${filename}`;
+  };
+
+  // Function to handle image load error and fallback to blank_full.png
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const img = e.target as HTMLImageElement;
+    if (img.src !== '/avatars/blank_full.png') {
+      img.src = '/avatars/blank_full.png';
+    }
+  };
+
   // Helper function to get artist insights for rich cards
   const getArtistInsights = (artist: Artist) => {
     const mood = artist.mood || 50;
@@ -184,18 +204,53 @@ const ArtistsLandingPage: React.FC = () => {
                 const isExpanded = expandedArtist === artist.id;
 
                 return (
-                  <RichArtistCard
-                    key={artist.id}
-                    artist={artist}
-                    insights={insights}
-                    relationship={relationship}
-                    archetype={archetype}
-                    isExpanded={isExpanded}
-                    onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
-                    onMeet={() => handleArtistMeeting(artist)}
-                    onNavigate={() => handleNavigateToArtist(artist.id)}
-                    gameState={gameState}
-                  />
+                  <div key={artist.id} className="border border-[#4e324c] rounded-lg p-4 bg-[#23121c]">
+                    <div className="flex items-center space-x-4">
+                      {/* Avatar and Meet button column */}
+                      <div className="flex-shrink-0 flex flex-col items-center justify-center space-y-2">
+                        {/* Avatar Box */}
+                        <div
+                          className="w-24 h-32 bg-[#8B6B70] border border-[#65557c] rounded-lg overflow-hidden relative cursor-pointer hover:bg-[#9B7B80] transition-colors"
+                          onClick={() => handleNavigateToArtist(artist.id)}
+                        >
+                          <img
+                            src={getAvatarUrl(artist.name)}
+                            alt={`${artist.name} avatar`}
+                            className="absolute w-full object-cover"
+                            style={{
+                              height: '450px',
+                              top: '-14px',
+                              objectPosition: 'center top'
+                            }}
+                            onError={handleImageError}
+                          />
+                        </div>
+
+                        {/* Meet button under avatar */}
+                        <button
+                          className="w-20 py-1 px-2 text-xs bg-[#A75A5B] hover:bg-[#B86B6C] text-white rounded border border-[#65557c] transition-colors"
+                          onClick={() => handleArtistMeeting(artist)}
+                        >
+                          Meet
+                        </button>
+                      </div>
+
+                      {/* Artist Card content pushed to the right */}
+                      <div className="flex-1 min-w-0">
+                        <RichArtistCard
+                          artist={artist}
+                          insights={insights}
+                          relationship={relationship}
+                          archetype={archetype}
+                          isExpanded={isExpanded}
+                          onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
+                          onMeet={() => handleArtistMeeting(artist)}
+                          onNavigate={() => handleNavigateToArtist(artist.id)}
+                          gameState={gameState}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
             </div>

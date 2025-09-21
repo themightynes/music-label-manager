@@ -1,12 +1,13 @@
 import {
   users, gameSaves, artists, roles, projects, dialogueChoices,
-  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs, executives, chartEntries,
+  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs, executives, chartEntries, musicLabels,
   type User, type InsertUser, type GameSave, type InsertGameSave,
   type Artist, type InsertArtist, type Project, type InsertProject,
   type GameState, type InsertGameState, type MonthlyAction, type InsertMonthlyAction,
   type DialogueChoice, type GameEvent, type Role,
   type Song, type InsertSong, type Release, type InsertRelease,
-  type ReleaseSong, type InsertReleaseSong, type ChartEntry as DbChartEntry, type InsertChartEntry
+  type ReleaseSong, type InsertReleaseSong, type ChartEntry as DbChartEntry, type InsertChartEntry,
+  type MusicLabel, type InsertMusicLabel
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
@@ -27,7 +28,7 @@ export interface IStorage {
 
   // Game state
   getGameState(id: string): Promise<GameState | undefined>;
-  createGameState(gameState: InsertGameState): Promise<GameState>;
+  createGameState(gameState: InsertGameState, dbTransaction?: any): Promise<GameState>;
   updateGameState(id: string, gameState: Partial<InsertGameState>): Promise<GameState>;
 
   // Artists
@@ -88,6 +89,11 @@ export interface IStorage {
   getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
   getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
   getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
+
+  // Music Labels
+  getMusicLabel(gameId: string): Promise<MusicLabel | undefined>;
+  createMusicLabel(label: InsertMusicLabel, dbTransaction?: any): Promise<MusicLabel>;
+  updateMusicLabel(gameId: string, label: Partial<InsertMusicLabel>): Promise<MusicLabel | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -141,8 +147,9 @@ export class DatabaseStorage implements IStorage {
     return state || undefined;
   }
 
-  async createGameState(gameState: InsertGameState): Promise<GameState> {
-    const [state] = await db.insert(gameStates).values(gameState).returning();
+  async createGameState(gameState: InsertGameState, dbTransaction?: any): Promise<GameState> {
+    const dbContext = dbTransaction || db;
+    const [state] = await dbContext.insert(gameStates).values(gameState).returning();
     return state;
   }
 
@@ -700,6 +707,33 @@ export class DatabaseStorage implements IStorage {
         chartEntries.songId,
         desc(chartEntries.chartWeek)
       );
+  }
+
+  // Music Labels implementation
+  async getMusicLabel(gameId: string): Promise<MusicLabel | undefined> {
+    const [label] = await db
+      .select()
+      .from(musicLabels)
+      .where(eq(musicLabels.gameId, gameId));
+    return label || undefined;
+  }
+
+  async createMusicLabel(label: InsertMusicLabel, dbTransaction?: any): Promise<MusicLabel> {
+    const dbContext = dbTransaction || db;
+    const [created] = await dbContext
+      .insert(musicLabels)
+      .values(label)
+      .returning();
+    return created;
+  }
+
+  async updateMusicLabel(gameId: string, label: Partial<InsertMusicLabel>): Promise<MusicLabel | undefined> {
+    const [updated] = await db
+      .update(musicLabels)
+      .set(label)
+      .where(eq(musicLabels.gameId, gameId))
+      .returning();
+    return updated || undefined;
   }
 }
 

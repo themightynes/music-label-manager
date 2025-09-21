@@ -18,6 +18,8 @@ import { useGameStore } from '@/store/gameStore';
 import { useGameContext } from '@/contexts/GameContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { MonthSummary } from './MonthSummary';
+import { LabelCreationModal } from './LabelCreationModal';
+import type { LabelData } from '@shared/types/gameTypes';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import {
   Home,
@@ -65,6 +67,8 @@ export function GameSidebar({
   const { user } = useUser();
   const { gameId } = useGameContext();
   const [isAutoSelecting, setIsAutoSelecting] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [isCreatingGame, setIsCreatingGame] = useState(false);
 
   // Simple AUTO function for sidebar
   const handleAutoSelect = async () => {
@@ -146,19 +150,28 @@ export function GameSidebar({
     if (gameState?.currentMonth && gameState.currentMonth > 1) {
       setShowNewGameConfirm(true);
     } else {
-      await confirmNewGame();
+      setShowLabelModal(true);
     }
   };
 
-  const confirmNewGame = async () => {
+  const handleCreateLabel = async (labelData: LabelData) => {
     try {
-      const newGame = await createNewGame('standard');
+      setIsCreatingGame(true);
+      const newGame = await createNewGame('standard', labelData);
       setGameId(newGame.id);
+      setShowLabelModal(false);
       setShowNewGameConfirm(false);
       setLocation('/');
     } catch (error) {
       console.error('Failed to start new game:', error);
+    } finally {
+      setIsCreatingGame(false);
     }
+  };
+
+  const confirmNewGame = async () => {
+    setShowNewGameConfirm(false);
+    setShowLabelModal(true);
   };
 
   const currentPath = location;
@@ -174,7 +187,7 @@ export function GameSidebar({
               className="h-8 w-auto"
             />
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <div className="text-sm font-semibold text-sidebar-foreground">Music Label</div>
+              <div className="text-sm font-semibold text-sidebar-foreground">{gameState?.musicLabel?.name || 'Music Label'}</div>
               <div className="flex items-center space-x-2 text-xs text-sidebar-foreground/70">
                 <span>Month {gameState?.currentMonth || 1}/36</span>
                 <span className="text-green-400">${(gameState?.money || 0).toLocaleString()}</span>
@@ -528,6 +541,13 @@ export function GameSidebar({
           </div>
         </div>
       )}
+
+      <LabelCreationModal
+        open={showLabelModal}
+        onOpenChange={setShowLabelModal}
+        onCreateLabel={handleCreateLabel}
+        isCreating={isCreatingGame}
+      />
     </>
   );
 }

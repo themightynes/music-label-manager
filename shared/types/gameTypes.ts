@@ -95,6 +95,23 @@ export interface GameState {
   rngSeed: string;
   flags: Record<string, any>;
   monthlyStats: Record<string, any>;
+  musicLabel?: MusicLabel;
+}
+
+export interface MusicLabel {
+  id: string;
+  name: string;
+  gameId: string;
+  foundedMonth?: number;
+  description?: string;
+  genreFocus?: string;
+  createdAt?: string;
+}
+
+export interface LabelData {
+  name: string;
+  description?: string;
+  genreFocus?: string;
 }
 
 export interface GameProject {

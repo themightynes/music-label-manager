@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { GameState, Artist, Project, Role, MonthlyAction } from '@shared/schema';
+import type { GameState, Artist, Project, Role, MonthlyAction, MusicLabel } from '@shared/schema';
+import type { LabelData } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
@@ -23,7 +24,7 @@ interface GameStore {
   // Actions
   loadGame: (gameId: string) => Promise<void>;
   loadGameFromSave: (saveId: string) => Promise<void>;
-  createNewGame: (campaignType: string) => Promise<GameState>;
+  createNewGame: (campaignType: string, labelData?: LabelData) => Promise<GameState>;
   updateGameState: (updates: Partial<GameState>) => Promise<void>;
   
   // Monthly actions
@@ -89,8 +90,14 @@ export const useGameStore = create<GameStore>()(
             usedFocusSlots: 0  // Reset to 0 since selectedActions is empty
           };
           
+          // Include musicLabel in the gameState object
+          const gameStateWithLabel = {
+            ...syncedGameState,
+            musicLabel: data.musicLabel || null
+          };
+
           set({
-            gameState: syncedGameState,
+            gameState: gameStateWithLabel,
             artists: data.artists,
             projects: data.projects,
             roles: data.roles,
@@ -125,8 +132,14 @@ export const useGameStore = create<GameStore>()(
             throw new Error('Invalid save data format');
           }
           
+          // Include musicLabel in the gameState object
+          const gameStateWithLabel = {
+            ...savedGameData.gameState,
+            musicLabel: savedGameData.musicLabel || null
+          };
+
           set({
-            gameState: savedGameData.gameState,
+            gameState: gameStateWithLabel,
             artists: savedGameData.artists || [],
             projects: savedGameData.projects || [],
             roles: savedGameData.roles || [],
@@ -145,7 +158,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       // Create new game
-      createNewGame: async (campaignType: string) => {
+      createNewGame: async (campaignType: string, labelData?: LabelData) => {
         try {
           const newGameData = {
             // userId will be set by the server from authentication
@@ -163,28 +176,34 @@ export const useGameStore = create<GameStore>()(
             rngSeed: Math.random().toString(36),
             flags: {},
             monthlyStats: {},
-            campaignCompleted: false
+            campaignCompleted: false,
+            ...(labelData && { labelData })
           };
 
           const response = await apiRequest('POST', '/api/game', newGameData);
           const gameState = await response.json();
-          
+
           console.log('=== CREATE NEW GAME DEBUG ===');
           console.log('New game created:', gameState);
           console.log('Month should be 1, actual:', gameState.currentMonth);
           console.log('Game ID:', gameState.id);
-          
+
+          // Follow-up GET request to ensure we have complete data including musicLabel
+          const completeGameResponse = await apiRequest('GET', `/api/game/${gameState.id}`);
+          const completeGameData = await completeGameResponse.json();
+
           // CRITICAL: Clear all localStorage game data first
           localStorage.removeItem('music-label-manager-game');
           localStorage.setItem('currentGameId', gameState.id);
           console.log('Cleared localStorage and set new gameId');
-          
-          // Ensure new game starts with 0 used slots
+
+          // Ensure new game starts with 0 used slots and include musicLabel
           const syncedGameState = {
-            ...gameState,
-            usedFocusSlots: 0  // New game starts with no slots used
+            ...completeGameData.gameState,
+            usedFocusSlots: 0,  // New game starts with no slots used
+            musicLabel: completeGameData.musicLabel || null
           };
-          
+
           // Clear campaign results and set new state
           set({
             gameState: syncedGameState,
@@ -639,6 +658,7 @@ export const useGameStore = create<GameStore>()(
             name,
             gameState: {
               gameState,
+              musicLabel: gameState.musicLabel,
               artists,
               projects,
               roles

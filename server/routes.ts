@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, gameStates, monthlyActions, projects, songs, artists, releases, releaseSongs, roles, executives } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, monthlyActions, projects, songs, artists, releases, releaseSongs, roles, executives } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -197,14 +197,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get related data
+      const musicLabel = await storage.getMusicLabel(gameState.id);
       const artists = await storage.getArtistsByGame(gameState.id);
       const projects = await storage.getProjectsByGame(gameState.id);
       const roles = await storage.getRolesByGame(gameState.id);
       const monthlyActions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth || 1);
       const releases = await serverGameData.getReleasesByGame(gameState.id);
-      
+
       res.json({
         gameState,
+        musicLabel,
         artists,
         projects,
         roles,
@@ -219,12 +221,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/game", requireClerkUser, async (req, res) => {
     console.log('🚀 [GAME CREATION] Starting new game creation...');
     try {
-      const validatedData = insertGameStateSchema.parse(req.body);
+      const { labelData, ...gameStateData } = req.body;
+      const validatedData = insertGameStateSchema.parse(gameStateData);
       console.log('📝 [GAME CREATION] Validated data reputation:', validatedData.reputation);
-      
+
+      // Validate label data if provided
+      let validatedLabelData = null;
+      if (labelData) {
+        validatedLabelData = labelRequestSchema.parse(labelData);
+      }
+
       // Ensure serverGameData is initialized before accessing balance config
       await serverGameData.initialize();
-      
+
       // Set starting money and reputation from balance.json configuration
       const startingMoney = await serverGameData.getStartingMoney();
       const startingReputation = await serverGameData.getStartingReputation();
@@ -238,9 +247,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.userId  // CRITICAL: Associate game with user
       };
       console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation);
-      
-      const gameState = await storage.createGameState(gameDataWithBalance);
-      
+
+      // Create game state and music label atomically within a transaction
+      const result = await db.transaction(async (tx) => {
+        const gameState = await storage.createGameState(gameDataWithBalance, tx);
+
+        // Create music label for the new game
+        const musicLabelData = {
+          name: validatedLabelData?.name || "New Music Label",
+          gameId: gameState.id,
+          foundedMonth: validatedLabelData?.foundedMonth || 1,
+          description: validatedLabelData?.description || null,
+          genreFocus: validatedLabelData?.genreFocus || null
+        };
+        const musicLabel = await storage.createMusicLabel(musicLabelData, tx);
+        console.log('🎵 Created music label:', musicLabel.name, 'for game:', gameState.id);
+
+        return { gameState, musicLabel };
+      });
+
+      const { gameState, musicLabel } = result;
+
       // Initialize executives for the new game (CEO excluded - player is the CEO)
       console.log('🎭 Creating executives for game:', gameState.id);
       try {
@@ -270,9 +297,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       // Note: This would need proper role creation through storage interface
-      // For now, returning basic game state
-      
-      res.json(gameState);
+      // For now, returning basic game state with music label
+
+      res.json({
+        ...gameState,
+        musicLabel
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid game data", errors: error.errors });
@@ -300,6 +330,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[PATCH /api/game/:id] Error:', error);
       res.status(500).json({ message: "Failed to update game state", error: error.message });
+    }
+  });
+
+  // Create/update music label for existing game
+  app.post("/api/game/:gameId/label", requireClerkUser, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      console.log('[POST /api/game/:gameId/label] Creating/updating label for game:', gameId);
+      console.log('[POST /api/game/:gameId/label] Label data:', req.body);
+
+      // Validate the game exists and belongs to the user
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      // Validate label data
+      const validatedLabelData = labelRequestSchema.parse(req.body);
+
+      // Check if label already exists for this game
+      const existingLabel = await storage.getMusicLabel(gameId);
+
+      let musicLabel;
+      if (existingLabel) {
+        // Update existing label
+        musicLabel = await storage.updateMusicLabel(gameId, validatedLabelData);
+        console.log('[POST /api/game/:gameId/label] Updated existing label:', musicLabel?.name);
+      } else {
+        // Create new label
+        const musicLabelData = {
+          name: validatedLabelData.name,
+          gameId: gameId,
+          foundedMonth: validatedLabelData.foundedMonth || 1,
+          description: validatedLabelData.description || null,
+          genreFocus: validatedLabelData.genreFocus || null
+        };
+        musicLabel = await storage.createMusicLabel(musicLabelData);
+        console.log('[POST /api/game/:gameId/label] Created new label:', musicLabel.name);
+      }
+
+      if (!musicLabel) {
+        return res.status(500).json({ message: "Failed to create/update music label" });
+      }
+
+      res.json(musicLabel);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid label data", errors: error.errors });
+      } else {
+        console.error('[POST /api/game/:gameId/label] Error:', error);
+        res.status(500).json({ message: "Failed to create/update music label", error: error.message });
+      }
     }
   });
 
@@ -1928,7 +2010,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })));
 
       if (allGames.length > 0) {
-        return res.json(allGames[0]);
+        const existingGame = allGames[0];
+
+        // Get music label for existing game
+        const musicLabel = await storage.getMusicLabel(existingGame.id);
+
+        return res.json({
+          ...existingGame,
+          musicLabel
+        });
       }
 
       // Create new game state for user
@@ -1952,8 +2042,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           monthlyStats: {}
         };
         
+        // Create game state without music label - label will be created separately via frontend flow
         const gameState = await storage.createGameState(defaultState);
-        return res.json(gameState);
+        console.log('🎮 Created auto-generated game state (label will be created separately):', gameState.id);
+
+        return res.json({
+          ...gameState,
+          musicLabel: null
+        });
     } catch (error) {
       console.error('Get game state error:', error);
       res.status(500).json({ message: "Failed to fetch game state" });

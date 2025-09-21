@@ -293,6 +293,17 @@ export const chartEntries = pgTable("chart_entries", {
   chartEntriesStreamRankIdx: sql`CREATE INDEX IF NOT EXISTS "idx_chart_entries_stream_rank" ON ${table} ("chart_week", "streams" DESC)`,
 }));
 
+// Music Labels table
+export const musicLabels = pgTable("music_labels", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull().unique(),
+  foundedMonth: integer("founded_month").default(1),
+  description: text("description"),
+  genreFocus: text("genre_focus"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Monthly actions (for tracking player choices)
 export const monthlyActions = pgTable("monthly_actions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -396,6 +407,30 @@ export const chartEntriesRelations = relations(chartEntries, ({ one }) => ({
   }),
 }));
 
+export const musicLabelsRelations = relations(musicLabels, ({ one }) => ({
+  gameState: one(gameStates, {
+    fields: [musicLabels.gameId],
+    references: [gameStates.id],
+  }),
+}));
+
+export const gameStatesRelations = relations(gameStates, ({ one, many }) => ({
+  user: one(users, {
+    fields: [gameStates.userId],
+    references: [users.id],
+  }),
+  musicLabel: one(musicLabels, {
+    fields: [gameStates.id],
+    references: [musicLabels.gameId],
+  }),
+  artists: many(artists),
+  songs: many(songs),
+  releases: many(releases),
+  moodEvents: many(moodEvents),
+  chartEntries: many(chartEntries),
+  monthlyActions: many(monthlyActions),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   clerkId: true,
@@ -457,6 +492,18 @@ export const insertChartEntrySchema = createInsertSchema(chartEntries).omit({
   isCharting: true,
 });
 
+export const insertMusicLabelSchema = createInsertSchema(musicLabels).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const labelRequestSchema = createInsertSchema(musicLabels).pick({
+  name: true,
+  description: true,
+  genreFocus: true,
+  foundedMonth: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -497,3 +544,7 @@ export type InsertMoodEvent = z.infer<typeof insertMoodEventSchema>;
 
 export type ChartEntry = typeof chartEntries.$inferSelect;
 export type InsertChartEntry = z.infer<typeof insertChartEntrySchema>;
+
+export type MusicLabel = typeof musicLabels.$inferSelect;
+export type InsertMusicLabel = z.infer<typeof insertMusicLabelSchema>;
+export type LabelRequest = z.infer<typeof labelRequestSchema>;
