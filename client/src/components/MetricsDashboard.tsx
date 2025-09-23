@@ -5,9 +5,23 @@ import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { fetchMeetingDialogue } from '@/services/executiveService';
 
+interface SelectedChoice {
+  executiveName: string;
+  meetingName: string;
+  choiceLabel: string;
+  effects_immediate: Record<string, number>;
+  effects_delayed: Record<string, number>;
+}
+
+interface ImpactPreview {
+  immediate: Record<string, number>;
+  delayed: Record<string, number>;
+  selectedChoices: SelectedChoice[];
+}
+
 export function MetricsDashboard() {
   const { gameState, selectedActions } = useGameStore();
-  const [impactPreview, setImpactPreview] = useState({
+  const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},
     delayed: {},
     selectedChoices: []
@@ -21,9 +35,9 @@ export function MetricsDashboard() {
         return;
       }
 
-      const immediate = {};
-      const delayed = {};
-      const selectedChoices = [];
+      const immediate: Record<string, number> = {};
+      const delayed: Record<string, number> = {};
+      const selectedChoices: SelectedChoice[] = [];
 
       try {
         for (const actionString of selectedActions) {

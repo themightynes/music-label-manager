@@ -14,8 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 export default function GamePage() {
   const [showCampaignResults, setShowCampaignResults] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [showProjectModal, setShowProjectModal] = useState(false);
-  const [showLivePerformanceModal, setShowLivePerformanceModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [isCreatingNewGame, setIsCreatingNewGame] = useState(false);
   const [creationError, setCreationError] = useState<string | null>(null);
@@ -91,54 +89,17 @@ export default function GamePage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const open = params.get('open');
-    if (open === 'recording') setShowProjectModal(true);
-    if (open === 'tour') setShowLivePerformanceModal(true);
     if (open === 'save') setShowSaveModal(true);
   }, []);
 
   // Check if loaded game has no music label and show creation modal (backup check)
   useEffect(() => {
-    if (gameState && !gameState.musicLabel && !isInitializing) {
+    if (gameState && !gameState.musicLabel && !isInitializing && gameState.currentMonth === 1) {
       console.log('🎵 Backup check: Game state loaded without musicLabel, showing label creation modal');
       setShowLabelModal(true);
     }
   }, [gameState, isInitializing]);
 
-  // Guard against modal dismissal without label creation
-  useEffect(() => {
-    const handleModalDismissalGuard = async () => {
-      // When modal closes and game has no label, automatically create default label
-      if (!showLabelModal && gameState && !gameState.musicLabel && !isInitializing && !isCreatingGameWithLabel) {
-        console.log('🛡️ Guard: Modal dismissed without label, creating default label');
-        try {
-          const defaultLabelData: LabelData = {
-            name: 'New Music Label'
-          };
-
-          await apiRequest('POST', `/api/game/${gameState.id}/label`, defaultLabelData);
-          await loadGame(gameState.id);
-
-          toast({
-            title: "Default label created",
-            description: "We've created 'New Music Label' for you. You can change this later.",
-            duration: 4000,
-          });
-        } catch (error) {
-          console.error('Guard: Failed to create default label:', error);
-          // Re-open modal with reminder if default creation fails
-          setShowLabelModal(true);
-          toast({
-            title: "Label required",
-            description: "Please create a label for your music company to continue.",
-            variant: "destructive",
-            duration: 5000,
-          });
-        }
-      }
-    };
-
-    handleModalDismissalGuard();
-  }, [showLabelModal, gameState, isInitializing, isCreatingGameWithLabel, loadGame, toast]);
   
   if (isInitializing) {
     return (
@@ -191,8 +152,8 @@ export default function GamePage() {
   };
 
   const handleLabelModalOpenChange = async (open: boolean) => {
-    // If modal is closing (open becomes false) and we have a game but no label, create default label
-    if (!open && gameState && !gameState.musicLabel) {
+    // If modal is closing (open becomes false) and we have a game but no label, create default label (only for new games)
+    if (!open && gameState && !gameState.musicLabel && gameState.currentMonth === 1) {
       await createDefaultLabelForGame(gameState.id);
     }
     setShowLabelModal(open);
@@ -242,15 +203,9 @@ export default function GamePage() {
   return (
     <ErrorBoundary>
       <GameLayout
-        onShowProjectModal={() => setShowProjectModal(true)}
-        onShowLivePerformanceModal={() => setShowLivePerformanceModal(true)}
         onShowSaveModal={() => setShowSaveModal(true)}
       >
         <Dashboard
-          showProjectModal={showProjectModal}
-          setShowProjectModal={setShowProjectModal}
-          showLivePerformanceModal={showLivePerformanceModal}
-          setShowLivePerformanceModal={setShowLivePerformanceModal}
           showSaveModal={showSaveModal}
           setShowSaveModal={setShowSaveModal}
         />

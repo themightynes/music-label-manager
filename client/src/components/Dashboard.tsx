@@ -8,26 +8,16 @@ import { Top10ChartDisplay } from './Top10ChartDisplay';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { MonthSummary } from './MonthSummary';
-import { ProjectCreationModal } from './ProjectCreationModal';
-import { LivePerformanceModal, type TourCreationData } from './LivePerformanceModal';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 interface DashboardProps {
-  showProjectModal?: boolean;
-  setShowProjectModal?: (show: boolean) => void;
-  showLivePerformanceModal?: boolean;
-  setShowLivePerformanceModal?: (show: boolean) => void;
   showSaveModal?: boolean;
   setShowSaveModal?: (show: boolean) => void;
 }
 
 export function Dashboard({
-  showProjectModal = false,
-  setShowProjectModal = () => {},
-  showLivePerformanceModal = false,
-  setShowLivePerformanceModal = () => {},
   showSaveModal = false,
   setShowSaveModal = () => {}
 }: DashboardProps) {
@@ -66,40 +56,6 @@ export function Dashboard({
   };
 
 
-  // Live performance creation - uses existing project creation flow
-  const handleCreateTour = async (tourData: TourCreationData) => {
-    try {
-      // Map TourCreationData to ProjectCreationData format
-      // Tours are stored as projects with type 'Mini-Tour'
-      const projectData = {
-        title: tourData.title,
-        type: 'Mini-Tour' as const, // Always use Mini-Tour type for live performances
-        artistId: tourData.artistId,
-        totalCost: Math.round(tourData.budget), // Map budget to totalCost (rounded to integer)
-        budgetPerSong: 0, // Not applicable for tours
-        songCount: 0, // Tours don't have songs
-        producerTier: 'local' as const, // Default for tours
-        timeInvestment: 'standard' as const, // Default for tours
-        metadata: {
-          performanceType: 'mini_tour', // Always store as mini_tour (single shows are just 1-city tours)
-          cities: tourData.cities, // 1 for single shows, 3+ for multi-city tours
-          venueAccess: tourData.venueAccess || 'none', // Store venue access at time of booking
-          venueCapacity: tourData.venueCapacity, // Store selected venue capacity
-          createdFrom: 'LivePerformanceModal' // Track source for debugging
-        }
-      };
-
-      // Use existing createProject method from gameStore
-      await createProject(projectData);
-      setShowLivePerformanceModal(false);
-      
-      // Show success notification
-      console.log(`✅ Tour "${tourData.title}" created successfully`);
-    } catch (error) {
-      console.error('Failed to create tour:', error);
-      // TODO: Show error notification to user
-    }
-  };
 
   return (
     <>
@@ -165,33 +121,6 @@ export function Dashboard({
       
       <SaveGameModal open={showSaveModal} onOpenChange={setShowSaveModal} />
       
-      {/* Project Creation Modal */}
-      {gameState && (
-        <ProjectCreationModal
-          gameState={gameState}
-          artists={artists}
-          onCreateProject={async (projectData) => {
-            await createProject(projectData);
-            setShowProjectModal(false);
-          }}
-          isCreating={false}
-          open={showProjectModal}
-          onOpenChange={setShowProjectModal}
-        />
-      )}
-      
-      {/* Live Performance Modal */}
-      {gameState && (
-        <LivePerformanceModal
-          gameState={gameState}
-          artists={artists}
-          projects={projects}
-          onCreateTour={handleCreateTour}
-          isCreating={false}
-          open={showLivePerformanceModal}
-          onOpenChange={setShowLivePerformanceModal}
-        />
-      )}
 
       <ToastNotification />
     </>

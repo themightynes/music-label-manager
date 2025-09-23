@@ -54,7 +54,9 @@
       "mcp__browsermcp__browser_snapshot",
       "Bash(python:*)",
       "mcp__browsermcp__browser_type",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "mcp__shadcn__getComponent",
+      "mcp__shadcn__getComponents"
     ],
     "deny": [],
     "ask": [],

@@ -675,12 +675,14 @@ export class DatabaseStorage implements IStorage {
 
   async getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
     const dbToUse = dbTransaction || db;
+    // Convert Date to ISO string format (YYYY-MM-DD) for database comparison
+    const chartWeekString = chartWeek.toISOString().split('T')[0];
     return await dbToUse
       .select()
       .from(chartEntries)
       .where(
         and(
-          eq(chartEntries.chartWeek, chartWeek),
+          eq(chartEntries.chartWeek, chartWeekString),
           eq(chartEntries.gameId, gameId)
         )
       )

@@ -590,11 +590,10 @@ export default function PlanReleasePage() {
 
   return (
     <GameLayout>
-      <div className="min-h-screen">
-        <div className="bg-[#2C222A] border-b border-[#4e324c]/50 px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-xl font-bold text-white">Plan Release</h1>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-8">
+          <h1 className="text-xl md:text-2xl font-bold text-white">Plan Release</h1>
         </div>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Left Column - Release Planning */}
@@ -1289,8 +1288,7 @@ export default function PlanReleasePage() {
             </Card>
           </div>
         </div>
-        </main>
-      </div>
+      </main>
     </GameLayout>
   );
 }

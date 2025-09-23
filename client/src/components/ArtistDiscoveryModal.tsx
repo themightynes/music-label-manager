@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Search, Music, TrendingUp, Zap, Heart, Star, AlertCircle } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { ARTIST_ARCHETYPES } from '@/lib/gameData';
@@ -118,7 +119,7 @@ export function ArtistDiscoveryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
         <DialogHeader className="border-b border-[#4e324c] pb-4">
           <DialogTitle className="text-xl font-bold text-white flex items-center">
             <Music className="w-5 h-5 mr-2 text-[#A75A5B]" />
@@ -155,8 +156,8 @@ export function ArtistDiscoveryModal({
           </div>
         </div>
 
-        {/* Artist Grid */}
-        <div className="p-6 overflow-y-auto max-h-96">
+        {/* Artist Table */}
+        <div className="overflow-y-auto max-h-96">
           {loading ? (
             <div className="text-center py-8">
               <Music className="w-12 h-12 text-white/50 mx-auto mb-4 animate-pulse" />
@@ -176,80 +177,98 @@ export function ArtistDiscoveryModal({
               <p className="text-white/70">No artists found matching your criteria</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredArtists.map(artist => (
-                <Card key={artist.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-white">
-                          {artist.name}
-                        </CardTitle>
-                        <p className="text-sm text-white/70">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</p>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-[#4e324c] hover:bg-[#2C222A]">
+                  <TableHead className="text-white/90 font-semibold w-20">Avatar</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Artist</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Archetype</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Talent</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Work Ethic</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Popularity</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Signing Cost</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Monthly Cost</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredArtists.map(artist => (
+                  <TableRow key={artist.id} className="border-[#4e324c] hover:bg-[#2C222A]/50">
+                    <TableCell className="w-20">
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-[#2C222A]">
+                        <img
+                          src={`/avatars/${artist.name.toLowerCase().replace(/\s+/g, '_')}_full.png`}
+                          alt={`${artist.name} avatar`}
+                          className="w-full h-full object-contain scale-[6] translate-y-[205%]"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/avatars/blank_full.png';
+                          }}
+                        />
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <div className="cursor-pointer">
+                            <div className="font-semibold text-white text-base hover:text-[#A75A5B] transition-colors">{artist.name}</div>
+                            <div className="text-xs text-white/70">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</div>
+                          </div>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" className="w-80 bg-[#23121c] border-[#4e324c] text-white">
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">{artist.name}</h4>
+                            <p className="text-sm text-white/70">{artist.bio || 'Talented artist...'}</p>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    </TableCell>
+                    <TableCell>
                       <Badge className={`${getArchetypeColor(artist.archetype)} border`}>
                         {getArchetypeIcon(artist.archetype)}
                         <span className="ml-1">{artist.archetype}</span>
                       </Badge>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-white/70 mb-4 line-clamp-2">{artist.bio || 'Talented artist...'}</p>
-                    
-                    {/* Stats */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-white/70">Talent</span>
-                        <span className="font-medium">{artist.talent}/100</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium text-white">{artist.talent}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium text-white">{artist.workEthic}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium text-white">{artist.popularity}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-semibold text-white">${(artist.signingCost || 5000).toLocaleString()}</div>
                       </div>
-                      <Progress value={artist.talent} className="h-1" />
-                      
-                      <div className="flex justify-between text-xs">
-                        <span className="text-white/70">Work Ethic</span>
-                        <span className="font-medium">{artist.workEthic}/100</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium text-white/90">${(artist.monthlyCost || 800).toLocaleString()}/mo</div>
                       </div>
-                      <Progress value={artist.workEthic} className="h-1" />
-                      
-                      <div className="flex justify-between text-xs">
-                        <span className="text-white/70">Popularity</span>
-                        <span className="font-medium">{artist.popularity}/100</span>
-                      </div>
-                      <Progress value={artist.popularity} className="h-1" />
-                    </div>
-
-                    {/* Costs */}
-                    <div className="bg-[#3c252d]/20 rounded-lg p-3 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-white/70">Signing Cost:</span>
-                        <span className="font-semibold text-white">${(artist.signingCost || 5000).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-white/70">Monthly Cost:</span>
-                        <span className="font-medium text-white/90">${(artist.monthlyCost || 800).toLocaleString()}/mo</span>
-                      </div>
-                    </div>
-
-                    {/* Sign Button */}
-                    <Button
-                      onClick={() => handleSignArtist(artist)}
-                      disabled={
-                        signingArtist === artist.id || 
-                        (gameState.money || 0) < (artist.signingCost || 5000) ||
-                        signedArtists.length >= 3
-                      }
-                      className="w-full"
-                      variant={signingArtist === artist.id ? 'secondary' : 'default'}
-                    >
-                      {signingArtist === artist.id ? 'Signing...' : 
-                       (gameState.money || 0) < (artist.signingCost || 5000) ? 'Cannot Afford' :
-                       signedArtists.length >= 3 ? 'Roster Full' :
-                       'Sign Artist'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        onClick={() => handleSignArtist(artist)}
+                        disabled={
+                          signingArtist === artist.id ||
+                          (gameState.money || 0) < (artist.signingCost || 5000) ||
+                          signedArtists.length >= 3
+                        }
+                        size="sm"
+                        variant={signingArtist === artist.id ? 'secondary' : 'default'}
+                      >
+                        {signingArtist === artist.id ? 'Signing...' :
+                         (gameState.money || 0) < (artist.signingCost || 5000) ? 'Cannot Afford' :
+                         signedArtists.length >= 3 ? 'Roster Full' :
+                         'Sign'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
 

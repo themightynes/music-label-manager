@@ -133,7 +133,7 @@ export const executiveMeetingMachine = createMachine({
         onError: {
           target: 'idle',
           actions: assign({
-            error: ({ event }) => event.error?.message || 'Failed to load meetings',
+            error: ({ event }) => (event.error as Error)?.message || 'Failed to load meetings',
             selectedExecutive: null,
           }),
         },
@@ -177,7 +177,7 @@ export const executiveMeetingMachine = createMachine({
         onError: {
           target: 'selectingMeeting',
           actions: assign({
-            error: ({ event }) => event.error?.message || 'Failed to load dialogue',
+            error: ({ event }) => (event.error as Error)?.message || 'Failed to load dialogue',
             selectedMeeting: null,
           }),
         },
@@ -222,7 +222,7 @@ export const executiveMeetingMachine = createMachine({
               console.log('[AUTO] fetchAllExecutiveData actor called with input:', input);
               const executives = await fetchExecutives(input.gameId);
               const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
-              const allMeetings = {};
+              const allMeetings: Record<string, RoleMeeting[]> = {};
 
               for (const role of roles) {
                 try {
@@ -336,7 +336,7 @@ export const executiveMeetingMachine = createMachine({
 }, {
   guards: {
     hasFocusSlots: ({ context }) => context.focusSlotsUsed < context.focusSlotsTotal,
-    hasValidMeeting: ({ event }) => !!event.meeting && !!event.meeting.id,
+    hasValidMeeting: ({ event }) => event.type === 'SELECT_MEETING' && !!event.meeting && !!event.meeting.id,
   },
   actions: {
     processChoice: ({ context, event }) => {
@@ -391,8 +391,13 @@ export const executiveMeetingMachine = createMachine({
     }),
     calculateAutoOptions: assign(({ context, event }) => {
       console.log('[AUTO] calculateAutoOptions called', { context, event });
-      const { executives } = event.output;
-      const { allMeetings } = event.output;
+      // Type guard for events with output property
+      if (!('output' in event) || !event.output) {
+        console.warn('[AUTO] Event missing output property:', event);
+        return { autoOptions: [] };
+      }
+      const { executives } = (event as any).output;
+      const { allMeetings } = (event as any).output;
       const remainingSlots = context.focusSlotsTotal - context.focusSlotsUsed;
 
       console.log('[AUTO] Data received:', {
@@ -406,10 +411,10 @@ export const executiveMeetingMachine = createMachine({
         return { autoOptions: [] };
       }
 
-      const options = [];
+      const options: Array<{ executive: Executive; meeting: RoleMeeting; choice: DialogueChoice; score: number; actionData: object }> = [];
 
       // Generate all possible combinations
-      executives.forEach(executive => {
+      executives.forEach((executive: Executive) => {
         const meetings = allMeetings[executive.role] || [];
         console.log(`[AUTO] Executive ${executive.role}: ${meetings.length} meetings`);
 
@@ -421,7 +426,7 @@ export const executiveMeetingMachine = createMachine({
             const choice = meeting.choices[0]; // Take first choice
 
             // Simple scoring: prioritize by low mood/loyalty + role priority
-            const roleScores = {
+            const roleScores: Record<string, number> = {
               'ceo': 50,
               'head_ar': 40,
               'cmo': 30,

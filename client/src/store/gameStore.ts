@@ -449,12 +449,13 @@ export const useGameStore = create<GameStore>()(
           console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
           console.log('=====================================');
 
-          // Ensure usedFocusSlots is reset to 0 for the new month
+          // Ensure usedFocusSlots is reset to 0 for the new month and preserve musicLabel
           const syncedGameState = {
             ...result.gameState,
-            usedFocusSlots: 0  // Always 0 at start of new month
+            usedFocusSlots: 0,  // Always 0 at start of new month
+            musicLabel: gameState.musicLabel  // Preserve existing music label
           };
-          
+
           set({
             gameState: syncedGameState,
             artists: gameData.artists || [], // Update artists to reflect mood changes

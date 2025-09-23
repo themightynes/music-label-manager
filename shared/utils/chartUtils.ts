@@ -31,22 +31,22 @@ export function calculateChartMovement(
  */
 export function getChartPositionColor(position: number | null): string {
   if (position === null) {
-    return 'bg-gray-100 text-gray-600'; // Non-charting
+    return 'bg-gray-700 text-gray-300'; // Non-charting
   }
 
   if (position >= 1 && position <= 10) {
-    return 'bg-yellow-100 text-yellow-800'; // Gold tier (#1-10)
+    return 'bg-yellow-500 text-yellow-900'; // Gold tier (#1-10)
   }
 
   if (position >= 11 && position <= 40) {
-    return 'bg-gray-100 text-gray-800'; // Silver tier (#11-40)
+    return 'bg-slate-600 text-white'; // Silver tier (#11-40)
   }
 
   if (position >= 41 && position <= 100) {
-    return 'bg-amber-100 text-amber-800'; // Bronze tier (#41-100)
+    return 'bg-slate-600 text-white'; // Bronze tier (#41-100)
   }
 
-  return 'bg-gray-100 text-gray-600'; // Outside chart
+  return 'bg-gray-700 text-gray-300'; // Outside chart
 }
 
 /**

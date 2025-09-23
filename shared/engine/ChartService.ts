@@ -268,8 +268,9 @@ export class ChartService {
    * @param dbTransaction Optional database transaction
    */
   private async createChartEntries(chartWeek: Date | string, rankedSongs: SongPerformance[], dbTransaction?: any): Promise<void> {
-    // Normalize chart week to Date object for database operations
+    // Normalize chart week to Date object for calculations, then convert to string for database
     const normalizedChartWeek = this.toDbDate(chartWeek);
+    const chartWeekString = normalizedChartWeek.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     // Get existing chart entries for this week to determine which songs already have entries
     const existingEntries = await this.storage.getChartEntriesByWeekAndGame(normalizedChartWeek, this.gameId, dbTransaction);
@@ -384,7 +385,7 @@ export class ChartService {
         chartEntries.push({
           songId: song.songId,
           gameId: this.gameId,
-          chartWeek: normalizedChartWeek,
+          chartWeek: chartWeekString,
           streams: song.streams,
           position: chartPosition, // null when not charting
           isDebut,
@@ -404,7 +405,7 @@ export class ChartService {
         chartEntries.push({
           songId: null, // Competitor songs don't have real songId
           gameId: this.gameId,
-          chartWeek: normalizedChartWeek,
+          chartWeek: chartWeekString,
           streams: song.streams,
           position: overallPosition <= 100 ? overallPosition : null,
           isDebut: false, // Competitors don't have debut tracking

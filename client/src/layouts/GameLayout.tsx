@@ -8,22 +8,16 @@ import { GameSidebar } from '@/components/GameSidebar';
 
 interface GameLayoutProps {
   children: ReactNode;
-  onShowProjectModal?: () => void;
-  onShowLivePerformanceModal?: () => void;
   onShowSaveModal?: () => void;
 }
 
 export default function GameLayout({
   children,
-  onShowProjectModal,
-  onShowLivePerformanceModal,
   onShowSaveModal
 }: GameLayoutProps) {
   return (
     <SidebarProvider defaultOpen={true}>
       <GameSidebar
-        onShowProjectModal={onShowProjectModal}
-        onShowLivePerformanceModal={onShowLivePerformanceModal}
         onShowSaveModal={onShowSaveModal}
       />
       <SidebarInset className="bg-transparent">

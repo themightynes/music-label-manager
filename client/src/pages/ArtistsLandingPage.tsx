@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, TrendingUp, Star, DollarSign, Music, Eye, UserPlus } from 'lucide-react';
+import { Users, TrendingUp, Star, DollarSign, Music, Eye, UserPlus, CalendarDays, Mic, Disc3, Rocket } from 'lucide-react';
 import { useLocation } from 'wouter';
 import type { Artist } from '@shared/schema';
 import GameLayout from '../layouts/GameLayout';
@@ -7,6 +7,13 @@ import { ArtistDiscoveryModal } from '../components/ArtistDiscoveryModal';
 import { ArtistCard as RichArtistCard, getArchetypeInfo, getRelationshipStatus } from '../components/ArtistCard';
 import { useGameStore } from '../store/gameStore';
 import { usePortfolioROI, useArtistROI } from '../hooks/useAnalytics';
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
+} from '../components/ui/menubar';
 
 const ArtistsLandingPage: React.FC = () => {
   const [, setLocation] = useLocation();
@@ -81,6 +88,31 @@ const ArtistsLandingPage: React.FC = () => {
 
   const handleNavigateToArtist = (artistId: string) => {
     setLocation(`/artist/${artistId}`);
+  };
+
+  // Artist action handlers
+  const handleMeetArtist = (artist: Artist) => {
+    console.info(`[ArtistsLandingPage] Arranging meeting with ${artist.name}...`);
+    // TODO: Implement meeting functionality - could navigate to /executives or open meeting modal
+    setLocation('/executives');
+  };
+
+  const handlePlanTour = (artist: Artist) => {
+    console.info(`[ArtistsLandingPage] Planning tour for ${artist.name}...`);
+    // Navigate to dedicated Live Performance page with artist pre-selected
+    setLocation(`/live-performance?artistId=${artist.id}`);
+  };
+
+  const handleStartRecording = (artist: Artist) => {
+    console.info(`[ArtistsLandingPage] Starting recording project for ${artist.name}...`);
+    // Navigate to dedicated Recording Session page with artist pre-selected
+    setLocation(`/recording-session?artistId=${artist.id}`);
+  };
+
+  const handlePlanRelease = (artist: Artist) => {
+    console.info(`[ArtistsLandingPage] Planning release for ${artist.name}...`);
+    // Navigate to Plan Release page with artist pre-selected
+    setLocation(`/plan-release?artistId=${artist.id}`);
   };
 
 
@@ -226,13 +258,44 @@ const ArtistsLandingPage: React.FC = () => {
                           />
                         </div>
 
-                        {/* Meet button under avatar */}
-                        <button
-                          className="w-20 py-1 px-2 text-xs bg-[#A75A5B] hover:bg-[#B86B6C] text-white rounded border border-[#65557c] transition-colors"
-                          onClick={() => handleArtistMeeting(artist)}
-                        >
-                          Meet
-                        </button>
+                        {/* Artist Actions Menubar */}
+                        <Menubar className="w-24 h-8 p-0 bg-[#A75A5B] border-[#65557c] rounded-lg">
+                          <MenubarMenu>
+                            <MenubarTrigger className="w-full h-full text-xs text-white px-2 py-1 hover:bg-[#B86B6C] data-[state=open]:bg-[#B86B6C] data-[state=open]:text-white justify-center rounded-lg">
+                              Actions
+                            </MenubarTrigger>
+                            <MenubarContent className="bg-[#23121c] border-[#4e324c] text-white">
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                onClick={() => handleMeetArtist(artist)}
+                              >
+                                <CalendarDays className="w-4 h-4 mr-2 text-gray-300" />
+                                Meet
+                              </MenubarItem>
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                onClick={() => handlePlanTour(artist)}
+                              >
+                                <Mic className="w-4 h-4 mr-2 text-gray-300" />
+                                Tour
+                              </MenubarItem>
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                onClick={() => handleStartRecording(artist)}
+                              >
+                                <Disc3 className="w-4 h-4 mr-2 text-gray-300" />
+                                Record
+                              </MenubarItem>
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                onClick={() => handlePlanRelease(artist)}
+                              >
+                                <Rocket className="w-4 h-4 mr-2 text-gray-300" />
+                                Release
+                              </MenubarItem>
+                            </MenubarContent>
+                          </MenubarMenu>
+                        </Menubar>
                       </div>
 
                       {/* Artist Card content pushed to the right */}

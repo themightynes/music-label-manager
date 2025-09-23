@@ -20,6 +20,8 @@ import ToursTest from "@/pages/ToursTest";
 import Top100ChartPage from "@/pages/Top100ChartPage";
 import MarketsEditor from "@/pages/MarketsEditor";
 import LandingPage from "@/pages/LandingPage";
+import RecordingSessionPage from "@/pages/RecordingSessionPage";
+import LivePerformancePage from "@/pages/LivePerformancePage";
 
 function Router() {
   return (
@@ -29,6 +31,8 @@ function Router() {
       <Route path="/artists" component={ArtistsLandingPage} />
       <Route path="/artist/:artistId" component={ArtistPage} />
       <Route path="/executives" component={ExecutiveSuitePage} />
+      <Route path="/recording-session" component={RecordingSessionPage} />
+      <Route path="/live-performance" component={LivePerformancePage} />
       <Route path="/quality-tester" component={QualityTester} />
       <Route path="/tour-variance-tester" component={TourVarianceTesterPage} />
       <Route path="/popularity-tester" component={PopularityTester} />

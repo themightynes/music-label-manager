@@ -134,7 +134,7 @@ export function ExecutiveMeetings({
   useEffect(() => {
     if (state.matches('idle') && lastCompletedMeeting) {
       // A meeting just completed, refetch executive data to get updated mood/loyalty
-      async function refetchExecutives() {
+      const refetchExecutives = async () => {
         try {
           setExecutivesLoading(true);
           const fetchedExecutives = await fetchExecutives(gameId);
@@ -145,7 +145,7 @@ export function ExecutiveMeetings({
         } finally {
           setExecutivesLoading(false);
         }
-      }
+      };
       refetchExecutives();
     }
   }, [state.value, lastCompletedMeeting, gameId]);

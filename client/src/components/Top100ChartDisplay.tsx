@@ -71,77 +71,71 @@ export function Top100ChartDisplay() {
 
   if (loading) {
     return (
-      <Card className="shadow-sm max-w-6xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+      <div className="space-y-6">
+        <div className="mb-8">
+          <div className="flex items-center space-x-2 mb-6">
             <Trophy className="w-5 h-5 text-yellow-600" />
-            <span>Top 100 Chart</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-white/50" />
-            <span className="ml-2 text-white/70">Loading chart data...</span>
+            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="w-6 h-6 animate-spin text-white/50" />
+          <span className="ml-2 text-white/70">Loading chart data...</span>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="shadow-sm max-w-6xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+      <div className="space-y-6">
+        <div className="mb-8">
+          <div className="flex items-center space-x-2 mb-6">
             <Trophy className="w-5 h-5 text-yellow-600" />
-            <span>Top 100 Chart</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-red-400 mb-4">{error}</div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Retry
-            </Button>
+            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-red-400 mb-4">{error}</div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Retry
+          </Button>
+        </div>
+      </div>
     );
   }
 
   if (!chartData || chartData.top100.length === 0) {
     return (
-      <Card className="shadow-sm max-w-6xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Trophy className="w-5 h-5 text-yellow-600" />
-              <span>Top 100 Chart</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <BarChart3 className="w-10 h-10 text-white/50 mx-auto mb-4" />
-              <h3 className="text-sm font-semibold text-white/70 mb-2">No Chart Data</h3>
-              <p className="text-xs text-white/50">No songs are currently charting in the Top 100</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-6">
+        <div className="mb-8">
+          <div className="flex items-center space-x-2 mb-6">
+            <Trophy className="w-5 h-5 text-yellow-600" />
+            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
+          </div>
+        </div>
+        <div className="text-center py-8">
+          <BarChart3 className="w-10 h-10 text-white/50 mx-auto mb-4" />
+          <h3 className="text-sm font-semibold text-white/70 mb-2">No Chart Data</h3>
+          <p className="text-xs text-white/50">No songs are currently charting in the Top 100</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -150,12 +144,13 @@ export function Top100ChartDisplay() {
   const displayEntries = showAll ? chartData.top100 : chartData.top100.slice(0, 25);
 
   return (
-    <Card className="shadow-sm max-w-6xl mx-auto">
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             <Trophy className="w-5 h-5 text-yellow-600" />
-            <CardTitle>Top 100 Chart</CardTitle>
+            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
             <Badge variant="outline" className="text-xs">
               Month {chartData.currentMonth}
             </Badge>
@@ -184,14 +179,14 @@ export function Top100ChartDisplay() {
         </div>
 
         {debuts.length > 0 && (
-          <div className="mt-2">
+          <div className="mb-4">
             <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
               {debuts.length} New Debut{debuts.length !== 1 ? 's' : ''}
             </Badge>
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div className="text-sm text-white/70">
             Showing {displayEntries.length} of {chartData.top100.length} songs
           </div>
@@ -206,9 +201,10 @@ export function Top100ChartDisplay() {
             </Button>
           )}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-6">
+      {/* Chart Content */}
+      <div className="space-y-6">
         <ChartDataTable<Top100Entry>
           columns={chartColumns}
           data={displayEntries}
@@ -244,41 +240,8 @@ export function Top100ChartDisplay() {
           </div>
         )}
 
-        {chartData.top100.length >= 10 && (
-          <div className="p-4 bg-[#3c252d]/30 rounded-lg border border-[#A75A5B]/20">
-            <h4 className="text-sm font-semibold text-white mb-3 flex items-center space-x-2">
-              <Trophy className="w-4 h-4 text-yellow-600" />
-              <span>Top 10 Highlights</span>
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              {chartData.top100.slice(0, 10).map(entry => (
-                <div
-                  key={entry.songId}
-                  className={`flex items-center justify-between p-2 rounded text-xs ${
-                    entry.isPlayerSong
-                      ? 'bg-[#A75A5B]/20 border border-[#A75A5B]/30'
-                      : 'bg-black/20'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="font-mono font-bold w-6">#{entry.position}</span>
-                    <div className="truncate">
-                      <div className="font-medium truncate">{entry.songTitle}</div>
-                      <div className="text-white/50 truncate">{entry.artistName}</div>
-                    </div>
-                  </div>
-                  {entry.isPlayerSong && (
-                    <Badge variant="secondary" className="text-xs bg-[#A75A5B] text-white px-1 ml-2">
-                      YOURS
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

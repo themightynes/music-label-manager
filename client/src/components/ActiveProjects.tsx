@@ -9,6 +9,7 @@ import { ProjectCreationModal, type ProjectCreationData } from './ProjectCreatio
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, TrendingUp, DollarSign, Users, Calculator } from 'lucide-react';
 import { useProjectROI, usePortfolioROI } from '@/hooks/useAnalytics';
+import { getTourMetadata, getTourStats, getCompletedCities, getCityCounts } from '@/utils/tourHelpers';
 
 export function ActiveProjects() {
   const { projects, artists, createProject, cancelProject, gameState, songs } = useGameStore();
@@ -70,19 +71,17 @@ export function ActiveProjects() {
     try {
       console.log('Cancelling tour:', projectToCancel.title);
       // Calculate cancellation penalty based on remaining cities
-      const tourStats = projectToCancel.metadata?.tourStats;
-      const citiesPlanned = projectToCancel.metadata?.cities || 1;
-      const citiesCompleted = tourStats?.cities?.length || 0;
-      const remainingCities = Math.max(0, citiesPlanned - citiesCompleted);
+      const cityCounts = getCityCounts(projectToCancel);
+      const remainingCities = cityCounts.remaining;
       
       // Calculate partial refund (60% of remaining cities cost)
       const refundPercentage = 0.6;
-      const costPerCity = projectToCancel.totalCost / citiesPlanned;
+      const costPerCity = projectToCancel.totalCost / cityCounts.planned;
       const refundAmount = Math.round(remainingCities * costPerCity * refundPercentage);
       
       console.log(`Cancellation details:`, {
-        citiesPlanned,
-        citiesCompleted, 
+        citiesPlanned: cityCounts.planned,
+        citiesCompleted: cityCounts.completed,
         remainingCities,
         originalCost: projectToCancel.totalCost,
         refundAmount
@@ -106,19 +105,17 @@ export function ActiveProjects() {
   const getCancellationDetails = (project: any) => {
     if (!project) return null;
     
-    const tourStats = project.metadata?.tourStats;
-    const citiesPlanned = project.metadata?.cities || 1;
-    const citiesCompleted = tourStats?.cities?.length || 0;
-    const remainingCities = Math.max(0, citiesPlanned - citiesCompleted);
+    const cityCounts = getCityCounts(project);
+    const remainingCities = cityCounts.remaining;
     
     const refundPercentage = 0.6;
-    const costPerCity = project.totalCost / citiesPlanned;
+    const costPerCity = project.totalCost / cityCounts.planned;
     const refundAmount = Math.round(remainingCities * costPerCity * refundPercentage);
     const sunkCosts = project.totalCost - refundAmount;
     
     return {
-      citiesPlanned,
-      citiesCompleted,
+      citiesPlanned: cityCounts.planned,
+      citiesCompleted: cityCounts.completed,
       remainingCities,
       refundAmount,
       sunkCosts,
@@ -153,16 +150,14 @@ export function ActiveProjects() {
         case 'planning': return 'Planning';
         case 'production': {
           // Show current city progress for tours in production
-          const tourStats = project.metadata?.tourStats;
-          const citiesCompleted = tourStats?.cities?.length || 0;
-          const citiesPlanned = project.metadata?.cities || 1;
+          const cityCounts = getCityCounts(project);
 
           // If all cities are completed, show completion status instead of "City X+1 of Y"
-          if (citiesCompleted >= citiesPlanned) {
+          if (cityCounts.completed >= cityCounts.planned) {
             return '✓ Complete';
           }
 
-          return `City ${citiesCompleted + 1} of ${citiesPlanned}`;
+          return `City ${cityCounts.completed + 1} of ${cityCounts.planned}`;
         }
         case 'recorded': return '✓ Complete';
         case 'cancelled': return '✗ Cancelled';
@@ -217,12 +212,10 @@ export function ActiveProjects() {
 
       // For production stage tours, check if they're actually completed
       if (p.stage === 'production') {
-        const tourStats = p.metadata?.tourStats;
-        const citiesCompleted = tourStats?.cities?.length || 0;
-        const citiesPlanned = p.metadata?.cities || 1;
+        const cityCounts = getCityCounts(p);
 
         // Only move to completed if ALL cities are done AND there are actually completed cities recorded
-        if (citiesCompleted > 0 && citiesCompleted >= citiesPlanned) {
+        if (cityCounts.completed > 0 && cityCounts.completed >= cityCounts.planned) {
           return false;
         }
 
@@ -247,12 +240,10 @@ export function ActiveProjects() {
 
       // Also include tours in 'production' stage that have completed all cities
       if (p.stage === 'production') {
-        const tourStats = p.metadata?.tourStats;
-        const citiesCompleted = tourStats?.cities?.length || 0;
-        const citiesPlanned = p.metadata?.cities || 1;
+        const cityCounts = getCityCounts(p);
 
         // Only consider completed if there are actually completed cities AND all are done
-        return citiesCompleted > 0 && citiesCompleted >= citiesPlanned;
+        return cityCounts.completed > 0 && cityCounts.completed >= cityCounts.planned;
       }
 
       return false;
@@ -435,10 +426,8 @@ export function ActiveProjects() {
                     <span className="font-mono text-green-600">
                       {(() => {
                         if (project.type === 'Mini-Tour') {
-                          const tourStats = project.metadata?.tourStats;
-                          const citiesPlanned = project.metadata?.cities || 1;
-                          const citiesCompleted = tourStats?.cities?.length || 0;
-                          return `${citiesCompleted}/${citiesPlanned} cities`;
+                          const cityCounts = getCityCounts(project);
+                          return `${cityCounts.completed}/${cityCounts.planned} cities`;
                         } else {
                           const projectSongs = getProjectSongs(project.id);
                           const recordedSongs = projectSongs.filter(song => song.isRecorded);
@@ -473,22 +462,19 @@ export function ActiveProjects() {
 
                   // For tours, also check if all cities are completed
                   if (project.type === 'Mini-Tour' && !isCompleted) {
-                    const tourStats = project.metadata?.tourStats;
-                    const citiesCompleted = tourStats?.cities?.length || 0;
-                    const citiesPlanned = project.metadata?.cities || 1;
-                    isCompleted = citiesCompleted >= citiesPlanned;
+                    const cityCounts = getCityCounts(project);
+                    isCompleted = cityCounts.completed >= cityCounts.planned;
                   }
 
                   if (!isCompleted) return null;
 
                   // Check if this is a tour project
                   if (project.type === 'Mini-Tour') {
-                    const tourStats = project.metadata?.tourStats;
-                    const citiesPlanned = project.metadata?.cities || 1;
-                    const citiesCompleted = tourStats?.cities?.length || 0;
-                    const totalRevenue = tourStats?.cities?.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0) || 0;
-                    const avgAttendance = tourStats?.cities?.length > 0 
-                      ? Math.round(tourStats.cities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / tourStats.cities.length)
+                    const cityCounts = getCityCounts(project);
+                    const completedCities = getCompletedCities(project);
+                    const totalRevenue = completedCities.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0) || 0;
+                    const avgAttendance = completedCities.length > 0
+                      ? Math.round(completedCities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / completedCities.length)
                       : 0;
                     
                     return (
@@ -496,7 +482,7 @@ export function ActiveProjects() {
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Tour Completed</span>
                           <span className="font-mono text-green-600">
-                            {citiesCompleted}/{citiesPlanned} cities
+                            {cityCounts.completed}/{cityCounts.planned} cities
                           </span>
                         </div>
                         
@@ -514,7 +500,7 @@ export function ActiveProjects() {
                           </span>
                         </div>
                         
-                        {tourStats?.cities?.length > 0 && (
+                        {completedCities.length > 0 && (
                           <div className="text-xs text-white/70 italic mt-1">
                             Tour completed successfully
                           </div>
@@ -620,10 +606,8 @@ export function ActiveProjects() {
                             <span className="text-white/50">Tour Complete</span>
                             <span className="font-mono text-green-600">
                               {(() => {
-                                const tourStats = project.metadata?.tourStats;
-                                const citiesPlanned = project.metadata?.cities || 1;
-                                const citiesCompleted = tourStats?.cities?.length || 0;
-                                return `${citiesCompleted}/${citiesPlanned} cities`;
+                                const cityCounts = getCityCounts(project);
+                                return `${cityCounts.completed}/${cityCounts.planned} cities`;
                               })()}
                             </span>
                           </div>
@@ -638,15 +622,14 @@ export function ActiveProjects() {
 
                         {/* City-by-City Details for Active Tours */}
                         {activeTab === 'active' && project.stage === 'production' && (() => {
-                          const tourStats = project.metadata?.tourStats;
-                          const citiesPlanned = project.metadata?.cities || 1;
-                          const completedCities = tourStats?.cities || [];
+                          const cityCounts = getCityCounts(project);
+                          const completedCities = getCompletedCities(project);
                           
                           if (completedCities.length > 0) {
                             return (
                               <div className="pt-2 border-t border-[#4e324c] space-y-1">
                                 <div className="text-xs text-white/60 font-medium mb-1">
-                                  Cities Completed ({completedCities.length}/{citiesPlanned})
+                                  Cities Completed ({completedCities.length}/{cityCounts.planned})
                                 </div>
                                 {completedCities.map((city: any, index: number) => (
                                   <div key={index} className="bg-[#3c252d]/30 rounded p-2 text-xs space-y-1">
@@ -668,12 +651,11 @@ export function ActiveProjects() {
 
                         {/* Information for Completed Tours */}
                         {project.stage === 'recorded' && (() => {
-                          const tourStats = project.metadata?.tourStats;
-                          const citiesPlanned = project.metadata?.cities || 1;
-                          const citiesCompleted = tourStats?.cities?.length || 0;
-                          const totalRevenue = tourStats?.cities?.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0) || 0;
-                          const avgAttendance = tourStats?.cities?.length > 0 
-                            ? Math.round(tourStats.cities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / tourStats.cities.length)
+                          const cityCounts = getCityCounts(project);
+                          const completedCities = getCompletedCities(project);
+                          const totalRevenue = completedCities.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0) || 0;
+                          const avgAttendance = completedCities.length > 0
+                            ? Math.round(completedCities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / completedCities.length)
                             : 0;
                           
                           return (
@@ -681,7 +663,7 @@ export function ActiveProjects() {
                               <div className="flex items-center justify-between text-xs">
                                 <span className="text-white/50">Tour Completed</span>
                                 <span className="font-mono text-green-600">
-                                  {citiesCompleted}/{citiesPlanned} cities
+                                  {cityCounts.completed}/{cityCounts.planned} cities
                                 </span>
                               </div>
                               
@@ -699,18 +681,18 @@ export function ActiveProjects() {
                                 </span>
                               </div>
                               
-                              {tourStats?.cities?.length > 0 && (
+                              {completedCities.length > 0 && (
                                 <>
                                   <div className="text-xs text-white/70 italic mt-1 mb-2">
                                     Tour completed successfully
                                   </div>
-                                  
+
                                   {/* City-by-City Details for Completed Tours */}
                                   <div className="space-y-1">
                                     <div className="text-xs text-white/60 font-medium">
-                                      City Details ({tourStats.cities.length} cities)
+                                      City Details ({completedCities.length} cities)
                                     </div>
-                                    {tourStats.cities.map((city: any, index: number) => {
+                                    {completedCities.map((city: any, index: number) => {
                                       const cityKey = `${project.id}-city-${city.cityNumber}`;
                                       const isExpanded = expandedCityDetails[cityKey];
                                       const hasEconomics = city.economics; // Check if enhanced data is available

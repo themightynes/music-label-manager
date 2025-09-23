@@ -41,14 +41,10 @@ import {
 } from 'lucide-react';
 
 interface GameSidebarProps {
-  onShowProjectModal?: () => void;
-  onShowLivePerformanceModal?: () => void;
   onShowSaveModal?: () => void;
 }
 
 export function GameSidebar({
-  onShowProjectModal,
-  onShowLivePerformanceModal,
   onShowSaveModal
 }: GameSidebarProps) {
   const [location, setLocation] = useLocation();
@@ -339,7 +335,8 @@ export function GameSidebar({
 
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => onShowProjectModal ? onShowProjectModal() : setLocation('/?open=recording')}
+                    onClick={() => setLocation('/recording-session')}
+                    isActive={currentPath === '/recording-session'}
                     tooltip="Recording Session"
                   >
                     <Plus />
@@ -349,7 +346,8 @@ export function GameSidebar({
 
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => onShowLivePerformanceModal ? onShowLivePerformanceModal() : setLocation('/?open=tour')}
+                    onClick={() => setLocation('/live-performance')}
+                    isActive={currentPath === '/live-performance'}
                     tooltip="Live Performance"
                   >
                     <Mic />

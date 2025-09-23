@@ -288,7 +288,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking';
   description: string;
   amount?: number;
   roleId?: string;
@@ -297,6 +297,8 @@ export interface GameChange {
   newMood?: number;
   loyaltyBoost?: number;
   newLoyalty?: number;
+  source?: string;
+  artistId?: string;
 }
 
 export interface EventOccurrence {
