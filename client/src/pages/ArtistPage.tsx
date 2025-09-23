@@ -41,6 +41,7 @@ import { useGameStore } from '@/store/gameStore';
 import { useLocation, useParams } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { useArtistROI } from '@/hooks/useAnalytics';
+import { findArtistBySlugOrId, generateArtistSlug } from '@/utils/artistSlug';
 
 // Types based on existing patterns
 interface Artist {
@@ -113,12 +114,16 @@ interface Release {
 
 export default function ArtistPage() {
   const params = useParams();
-  const artistId = params.artistId;
+  const artistParam = params.artistParam; // Can be either ID or slug
   const [, setLocation] = useLocation();
   const { gameState, artists, projects, releases } = useGameStore();
 
+  // Find the actual artist first to get ID for ROI
+  const foundArtist = artists ? findArtistBySlugOrId(artists, artistParam || '') : null;
+  const actualArtistId = foundArtist?.id || '';
+
   // Fetch ROI data once at top level to avoid duplicate calls
-  const { data: roiData } = useArtistROI(artistId || '');
+  const { data: roiData } = useArtistROI(actualArtistId);
 
   // Data state
   const [artist, setArtist] = useState<Artist | null>(null);
@@ -143,15 +148,15 @@ export default function ArtistPage() {
   
   // Load artist data
   useEffect(() => {
-    if (!artistId || !gameState?.id) return;
+    if (!artistParam || !gameState?.id) return;
     
     const loadArtistData = async () => {
       setLoadingArtist(true);
       setArtistError(null);
       
       try {
-        // First try to find artist in the store
-        const foundArtist = artists?.find(a => a.id === artistId);
+        // Find artist by slug or ID (backwards compatibility)
+        const foundArtist = artists ? findArtistBySlugOrId(artists, artistParam) : null;
         if (foundArtist) {
           // Transform the artist data to match our interface
           const transformedArtist: Artist = {
@@ -170,11 +175,11 @@ export default function ArtistPage() {
         }
         
         // Get projects for this artist
-        const relevantProjects = projects?.filter(p => p.artistId === artistId) || [];
+        const relevantProjects = projects?.filter(p => p.artistId === foundArtist.id) || [];
         setArtistProjects(relevantProjects as Project[]);
         
-        // Get releases for this artist  
-        const relevantReleases = releases?.filter(r => r.artistId === artistId) || [];
+        // Get releases for this artist
+        const relevantReleases = releases?.filter(r => r.artistId === foundArtist.id) || [];
         setArtistReleases(relevantReleases as Release[]);
         
       } catch (error: any) {
@@ -186,11 +191,11 @@ export default function ArtistPage() {
     };
     
     loadArtistData();
-  }, [artistId, gameState?.id, artists, projects, releases]);
+  }, [artistParam, gameState?.id, artists, projects, releases]);
   
   // Load songs data
   useEffect(() => {
-    if (!artistId || !gameState?.id) return;
+    if (!actualArtistId || !gameState?.id) return;
     
     const loadSongsData = async () => {
       setLoadingSongs(true);
@@ -198,8 +203,8 @@ export default function ArtistPage() {
       
       try {
         // Try to load from API first
-        const response = await apiRequest('GET', 
-          `/api/game/${gameState.id}/artists/${artistId}/songs`);
+        const response = await apiRequest('GET',
+          `/api/game/${gameState.id}/artists/${actualArtistId}/songs`);
         const data = await response.json();
         
         if (data.songs) {
@@ -207,14 +212,14 @@ export default function ArtistPage() {
         } else {
           // Fallback to store
           const { songs: allSongs } = useGameStore.getState();
-          const artistSongs = allSongs?.filter(s => s.artistId === artistId) || [];
+          const artistSongs = allSongs?.filter(s => s.artistId === actualArtistId) || [];
           setSongs(artistSongs as Song[]);
         }
       } catch (error: any) {
         console.error('Failed to load songs:', error);
         // Fallback to store on error
         const { songs: allSongs } = useGameStore.getState();
-        const artistSongs = allSongs?.filter(s => s.artistId === artistId) || [];
+        const artistSongs = allSongs?.filter(s => s.artistId === actualArtistId) || [];
         setSongs(artistSongs as Song[]);
       } finally {
         setLoadingSongs(false);
@@ -222,7 +227,7 @@ export default function ArtistPage() {
     };
     
     loadSongsData();
-  }, [artistId, gameState?.id]);
+  }, [actualArtistId, gameState?.id]);
   
   // Helper functions
   const getQualityColor = (quality: number) => {
@@ -530,7 +535,7 @@ export default function ArtistPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <PerformanceMetrics
-                    artistId={artistId || ''}
+                    artistId={actualArtistId || ''}
                     avgQuality={avgQuality}
                     projectCount={artistProjects.length}
                     readySongs={songs.filter(s => s.isRecorded && !s.isReleased).length}

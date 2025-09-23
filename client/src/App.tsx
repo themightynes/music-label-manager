@@ -29,7 +29,7 @@ function Router() {
       <Route path="/" component={GamePage} />
       <Route path="/plan-release" component={PlanReleasePage} />
       <Route path="/artists" component={ArtistsLandingPage} />
-      <Route path="/artist/:artistId" component={ArtistPage} />
+      <Route path="/artist/:artistParam" component={ArtistPage} />
       <Route path="/executives" component={ExecutiveSuitePage} />
       <Route path="/recording-session" component={RecordingSessionPage} />
       <Route path="/live-performance" component={LivePerformancePage} />

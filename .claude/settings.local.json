@@ -57,7 +57,9 @@
       "Bash(npx kill-port:*)",
       "mcp__shadcn__getComponent",
       "mcp__shadcn__getComponents",
-      "mcp__context7-mcp__get-library-docs"
+      "mcp__context7-mcp__get-library-docs",
+      "Bash(claude agents remove turn-based-game-designer)",
+      "Bash(claude agents remove technical-docs-architect)"
     ],
     "deny": [],
     "ask": [],

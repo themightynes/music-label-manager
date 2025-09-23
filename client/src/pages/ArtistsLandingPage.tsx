@@ -7,6 +7,7 @@ import { ArtistDiscoveryModal } from '../components/ArtistDiscoveryModal';
 import { ArtistCard as RichArtistCard, getArchetypeInfo, getRelationshipStatus } from '../components/ArtistCard';
 import { useGameStore } from '../store/gameStore';
 import { usePortfolioROI, useArtistROI } from '../hooks/useAnalytics';
+import { generateArtistSlug } from '../utils/artistSlug';
 import {
   Menubar,
   MenubarContent,
@@ -26,8 +27,9 @@ const ArtistsLandingPage: React.FC = () => {
   const maxArtists = 3; // Based on typical roster limits in the game
   const availableSlots = maxArtists - signedArtists.length;
 
-  const handleViewArtistDetails = (artistId: string) => {
-    setLocation(`/artist/${artistId}`);
+  const handleViewArtistDetails = (artist: Artist) => {
+    const slug = generateArtistSlug(artist.name);
+    setLocation(`/artist/${slug}`);
   };
 
   const handleDiscoverArtists = () => {
@@ -86,8 +88,9 @@ const ArtistsLandingPage: React.FC = () => {
     console.info(`[ArtistsLandingPage] Artist meetings temporarily unavailable for ${artist.name}.`);
   };
 
-  const handleNavigateToArtist = (artistId: string) => {
-    setLocation(`/artist/${artistId}`);
+  const handleNavigateToArtist = (artist: Artist) => {
+    const slug = generateArtistSlug(artist.name);
+    setLocation(`/artist/${slug}`);
   };
 
   // Artist action handlers
@@ -243,7 +246,7 @@ const ArtistsLandingPage: React.FC = () => {
                         {/* Avatar Box */}
                         <div
                           className="w-24 h-32 bg-[#8B6B70] border border-[#65557c] rounded-lg overflow-hidden relative cursor-pointer hover:bg-[#9B7B80] transition-colors"
-                          onClick={() => handleNavigateToArtist(artist.id)}
+                          onClick={() => handleNavigateToArtist(artist)}
                         >
                           <img
                             src={getAvatarUrl(artist.name)}
@@ -308,7 +311,7 @@ const ArtistsLandingPage: React.FC = () => {
                           isExpanded={isExpanded}
                           onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
                           onMeet={() => handleArtistMeeting(artist)}
-                          onNavigate={() => handleNavigateToArtist(artist.id)}
+                          onNavigate={() => handleNavigateToArtist(artist)}
                           gameState={gameState}
                         />
                       </div>
