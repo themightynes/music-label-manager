@@ -119,7 +119,7 @@ const ArtistsLandingPage: React.FC = () => {
   // Calculate success metrics
   const successfulArtists = signedArtists.filter(artist => {
     // Consider an artist successful if they have positive ROI or high popularity/reputation
-    return artist.popularity > 60 || artist.reputation > 60;
+    return (artist.popularity ?? 0) > 60;
   }).length;
   const successRate = signedArtists.length > 0 ? (successfulArtists / signedArtists.length) * 100 : 0;
 

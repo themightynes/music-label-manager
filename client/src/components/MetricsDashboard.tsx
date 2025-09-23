@@ -53,8 +53,8 @@ export function MetricsDashboard() {
               executiveName: roleId.toUpperCase(),
               meetingName: actionId.replace(/_/g, ' '),
               choiceLabel: choice.label,
-              effects_immediate: choice.effects_immediate,
-              effects_delayed: choice.effects_delayed
+              effects_immediate: choice.effects_immediate as Record<string, number>,
+              effects_delayed: choice.effects_delayed as Record<string, number>
             });
 
             // Accumulate immediate effects

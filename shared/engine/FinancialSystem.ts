@@ -12,8 +12,9 @@
  * - Investment tracking for ROI analysis
  */
 
-// Import types from game-engine.ts where they're defined
-import type { MonthSummary, MonthlyFinancials } from './game-engine';
+// Import types from the correct location
+import type { MonthSummary } from '../types/gameTypes';
+import type { MonthlyFinancials } from './game-engine';
 
 /**
  * Types for tour calculation parameters and results

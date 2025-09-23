@@ -448,7 +448,7 @@ export default function LivePerformancePage() {
             {selectedArtistData && (
               <div className="text-xs text-white/50 mt-2">
                 <p>Analysis based on: {selectedArtistData.name}'s popularity ({selectedArtistData.popularity || 0}),
-                   venue access ({venueInfo.name}), {gameState.reputation || 0} reputation, and {cities} {cities === 1 ? 'show' : 'cities'}</p>
+                   venue access ({venueInfo.name}), {gameState?.reputation || 0} reputation, and {cities} {cities === 1 ? 'show' : 'cities'}</p>
                 <p className="text-green-500 mt-1">✅ Comprehensive projections powered by unified calculation engine</p>
               </div>
             )}

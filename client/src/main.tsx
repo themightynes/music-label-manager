@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { ClerkProvider, type Appearance } from '@clerk/clerk-react';
+import { ClerkProvider } from '@clerk/clerk-react';
 import App from "./App";
 import "./index.css";
 
@@ -9,10 +9,10 @@ if (!publishableKey) {
   throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in environment.');
 }
 
-const clerkAppearance: Appearance = {
+const clerkAppearance = {
   layout: {
     shimmer: true,
-    socialButtonsPlacement: 'bottom',
+    socialButtonsPlacement: 'bottom' as const,
   },
   variables: {
     colorPrimary: '#A75A5B',
@@ -42,7 +42,7 @@ const clerkAppearance: Appearance = {
 };
 
 createRoot(document.getElementById("root")!).render(
-  <ClerkProvider publishableKey={publishableKey} appearance={clerkAppearance}>
+  <ClerkProvider publishableKey={publishableKey} appearance={clerkAppearance as any}>
     <App />
   </ClerkProvider>
 );

@@ -29,7 +29,7 @@ export function Dashboard({
   useEffect(() => {
     // Only auto-show if this is a fresh monthly outcome (not from page refresh)
     if (monthlyOutcome && !isAdvancingMonth && gameState) {
-      const isCurrentMonthResult = monthlyOutcome.month === gameState.currentMonth - 1;
+      const isCurrentMonthResult = monthlyOutcome.month === (gameState.currentMonth ?? 1) - 1;
       const isNewResult = lastProcessedMonth !== monthlyOutcome.month;
 
       if (isCurrentMonthResult && isNewResult) {

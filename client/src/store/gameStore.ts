@@ -279,7 +279,7 @@ export const useGameStore = create<GameStore>()(
         } catch (error) {
           console.error('Failed to update game state:', error);
           // If it's a 404, the game doesn't exist in the database
-          if (error.status === 404) {
+          if ((error as any).status === 404) {
             console.error('Game not found in database. You may need to create a new game.');
             // Don't throw - just apply updates locally
             const updatedState = { ...gameState, ...updates };
@@ -453,7 +453,7 @@ export const useGameStore = create<GameStore>()(
           const syncedGameState = {
             ...result.gameState,
             usedFocusSlots: 0,  // Always 0 at start of new month
-            musicLabel: gameState.musicLabel  // Preserve existing music label
+            musicLabel: (gameState as any).musicLabel  // Preserve existing music label
           };
 
           set({
@@ -586,7 +586,7 @@ export const useGameStore = create<GameStore>()(
           if (projectCost > 0) {
             const updatedGameState = {
               ...gameState,
-              money: gameState.money - projectCost
+              money: (gameState.money ?? 0) - projectCost
             };
             set({ gameState: updatedGameState });
             console.log(`[FRONTEND] Synced money deduction: -$${projectCost}, new balance: $${updatedGameState.money}`);
@@ -659,7 +659,7 @@ export const useGameStore = create<GameStore>()(
             name,
             gameState: {
               gameState,
-              musicLabel: gameState.musicLabel,
+              musicLabel: (gameState as any).musicLabel,
               artists,
               projects,
               roles

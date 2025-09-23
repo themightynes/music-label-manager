@@ -15,6 +15,9 @@ import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
 import type { MonthSummary, ChartUpdate, GameChange, EventOccurrence } from '../types/gameTypes';
+
+// Re-export MonthSummary for backward compatibility
+export type { MonthSummary } from '../types/gameTypes';
 import seedrandom from 'seedrandom';
 
 // Extended MonthlyAction interface for game engine
@@ -879,7 +882,7 @@ export class GameEngine {
         try {
           const artists = await this.storage.getArtistsByGame(this.gameState.id);
           if (artists && artists.length > 0) {
-            artists.forEach(artist => artistMap.set(artist.id, artist));
+            artists.forEach((artist: any) => artistMap.set(artist.id, artist));
             console.log(`[STREAMING POPULARITY] Cached ${artistMap.size} artists for popularity calculations`);
           }
         } catch (error) {
@@ -2961,9 +2964,10 @@ export class GameEngine {
       if (!summary.revenueBreakdown) {
         summary.revenueBreakdown = {
           streamingRevenue: 0,
+          projectRevenue: 0,
           tourRevenue: 0,
-          releaseRevenue: 0,
-          marketingRevenue: 0
+          roleBenefits: 0,
+          otherRevenue: 0
         };
       }
       summary.revenueBreakdown.tourRevenue += revenue;

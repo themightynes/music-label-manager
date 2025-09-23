@@ -324,6 +324,13 @@ export interface MonthSummary {
     marketingCosts: number;
     roleMeetingCosts: number;
   };
+  revenueBreakdown?: {
+    streamingRevenue: number;
+    projectRevenue: number;
+    tourRevenue: number;
+    roleBenefits: number;
+    otherRevenue: number;
+  };
   financialBreakdown?: string; // Human-readable financial calculation
   chartUpdates?: ChartUpdate[]; // Chart position changes, debuts, and movements
 }

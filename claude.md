@@ -1,5 +1,18 @@
 # Music Label Manager - Claude Session Instructions
 
+## 📊 Project Architecture Overview
+TypeScript monorepo with Express backend and React frontend for a music industry simulation game.
+
+**Stack**: React 18 + Vite, Wouter routing, TanStack Query, Clerk auth, Zustand state, XState flows, Express + Drizzle ORM + PostgreSQL
+
+**Key Components**:
+- Monorepo with coordinated npm scripts (`dev`, `build`, `db:push`)
+- Shared game state via Zustand store with API sync
+- Complex meeting flows modeled with XState state machines
+- Drizzle schemas define gameplay domain (users, saves, artists, songs, releases, charts, labels)
+- GameEngine processes monthly actions and financial systems (shared client/server)
+- Shared Zod contracts keep API schemas in sync
+
 ## 🚨 Railway Deployment Environment
 **Critical for Railway PostgreSQL sessions:**
 - **Database**: Railway PostgreSQL with standard `pg` driver (migrated from Neon serverless)
@@ -8,10 +21,6 @@
 - **SSL Config**: `rejectUnauthorized: false` required for Railway's certificates
 - **Local Development**: Default port 5000 for main application
 - **Alternative ports**: Use ports like 3000, 8000, or 8080 for testing servers
-
-## 🎵 Content Philosophy
-**Tone**: Heightened drama (Empire, Nashville, High Fidelity inspiration)  
-**Every scene should feel like a TV show cold open or finale**
 
 ## 📋 Special Implementation Notes
 - Must preserve `/data/` JSON files - these are the game's content source

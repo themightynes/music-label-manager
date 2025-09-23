@@ -172,7 +172,7 @@ export class DatabaseStorage implements IStorage {
       if (!existingGame) {
         console.error('[Storage.updateGameState] Game does not exist in database:', id);
       }
-      return null;
+      return null as any;
     }
     
     const [state] = result;
@@ -621,7 +621,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    return releasedSongs.map(song => ({
+    return releasedSongs.map((song: any) => ({
       id: song.id,
       title: song.title,
       artistName: song.artistName,
@@ -636,8 +636,8 @@ export class DatabaseStorage implements IStorage {
     const dbToUse = dbTransaction || db;
 
     // Split entries by type to use different conflict targets
-    const playerEntries = entries.filter(e => !e.isCompetitorSong);
-    const competitorEntries = entries.filter(e => e.isCompetitorSong);
+    const playerEntries = entries.filter((e: any) => !e.isCompetitorSong);
+    const competitorEntries = entries.filter((e: any) => e.isCompetitorSong);
 
     // Insert player entries with songId-based conflict resolution
     if (playerEntries.length > 0) {

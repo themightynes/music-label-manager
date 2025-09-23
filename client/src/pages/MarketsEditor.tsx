@@ -298,7 +298,7 @@ export default function MarketsEditor() {
       setValidationError(null);
       return true;
     } catch (error) {
-      setValidationError(`JSON Parse Error: ${error.message}`);
+      setValidationError(`JSON Parse Error: ${(error as any).message}`);
       return false;
     }
   };

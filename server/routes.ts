@@ -329,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(gameState);
     } catch (error) {
       console.error('[PATCH /api/game/:id] Error:', error);
-      res.status(500).json({ message: "Failed to update game state", error: error.message });
+      res.status(500).json({ message: "Failed to update game state", error: (error as any).message });
     }
   });
 
@@ -380,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: "Invalid label data", errors: error.errors });
       } else {
         console.error('[POST /api/game/:gameId/label] Error:', error);
-        res.status(500).json({ message: "Failed to create/update music label", error: error.message });
+        res.status(500).json({ message: "Failed to create/update music label", error: (error as any).message });
       }
     }
   });
@@ -721,8 +721,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const projectCost = validatedData.totalCost || validatedData.budgetPerSong || 0;
-      if (projectCost > gameState.money) {
-        throw new Error(`Insufficient funds. Project costs $${projectCost.toLocaleString()} but you only have $${gameState.money.toLocaleString()}`);
+      if (projectCost > (gameState.money ?? 0)) {
+        throw new Error(`Insufficient funds. Project costs $${projectCost.toLocaleString()} but you only have $${(gameState.money ?? 0).toLocaleString()}`);
       }
       
       const project = await storage.createProject(validatedData);
@@ -730,7 +730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // IMMEDIATELY deduct project cost to prevent timing exploit
       if (projectCost > 0) {
         await storage.updateGameState(validatedData.gameId, {
-          money: gameState.money - projectCost
+          money: (gameState.money ?? 0) - projectCost
         });
         console.log(`[PROJECT CREATION] Immediately deducted $${projectCost} for project "${project.title}"`);
       }
@@ -790,21 +790,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get game state to update money
-      const gameState = await storage.getGameState(project.gameId);
+      const gameState = await storage.getGameState(project.gameId!);
       if (!gameState) {
         return res.status(404).json({ message: "Game state not found" });
       }
       
       // Update project with cancellation data (keep for ROI tracking)
       await storage.updateProject(projectId, {
-        totalRevenue: -(project.totalCost - refundAmount), // Loss = total cost minus refund
+        totalRevenue: -((project.totalCost ?? 0) - refundAmount), // Loss = total cost minus refund
         completionStatus: 'cancelled',
         stage: 'cancelled' // Mark as cancelled instead of deleting
       });
       
       // Update game state with refund
-      const updatedGameState = await storage.updateGameState(project.gameId, {
-        money: gameState.money + refundAmount
+      const updatedGameState = await storage.updateGameState(project.gameId!, {
+        money: (gameState.money ?? 0) + refundAmount
       });
       
       console.log(`[CANCEL PROJECT] Project ${project.title} cancelled. Refund: $${refundAmount}`);
@@ -1069,7 +1069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const chartService = new ChartService(serverGameData, rng, storage, gameId);
 
       // Calculate current chart week from game month
-      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth);
+      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth ?? 1);
 
       // Get Top 10 chart data
       const top10Data = await chartService.getTop10ChartData(currentChartWeek);
@@ -1129,7 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const chartService = new ChartService(serverGameData, rng, storage, gameId);
 
       // Calculate current chart week from game month
-      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth);
+      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth ?? 1);
 
       // Get Top 100 chart data (all charting songs)
       const currentEntries = await chartService.getCurrentWeekChartEntries(currentChartWeek);

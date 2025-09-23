@@ -64,14 +64,14 @@ export async function getOrCreateUserFromClerk(clerkId: string) {
     username: clerkUser.username,
     emailAddresses: clerkUser.emailAddresses?.map(({ id, emailAddress }) => ({ id, emailAddress })),
     primaryEmailAddressId: clerkUser.primaryEmailAddressId,
-    primaryEmailAddress: clerkUser.primaryEmailAddress
+    primaryEmailAddress: clerkUser.emailAddresses?.find(e => e.id === clerkUser.primaryEmailAddressId)
   });
 
   if (!email) {
     throw new Error('Clerk user is missing a primary email address.');
   }
 
-  const username = resolveUsername({ username: clerkUser.username }, email);
+  const username = resolveUsername({ id: clerkUser.id, username: clerkUser.username }, email);
 
   const [userRecord] = await db
     .insert(users)
@@ -92,7 +92,7 @@ export async function getOrCreateUserFromClerk(clerkId: string) {
   return userRecord;
 }
 
-const requireSession = ClerkExpressRequireAuth({ clerkClient });
+const requireSession = ClerkExpressRequireAuth();
 
 export function requireClerkUser(req: Request, res: Response, next: NextFunction) {
   requireSession(req, res, async (sessionError?: any) => {
@@ -134,7 +134,7 @@ export async function handleClerkWebhook(req: Request, res: Response) {
     return res.status(400).json({ message: 'Missing webhook payload' });
   }
 
-  const headers = req.headers as WebhookRequiredHeaders;
+  const headers = req.headers as unknown as WebhookRequiredHeaders;
 
   try {
     const webhook = new Webhook(webhookSecret);

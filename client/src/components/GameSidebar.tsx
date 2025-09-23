@@ -77,7 +77,7 @@ export function GameSidebar({
       // Fetch executives and meetings
       const executives = await fetchExecutives(gameId);
       const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
-      const allMeetings = {};
+      const allMeetings: Record<string, any[]> = {};
 
       for (const role of roles) {
         try {
@@ -88,9 +88,9 @@ export function GameSidebar({
       }
 
       // Score and select top options
-      const options = [];
+      const options: any[] = [];
       executives.forEach(executive => {
-        const meetings = allMeetings[executive.role] || [];
+        const meetings = allMeetings[executive.role as keyof typeof allMeetings] || [];
         if (meetings.length > 0) {
           const meeting = meetings[0];
           if (meeting.choices && meeting.choices.length > 0) {
@@ -100,7 +100,7 @@ export function GameSidebar({
               'ceo': 50, 'head_ar': 40, 'cmo': 30, 'cco': 20, 'head_distribution': 10
             };
 
-            const score = (100 - (executive.mood || 50)) + (100 - (executive.loyalty || 50)) + (roleScores[executive.role] || 0);
+            const score = (100 - (executive.mood || 50)) + (100 - (executive.loyalty || 50)) + (roleScores[executive.role as keyof typeof roleScores] || 0);
 
             const actionData = {
               roleId: executive.role,
@@ -183,7 +183,7 @@ export function GameSidebar({
               className="h-8 w-auto"
             />
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <div className="text-sm font-semibold text-sidebar-foreground">{gameState?.musicLabel?.name || 'Music Label'}</div>
+              <div className="text-sm font-semibold text-sidebar-foreground">{(gameState as any)?.musicLabel?.name || 'Music Label'}</div>
               <div className="flex items-center space-x-2 text-xs text-sidebar-foreground/70">
                 <span>Month {gameState?.currentMonth || 1}/36</span>
                 <span className="text-green-400">${(gameState?.money || 0).toLocaleString()}</span>
@@ -464,6 +464,7 @@ export function GameSidebar({
             <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
               <UserButton
                 userProfileMode="navigation"
+                userProfileUrl="/user-profile"
                 afterSignOutUrl="/"
                 appearance={{
                   elements: {
@@ -496,7 +497,7 @@ export function GameSidebar({
         cancelText="Cancel"
         variant="destructive"
         emoji="⚠️"
-        currentMonth={gameState?.currentMonth}
+        currentMonth={gameState?.currentMonth ?? 1}
       />
 
       {/* Monthly Results Modal */}
