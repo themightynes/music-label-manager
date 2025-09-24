@@ -3,44 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
-import { ProjectCreationModal, type ProjectCreationData } from './ProjectCreationModal';
+import { useLocation } from 'wouter';
 import { useState } from 'react';
 
 export function ActiveRecordingSessions() {
-  const { projects, artists, createProject, gameState, songs } = useGameStore();
-  const [creatingProject, setCreatingProject] = useState(false);
-  const [showProjectModal, setShowProjectModal] = useState(false);
+  const { projects, artists, gameState, songs } = useGameStore();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
 
-  const handleCreateProject = async (projectData: ProjectCreationData) => {
-    if (creatingProject) return;
-
-    setCreatingProject(true);
-    try {
-      await createProject({
-        title: projectData.title,
-        type: projectData.type,
-        artistId: projectData.artistId,
-        budgetPerSong: projectData.budgetPerSong,
-        totalCost: projectData.totalCost || 0,
-        costUsed: 0,
-        quality: 0,
-        dueWeek: (gameState?.currentWeek || 1) + 3,
-        songCount: projectData.songCount || 1,
-        songsCreated: 0,
-        metadata: {
-          producerTier: projectData.producerTier,
-          timeInvestment: projectData.timeInvestment,
-          enhancedProject: true,
-          createdAt: new Date().toISOString()
-        }
-      });
-      setShowProjectModal(false);
-    } catch (error) {
-      console.error('Failed to create project:', error);
-    } finally {
-      setCreatingProject(false);
-    }
+  const handleNavigateToRecordingSession = () => {
+    setLocation('/recording-session');
   };
 
   const getProjectProgress = (project: any) => {
@@ -126,7 +98,7 @@ export function ActiveRecordingSessions() {
             </Badge>
             <Button
               size="sm"
-              onClick={() => setShowProjectModal(true)}
+              onClick={handleNavigateToRecordingSession}
               className="bg-[#A75A5B] hover:bg-[#8a4a4b] text-white text-xs px-3 py-1.5"
             >
               + Recording Session
@@ -245,17 +217,6 @@ export function ActiveRecordingSessions() {
           )}
         </div>
 
-        {/* Project Creation Modal */}
-        {gameState && (
-          <ProjectCreationModal
-            gameState={gameState}
-            artists={artists}
-            onCreateProject={handleCreateProject}
-            isCreating={creatingProject}
-            open={showProjectModal}
-            onOpenChange={setShowProjectModal}
-          />
-        )}
       </CardContent>
     </Card>
   );

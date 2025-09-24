@@ -1431,7 +1431,8 @@ export class FinancialSystem {
    */
   async calculateExecutiveSalaries(
     gameId: string,
-    storage?: any
+    storage?: any,
+    currentWeek?: number
   ): Promise<{
     total: number;
     breakdown: Array<{ role: string, name: string, salary: number }>;
@@ -1439,6 +1440,16 @@ export class FinancialSystem {
     console.log('\n========== EXECUTIVE SALARY CALCULATION START ==========');
     console.log('[DEBUG] calculateExecutiveSalaries called with gameId:', gameId);
     console.log('[DEBUG] Storage provided:', !!storage);
+    console.log('[DEBUG] Current week:', currentWeek);
+
+    // Only pay executives every 4 weeks (weeks 4, 8, 12, etc.)
+    if (currentWeek && currentWeek % 4 !== 0) {
+      console.log(`[DEBUG] Not a payment week (${currentWeek}). Executives paid every 4 weeks.`);
+      return {
+        total: 0,
+        breakdown: []
+      };
+    }
     console.log('[DEBUG] Storage has getExecutivesByGame:', !!(storage && storage.getExecutivesByGame));
     
     let executiveBreakdown: Array<{ role: string, name: string, salary: number }> = [];

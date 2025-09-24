@@ -204,15 +204,15 @@ export class ServerGameData {
     return this.dataLoader.getWorldConfig();
   }
 
-  async getStartingMoney(): Promise<number> {
+  async getStartingValues(): Promise<{ money: number; reputation: number; creativeCapital: number }> {
     const balance = await this.getBalanceConfig();
-    return balance.economy.starting_money;
+    return {
+      money: balance.economy.starting_money,
+      reputation: balance.reputation_system.starting_reputation,
+      creativeCapital: balance.reputation_system.starting_creative_capital
+    };
   }
 
-  async getStartingReputation(): Promise<number> {
-    const balance = await this.getBalanceConfig();
-    return balance.reputation_system.starting_reputation;
-  }
 
   async getProjectCosts(projectType: string): Promise<{ min: number; max: number }> {
     const balance = await this.getBalanceConfig();

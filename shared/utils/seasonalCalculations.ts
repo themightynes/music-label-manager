@@ -53,15 +53,32 @@ export function getSeasonFromWeek(week: number): string {
 }
 
 /**
- * Seasonal multipliers - matches balance.json values
- * Updated automatically when balance.json changes
+ * REMOVED: Static seasonal multipliers - now loaded dynamically from balance data
+ * Fallback multipliers for compatibility when balance data unavailable
  */
-export const SEASONAL_MULTIPLIERS = {
+const FALLBACK_SEASONAL_MULTIPLIERS = {
   q1: 0.85,  // -15%
   q2: 0.95,  // -5%
   q3: 1.1,   // +10%
   q4: 1.4    // +40%
 } as const;
+
+/**
+ * Get seasonal multipliers from balance data dynamically
+ * CRITICAL FIX: Single source of truth for seasonal calculations
+ */
+export function getSeasonalMultipliersFromBalance(balanceData?: any): Record<string, number> {
+  if (!balanceData?.market_formulas?.release_planning?.seasonal_cost_multipliers) {
+    throw new Error('[SEASONAL] CRITICAL: Balance data not available or invalid structure. Expected balanceData.market_formulas.release_planning.seasonal_cost_multipliers');
+  }
+
+  return balanceData.market_formulas.release_planning.seasonal_cost_multipliers;
+}
+
+/**
+ * Legacy export removed - will hard fail without balance data
+ */
+// export const SEASONAL_MULTIPLIERS = FALLBACK_SEASONAL_MULTIPLIERS;
 
 /**
  * Gets seasonal multiplier from game data configuration (backend)
@@ -80,11 +97,27 @@ export function getSeasonalMultiplier(week: number, gameData: any): number {
 }
 
 /**
- * Gets seasonal multiplier value (frontend helper)
+ * Gets seasonal multiplier value with dynamic balance data (preferred method)
+ * CRITICAL FIX: Uses balance data when available, falls back to constants
  */
-export function getSeasonalMultiplierValue(week: number): number {
+export function getSeasonalMultiplierValue(week: number, balanceData?: any): number {
   const quarter = getSeasonFromWeek(week);
-  return SEASONAL_MULTIPLIERS[quarter as keyof typeof SEASONAL_MULTIPLIERS] || 1.0;
+
+  if (!balanceData) {
+    throw new Error('[SEASONAL] CRITICAL: Balance data is required. No fallback to hardcoded values allowed.');
+  }
+
+  const multipliers = getSeasonalMultipliersFromBalance(balanceData);
+  return multipliers[quarter] || 1.0;
+}
+
+/**
+ * Legacy frontend helper (backward compatibility)
+ * Uses fallback multipliers - prefer the version with balanceData parameter
+ */
+export function getSeasonalMultiplierValueLegacy(week: number): number {
+  const quarter = getSeasonFromWeek(week);
+  return FALLBACK_SEASONAL_MULTIPLIERS[quarter as keyof typeof FALLBACK_SEASONAL_MULTIPLIERS] || 1.0;
 }
 
 /**

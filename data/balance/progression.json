@@ -1,6 +1,7 @@
 {
   "reputation_system": {
     "starting_reputation": 5,
+    "starting_creative_capital": 10,
     "max_reputation": 100,
     "goal_failure_penalty": 2,
     "hit_single_bonus": 5,

@@ -142,7 +142,7 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
             {/* Salary */}
             {!isCEO && weeklySalary !== undefined && (
               <div className="text-sm text-white/60">
-                Weekly Salary: {weeklySalary === 0 ? 'Equity Only' : `$${weeklySalary.toLocaleString()}`}
+                Monthly Salary: {weeklySalary === 0 ? 'Equity Only' : `$${weeklySalary.toLocaleString()}`}
               </div>
             )}
           </div>

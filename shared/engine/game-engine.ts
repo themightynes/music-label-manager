@@ -209,7 +209,8 @@ export class GameEngine {
     // Calculate executive salaries
     const executiveSalaryResult = await this.financialSystem.calculateExecutiveSalaries(
       this.gameState.id,
-      this.storage
+      this.storage,
+      this.gameState.currentWeek
     );
     summary.expenseBreakdown.executiveSalaries = executiveSalaryResult.total;
     
@@ -3971,17 +3972,30 @@ export class GameEngine {
 
     // Reconstruct marketing budget from stored data structure
     let marketingBudget = {};
-    if (metadata?.marketingBudget && typeof metadata.marketingBudget === 'object') {
-      // Future structure: detailed budget object
+    if (metadata?.marketingBudgetBreakdown && typeof metadata.marketingBudgetBreakdown === 'object') {
+      // CRITICAL FIX: Use stored per-channel budget breakdown instead of even distribution
+      marketingBudget = metadata.marketingBudgetBreakdown;
+    } else if (metadata?.marketingBudget && typeof metadata.marketingBudget === 'object') {
+      // Legacy: detailed budget object (old field name)
       marketingBudget = metadata.marketingBudget;
     } else if (release.marketingBudget && release.marketingBudget > 0) {
-      // Current structure: total amount + channel list
+      // Fallback: total amount + even distribution (legacy releases)
       const totalBudget = release.marketingBudget;
       const channels = metadata?.marketingChannels || ['digital'];
       const budgetPerChannel = totalBudget / channels.length;
       channels.forEach((channel: string) => {
         marketingBudget[channel] = budgetPerChannel;
       });
+    }
+
+    // Process lead single strategy to use stored budget breakdown
+    let processedLeadSingleStrategy = null;
+    if (leadSingleStrategy) {
+      processedLeadSingleStrategy = {
+        ...leadSingleStrategy,
+        // CRITICAL FIX: Use stored per-channel budget breakdown for lead single
+        leadSingleBudget: leadSingleStrategy.leadSingleBudgetBreakdown || leadSingleStrategy.leadSingleBudget || {}
+      };
     }
 
     // Create release config for preview system
@@ -3991,7 +4005,7 @@ export class GameEngine {
       seasonalTiming: getSeasonFromWeek(release.releaseWeek),
       scheduledReleaseWeek: release.releaseWeek,
       marketingBudget,
-      leadSingleStrategy
+      leadSingleStrategy: processedLeadSingleStrategy
     };
 
     // Use existing sophisticated preview calculation

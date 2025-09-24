@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useGameStore } from '@/store/gameStore';
-import { LivePerformanceModal, type TourCreationData } from './LivePerformanceModal';
+import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, DollarSign, Users, Calculator } from 'lucide-react';
 import { getTourMetadata, getTourStats, getCompletedCities, getCityCounts } from '@/utils/tourHelpers';
@@ -260,12 +260,12 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
 }
 
 export function ActiveTours() {
-  const { projects, artists, cancelProject, createProject, gameState } = useGameStore();
+  const { projects, artists, cancelProject, gameState } = useGameStore();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [projectToCancel, setProjectToCancel] = useState<any>(null);
   const [expandedCityDetails, setExpandedCityDetails] = useState<{[key: string]: boolean}>({});
-  const [showLivePerformanceModal, setShowLivePerformanceModal] = useState(false);
 
   const toggleCityDetails = (cityKey: string) => {
     setExpandedCityDetails(prev => ({
@@ -302,33 +302,8 @@ export function ActiveTours() {
     }
   };
 
-  const handleCreateTour = async (tourData: TourCreationData) => {
-    try {
-      const projectData = {
-        title: tourData.title,
-        type: 'Mini-Tour' as const,
-        artistId: tourData.artistId,
-        totalCost: tourData.budget,
-        budgetPerSong: 0,
-        songCount: 0,
-        producerTier: 'local' as const,
-        timeInvestment: 'standard' as const,
-        metadata: {
-          performanceType: 'mini_tour',
-          cities: tourData.cities,
-          venueAccess: tourData.venueAccess || 'none',
-          venueCapacity: tourData.venueCapacity, // Store selected venue capacity
-          createdFrom: 'ActiveTours'
-        }
-      };
-
-      await createProject(projectData);
-      setShowLivePerformanceModal(false);
-
-      console.log(`✅ Tour "${tourData.title}" created successfully`);
-    } catch (error) {
-      console.error('Failed to create tour:', error);
-    }
+  const handleNavigateToLivePerformance = () => {
+    setLocation('/live-performance');
   };
 
   // REMOVED: getCancellationDetails - inlined since only used once
@@ -445,7 +420,7 @@ export function ActiveTours() {
               </Badge>
               <Button
                 size="sm"
-                onClick={() => setShowLivePerformanceModal(true)}
+                onClick={handleNavigateToLivePerformance}
                 className="bg-[#A75A5B] hover:bg-[#8a4a4b] text-white text-xs px-3 py-1.5"
               >
                 + Live Performance
@@ -838,18 +813,6 @@ export function ActiveTours() {
         </DialogContent>
       </Dialog>
 
-      {/* Live Performance Modal */}
-      {gameState && (
-        <LivePerformanceModal
-          gameState={gameState}
-          artists={artists}
-          projects={projects}
-          onCreateTour={handleCreateTour}
-          isCreating={false}
-          open={showLivePerformanceModal}
-          onOpenChange={setShowLivePerformanceModal}
-        />
-      )}
 
     </>
   );

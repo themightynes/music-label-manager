@@ -14,7 +14,21 @@ import { apiRequest } from '@/lib/queryClient';
 import GameLayout from '@/layouts/GameLayout';
 import { WeekPicker } from '@/components/WeekPicker';
 import { cn } from '@/lib/utils';
-// TODO: Import seasonal utilities once import path is resolved
+import {
+  getSeasonFromWeek,
+  getSeasonalMultiplierValue,
+  getQuarterInfoForWeek,
+  QUARTER_DEFINITIONS
+} from '@shared/utils/seasonalCalculations';
+import {
+  getMarketingChannelsFromBalance,
+  getReleaseTypesFromBalance,
+  calculateTotalMarketingCost,
+  calculateChannelSynergies,
+  calculateChannelEffectiveness,
+  type MarketingChannel,
+  type ReleaseType
+} from '@shared/utils/marketingUtils';
 
 // Mock data types
 interface Song {
@@ -42,47 +56,28 @@ interface Artist {
   loyalty: number;
 }
 
-interface ReleaseType {
-  id: 'single' | 'ep' | 'album';
-  name: string;
-  minSongs: number;
-  maxSongs: number;
-  description: string;
-  bonusType: string;
-  bonusAmount: number;
-  icon: React.ElementType;
-}
-
-interface MarketingChannel {
-  id: string;
-  name: string;
-  description: string;
-  minBudget: number;
-  maxBudget: number;
-  effectiveness: number;
-  icon: string;
-  targetAudience: string;
-}
+// Marketing and Release types now imported from shared utilities
 
 // REMOVED: SeasonalTiming interface - using balance.json as single source
 
 // Data transformation utilities
+// FIXED: Honor backend fields instead of forcing defaults
 const transformArtistData = (backendArtist: any): Artist => ({
   id: backendArtist.id,
   name: backendArtist.name,
-  genre: 'Pop', // Default since not in backend schema
+  genre: backendArtist.genre || 'Unknown', // Honor backend genre field
   readySongs: parseInt(backendArtist.readySongsCount || '0'),
   totalSongs: parseInt(backendArtist.totalSongsCount || '0'),
-  mood: backendArtist.mood || 50,
-  loyalty: backendArtist.loyalty || 50
+  mood: backendArtist.mood || 50, // Honor actual mood from backend
+  loyalty: backendArtist.loyalty || 50 // Honor actual loyalty from backend
 });
 
 const transformSongData = (backendSong: any, artistName: string): Song => ({
   id: backendSong.id,
   title: backendSong.title,
   quality: backendSong.quality,
-  genre: backendSong.genre || 'Pop',
-  mood: backendSong.mood || 'neutral',
+  genre: backendSong.genre || 'Unknown', // Honor backend genre, don't force 'Pop'
+  mood: backendSong.mood || 'Unknown', // Honor backend mood, don't force 'neutral'
   artistId: backendSong.artistId,
   artistName,
   createdWeek: backendSong.createdWeek || 1,
@@ -92,60 +87,30 @@ const transformSongData = (backendSong: any, artistName: string): Song => ({
   isReleased: backendSong.isReleased
 });
 
-const MOCK_SONGS: Song[] = [
-  { id: '1', title: 'Midnight Dreams', quality: 87, genre: 'Pop', mood: 'Dreamy', artistId: '1', artistName: 'Luna Starr', createdWeek: 3, estimatedStreams: 145000, estimatedRevenue: 8200, isRecorded: true, isReleased: false },
-  { id: '2', title: 'City Lights', quality: 82, genre: 'Pop', mood: 'Upbeat', artistId: '1', artistName: 'Luna Starr', createdWeek: 3, estimatedStreams: 132000, estimatedRevenue: 7500, isRecorded: true, isReleased: false },
-  { id: '3', title: 'Hearts on Fire', quality: 91, genre: 'Pop', mood: 'Passionate', artistId: '1', artistName: 'Luna Starr', createdWeek: 4, estimatedStreams: 168000, estimatedRevenue: 9800, isRecorded: true, isReleased: false },
-  { id: '4', title: 'Dancing Alone', quality: 79, genre: 'Pop', mood: 'Melancholic', artistId: '1', artistName: 'Luna Starr', createdWeek: 4, estimatedStreams: 118000, estimatedRevenue: 6900, isRecorded: true, isReleased: false },
-  { id: '5', title: 'Thunder Road', quality: 85, genre: 'Rock', mood: 'Aggressive', artistId: '2', artistName: 'Echo Rebellion', createdWeek: 2, estimatedStreams: 95000, estimatedRevenue: 5800, isRecorded: true, isReleased: false },
-  { id: '6', title: 'Broken Chains', quality: 88, genre: 'Rock', mood: 'Rebellious', artistId: '2', artistName: 'Echo Rebellion', createdWeek: 3, estimatedStreams: 112000, estimatedRevenue: 6900, isRecorded: true, isReleased: false },
-  { id: '7', title: 'Rebel Soul', quality: 83, genre: 'Rock', mood: 'Defiant', artistId: '2', artistName: 'Echo Rebellion', createdWeek: 4, estimatedStreams: 98000, estimatedRevenue: 6100, isRecorded: true, isReleased: false },
-  { id: '8', title: 'Digital Love', quality: 89, genre: 'Electronic', mood: 'Futuristic', artistId: '3', artistName: 'Neon Dreams', createdWeek: 3, estimatedStreams: 158000, estimatedRevenue: 9200, isRecorded: true, isReleased: false },
-  { id: '9', title: 'Neon Nights', quality: 86, genre: 'Electronic', mood: 'Atmospheric', artistId: '3', artistName: 'Neon Dreams', createdWeek: 4, estimatedStreams: 142000, estimatedRevenue: 8400, isRecorded: true, isReleased: false }
-];
+// REMOVED: Static MOCK_SONGS array - now using dynamic backend data
+// REMOVED: Static releaseTypes and marketingChannels - now imported from shared utilities
 
-const RELEASE_TYPES: ReleaseType[] = [
-  { id: 'single', name: 'Single', minSongs: 1, maxSongs: 1, description: 'Quick release for maximum focus', bonusType: 'Focus Bonus', bonusAmount: 20, icon: Music },
-  { id: 'ep', name: 'EP', minSongs: 3, maxSongs: 5, description: 'Extended play for sustained momentum', bonusType: 'Momentum Bonus', bonusAmount: 15, icon: Award },
-  { id: 'album', name: 'Album', minSongs: 8, maxSongs: 12, description: 'Complete artistic statement', bonusType: 'Cohesion Bonus', bonusAmount: 25, icon: Star }
-];
+// REMOVED: Local seasonal calculation functions - now imported from shared utilities
 
-const MARKETING_CHANNELS: MarketingChannel[] = [
-  { id: 'radio', name: 'Radio Push', description: 'Traditional radio promotion - high reach, mainstream appeal', minBudget: 2500, maxBudget: 15000, effectiveness: 85, icon: 'fas fa-radio', targetAudience: 'Mainstream' },
-  { id: 'digital', name: 'Digital Ads', description: 'Social media, streaming, and search advertising', minBudget: 500, maxBudget: 12000, effectiveness: 92, icon: 'fas fa-ad', targetAudience: 'Online' },
-  { id: 'pr', name: 'PR Campaign', description: 'Press coverage, interviews, and media relations', minBudget: 1500, maxBudget: 8000, effectiveness: 78, icon: 'fas fa-newspaper', targetAudience: 'Industry' },
-  { id: 'influencer', name: 'Influencer Marketing', description: 'Social media influencer partnerships and content', minBudget: 800, maxBudget: 6000, effectiveness: 88, icon: 'fas fa-users', targetAudience: 'Social' }
-];
+// Budget calculation helpers to eliminate duplicate code
+const getTotalChannelBudget = (budgets: Record<string, number>): number =>
+  Object.values(budgets).reduce((a, b) => a + b, 0);
 
-// Temporary local functions until import path is resolved
-const getSeasonFromWeek = (week: number): string => {
-  const yearWeek = ((week - 1) % 52) + 1;
-  if (yearWeek <= 13) return 'q1';
-  if (yearWeek <= 26) return 'q2';
-  if (yearWeek <= 39) return 'q3';
-  return 'q4';
-};
+const getAdjustedBudget = (budgets: Record<string, number>, week: number, balanceData: any): number =>
+  getTotalChannelBudget(budgets) * getSeasonalMultiplierValue(week, balanceData);
 
-const getSeasonalMultiplierValue = (week: number): number => {
-  const quarter = getSeasonFromWeek(week);
-  const multipliers = { q1: 0.85, q2: 0.95, q3: 1.1, q4: 1.4 };
-  return multipliers[quarter as keyof typeof multipliers] || 1.0;
-};
-
-const getQuarterInfo = (quarter: string) => {
-  const info = {
-    q1: { name: 'Q1 (Jan-Mar)', description: 'Winter • Low Competition' },
-    q2: { name: 'Q2 (Apr-Jun)', description: 'Spring • Moderate' },
-    q3: { name: 'Q3 (Jul-Sep)', description: 'Summer • Higher Costs' },
-    q4: { name: 'Q4 (Oct-Dec)', description: 'Holiday • Maximum Impact' }
-  };
-  return info[quarter as keyof typeof info];
-};
+const getSeasonalAdjustment = (budgets: Record<string, number>, week: number, balanceData: any): number =>
+  getTotalChannelBudget(budgets) * (getSeasonalMultiplierValue(week, balanceData) - 1);
 
 export default function PlanReleasePage() {
   const [, setLocation] = useLocation();
   const { gameState, loadGame } = useGameStore();
-  
+
+  // Dynamic data state (loaded from balance config)
+  const [marketingChannels, setMarketingChannels] = useState<MarketingChannel[]>([]);
+  const [releaseTypes, setReleaseTypes] = useState<ReleaseType[]>([]);
+  const [balanceData, setBalanceData] = useState<any>(null);
+
   // Data state
   const [artists, setArtists] = useState<Artist[]>([]);
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
@@ -194,6 +159,32 @@ export default function PlanReleasePage() {
   const [previewData, setPreviewData] = useState<any>(null);
   const [calculatingPreview, setCalculatingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+
+  // Load balance data and dynamic configuration
+  useEffect(() => {
+    const loadBalanceData = async () => {
+      try {
+        const response = await apiRequest('GET', `/api/game/${gameState?.id}/balance`);
+        const data = await response.json();
+        setBalanceData(data.balance);
+
+        // Load dynamic marketing and release configuration
+        const channels = getMarketingChannelsFromBalance(data.balance);
+        const types = getReleaseTypesFromBalance(data.balance);
+
+        setMarketingChannels(channels);
+        setReleaseTypes(types);
+      } catch (error) {
+        console.error('Failed to load balance data:', error);
+        // Let errors bubble up for debugging - no fallbacks
+        throw error;
+      }
+    };
+
+    if (gameState?.id) {
+      loadBalanceData();
+    }
+  }, [gameState?.id]);
 
   // Load ready artists on component mount
   useEffect(() => {
@@ -316,7 +307,7 @@ export default function PlanReleasePage() {
           leadSingleId: leadSingle,
           leadSingleReleaseWeek: leadSingleWeek,
           leadSingleBudget,
-          totalLeadSingleBudget: Object.values(leadSingleBudget).reduce((a, b) => a + b, 0)
+          totalLeadSingleBudget: getTotalChannelBudget(leadSingleBudget)
         } : null
       };
       
@@ -362,17 +353,18 @@ export default function PlanReleasePage() {
     estimatedStreams: 0,
     estimatedRevenue: 0,
     releaseBonus: 0,
-    seasonalMultiplier: 1,
-    marketingMultiplier: 1,
+    seasonalMultiplier: getSeasonalMultiplierValue(releaseWeek, balanceData),
+    marketingMultiplier: calculateChannelSynergies(channelBudgets),
     leadSingleBoost: 1,
-    totalMarketingCost:
-      Object.values(channelBudgets).reduce((a, b) => a + b, 0) *
-        getSeasonalMultiplierValue(releaseWeek) +
-      Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) *
-        getSeasonalMultiplierValue(leadSingleWeek),
-    diversityBonus: 1,
-    activeChannelCount: 0,
-    channelEffectiveness: {},
+    totalMarketingCost: calculateTotalMarketingCost(
+      channelBudgets,
+      releaseWeek,
+      leadSingleBudget,
+      leadSingleWeek
+    ),
+    diversityBonus: calculateChannelSynergies(channelBudgets),
+    activeChannelCount: Object.keys(channelBudgets).filter(id => (channelBudgets[id] || 0) > 0).length,
+    channelEffectiveness: calculateChannelEffectiveness(channelBudgets),
     projectedROI: 0
   };
 
@@ -380,7 +372,7 @@ export default function PlanReleasePage() {
   const validateRelease = () => {
     const errors: string[] = [];
     const totalMarketingCost = metrics.totalMarketingCost;
-    const activeChannels = MARKETING_CHANNELS.filter(channel => (channelBudgets[channel.id] || 0) > 0);
+    const activeChannels = marketingChannels.filter(channel => (channelBudgets[channel.id] || 0) > 0);
     
     if (!selectedArtist) errors.push('Please select an artist');
     if (selectedSongs.length === 0) errors.push('Please select at least one song');
@@ -404,7 +396,7 @@ export default function PlanReleasePage() {
       if (releaseWeek - leadSingleWeek > 3) {
         errors.push('Lead single should release no more than 3 weeks before main release');
       }
-      if (Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) === 0) {
+      if (getTotalChannelBudget(leadSingleBudget) === 0) {
         errors.push('Lead single requires marketing budget allocation');
       }
     }
@@ -442,7 +434,7 @@ export default function PlanReleasePage() {
           leadSingleId: leadSingle,
           leadSingleReleaseWeek: leadSingleWeek,
           leadSingleBudget,
-          totalLeadSingleBudget: Object.values(leadSingleBudget).reduce((a, b) => a + b, 0)
+          totalLeadSingleBudget: getTotalChannelBudget(leadSingleBudget)
         } : null,
         metadata: {
           estimatedStreams: metrics.estimatedStreams,
@@ -455,7 +447,7 @@ export default function PlanReleasePage() {
           projectedROI: metrics.projectedROI,
           totalInvestment: metrics.totalMarketingCost,
           // Store the marketing budget in metadata as well for released items
-          marketingBudget: Object.values(channelBudgets).reduce((a, b) => a + b, 0)
+          marketingBudget: getTotalChannelBudget(channelBudgets)
         }
       };
       
@@ -579,10 +571,14 @@ export default function PlanReleasePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {loadingArtists ? (
+                {loadingArtists || !balanceData || marketingChannels.length === 0 || releaseTypes.length === 0 ? (
                   <div className="text-center py-8">
                     <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
-                    <p className="text-white/70">Loading available artists...</p>
+                    <p className="text-white/70">
+                      {!balanceData ? 'Loading balance data...' :
+                       marketingChannels.length === 0 || releaseTypes.length === 0 ? 'Loading configuration...' :
+                       'Loading available artists...'}
+                    </p>
                   </div>
                 ) : artistError ? (
                   <div className="text-center py-8">
@@ -845,8 +841,8 @@ export default function PlanReleasePage() {
                       <label className="text-xs text-white/70 mb-1 block">
                         Lead Single Release
                         <span className="ml-2 text-orange-600">
-                          ({getQuarterInfo(getSeasonFromWeek(leadSingleWeek))?.name} - {(() => {
-                            const multiplier = getSeasonalMultiplierValue(leadSingleWeek);
+                          ({getQuarterInfoForWeek(leadSingleWeek).name} - {(() => {
+                            const multiplier = getSeasonalMultiplierValue(leadSingleWeek, balanceData);
                             const percentage = Math.round((multiplier - 1) * 100);
                             return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
                           })()} cost)
@@ -858,8 +854,8 @@ export default function PlanReleasePage() {
                         onWeekSelect={setLeadSingleWeek}
                         maxWeek={releaseWeek - 1}
                         renderSelectedInfo={(week) => {
-                          const quarter = getQuarterInfo(getSeasonFromWeek(week));
-                          const multiplier = getSeasonalMultiplierValue(week);
+                          const quarter = getQuarterInfoForWeek(week);
+                          const multiplier = getSeasonalMultiplierValue(week, balanceData);
                           return quarter ? (
                             <div className="flex items-center justify-between p-2 rounded border border-[#A75A5B]/30 bg-[#23121c]/60">
                               <div>
@@ -894,7 +890,7 @@ export default function PlanReleasePage() {
                   <div>
                     <h4 className="text-sm font-medium text-white/90 mb-3">Lead Single Marketing Budget</h4>
                     <div className="space-y-3">
-                      {MARKETING_CHANNELS.map(channel => (
+                      {marketingChannels.map(channel => (
                         <div key={`lead-${channel.id}`} className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <i className={`${channel.icon} text-sm text-white/70`} />
@@ -919,10 +915,10 @@ export default function PlanReleasePage() {
                       ))}
                     </div>
                     <div className="mt-2 text-xs text-white/50">
-                      <div>Lead Single Total: ${Object.values(leadSingleBudget).reduce((a, b) => a + b, 0).toLocaleString()}</div>
-                      {getSeasonalMultiplierValue(leadSingleWeek) !== 1 && (
+                      <div>Lead Single Total: ${getTotalChannelBudget(leadSingleBudget).toLocaleString()}</div>
+                      {getSeasonalMultiplierValue(leadSingleWeek, balanceData) !== 1 && (
                         <div className="text-orange-600">
-                          Adjusted for {getQuarterInfo(getSeasonFromWeek(leadSingleWeek))?.name}: ${Math.round(Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * getSeasonalMultiplierValue(leadSingleWeek)).toLocaleString()}
+                          Adjusted for {getQuarterInfoForWeek(leadSingleWeek).name}: ${Math.round(calculateTotalMarketingCost({}, 0, leadSingleBudget, leadSingleWeek)).toLocaleString()}
                         </div>
                       )}
                     </div>
@@ -947,12 +943,12 @@ export default function PlanReleasePage() {
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-medium text-white/90">Budget Allocation</h4>
                       <span className="text-sm font-mono font-semibold text-[#A75A5B]">
-                        Total: ${Object.values(channelBudgets).reduce((a, b) => a + b, 0).toLocaleString()}
+                        Total: ${getTotalChannelBudget(channelBudgets).toLocaleString()}
                       </span>
                     </div>
                     
                     <div className="space-y-4">
-                      {MARKETING_CHANNELS.map(channel => {
+                      {marketingChannels.map(channel => {
                         const budget = channelBudgets[channel.id] || 0;
                         const isActive = budget > 0;
                         const effectiveness = metrics.channelEffectiveness?.[channel.id];
@@ -1008,8 +1004,8 @@ export default function PlanReleasePage() {
                         <label className="text-xs text-white/70 mb-1 block">
                           Target Week 
                           <span className="ml-2 text-orange-600">
-                            ({getQuarterInfo(getSeasonFromWeek(releaseWeek))?.name} - {(() => {
-                              const multiplier = getSeasonalMultiplierValue(releaseWeek);
+                            ({getQuarterInfoForWeek(releaseWeek).name} - {(() => {
+                              const multiplier = getSeasonalMultiplierValue(releaseWeek, balanceData);
                               const percentage = Math.round((multiplier - 1) * 100);
                               return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
                             })()} cost)
@@ -1020,8 +1016,8 @@ export default function PlanReleasePage() {
                           currentWeek={gameState?.currentWeek || 1}
                           onWeekSelect={setReleaseWeek}
                           renderSelectedInfo={(week) => {
-                            const quarter = getQuarterInfo(getSeasonFromWeek(week));
-                            const multiplier = getSeasonalMultiplierValue(week);
+                            const quarter = getQuarterInfoForWeek(week);
+                            const multiplier = getSeasonalMultiplierValue(week, balanceData);
                             return quarter ? (
                               <div className="flex items-center justify-between p-3 rounded-lg border border-[#A75A5B]/30 bg-[#23121c]/80">
                                 <div>
@@ -1062,8 +1058,11 @@ export default function PlanReleasePage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    {React.createElement(RELEASE_TYPES.find(rt => rt.id === releaseType)?.icon || Music, { className: "w-5 h-5" })}
-                    <span>{RELEASE_TYPES.find(rt => rt.id === releaseType)?.name} Release</span>
+                    {(() => {
+                      const IconComponent = releaseTypes.find(rt => rt.id === releaseType)?.icon || Music;
+                      return <IconComponent className="w-5 h-5" />;
+                    })()}
+                    <span>{releaseTypes.find(rt => rt.id === releaseType)?.name} Release</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1082,14 +1081,14 @@ export default function PlanReleasePage() {
                       <h4 className="text-sm font-semibold text-white/90 mb-2">Release Bonus</h4>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-white/70">
-                          {RELEASE_TYPES.find(rt => rt.id === releaseType)?.bonusType}
+                          {releaseTypes.find(rt => rt.id === releaseType)?.bonusType}
                         </span>
                         <span className="text-sm font-semibold text-green-600">
-                          +{RELEASE_TYPES.find(rt => rt.id === releaseType)?.bonusAmount}%
+                          +{releaseTypes.find(rt => rt.id === releaseType)?.bonusAmount}%
                         </span>
                       </div>
                       <p className="text-xs text-white/50 mt-1">
-                        {RELEASE_TYPES.find(rt => rt.id === releaseType)?.description}
+                        {releaseTypes.find(rt => rt.id === releaseType)?.description}
                       </p>
                     </div>
                   </div>
@@ -1204,7 +1203,7 @@ export default function PlanReleasePage() {
                       <div>
                         <h4 className="text-sm font-semibold text-white/90 mb-2">Marketing Breakdown</h4>
                         <div className="space-y-1 text-xs">
-                          {MARKETING_CHANNELS.map(channel => {
+                          {marketingChannels.map(channel => {
                             const budget = channelBudgets[channel.id] || 0;
                             const effectiveness = metrics.channelEffectiveness?.[channel.id];
                             const adjustedBudget = effectiveness?.adjustedBudget || budget;
@@ -1227,14 +1226,14 @@ export default function PlanReleasePage() {
                               </div>
                             ) : null;
                           })}
-                          {releaseType !== 'single' && leadSingle && Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) > 0 && (
+                          {releaseType !== 'single' && leadSingle && getTotalChannelBudget(leadSingleBudget) > 0 && (
                             <div className="flex justify-between border-t pt-1">
                               <span className="text-white/70">Lead Single Budget:</span>
                               <div className="text-right font-mono text-[#791014]">
-                                <div>${Math.round(Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * getSeasonalMultiplierValue(leadSingleWeek)).toLocaleString()}</div>
-                                {getSeasonalMultiplierValue(leadSingleWeek) !== 1 && (
+                                <div>${Math.round(getAdjustedBudget(leadSingleBudget, leadSingleWeek, balanceData)).toLocaleString()}</div>
+                                {getSeasonalMultiplierValue(leadSingleWeek, balanceData) !== 1 && (
                                   <div className="text-xs text-orange-600">
-                                    +${Math.round(Object.values(leadSingleBudget).reduce((a, b) => a + b, 0) * (getSeasonalMultiplierValue(leadSingleWeek) - 1)).toLocaleString()} seasonal
+                                    +${Math.round(getSeasonalAdjustment(leadSingleBudget, leadSingleWeek, balanceData)).toLocaleString()} seasonal
                                   </div>
                                 )}
                               </div>

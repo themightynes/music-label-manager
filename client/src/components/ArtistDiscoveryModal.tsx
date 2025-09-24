@@ -245,7 +245,7 @@ export function ArtistDiscoveryModal({
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="font-medium text-white/90">${(artist.weeklyCost || 800).toLocaleString()}/mo</div>
+                        <div className="font-medium text-white/90">${(artist.weeklyCost || 800).toLocaleString()}</div>
                       </div>
                     </TableCell>
                     <TableCell>

@@ -234,16 +234,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure serverGameData is initialized before accessing balance config
       await serverGameData.initialize();
 
-      // Set starting money and reputation from balance.json configuration
-      const startingMoney = await serverGameData.getStartingMoney();
-      const startingReputation = await serverGameData.getStartingReputation();
+      // Set starting values from balance.json configuration
+      const startingValues = await serverGameData.getStartingValues();
       // Make these logs more visible
-      console.error('🎮🎮🎮 REPUTATION FROM BALANCE:', startingReputation);
-      console.error('💰💰💰 MONEY FROM BALANCE:', startingMoney);
+      console.error('🎮🎮🎮 REPUTATION FROM BALANCE:', startingValues.reputation);
+      console.error('💰💰💰 MONEY FROM BALANCE:', startingValues.money);
+      console.error('🎨🎨🎨 CREATIVE CAPITAL FROM BALANCE:', startingValues.creativeCapital);
       const gameDataWithBalance = {
         ...validatedData,
-        money: startingMoney,
-        reputation: startingReputation,
+        money: startingValues.money,
+        reputation: startingValues.reputation,
+        creativeCapital: startingValues.creativeCapital, // FIXED: Use balance.json configuration like money and reputation
         userId: req.userId  // CRITICAL: Associate game with user
       };
       console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation);
@@ -1586,7 +1587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create the planned release in a transaction
       const result = await db.transaction(async (tx) => {
-        // Deduct marketing budget
+        // CRITICAL FIX: Single deduction of marketing budget (was double-deducting)
         await tx.update(gameStates)
           .set({ money: (gameState.money || 0) - totalBudget })
           .where(eq(gameStates.id, gameId));
@@ -1605,7 +1606,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             seasonalTiming,
             scheduledReleaseWeek,
             marketingChannels: Object.keys(marketingBudget || {}),
-            leadSingleStrategy: leadSingleStrategy || null
+            marketingBudgetBreakdown: marketingBudget || {}, // CRITICAL FIX: Store per-channel budgets for release execution
+            leadSingleStrategy: leadSingleStrategy ? {
+              ...leadSingleStrategy,
+              leadSingleBudgetBreakdown: leadSingleStrategy.leadSingleBudget || {} // Store per-channel breakdown for lead single too
+            } : null
           }
         }).returning();
 
@@ -1623,14 +1628,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           trackNumber: index + 1, // Track order based on selection order
           createdAt: new Date()
         }));
-        
+
         await tx.insert(releaseSongs).values(releaseSongEntries);
         console.log(`[PLAN RELEASE] Created ${releaseSongEntries.length} junction table entries for release ${newRelease.id}`);
-
-        // Deduct marketing budget from game state money
-        await tx.update(gameStates)
-          .set({ money: (gameState.money || 0) - totalBudget })
-          .where(eq(gameStates.id, gameId));
 
         return newRelease;
       });
@@ -2022,15 +2022,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create new game state for user
-      // Get starting money from balance configuration
-      const startingMoney = await serverGameData.getStartingMoney();
-      
+      // Get starting values from balance configuration
+      const startingValues = await serverGameData.getStartingValues();
+
       const defaultState = {
         userId: userId,
           currentWeek: 1,
-          money: startingMoney,
-          reputation: 5,
-          creativeCapital: 10,
+          money: startingValues.money,
+          reputation: startingValues.reputation,
+          creativeCapital: startingValues.creativeCapital,
           focusSlots: 3,
           usedFocusSlots: 0,
           playlistAccess: "none",
@@ -2194,16 +2194,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('Game not found');
         }
         
-        // Get starting money from balance configuration
-        const startingMoney = await serverGameData.getStartingMoney();
-        
+        // Get starting values from balance configuration
+        const startingValues = await serverGameData.getStartingValues();
+
         // Convert database gameState to proper GameState type
         const gameStateForEngine = {
           ...gameState,
           currentWeek: gameState.currentWeek || 1,
-          money: gameState.money || startingMoney,
-          reputation: gameState.reputation || 5,
-          creativeCapital: gameState.creativeCapital || 10,
+          money: gameState.money || startingValues.money,
+          reputation: gameState.reputation || startingValues.reputation,
+          creativeCapital: gameState.creativeCapital || startingValues.creativeCapital,
           focusSlots: gameState.focusSlots || 3,
           usedFocusSlots: gameState.usedFocusSlots || 0,
           playlistAccess: gameState.playlistAccess || 'none',
@@ -2493,16 +2493,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error('Game not found');
         }
         
-        // Get starting money from balance configuration
-        const startingMoney = await serverGameData.getStartingMoney();
-        
+        // Get starting values from balance configuration
+        const startingValues = await serverGameData.getStartingValues();
+
         // Convert database gameState to proper GameState type
         const gameStateForEngine = {
           ...gameState,
           currentWeek: gameState.currentWeek || 1,
-          money: gameState.money || startingMoney,
-          reputation: gameState.reputation || 5,
-          creativeCapital: gameState.creativeCapital || 10,
+          money: gameState.money || startingValues.money,
+          reputation: gameState.reputation || startingValues.reputation,
+          creativeCapital: gameState.creativeCapital || startingValues.creativeCapital,
           focusSlots: gameState.focusSlots || 3,
           usedFocusSlots: gameState.usedFocusSlots || 0,
           playlistAccess: gameState.playlistAccess || 'none',
@@ -2586,6 +2586,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to save markets config:', error);
       res.status(500).json({ error: 'Failed to save markets configuration' });
+    }
+  });
+
+  // Balance data endpoint
+  app.get('/api/game/:gameId/balance', requireClerkUser, async (req, res) => {
+    try {
+      const balance = await serverGameData.getBalanceConfig();
+      res.json({ balance });
+    } catch (error: any) {
+      console.error('[BALANCE] Failed to load balance data:', error);
+      res.status(500).json({
+        error: 'BALANCE_LOAD_FAILED',
+        message: error.message || 'Failed to load balance configuration'
+      });
     }
   });
 
