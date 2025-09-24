@@ -207,43 +207,24 @@ export class GameEngine {
     summary.expenseBreakdown.artistSalaries = weeklyBurnResult.artistCosts;
     
     // Calculate executive salaries
-    console.log('\n[GAME-ENGINE] About to call calculateExecutiveSalaries');
-    console.log('[GAME-ENGINE] gameStateId:', this.gameState.id);
-    console.log('[GAME-ENGINE] storage available:', !!this.storage);
-    console.log('[GAME-ENGINE] financialSystem available:', !!this.financialSystem);
-    
     const executiveSalaryResult = await this.financialSystem.calculateExecutiveSalaries(
       this.gameState.id,
       this.storage
     );
-    
-    console.log('[GAME-ENGINE] executiveSalaryResult received:', executiveSalaryResult);
-    console.log('[GAME-ENGINE] Total executive salaries:', executiveSalaryResult.total);
     summary.expenseBreakdown.executiveSalaries = executiveSalaryResult.total;
     
     // Add weekly burn to total expenses (including base operations and artist salaries)
     summary.expenses += weeklyBurn;
     
     // Add executive salaries to total expenses
-    console.log('[GAME-ENGINE] Checking if executive salaries should be added to expenses');
-    console.log('[GAME-ENGINE] executiveSalaryResult.total > 0?', executiveSalaryResult.total > 0);
-    
     if (executiveSalaryResult.total > 0) {
-      console.log('[GAME-ENGINE] Adding executive salaries to expenses');
-      console.log('[GAME-ENGINE] Current summary.expenses BEFORE adding executive salaries:', summary.expenses);
       summary.expenses += executiveSalaryResult.total;
-      console.log('[GAME-ENGINE] Summary.expenses AFTER adding executive salaries:', summary.expenses);
-      
-      // Add change entry for executive salaries
-      console.log('[GAME-ENGINE] Adding change entry for executive salaries');
+
       summary.changes.push({
         type: 'expense',
         description: 'Executive team salaries',
         amount: -executiveSalaryResult.total
       });
-      console.log('[GAME-ENGINE] Change entry added successfully');
-    } else {
-      console.log('[GAME-ENGINE] No executive salaries to add (total is 0)');
     }
     
     summary.changes.push({
@@ -863,17 +844,13 @@ export class GameEngine {
    * Processes ongoing revenue from individual released songs (streaming decay)
    * This simulates realistic revenue patterns where each song generates declining revenue over time
    */
-  private async processReleasedProjects(summary: WeekSummary): Promise<void> {
-    console.log('[INDIVIDUAL SONG DECAY] === Processing Released Songs ===');
-    console.log(`[INDIVIDUAL SONG DECAY] Current week: ${this.gameState.currentWeek}`);
+  private async processReleasedProjects(summary: MonthSummary): Promise<void> {
     
     try {
       // Get all released songs for this game
       const releasedSongs = await this.gameData.getReleasedSongs(this.gameState.id) || [];
-      console.log(`[INDIVIDUAL SONG DECAY] Found ${releasedSongs.length} released songs`);
-      
+
       if (releasedSongs.length === 0) {
-        console.log('[INDIVIDUAL SONG DECAY] No released songs found, skipping ongoing revenue processing');
         return;
       }
 
@@ -884,7 +861,6 @@ export class GameEngine {
           const artists = await this.storage.getArtistsByGame(this.gameState.id);
           if (artists && artists.length > 0) {
             artists.forEach((artist: any) => artistMap.set(artist.id, artist));
-            console.log(`[STREAMING POPULARITY] Cached ${artistMap.size} artists for popularity calculations`);
           }
         } catch (error) {
           console.error('[STREAMING POPULARITY] Error caching artists, will fallback to individual lookups:', error);
@@ -895,10 +871,7 @@ export class GameEngine {
       const songUpdates = [];
       
       for (const song of releasedSongs) {
-        console.log(`[INDIVIDUAL SONG DECAY] Processing song: "${song.title}" (Quality: ${song.quality})`);
-        
         const ongoingRevenue = this.calculateOngoingSongRevenue(song);
-        console.log(`[INDIVIDUAL SONG DECAY] Calculated ongoing revenue for "${song.title}": $${ongoingRevenue}`);
         
         if (ongoingRevenue > 0) {
           totalOngoingRevenue += ongoingRevenue;
@@ -941,7 +914,6 @@ export class GameEngine {
                   }
                   summary.artistChanges[popularityKey] = (summary.artistChanges[popularityKey] || 0) + popularityBonus;
 
-                  console.log(`[STREAMING POPULARITY] "${song.title}" (${weeklyStreams.toLocaleString()} streams) adds +${popularityBonus.toFixed(2)} popularity to ${artist.name}`);
                 }
               }
             } catch (error) {
@@ -964,14 +936,11 @@ export class GameEngine {
             description: `🎵 "${song.title}" ongoing streams`,
             amount: ongoingRevenue
           });
-        } else {
-          console.log(`[INDIVIDUAL SONG DECAY] No ongoing revenue for "${song.title}" (too old or below threshold)`);
         }
       }
       
       // Update songs in batch if available
       if (songUpdates.length > 0 && this.gameData.updateSongs) {
-        console.log(`[INDIVIDUAL SONG DECAY] Updating ${songUpdates.length} songs with new metrics`);
         await this.gameData.updateSongs(songUpdates);
       }
       
@@ -984,131 +953,55 @@ export class GameEngine {
         const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
         const totalStreams = Math.round(totalOngoingRevenue / revenuePerStream);
         summary.streams = (summary.streams || 0) + totalStreams;
-        console.log(`[INDIVIDUAL SONG DECAY] Total ongoing revenue: $${totalOngoingRevenue}, streams: ${totalStreams}`);
       }
       
     } catch (error) {
       console.error('[INDIVIDUAL SONG DECAY] Error processing released songs:', error);
-      // No fallback - individual song processing is the only path
     }
-    
-    console.log('[INDIVIDUAL SONG DECAY] === End Processing ===');
   }
 
   /**
    * Processes lead singles that are scheduled for release this week (before the main release)
    * Checks all planned releases for lead single strategies and releases them early
    */
-  private async processLeadSingles(summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    console.log('[LEAD SINGLE] 🎯🎯🎯 === STARTING LEAD SINGLE PROCESSING === 🎯🎯🎯');
-    const currentWeek = this.gameState.currentWeek || 1;
-    console.log(`[LEAD SINGLE] 📅 Current week: ${currentWeek}`);
-    console.log(`[LEAD SINGLE] 🎮 Game ID: ${this.gameState.id}`);
-    console.log(`[LEAD SINGLE] 💾 Transaction available: ${!!dbTransaction}`);
+  private async processLeadSingles(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+    const currentMonth = this.gameState.currentMonth || 1;
     
     try {
       // Get all planned releases from gameData to check for lead single strategies
-      // We need ALL planned releases, not just those for the current week
-      console.log('[LEAD SINGLE] 🔍 Fetching all releases from database...');
       const allReleases = await this.gameData.getReleasesByGame(this.gameState.id, dbTransaction) || [];
-      console.log(`[LEAD SINGLE] 📦 Total releases found: ${allReleases.length}`);
-      
       const plannedReleases = allReleases.filter((r: any) => r.status === 'planned');
-      console.log(`[LEAD SINGLE] 📋 Planned releases: ${plannedReleases.length}`);
       
-      // Enhanced debugging: Log ALL releases with their metadata
-      console.log('[LEAD SINGLE] 🔬 === DETAILED RELEASE ANALYSIS ===');
-      plannedReleases.forEach((release: any, index: number) => {
-        console.log(`[LEAD SINGLE] Release #${index + 1}:`, {
-          id: release.id,
-          title: release.title,
-          type: release.type,
-          status: release.status,
-          releaseWeek: release.releaseWeek,
-          hasMetadata: !!release.metadata,
-          metadataType: typeof release.metadata,
-          metadataKeys: release.metadata ? Object.keys(release.metadata) : [],
-          hasLeadSingleStrategy: !!(release.metadata?.leadSingleStrategy),
-          leadSingleDetails: release.metadata?.leadSingleStrategy ? {
-            leadSingleId: release.metadata.leadSingleStrategy.leadSingleId,
-            leadSingleReleaseWeek: release.metadata.leadSingleStrategy.leadSingleReleaseWeek,
-            leadSingleBudget: release.metadata.leadSingleStrategy.leadSingleBudget,
-            weekComparison: {
-              leadSingleWeek: release.metadata.leadSingleStrategy.leadSingleReleaseWeek,
-              currentWeek: currentWeek,
-              shouldRelease: release.metadata.leadSingleStrategy.leadSingleReleaseWeek === currentWeek
-            }
-          } : null
-        });
-      });
-      
-      // Count how many lead singles should release this week
+      // Process releases with lead single strategies
       const leadSinglesToRelease = plannedReleases.filter((r: any) => {
         const lss = r.metadata?.leadSingleStrategy;
         return lss && lss.leadSingleReleaseWeek === currentWeek;
       });
-      console.log(`[LEAD SINGLE] ⭐ ${leadSinglesToRelease.length} lead single(s) should release this week`);
       
       for (const release of plannedReleases) {
         const metadata = release.metadata as any;
         const leadSingleStrategy = metadata?.leadSingleStrategy;
         
-        // Enhanced debugging for each release
-        if (leadSingleStrategy) {
-          console.log(`[LEAD SINGLE] 🎵 Checking release "${release.title}":`, {
-            releaseId: release.id,
-            leadSingleId: leadSingleStrategy.leadSingleId,
-            leadSingleReleaseWeek: leadSingleStrategy.leadSingleReleaseWeek,
-            mainReleaseWeek: release.releaseWeek,
-            currentWeek: currentWeek,
-            weekMatch: leadSingleStrategy.leadSingleReleaseWeek === currentWeek,
-            willRelease: leadSingleStrategy.leadSingleReleaseWeek === currentWeek ? '✅ YES' : '❌ NO'
-          });
-        }
+        // Check if lead single should be released this month
         
-        if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseWeek === currentWeek) {
-          console.log(`[LEAD SINGLE] 🚀🚀🚀 EXECUTING LEAD SINGLE RELEASE 🚀🚀🚀`);
-          console.log(`[LEAD SINGLE] 📀 Release: "${release.title}" (ID: ${release.id})`);
-          console.log(`[LEAD SINGLE] 📅 Main release scheduled for week ${release.releaseWeek}`);
+        if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseMonth === currentMonth) {
           
           // Get the lead single song
-          console.log(`[LEAD SINGLE] 🔍 Fetching songs for release ${release.id}...`);
           const releaseSongs = await this.gameData.getSongsByRelease(release.id, dbTransaction) || [];
-          console.log(`[LEAD SINGLE] 📋 Found ${releaseSongs.length} songs in release`);
-          console.log(`[LEAD SINGLE] 🎵 Songs:`, releaseSongs.map(s => ({
-            id: s.id,
-            title: s.title,
-            quality: s.quality,
-            isReleased: s.isReleased,
-            isLeadSingle: s.id === leadSingleStrategy.leadSingleId
-          })));
           
           const leadSong = releaseSongs.find(song => song.id === leadSingleStrategy.leadSingleId);
           
           if (leadSong) {
-            console.log(`[LEAD SINGLE] ✅ Found lead single: "${leadSong.title}" (ID: ${leadSong.id})`);
-            console.log(`[LEAD SINGLE] 📊 Lead single details:`, {
-              id: leadSong.id,
-              title: leadSong.title,
-              quality: leadSong.quality,
-              isAlreadyReleased: leadSong.isReleased,
-              currentStreams: leadSong.totalStreams || 0,
-              currentRevenue: leadSong.totalRevenue || 0
-            });
             
             // Calculate lead single performance
-            console.log(`[LEAD SINGLE] 💰 Calculating budget...`);
             const budgetBreakdown = leadSingleStrategy.leadSingleBudget || {};
-            console.log(`[LEAD SINGLE] 💵 Budget breakdown:`, budgetBreakdown);
             const leadSingleBudget = Object.values(budgetBreakdown).reduce((sum: number, budget) => sum + (budget as number), 0);
-            console.log(`[LEAD SINGLE] 💵 Total lead single budget: $${leadSingleBudget}`);
             
-            console.log(`[LEAD SINGLE] 📈 Calculating streaming outcome...`);
             // Get artist data for sophisticated calculation
             const artist = await this.storage?.getArtist(leadSong.artistId);
 
             if (!artist) {
-              console.warn(`[LEAD SINGLE] ⚠️ Artist not found, skipping lead single`);
+              console.warn(`[LEAD SINGLE] Artist not found, skipping lead single`);
               continue;
             }
 
@@ -1122,7 +1015,6 @@ export class GameEngine {
               }
             };
 
-            console.log(`[LEAD SINGLE] 🚀 Using sophisticated calculation system`);
             const sophisticatedResults = this.calculateSophisticatedReleaseOutcome(
               leadSingleReleaseConfig,
               [leadSong],
@@ -1131,17 +1023,8 @@ export class GameEngine {
 
             const initialStreams = sophisticatedResults.perSongBreakdown[0].streams;
             const initialRevenue = sophisticatedResults.perSongBreakdown[0].revenue;
-
-            console.log(`[LEAD SINGLE] 📊 Sophisticated results:`, {
-              initialStreams,
-              initialRevenue,
-              totalStreams: sophisticatedResults.totalStreams,
-              totalRevenue: sophisticatedResults.totalRevenue
-            });
             
-            // Update the lead song as released
-            console.log(`[LEAD SINGLE] 💾 Updating song in database...`);
-            // Allocate lead single marketing via InvestmentTracker before song update
+            // Update the lead song as released and allocate marketing
             if (this.financialSystem.investmentTracker && leadSingleBudget > 0) {
               try {
                 await this.financialSystem.investmentTracker.allocateMarketingToSong(
@@ -1151,7 +1034,7 @@ export class GameEngine {
                   dbTransaction
                 );
               } catch (allocError) {
-                console.warn(`[LEAD SINGLE] ⚠️ Marketing allocation skipped or failed:`, allocError);
+                console.warn(`[LEAD SINGLE] Marketing allocation failed:`, allocError);
               }
             }
 
@@ -1165,13 +1048,11 @@ export class GameEngine {
               totalRevenue: Math.round((leadSong.totalRevenue || 0) + initialRevenue),
               lastWeekRevenue: Math.round(initialRevenue)
             };
-            console.log(`[LEAD SINGLE] 📝 Song update payload (marketing handled by InvestmentTracker):`, songUpdate);
-            
+
             try {
               await this.gameData.updateSongs([songUpdate], dbTransaction);
-              console.log(`[LEAD SINGLE] ✅ Song successfully updated in database`);
             } catch (updateError) {
-              console.error(`[LEAD SINGLE] ❌ Failed to update song:`, updateError);
+              console.error(`[LEAD SINGLE] Failed to update song:`, updateError);
               throw updateError;
             }
             
@@ -1185,27 +1066,15 @@ export class GameEngine {
               amount: initialRevenue
             });
             
-            console.log(`[LEAD SINGLE] 🎉 === LEAD SINGLE RELEASE COMPLETE === 🎉`);
-            console.log(`[LEAD SINGLE] 📊 Final results:`, {
-              songTitle: leadSong.title,
-              revenue: `$${initialRevenue}`,
-              streams: initialStreams,
-              addedToWeek: currentWeek,
-              mainReleaseWeek: release.releaseWeek
-            });
+            // Lead single release completed successfully
           } else {
-            console.warn(`[LEAD SINGLE] ⚠️ Lead song not found!`);
-            console.warn(`[LEAD SINGLE] 🔍 Looking for song ID: ${leadSingleStrategy.leadSingleId}`);
-            console.warn(`[LEAD SINGLE] 📋 Available songs:`, releaseSongs.map(s => ({ id: s.id, title: s.title })));
+            console.warn(`[LEAD SINGLE] Lead song not found: ${leadSingleStrategy.leadSingleId}`);
           }
         }
       }
       
-      console.log('[LEAD SINGLE] 🏁🏁🏁 === LEAD SINGLE PROCESSING COMPLETE === 🏁🏁🏁');
     } catch (error) {
-      console.error('[LEAD SINGLE] 🚨🚨🚨 CRITICAL ERROR 🚨🚨🚨');
-      console.error('[LEAD SINGLE] Error details:', error);
-      console.error('[LEAD SINGLE] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('[LEAD SINGLE] Error processing lead singles:', error);
       throw error;
     }
   }
@@ -1214,62 +1083,30 @@ export class GameEngine {
    * Processes planned releases that are scheduled for the current week
    * This executes the release, generates initial revenue, and updates song statuses
    */
-  private async processPlannedReleases(summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    console.log('[PLANNED RELEASE] 🎯🎯🎯 === STARTING PLANNED RELEASE PROCESSING === 🎯🎯🎯');
-    console.log(`[PLANNED RELEASE] 📅 Current week: ${this.gameState.currentWeek}`);
-    console.log(`[PLANNED RELEASE] 🎮 Game state ID: ${this.gameState.id}`);
-    console.log(`[PLANNED RELEASE] 💾 Transaction context: ${!!dbTransaction ? 'AVAILABLE' : 'MISSING'}`);
+  private async processPlannedReleases(summary: MonthSummary, dbTransaction?: any): Promise<void> {
     
     try {
-      // Get planned releases scheduled for this week
-      const currentWeek = this.gameState.currentWeek || 1;
-      console.log(`[PLANNED RELEASE] 🔍 Querying planned releases for gameId=${this.gameState.id}, week=${currentWeek}`);
+      // Get planned releases scheduled for this month
+      const currentMonth = this.gameState.currentMonth || 1;
       const plannedReleases = await this.gameData.getPlannedReleases(
-        this.gameState.id, 
-        currentWeek,
+        this.gameState.id,
+        currentMonth,
         dbTransaction
       ) || [];
-      
-      console.log(`[PLANNED RELEASE] 📦 Found ${plannedReleases.length} releases scheduled for this week`);
-      
+
       if (plannedReleases.length === 0) {
-        console.log('[PLANNED RELEASE] 📆 No releases scheduled for this week');
         return;
       }
       
-      // Log all releases that will be processed
-      console.log('[PLANNED RELEASE] 📋 Releases to process:');
-      plannedReleases.forEach((release: any, index: number) => {
-        console.log(`[PLANNED RELEASE] Release #${index + 1}:`, {
-          id: release.id,
-          title: release.title,
-          type: release.type,
-          releaseWeek: release.releaseWeek,
-          marketingBudget: release.marketingBudget,
-          hasLeadSingleStrategy: !!(release.metadata?.leadSingleStrategy)
-        });
-      })
+      // Process planned releases
       
       for (const release of plannedReleases) {
-        console.log(`[PLANNED RELEASE] 🚀🚀🚀 EXECUTING RELEASE 🚀🚀🚀`);
-        console.log(`[PLANNED RELEASE] 📀 Release: "${release.title}" (Type: ${release.type}, ID: ${release.id})`)
         
         // Get songs associated with this release
-        console.log(`[PLANNED RELEASE] 🎵 Fetching songs for release...`);
         const releaseSongs = await this.gameData.getSongsByRelease(release.id, dbTransaction) || [];
-        console.log(`[PLANNED RELEASE] 📋 Found ${releaseSongs.length} songs`);
-        console.log(`[PLANNED RELEASE] 🎶 Songs in release:`, releaseSongs.map(s => ({
-          id: s.id,
-          title: s.title,
-          quality: s.quality,
-          isReleased: s.isReleased,
-          isRecorded: s.isRecorded,
-          totalStreams: s.totalStreams || 0,
-          totalRevenue: s.totalRevenue || 0
-        })));
         
         if (releaseSongs.length === 0) {
-          console.warn(`[PLANNED RELEASE] ⚠️ No songs found for release "${release.title}", skipping`);
+          console.warn(`[PLANNED RELEASE] No songs found for release "${release.title}", skipping`);
           continue;
         }
         
@@ -1281,43 +1118,26 @@ export class GameEngine {
         const songsToRelease = releaseSongs.filter(s => !s.isReleased);
         const alreadyReleasedSongs = releaseSongs.filter(s => s.isReleased);
 
-        console.log(`[PLANNED RELEASE] 📊 Song statistics:`, {
-          totalSongs: releaseSongs.length,
-          alreadyReleased: alreadyReleasedSongs.length,
-          toRelease: songsToRelease.length
-        });
-
         if (songsToRelease.length === 0) {
-          console.log(`[PLANNED RELEASE] ⏭️ All songs already released, skipping calculation`);
           continue;
         }
 
-        // Extract lead single strategy for logging
-        const metadata = release.metadata as any;
-        const leadSingleStrategy = metadata?.leadSingleStrategy;
-
         // Get artist data for sophisticated calculation
+        const metadata = release.metadata as any;
         const [artist] = await this.storage?.getArtistsByGame(this.gameState.id) || [];
         const releaseArtist = artist || await this.storage?.getArtist(release.artistId);
 
         if (!releaseArtist) {
-          console.warn(`[PLANNED RELEASE] ⚠️ Artist not found for release, skipping`);
+          console.warn(`[PLANNED RELEASE] Artist not found for release, skipping`);
           continue;
         }
 
-        // Use sophisticated preview calculation for actual release
-        console.log(`[PLANNED RELEASE] 🚀 Using sophisticated calculation system`);
+        // Use sophisticated calculation for actual release
         const sophisticatedResults = this.calculateSophisticatedReleaseOutcome(
           release,
           songsToRelease,
           releaseArtist
         );
-
-        console.log(`[PLANNED RELEASE] 📊 Sophisticated results:`, {
-          totalStreams: sophisticatedResults.totalStreams,
-          totalRevenue: sophisticatedResults.totalRevenue,
-          songCount: sophisticatedResults.perSongBreakdown.length
-        });
 
         // Prepare song updates using sophisticated breakdown
         const songUpdates = sophisticatedResults.perSongBreakdown.map(songResult => ({
@@ -1341,7 +1161,7 @@ export class GameEngine {
               dbTransaction
             );
           } catch (allocError) {
-            console.warn(`[PLANNED RELEASE] ⚠️ Marketing allocation failed:`, allocError);
+            console.warn(`[PLANNED RELEASE] Marketing allocation failed:`, allocError);
           }
         }
 
@@ -1431,40 +1251,25 @@ export class GameEngine {
           }
         }
         
-        console.log(`[PLANNED RELEASE] 🎉 === RELEASE COMPLETE === 🎉`);
-        console.log(`[PLANNED RELEASE] 📊 Final statistics for "${release.title}":`, {
-          songsReleased: songUpdates.length,
-          totalRevenue: `$${totalRevenue}`,
-          totalStreams: totalStreams,
-          marketingSpent: `$${totalMarketingBudget}`,
-          netRevenue: `$${totalRevenue - totalMarketingBudget}`,
-          hadLeadSingle: !!leadSingleStrategy,
-          leadSingleBoostApplied: leadSingleStrategy ? 'Included in sophisticated calculation' : 'N/A'
-        });
+        // Release completed successfully
       }
       
     } catch (error) {
-      console.error('[PLANNED RELEASE] CRITICAL ERROR processing planned releases:', error);
-      console.error('[PLANNED RELEASE] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      
-      // Add detailed error information to summary
+      console.error('[PLANNED RELEASE] Error processing planned releases:', error);
+
       summary.changes.push({
         type: 'error',
-        description: `CRITICAL: Planned release processing failed - ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Planned release processing failed - ${error instanceof Error ? error.message : 'Unknown error'}`,
         amount: 0
       });
-      
+
       // Re-throw the error to ensure transaction rollback on critical failures
-      // Only swallow errors for non-critical issues like missing songs
       if (error instanceof Error && error.message.includes('No songs found')) {
         console.warn('[PLANNED RELEASE] Non-critical error, continuing processing');
       } else {
-        console.error('[PLANNED RELEASE] Critical error, will cause transaction rollback');
         throw error;
       }
     }
-    
-    console.log('[PLANNED RELEASE] === End Processing ===');
   }
   
   /**
@@ -1489,18 +1294,13 @@ export class GameEngine {
    * Processes newly recorded projects - projects that became "recorded" this week
    * This marks songs as recorded but does not release them (no revenue yet)
    */
-  private async processNewlyRecordedProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    console.log('[NEWLY RECORDED] === Processing Newly Recorded Projects ===');
-    console.log(`[NEWLY RECORDED] Current week: ${this.gameState.currentWeek}`);
+  private async processNewlyRecordedProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
     
     try {
       // Check if we have a method to get newly released projects
       if (!this.gameData.getNewlyReleasedProjects && !this.gameData.getProjectsByStage) {
-        console.log('[NEWLY RELEASED] No method available to get newly released projects, checking gameState flags');
-        
         // Check if there are released projects in gameState flags that need processing
         const releasedProjects = (this.gameState.flags as any)?.['released_projects'] || [];
-        console.log(`[NEWLY RELEASED] Found ${releasedProjects.length} released projects in flags`);
         
         for (const project of releasedProjects) {
           await this.processProjectSongRecording(project, summary, dbTransaction);
@@ -1517,10 +1317,7 @@ export class GameEngine {
         recordedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id || '', this.gameState.currentWeek || 1, dbTransaction);
       }
       
-      console.log(`[NEWLY RECORDED] Found ${recordedProjects.length} recorded projects`);
-      
       if (recordedProjects.length === 0) {
-        console.log('[NEWLY RECORDED] No recorded projects found, skipping song recording processing');
         return;
       }
       
@@ -1533,7 +1330,6 @@ export class GameEngine {
       console.error('[NEWLY RECORDED] Error processing newly recorded projects:', error);
     }
     
-    console.log('[NEWLY RECORDED] === End Processing ===');
   }
 
   /**
@@ -1593,44 +1389,24 @@ export class GameEngine {
    * Processes song generation for recording projects
    * This is called during weekly processing to create songs for active recording projects
    */
-  private async processRecordingProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    console.log('[SONG GENERATION] === Processing Recording Projects ===');
-    console.log(`[SONG GENERATION] Game ID: ${this.gameState.id}`);
+  private async processRecordingProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
     
     try {
       // Get recording projects from database via ServerGameData
-      // Note: This assumes the server will provide recording projects
       const recordingProjects = await this.gameData.getActiveRecordingProjects(this.gameState.id || '', dbTransaction);
-      
-      console.log(`[SONG GENERATION] Found ${recordingProjects?.length || 0} recording projects`);
-      console.log('[SONG GENERATION] Projects:', recordingProjects?.map((p: any) => ({
-        id: p.id,
-        title: p.title,
-        type: p.type,
-        stage: p.stage,
-        songCount: p.songCount,
-        songsCreated: p.songsCreated
-      })));
-      
+
       if (!recordingProjects || recordingProjects.length === 0) {
-        console.log('[SONG GENERATION] No active recording projects found');
         return;
       }
 
       for (const project of recordingProjects) {
-        console.log(`[SONG GENERATION] Checking project: ${project.title} (${project.type})`);
         if (this.shouldGenerateProjectSongs(project)) {
-          console.log(`[SONG GENERATION] Project ${project.title} should generate songs`);
-          await this.generateWeeklyProjectSongs(project, summary, dbTransaction);
-        } else {
-          console.log(`[SONG GENERATION] Project ${project.title} should NOT generate songs - stage: ${project.stage}, songCount: ${project.songCount}, songsCreated: ${project.songsCreated}`);
+          await this.generateMonthlyProjectSongs(project, summary, dbTransaction);
         }
       }
     } catch (error) {
       console.error('[SONG GENERATION] Error processing recording projects:', error);
     }
-    
-    console.log('[SONG GENERATION] === End Processing ===');
   }
 
   /**
@@ -1652,16 +1428,7 @@ export class GameEngine {
   /**
    * Generates songs for a recording project during weekly processing
    */
-  private async generateWeeklyProjectSongs(project: any, summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    console.log(`[SONG GENERATION] Generating songs for project: ${project.title}`);
-    console.log(`[SONG GENERATION] Project details:`, {
-      id: project.id,
-      artistId: project.artistId,
-      songCount: project.songCount,
-      songsCreated: project.songsCreated,
-      type: project.type,
-      stage: project.stage
-    });
+  private async generateMonthlyProjectSongs(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
     
     try {
       const artist = await this.gameData.getArtistById(project.artistId);
@@ -1669,38 +1436,23 @@ export class GameEngine {
         console.error(`[SONG GENERATION] Artist not found for project ${project.id}`);
         return;
       }
-      console.log(`[SONG GENERATION] Found artist: ${artist.name}`);
 
       // Determine how many songs to generate this week
       const remainingSongs = (project.songCount || 1) - (project.songsCreated || 0);
       const songsPerWeek = this.getSongsPerWeek(project.type);
       const songsToGenerate = Math.min(remainingSongs, songsPerWeek);
 
-      console.log(`[SONG GENERATION] Calculation:`, {
-        remainingSongs,
-        songsPerWeek,
-        songsToGenerate
-      });
 
       for (let i = 0; i < songsToGenerate; i++) {
-        console.log(`[SONG GENERATION] Creating song ${i + 1}/${songsToGenerate} for project ${project.title}`);
         const song = this.generateSong(project, artist);
-        console.log(`[SONG GENERATION] Generated song:`, {
-          title: song.title,
-          quality: song.quality,
-          genre: song.genre,
-          mood: song.mood
-        });
         
         // Store song via ServerGameData (if available)
         if (this.gameData.createSong) {
-          console.log(`[SONG GENERATION] Saving song to database via createSong...`);
           try {
             const savedSong = await this.gameData.createSong(song, dbTransaction);
-            console.log(`[SONG GENERATION] Song saved successfully:`, savedSong.id);
           } catch (songError) {
             console.error(`[SONG GENERATION] Failed to save song:`, songError);
-            continue; // Skip updating project progress if song save failed
+            continue;
           }
         } else {
           console.warn(`[SONG GENERATION] createSong method not available on gameData`);
@@ -1708,7 +1460,6 @@ export class GameEngine {
 
         // Update project progress
         project.songsCreated = (project.songsCreated || 0) + 1;
-        console.log(`[SONG GENERATION] Updated project songsCreated to: ${project.songsCreated}`);
         
         // Enhanced summary with economic insights
         const economicInsight = this.generateSongEconomicInsight(song, project);
@@ -1719,7 +1470,6 @@ export class GameEngine {
           projectId: project.id,
           amount: 0
         });
-        console.log(`[SONG GENERATION] Added enhanced summary change for song creation`);
       }
 
       // Update project in database
@@ -2121,19 +1871,6 @@ export class GameEngine {
     const currentGameState = gameState || this.gameState;
     const currentWeek = currentGameState.currentWeek || 1;
     
-    console.log(`[SONG RELEASE] 🎯 ENTERING processSongRelease for song: "${song.title}"`);
-    console.log(`[SONG RELEASE] Song details:`, {
-      id: song.id,
-      title: song.title,
-      quality: song.quality,
-      isReleased: song.isReleased,
-      initialStreams: song.initialStreams
-    });
-    console.log(`[SONG RELEASE] Game state:`, {
-      currentWeek,
-      reputation: currentGameState.reputation,
-      playlistAccess: currentGameState.playlistAccess
-    });
     
     // Get artist popularity
     const artist = await this.storage?.getArtist(song.artistId);
@@ -3693,8 +3430,7 @@ export class GameEngine {
       return;
     }
 
-    console.log('[PROJECT ADVANCEMENT] === GameEngine Project Stage Advancement ===');
-    console.log(`[PROJECT ADVANCEMENT] Current week: ${this.gameState.currentWeek}`);
+    console.log(`[PROJECT ADVANCEMENT] Current month: ${this.gameState.currentMonth}`);
     
     try {
       // Import the required modules dynamically to avoid circular dependencies
@@ -3862,7 +3598,6 @@ export class GameEngine {
         }
       }
       
-      console.log('[PROJECT ADVANCEMENT] === GameEngine Project Stage Advancement Complete ===');
     } catch (error) {
       console.error('[PROJECT ADVANCEMENT] Error during project advancement:', error);
       throw new Error(`Project advancement failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
