@@ -22,9 +22,9 @@ export function ActiveReleases() {
     if (!releases || releases.length === 0) return;
     
     // Check for potential desync indicators
-    const currentMonth = gameState?.currentMonth || 1;
+    const currentWeek = gameState?.currentWeek || 1;
     const overdueReleases = releases.filter(r => 
-      r.status === 'planned' && (r.releaseMonth || 0) < currentMonth
+      r.status === 'planned' && (r.releaseWeek || 0) < currentWeek
     );
     
     if (overdueReleases.length > 0) {
@@ -33,14 +33,14 @@ export function ActiveReleases() {
     } else {
       setStateSync('synced');
     }
-  }, [releases, gameState?.currentMonth]);
+  }, [releases, gameState?.currentWeek]);
 
   // Enhanced debug logging for release state tracking
   console.log('ActiveReleases Enhanced Debug:', {
     totalReleases: releases?.length || 0,
     totalSongs: songs?.length || 0,
     gameState: gameState?.id,
-    currentMonth: gameState?.currentMonth,
+    currentWeek: gameState?.currentWeek,
     releasesByStatus: {
       planned: releases?.filter(r => r.status === 'planned').length || 0,
       released: releases?.filter(r => r.status === 'released').length || 0,
@@ -86,11 +86,11 @@ export function ActiveReleases() {
   }
 
   const getUpcomingReleases = () => {
-    const currentMonth = gameState?.currentMonth || 1;
+    const currentWeek = gameState?.currentWeek || 1;
     const upcoming = releases.filter(r => {
       const isPlanned = r.status === 'planned';
-      const isFutureOrCurrent = !r.releaseMonth || r.releaseMonth >= currentMonth;
-      console.log(`Release "${r.title}": status=${r.status}, releaseMonth=${r.releaseMonth}, currentMonth=${currentMonth}, included=${isPlanned && isFutureOrCurrent}`);
+      const isFutureOrCurrent = !r.releaseWeek || r.releaseWeek >= currentWeek;
+      console.log(`Release "${r.title}": status=${r.status}, releaseWeek=${r.releaseWeek}, currentWeek=${currentWeek}, included=${isPlanned && isFutureOrCurrent}`);
       return isPlanned && isFutureOrCurrent;
     });
     console.log('Filtered upcoming releases:', upcoming.length, 'releases');
@@ -137,9 +137,9 @@ export function ActiveReleases() {
     return songs.filter(s => s.releaseId === releaseId).length;
   };
 
-  const formatMonth = (month: number) => {
-    if (!month) return 'TBD';
-    return `Month ${month}`;
+  const formatWeek = (week: number) => {
+    if (!week) return 'TBD';
+    return `Week ${week}`;
   };
 
   const getSongChartInfo = (songId: string) => {
@@ -184,7 +184,7 @@ export function ActiveReleases() {
 
   const upcomingReleases = getUpcomingReleases();
   const releasedReleases = getReleasedReleases();
-  const currentMonth = gameState?.currentMonth || 1;
+  const currentWeek = gameState?.currentWeek || 1;
 
   return (
     <Card className="shadow-sm">
@@ -257,7 +257,7 @@ export function ActiveReleases() {
                   <ReleaseWorkflowCard
                     key={release.id}
                     release={release}
-                    currentMonth={currentMonth}
+                    currentWeek={currentWeek}
                     artistName={getArtistName(release.artistId)}
                     songs={songs}
                   />
@@ -332,7 +332,7 @@ export function ActiveReleases() {
                     <ReleaseWorkflowCard
                       key={release.id}
                       release={release}
-                      currentMonth={currentMonth}
+                      currentWeek={currentWeek}
                       artistName={getArtistName(release.artistId)}
                       songs={songs}
                     />

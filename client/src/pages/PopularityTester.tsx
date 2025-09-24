@@ -5,7 +5,7 @@ import { Link } from 'wouter';
 interface Song {
   id: string;
   title: string;
-  monthlyStreams: number;
+  weeklyStreams: number;
 }
 
 interface TestScenario {
@@ -58,7 +58,7 @@ export default function PopularityTester() {
       newSongs.push({
         id: `song_${i}`,
         title: `Song ${i + 1}`,
-        monthlyStreams: streams
+        weeklyStreams: streams
       });
     }
     setSongs(newSongs);
@@ -101,14 +101,14 @@ export default function PopularityTester() {
     const breakdown: string[] = [];
 
     songs.forEach((song, index) => {
-      if (song.monthlyStreams >= actualThreshold) {
+      if (song.weeklyStreams >= actualThreshold) {
         // Logarithmic scaling: log10(streams/threshold) gives:
         // threshold streams = 0 points, threshold*10 = 1 point, threshold*100 = 2 points
-        const streamPoints = Math.log10(song.monthlyStreams / actualThreshold);
+        const streamPoints = Math.log10(song.weeklyStreams / actualThreshold);
         baseBonus += streamPoints;
-        breakdown.push(`${song.title}: ${song.monthlyStreams.toLocaleString()} streams = +${streamPoints.toFixed(2)} points`);
+        breakdown.push(`${song.title}: ${song.weeklyStreams.toLocaleString()} streams = +${streamPoints.toFixed(2)} points`);
       } else {
-        breakdown.push(`${song.title}: ${song.monthlyStreams.toLocaleString()} streams = +0 points (below ${actualThreshold.toLocaleString()} threshold)`);
+        breakdown.push(`${song.title}: ${song.weeklyStreams.toLocaleString()} streams = +0 points (below ${actualThreshold.toLocaleString()} threshold)`);
       }
     });
 
@@ -135,10 +135,10 @@ export default function PopularityTester() {
       );
 
       const newPopularity = Math.min(100, config.currentPopularity + finalBonus);
-      const totalStreams = songs.reduce((sum, song) => sum + song.monthlyStreams, 0);
-      const hotSongs = songs.filter(song => song.monthlyStreams >= config.hotThreshold);
+      const totalStreams = songs.reduce((sum, song) => sum + song.weeklyStreams, 0);
+      const hotSongs = songs.filter(song => song.weeklyStreams >= config.hotThreshold);
 
-      let description = `${totalStreams.toLocaleString()} total monthly streams`;
+      let description = `${totalStreams.toLocaleString()} total weekly streams`;
       if (config.currentPopularity > 70) {
         description += ' [diminished at high popularity]';
       }
@@ -162,14 +162,14 @@ export default function PopularityTester() {
 
   const updateSongStreams = (songId: string, streams: number) => {
     setSongs(prev => prev.map(song =>
-      song.id === songId ? { ...song, monthlyStreams: streams } : song
+      song.id === songId ? { ...song, weeklyStreams: streams } : song
     ));
   };
 
   const randomizeSongStreams = () => {
     const newSongs = songs.map(song => ({
       ...song,
-      monthlyStreams: Math.floor(
+      weeklyStreams: Math.floor(
         Math.random() * (config.maxStreams - config.minStreams) + config.minStreams
       )
     }));
@@ -217,7 +217,7 @@ export default function PopularityTester() {
                   <div className="mb-2">
                     <strong>Primary Integration: Streaming → Popularity</strong><br/>
                     Location: processReleasedProjects (game-engine.ts:825-893)<br/>
-                    Add around line 858 where monthlyStreams is calculated:
+                    Add around line 858 where weeklyStreams is calculated:
                   </div>
 
                   <div className="bg-black/20 p-2 rounded text-xs font-mono mb-2">
@@ -226,7 +226,7 @@ export default function PopularityTester() {
                     {'  '}const artist = await this.storage?.getArtist?.(song.artistId);<br/>
                     {'  '}if (artist) {'{'}{'<br/>'}
                     {'    '}const popularityBonus = this.calculateStreamingPopularityBonus(<br/>
-                    {'      '}monthlyStreams, artist.popularity, 3000, true, 35<br/>
+                    {'      '}weeklyStreams, artist.popularity, 3000, true, 35<br/>
                     {'    '});<br/>
                     {'    '}summary.artistChanges[`${'${song.artistId}'}_popularity`] = <br/>
                     {'      '}(summary.artistChanges[`${'${song.artistId}'}_popularity`] || 0) + popularityBonus;<br/>
@@ -246,8 +246,8 @@ export default function PopularityTester() {
                   </div>
 
                   <div className="mt-2">
-                    <strong>Monthly Processing Integration</strong><br/>
-                    processMonthlyPopularityChanges (lines 2446-2485) will automatically handle streaming-based changes via existing summary.artistChanges pattern
+                    <strong>Weekly Processing Integration</strong><br/>
+                    processWeeklyPopularityChanges (lines 2446-2485) will automatically handle streaming-based changes via existing summary.artistChanges pattern
                   </div>
                 </div>
               </div>
@@ -431,7 +431,7 @@ export default function PopularityTester() {
                 <Music className="h-5 w-5" />
                 Current Songs
                 <span className="text-sm font-normal text-gray-400">
-                  ({songs.filter(s => s.monthlyStreams >= config.hotThreshold).length} hot songs)
+                  ({songs.filter(s => s.weeklyStreams >= config.hotThreshold).length} hot songs)
                 </span>
               </h3>
 
@@ -440,9 +440,9 @@ export default function PopularityTester() {
                   <div key={song.id} className="bg-plum-900/30 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{song.title}</span>
-                      <span className={getStreamsColor(song.monthlyStreams, config.hotThreshold)}>
-                        {song.monthlyStreams.toLocaleString()} streams
-                        {song.monthlyStreams >= config.hotThreshold && ' 🔥'}
+                      <span className={getStreamsColor(song.weeklyStreams, config.hotThreshold)}>
+                        {song.weeklyStreams.toLocaleString()} streams
+                        {song.weeklyStreams >= config.hotThreshold && ' 🔥'}
                       </span>
                     </div>
                     <input
@@ -450,7 +450,7 @@ export default function PopularityTester() {
                       min={config.minStreams}
                       max={config.maxStreams}
                       step="10000"
-                      value={song.monthlyStreams}
+                      value={song.weeklyStreams}
                       onChange={(e) => updateSongStreams(song.id, parseInt(e.target.value))}
                       className="w-full accent-burgundy-500"
                     />
@@ -545,7 +545,7 @@ export default function PopularityTester() {
                   <div className="bg-plum-900/30 rounded-lg p-3">
                     <div className="text-xs text-gray-400 mb-1">Total Streams</div>
                     <div className="text-2xl font-bold text-orange-400">
-                      {result.songs.reduce((sum, song) => sum + song.monthlyStreams, 0).toLocaleString()}
+                      {result.songs.reduce((sum, song) => sum + song.weeklyStreams, 0).toLocaleString()}
                     </div>
                   </div>
                   <div className="bg-plum-900/30 rounded-lg p-3">
@@ -578,9 +578,9 @@ export default function PopularityTester() {
                           {result.songs.map((song, i) => (
                             <div key={i} className="flex justify-between">
                               <span>{song.title}:</span>
-                              <span className={getStreamsColor(song.monthlyStreams, config.hotThreshold)}>
-                                {song.monthlyStreams.toLocaleString()}
-                                {song.monthlyStreams >= config.hotThreshold && ' 🔥'}
+                              <span className={getStreamsColor(song.weeklyStreams, config.hotThreshold)}>
+                                {song.weeklyStreams.toLocaleString()}
+                                {song.weeklyStreams >= config.hotThreshold && ' 🔥'}
                               </span>
                             </div>
                           ))}

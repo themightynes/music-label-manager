@@ -28,7 +28,7 @@ Based on the essential documentation, here's your development-ready summary:
 ## 🎯 **Music Label Manager** - Strategic Music Industry Simulation
 **Status**: MVP Complete (August 2025) - Active v2.0 Development (September 2025)
 
-**Core Game**: 36-month turn-based campaign where players run a record label, managing artists, creating projects (Singles/EPs/Tours), building industry relationships, and progressing through access tiers.
+**Core Game**: 52-week turn-based campaign where players run a record label, managing artists, creating projects (Singles/EPs/Tours), building industry relationships, and progressing through access tiers.
 
 ## 🏗️ **Tech Stack** (For Development Context)
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind + Zustand + React Query  

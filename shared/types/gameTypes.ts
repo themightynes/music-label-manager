@@ -12,7 +12,7 @@ export interface GameArtist {
   mood: number;
   signed: boolean;
   signingCost?: number;
-  monthlyCost?: number;
+  weeklyCost?: number;
   bio?: string;
   genre?: string;
   age?: number;
@@ -82,7 +82,7 @@ export interface DialogueScene {
 
 export interface GameState {
   id: string;
-  currentMonth: number;
+  currentWeek: number;
   money: number;
   reputation: number;
   creativeCapital: number;
@@ -94,7 +94,7 @@ export interface GameState {
   campaignType: string;
   rngSeed: string;
   flags: Record<string, any>;
-  monthlyStats: Record<string, any>;
+  weeklyStats: Record<string, any>;
   musicLabel?: MusicLabel;
 }
 
@@ -102,7 +102,7 @@ export interface MusicLabel {
   id: string;
   name: string;
   gameId: string;
-  foundedMonth?: number;
+  foundedWeek?: number;
   description?: string;
   genreFocus?: string;
   createdAt?: string;
@@ -123,8 +123,8 @@ export interface GameProject {
   quality: number;
   budget: number;
   budgetUsed: number;
-  dueMonth: number;
-  startMonth: number;
+  dueWeek: number;
+  startWeek: number;
   metadata?: Record<string, any>;
 }
 
@@ -146,7 +146,7 @@ export interface BalanceConfig {
   version: string;
   economy: {
     starting_money: number;
-    monthly_burn_base: [number, number];
+    weekly_burn_base: [number, number];
     bankruptcy_threshold: number;
     rng_variance: [number, number];
     project_costs: Record<string, any>;
@@ -155,7 +155,7 @@ export interface BalanceConfig {
     talent_costs: Record<string, any>;
   };
   time_progression: {
-    campaign_length_months: number;
+    campaign_length_weeks: number;
     focus_slots_base: number;
     focus_slots_unlock_threshold: number;
     focus_slots_max: number;
@@ -197,7 +197,7 @@ export interface WorldConfig {
   generated: string;
   seed: number;
   money_start: number;
-  monthly_burn_base: [number, number];
+  weekly_burn_base: [number, number];
   access_tiers: {
     playlist: string[];
     press: string[];
@@ -222,7 +222,7 @@ export interface GameDataFiles {
 }
 
 // Utility types for game engine
-export interface MonthlyOutcome {
+export interface WeeklyOutcome {
   revenue: number;
   expenses: number;
   reputationChange: number;
@@ -307,8 +307,8 @@ export interface EventOccurrence {
   occurred: boolean;
 }
 
-export interface MonthSummary {
-  month: number;
+export interface WeekSummary {
+  week: number;
   changes: GameChange[];
   revenue: number;
   expenses: number;
@@ -317,7 +317,7 @@ export interface MonthSummary {
   events: EventOccurrence[];
   artistChanges?: Record<string, number>;
   expenseBreakdown?: {
-    monthlyOperations: number;
+    weeklyOperations: number;
     artistSalaries: number;
     executiveSalaries: number;
     projectCosts: number;

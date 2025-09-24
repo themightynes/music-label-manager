@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "generated": "2025-09-06",
   "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration.",
-  "monthly_actions": [
+  "weekly_actions": [
     {
       "id": "ceo_priorities",
       "name": "CEO: Strategic Priorities",
@@ -12,7 +12,7 @@
       "role_id": "ceo",
       "meeting_id": "mgr_priorities",
       "category": "business",
-      "prompt": "We can only push two tracks next month—what's the focus?",
+      "prompt": "We can only push two tracks next week—what's the focus?",
       "choices": [
         {
           "id": "studio_first",
@@ -462,7 +462,7 @@
         },
         {
           "id": "hold",
-          "label": "Hold this month; build proof points",
+          "label": "Hold this week; build proof points",
           "effects_immediate": {},
           "effects_delayed": { "playlist_bias_next": 1 }
         }

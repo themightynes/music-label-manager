@@ -9,7 +9,7 @@ interface ExecutiveCardProps {
   executive: Executive;
   disabled?: boolean;
   onSelect: () => void;
-  monthlySalary?: number;
+  weeklySalary?: number;
 }
 
 const roleConfig = {
@@ -45,7 +45,7 @@ const roleConfig = {
   },
 } as const;
 
-export function ExecutiveCard({ executive, disabled = false, onSelect, monthlySalary }: ExecutiveCardProps) {
+export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySalary }: ExecutiveCardProps) {
   const config = roleConfig[executive.role as keyof typeof roleConfig] || {
     icon: Users,
     color: 'bg-gray-500',
@@ -140,9 +140,9 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, monthlySa
             )}
 
             {/* Salary */}
-            {!isCEO && monthlySalary !== undefined && (
+            {!isCEO && weeklySalary !== undefined && (
               <div className="text-sm text-white/60">
-                Monthly Salary: {monthlySalary === 0 ? 'Equity Only' : `$${monthlySalary.toLocaleString()}`}
+                Weekly Salary: {weeklySalary === 0 ? 'Equity Only' : `$${weeklySalary.toLocaleString()}`}
               </div>
             )}
           </div>

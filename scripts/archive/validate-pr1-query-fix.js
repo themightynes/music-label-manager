@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * PR #1 Validation Script - Release Query Fix
- * Tests that planned releases with past release months are correctly detected
+ * Tests that planned releases with past release weeks are correctly detected
  */
 
 const { exec } = require('child_process');
@@ -20,13 +20,13 @@ async function validateQueryFix() {
     console.log('1️⃣  Creating test game...');
     await createTestGame();
     
-    // Step 2: Create a planned release for month 2
-    console.log('2️⃣  Planning release for month 2...');
+    // Step 2: Create a planned release for week 2
+    console.log('2️⃣  Planning release for week 2...');
     const releaseId = await createPlannedRelease(2);
     
-    // Step 3: Advance game to month 4 (making release overdue)
-    console.log('3️⃣  Advancing to month 4 (making release overdue)...');
-    await advanceToMonth(4);
+    // Step 3: Advance game to week 4 (making release overdue)
+    console.log('3️⃣  Advancing to week 4 (making release overdue)...');
+    await advanceToWeek(4);
     
     // Step 4: Test the query finds overdue releases
     console.log('4️⃣  Testing inclusive query finds overdue releases...');
@@ -39,7 +39,7 @@ async function validateQueryFix() {
     if (success) {
       console.log('\n✅ PR #1 VALIDATION PASSED');
       console.log('   - Query correctly finds overdue releases');
-      console.log('   - No regression in current month processing');
+      console.log('   - No regression in current week processing');
       process.exit(0);
     } else {
       console.log('\n❌ PR #1 VALIDATION FAILED');
@@ -60,12 +60,12 @@ async function createTestGame() {
   console.log('   ✓ Test game created');
 }
 
-async function createPlannedRelease(month) {
+async function createPlannedRelease(week) {
   const releaseData = {
     artistId: 'test-artist-1',
     title: 'Test Overdue Release',
     type: 'single',
-    releaseMonth: month,
+    releaseWeek: week,
     marketingBudget: 5000,
     songIds: ['test-song-1']
   };
@@ -74,25 +74,25 @@ async function createPlannedRelease(month) {
   const result = JSON.parse(stdout);
   
   if (!result.success) throw new Error('Failed to create planned release');
-  console.log(`   ✓ Planned release created for month ${month}`);
+  console.log(`   ✓ Planned release created for week ${week}`);
   return result.release.id;
 }
 
-async function advanceToMonth(targetMonth) {
-  for (let i = 1; i < targetMonth; i++) {
-    await execAsync(`curl -s -X POST "${API_BASE}/api/games/${TEST_GAME_ID}/advance-month"`);
+async function advanceToWeek(targetWeek) {
+  for (let i = 1; i < targetWeek; i++) {
+    await execAsync(`curl -s -X POST "${API_BASE}/api/games/${TEST_GAME_ID}/advance-week"`);
   }
-  console.log(`   ✓ Advanced to month ${targetMonth}`);
+  console.log(`   ✓ Advanced to week ${targetWeek}`);
 }
 
-async function getPlannedReleases(month) {
-  const { stdout } = await execAsync(`curl -s "${API_BASE}/api/games/${TEST_GAME_ID}/releases/planned?month=${month}"`);
+async function getPlannedReleases(week) {
+  const { stdout } = await execAsync(`curl -s "${API_BASE}/api/games/${TEST_GAME_ID}/releases/planned?week=${week}"`);
   const result = JSON.parse(stdout);
-  console.log(`   ✓ Query executed for month ${month}`);
+  console.log(`   ✓ Query executed for week ${week}`);
   return result.releases || [];
 }
 
-function validateResults(releases, expectedReleaseId, expectedMonth) {
+function validateResults(releases, expectedReleaseId, expectedWeek) {
   console.log(`   📊 Found ${releases.length} releases`);
   
   if (releases.length === 0) {
@@ -106,8 +106,8 @@ function validateResults(releases, expectedReleaseId, expectedMonth) {
     return false;
   }
   
-  if (overdueRelease.releaseMonth !== expectedMonth) {
-    console.log('   ❌ Overdue release has wrong month');
+  if (overdueRelease.releaseWeek !== expectedWeek) {
+    console.log('   ❌ Overdue release has wrong week');
     return false;
   }
   
@@ -143,7 +143,7 @@ async function edgeCaseTests() {
   console.log('Test 1: No overdue releases scenario...');
   await createPlannedRelease(5); // Future release
   const futureReleases = await getPlannedReleases(4);
-  const futureCount = futureReleases.filter(r => r.releaseMonth > 4).length;
+  const futureCount = futureReleases.filter(r => r.releaseWeek > 4).length;
   console.log(`   ${futureCount > 0 ? '✅' : '❌'} Future releases handled correctly`);
   
   // Test 2: Multiple overdue releases
@@ -151,7 +151,7 @@ async function edgeCaseTests() {
   await createPlannedRelease(1);
   await createPlannedRelease(3);
   const multipleOverdue = await getPlannedReleases(4);
-  const overdueCount = multipleOverdue.filter(r => r.releaseMonth < 4).length;
+  const overdueCount = multipleOverdue.filter(r => r.releaseWeek < 4).length;
   console.log(`   ${overdueCount >= 2 ? '✅' : '❌'} Multiple overdue releases detected (${overdueCount})`);
 }
 

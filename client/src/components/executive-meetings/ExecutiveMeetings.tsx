@@ -42,7 +42,7 @@ export function ExecutiveMeetings({
   const [executivesError, setExecutivesError] = useState<string | null>(null);
   const [roleSalaries, setRoleSalaries] = useState<Record<string, number>>({});
 
-  // Watch for month changes to refresh executive data
+  // Watch for week changes to refresh executive data
   const { gameState } = useGameStore();
 
   const [state, send] = useMachine(executiveMeetingMachine, {
@@ -56,7 +56,7 @@ export function ExecutiveMeetings({
   const { context } = state;
   const hasAvailableSlots = context.focusSlotsUsed < context.focusSlotsTotal;
 
-  // Refetch executives when game loads or month changes
+  // Refetch executives when game loads or week changes
   useEffect(() => {
     async function loadExecutivesAndRoles() {
       try {
@@ -91,7 +91,7 @@ export function ExecutiveMeetings({
     if (gameId) {
       loadExecutivesAndRoles();
     }
-  }, [gameId, gameState?.currentMonth]); // Added currentMonth dependency
+  }, [gameId, gameState?.currentWeek]); // Added currentWeek dependency
 
   // Sync focus slots with the machine
   useEffect(() => {
@@ -190,7 +190,7 @@ export function ExecutiveMeetings({
           ) : !hasAvailableSlots ? (
             <div className="text-center p-8 text-white/70">
               <p>No focus slots available</p>
-              <p className="text-sm text-white/50">Complete your current actions or advance the month to continue.</p>
+              <p className="text-sm text-white/50">Complete your current actions or advance the week to continue.</p>
             </div>
           ) : executives.length === 0 ? (
             <div className="text-center p-8 text-white/70">
@@ -205,7 +205,7 @@ export function ExecutiveMeetings({
                   executive={executive}
                   disabled={!hasAvailableSlots}
                   onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
-                  monthlySalary={roleSalaries[executive.role]}
+                  weeklySalary={roleSalaries[executive.role]}
                 />
               ))}
             </div>

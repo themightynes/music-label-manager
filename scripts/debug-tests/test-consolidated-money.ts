@@ -14,7 +14,7 @@ async function testConsolidatedMoney() {
     // Create a mock game state
     const mockGameState = {
       id: 'test-game',
-      currentMonth: 1,
+      currentWeek: 1,
       money: 100000, // Starting with $100,000
       reputation: 10,
       creativeCapital: 10,
@@ -26,7 +26,7 @@ async function testConsolidatedMoney() {
       campaignType: 'standard',
       rngSeed: 'test-seed',
       flags: {},
-      monthlyStats: {}
+      weeklyStats: {}
     };
     
     console.log('=== TESTING CONSOLIDATED MONEY CALCULATION ===\n');
@@ -40,16 +40,16 @@ async function testConsolidatedMoney() {
     let expectedExpenses = 0;
     
     // Simulate various money changes by directly calling internal methods
-    // This would normally happen during the month processing
+    // This would normally happen during the week processing
     const summary = {
-      month: 2,
+      week: 2,
       changes: [],
       revenue: 0,
       expenses: 0,
       reputationChanges: {},
       events: [],
       expenseBreakdown: {
-        monthlyOperations: 4000,  // Simulate monthly operations
+        weeklyOperations: 4000,  // Simulate weekly operations
         artistSalaries: 1200,      // Simulate artist salary
         projectCosts: 3000,        // Simulate a project cost
         marketingCosts: 2000,      // Simulate marketing
@@ -71,8 +71,8 @@ async function testConsolidatedMoney() {
     console.log('  Net change:', expectedRevenue - expectedExpenses);
     console.log('  Expected final money:', mockGameState.money + expectedRevenue - expectedExpenses);
     
-    // Now test that advanceMonth uses these correctly
-    const result = await gameEngine.advanceMonth([]);
+    // Now test that advanceWeek uses these correctly
+    const result = await gameEngine.advanceWeek([]);
     
     console.log('\n=== RESULTS ===');
     console.log('Final money:', result.gameState.money);

@@ -1,4 +1,4 @@
-import { db } from '../server/db';
+import { db } from '../../server/db';
 import { gameStates } from '@shared/schema';
 import fetch from 'node-fetch';
 
@@ -16,7 +16,7 @@ async function testExecutiveMeeting() {
     const gameId = games[0].id;
     console.log(`📊 Using game: ${gameId}`);
     
-    // 2. Simulate what the client sends when advancing month with an executive meeting
+    // 2. Simulate what the client sends when advancing week with an executive meeting
     const testAction = {
       gameId: gameId,
       selectedActions: [
@@ -31,11 +31,11 @@ async function testExecutiveMeeting() {
       ]
     };
     
-    console.log('\n📤 Sending advance month request with executive action...');
+    console.log('\n📤 Sending advance week request with executive action...');
     console.log(JSON.stringify(testAction, null, 2));
     
-    // 3. Call the advance-month endpoint
-    const response = await fetch(`http://localhost:5000/api/advance-month`, {
+    // 3. Call the advance-week endpoint
+    const response = await fetch(`http://localhost:5000/api/advance-week`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ async function testExecutiveMeeting() {
       console.log(error);
     } else {
       const result = await response.json();
-      console.log('\n✅ Month advanced successfully');
+      console.log('\n✅ Week advanced successfully');
       console.log('Changes:', result.summary?.changes);
     }
     

@@ -1,14 +1,14 @@
 {
   "time_progression": {
-    "campaign_length_months": 36,
-    "_dev_note_campaign_length": "IMPORTANT: When changing campaign_length_months, also update these hardcoded values:",
+    "campaign_length_weeks": 52,
+    "_dev_note_campaign_length": "UPDATED: Campaign now runs for full calendar year (52 weeks)",
     "_dev_note_locations": [
-      "client/src/components/Dashboard.tsx:81-82 - Update 'of 36' and '/36' display",
-      "client/src/pages/PlanReleasePage.tsx:933 - Update month <= 36 check for release planning",
-      "Consider adjusting focus_slots_unlock_threshold below for longer campaigns"
+      "COMPLETED: client/src/components/GameSidebar.tsx - Updated to Week XX/52 display",
+      "COMPLETED: client/src/pages/PlanReleasePage.tsx - Updated to week <= 52 check",
+      "COMPLETED: Adjusted focus_slots_unlock_threshold to week 26 (halfway through 52-week campaign)"
     ],
     "focus_slots_base": 3,
-    "focus_slots_unlock_threshold": 18,
+    "focus_slots_unlock_threshold": 26,
     "focus_slots_max": 4,
     
     "project_durations": {
@@ -22,7 +22,7 @@
   
   "save_system": {
     "max_save_slots": 3,
-    "autosave_frequency": "monthly",
+    "autosave_frequency": "weekly",
     "export_format_version": "1.0",
     "compression_enabled": true,
     "validation_strict": true

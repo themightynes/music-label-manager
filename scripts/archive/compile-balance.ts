@@ -96,7 +96,7 @@ async function compileBalance() {
     
     // Time progression section - MUST match balance.ts structure exactly (line 48-55)
     time_progression: {
-      campaign_length_months: projects.time_progression.campaign_length_months,
+      campaign_length_weeks: projects.time_progression.campaign_length_weeks,
       focus_slots_base: projects.time_progression.focus_slots_base,
       focus_slots_unlock_threshold: projects.time_progression.focus_slots_unlock_threshold,
       focus_slots_max: projects.time_progression.focus_slots_max,

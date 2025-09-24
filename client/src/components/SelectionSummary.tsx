@@ -22,7 +22,7 @@ interface SelectionSummaryProps {
   actions: any[]; // Keep for now, will be removed later
   onRemoveAction: (actionId: string) => void;
   onReorderActions: (startIndex: number, endIndex: number) => void;
-  onAdvanceMonth: () => void;
+  onAdvanceWeek: () => void;
   isAdvancing: boolean;
   impactPreview?: {
     immediate: Record<string, number>;
@@ -73,7 +73,7 @@ export function SelectionSummary({
   actions,
   onRemoveAction,
   onReorderActions,
-  onAdvanceMonth,
+  onAdvanceWeek,
   isAdvancing,
   impactPreview
 }: SelectionSummaryProps) {
@@ -335,7 +335,7 @@ export function SelectionSummary({
                 <div>
                   <div className="flex items-center gap-1 mb-2">
                     <Zap className="h-3 w-3 text-orange-300" />
-                    <span className="text-xs font-medium text-white/70">This Month</span>
+                    <span className="text-xs font-medium text-white/70">This Week</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {Object.entries(impactPreview?.immediate || {}).map(([effect, value]) => (
@@ -353,7 +353,7 @@ export function SelectionSummary({
                 <div>
                   <div className="flex items-center gap-1 mb-2">
                     <Clock className="h-3 w-3 text-blue-300" />
-                    <span className="text-xs font-medium text-white/70">Next Month</span>
+                    <span className="text-xs font-medium text-white/70">Next Week</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {Object.entries(impactPreview?.delayed || {}).map(([effect, value]) => (
@@ -371,7 +371,7 @@ export function SelectionSummary({
           </Card>
         )}
 
-        {/* Advance Month Button */}
+        {/* Advance Week Button */}
         <div className="space-y-3">
           {usedSlots < totalSlots && (
             <div className="text-center p-3 bg-[#8B4A6C]/10 border border-[#8B4A6C]/30 rounded-lg">
@@ -383,7 +383,7 @@ export function SelectionSummary({
           )}
           
           <Button
-            onClick={onAdvanceMonth}
+            onClick={onAdvanceWeek}
             disabled={selectedActions.length === 0 || isAdvancing}
             className="w-full bg-gradient-to-r from-[#A75A5B] to-[#8B4A6C] text-white hover:from-[#A75A5B]/80 hover:to-[#7A3F5E] py-3 font-medium shadow-lg"
             size="lg"
@@ -391,12 +391,12 @@ export function SelectionSummary({
             {isAdvancing ? (
               <>
                 <i className="fas fa-spinner fa-spin mr-2"></i>
-                Processing Month...
+                Processing Week...
               </>
             ) : (
               <>
                 <i className="fas fa-rocket mr-2"></i>
-                Advance to Next Month
+                Advance to Next Week
               </>
             )}
           </Button>

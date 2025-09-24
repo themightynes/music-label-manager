@@ -103,44 +103,44 @@ async function simpleReleaseTest() {
   console.log('📊 SIMULATED RELEASE BUG DEMONSTRATION:');
   console.log('');
   
-  const currentMonth = 4;
+  const currentWeek = 4;
   const releases = [
-    { id: '1', title: 'Past Release', status: 'planned', releaseMonth: 2 },
-    { id: '2', title: 'Current Release', status: 'planned', releaseMonth: 4 },
-    { id: '3', title: 'Future Release', status: 'planned', releaseMonth: 6 }
+    { id: '1', title: 'Past Release', status: 'planned', releaseWeek: 2 },
+    { id: '2', title: 'Current Release', status: 'planned', releaseWeek: 4 },
+    { id: '3', title: 'Future Release', status: 'planned', releaseWeek: 6 }
   ];
   
   // Original buggy logic - exact match
-  console.log('❌ BUGGY LOGIC (eq): Find releases where releaseMonth === currentMonth');
-  const buggyResults = releases.filter(r => r.releaseMonth === currentMonth);
+  console.log('❌ BUGGY LOGIC (eq): Find releases where releaseWeek === currentWeek');
+  const buggyResults = releases.filter(r => r.releaseWeek === currentWeek);
   console.log(`   Found: ${buggyResults.length} releases`);
-  buggyResults.forEach(r => console.log(`   - ${r.title} (Month ${r.releaseMonth})`));
+  buggyResults.forEach(r => console.log(`   - ${r.title} (Week ${r.releaseWeek})`));
   
   console.log('   📋 Status after buggy processing:');
   releases.forEach(r => {
-    const wasProcessed = r.releaseMonth === currentMonth;
+    const wasProcessed = r.releaseWeek === currentWeek;
     const newStatus = wasProcessed ? 'released' : r.status;
-    const displayStatus = r.status === 'planned' && r.releaseMonth < currentMonth ? 'DISAPPEARED' : newStatus;
-    console.log(`   - ${r.title}: ${displayStatus} ${r.releaseMonth < currentMonth && !wasProcessed ? '⚠️  STUCK' : ''}`);
+    const displayStatus = r.status === 'planned' && r.releaseWeek < currentWeek ? 'DISAPPEARED' : newStatus;
+    console.log(`   - ${r.title}: ${displayStatus} ${r.releaseWeek < currentWeek && !wasProcessed ? '⚠️  STUCK' : ''}`);
   });
   
   console.log('');
-  console.log('✅ FIXED LOGIC (lte): Find releases where releaseMonth <= currentMonth');
-  const fixedResults = releases.filter(r => r.releaseMonth <= currentMonth);
+  console.log('✅ FIXED LOGIC (lte): Find releases where releaseWeek <= currentWeek');
+  const fixedResults = releases.filter(r => r.releaseWeek <= currentWeek);
   console.log(`   Found: ${fixedResults.length} releases`);
-  fixedResults.forEach(r => console.log(`   - ${r.title} (Month ${r.releaseMonth})`));
+  fixedResults.forEach(r => console.log(`   - ${r.title} (Week ${r.releaseWeek})`));
   
   console.log('   📋 Status after fixed processing:');
   releases.forEach(r => {
-    const wasProcessed = r.releaseMonth <= currentMonth;
+    const wasProcessed = r.releaseWeek <= currentWeek;
     const newStatus = wasProcessed ? 'released' : r.status;
-    console.log(`   - ${r.title}: ${newStatus} ${wasProcessed && r.releaseMonth < currentMonth ? '🔧 AUTO-FIXED' : ''}`);
+    console.log(`   - ${r.title}: ${newStatus} ${wasProcessed && r.releaseWeek < currentWeek ? '🔧 AUTO-FIXED' : ''}`);
   });
   
   console.log('');
   console.log('🎯 VALIDATION RESULT:');
-  const stuckReleases = releases.filter(r => r.status === 'planned' && r.releaseMonth < currentMonth);
-  const wouldBeFixed = releases.filter(r => r.releaseMonth <= currentMonth).length;
+  const stuckReleases = releases.filter(r => r.status === 'planned' && r.releaseWeek < currentWeek);
+  const wouldBeFixed = releases.filter(r => r.releaseWeek <= currentWeek).length;
   
   console.log(`   Stuck releases (buggy): ${stuckReleases.length}`);
   console.log(`   Would be processed (fixed): ${wouldBeFixed}`);

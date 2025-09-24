@@ -93,11 +93,11 @@ async function runIntegrationTests() {
     
     // Validate: Both current and overdue releases handled correctly
     const currentReleases = gameState.releases?.filter(r => 
-      r.releaseMonth === gameState.currentMonth && r.status === 'planned'
+      r.releaseWeek === gameState.currentWeek && r.status === 'planned'
     ) || [];
     
     const overdueReleases = gameState.releases?.filter(r => 
-      r.releaseMonth < gameState.currentMonth && r.status === 'planned'
+      r.releaseWeek < gameState.currentWeek && r.status === 'planned'
     ) || [];
     
     const autoFixedReleases = gameState.releases?.filter(r => 
@@ -167,7 +167,7 @@ async function runUserExperienceTests() {
     
     // Validate user experience improvements
     const upcomingReleases = gameState.releases?.filter(r => 
-      r.status === 'planned' && r.releaseMonth >= gameState.currentMonth
+      r.status === 'planned' && r.releaseWeek >= gameState.currentWeek
     ) || [];
     
     const releasedReleases = gameState.releases?.filter(r => 
@@ -175,7 +175,7 @@ async function runUserExperienceTests() {
     ) || [];
     
     const disappearedReleases = gameState.releases?.filter(r => 
-      r.status === 'planned' && r.releaseMonth < gameState.currentMonth
+      r.status === 'planned' && r.releaseWeek < gameState.currentWeek
     ) || [];
     
     // Success criteria
@@ -204,12 +204,12 @@ async function createIntegrationTestScenario(gameId) {
   // Create test game and releases for integration testing
   execSync(`curl -s -X POST "http://localhost:5001/api/games" -H "Content-Type: application/json" -d '{"id":"${gameId}","playerName":"Integration Test"}'`);
   
-  // Create releases for different months
+  // Create releases for different weeks
   const releases = [
-    { month: 1, title: 'Past Release 1' },
-    { month: 2, title: 'Past Release 2' }, 
-    { month: 4, title: 'Current Release' },
-    { month: 5, title: 'Future Release' }
+    { week: 1, title: 'Past Release 1' },
+    { week: 2, title: 'Past Release 2' }, 
+    { week: 4, title: 'Current Release' },
+    { week: 5, title: 'Future Release' }
   ];
   
   for (const release of releases) {
@@ -217,7 +217,7 @@ async function createIntegrationTestScenario(gameId) {
       artistId: 'test-artist',
       title: release.title,
       type: 'single',
-      releaseMonth: release.month,
+      releaseWeek: release.week,
       marketingBudget: 3000,
       songIds: ['test-song']
     });
@@ -225,21 +225,21 @@ async function createIntegrationTestScenario(gameId) {
     execSync(`curl -s -X POST "http://localhost:5001/api/games/${gameId}/releases/plan" -H "Content-Type: application/json" -d '${releaseData}'`);
   }
   
-  // Set current month to 4
-  execSync(`curl -s -X PUT "http://localhost:5001/api/games/${gameId}/state" -H "Content-Type: application/json" -d '{"currentMonth":4}'`);
+  // Set current week to 4
+  execSync(`curl -s -X PUT "http://localhost:5001/api/games/${gameId}/state" -H "Content-Type: application/json" -d '{"currentWeek":4}'`);
 }
 
 async function createPerformanceTestScenario(gameId) {
   // Create game with many releases for performance testing
   execSync(`curl -s -X POST "http://localhost:5001/api/games" -H "Content-Type: application/json" -d '{"id":"${gameId}","playerName":"Performance Test"}'`);
   
-  // Create 50 releases across different months
+  // Create 50 releases across different weeks
   for (let i = 1; i <= 50; i++) {
     const releaseData = JSON.stringify({
       artistId: `artist-${i}`,
       title: `Performance Test Release ${i}`,
       type: 'single',
-      releaseMonth: (i % 10) + 1,
+      releaseWeek: (i % 10) + 1,
       marketingBudget: 2000,
       songIds: [`song-${i}`]
     });
@@ -247,8 +247,8 @@ async function createPerformanceTestScenario(gameId) {
     execSync(`curl -s -X POST "http://localhost:5001/api/games/${gameId}/releases/plan" -H "Content-Type: application/json" -d '${releaseData}'`);
   }
   
-  // Set current month to 6
-  execSync(`curl -s -X PUT "http://localhost:5001/api/games/${gameId}/state" -H "Content-Type: application/json" -d '{"currentMonth":6}'`);
+  // Set current week to 6
+  execSync(`curl -s -X PUT "http://localhost:5001/api/games/${gameId}/state" -H "Content-Type: application/json" -d '{"currentWeek":6}'`);
 }
 
 async function createUserExperienceTestScenario(gameId) {
@@ -257,9 +257,9 @@ async function createUserExperienceTestScenario(gameId) {
   
   // Create releases that would have "disappeared"
   const disappearingReleases = [
-    { month: 1, title: 'Disappeared EP' },
-    { month: 2, title: 'Disappeared Single' },
-    { month: 3, title: 'Disappeared Album' }
+    { week: 1, title: 'Disappeared EP' },
+    { week: 2, title: 'Disappeared Single' },
+    { week: 3, title: 'Disappeared Album' }
   ];
   
   for (const release of disappearingReleases) {
@@ -267,7 +267,7 @@ async function createUserExperienceTestScenario(gameId) {
       artistId: 'test-artist',
       title: release.title,
       type: 'single',
-      releaseMonth: release.month,
+      releaseWeek: release.week,
       marketingBudget: 4000,
       songIds: ['test-song']
     });
@@ -275,8 +275,8 @@ async function createUserExperienceTestScenario(gameId) {
     execSync(`curl -s -X POST "http://localhost:5001/api/games/${gameId}/releases/plan" -H "Content-Type: application/json" -d '${releaseData}'`);
   }
   
-  // Advance to month 5 to create the bug scenario
-  execSync(`curl -s -X PUT "http://localhost:5001/api/games/${gameId}/state" -H "Content-Type: application/json" -d '{"currentMonth":5}'`);
+  // Advance to week 5 to create the bug scenario
+  execSync(`curl -s -X PUT "http://localhost:5001/api/games/${gameId}/state" -H "Content-Type: application/json" -d '{"currentWeek":5}'`);
 }
 
 async function loadGameState(gameId) {

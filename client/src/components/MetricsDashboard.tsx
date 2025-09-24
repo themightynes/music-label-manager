@@ -176,17 +176,17 @@ export function MetricsDashboard() {
   };
 
   const getReputationChange = () => {
-    const monthlyStats = gameState.monthlyStats as any;
-    const currentMonth = gameState.currentMonth || 1;
-    const lastMonth = `month${currentMonth - 1}`;
-    return monthlyStats?.[lastMonth]?.reputationChange || 0;
+    const weeklyStats = gameState.weeklyStats as any;
+    const currentWeek = gameState.currentWeek || 1;
+    const lastWeek = `week${currentWeek - 1}`;
+    return weeklyStats?.[lastWeek]?.reputationChange || 0;
   };
 
-  const getMonthlyStats = () => {
-    const monthlyStats = gameState.monthlyStats as any;
-    const currentMonth = gameState.currentMonth || 1;
-    const currentMonthKey = `month${currentMonth - 1}`;
-    const stats = monthlyStats?.[currentMonthKey] || {};
+  const getWeeklyStats = () => {
+    const weeklyStats = gameState.weeklyStats as any;
+    const currentWeek = gameState.currentWeek || 1;
+    const currentWeekKey = `week${currentWeek - 1}`;
+    const stats = weeklyStats?.[currentWeekKey] || {};
     
     return {
       streams: stats.streams || 0,
@@ -197,7 +197,7 @@ export function MetricsDashboard() {
     };
   };
 
-  const stats = getMonthlyStats();
+  const stats = getWeeklyStats();
   const netProfitLoss = stats.revenue - stats.expenses;
   const reputationChange = getReputationChange();
 
@@ -207,15 +207,15 @@ export function MetricsDashboard() {
     }
 
     const breakdown = stats.expenseBreakdown;
-    const total = breakdown.monthlyOperations + breakdown.artistSalaries + (breakdown.executiveSalaries || 0) + breakdown.projectCosts + breakdown.marketingCosts + breakdown.roleMeetingCosts;
+    const total = breakdown.weeklyOperations + breakdown.artistSalaries + (breakdown.executiveSalaries || 0) + breakdown.projectCosts + breakdown.marketingCosts + breakdown.roleMeetingCosts;
 
     return (
       <div className="space-y-2 text-xs">
         <div className="font-semibold text-red-600/90 mb-2">Expense Breakdown (${total.toLocaleString()})</div>
-        {breakdown.monthlyOperations > 0 && (
+        {breakdown.weeklyOperations > 0 && (
           <div className="flex justify-between">
-            <span className="text-black/70">Monthly Operations:</span>
-            <span className="font-medium">${breakdown.monthlyOperations.toLocaleString()}</span>
+            <span className="text-black/70">Weekly Operations:</span>
+            <span className="font-medium">${breakdown.weeklyOperations.toLocaleString()}</span>
           </div>
         )}
         {breakdown.artistSalaries > 0 && (
@@ -253,11 +253,11 @@ export function MetricsDashboard() {
   };
 
   const renderRevenueBreakdown = () => {
-    const monthlyStats = gameState.monthlyStats as any;
-    const currentMonth = gameState.currentMonth || 1;
-    const currentMonthKey = `month${currentMonth - 1}`;
-    const monthData = monthlyStats?.[currentMonthKey] || {};
-    const changes = monthData.changes || [];
+    const weeklyStats = gameState.weeklyStats as any;
+    const currentWeek = gameState.currentWeek || 1;
+    const currentWeekKey = `week${currentWeek - 1}`;
+    const weekData = weeklyStats?.[currentWeekKey] || {};
+    const changes = weekData.changes || [];
 
     // Categorize revenue sources from changes following pure function principles
     const revenueBreakdown = {
@@ -374,11 +374,11 @@ export function MetricsDashboard() {
               </div>
             </div>
 
-            {/* Monthly Performance Section */}
+            {/* Weekly Performance Section */}
             <div className="col-span-5 bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
                 <i className="fas fa-chart-line mr-2 text-green-600"></i>
-                Monthly Performance
+                Weekly Performance
               </h3>
               <div className="grid grid-cols-5 gap-3">
                 <div className="text-center">
@@ -491,7 +491,7 @@ export function MetricsDashboard() {
             <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
                 <i className="fas fa-chart-line mr-2 text-green-600"></i>
-                Monthly Performance
+                Weekly Performance
               </h3>
               <div className="grid grid-cols-5 gap-2">
                 <div className="text-center p-2 bg-[#4e324c]/20 rounded">
@@ -548,7 +548,7 @@ export function MetricsDashboard() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-1 mb-1">
                     <Zap className="h-3 w-3 text-orange-300" />
-                    <span className="text-xs font-medium text-white/70">This Month</span>
+                    <span className="text-xs font-medium text-white/70">This Week</span>
                   </div>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {Object.entries(impactPreview.immediate).map(([effect, value]) => (
@@ -711,11 +711,11 @@ export function MetricsDashboard() {
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* This Month Column */}
+                {/* This Week Column */}
                 <div>
                   <div className="flex items-center gap-1 mb-2">
                     <Zap className="h-3 w-3 text-orange-300" />
-                    <span className="text-xs font-medium text-white/70">This Month</span>
+                    <span className="text-xs font-medium text-white/70">This Week</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {Object.entries(impactPreview.immediate).map(([effect, value]) => (

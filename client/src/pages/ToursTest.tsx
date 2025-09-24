@@ -23,7 +23,7 @@ const mockTourData = {
           ticketsSold: 680,
           attendanceRate: 80,
           revenue: 15400,
-          month: 15,
+          week: 15,
           economics: {
             sellThrough: {
               baseRate: 65,
@@ -60,7 +60,7 @@ const mockTourData = {
           ticketsSold: 960,
           attendanceRate: 80,
           revenue: 24800,
-          month: 15,
+          week: 15,
           economics: {
             sellThrough: {
               baseRate: 70,
@@ -97,7 +97,7 @@ const mockTourData = {
           ticketsSold: 874,
           attendanceRate: 92,
           revenue: 22600,
-          month: 16,
+          week: 16,
           economics: {
             sellThrough: {
               baseRate: 75,
@@ -134,7 +134,7 @@ const mockTourData = {
           ticketsSold: 1275,
           attendanceRate: 85,
           revenue: 33150,
-          month: 16,
+          week: 16,
           economics: {
             sellThrough: {
               baseRate: 72,
@@ -171,7 +171,7 @@ const mockTourData = {
           ticketsSold: 600,
           attendanceRate: 80,
           revenue: 15000,
-          month: 17,
+          week: 17,
           economics: {
             sellThrough: {
               baseRate: 68,
@@ -208,7 +208,7 @@ const mockTourData = {
           ticketsSold: 946,
           attendanceRate: 86,
           revenue: 26334,
-          month: 17,
+          week: 17,
           economics: {
             sellThrough: {
               baseRate: 74,
@@ -245,7 +245,7 @@ const mockTourData = {
           ticketsSold: 1800,
           attendanceRate: 90,
           revenue: 54000,
-          month: 18,
+          week: 18,
           economics: {
             sellThrough: {
               baseRate: 80,
@@ -282,7 +282,7 @@ const mockTourData = {
           ticketsSold: 1674,
           attendanceRate: 93,
           revenue: 58590,
-          month: 18,
+          week: 18,
           economics: {
             sellThrough: {
               baseRate: 82,

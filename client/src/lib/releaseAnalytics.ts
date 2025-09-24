@@ -6,7 +6,7 @@
 export interface CampaignData {
   hasLeadSingle: boolean;
   leadSingleBudget: number;
-  leadSingleMonth?: number;
+  leadSingleWeek?: number;
   mainBudget: number;
   totalInvestment: number;
   totalProductionCost?: number;
@@ -64,15 +64,15 @@ export function extractCampaignData(release: any): CampaignData {
       Object.values(metadata.marketingBudget).reduce((a: number, b: any) => a + (b || 0), 0) : 0);
   const totalInvestment = leadSingleBudget + mainBudget;
   
-  let campaignDuration = 1; // Default for single month releases
-  if (hasLeadSingle && leadSingleStrategy.leadSingleReleaseMonth) {
-    campaignDuration = (release.releaseMonth || 0) - leadSingleStrategy.leadSingleReleaseMonth + 1;
+  let campaignDuration = 1; // Default for single week releases
+  if (hasLeadSingle && leadSingleStrategy.leadSingleReleaseWeek) {
+    campaignDuration = (release.releaseWeek || 0) - leadSingleStrategy.leadSingleReleaseWeek + 1;
   }
   
   return {
     hasLeadSingle,
     leadSingleBudget,
-    leadSingleMonth: leadSingleStrategy?.leadSingleReleaseMonth,
+    leadSingleWeek: leadSingleStrategy?.leadSingleReleaseWeek,
     mainBudget,
     totalInvestment,
     campaignDuration: Math.max(1, campaignDuration),
@@ -110,12 +110,12 @@ export function identifyLeadSingle(releaseSongs: any[], release: any): any | nul
   
   if (!leadSingleStrategy) return null;
   
-  // Try to find the lead single by release month or first released song
-  const leadSingleMonth = leadSingleStrategy.leadSingleReleaseMonth;
+  // Try to find the lead single by release week or first released song
+  const leadSingleWeek = leadSingleStrategy.leadSingleReleaseWeek;
   
-  // First, look for songs released in the lead single month
-  if (leadSingleMonth) {
-    const leadSong = releaseSongs.find(song => song.releaseMonth === leadSingleMonth);
+  // First, look for songs released in the lead single week
+  if (leadSingleWeek) {
+    const leadSong = releaseSongs.find(song => song.releaseWeek === leadSingleWeek);
     if (leadSong) return leadSong;
   }
   

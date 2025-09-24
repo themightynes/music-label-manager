@@ -16,7 +16,7 @@ export const gameEndpoints = {
   saveGame: '/api/games/:gameId',
   
   // Game actions
-  advanceMonth: '/api/games/:gameId/advance-month',
+  advanceWeek: '/api/games/:gameId/advance-week',
   selectActions: '/api/games/:gameId/actions',
   
   // Game resources
@@ -46,11 +46,11 @@ export const GetGameStateResponse = z.object({
   artists: z.array(z.any()),
   projects: z.array(z.any()),
   roles: z.array(z.any()),
-  monthlyActions: z.array(z.any())
+  weeklyActions: z.array(z.any())
 });
 
-// Month advancement schemas
-export const AdvanceMonthRequest = z.object({
+// Week advancement schemas
+export const AdvanceWeekRequest = z.object({
   gameId: z.string().uuid(),
   selectedActions: z.array(ActionSchema)
 });
@@ -70,10 +70,10 @@ export const CampaignResultsSchema = z.object({
   achievements: z.array(z.string()),
 });
 
-export const AdvanceMonthResponse = z.object({
+export const AdvanceWeekResponse = z.object({
   gameState: z.custom<GameState>(),
   summary: z.object({
-    month: z.number(),
+    week: z.number(),
     changes: z.array(z.any()),
     revenue: z.number(),
     expenses: z.number(),
@@ -112,7 +112,7 @@ export const SignArtistResponse = z.object({
     mood: z.number(),
     loyalty: z.number(),
     popularity: z.number(),
-    signedMonth: z.number().nullable(),
+    signedWeek: z.number().nullable(),
     isSigned: z.boolean(),
     gameId: z.string().nullable()
   }),
@@ -146,8 +146,8 @@ export const ErrorResponse = z.object({
 export type ActionType = z.infer<typeof ActionSchema>;
 export type GetGameStateRequest = z.infer<typeof GetGameStateRequest>;
 export type GetGameStateResponse = z.infer<typeof GetGameStateResponse>;
-export type AdvanceMonthRequest = z.infer<typeof AdvanceMonthRequest>;
-export type AdvanceMonthResponse = z.infer<typeof AdvanceMonthResponse>;
+export type AdvanceWeekRequest = z.infer<typeof AdvanceWeekRequest>;
+export type AdvanceWeekResponse = z.infer<typeof AdvanceWeekResponse>;
 export type SelectActionsRequest = z.infer<typeof SelectActionsRequest>;
 export type SelectActionsResponse = z.infer<typeof SelectActionsResponse>;
 export type SignArtistRequest = z.infer<typeof SignArtistRequest>;
@@ -160,7 +160,7 @@ export type GameEndpoints = typeof gameEndpoints;
 // Backward compatibility - keep existing routes for now
 export const API_ROUTES = {
   GAME_STATE: '/api/game-state',
-  ADVANCE_MONTH: '/api/advance-month',
+  ADVANCE_WEEK: '/api/advance-week',
   SELECT_ACTIONS: '/api/select-actions',
   SIGN_ARTIST: '/api/game/:gameId/artists',
   START_PROJECT: '/api/game/:gameId/projects',

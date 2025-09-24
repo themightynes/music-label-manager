@@ -64,7 +64,7 @@ Ensuring the main README reflects current status...
 - **Documentation**: Comprehensive strategic + technical documentation
 
 ✅ **Key Systems Documented:**
-- Complete 12-month campaign with scoring and victory conditions
+- Complete 52-week campaign with scoring and victory conditions
 - Artist discovery, signing, and management systems  
 - Project creation workflow (Singles, EPs, Mini-Tours)
 - Role-based dialogue system with 72+ dialogue choices

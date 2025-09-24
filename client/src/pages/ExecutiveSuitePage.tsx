@@ -26,11 +26,11 @@ interface ImpactPreview {
 }
 
 interface ExecutiveSuitePageProps {
-  onAdvanceMonth?: () => Promise<void>;
+  onAdvanceWeek?: () => Promise<void>;
   isAdvancing?: boolean;
 }
 
-interface MonthlyAction {
+interface WeeklyAction {
   id: string;
   name: string;
   type: string;
@@ -57,7 +57,7 @@ interface MonthlyAction {
 }
 
 export default function ExecutiveSuitePage(props: any = {}) {
-  const { onAdvanceMonth, isAdvancing } = props as ExecutiveSuitePageProps;
+  const { onAdvanceWeek, isAdvancing } = props as ExecutiveSuitePageProps;
   const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
   const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
@@ -68,13 +68,13 @@ export default function ExecutiveSuitePage(props: any = {}) {
   });
 
   // Executive meetings removed - keep empty structure for SelectionSummary compatibility
-  const monthlyActions: MonthlyAction[] = [];
+  const weeklyActions: WeeklyAction[] = [];
   const loading = false;
   const error: string | null = null;
 
-  // Fallback advance month function if not provided
-  const handleAdvanceMonth = onAdvanceMonth || (async () => {
-    console.warn('No advance month handler provided to ExecutiveSuitePage');
+  // Fallback advance week function if not provided
+  const handleAdvanceWeek = onAdvanceWeek || (async () => {
+    console.warn('No advance week handler provided to ExecutiveSuitePage');
   });
 
   const handleIsAdvancing = isAdvancing || false;
@@ -88,13 +88,13 @@ export default function ExecutiveSuitePage(props: any = {}) {
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-6">
             <div className="flex-1">
-              <h2 className="text-xl md:text-2xl font-bold text-white">Month {gameState.currentMonth} Executive Meetings</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-white">Week {gameState.currentWeek} Executive Meetings</h2>
               <p className="text-sm md:text-base text-white/70">
                 Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
                 {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th Slot Unlocked!)</span>}
               </p>
             </div>
-            <div className="hidden md:block" title="Focus Slots are your monthly action points. Each strategic action requires one focus slot.">
+            <div className="hidden md:block" title="Focus Slots are your weekly action points. Each strategic action requires one focus slot.">
               <i className="fas fa-info-circle text-white/50 hover:text-white/70 cursor-help"></i>
             </div>
           </div>
@@ -133,10 +133,10 @@ export default function ExecutiveSuitePage(props: any = {}) {
             <div className="lg:col-span-1">
               <SelectionSummary
                 selectedActions={selectedActions}
-                actions={monthlyActions}
+                actions={weeklyActions}
                 onRemoveAction={removeAction}
                 onReorderActions={reorderActions}
-                onAdvanceMonth={handleAdvanceMonth}
+                onAdvanceWeek={handleAdvanceWeek}
                 isAdvancing={handleIsAdvancing}
                 impactPreview={impactPreview}
               />

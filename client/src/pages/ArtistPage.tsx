@@ -56,8 +56,8 @@ interface Artist {
   signed?: boolean | null;
   isSigned?: boolean | null;
   signingCost?: number | null;
-  monthlyCost?: number | null;
-  monthlyFee?: number | null;
+  weeklyCost?: number | null;
+  weeklyFee?: number | null;
   bio?: string;
   genre?: string;
   age?: number | null;
@@ -71,15 +71,15 @@ interface Song {
   mood: string;
   artistId: string;
   artistName: string;
-  createdMonth: number;
+  createdWeek: number;
   isRecorded: boolean;
   isReleased: boolean;
   releaseId?: string | null;
   totalStreams?: number;
   totalRevenue?: number;
-  monthlyStreams?: number;
-  lastMonthRevenue?: number;
-  releaseMonth?: number;
+  weeklyStreams?: number;
+  lastWeekRevenue?: number;
+  releaseWeek?: number;
   metadata?: any;
 }
 
@@ -92,8 +92,8 @@ interface Project {
   quality: number;
   budget: number;
   budgetUsed: number;
-  dueMonth: number;
-  startMonth: number;
+  dueWeek: number;
+  startWeek: number;
   metadata?: Record<string, any>;
 }
 
@@ -103,7 +103,7 @@ interface Release {
   type: 'single' | 'ep' | 'album';
   artistId: string;
   status: 'planned' | 'released' | 'catalog';
-  releaseMonth?: number;
+  releaseWeek?: number;
   songIds: string[];
   streamsGenerated: number;
   revenueGenerated: number;
@@ -562,7 +562,7 @@ export default function ArtistPage() {
                             <div>
                               <div className="text-sm font-medium">{song.title}</div>
                               <div className="text-xs text-white/50">
-                                {song.isReleased ? 'Released' : song.isRecorded ? 'Recorded' : 'Recording'} • Month {song.createdMonth}
+                                {song.isReleased ? 'Released' : song.isRecorded ? 'Recorded' : 'Recording'} • Week {song.createdWeek}
                               </div>
                             </div>
                             <Badge className={getQualityColor(song.quality)}>
@@ -614,7 +614,7 @@ export default function ArtistPage() {
                         </div>
                         <div className="flex items-center space-x-4">
                           <div className="text-sm text-white/70">
-                            Month {release.releaseMonth} • {releaseSongs.length} songs
+                            Week {release.releaseWeek} • {releaseSongs.length} songs
                           </div>
                           <div className="flex items-center space-x-3 text-sm">
                             <div className="flex items-center space-x-1">
@@ -713,7 +713,7 @@ export default function ArtistPage() {
                                   {song.isRecorded ? 'Ready' : 'Recording'}
                                 </Badge>
                               </td>
-                              <td className="py-2 text-sm">Month {song.createdMonth}</td>
+                              <td className="py-2 text-sm">Week {song.createdWeek}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -795,7 +795,7 @@ export default function ArtistPage() {
                     <ReleaseWorkflowCard
                       key={release.id}
                       release={release}
-                      currentMonth={gameState?.currentMonth || 1}
+                      currentWeek={gameState?.currentWeek || 1}
                       artistName={artist.name}
                       songs={songs}
                       onReleasePage={true}
@@ -828,7 +828,7 @@ export default function ArtistPage() {
                     <ReleaseWorkflowCard
                       key={release.id}
                       release={release}
-                      currentMonth={gameState?.currentMonth || 1}
+                      currentWeek={gameState?.currentWeek || 1}
                       artistName={artist.name}
                       songs={songs}
                       onReleasePage={true}
@@ -907,19 +907,19 @@ export default function ArtistPage() {
                 </CardContent>
               </Card>
               
-              {/* Last Month Streams Table */}
+              {/* Last Week Streams Table */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <TrendingUp className="w-5 h-5" />
-                    <span>Last Month Streams</span>
+                    <span>Last Week Streams</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {songs.filter(s => s.isReleased && s.monthlyStreams).length === 0 ? (
+                  {songs.filter(s => s.isReleased && s.weeklyStreams).length === 0 ? (
                     <div className="text-center py-8">
                       <TrendingUp className="w-8 h-8 text-white/30 mx-auto mb-3" />
-                      <p className="text-white/50">No streaming data for last month</p>
+                      <p className="text-white/50">No streaming data for last week</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -929,18 +929,18 @@ export default function ArtistPage() {
                             <th className="pb-2">Rank</th>
                             <th className="pb-2">Song Title</th>
                             <th className="pb-2">Quality</th>
-                            <th className="pb-2 text-right">Monthly Streams</th>
+                            <th className="pb-2 text-right">Weekly Streams</th>
                             <th className="pb-2 text-right">Growth</th>
                           </tr>
                         </thead>
                         <tbody>
                           {songs
                             .filter(s => s.isReleased)
-                            .sort((a, b) => (b.monthlyStreams || 0) - (a.monthlyStreams || 0))
+                            .sort((a, b) => (b.weeklyStreams || 0) - (a.weeklyStreams || 0))
                             .slice(0, 10)
                             .map((song, idx) => {
-                              const growth = song.totalStreams && song.monthlyStreams 
-                                ? ((song.monthlyStreams / Math.max(1, song.totalStreams - song.monthlyStreams)) * 100).toFixed(1)
+                              const growth = song.totalStreams && song.weeklyStreams 
+                                ? ((song.weeklyStreams / Math.max(1, song.totalStreams - song.weeklyStreams)) * 100).toFixed(1)
                                 : '0.0';
                               return (
                                 <tr key={song.id} className="border-b last:border-0">
@@ -961,7 +961,7 @@ export default function ArtistPage() {
                                     </Badge>
                                   </td>
                                   <td className="py-3 text-right font-mono font-semibold">
-                                    {(song.monthlyStreams || 0).toLocaleString()}
+                                    {(song.weeklyStreams || 0).toLocaleString()}
                                   </td>
                                   <td className="py-3 text-right">
                                     <span className={`font-semibold ${
@@ -1065,11 +1065,11 @@ export default function ArtistPage() {
                   </Button>
                   
                   <div className="pt-3 border-t border-[#4e324c]/50">
-                    <div className="text-sm text-white/70 mb-2">Monthly Cost</div>
+                    <div className="text-sm text-white/70 mb-2">Weekly Cost</div>
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold">${(artist.monthlyCost || artist.monthlyFee || 0).toLocaleString()}</span>
+                      <span className="text-lg font-semibold">${(artist.weeklyCost || artist.weeklyFee || 0).toLocaleString()}</span>
                       <Badge variant="outline" className="text-xs">
-                        Per Month
+                        Per Week
                       </Badge>
                     </div>
                   </div>

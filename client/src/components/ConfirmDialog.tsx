@@ -10,7 +10,7 @@ interface ConfirmDialogProps {
   cancelText?: string;
   variant?: 'default' | 'destructive';
   emoji?: string;
-  currentMonth?: number;
+  currentWeek?: number;
 }
 
 export function ConfirmDialog({
@@ -23,7 +23,7 @@ export function ConfirmDialog({
   cancelText = 'Cancel',
   variant = 'destructive',
   emoji = '⚠️',
-  currentMonth
+  currentWeek
 }: ConfirmDialogProps) {
   if (!isOpen) return null;
 
@@ -36,11 +36,11 @@ export function ConfirmDialog({
           <div className="text-sm text-white/70 mb-6">
             {description.split('\n').map((line, index) => (
               <p key={index} className={index > 0 ? 'mt-1' : ''}>
-                {line.includes('Month') && currentMonth ? (
+                {line.includes('Week') && currentWeek ? (
                   <>
-                    {line.split('Month')[0]}
-                    <span className="font-medium text-[#A75A5B]">Month {currentMonth}</span>
-                    {line.split('Month')[1]?.replace(/\d+/, '')}
+                    {line.split('Week')[0]}
+                    <span className="font-medium text-[#A75A5B]">Week {currentWeek}</span>
+                    {line.split('Week')[1]?.replace(/\d+/, '')}
                   </>
                 ) : (
                   line

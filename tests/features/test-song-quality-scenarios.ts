@@ -160,7 +160,7 @@ async function runQualityTests() {
               workEthic: 60, // Default medium work ethic
               popularity: 30, // Default low popularity
               mood: 50, // Default neutral mood
-              monthlyFee: 5000
+              weeklyFee: 5000
             };
             
             // Calculate quality for each song

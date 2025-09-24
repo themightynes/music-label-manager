@@ -13,7 +13,7 @@ type Top10Entry = ChartEntry;
 
 interface Top10ChartData {
   chartWeek: string;
-  currentMonth: number;
+  currentWeek: number;
   top10: Top10Entry[];
 }
 
@@ -21,7 +21,7 @@ export function Top10ChartDisplay() {
   console.log('🚀 Top10ChartDisplay component rendering...');
 
   const { gameState } = useGameStore();
-  console.log('🎮 GameState from store:', { id: gameState?.id, currentMonth: gameState?.currentMonth });
+  console.log('🎮 GameState from store:', { id: gameState?.id, currentWeek: gameState?.currentWeek });
 
   const [chartData, setChartData] = useState<Top10ChartData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,7 +155,7 @@ export function Top10ChartDisplay() {
             <Trophy className="w-5 h-5 text-yellow-600" />
             <CardTitle>Top 10 Chart</CardTitle>
             <Badge variant="outline" className="text-xs">
-              Month {chartData.currentMonth}
+              Week {chartData.currentWeek}
             </Badge>
           </div>
 

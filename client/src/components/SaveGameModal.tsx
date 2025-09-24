@@ -155,7 +155,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
+      week: 'short',
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit'
@@ -177,7 +177,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                 <div className="flex-1">
                   <div className="font-medium text-white">{save.name}</div>
                   <div className="text-xs text-white/70">
-                    Month {save.month} • ${gameState?.money?.toLocaleString() || '0'}
+                    Week {save.week} • ${gameState?.money?.toLocaleString() || '0'}
                   </div>
                   <div className="text-xs text-white/50">
                     Saved {formatDate(save.updatedAt)}

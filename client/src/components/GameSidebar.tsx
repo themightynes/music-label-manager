@@ -17,7 +17,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { useGameStore } from '@/store/gameStore';
 import { useGameContext } from '@/contexts/GameContext';
 import { ConfirmDialog } from './ConfirmDialog';
-import { MonthSummary } from './MonthSummary';
+import { WeekSummary } from './WeekSummary';
 import { LabelCreationModal } from './LabelCreationModal';
 import type { LabelData } from '@shared/types/gameTypes';
 import { UserButton, useUser } from '@clerk/clerk-react';
@@ -49,15 +49,15 @@ export function GameSidebar({
 }: GameSidebarProps) {
   const [location, setLocation] = useLocation();
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
-  const [showMonthSummary, setShowMonthSummary] = useState(false);
+  const [showWeekSummary, setShowWeekSummary] = useState(false);
   const { setGameId } = useGameContext();
   const {
     gameState,
     selectedActions,
-    isAdvancingMonth,
-    advanceMonth,
+    isAdvancingWeek,
+    advanceWeek,
     createNewGame,
-    monthlyOutcome,
+    weeklyOutcome,
     selectAction
   } = useGameStore();
   const { user } = useUser();
@@ -134,16 +134,16 @@ export function GameSidebar({
   const displayName = user?.username || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
   const displayEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress || null;
 
-  const handleAdvanceMonth = async () => {
+  const handleAdvanceWeek = async () => {
     try {
-      await advanceMonth();
+      await advanceWeek();
     } catch (error) {
-      console.error('Failed to advance month:', error);
+      console.error('Failed to advance week:', error);
     }
   };
 
   const handleNewGame = async () => {
-    if (gameState?.currentMonth && gameState.currentMonth > 1) {
+    if (gameState?.currentWeek && gameState.currentWeek > 1) {
       setShowNewGameConfirm(true);
     } else {
       setShowLabelModal(true);
@@ -185,7 +185,7 @@ export function GameSidebar({
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
               <div className="text-sm font-semibold text-sidebar-foreground">{(gameState as any)?.musicLabel?.name || 'Music Label'}</div>
               <div className="flex items-center space-x-2 text-xs text-sidebar-foreground/70">
-                <span>Month {gameState?.currentMonth || 1}/36</span>
+                <span>Week {gameState?.currentWeek || 1}/52</span>
                 <span className="text-green-400">${(gameState?.money || 0).toLocaleString()}</span>
               </div>
             </div>
@@ -193,7 +193,7 @@ export function GameSidebar({
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Group 1: Dashboard, Advance Month, Monthly Results */}
+          {/* Group 1: Dashboard, Advance Week, Weekly Results */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -210,23 +210,23 @@ export function GameSidebar({
 
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={handleAdvanceMonth}
-                    disabled={selectedActions.length === 0 || isAdvancingMonth}
-                    tooltip="Advance Month"
+                    onClick={handleAdvanceWeek}
+                    disabled={selectedActions.length === 0 || isAdvancingWeek}
+                    tooltip="Advance Week"
                   >
                     <FastForward />
-                    <span>{isAdvancingMonth ? 'Processing...' : 'Advance Month'}</span>
+                    <span>{isAdvancingWeek ? 'Processing...' : 'Advance Week'}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => setShowMonthSummary(true)}
-                    disabled={!monthlyOutcome}
-                    tooltip={monthlyOutcome ? "Monthly Results" : "Advance a month to view results"}
+                    onClick={() => setShowWeekSummary(true)}
+                    disabled={!weeklyOutcome}
+                    tooltip={weeklyOutcome ? "Weekly Results" : "Advance a week to view results"}
                   >
                     <BarChart3 />
-                    <span>Monthly Results</span>
+                    <span>Weekly Results</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -497,41 +497,41 @@ export function GameSidebar({
         cancelText="Cancel"
         variant="destructive"
         emoji="⚠️"
-        currentMonth={gameState?.currentMonth ?? 1}
+        currentWeek={gameState?.currentWeek ?? 1}
       />
 
-      {/* Monthly Results Modal */}
-      {showMonthSummary && monthlyOutcome && (
+      {/* Weekly Results Modal */}
+      {showWeekSummary && weeklyOutcome && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setShowMonthSummary(false)}
+          onClick={() => setShowWeekSummary(false)}
         >
           <div
             className="bg-[#2C222A] border border-[#4e324c] rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <MonthSummary
-              monthlyStats={monthlyOutcome}
-              onAdvanceMonth={() => setShowMonthSummary(false)}
-              isMonthResults={true}
-              onClose={() => setShowMonthSummary(false)}
+            <WeekSummary
+              weeklyStats={weeklyOutcome}
+              onAdvanceWeek={() => setShowWeekSummary(false)}
+              isWeekResults={true}
+              onClose={() => setShowWeekSummary(false)}
             />
           </div>
         </div>
       )}
 
       {/* No Results Available Modal */}
-      {showMonthSummary && !monthlyOutcome && (
+      {showWeekSummary && !weeklyOutcome && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#2C222A] border border-[#4e324c] rounded-lg p-6 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-lg font-semibold text-white mb-2">No Monthly Results</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">No Weekly Results</h3>
               <p className="text-sm text-white/70 mb-6">
-                Monthly results will be available after advancing to the next month.
+                Weekly results will be available after advancing to the next week.
               </p>
               <Button
-                onClick={() => setShowMonthSummary(false)}
+                onClick={() => setShowWeekSummary(false)}
                 className="bg-[#A75A5B] hover:bg-[#D99696] text-white border-0"
               >
                 Close

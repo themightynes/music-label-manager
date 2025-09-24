@@ -61,32 +61,32 @@ async function setupStuckReleaseScenario() {
   await execAsync(`curl -s -X POST "${API_BASE}/api/games" -H "Content-Type: application/json" -d '{"id":"${TEST_GAME_ID}","playerName":"Auto-Fix Test"}'`);
   console.log('   ✓ Test game created');
   
-  // Create multiple planned releases for previous months
+  // Create multiple planned releases for previous weeks
   const stuckReleases = [
-    { month: 1, title: 'Stuck Single 1' },
-    { month: 2, title: 'Stuck EP 1' },
-    { month: 3, title: 'Stuck Album 1' }
+    { week: 1, title: 'Stuck Single 1' },
+    { week: 2, title: 'Stuck EP 1' },
+    { week: 3, title: 'Stuck Album 1' }
   ];
   
   for (const release of stuckReleases) {
-    await createPlannedRelease(release.month, release.title);
-    console.log(`   ✓ Created planned release for month ${release.month}`);
+    await createPlannedRelease(release.week, release.title);
+    console.log(`   ✓ Created planned release for week ${release.week}`);
   }
   
-  // Manually advance game state to month 5 without processing releases
+  // Manually advance game state to week 5 without processing releases
   // This simulates the bug condition where releases get stuck
-  await execAsync(`curl -s -X PUT "${API_BASE}/api/games/${TEST_GAME_ID}/state" -H "Content-Type: application/json" -d '{"currentMonth":5}'`);
-  console.log('   ✓ Advanced to month 5 (leaving releases stuck)');
+  await execAsync(`curl -s -X PUT "${API_BASE}/api/games/${TEST_GAME_ID}/state" -H "Content-Type: application/json" -d '{"currentWeek":5}'`);
+  console.log('   ✓ Advanced to week 5 (leaving releases stuck)');
 }
 
-async function createPlannedRelease(month, title) {
+async function createPlannedRelease(week, title) {
   const releaseData = {
     artistId: 'test-artist-1',
     title: title,
-    type: month === 2 ? 'ep' : month === 3 ? 'album' : 'single',
-    releaseMonth: month,
+    type: week === 2 ? 'ep' : week === 3 ? 'album' : 'single',
+    releaseWeek: week,
     marketingBudget: 3000,
-    songIds: month === 3 ? ['song-1', 'song-2', 'song-3'] : ['song-1']
+    songIds: week === 3 ? ['song-1', 'song-2', 'song-3'] : ['song-1']
   };
   
   await execAsync(`curl -s -X POST "${API_BASE}/api/games/${TEST_GAME_ID}/releases/plan" -H "Content-Type: application/json" -d '${JSON.stringify(releaseData)}'`);
@@ -98,9 +98,9 @@ async function getGameState() {
 }
 
 function countStuckReleases(gameState) {
-  const currentMonth = gameState.currentMonth || 1;
+  const currentWeek = gameState.currentWeek || 1;
   const stuckReleases = gameState.releases?.filter(r => 
-    r.status === 'planned' && r.releaseMonth < currentMonth
+    r.status === 'planned' && r.releaseWeek < currentWeek
   ) || [];
   
   console.log(`   📊 Found ${stuckReleases.length} stuck releases`);
@@ -209,8 +209,8 @@ async function dataConsistencyChecks() {
   
   // Check 1: All auto-fixed releases have proper metadata
   const autoFixedReleases = gameState.releases?.filter(r => r.metadata?.autoFixed) || [];
-  const hasOriginalMonth = autoFixedReleases.every(r => r.metadata?.originalMonth);
-  console.log(`   ${hasOriginalMonth ? '✅' : '❌'} All auto-fixed releases have originalMonth metadata`);
+  const hasOriginalWeek = autoFixedReleases.every(r => r.metadata?.originalWeek);
+  console.log(`   ${hasOriginalWeek ? '✅' : '❌'} All auto-fixed releases have originalWeek metadata`);
   
   // Check 2: Associated songs are properly updated
   const autoFixedSongs = gameState.songs?.filter(s => s.metadata?.autoFixed) || [];
@@ -219,7 +219,7 @@ async function dataConsistencyChecks() {
   
   // Check 3: No orphaned planned releases
   const orphanedReleases = gameState.releases?.filter(r => 
-    r.status === 'planned' && r.releaseMonth < gameState.currentMonth
+    r.status === 'planned' && r.releaseWeek < gameState.currentWeek
   ) || [];
   console.log(`   ${orphanedReleases.length === 0 ? '✅' : '❌'} No orphaned planned releases remain`);
 }

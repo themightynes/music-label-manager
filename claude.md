@@ -10,7 +10,7 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 - Shared game state via Zustand store with API sync
 - Complex meeting flows modeled with XState state machines
 - Drizzle schemas define gameplay domain (users, saves, artists, songs, releases, charts, labels)
-- GameEngine processes monthly actions and financial systems (shared client/server)
+- GameEngine processes weekly actions and financial systems (shared client/server)
 - Shared Zod contracts keep API schemas in sync
 
 ## 🚨 Railway Deployment Environment

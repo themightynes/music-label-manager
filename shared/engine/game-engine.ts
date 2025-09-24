@@ -10,17 +10,18 @@
  * @module shared/engine/GameEngine
  */
 
-import { GameState, Artist, Project, Role, MonthlyAction, Song, Release, ReleaseSong } from '../schema';
+import { GameState, Artist, Project, Role, WeeklyAction, Song, Release, ReleaseSong } from '../schema';
 import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
-import type { MonthSummary, ChartUpdate, GameChange, EventOccurrence } from '../types/gameTypes';
+import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence } from '../types/gameTypes';
+import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 
-// Re-export MonthSummary for backward compatibility
-export type { MonthSummary } from '../types/gameTypes';
+// Re-export WeekSummary for backward compatibility
+export type { WeekSummary } from '../types/gameTypes';
 import seedrandom from 'seedrandom';
 
-// Extended MonthlyAction interface for game engine
+// Extended WeeklyAction interface for game engine
 interface GameEngineAction {
   actionType: 'role_meeting' | 'start_project' | 'marketing' | 'artist_dialogue';
   targetId: string | null;
@@ -56,9 +57,9 @@ interface RNGConfig {
 // using configuration from data/balance/markets.json
 
 /**
- * Consolidated financial tracking for monthly calculations
+ * Consolidated financial tracking for weekly calculations
  */
-export interface MonthlyFinancials {
+export interface WeeklyFinancials {
   startingBalance: number;
   operations: { base: number; artists: number; executives: number; total: number };
   projects: { costs: number; revenue: number };
@@ -70,7 +71,7 @@ export interface MonthlyFinancials {
   breakdown: string; // Human-readable calculation
 }
 
-// Using exported MonthSummary interface from end of file
+// Using exported WeekSummary interface from end of file
 
 /**
  * Main game engine class that handles all game logic
@@ -78,7 +79,7 @@ export interface MonthlyFinancials {
  * @example
  * ```typescript
  * const engine = new GameEngine(gameState, gameData);
- * const result = await engine.advanceMonth(selectedActions);
+ * const result = await engine.advanceWeek(selectedActions);
  * ```
  */
 export class GameEngine {
@@ -95,20 +96,20 @@ export class GameEngine {
   ) {
     this.gameData = gameData;
     this.storage = storage;
-    this.rng = seedrandom(seed || `${gameState.id}-${gameState.currentMonth}`);
+    this.rng = seedrandom(seed || `${gameState.id}-${gameState.currentWeek}`);
     this.financialSystem = new FinancialSystem(gameData, () => this.rng(), this.storage);
   }
 
   /**
-   * Advances the game by one month, processing all actions
+   * Advances the game by one week, processing all actions
    * This is the main game loop function
    * 
-   * @param monthlyActions - Actions selected by the player this month
+   * @param weeklyActions - Actions selected by the player this week
    * @returns Updated game state and summary of changes
    */
-  async advanceMonth(monthlyActions: GameEngineAction[], dbTransaction?: any): Promise<{
+  async advanceWeek(weeklyActions: GameEngineAction[], dbTransaction?: any): Promise<{
     gameState: GameState;
-    summary: MonthSummary;
+    summary: WeekSummary;
     campaignResults?: CampaignResults;
   }> {
     // Check if campaign is already completed
@@ -116,8 +117,8 @@ export class GameEngine {
       throw new Error('Campaign has already been completed. Start a new game to continue playing.');
     }
 
-    const summary: MonthSummary = {
-      month: (this.gameState.currentMonth || 0) + 1,
+    const summary: WeekSummary = {
+      week: (this.gameState.currentWeek || 0) + 1,
       changes: [],
       revenue: 0,
       expenses: 0,
@@ -128,15 +129,15 @@ export class GameEngine {
     // Initialize runtime tracking for executive usage (not in interface)
     (summary as any).usedExecutives = new Set<string>();
 
-    // Reset monthly values
+    // Reset weekly values
     this.gameState.usedFocusSlots = 0;
-    this.gameState.currentMonth = (this.gameState.currentMonth || 0) + 1;
+    this.gameState.currentWeek = (this.gameState.currentWeek || 0) + 1;
 
     // PHASE 1: Process role_meeting actions first (executive meetings)
-    const meetingActions = monthlyActions.filter(action => action.actionType === 'role_meeting');
-    const otherActions = monthlyActions.filter(action => action.actionType !== 'role_meeting');
+    const meetingActions = weeklyActions.filter(action => action.actionType === 'role_meeting');
+    const otherActions = weeklyActions.filter(action => action.actionType !== 'role_meeting');
     
-    console.log(`[MONTHLY ADVANCE] Processing ${meetingActions.length} meeting actions first, then ${otherActions.length} other actions`);
+    console.log(`[WEEKLY ADVANCE] Processing ${meetingActions.length} meeting actions first, then ${otherActions.length} other actions`);
     
     for (const action of meetingActions) {
       await this.processAction(action, summary, dbTransaction);
@@ -153,32 +154,32 @@ export class GameEngine {
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary);
     
-    // Process newly recorded projects (projects that became "recorded" this month)
+    // Process newly recorded projects (projects that became "recorded" this week)
     await this.processNewlyRecordedProjects(summary, dbTransaction);
     
     // Process song generation for recording projects
     await this.processRecordingProjects(summary, dbTransaction);
 
-    // Process lead singles scheduled for this month  
+    // Process lead singles scheduled for this week  
     await this.processLeadSingles(summary, dbTransaction);
 
-    // Process planned releases scheduled for this month
+    // Process planned releases scheduled for this week
     await this.processPlannedReleases(summary, dbTransaction);
 
-    // Process monthly charts after releases
-    await this.processMonthlyCharts(summary, dbTransaction);
+    // Process weekly charts after releases
+    await this.processWeeklyCharts(summary, dbTransaction);
 
     // PHASE 1 MIGRATION: Handle project stage advancement within GameEngine
     await this.advanceProjectStages(summary, dbTransaction);
 
-    // Apply delayed effects from previous months
+    // Apply delayed effects from previous weeks
     await this.processDelayedEffects(summary);
 
-    // Process monthly mood changes
-    await this.processMonthlyMoodChanges(summary);
+    // Process weekly mood changes
+    await this.processWeeklyMoodChanges(summary);
 
-    // Process monthly popularity changes
-    await this.processMonthlyPopularityChanges(summary);
+    // Process weekly popularity changes
+    await this.processWeeklyPopularityChanges(summary);
 
     // Process executive mood/loyalty decay
     await this.processExecutiveMoodDecay(summary, dbTransaction);
@@ -186,15 +187,15 @@ export class GameEngine {
     // Check for random events
     await this.checkForEvents(summary);
 
-    // Apply monthly burn (operational costs) - handled by consolidated financial calculation
-    const monthlyBurnResult = await this.calculateMonthlyBurnWithBreakdown();
-    const monthlyBurn = monthlyBurnResult.total;
+    // Apply weekly burn (operational costs) - handled by consolidated financial calculation
+    const weeklyBurnResult = await this.calculateWeeklyBurnWithBreakdown();
+    const weeklyBurn = weeklyBurnResult.total;
     // Note: Both money deduction and expense tracking handled by consolidated financial calculation
     
     // Initialize expense breakdown if not exists
     if (!summary.expenseBreakdown) {
       summary.expenseBreakdown = {
-        monthlyOperations: 0,
+        weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
         projectCosts: 0,
@@ -202,8 +203,8 @@ export class GameEngine {
         roleMeetingCosts: 0
       };
     }
-    summary.expenseBreakdown.monthlyOperations = monthlyBurnResult.baseBurn;
-    summary.expenseBreakdown.artistSalaries = monthlyBurnResult.artistCosts;
+    summary.expenseBreakdown.weeklyOperations = weeklyBurnResult.baseBurn;
+    summary.expenseBreakdown.artistSalaries = weeklyBurnResult.artistCosts;
     
     // Calculate executive salaries
     console.log('\n[GAME-ENGINE] About to call calculateExecutiveSalaries');
@@ -220,8 +221,8 @@ export class GameEngine {
     console.log('[GAME-ENGINE] Total executive salaries:', executiveSalaryResult.total);
     summary.expenseBreakdown.executiveSalaries = executiveSalaryResult.total;
     
-    // Add monthly burn to total expenses (including base operations and artist salaries)
-    summary.expenses += monthlyBurn;
+    // Add weekly burn to total expenses (including base operations and artist salaries)
+    summary.expenses += weeklyBurn;
     
     // Add executive salaries to total expenses
     console.log('[GAME-ENGINE] Checking if executive salaries should be added to expenses');
@@ -247,8 +248,8 @@ export class GameEngine {
     
     summary.changes.push({
       type: 'expense',
-      description: 'Monthly operational costs',
-      amount: -monthlyBurn
+      description: 'Weekly operational costs',
+      amount: -weeklyBurn
     });
 
     // Check progression gates
@@ -262,30 +263,30 @@ export class GameEngine {
     this.checkProducerTierUnlocks(summary);
 
     // Calculate financial summary (but don't update money yet)
-    const financials = await this.calculateMonthlyFinancials(summary);
+    const financials = await this.calculateWeeklyFinancials(summary);
     summary.financialBreakdown = financials.breakdown;
     
-    // Summary totals are already correctly accumulated throughout the month processing
+    // Summary totals are already correctly accumulated throughout the week processing
     // No need to overwrite them - they contain the complete picture
     
     console.log('[FINANCIAL BREAKDOWN]', financials.breakdown);
     
-    // Generate economic insights for the month
+    // Generate economic insights for the week
     this.generateEconomicInsights(summary);
     
     // Check for campaign completion
     const campaignResults = await this.checkCampaignCompletion(summary);
     
-    // Save monthly summary to gameState.monthlyStats for UI display
-    const currentMonth = this.gameState.currentMonth || 1;
-    const monthKey = `month${currentMonth - 1}`;  // UI expects month0, month1, etc.
-    (this.gameState as any).monthlyStats = (this.gameState as any).monthlyStats || {};
-    (this.gameState as any).monthlyStats[monthKey] = {
+    // Save weekly summary to gameState.weeklyStats for UI display
+    const currentWeek = this.gameState.currentWeek || 1;
+    const weekKey = `week${currentWeek - 1}`;  // UI expects week0, week1, etc.
+    (this.gameState as any).weeklyStats = (this.gameState as any).weeklyStats || {};
+    (this.gameState as any).weeklyStats[weekKey] = {
       revenue: summary.revenue,
       streams: summary.streams || 0,
       expenses: summary.expenses,
       expenseBreakdown: summary.expenseBreakdown || {
-        monthlyOperations: 0,
+        weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
         projectCosts: 0,
@@ -298,29 +299,29 @@ export class GameEngine {
       events: summary.events
     };
     
-    console.log(`[MONTHLY STATS] Saved month ${currentMonth - 1} stats:`, {
+    console.log(`[WEEKLY STATS] Saved week ${currentWeek - 1} stats:`, {
       revenue: summary.revenue,
       streams: summary.streams || 0,
       expenses: summary.expenses,
-      monthKey
+      weekKey
     });
     
     // SINGLE POINT OF MONEY UPDATE - at the very end
     // All revenue and expenses have been accumulated in the summary
     console.log('\n[FINAL MONEY CALCULATION]');
-    const monthStartMoney = this.gameState.money || 0;
-    console.log('[FINAL MONEY] Month start money:', monthStartMoney);
-    console.log('[FINAL MONEY] Total revenue this month:', summary.revenue);
-    console.log('[FINAL MONEY] Total expenses this month:', summary.expenses);
+    const weekStartMoney = this.gameState.money || 0;
+    console.log('[FINAL MONEY] Week start money:', weekStartMoney);
+    console.log('[FINAL MONEY] Total revenue this week:', summary.revenue);
+    console.log('[FINAL MONEY] Total expenses this week:', summary.expenses);
     console.log('[FINAL MONEY] Expense breakdown:', summary.expenseBreakdown);
     
-    const finalMoney = monthStartMoney + summary.revenue - summary.expenses;
+    const finalMoney = weekStartMoney + summary.revenue - summary.expenses;
     console.log('[FINAL MONEY] Calculated final money:', finalMoney);
 
     this.gameState.money = finalMoney;
     console.log('[FINAL MONEY] Game state money updated to:', this.gameState.money);
     
-    console.log(`[MONEY UPDATE] Starting: $${monthStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
+    console.log(`[MONEY UPDATE] Starting: $${weekStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
     
     // Check for focus slot unlock at 50+ reputation
     if (this.gameState.reputation && this.gameState.reputation >= 50) {
@@ -329,7 +330,7 @@ export class GameEngine {
         this.gameState.focusSlots = 4;
         summary.changes.push({
           type: 'unlock',
-          description: 'Fourth focus slot unlocked! You can now select 4 actions per month.'
+          description: 'Fourth focus slot unlocked! You can now select 4 actions per week.'
         });
         console.log('[UNLOCK] Fourth focus slot unlocked at reputation', this.gameState.reputation);
       }
@@ -345,7 +346,7 @@ export class GameEngine {
   /**
    * Processes a single player action
    */
-  private async processAction(action: GameEngineAction, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processAction(action: GameEngineAction, summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log('[GAME-ENGINE processAction] Processing action:', JSON.stringify(action, null, 2));
     console.log('[GAME-ENGINE processAction] Action type:', action.actionType);
     console.log('[GAME-ENGINE processAction] Action metadata:', action.metadata);
@@ -375,7 +376,7 @@ export class GameEngine {
   /**
    * Processes a role meeting and applies effects
    */
-  private async processRoleMeeting(action: GameEngineAction, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processRoleMeeting(action: GameEngineAction, summary: WeekSummary, dbTransaction?: any): Promise<void> {
     if (!action.targetId) return;
     
     console.log(`[GAME-ENGINE] processRoleMeeting called with action:`, action);
@@ -443,7 +444,7 @@ export class GameEngine {
       const flags = this.gameState.flags || {};
       const delayedKey = `${action.targetId}-${action.details?.choiceId}-delayed`;
       (flags as any)[delayedKey] = {
-        triggerMonth: (this.gameState.currentMonth || 0) + 1,
+        triggerWeek: (this.gameState.currentWeek || 0) + 1,
         effects: choice.effects_delayed
       };
       this.gameState.flags = flags;
@@ -470,11 +471,11 @@ export class GameEngine {
 
   /**
    * Processes executive-specific effects from actions
-   * Updates mood, loyalty, and lastActionMonth when executives are used
+   * Updates mood, loyalty, and lastActionWeek when executives are used
    */
   private async processExecutiveActions(
     action: GameEngineAction,
-    summary: MonthSummary,
+    summary: WeekSummary,
     dbTransaction?: any
   ): Promise<void> {
     // Skip CEO meetings - player IS the CEO, no executive to update
@@ -492,7 +493,7 @@ export class GameEngine {
 
     console.log('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
     
-    // Track that this executive was used this month
+    // Track that this executive was used this week
     (summary as any).usedExecutives.add(executiveId);
     
     // Get executive from database
@@ -526,14 +527,14 @@ export class GameEngine {
     // Boost loyalty for being used (+5 for interaction)
     const newLoyalty = Math.min(100, executive.loyalty + 5);
     
-    // Update last action month
-    const currentMonth = this.gameState.currentMonth || 1;
+    // Update last action week
+    const currentWeek = this.gameState.currentWeek || 1;
 
     console.log('[GAME-ENGINE] Updating executive:', {
       moodChange,
       newMood,
       newLoyalty,
-      lastActionMonth: currentMonth
+      lastActionWeek: currentWeek
     });
 
     // Save changes to database
@@ -542,7 +543,7 @@ export class GameEngine {
       {
         mood: newMood,
         loyalty: newLoyalty,
-        lastActionMonth: currentMonth
+        lastActionWeek: currentWeek
       },
       dbTransaction
     );
@@ -563,7 +564,7 @@ export class GameEngine {
   /**
    * Applies immediate effects to game state
    */
-  private applyEffects(effects: Record<string, number>, summary: MonthSummary): void {
+  private applyEffects(effects: Record<string, number>, summary: WeekSummary): void {
     for (const [key, value] of Object.entries(effects)) {
       switch (key) {
         case 'money':
@@ -581,7 +582,7 @@ export class GameEngine {
             // Track role meeting costs in breakdown
             if (!summary.expenseBreakdown) {
               summary.expenseBreakdown = {
-                monthlyOperations: 0,
+                weeklyOperations: 0,
                 artistSalaries: 0,
                 executiveSalaries: 0,
                 projectCosts: 0,
@@ -764,24 +765,24 @@ export class GameEngine {
   }
 
   /**
-   * Calculates monthly operational costs including artist payments
+   * Calculates weekly operational costs including artist payments
    */
-  private async calculateMonthlyBurn(): Promise<number> {
-    const result = await this.calculateMonthlyBurnWithBreakdown();
+  private async calculateWeeklyBurn(): Promise<number> {
+    const result = await this.calculateWeeklyBurnWithBreakdown();
     return result.total;
   }
 
   /**
-   * Calculates monthly operational costs with detailed breakdown for transparency
+   * Calculates weekly operational costs with detailed breakdown for transparency
    */
   // DELEGATED TO FinancialSystem (originally lines 572-617)
-  private async calculateMonthlyBurnWithBreakdown(): Promise<{
+  private async calculateWeeklyBurnWithBreakdown(): Promise<{
     total: number;
     baseBurn: number;
     artistCosts: number;
-    artistDetails: Array<{name: string, monthlyFee: number}>;
+    artistDetails: Array<{name: string, weeklyFee: number}>;
   }> {
-    return this.financialSystem.calculateMonthlyBurnWithBreakdown(
+    return this.financialSystem.calculateWeeklyBurnWithBreakdown(
       this.gameState.id || '',
       this.storage
     );
@@ -792,15 +793,15 @@ export class GameEngine {
    * Processes ongoing projects (recordings, tours, etc)
    * NOTE: This function is currently unused but kept for potential future use
    */
-  // private async processOngoingProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  // private async processOngoingProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
   //   // Projects are now managed via flags since they're not part of database gameState
   //   const flags = this.gameState.flags || {};
   //   const projects = (flags as any)['active_projects'] || [];
   //   for (const project of projects) {
   //     if (project.status === 'in_progress') {
-  //       project.monthsRemaining = (project.monthsRemaining || 0) - 1;
+  //       project.weeksRemaining = (project.weeksRemaining || 0) - 1;
   //       
-  //       if (project.monthsRemaining <= 0) {
+  //       if (project.weeksRemaining <= 0) {
   //         project.status = 'completed';
   //         
   //         // Calculate project outcomes based on type
@@ -828,7 +829,7 @@ export class GameEngine {
    * Implements the formula from PopularityTester: dynamic threshold, log points, diminishing returns
    */
   private calculateStreamingPopularityBonus(
-    monthlyStreams: number,
+    weeklyStreams: number,
     currentPopularity: number,
     baseThreshold: number = 3000,
     useDynamicThreshold: boolean = true,
@@ -840,11 +841,11 @@ export class GameEngine {
       : baseThreshold;
 
     // Convert streams to popularity points using logarithmic scaling
-    if (monthlyStreams < actualThreshold) {
+    if (weeklyStreams < actualThreshold) {
       return 0; // No bonus below threshold
     }
 
-    const streamPoints = Math.log10(monthlyStreams / actualThreshold);
+    const streamPoints = Math.log10(weeklyStreams / actualThreshold);
 
     // Cap total bonus at reasonable level (per song)
     const cappedPoints = Math.min(streamPoints, 10);
@@ -862,9 +863,9 @@ export class GameEngine {
    * Processes ongoing revenue from individual released songs (streaming decay)
    * This simulates realistic revenue patterns where each song generates declining revenue over time
    */
-  private async processReleasedProjects(summary: MonthSummary): Promise<void> {
+  private async processReleasedProjects(summary: WeekSummary): Promise<void> {
     console.log('[INDIVIDUAL SONG DECAY] === Processing Released Songs ===');
-    console.log(`[INDIVIDUAL SONG DECAY] Current month: ${this.gameState.currentMonth}`);
+    console.log(`[INDIVIDUAL SONG DECAY] Current week: ${this.gameState.currentWeek}`);
     
     try {
       // Get all released songs for this game
@@ -912,7 +913,7 @@ export class GameEngine {
             continue;
           }
 
-          const monthlyStreams = Math.round(ongoingRevenue / revenuePerStream);
+          const weeklyStreams = Math.round(ongoingRevenue / revenuePerStream);
 
           // Apply streaming-based popularity bonus using optimized formula
           if (song.artistId) {
@@ -925,7 +926,7 @@ export class GameEngine {
 
               if (artist) {
                 const popularityBonus = this.calculateStreamingPopularityBonus(
-                  monthlyStreams,
+                  weeklyStreams,
                   artist.popularity || 0,
                   3000, // baseThreshold
                   true, // useDynamicThreshold
@@ -933,14 +934,14 @@ export class GameEngine {
                 );
 
                 if (popularityBonus > 0) {
-                  // Accumulate popularity bonus in summary.artistChanges for processing by processMonthlyPopularityChanges
+                  // Accumulate popularity bonus in summary.artistChanges for processing by processWeeklyPopularityChanges
                   const popularityKey = `${song.artistId}_popularity`;
                   if (!summary.artistChanges) {
                     summary.artistChanges = {};
                   }
                   summary.artistChanges[popularityKey] = (summary.artistChanges[popularityKey] || 0) + popularityBonus;
 
-                  console.log(`[STREAMING POPULARITY] "${song.title}" (${monthlyStreams.toLocaleString()} streams) adds +${popularityBonus.toFixed(2)} popularity to ${artist.name}`);
+                  console.log(`[STREAMING POPULARITY] "${song.title}" (${weeklyStreams.toLocaleString()} streams) adds +${popularityBonus.toFixed(2)} popularity to ${artist.name}`);
                 }
               }
             } catch (error) {
@@ -951,10 +952,10 @@ export class GameEngine {
           // Track song updates for batch processing
           songUpdates.push({
             songId: song.id,
-            monthlyStreams: monthlyStreams,
-            lastMonthRevenue: Math.round(ongoingRevenue),
+            weeklyStreams: weeklyStreams,
+            lastWeekRevenue: Math.round(ongoingRevenue),
             totalRevenue: Math.round((song.totalRevenue || 0) + ongoingRevenue),
-            totalStreams: (song.totalStreams || 0) + monthlyStreams
+            totalStreams: (song.totalStreams || 0) + weeklyStreams
           });
           
           // Add to summary changes for transparency
@@ -995,19 +996,19 @@ export class GameEngine {
   }
 
   /**
-   * Processes lead singles that are scheduled for release this month (before the main release)
+   * Processes lead singles that are scheduled for release this week (before the main release)
    * Checks all planned releases for lead single strategies and releases them early
    */
-  private async processLeadSingles(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processLeadSingles(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log('[LEAD SINGLE] 🎯🎯🎯 === STARTING LEAD SINGLE PROCESSING === 🎯🎯🎯');
-    const currentMonth = this.gameState.currentMonth || 1;
-    console.log(`[LEAD SINGLE] 📅 Current month: ${currentMonth}`);
+    const currentWeek = this.gameState.currentWeek || 1;
+    console.log(`[LEAD SINGLE] 📅 Current week: ${currentWeek}`);
     console.log(`[LEAD SINGLE] 🎮 Game ID: ${this.gameState.id}`);
     console.log(`[LEAD SINGLE] 💾 Transaction available: ${!!dbTransaction}`);
     
     try {
       // Get all planned releases from gameData to check for lead single strategies
-      // We need ALL planned releases, not just those for the current month
+      // We need ALL planned releases, not just those for the current week
       console.log('[LEAD SINGLE] 🔍 Fetching all releases from database...');
       const allReleases = await this.gameData.getReleasesByGame(this.gameState.id, dbTransaction) || [];
       console.log(`[LEAD SINGLE] 📦 Total releases found: ${allReleases.length}`);
@@ -1023,30 +1024,30 @@ export class GameEngine {
           title: release.title,
           type: release.type,
           status: release.status,
-          releaseMonth: release.releaseMonth,
+          releaseWeek: release.releaseWeek,
           hasMetadata: !!release.metadata,
           metadataType: typeof release.metadata,
           metadataKeys: release.metadata ? Object.keys(release.metadata) : [],
           hasLeadSingleStrategy: !!(release.metadata?.leadSingleStrategy),
           leadSingleDetails: release.metadata?.leadSingleStrategy ? {
             leadSingleId: release.metadata.leadSingleStrategy.leadSingleId,
-            leadSingleReleaseMonth: release.metadata.leadSingleStrategy.leadSingleReleaseMonth,
+            leadSingleReleaseWeek: release.metadata.leadSingleStrategy.leadSingleReleaseWeek,
             leadSingleBudget: release.metadata.leadSingleStrategy.leadSingleBudget,
-            monthComparison: {
-              leadSingleMonth: release.metadata.leadSingleStrategy.leadSingleReleaseMonth,
-              currentMonth: currentMonth,
-              shouldRelease: release.metadata.leadSingleStrategy.leadSingleReleaseMonth === currentMonth
+            weekComparison: {
+              leadSingleWeek: release.metadata.leadSingleStrategy.leadSingleReleaseWeek,
+              currentWeek: currentWeek,
+              shouldRelease: release.metadata.leadSingleStrategy.leadSingleReleaseWeek === currentWeek
             }
           } : null
         });
       });
       
-      // Count how many lead singles should release this month
+      // Count how many lead singles should release this week
       const leadSinglesToRelease = plannedReleases.filter((r: any) => {
         const lss = r.metadata?.leadSingleStrategy;
-        return lss && lss.leadSingleReleaseMonth === currentMonth;
+        return lss && lss.leadSingleReleaseWeek === currentWeek;
       });
-      console.log(`[LEAD SINGLE] ⭐ ${leadSinglesToRelease.length} lead single(s) should release this month`);
+      console.log(`[LEAD SINGLE] ⭐ ${leadSinglesToRelease.length} lead single(s) should release this week`);
       
       for (const release of plannedReleases) {
         const metadata = release.metadata as any;
@@ -1057,18 +1058,18 @@ export class GameEngine {
           console.log(`[LEAD SINGLE] 🎵 Checking release "${release.title}":`, {
             releaseId: release.id,
             leadSingleId: leadSingleStrategy.leadSingleId,
-            leadSingleReleaseMonth: leadSingleStrategy.leadSingleReleaseMonth,
-            mainReleaseMonth: release.releaseMonth,
-            currentMonth: currentMonth,
-            monthMatch: leadSingleStrategy.leadSingleReleaseMonth === currentMonth,
-            willRelease: leadSingleStrategy.leadSingleReleaseMonth === currentMonth ? '✅ YES' : '❌ NO'
+            leadSingleReleaseWeek: leadSingleStrategy.leadSingleReleaseWeek,
+            mainReleaseWeek: release.releaseWeek,
+            currentWeek: currentWeek,
+            weekMatch: leadSingleStrategy.leadSingleReleaseWeek === currentWeek,
+            willRelease: leadSingleStrategy.leadSingleReleaseWeek === currentWeek ? '✅ YES' : '❌ NO'
           });
         }
         
-        if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseMonth === currentMonth) {
+        if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseWeek === currentWeek) {
           console.log(`[LEAD SINGLE] 🚀🚀🚀 EXECUTING LEAD SINGLE RELEASE 🚀🚀🚀`);
           console.log(`[LEAD SINGLE] 📀 Release: "${release.title}" (ID: ${release.id})`);
-          console.log(`[LEAD SINGLE] 📅 Main release scheduled for month ${release.releaseMonth}`);
+          console.log(`[LEAD SINGLE] 📅 Main release scheduled for week ${release.releaseWeek}`);
           
           // Get the lead single song
           console.log(`[LEAD SINGLE] 🔍 Fetching songs for release ${release.id}...`);
@@ -1115,7 +1116,7 @@ export class GameEngine {
             const leadSingleReleaseConfig = {
               id: `temp-lead-${release.id}`,
               type: 'single',
-              releaseMonth: currentMonth,
+              releaseWeek: currentWeek,
               metadata: {
                 marketingBudget: budgetBreakdown
               }
@@ -1157,12 +1158,12 @@ export class GameEngine {
             const songUpdate = {
               songId: leadSong.id,
               isReleased: true,
-              releaseMonth: currentMonth,
+              releaseWeek: currentWeek,
               initialStreams: initialStreams,
-              monthlyStreams: initialStreams,
+              weeklyStreams: initialStreams,
               totalStreams: (leadSong.totalStreams || 0) + initialStreams,
               totalRevenue: Math.round((leadSong.totalRevenue || 0) + initialRevenue),
-              lastMonthRevenue: Math.round(initialRevenue)
+              lastWeekRevenue: Math.round(initialRevenue)
             };
             console.log(`[LEAD SINGLE] 📝 Song update payload (marketing handled by InvestmentTracker):`, songUpdate);
             
@@ -1189,8 +1190,8 @@ export class GameEngine {
               songTitle: leadSong.title,
               revenue: `$${initialRevenue}`,
               streams: initialStreams,
-              addedToMonth: currentMonth,
-              mainReleaseMonth: release.releaseMonth
+              addedToWeek: currentWeek,
+              mainReleaseWeek: release.releaseWeek
             });
           } else {
             console.warn(`[LEAD SINGLE] ⚠️ Lead song not found!`);
@@ -1210,29 +1211,29 @@ export class GameEngine {
   }
 
   /**
-   * Processes planned releases that are scheduled for the current month
+   * Processes planned releases that are scheduled for the current week
    * This executes the release, generates initial revenue, and updates song statuses
    */
-  private async processPlannedReleases(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processPlannedReleases(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log('[PLANNED RELEASE] 🎯🎯🎯 === STARTING PLANNED RELEASE PROCESSING === 🎯🎯🎯');
-    console.log(`[PLANNED RELEASE] 📅 Current month: ${this.gameState.currentMonth}`);
+    console.log(`[PLANNED RELEASE] 📅 Current week: ${this.gameState.currentWeek}`);
     console.log(`[PLANNED RELEASE] 🎮 Game state ID: ${this.gameState.id}`);
     console.log(`[PLANNED RELEASE] 💾 Transaction context: ${!!dbTransaction ? 'AVAILABLE' : 'MISSING'}`);
     
     try {
-      // Get planned releases scheduled for this month
-      const currentMonth = this.gameState.currentMonth || 1;
-      console.log(`[PLANNED RELEASE] 🔍 Querying planned releases for gameId=${this.gameState.id}, month=${currentMonth}`);
+      // Get planned releases scheduled for this week
+      const currentWeek = this.gameState.currentWeek || 1;
+      console.log(`[PLANNED RELEASE] 🔍 Querying planned releases for gameId=${this.gameState.id}, week=${currentWeek}`);
       const plannedReleases = await this.gameData.getPlannedReleases(
         this.gameState.id, 
-        currentMonth,
+        currentWeek,
         dbTransaction
       ) || [];
       
-      console.log(`[PLANNED RELEASE] 📦 Found ${plannedReleases.length} releases scheduled for this month`);
+      console.log(`[PLANNED RELEASE] 📦 Found ${plannedReleases.length} releases scheduled for this week`);
       
       if (plannedReleases.length === 0) {
-        console.log('[PLANNED RELEASE] 📆 No releases scheduled for this month');
+        console.log('[PLANNED RELEASE] 📆 No releases scheduled for this week');
         return;
       }
       
@@ -1243,7 +1244,7 @@ export class GameEngine {
           id: release.id,
           title: release.title,
           type: release.type,
-          releaseMonth: release.releaseMonth,
+          releaseWeek: release.releaseWeek,
           marketingBudget: release.marketingBudget,
           hasLeadSingleStrategy: !!(release.metadata?.leadSingleStrategy)
         });
@@ -1322,12 +1323,12 @@ export class GameEngine {
         const songUpdates = sophisticatedResults.perSongBreakdown.map(songResult => ({
           songId: songResult.songId,
           isReleased: true,
-          releaseMonth: this.gameState.currentMonth,
+          releaseWeek: this.gameState.currentWeek,
           initialStreams: songResult.streams,
-          monthlyStreams: songResult.streams,
+          weeklyStreams: songResult.streams,
           totalStreams: (songsToRelease.find(s => s.id === songResult.songId)?.totalStreams || 0) + songResult.streams,
           totalRevenue: Math.round((songsToRelease.find(s => s.id === songResult.songId)?.totalRevenue || 0) + songResult.revenue),
-          lastMonthRevenue: Math.round(songResult.revenue)
+          lastWeekRevenue: Math.round(songResult.revenue)
         }));
 
         // Handle marketing investment allocation
@@ -1349,7 +1350,7 @@ export class GameEngine {
         
         // Update release status to 'released'
         await this.gameData.updateReleaseStatus(release.id, 'released', {
-          releasedAt: currentMonth,
+          releasedAt: currentWeek,
           initialStreams: totalStreams,
           totalRevenue: totalRevenue
         }, dbTransaction);
@@ -1364,7 +1365,7 @@ export class GameEngine {
         if (release.artistId) {
           const moodBoost = (release.type === 'album' || release.type === 'ep') ? 20 : 5;
           
-          // Track mood change for later application in processMonthlyMoodChanges
+          // Track mood change for later application in processWeeklyMoodChanges
           if (!summary.artistChanges) {
             summary.artistChanges = {};
           }
@@ -1395,7 +1396,7 @@ export class GameEngine {
         // Track marketing costs in breakdown
         if (!summary.expenseBreakdown) {
           summary.expenseBreakdown = {
-            monthlyOperations: 0,
+            weeklyOperations: 0,
             artistSalaries: 0,
             executiveSalaries: 0,
             projectCosts: 0,
@@ -1482,34 +1483,15 @@ export class GameEngine {
     return typeData?.revenue_multiplier || 1.0;
   }
   
-  /**
-   * Gets the seasonal multiplier for the current month
-   */
-  private getSeasonalMultiplier(month: number): number {
-    const balance = this.gameData.getBalanceConfigSync();
-    const seasonalModifiers = balance?.time_progression?.seasonal_modifiers;
-    
-    if (!seasonalModifiers) {
-      console.warn('[PLANNED RELEASE] No seasonal modifiers found in balance.json');
-      return 1.0;
-    }
-    
-    // Determine quarter based on month within year (handles months 1-36)
-    // Convert to 1-12 range: month 13 -> 1, month 25 -> 1, etc.
-    const yearMonth = ((month - 1) % 12) + 1;
-    const quarter = Math.ceil(yearMonth / 3);
-    const quarterKey = `q${quarter}`;
-    
-    return seasonalModifiers[quarterKey] || 1.0;
-  }
+  // REMOVED: getSeasonalMultiplier() - now using shared utility
 
   /**
-   * Processes newly recorded projects - projects that became "recorded" this month
+   * Processes newly recorded projects - projects that became "recorded" this week
    * This marks songs as recorded but does not release them (no revenue yet)
    */
-  private async processNewlyRecordedProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processNewlyRecordedProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log('[NEWLY RECORDED] === Processing Newly Recorded Projects ===');
-    console.log(`[NEWLY RECORDED] Current month: ${this.gameState.currentMonth}`);
+    console.log(`[NEWLY RECORDED] Current week: ${this.gameState.currentWeek}`);
     
     try {
       // Check if we have a method to get newly released projects
@@ -1532,7 +1514,7 @@ export class GameEngine {
         recordedProjects = await this.gameData.getProjectsByStage(this.gameState.id || '', 'recorded', dbTransaction);
       } else if (this.gameData.getNewlyReleasedProjects) {
         // Note: This method name should be updated to getNewlyRecordedProjects in future
-        recordedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id || '', this.gameState.currentMonth || 1, dbTransaction);
+        recordedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id || '', this.gameState.currentWeek || 1, dbTransaction);
       }
       
       console.log(`[NEWLY RECORDED] Found ${recordedProjects.length} recorded projects`);
@@ -1558,7 +1540,7 @@ export class GameEngine {
    * Process song recording completion for a specific project
    * This marks all songs from a completed recording project as recorded (but not released)
    */
-  private async processProjectSongRecording(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processProjectSongRecording(project: any, summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log(`[PROJECT SONG RECORDING] Processing project "${project.title}" (ID: ${project.id})`);
     
     try {
@@ -1609,9 +1591,9 @@ export class GameEngine {
 
   /**
    * Processes song generation for recording projects
-   * This is called during monthly processing to create songs for active recording projects
+   * This is called during weekly processing to create songs for active recording projects
    */
-  private async processRecordingProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processRecordingProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log('[SONG GENERATION] === Processing Recording Projects ===');
     console.log(`[SONG GENERATION] Game ID: ${this.gameState.id}`);
     
@@ -1639,7 +1621,7 @@ export class GameEngine {
         console.log(`[SONG GENERATION] Checking project: ${project.title} (${project.type})`);
         if (this.shouldGenerateProjectSongs(project)) {
           console.log(`[SONG GENERATION] Project ${project.title} should generate songs`);
-          await this.generateMonthlyProjectSongs(project, summary, dbTransaction);
+          await this.generateWeeklyProjectSongs(project, summary, dbTransaction);
         } else {
           console.log(`[SONG GENERATION] Project ${project.title} should NOT generate songs - stage: ${project.stage}, songCount: ${project.songCount}, songsCreated: ${project.songsCreated}`);
         }
@@ -1652,7 +1634,7 @@ export class GameEngine {
   }
 
   /**
-   * Determines if a project should generate songs this month
+   * Determines if a project should generate songs this week
    */
   private shouldGenerateProjectSongs(project: any): boolean {
     // Only generate songs for recording projects (Singles, EPs) in production stage
@@ -1668,9 +1650,9 @@ export class GameEngine {
   }
 
   /**
-   * Generates songs for a recording project during monthly processing
+   * Generates songs for a recording project during weekly processing
    */
-  private async generateMonthlyProjectSongs(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async generateWeeklyProjectSongs(project: any, summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log(`[SONG GENERATION] Generating songs for project: ${project.title}`);
     console.log(`[SONG GENERATION] Project details:`, {
       id: project.id,
@@ -1689,14 +1671,14 @@ export class GameEngine {
       }
       console.log(`[SONG GENERATION] Found artist: ${artist.name}`);
 
-      // Determine how many songs to generate this month
+      // Determine how many songs to generate this week
       const remainingSongs = (project.songCount || 1) - (project.songsCreated || 0);
-      const songsPerMonth = this.getSongsPerMonth(project.type);
-      const songsToGenerate = Math.min(remainingSongs, songsPerMonth);
+      const songsPerWeek = this.getSongsPerWeek(project.type);
+      const songsToGenerate = Math.min(remainingSongs, songsPerWeek);
 
       console.log(`[SONG GENERATION] Calculation:`, {
         remainingSongs,
-        songsPerMonth,
+        songsPerWeek,
         songsToGenerate
       });
 
@@ -1766,12 +1748,12 @@ export class GameEngine {
   }
 
   /**
-   * Determines how many songs to generate per month based on project type
+   * Determines how many songs to generate per week based on project type
    */
-  private getSongsPerMonth(projectType: string): number {
+  private getSongsPerWeek(projectType: string): number {
     switch (projectType) {
-      case 'Single': return 2; // Singles can generate up to 2 songs per month
-      case 'EP': return 3;     // EPs can generate up to 3 songs per month  
+      case 'Single': return 2; // Singles can generate up to 2 songs per week
+      case 'EP': return 3;     // EPs can generate up to 3 songs per week  
       default: return 2;
     }
   }
@@ -1780,7 +1762,7 @@ export class GameEngine {
    * Generates a single song for a recording project with enhanced quality calculation
    */
   private generateSong(project: any, artist: any): any {
-    const currentMonth = this.gameState.currentMonth || 1;
+    const currentWeek = this.gameState.currentWeek || 1;
     
     // Get song names from data layer
     const songNamePools = this.gameData.getBalanceConfigSync()?.song_generation?.name_pools;
@@ -1879,7 +1861,7 @@ export class GameEngine {
       quality: Math.round(finalQuality),
       genre: artist.genre || 'pop', // Would come from artist data
       mood: this.generateSongMood(),
-      createdMonth: currentMonth,
+      createdWeek: currentWeek,
       producerTier: producerTier,
       timeInvestment: timeInvestment,
       isRecorded: true,
@@ -2121,7 +2103,7 @@ export class GameEngine {
   private calculateOngoingSongRevenue(song: any): number {
     return this.financialSystem.calculateOngoingSongRevenue(
       song,
-      this.gameState.currentMonth || 1,
+      this.gameState.currentWeek || 1,
       this.gameState.reputation || 0,
       this.gameState.playlistAccess || 'none'
     );
@@ -2137,7 +2119,7 @@ export class GameEngine {
     initialRevenue: number;
   }> {
     const currentGameState = gameState || this.gameState;
-    const currentMonth = currentGameState.currentMonth || 1;
+    const currentWeek = currentGameState.currentWeek || 1;
     
     console.log(`[SONG RELEASE] 🎯 ENTERING processSongRelease for song: "${song.title}"`);
     console.log(`[SONG RELEASE] Song details:`, {
@@ -2148,7 +2130,7 @@ export class GameEngine {
       initialStreams: song.initialStreams
     });
     console.log(`[SONG RELEASE] Game state:`, {
-      currentMonth,
+      currentWeek,
       reputation: currentGameState.reputation,
       playlistAccess: currentGameState.playlistAccess
     });
@@ -2177,10 +2159,10 @@ export class GameEngine {
     const songUpdates = {
       initialStreams: initialStreams,
       totalStreams: initialStreams,
-      monthlyStreams: initialStreams,
+      weeklyStreams: initialStreams,
       totalRevenue: Math.round(initialRevenue),
-      lastMonthRevenue: Math.round(initialRevenue),
-      releaseMonth: currentMonth,
+      lastWeekRevenue: Math.round(initialRevenue),
+      releaseWeek: currentWeek,
       isReleased: true
     };
     
@@ -2305,9 +2287,9 @@ export class GameEngine {
   }
 
   /**
-   * Processes delayed effects from previous months
+   * Processes delayed effects from previous weeks
    */
-  private async processDelayedEffects(summary: MonthSummary): Promise<void> {
+  private async processDelayedEffects(summary: WeekSummary): Promise<void> {
     // Initialize flags as array if it's not already
     if (!Array.isArray(this.gameState.flags)) {
       this.gameState.flags = [] as any;
@@ -2315,7 +2297,7 @@ export class GameEngine {
     
     const flags = this.gameState.flags as any[];
     const triggeredFlags = flags.filter(
-      (f: any) => f.triggerMonth === this.gameState.currentMonth
+      (f: any) => f.triggerWeek === this.gameState.currentWeek
     );
     
     for (const flag of triggeredFlags) {
@@ -2328,7 +2310,7 @@ export class GameEngine {
     
     // Remove triggered flags
     this.gameState.flags = flags.filter(
-      (f: any) => f.triggerMonth !== this.gameState.currentMonth
+      (f: any) => f.triggerWeek !== this.gameState.currentWeek
     ) as any;
   }
 
@@ -2337,7 +2319,7 @@ export class GameEngine {
    * This processes changes accumulated in summary.artistChanges.mood/loyalty
    * and applies them to ALL artists immediately
    */
-  private async applyArtistChangesToDatabase(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async applyArtistChangesToDatabase(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     // Check if there are any artist changes to apply
     if (!summary.artistChanges || (!summary.artistChanges.mood && !summary.artistChanges.loyalty && !summary.artistChanges.popularity)) {
       return;
@@ -2434,9 +2416,9 @@ export class GameEngine {
   }
 
   /**
-   * Process monthly mood changes for all artists
+   * Process weekly mood changes for all artists
    */
-  private async processMonthlyMoodChanges(summary: MonthSummary): Promise<void> {
+  private async processWeeklyMoodChanges(summary: WeekSummary): Promise<void> {
     // Get artists from storage if available
     if (!this.storage || !this.storage.getArtistsByGame) {
       return;
@@ -2507,10 +2489,10 @@ export class GameEngine {
   }
 
   /**
-   * Process monthly popularity changes for all artists
-   * Mirrors processMonthlyMoodChanges pattern for consistency
+   * Process weekly popularity changes for all artists
+   * Mirrors processWeeklyMoodChanges pattern for consistency
    */
-  private async processMonthlyPopularityChanges(summary: MonthSummary): Promise<void> {
+  private async processWeeklyPopularityChanges(summary: WeekSummary): Promise<void> {
     // Get artists from storage if available
     if (!this.storage || !this.storage.getArtistsByGame) {
       return;
@@ -2549,11 +2531,11 @@ export class GameEngine {
   }
 
   /**
-   * Process monthly mood and loyalty decay for executives
-   * - Loyalty decays when executives are ignored for 3+ months
+   * Process weekly mood and loyalty decay for executives
+   * - Loyalty decays when executives are ignored for 3+ weeks
    * - Mood naturally drifts toward neutral (50) over time
    */
-  private async processExecutiveMoodDecay(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processExecutiveMoodDecay(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     try {
       // Check if storage has executive methods
       if (!this.storage || !this.storage.getExecutivesByGame) {
@@ -2567,8 +2549,8 @@ export class GameEngine {
         return;
       }
       
-      const currentMonth = this.gameState.currentMonth || 1;
-      console.log(`[GAME-ENGINE] Processing executive decay for month ${currentMonth}, ${executives.length} executives`);
+      const currentWeek = this.gameState.currentWeek || 1;
+      console.log(`[GAME-ENGINE] Processing executive decay for week ${currentWeek}, ${executives.length} executives`);
       
       for (const exec of executives) {
       let moodChange = 0;
@@ -2577,28 +2559,28 @@ export class GameEngine {
       const currentLoyalty = exec.loyalty || 50;
       
       // Calculate loyalty decay for inactivity
-      // If lastActionMonth is null/undefined, treat as never used (start from month 0)
-      const lastAction = exec.lastActionMonth || 0;
-      const monthsSinceAction = lastAction === 0 ? currentMonth : currentMonth - lastAction;
+      // If lastActionWeek is null/undefined, treat as never used (start from week 0)
+      const lastAction = exec.lastActionWeek || 0;
+      const weeksSinceAction = lastAction === 0 ? currentWeek : currentWeek - lastAction;
       
-      // Check if executive was used this month using in-memory tracking
+      // Check if executive was used this week using in-memory tracking
       // This avoids database transaction isolation issues
-      const wasUsedThisMonth = (summary as any).usedExecutives.has(exec.id);
+      const wasUsedThisWeek = (summary as any).usedExecutives.has(exec.id);
       
       console.log(`[DECAY] Executive ${exec.role}:`);
       console.log(`  - Current mood: ${currentMood}, loyalty: ${currentLoyalty}`);
-      console.log(`  - Last used: Month ${lastAction === 0 ? 'Never' : lastAction}`);
-      console.log(`  - Months since action: ${monthsSinceAction}`);
-      console.log(`  - Used this month: ${wasUsedThisMonth}`);
+      console.log(`  - Last used: Week ${lastAction === 0 ? 'Never' : lastAction}`);
+      console.log(`  - Weeks since action: ${weeksSinceAction}`);
+      console.log(`  - Used this week: ${wasUsedThisWeek}`);
       
-      // Loyalty decay: -5 every month after being ignored for 3+ months
-      if (monthsSinceAction >= 3 && !wasUsedThisMonth) {
-        loyaltyChange = -5; // Consistent monthly penalty after 3 months of neglect
+      // Loyalty decay: -5 every week after being ignored for 3+ weeks
+      if (weeksSinceAction >= 3 && !wasUsedThisWeek) {
+        loyaltyChange = -5; // Consistent weekly penalty after 3 weeks of neglect
       }
       
-      // Natural mood normalization toward 50 - but NOT for executives used this month
+      // Natural mood normalization toward 50 - but NOT for executives used this week
       // This prevents the +5/-5 conflict where used executives get cancelled out
-      if (!wasUsedThisMonth) {
+      if (!wasUsedThisWeek) {
         if (currentMood > 55) {
           // Happy executives gradually calm down
           moodChange = -Math.min(5, currentMood - 50);
@@ -2628,7 +2610,7 @@ export class GameEngine {
         if (loyaltyChange < 0) {
           summary.changes.push({
             type: 'executive_interaction',
-            description: `${this.formatExecutiveRole(exec.role)}'s loyalty decreased (ignored for ${monthsSinceAction} months)`,
+            description: `${this.formatExecutiveRole(exec.role)}'s loyalty decreased (ignored for ${weeksSinceAction} weeks)`,
             amount: loyaltyChange
           });
         }
@@ -2667,10 +2649,10 @@ export class GameEngine {
   /**
    * Checks for random events based on probability
    */
-  private async checkForEvents(summary: MonthSummary): Promise<void> {
+  private async checkForEvents(summary: WeekSummary): Promise<void> {
     const eventConfig = this.gameData.getEventConfigSync();
     
-    if (this.getRandom(0, 1) < eventConfig.monthly_chance) {
+    if (this.getRandom(0, 1) < eventConfig.weekly_chance) {
       // Trigger an event
       const event = await this.gameData.getRandomEvent();
       if (event) {
@@ -2686,7 +2668,7 @@ export class GameEngine {
   /**
    * Checks and applies progression gates
    */
-  private async checkProgressionGates(summary: MonthSummary): Promise<void> {
+  private async checkProgressionGates(summary: WeekSummary): Promise<void> {
     const thresholds = this.gameData.getProgressionThresholdsSync();
     
     // Slot unlock functionality has been removed - these were non-functional placeholders
@@ -2784,7 +2766,7 @@ export class GameEngine {
   /**
    * Checks for producer tier unlocks and adds progression notifications
    */
-  private checkProducerTierUnlocks(summary: MonthSummary): void {
+  private checkProducerTierUnlocks(summary: WeekSummary): void {
     const reputation = this.gameState.reputation || 0;
     const producerSystem = this.gameData.getProducerTierSystemSync();
     
@@ -2836,7 +2818,7 @@ export class GameEngine {
    * Processes tour revenue using unified FinancialSystem calculations
    * Replaces legacy random-based city revenue system
    */
-  private async processUnifiedTourRevenue(project: any, cityNumber: number, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processUnifiedTourRevenue(project: any, cityNumber: number, summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log(`[UNIFIED TOUR] Processing city ${cityNumber} for tour "${project.title}"`);
 
     // Get artist data for popularity
@@ -2943,7 +2925,7 @@ export class GameEngine {
       console.log(`[UNIFIED TOUR] Pre-calculated ${preCalculatedCities.length} cities`);
     }
 
-    // Reveal one city per month from pre-calculated results
+    // Reveal one city per week from pre-calculated results
     if (tourStats.preCalculatedCities && tourStats.preCalculatedCities.length >= cityNumber) {
       const cityData = tourStats.preCalculatedCities[cityNumber - 1];
 
@@ -2958,7 +2940,7 @@ export class GameEngine {
       await this.applyTourPerformanceImpacts(project.artistId, cityData, summary, dbTransaction);
       console.log(`[TOUR IMPACTS] Completed applying impacts for artist ${project.artistId}`);
 
-      // Add revenue to monthly summary
+      // Add revenue to weekly summary
       const revenue = cityData.revenue;
       summary.revenue += revenue;
       if (!summary.revenueBreakdown) {
@@ -3006,12 +2988,12 @@ export class GameEngine {
 
   /**
    * Apply artist mood and popularity impacts based on tour performance
-   * Uses summary accumulation pattern to avoid conflicts with processMonthlyMoodChanges
+   * Uses summary accumulation pattern to avoid conflicts with processWeeklyMoodChanges
    */
   private async applyTourPerformanceImpacts(
     artistId: string,
     cityData: any,
-    summary: MonthSummary,
+    summary: WeekSummary,
     dbTransaction: any
   ): Promise<void> {
     try {
@@ -3054,18 +3036,18 @@ export class GameEngine {
       }
 
       // FIXED: Accumulate changes in summary using established pattern
-      // This prevents processMonthlyMoodChanges from overwriting our changes
+      // This prevents processWeeklyMoodChanges from overwriting our changes
       if (!summary.artistChanges) {
         summary.artistChanges = {};
       }
 
-      // Store per-artist mood changes for later processing by processMonthlyMoodChanges
+      // Store per-artist mood changes for later processing by processWeeklyMoodChanges
       if (!summary.artistChanges[artistId]) {
         summary.artistChanges[artistId] = 0;
       }
       summary.artistChanges[artistId] += moodChange;
 
-      // Store per-artist popularity changes for later processing by processMonthlyPopularityChanges
+      // Store per-artist popularity changes for later processing by processWeeklyPopularityChanges
       if (popularityChange > 0) {
         const popularityKey = `${artistId}_popularity`;
         if (!summary.artistChanges[popularityKey]) {
@@ -3106,7 +3088,7 @@ export class GameEngine {
   /**
    * Processes marketing campaigns (PR, Digital Ads, etc.)
    */
-  private async processMarketing(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+  private async processMarketing(action: GameEngineAction, summary: WeekSummary): Promise<void> {
     if (!action.details?.marketingType) return;
     
     const marketingType = action.details.marketingType;
@@ -3129,7 +3111,7 @@ export class GameEngine {
     // Track marketing costs in expense breakdown
     if (!summary.expenseBreakdown) {
       summary.expenseBreakdown = {
-        monthlyOperations: 0,
+        weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
         projectCosts: 0,
@@ -3180,7 +3162,7 @@ export class GameEngine {
   /**
    * Processes artist dialogue interactions
    */
-  private async processArtistDialogue(action: GameEngineAction, summary: MonthSummary): Promise<void> {
+  private async processArtistDialogue(action: GameEngineAction, summary: WeekSummary): Promise<void> {
     if (!action.targetId || !action.details?.choiceId) return;
     
     // Get artist archetype for dialogue content
@@ -3212,12 +3194,12 @@ export class GameEngine {
   }
 
   /**
-   * Process monthly charts after releases have been processed
+   * Process weekly charts after releases have been processed
    */
-  private async processMonthlyCharts(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processWeeklyCharts(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     try {
-      // Generate chart week from current month
-      const chartWeek = ChartService.generateChartWeekFromGameMonth(this.gameState.currentMonth || 1);
+      // Generate chart week from current week
+      const chartWeek = ChartService.generateChartWeekFromGameWeek(this.gameState.currentWeek || 1);
 
       // Create ChartService instance
       const chartService = new ChartService(
@@ -3227,8 +3209,8 @@ export class GameEngine {
         this.gameState.id
       );
 
-      // Generate monthly chart
-      await chartService.generateMonthlyChart(chartWeek, dbTransaction);
+      // Generate weekly chart
+      await chartService.generateWeeklyChart(chartWeek, dbTransaction);
 
       // Fetch current week entries and map to ChartUpdate objects
       const currentWeekEntries = await chartService.getCurrentWeekChartEntries(chartWeek, dbTransaction);
@@ -3247,21 +3229,21 @@ export class GameEngine {
       const chartUpdateCount = summary.chartUpdates?.length ?? 0;
       console.log(`[CHART PROCESSING] Generated chart for week ${chartWeek} with ${chartUpdateCount} player entries`);
     } catch (error) {
-      console.error('[CHART PROCESSING] Error generating monthly chart:', error);
-      // Don't throw - chart generation should not break monthly processing
+      console.error('[CHART PROCESSING] Error generating weekly chart:', error);
+      // Don't throw - chart generation should not break weekly processing
     }
   }
 
   /**
-   * Check if the 12-month campaign has been completed and calculate final results
+   * Check if the 52-week campaign has been completed and calculate final results
    */
-  private async checkCampaignCompletion(summary: MonthSummary): Promise<CampaignResults | undefined> {
-    const currentMonth = this.gameState.currentMonth || 0;
+  private async checkCampaignCompletion(summary: WeekSummary): Promise<CampaignResults | undefined> {
+    const currentWeek = this.gameState.currentWeek || 0;
     const balanceConfig = await this.gameData.getBalanceConfig();
-    const campaignLength = balanceConfig.time_progression.campaign_length_months;
+    const campaignLength = balanceConfig.time_progression.campaign_length_weeks;
     
-    // Only complete campaign if we've reached the final month
-    if (currentMonth < campaignLength) {
+    // Only complete campaign if we've reached the final week
+    if (currentWeek < campaignLength) {
       return undefined;
     }
 
@@ -3385,7 +3367,7 @@ export class GameEngine {
     
     // Survival achievements
     if ((this.gameState.money || 0) >= 0 && achievements.length === 0) {
-      achievements.push('🛡️ Survivor - Made it through 12 months');
+      achievements.push('🛡️ Survivor - Made it through 12 weeks');
     }
     
     return achievements;
@@ -3419,7 +3401,7 @@ export class GameEngine {
         return `The music industry proved challenging, and your label struggled to find its footing. With financial difficulties and limited industry recognition, this campaign serves as a learning experience for your next venture.`;
       
       default:
-        return `Your 12-month journey in the music industry has concluded with a final score of ${finalScore} points.`;
+        return `Your 12-week journey in the music industry has concluded with a final score of ${finalScore} points.`;
     }
   }
 
@@ -3473,7 +3455,7 @@ export class GameEngine {
   /**
    * Calculates outcomes when a project completes
    */
-  async calculateProjectOutcomes(project: any, summary: MonthSummary): Promise<{
+  async calculateProjectOutcomes(project: any, summary: WeekSummary): Promise<{
     revenue: number;
     streams?: number;
     pressPickups?: number;
@@ -3654,10 +3636,10 @@ export class GameEngine {
   }
   
   /**
-   * Enhanced monthly summary generation with economic insights
+   * Enhanced weekly summary generation with economic insights
    */
-  private generateEconomicInsights(summary: MonthSummary): void {
-    // Track budget efficiency and strategic decisions for the month
+  private generateEconomicInsights(summary: WeekSummary): void {
+    // Track budget efficiency and strategic decisions for the week
     const projectStartChanges = summary.changes.filter(change => 
       change.type === 'project_complete' && change.description.includes('Started')
     );
@@ -3669,7 +3651,7 @@ export class GameEngine {
       
       summary.changes.push({
         type: 'unlock',
-        description: `💰 Monthly project investment: $${totalProjectSpend.toLocaleString()} across ${projectStartChanges.length} project${projectStartChanges.length > 1 ? 's' : ''}`,
+        description: `💰 Weekly project investment: $${totalProjectSpend.toLocaleString()} across ${projectStartChanges.length} project${projectStartChanges.length > 1 ? 's' : ''}`,
         amount: 0
       });
     }
@@ -3687,7 +3669,7 @@ export class GameEngine {
       });
     }
     
-    // Track reputation-to-money efficiency this month
+    // Track reputation-to-money efficiency this week
     const reputationGain = Object.values(summary.reputationChanges).reduce((total, change) => total + change, 0);
     const netCashFlow = summary.revenue - summary.expenses;
     
@@ -3695,7 +3677,7 @@ export class GameEngine {
       const efficiency = Math.abs(netCashFlow) / reputationGain;
       summary.changes.push({
         type: 'unlock',
-        description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point this month`,
+        description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point this week`,
         amount: 0
       });
     }
@@ -3705,14 +3687,14 @@ export class GameEngine {
    * PHASE 1 MIGRATION: Moved from routes.ts
    * Handles all project stage advancement logic within GameEngine
    */
-  private async advanceProjectStages(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async advanceProjectStages(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     if (!dbTransaction) {
       console.warn('[PROJECT ADVANCEMENT] No database transaction provided - cannot advance project stages');
       return;
     }
 
     console.log('[PROJECT ADVANCEMENT] === GameEngine Project Stage Advancement ===');
-    console.log(`[PROJECT ADVANCEMENT] Current month: ${this.gameState.currentMonth}`);
+    console.log(`[PROJECT ADVANCEMENT] Current week: ${this.gameState.currentWeek}`);
     
     try {
       // Import the required modules dynamically to avoid circular dependencies
@@ -3730,7 +3712,7 @@ export class GameEngine {
       for (const project of projectList) {
         const stages = ['planning', 'production', 'recorded'];
         const currentStageIndex = stages.indexOf(project.stage || 'planning');
-        const monthsElapsed = (this.gameState.currentMonth || 1) - (project.startMonth || 1);
+        const weeksElapsed = (this.gameState.currentWeek || 1) - (project.startWeek || 1);
         const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
         const songCount = project.songCount || 1;
         const songsCreated = project.songsCreated || 0;
@@ -3739,7 +3721,7 @@ export class GameEngine {
         console.log(`[PROJECT ADVANCEMENT] Evaluating ${project.title}:`, {
           currentStage: project.stage,
           currentStageIndex,
-          monthsElapsed,
+          weeksElapsed,
           isRecordingProject,
           songCount,
           songsCreated,
@@ -3750,21 +3732,21 @@ export class GameEngine {
         let advancementReason = '';
 
         // Stage advancement logic
-        if (currentStageIndex === 0 && monthsElapsed >= 0) {
+        if (currentStageIndex === 0 && weeksElapsed >= 0) {
           // planning -> production (simple time-based)
           newStageIndex = 1;
-          advancementReason = `Planning complete after ${monthsElapsed} month${monthsElapsed > 1 ? 's' : ''}`;
+          advancementReason = `Planning complete after ${weeksElapsed} week${weeksElapsed > 1 ? 's' : ''}`;
           
           // NOTE: Project costs are now deducted immediately upon creation (see routes.ts)
-          // This prevents timing exploits where users cancel before month advance
-          // We track the expense for monthly reporting but DON'T deduct money again
+          // This prevents timing exploits where users cancel before week advance
+          // We track the expense for weekly reporting but DON'T deduct money again
           if (project.totalCost) {
             // DO NOT add to summary.expenses - money already deducted at creation!
             // summary.expenses += project.totalCost; // <-- REMOVED to fix double-charging bug
 
             if (!summary.expenseBreakdown) {
               summary.expenseBreakdown = {
-                monthlyOperations: 0,
+                weeklyOperations: 0,
                 artistSalaries: 0,
                 executiveSalaries: 0,
                 projectCosts: 0,
@@ -3786,14 +3768,14 @@ export class GameEngine {
         } else if (currentStageIndex === 1) {
           // production -> marketing/completed
           if (!isRecordingProject && project.type === 'Mini-Tour') {
-            // Enhanced tour logic: 1 month per city + planning month
+            // Enhanced tour logic: 1 week per city + planning week
             const citiesPlanned = project.metadata?.cities || 1;
-            const monthsInProduction = monthsElapsed - 1; // Subtract planning month
+            const weeksInProduction = weeksElapsed - 1; // Subtract planning week
             
-            if (monthsInProduction > citiesPlanned) {
+            if (weeksInProduction > citiesPlanned) {
               // Tour complete - skip marketing, go directly to completed
               newStageIndex = 2; // Go directly to 'recorded' which acts as 'completed' for tours
-              advancementReason = `Tour completed after ${citiesPlanned} cities (${monthsElapsed} total months)`;
+              advancementReason = `Tour completed after ${citiesPlanned} cities (${weeksElapsed} total weeks)`;
               
               // Generate final tour completion summary
               const tourStats = project.metadata?.tourStats;
@@ -3812,28 +3794,28 @@ export class GameEngine {
                 summary.changes.push({
                   type: 'project_complete',
                   description: `${project.title} tour completed - ${tourStats.cities.length} cities, ${avgAttendance}% avg attendance, $${totalRevenue.toLocaleString()} total revenue`,
-                  amount: 0, // Revenue already counted monthly
+                  amount: 0, // Revenue already counted weekly
                   projectId: project.id
                 });
               }
-            } else if (monthsInProduction > 0) {
-              // Process this month's city performance using unified system
-              await this.processUnifiedTourRevenue(project, monthsInProduction, summary, dbTransaction);
+            } else if (weeksInProduction > 0) {
+              // Process this week's city performance using unified system
+              await this.processUnifiedTourRevenue(project, weeksInProduction, summary, dbTransaction);
             }
           } else if (!isRecordingProject) {
             // Other non-recording projects - simple time-based
-            if (monthsElapsed >= 2) {
+            if (weeksElapsed >= 2) {
               newStageIndex = 2;
-              advancementReason = `Production complete after ${monthsElapsed} months`;
+              advancementReason = `Production complete after ${weeksElapsed} weeks`;
             }
           } else {
-            // Recording projects - need all songs OR max 4 months
-            if (allSongsCreated && monthsElapsed >= 2) {
+            // Recording projects - need all songs OR max 4 weeks
+            if (allSongsCreated && weeksElapsed >= 2) {
               newStageIndex = 2;
-              advancementReason = `All ${songsCreated} songs completed after ${monthsElapsed} months`;
-            } else if (monthsElapsed >= 4) {
+              advancementReason = `All ${songsCreated} songs completed after ${weeksElapsed} weeks`;
+            } else if (weeksElapsed >= 4) {
               newStageIndex = 2;
-              advancementReason = `Maximum production time reached (${monthsElapsed} months, ${songsCreated}/${songCount} songs)`;
+              advancementReason = `Maximum production time reached (${weeksElapsed} weeks, ${songsCreated}/${songCount} songs)`;
             }
           }
         }
@@ -3854,11 +3836,11 @@ export class GameEngine {
             const existingMetadata = project.metadata || {};
             updateData.metadata = {
               ...existingMetadata,
-              recordingCompletedMonth: this.gameState.currentMonth,
+              recordingCompletedWeek: this.gameState.currentWeek,
               recordedAt: new Date().toISOString(),
               advancementReason
             };
-            console.log(`[PROJECT ADVANCEMENT] Marking project "${project.title}" as recording completed in month ${this.gameState.currentMonth}`);
+            console.log(`[PROJECT ADVANCEMENT] Marking project "${project.title}" as recording completed in week ${this.gameState.currentWeek}`);
           }
           
           // Update project in database
@@ -3876,7 +3858,7 @@ export class GameEngine {
           
           console.log(`[PROJECT ADVANCEMENT] Successfully advanced "${project.title}" to ${newStage}`);
         } else {
-          console.log(`[PROJECT ADVANCEMENT] ${project.title} staying in ${project.stage} (${monthsElapsed} months elapsed)`);
+          console.log(`[PROJECT ADVANCEMENT] ${project.title} staying in ${project.stage} (${weeksElapsed} weeks elapsed)`);
         }
       }
       
@@ -3932,7 +3914,7 @@ export class GameEngine {
   /**
    * Generates human-readable financial breakdown string
    */
-  private generateFinancialBreakdown(f: MonthlyFinancials): string {
+  private generateFinancialBreakdown(f: WeeklyFinancials): string {
     const parts: string[] = [`$${f.startingBalance.toLocaleString()}`];
     
     if (f.operations.base > 0) {
@@ -3967,28 +3949,18 @@ export class GameEngine {
 
   /**
    * Generates financial breakdown for display purposes only
-   * Does NOT modify game state - that happens at the end of advanceMonth()
+   * Does NOT modify game state - that happens at the end of advanceWeek()
    */
   // DELEGATED TO FinancialSystem (originally lines 3126-3172)
-  async calculateMonthlyFinancials(summary: MonthSummary): Promise<MonthlyFinancials> {
-    return this.financialSystem.calculateMonthlyFinancials(
+  async calculateWeeklyFinancials(summary: WeekSummary): Promise<WeeklyFinancials> {
+    return this.financialSystem.calculateWeeklyFinancials(
       summary,
       this.gameState.money || 0
     );
   }
 
 
-  /**
-   * Helper function to determine season from month
-   */
-  private getSeasonFromMonth(month: number): string {
-    // Convert to 1-12 range for quarters (handles months 1-36)
-    const yearMonth = ((month - 1) % 12) + 1;
-    if (yearMonth <= 3) return 'q1';
-    if (yearMonth <= 6) return 'q2';
-    if (yearMonth <= 9) return 'q3';
-    return 'q4';
-  }
+  // REMOVED: getSeasonFromWeek() - now using shared utility
 
   /**
    * Calculates comprehensive release preview metrics using GameEngine formulas
@@ -4001,19 +3973,19 @@ export class GameEngine {
       releaseType: 'single' | 'ep' | 'album';
       leadSingleId?: string;
       seasonalTiming: string;
-      scheduledReleaseMonth: number;
+      scheduledReleaseWeek: number;
       marketingBudget: Record<string, number>;
       leadSingleStrategy?: {
         leadSingleId: string;
-        leadSingleReleaseMonth: number;
+        leadSingleReleaseWeek: number;
         leadSingleBudget: Record<string, number>;
       };
     }
   ) {
     const balance = this.gameData.getBalanceConfigSync();
     
-    // Auto-detect season from release month
-    const mainReleaseSeason = this.getSeasonFromMonth(releaseConfig.scheduledReleaseMonth);
+    // Auto-detect season from release week
+    const mainReleaseSeason = getSeasonFromWeek(releaseConfig.scheduledReleaseWeek);
     
     // Calculate base song metrics using existing GameEngine methods
     const averageQuality = songs.reduce((sum, song) => sum + song.quality, 0) / songs.length;
@@ -4067,20 +4039,8 @@ export class GameEngine {
     // Calculate bonus percentage from multiplier for display
     const releaseBonus = Math.round((releaseMultiplier - 1) * 100);
     
-    // Apply seasonal multipliers from balance.json with resilient fallbacks
-    const seasonalMultipliers = balance?.time_progression?.seasonal_modifiers || {
-      q1: 0.85,
-      q2: 0.95,
-      q3: 0.90,
-      q4: 1.25
-    };
-    
-    if (!balance?.time_progression?.seasonal_modifiers) {
-      console.warn('[GameEngine] seasonal_modifiers not found in balance data, using defaults');
-    }
-    
-    // Use the seasonal revenue multipliers from balance data with fallback
-    const seasonalRevenueMultiplier = seasonalMultipliers[mainReleaseSeason as keyof typeof seasonalMultipliers] || 1;
+    // Use shared seasonal calculation utility
+    const seasonalRevenueMultiplier = getSeasonalMultiplier(releaseConfig.scheduledReleaseWeek, this.gameData);
     
     // Calculate marketing effectiveness using balance.json formulas
     const totalMarketingBudget = Object.values(releaseConfig.marketingBudget).reduce((sum, budget) => sum + budget, 0);
@@ -4154,11 +4114,11 @@ export class GameEngine {
       const leadSong = songs.find(s => s.id === releaseConfig.leadSingleStrategy!.leadSingleId);
       if (leadSong) {
         const leadSingleConfig = releasePlanningConfig.lead_single_strategy;
-        const timingGap = releaseConfig.scheduledReleaseMonth - releaseConfig.leadSingleStrategy.leadSingleReleaseMonth;
+        const timingGap = releaseConfig.scheduledReleaseWeek - releaseConfig.leadSingleStrategy.leadSingleReleaseWeek;
         
         // Calculate timing bonus based on balance.json configuration
         let timingBonus = leadSingleConfig.default_bonus;
-        if (leadSingleConfig.optimal_timing_months_before.includes(timingGap)) {
+        if (leadSingleConfig.optimal_timing_weeks_before.includes(timingGap)) {
           timingBonus = leadSingleConfig.optimal_timing_bonus;
         } else if (timingGap === 3) {
           timingBonus = leadSingleConfig.good_timing_bonus;
@@ -4167,8 +4127,8 @@ export class GameEngine {
         const leadSingleBudget = Object.values(releaseConfig.leadSingleStrategy.leadSingleBudget).reduce((sum, budget) => sum + budget, 0);
         const leadSingleMarketingBonus = 1 + Math.sqrt(leadSingleBudget / leadSingleConfig.budget_scaling_factor) * leadSingleConfig.marketing_effectiveness_factor;
         
-        // Calculate lead single's own seasonal multiplier based on its release month
-        const leadSingleSeason = this.getSeasonFromMonth(releaseConfig.leadSingleStrategy.leadSingleReleaseMonth);
+        // Calculate lead single's own seasonal multiplier based on its release week
+        const leadSingleSeason = getSeasonFromWeek(releaseConfig.leadSingleStrategy.leadSingleReleaseWeek);
         const leadSingleSeasonalMultiplier = seasonalCostMultipliers[leadSingleSeason as keyof typeof seasonalCostMultipliers] || 1;
         
         leadSingleBoost = timingBonus * leadSingleMarketingBonus;
@@ -4293,8 +4253,8 @@ export class GameEngine {
     const releaseConfig = {
       releaseType: release.type as 'single' | 'ep' | 'album',
       leadSingleId: leadSingleStrategy?.leadSingleId,
-      seasonalTiming: this.getSeasonFromMonth(release.releaseMonth),
-      scheduledReleaseMonth: release.releaseMonth,
+      seasonalTiming: getSeasonFromWeek(release.releaseWeek),
+      scheduledReleaseWeek: release.releaseWeek,
       marketingBudget,
       leadSingleStrategy
     };
@@ -4336,7 +4296,7 @@ export class GameEngine {
     }
     
     // Seasonal competition risk
-    const releaseSeason = this.getSeasonFromMonth(releaseConfig.scheduledReleaseMonth);
+    const releaseSeason = getSeasonFromWeek(releaseConfig.scheduledReleaseWeek);
     if (releaseSeason === 'q4') {
       risks.push("High competition period - Q4 releases face maximum market saturation");
     }
@@ -4391,7 +4351,7 @@ export class GameEngine {
     }
     
     // Seasonal recommendations
-    const releaseSeason = this.getSeasonFromMonth(releaseConfig.scheduledReleaseMonth);
+    const releaseSeason = getSeasonFromWeek(releaseConfig.scheduledReleaseWeek);
     if (releaseSeason === 'q1') {
       recommendations.push("Q1 release - lower competition but reduced market activity");
     }

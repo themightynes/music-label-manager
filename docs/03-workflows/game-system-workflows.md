@@ -332,10 +332,10 @@ option         Delayed =           right now     systems
 ### **Campaign Progression Flow**
 
 ```
-Month 12 Reached → Final Calculations → Score Generation → Results Display → Restart Option
+Week 52 Reached → Final Calculations → Score Generation → Results Display → Restart Option
        ↓                ↓                   ↓                ↓                 ↓
 System detects     Calculate final     Generate score    Show completion   Allow new
-month 12           money, reputation   based on          modal with        campaign
+week 52            money, reputation   based on          modal with        campaign
 completion         project success     achievements      final results     creation
 ```
 

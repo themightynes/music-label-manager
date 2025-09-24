@@ -2,7 +2,7 @@
  * ChartService.ts
  *
  * Chart system for music industry simulation
- * Manages weekly/monthly chart generation combining player songs with competitor performance
+ * Manages weekly/weekly chart generation combining player songs with competitor performance
  *
  * This service creates a realistic chart environment where player songs compete
  * against simulated industry competitors for chart positions 1-100 based on streaming data.
@@ -24,7 +24,7 @@ export interface ReleasedSongData {
   title: string;
   artistName: string;
   totalStreams: number;
-  monthlyStreams: number;
+  weeklyStreams: number;
 }
 
 // Storage interface for chart operations
@@ -74,11 +74,11 @@ export class ChartService {
   }
 
   /**
-   * Main method to generate monthly chart combining player and competitor songs
-   * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the month
+   * Main method to generate weekly chart combining player and competitor songs
+   * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the week
    * @param dbTransaction Optional database transaction
    */
-  async generateMonthlyChart(chartWeek: Date | string, dbTransaction?: any): Promise<void> {
+  async generateWeeklyChart(chartWeek: Date | string, dbTransaction?: any): Promise<void> {
     try {
       // Get active player songs (released songs with streaming data)
       const playerSongs = await this.getActiveSongs(dbTransaction);
@@ -93,7 +93,7 @@ export class ChartService {
       await this.createChartEntries(chartWeek, allSongs, dbTransaction);
 
     } catch (error) {
-      console.error('[CHART SERVICE] Error generating monthly chart:', error);
+      console.error('[CHART SERVICE] Error generating weekly chart:', error);
       throw error;
     }
   }
@@ -108,12 +108,12 @@ export class ChartService {
       this.refreshSongsCache(releasedSongs);
 
       return releasedSongs
-        .filter((song: ReleasedSongData) => song.monthlyStreams > 0) // Only songs with monthly streams
+        .filter((song: ReleasedSongData) => song.weeklyStreams > 0) // Only songs with weekly streams
         .map((song: ReleasedSongData): SongPerformance => ({
           id: `player_${song.id}`,
           title: song.title,
           artist: song.artistName || 'Unknown Artist',
-          streams: song.monthlyStreams || 0, // Use current monthly streams for chart
+          streams: song.weeklyStreams || 0, // Use current weekly streams for chart
           isPlayerSong: true,
           songId: song.id
         }));
@@ -177,7 +177,7 @@ export class ChartService {
 
   /**
    * Creates chart entries in database with position calculations
-   * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the month
+   * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the week
    * @param dbTransaction Optional database transaction
    */
   private async createChartEntries(chartWeek: Date | string, rankedSongs: SongPerformance[], dbTransaction?: any): Promise<void> {
@@ -392,37 +392,38 @@ export class ChartService {
 
   /**
    * Normalizes chart week input to Date object for database operations
-   * @param chartWeek Date object or ISO date string (YYYY-MM-DD)
-   * @returns Date object normalized to first day of month
+   * @param chartWeek Date object or ISO date string (YYYY-WW-01 where WW is week number)
+   * @returns Date object normalized to week boundary
    */
   private toDbDate(chartWeek: Date | string): Date {
     if (chartWeek instanceof Date) {
       return chartWeek;
     }
-    // Parse ISO string and ensure it's the first day of the month
+    // Parse ISO string and ensure it's the first day of the week
     const date = new Date(chartWeek);
     return new Date(date.getFullYear(), date.getMonth(), 1);
   }
 
   /**
-   * Generates ISO date string for chart week from game month
-   * @param gameMonth The current game month (1-36)
+   * Generates ISO date string for chart week from game week
+   * @param gameWeek The current game week (1-52)
    * @param startYear The starting year of the campaign (default 2024)
-   * @returns ISO date string (YYYY-MM-DD) for the first day of the month
+   * @returns ISO date string (YYYY-MM-DD) for the first day of the week
    */
-  static generateChartWeekFromGameMonth(gameMonth: number, startYear: number = 2024): string {
-    const monthIndex = ((gameMonth - 1) % 12);
-    const yearOffset = Math.floor((gameMonth - 1) / 12);
+  static generateChartWeekFromGameWeek(gameWeek: number, startYear: number = 2024): string {
+    // TRUE WEEKLY SYSTEM: 52 weeks per year
+    const weekIndex = ((gameWeek - 1) % 52);
+    const yearOffset = Math.floor((gameWeek - 1) / 52);
     const year = startYear + yearOffset;
-    const month = monthIndex + 1;
+    const week = weekIndex + 1;
 
-    // Return first day of month in ISO format (YYYY-MM-DD)
-    return `${year}-${month.toString().padStart(2, '0')}-01`;
+    // Return ISO week format (YYYY-WW-01 where WW is week number)
+    return `${year}-${week.toString().padStart(2, '0')}-01`;
   }
 
   /**
    * Gets chart data for a specific week (for UI display)
-   * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the month
+   * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the week
    */
   async getChartForWeek(chartWeek: Date | string): Promise<DbChartEntry[]> {
     try {

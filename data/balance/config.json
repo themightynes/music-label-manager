@@ -5,7 +5,7 @@
   
   "ui_constants": {
     "load_time_target_ms": 4000,
-    "month_resolution_target_ms": 300,
+    "week_resolution_target_ms": 300,
     "bundle_size_target_mb": 1.2,
     "animation_duration_ms": 250,
     "toast_duration_ms": 3000

@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "generated": "2025-08-14",
   "starting_money": 500000,
-  "monthly_burn_base": [3000, 6000],
+  "weekly_burn_base": [3000, 6000],
   "bankruptcy_threshold": -10000,
   "rng_variance": [0.9, 1.1],
   

@@ -6,9 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 
 export function ToastNotification() {
   const { toast, dismiss } = useToast();
-  const { gameState, monthlyOutcome, projects } = useGameStore();
+  const { gameState, weeklyOutcome, projects } = useGameStore();
   const prevGameState = useRef(gameState);
-  const prevMonthlyOutcome = useRef(monthlyOutcome);
+  const prevWeeklyOutcome = useRef(weeklyOutcome);
   const [recentToasts, setRecentToasts] = useState<Set<string>>(new Set());
 
   // Helper function to format currency
@@ -163,30 +163,30 @@ export function ToastNotification() {
       }
     }
 
-    // Access tier notifications are now handled server-side in MonthSummary
+    // Access tier notifications are now handled server-side in WeekSummary
     // This ensures consistency with other progression notifications
 
     prevGameState.current = gameState;
-    prevMonthlyOutcome.current = monthlyOutcome;
-  }, [gameState, monthlyOutcome, toast]);
+    prevWeeklyOutcome.current = weeklyOutcome;
+  }, [gameState, weeklyOutcome, toast]);
 
-  // Enhanced monthly outcome notifications
+  // Enhanced weekly outcome notifications
   useEffect(() => {
-    if (!monthlyOutcome || monthlyOutcome === prevMonthlyOutcome.current) {
+    if (!weeklyOutcome || weeklyOutcome === prevWeeklyOutcome.current) {
       return;
     }
 
     // Group and process changes more intelligently
-    if (monthlyOutcome.changes) {
-      const projectCompletions = monthlyOutcome.changes.filter((c: any) => c.type === 'project_complete');
-      const revenueChanges = monthlyOutcome.changes.filter((c: any) => c.type === 'revenue');
-      const achievements = monthlyOutcome.changes.filter((c: any) => c.type === 'unlock');
+    if (weeklyOutcome.changes) {
+      const projectCompletions = weeklyOutcome.changes.filter((c: any) => c.type === 'project_complete');
+      const revenueChanges = weeklyOutcome.changes.filter((c: any) => c.type === 'revenue');
+      const achievements = weeklyOutcome.changes.filter((c: any) => c.type === 'unlock');
       
       // Enhanced: Filter mood and loyalty changes from executive meetings
-      const moodChanges = monthlyOutcome.changes.filter((c: any) => 
+      const moodChanges = weeklyOutcome.changes.filter((c: any) => 
         c.type === 'mood' && c.description.includes('meeting decision')
       );
-      const loyaltyChanges = monthlyOutcome.changes.filter((c: any) => 
+      const loyaltyChanges = weeklyOutcome.changes.filter((c: any) => 
         c.type === 'mood' && c.loyaltyBoost && c.description.includes('meeting decision')
       );
 
@@ -221,7 +221,7 @@ export function ToastNotification() {
           setTimeout(() => {
             showEnhancedToast({
               title: '💿 Streaming Success!',
-              description: `Your releases generated ${formatCurrency(totalRevenue)} from streaming this month!`,
+              description: `Your releases generated ${formatCurrency(totalRevenue)} from streaming this week!`,
               type: 'success',
               duration: 5000,
               action: {
@@ -295,19 +295,19 @@ export function ToastNotification() {
         }, (projectCompletions.length + revenueChanges.length + achievements.length + moodChanges.length) * 1500 + index * 800);
       });
 
-      // Show month summary action if significant activity
-      if (monthlyOutcome.changes.length >= 3) {
+      // Show week summary action if significant activity
+      if (weeklyOutcome.changes.length >= 3) {
         setTimeout(() => {
           showEnhancedToast({
-            title: '📊 Busy Month!',
-            description: `${monthlyOutcome.changes.length} significant events occurred this month.`,
+            title: '📊 Busy Week!',
+            description: `${weeklyOutcome.changes.length} significant events occurred this week.`,
             type: 'info',
             duration: 6000,
             action: {
               label: 'View Summary',
               onClick: () => {
-                // Could trigger month summary modal
-                console.log('Show month summary');
+                // Could trigger week summary modal
+                console.log('Show week summary');
               }
             }
           });
@@ -315,8 +315,8 @@ export function ToastNotification() {
       }
     }
 
-    prevMonthlyOutcome.current = monthlyOutcome;
-  }, [monthlyOutcome, toast]);
+    prevWeeklyOutcome.current = weeklyOutcome;
+  }, [weeklyOutcome, toast]);
 
   return <Toaster />;
 }

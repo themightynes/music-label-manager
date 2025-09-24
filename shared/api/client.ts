@@ -1,6 +1,6 @@
 import { 
-  AdvanceMonthRequest, 
-  AdvanceMonthResponse, 
+  AdvanceWeekRequest, 
+  AdvanceWeekResponse, 
   SelectActionsRequest,
   SelectActionsResponse,
   SignArtistRequest, 
@@ -91,9 +91,9 @@ class APIClient {
     return this.request<GetGameStateResponse>(url);
   }
   
-  async advanceMonth(request: AdvanceMonthRequest): Promise<AdvanceMonthResponse> {
-    const validatedRequest = validateRequest(AdvanceMonthRequest, request);
-    return this.request<AdvanceMonthResponse>(API_ROUTES.ADVANCE_MONTH, {
+  async advanceWeek(request: AdvanceWeekRequest): Promise<AdvanceWeekResponse> {
+    const validatedRequest = validateRequest(AdvanceWeekRequest, request);
+    return this.request<AdvanceWeekResponse>(API_ROUTES.ADVANCE_WEEK, {
       method: 'POST',
       body: JSON.stringify(validatedRequest),
     });

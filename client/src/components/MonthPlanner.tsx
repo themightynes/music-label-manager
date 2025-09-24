@@ -9,12 +9,12 @@ import { SelectionSummary } from './SelectionSummary';
 import { ExecutiveMeetings } from './executive-meetings/ExecutiveMeetings';
 import { useGameContext } from '@/contexts/GameContext';
 
-interface MonthPlannerProps {
-  onAdvanceMonth: () => Promise<void>;
+interface WeekPlannerProps {
+  onAdvanceWeek: () => Promise<void>;
   isAdvancing: boolean;
 }
 
-interface MonthlyAction {
+interface WeeklyAction {
   id: string;
   name: string;
   type: string;
@@ -40,13 +40,13 @@ interface MonthlyAction {
   availableMeetings?: number;
 }
 
-export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
+export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
   const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
   const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
 
   // Executive meetings removed - keep empty structure for SelectionSummary compatibility
-  const monthlyActions: MonthlyAction[] = [];
+  const weeklyActions: WeeklyAction[] = [];
   const loading = false;
   const error: string | null = null;
 
@@ -62,13 +62,13 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
             <i className="fas fa-calendar-alt text-white text-xl md:text-2xl"></i>
           </div>
           <div className="flex-1">
-            <h2 className="text-xl md:text-2xl font-bold text-white">Month {gameState.currentMonth} Focus Strategy</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white">Week {gameState.currentWeek} Focus Strategy</h2>
             <p className="text-sm md:text-base text-white/70">
               Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
               {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th slot unlocked!)</span>}
             </p>
           </div>
-          <div className="hidden md:block" title="Focus Slots are your monthly action points. Each strategic action requires one focus slot.">
+          <div className="hidden md:block" title="Focus Slots are your weekly action points. Each strategic action requires one focus slot.">
             <i className="fas fa-info-circle text-white/50 hover:text-white/70 cursor-help"></i>
           </div>
         </div>
@@ -108,10 +108,10 @@ export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps)
             <div className="lg:col-span-1">
               <SelectionSummary
                 selectedActions={selectedActions}
-                actions={monthlyActions}
+                actions={weeklyActions}
                 onRemoveAction={removeAction}
                 onReorderActions={reorderActions}
-                onAdvanceMonth={onAdvanceMonth}
+                onAdvanceWeek={onAdvanceWeek}
                 isAdvancing={isAdvancing}
                 impactPreview={{
                   immediate: {},

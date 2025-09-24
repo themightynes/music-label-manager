@@ -3,8 +3,8 @@
  * Test script to verify marketing allocation implementation
  */
 
-import { db } from '../server/db';
-import { songs } from '../shared/schema';
+import { db } from '../../server/db';
+import { songs } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 
 async function testMarketingAllocation() {

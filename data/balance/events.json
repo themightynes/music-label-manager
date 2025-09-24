@@ -1,7 +1,7 @@
 {
   "side_events": {
-    "monthly_chance": 0.20,
-    "max_events_per_month": 1,
+    "weekly_chance": 0.20,
+    "max_events_per_week": 1,
     "event_cooldown": 2,
     
     "event_weights": {

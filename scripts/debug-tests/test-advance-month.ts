@@ -5,7 +5,7 @@ import { db } from './server/db';
 import { gameStates } from './shared/schema';
 import { eq } from 'drizzle-orm';
 
-async function testAdvanceMonth() {
+async function testAdvanceWeek() {
   try {
     // Initialize game data
     const serverGameData = new ServerGameData();
@@ -24,13 +24,13 @@ async function testAdvanceMonth() {
     }
     
     console.log('Current game state money:', gameState.money);
-    console.log('Current month:', gameState.currentMonth);
+    console.log('Current week:', gameState.currentWeek);
     
     // Create game engine
     const gameEngine = new GameEngine(gameState as any, serverGameData, storage);
     
-    // Advance month with no actions
-    const result = await gameEngine.advanceMonth([]);
+    // Advance week with no actions
+    const result = await gameEngine.advanceWeek([]);
     
     console.log('Result money:', result.gameState.money);
     console.log('Financial breakdown:', result.summary.financialBreakdown);
@@ -45,4 +45,4 @@ async function testAdvanceMonth() {
   }
 }
 
-testAdvanceMonth();
+testAdvanceWeek();

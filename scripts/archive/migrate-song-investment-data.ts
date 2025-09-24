@@ -3,8 +3,8 @@
  * One-time migration script to move investment data from metadata to proper columns
  */
 
-import { db } from '../server/db';
-import { songs, projects } from '../shared/schema';
+import { db } from '../../server/db';
+import { songs, projects } from '../../shared/schema';
 import { sql, eq } from 'drizzle-orm';
 
 async function migrateSongInvestmentData() {

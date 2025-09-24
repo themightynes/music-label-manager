@@ -96,7 +96,7 @@ function ChoiceEffects({ choice }: { choice: DialogueChoice }) {
         <div>
           <div className="flex items-center gap-1 mb-1">
             <Clock className="h-3 w-3 text-blue-300" />
-            <span className="text-xs font-medium text-white/70">Next Month</span>
+            <span className="text-xs font-medium text-white/70">Next Week</span>
           </div>
           <div className="flex flex-wrap gap-1">
             {Object.entries(choice.effects_delayed).map(([effect, value]) =>

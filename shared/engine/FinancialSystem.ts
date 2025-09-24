@@ -13,8 +13,8 @@
  */
 
 // Import types from the correct location
-import type { MonthSummary } from '../types/gameTypes';
-import type { MonthlyFinancials } from './game-engine';
+import type { WeekSummary } from '../types/gameTypes';
+import type { WeeklyFinancials } from './game-engine';
 
 /**
  * Types for tour calculation parameters and results
@@ -896,13 +896,13 @@ export class FinancialSystem {
    */
   private calculateDecayRevenue(
     initialStreams: number,
-    monthsSinceRelease: number,
+    weeksSinceRelease: number,
     reputation: number,
     playlistAccess: string,
     entityName: string = 'entity'
   ): number {
-    // No revenue if just released this month or no initial streams
-    if (monthsSinceRelease <= 0) {
+    // No revenue if just released this week or no initial streams
+    if (weeksSinceRelease <= 0) {
       // console.log(`[DECAY CALC] No revenue for ${entityName} - just released or future release`);
       return 0;
     }
@@ -916,8 +916,8 @@ export class FinancialSystem {
     const streamingConfig = this.gameData.getStreamingConfigSync();
     const ongoingConfig = streamingConfig.ongoing_streams;
     
-    const decayRate = ongoingConfig.monthly_decay_rate;
-    const maxDecayMonths = ongoingConfig.max_decay_months;
+    const decayRate = ongoingConfig.weekly_decay_rate;
+    const maxDecayWeeks = ongoingConfig.max_decay_weeks;
     const revenuePerStream = ongoingConfig.revenue_per_stream;
     const ongoingFactor = ongoingConfig.ongoing_factor;
     const reputationBonusFactor = ongoingConfig.reputation_bonus_factor;
@@ -925,13 +925,13 @@ export class FinancialSystem {
     const minimumThreshold = ongoingConfig.minimum_revenue_threshold;
     
     // Stop generating revenue after max decay period
-    if (monthsSinceRelease > maxDecayMonths) {
-      // console.log(`[DECAY CALC] ${entityName} too old (${monthsSinceRelease} > ${maxDecayMonths} months), returning $0`);
+    if (weeksSinceRelease > maxDecayWeeks) {
+      // console.log(`[DECAY CALC] ${entityName} too old (${weeksSinceRelease} > ${maxDecayWeeks} weeks), returning $0`);
       return 0;
     }
     
     // Decay formula: starts high, gradually decreases
-    const baseDecay = Math.pow(decayRate, monthsSinceRelease);
+    const baseDecay = Math.pow(decayRate, weeksSinceRelease);
     // console.log(`[DECAY CALC] Decay rate: ${decayRate}, Base decay: ${baseDecay.toFixed(4)}`);
     
     // Apply current reputation and access tier bonuses
@@ -939,12 +939,12 @@ export class FinancialSystem {
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
     const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
     
-    // Calculate monthly streams with decay
-    const monthlyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
-    // console.log(`[DECAY CALC] Monthly streams for ${entityName}: ${monthlyStreams.toFixed(2)}`);
+    // Calculate weekly streams with decay
+    const weeklyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
+    // console.log(`[DECAY CALC] Weekly streams for ${entityName}: ${weeklyStreams.toFixed(2)}`);
     
     // Convert to revenue
-    const revenue = Math.max(0, Math.round(monthlyStreams * revenuePerStream));
+    const revenue = Math.max(0, Math.round(weeklyStreams * revenuePerStream));
     
     // Apply minimum threshold
     if (revenue < minimumThreshold) {
@@ -962,23 +962,23 @@ export class FinancialSystem {
    */
   calculateOngoingSongRevenue(
     song: any, 
-    currentMonth: number, 
+    currentWeek: number, 
     reputation: number, 
     playlistAccess: string
   ): number {
-    const releaseMonth = song.releaseMonth || 1;
-    const monthsSinceRelease = currentMonth - releaseMonth;
+    const releaseWeek = song.releaseWeek || 1;
+    const weeksSinceRelease = currentWeek - releaseWeek;
     const initialStreams = song.initialStreams || 0;
     
     // console.log(`[SONG REVENUE CALC] === Calculating for "${song.title}" ===`);
     // console.log(`[SONG REVENUE CALC] Quality: ${song.quality}, Initial streams: ${initialStreams}`);
-    // console.log(`[SONG REVENUE CALC] Release month: ${releaseMonth}, Current month: ${currentMonth}`);
-    // console.log(`[SONG REVENUE CALC] Months since release: ${monthsSinceRelease}`);
+    // console.log(`[SONG REVENUE CALC] Release week: ${releaseWeek}, Current week: ${currentWeek}`);
+    // console.log(`[SONG REVENUE CALC] Weeks since release: ${weeksSinceRelease}`);
     
     // Use common decay calculation logic
     return this.calculateDecayRevenue(
       initialStreams,
-      monthsSinceRelease,
+      weeksSinceRelease,
       reputation,
       playlistAccess,
       `"${song.title}"`
@@ -1422,7 +1422,7 @@ export class FinancialSystem {
 
 
   /**
-   * Calculates executive salaries for the month
+   * Calculates executive salaries for the week
    * Gets executives from the database and looks up their salaries from roles.json
    * @param gameId The game ID to get executives for
    * @param storage The storage instance to fetch executives
@@ -1507,40 +1507,40 @@ export class FinancialSystem {
   }
 
   /**
-   * Calculates monthly burn with detailed breakdown
+   * Calculates weekly burn with detailed breakdown
    * Originally from game-engine.ts line 572-617
    * Now accepts optional artist data to maintain pure function principle
    */
-  async calculateMonthlyBurnWithBreakdown(
+  async calculateWeeklyBurnWithBreakdown(
     gameStateId: string,
     storageOrArtistData?: any
   ): Promise<{
     total: number;
     baseBurn: number;
     artistCosts: number;
-    artistDetails: Array<{name: string, monthlyFee: number}>;
+    artistDetails: Array<{name: string, weeklyFee: number}>;
   }> {
-    const [min, max] = this.gameData.getMonthlyBurnRangeSync();
+    const [min, max] = this.gameData.getWeeklyBurnRangeSync();
     const baseBurn = Math.round(this.getRandom(min, max));
     
     // Add actual artist costs from signed artists
     let artistCosts = 0;
-    let artistDetails: Array<{name: string, monthlyFee: number}> = [];
+    let artistDetails: Array<{name: string, weeklyFee: number}> = [];
     
     // Check if we received artist data directly (preferred) or need to fetch from storage
     if (Array.isArray(storageOrArtistData)) {
       // Artist data was passed directly - use it
       artistDetails = storageOrArtistData.map((artist: any) => ({
         name: artist.name,
-        monthlyFee: artist.monthlyFee || 1200
+        weeklyFee: artist.weeklyFee || 1200
       }));
       
-      artistCosts = artistDetails.reduce((sum, artist) => sum + artist.monthlyFee, 0);
+      artistCosts = artistDetails.reduce((sum, artist) => sum + artist.weeklyFee, 0);
       
       // console.log(`[ARTIST COSTS BREAKDOWN] Base operations: $${baseBurn}`);
       // console.log(`[ARTIST COSTS BREAKDOWN] Artist details:`, artistDetails);
       // console.log(`[ARTIST COSTS BREAKDOWN] Total artist costs: $${artistCosts}`);
-      // console.log(`[ARTIST COSTS BREAKDOWN] Total monthly burn: $${baseBurn + artistCosts}`);
+      // console.log(`[ARTIST COSTS BREAKDOWN] Total weekly burn: $${baseBurn + artistCosts}`);
     } else {
       // Legacy path: storageOrArtistData is a storage object
       try {
@@ -1548,28 +1548,28 @@ export class FinancialSystem {
           const signedArtists = await storageOrArtistData.getArtistsByGame(gameStateId);
           artistDetails = signedArtists.map((artist: any) => ({
             name: artist.name,
-            monthlyFee: artist.monthlyFee || this.CONSTANTS.DEFAULT_ARTIST_FEE
+            weeklyFee: artist.weeklyFee || this.CONSTANTS.DEFAULT_ARTIST_FEE
           }));
           
-          artistCosts = artistDetails.reduce((sum, artist) => sum + artist.monthlyFee, 0);
+          artistCosts = artistDetails.reduce((sum, artist) => sum + artist.weeklyFee, 0);
           
           // console.log(`[ARTIST COSTS BREAKDOWN] Base operations: $${baseBurn}`);
           // console.log(`[ARTIST COSTS BREAKDOWN] Artist details:`, artistDetails);
           // console.log(`[ARTIST COSTS BREAKDOWN] Total artist costs: $${artistCosts}`);
-          // console.log(`[ARTIST COSTS BREAKDOWN] Total monthly burn: $${baseBurn + artistCosts}`);
+          // console.log(`[ARTIST COSTS BREAKDOWN] Total weekly burn: $${baseBurn + artistCosts}`);
         } else {
           // No storage or artist data available - use fallback
           // console.warn('[ARTIST COSTS] No artist data or storage provided, using default estimation');
           const estimatedArtists = 1;
           artistCosts = estimatedArtists * this.CONSTANTS.DEFAULT_ARTIST_FEE; // Use average cost as fallback
-          artistDetails = [{name: 'Estimated Artists', monthlyFee: artistCosts}];
+          artistDetails = [{name: 'Estimated Artists', weeklyFee: artistCosts}];
         }
       } catch (error) {
         // console.error('[ARTIST COSTS] Error fetching signed artists, using fallback calculation:', error);
         // Fallback estimation if database query fails
         const estimatedArtists = 1;
         artistCosts = estimatedArtists * 1200; // Use average cost as fallback
-        artistDetails = [{name: 'Estimated Artists', monthlyFee: artistCosts}];
+        artistDetails = [{name: 'Estimated Artists', weeklyFee: artistCosts}];
       }
     }
     
@@ -1582,23 +1582,23 @@ export class FinancialSystem {
   }
 
   /**
-   * Calculates comprehensive monthly financials
+   * Calculates comprehensive weekly financials
    * Originally from game-engine.ts line 3126-3172
    */
-  calculateMonthlyFinancials(
-    summary: MonthSummary, 
+  calculateWeeklyFinancials(
+    summary: WeekSummary, 
     startingMoney: number
-  ): MonthlyFinancials {
+  ): WeeklyFinancials {
     const starting = startingMoney || 0;
     
     // Use the already-calculated operations costs from the expense breakdown
     // This ensures we don't recalculate with a different random value
     // TODO: Executive costs remain in the breakdown even though the client UI no longer surfaces executive actions.
     const operations = {
-      base: summary.expenseBreakdown?.monthlyOperations || 0,
+      base: summary.expenseBreakdown?.weeklyOperations || 0,
       artists: summary.expenseBreakdown?.artistSalaries || 0,
       executives: summary.expenseBreakdown?.executiveSalaries || 0,
-      total: (summary.expenseBreakdown?.monthlyOperations || 0) + 
+      total: (summary.expenseBreakdown?.weeklyOperations || 0) + 
              (summary.expenseBreakdown?.artistSalaries || 0) + 
              (summary.expenseBreakdown?.executiveSalaries || 0)
     };
@@ -1620,10 +1620,10 @@ export class FinancialSystem {
     const streamingRevenue = summary.revenue || 0;
     
     // Use the already accumulated totals from the summary
-    const totalExpenses = summary.expenses; // Already accumulated throughout the month
-    const totalRevenue = summary.revenue;   // Already accumulated throughout the month
+    const totalExpenses = summary.expenses; // Already accumulated throughout the week
+    const totalRevenue = summary.revenue;   // Already accumulated throughout the week
     
-    const financials: MonthlyFinancials = {
+    const financials: WeeklyFinancials = {
       startingBalance: starting,
       operations,
       projects,
@@ -1644,7 +1644,7 @@ export class FinancialSystem {
    * Generates human-readable financial breakdown string
    * Originally from game-engine.ts line 3089-3120
    */
-  private generateFinancialBreakdown(f: MonthlyFinancials): string {
+  private generateFinancialBreakdown(f: WeeklyFinancials): string {
     const parts: string[] = [`$${f.startingBalance.toLocaleString()}`];
     
     if (f.operations.base > 0) {

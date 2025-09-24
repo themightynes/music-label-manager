@@ -13,7 +13,7 @@ type Top100Entry = ChartEntry;
 
 interface Top100ChartData {
   chartWeek: string;
-  currentMonth: number;
+  currentWeek: number;
   top100: Top100Entry[];
 }
 
@@ -21,7 +21,7 @@ export function Top100ChartDisplay() {
   console.log('🚀 Top100ChartDisplay component rendering...');
 
   const { gameState } = useGameStore();
-  console.log('🎮 GameState from store:', { id: gameState?.id, currentMonth: gameState?.currentMonth });
+  console.log('🎮 GameState from store:', { id: gameState?.id, currentWeek: gameState?.currentWeek });
 
   const [chartData, setChartData] = useState<Top100ChartData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,7 +152,7 @@ export function Top100ChartDisplay() {
             <Trophy className="w-5 h-5 text-yellow-600" />
             <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
             <Badge variant="outline" className="text-xs">
-              Month {chartData.currentMonth}
+              Week {chartData.currentWeek}
             </Badge>
           </div>
 

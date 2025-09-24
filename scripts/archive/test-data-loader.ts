@@ -1,4 +1,4 @@
-import { gameDataLoader } from '../shared/utils/dataLoader';
+import { gameDataLoader } from '../../shared/utils/dataLoader';
 
 async function testDataLoader() {
   console.log('Testing data loader directly...\n');

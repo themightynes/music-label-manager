@@ -42,7 +42,7 @@ import {
 
 interface ReleaseWorkflowCardProps {
   release: any;
-  currentMonth: number;
+  currentWeek: number;
   artistName: string;
   onReleasePage?: boolean;
   songs?: any[]; // Songs from useGameStore for enhanced released view
@@ -50,7 +50,7 @@ interface ReleaseWorkflowCardProps {
 
 export function ReleaseWorkflowCard({ 
   release, 
-  currentMonth, 
+  currentWeek, 
   artistName,
   onReleasePage = false,
   songs = []
@@ -105,20 +105,20 @@ export function ReleaseWorkflowCard({
   const getTimelineProgress = () => {
     if (!hasLeadSingle) {
       // Simple single release or EP without lead single
-      const progress = currentMonth >= release.releaseMonth ? 100 : 0;
+      const progress = currentWeek >= release.releaseWeek ? 100 : 0;
       return { progress, phase: progress === 100 ? 'released' : 'planned' };
     }
     
     // Multi-phase campaign
-    const leadMonth = leadSingleStrategy.leadSingleReleaseMonth;
-    const mainMonth = release.releaseMonth;
+    const leadWeek = leadSingleStrategy.leadSingleReleaseWeek;
+    const mainWeek = release.releaseWeek;
     
-    if (currentMonth < leadMonth) {
+    if (currentWeek < leadWeek) {
       return { progress: 0, phase: 'pre-campaign' };
-    } else if (currentMonth >= leadMonth && currentMonth < mainMonth) {
-      const campaignProgress = ((currentMonth - leadMonth + 1) / (mainMonth - leadMonth + 1)) * 50;
+    } else if (currentWeek >= leadWeek && currentWeek < mainWeek) {
+      const campaignProgress = ((currentWeek - leadWeek + 1) / (mainWeek - leadWeek + 1)) * 50;
       return { progress: campaignProgress, phase: 'lead-single-active' };
-    } else if (currentMonth >= mainMonth) {
+    } else if (currentWeek >= mainWeek) {
       return { progress: 100, phase: 'fully-released' };
     }
     
@@ -215,7 +215,7 @@ export function ReleaseWorkflowCard({
           icon: Calendar,
           color: 'text-yellow-600 bg-yellow-100',
           label: 'Scheduled',
-          description: 'Awaiting release month'
+          description: 'Awaiting release week'
         };
     }
   };
@@ -245,7 +245,7 @@ export function ReleaseWorkflowCard({
             </div>
             <div className="text-right">
               <div className="text-sm font-semibold">{campaignData.strategy === 'lead_single' ? 'Lead Single Strategy' : 'Direct Release'}</div>
-              <div className="text-xs text-white/50">{campaignData.campaignDuration} month campaign</div>
+              <div className="text-xs text-white/50">{campaignData.campaignDuration} week campaign</div>
             </div>
           </div>
           
@@ -491,16 +491,16 @@ export function ReleaseWorkflowCard({
             <div className="space-y-2">
               {/* Lead Single Phase */}
               <div className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
-                currentMonth >= leadSingleStrategy.leadSingleReleaseMonth 
+                currentWeek >= leadSingleStrategy.leadSingleReleaseWeek 
                   ? 'bg-green-900/30 border border-green-600/40' 
-                  : currentMonth === leadSingleStrategy.leadSingleReleaseMonth - 1
+                  : currentWeek === leadSingleStrategy.leadSingleReleaseWeek - 1
                   ? 'bg-amber-900/30 border border-amber-600/40'
                   : 'bg-[#3c252d]/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                  currentMonth >= leadSingleStrategy.leadSingleReleaseMonth 
+                  currentWeek >= leadSingleStrategy.leadSingleReleaseWeek 
                     ? 'bg-green-600' 
-                    : currentMonth === leadSingleStrategy.leadSingleReleaseMonth - 1
+                    : currentWeek === leadSingleStrategy.leadSingleReleaseWeek - 1
                     ? 'bg-amber-600'
                     : 'bg-[#65557c]/60'
                 }`} />
@@ -509,7 +509,7 @@ export function ReleaseWorkflowCard({
                     <Play className="w-3 h-3" />
                     <span className="text-sm font-medium">Lead Single</span>
                     <Badge variant="secondary" className="text-xs">
-                      Month {leadSingleStrategy.leadSingleReleaseMonth}
+                      Week {leadSingleStrategy.leadSingleReleaseWeek}
                     </Badge>
                   </div>
                   <div className="text-xs text-white/70 mt-1">
@@ -525,16 +525,16 @@ export function ReleaseWorkflowCard({
 
               {/* Main Release Phase */}
               <div className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
-                currentMonth >= release.releaseMonth 
+                currentWeek >= release.releaseWeek 
                   ? 'bg-green-900/30 border border-green-600/40' 
-                  : currentMonth === release.releaseMonth - 1
+                  : currentWeek === release.releaseWeek - 1
                   ? 'bg-amber-900/30 border border-amber-600/40'
                   : 'bg-[#3c252d]/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                  currentMonth >= release.releaseMonth 
+                  currentWeek >= release.releaseWeek 
                     ? 'bg-green-600' 
-                    : currentMonth === release.releaseMonth - 1
+                    : currentWeek === release.releaseWeek - 1
                     ? 'bg-amber-600'
                     : 'bg-[#65557c]/60'
                 }`} />
@@ -543,7 +543,7 @@ export function ReleaseWorkflowCard({
                     <Music className="w-3 h-3" />
                     <span className="text-sm font-medium">Full {release.type}</span>
                     <Badge variant="secondary" className="text-xs">
-                      Month {release.releaseMonth}
+                      Week {release.releaseWeek}
                     </Badge>
                   </div>
                   <div className="text-xs text-white/70 mt-1">

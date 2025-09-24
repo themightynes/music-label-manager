@@ -43,7 +43,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
         {showHeader && (
           <h3 className={`text-lg font-semibold ${headerTextClasses} mb-3`}>Chart Performance</h3>
         )}
-        <p className={`${subTextClasses} text-center py-4`}>No chart activity this month</p>
+        <p className={`${subTextClasses} text-center py-4`}>No chart activity this week</p>
       </div>
     );
   }

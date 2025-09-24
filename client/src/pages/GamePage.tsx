@@ -21,7 +21,7 @@ export default function GamePage() {
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [isCreatingGameWithLabel, setIsCreatingGameWithLabel] = useState(false);
 
-  const { gameState, campaignResults, createNewGame, isAdvancingMonth, loadGame } = useGameStore();
+  const { gameState, campaignResults, createNewGame, isAdvancingWeek, loadGame } = useGameStore();
   const { setGameId } = useGameContext();
   const { toast } = useToast();
   
@@ -94,7 +94,7 @@ export default function GamePage() {
 
   // Check if loaded game has no music label and show creation modal (backup check)
   useEffect(() => {
-    if (gameState && !(gameState as any).musicLabel && !isInitializing && gameState.currentMonth === 1) {
+    if (gameState && !(gameState as any).musicLabel && !isInitializing && gameState.currentWeek === 1) {
       console.log('🎵 Backup check: Game state loaded without musicLabel, showing label creation modal');
       setShowLabelModal(true);
     }
@@ -153,7 +153,7 @@ export default function GamePage() {
 
   const handleLabelModalOpenChange = async (open: boolean) => {
     // If modal is closing (open becomes false) and we have a game but no label, create default label (only for new games)
-    if (!open && gameState && !(gameState as any).musicLabel && gameState.currentMonth === 1) {
+    if (!open && gameState && !(gameState as any).musicLabel && gameState.currentWeek === 1) {
       await createDefaultLabelForGame(gameState.id);
     }
     setShowLabelModal(open);

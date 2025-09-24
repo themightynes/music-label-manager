@@ -1,4 +1,4 @@
-import { serverGameData } from '../shared/utils/dataLoader';
+import { serverGameData } from '../../shared/utils/dataLoader';
 
 async function testRoleLookup() {
   console.log('\n=== Testing Role Lookup ===\n');

@@ -1,9 +1,9 @@
 import {
   users, gameSaves, artists, roles, projects, dialogueChoices,
-  gameEvents, gameStates, monthlyActions, songs, releases, releaseSongs, executives, chartEntries, musicLabels,
+  gameEvents, gameStates, weeklyActions, songs, releases, releaseSongs, executives, chartEntries, musicLabels,
   type User, type InsertUser, type GameSave, type InsertGameSave,
   type Artist, type InsertArtist, type Project, type InsertProject,
-  type GameState, type InsertGameState, type MonthlyAction, type InsertMonthlyAction,
+  type GameState, type InsertGameState, type WeeklyAction, type InsertWeeklyAction,
   type DialogueChoice, type GameEvent, type Role,
   type Song, type InsertSong, type Release, type InsertRelease,
   type ReleaseSong, type InsertReleaseSong, type ChartEntry as DbChartEntry, type InsertChartEntry,
@@ -61,7 +61,7 @@ export interface IStorage {
   getRelease(id: string): Promise<Release | undefined>;
   createRelease(release: InsertRelease): Promise<Release>;
   updateRelease(id: string, release: Partial<InsertRelease>): Promise<Release>;
-  getPlannedReleases(gameId: string, month: number, dbTransaction?: any): Promise<Release[]>;
+  getPlannedReleases(gameId: string, week: number, dbTransaction?: any): Promise<Release[]>;
   getSongsByRelease(releaseId: string, dbTransaction?: any): Promise<Song[]>;
   updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any): Promise<Release>;
 
@@ -79,9 +79,9 @@ export interface IStorage {
   getDialogueChoices(roleType: string, sceneId?: string): Promise<DialogueChoice[]>;
   getGameEvents(): Promise<GameEvent[]>;
 
-  // Monthly actions
-  getMonthlyActions(gameId: string, month?: number): Promise<MonthlyAction[]>;
-  createMonthlyAction(action: InsertMonthlyAction): Promise<MonthlyAction>;
+  // Weekly actions
+  getWeeklyActions(gameId: string, week?: number): Promise<WeeklyAction[]>;
+  createWeeklyAction(action: InsertWeeklyAction): Promise<WeeklyAction>;
 
   // Chart operations
   getReleasedSongsByGame(gameId: string, dbTransaction?: any): Promise<ReleasedSongData[]>;
@@ -344,7 +344,7 @@ export class DatabaseStorage implements IStorage {
         eq(songs.gameId, gameId),
         eq(songs.isReleased, true)
       ))
-      .orderBy(desc(songs.releaseMonth));
+      .orderBy(desc(songs.releaseWeek));
   }
 
   async getSongsByProject(projectId: string): Promise<Song[]> {
@@ -368,13 +368,13 @@ export class DatabaseStorage implements IStorage {
       console.log(`[STORAGE] 📝 Update data:`, {
         songId: songId,
         isReleased: updateData.isReleased,
-        releaseMonth: updateData.releaseMonth,
+        releaseWeek: updateData.releaseWeek,
         initialStreams: updateData.initialStreams,
-        monthlyStreams: updateData.monthlyStreams,
+        weeklyStreams: updateData.weeklyStreams,
         totalStreams: updateData.totalStreams,
         totalRevenue: updateData.totalRevenue,
-        lastMonthRevenue: updateData.lastMonthRevenue,
-        ...Object.keys(updateData).filter(k => !['isReleased', 'releaseMonth', 'initialStreams', 'monthlyStreams', 'totalStreams', 'totalRevenue', 'lastMonthRevenue'].includes(k))
+        lastWeekRevenue: updateData.lastWeekRevenue,
+        ...Object.keys(updateData).filter(k => !['isReleased', 'releaseWeek', 'initialStreams', 'weeklyStreams', 'totalStreams', 'totalRevenue', 'lastWeekRevenue'].includes(k))
           .reduce((obj, key) => ({ ...obj, [key]: updateData[key] }), {})
       });
       
@@ -423,23 +423,23 @@ export class DatabaseStorage implements IStorage {
     return updatedRelease;
   }
 
-  async getPlannedReleases(gameId: string, month: number, dbTransaction?: any): Promise<Release[]> {
+  async getPlannedReleases(gameId: string, week: number, dbTransaction?: any): Promise<Release[]> {
     const dbContext = dbTransaction || db;
-    console.log(`[STORAGE] getPlannedReleases: gameId=${gameId}, month=${month}, usingTransaction=${!!dbTransaction}`);
+    console.log(`[STORAGE] getPlannedReleases: gameId=${gameId}, week=${week}, usingTransaction=${!!dbTransaction}`);
     
     const result = await dbContext.select().from(releases)
       .where(and(
         eq(releases.gameId, gameId),
         eq(releases.status, 'planned'),
-        lte(releases.releaseMonth, month)
+        lte(releases.releaseWeek, week)
       ))
       .orderBy(releases.createdAt);
     
-    const overdueCount = result.filter((r: any) => r.releaseMonth && r.releaseMonth < month).length;
+    const overdueCount = result.filter((r: any) => r.releaseWeek && r.releaseWeek < week).length;
     console.log(`[STORAGE] getPlannedReleases: found ${result.length} releases (${overdueCount} overdue)`);
     
     if (overdueCount > 0) {
-      console.log(`[STORAGE] ✅ OVERDUE RELEASE DETECTION: Processing ${overdueCount} releases that should have been executed in previous months`);
+      console.log(`[STORAGE] ✅ OVERDUE RELEASE DETECTION: Processing ${overdueCount} releases that should have been executed in previous weeks`);
     }
     return result;
   }
@@ -556,17 +556,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(gameEvents);
   }
 
-  // Monthly actions
-  async getMonthlyActions(gameId: string, month?: number): Promise<MonthlyAction[]> {
-    const conditions = month 
-      ? and(eq(monthlyActions.gameId, gameId), eq(monthlyActions.month, month))
-      : eq(monthlyActions.gameId, gameId);
+  // Weekly actions
+  async getWeeklyActions(gameId: string, week?: number): Promise<WeeklyAction[]> {
+    const conditions = week 
+      ? and(eq(weeklyActions.gameId, gameId), eq(weeklyActions.week, week))
+      : eq(weeklyActions.gameId, gameId);
     
-    return await db.select().from(monthlyActions).where(conditions);
+    return await db.select().from(weeklyActions).where(conditions);
   }
 
-  async createMonthlyAction(action: InsertMonthlyAction): Promise<MonthlyAction> {
-    const [newAction] = await db.insert(monthlyActions).values(action).returning();
+  async createWeeklyAction(action: InsertWeeklyAction): Promise<WeeklyAction> {
+    const [newAction] = await db.insert(weeklyActions).values(action).returning();
     return newAction;
   }
 
@@ -610,7 +610,7 @@ export class DatabaseStorage implements IStorage {
         title: songs.title,
         artistName: artists.name,
         totalStreams: songs.totalStreams,
-        monthlyStreams: songs.monthlyStreams
+        weeklyStreams: songs.weeklyStreams
       })
       .from(songs)
       .innerJoin(artists, eq(songs.artistId, artists.id))
@@ -626,7 +626,7 @@ export class DatabaseStorage implements IStorage {
       title: song.title,
       artistName: song.artistName,
       totalStreams: song.totalStreams || 0,
-      monthlyStreams: song.monthlyStreams || 0
+      weeklyStreams: song.weeklyStreams || 0
     }));
   }
 

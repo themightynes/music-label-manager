@@ -25,7 +25,7 @@ async function testExecutiveAction() {
     const gameState = await gameStateResponse.json();
     const gameId = gameState.id;
     console.log(`   Game ID: ${gameId}`);
-    console.log(`   Current Month: ${gameState.currentMonth}`);
+    console.log(`   Current Week: ${gameState.currentWeek}`);
     
     // 2. Submit a role meeting action with executive metadata
     console.log('\n2. Submitting role meeting action with executive metadata...');

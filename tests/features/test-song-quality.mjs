@@ -101,7 +101,7 @@ for (const talent of TALENTS) {
           const engine = createEngine();
           const artist = {
             id: 'test', name: `T${talent}`, talent,
-            workEthic: 60, popularity: 30, mood: 50, monthlyFee: 5000
+            workEthic: 60, popularity: 30, mood: 50, weeklyFee: 5000
           };
           
           for (let i = 0; i < SONG_COUNT; i++) {

@@ -20,11 +20,11 @@ function testSongNameGeneration() {
   const nameFrequency: Record<string, number> = {};
   const generatedNames: string[] = [];
   
-  // Test with different seeds to simulate different games/months
+  // Test with different seeds to simulate different games/weeks
   const testCases = [
-    { seed: 'game1-month1', count: 100 },
-    { seed: 'game1-month2', count: 100 },
-    { seed: 'game2-month1', count: 100 }
+    { seed: 'game1-week1', count: 100 },
+    { seed: 'game1-week2', count: 100 },
+    { seed: 'game2-week1', count: 100 }
   ];
 
   console.log(`🎲 Generating songs with different seeds:\n`);

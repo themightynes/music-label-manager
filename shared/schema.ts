@@ -18,7 +18,7 @@ export const gameSaves = pgTable("game_saves", {
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   gameState: jsonb("game_state").notNull(),
-  month: integer("month").notNull(),
+  week: integer("week").notNull(),
   isAutosave: boolean("is_autosave").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -32,9 +32,9 @@ export const artists = pgTable("artists", {
   mood: integer("mood").default(50),
   loyalty: integer("loyalty").default(50),
   popularity: integer("popularity").default(0),
-  signedMonth: integer("signed_month"),
+  signedWeek: integer("signed_week"),
   isSigned: boolean("is_signed").default(false),
-  monthlyFee: integer("monthly_fee").default(1200), // Ongoing monthly cost for this artist
+  weeklyFee: integer("weekly_fee").default(1200), // Ongoing weekly cost for this artist
   gameId: uuid("game_id"),
   // Additional artist attributes
   talent: integer("talent").default(50), // 0-100
@@ -42,7 +42,7 @@ export const artists = pgTable("artists", {
   stress: integer("stress").default(0), // 0-100
   creativity: integer("creativity").default(50), // 0-100
   massAppeal: integer("mass_appeal").default(50), // 0-100
-  lastAttentionMonth: integer("last_attention_month").default(1),
+  lastAttentionWeek: integer("last_attention_week").default(1),
   experience: integer("experience").default(0),
   // Mood tracking
   moodHistory: jsonb("mood_history").default('[]'), // Array of mood change events
@@ -60,7 +60,7 @@ export const moodEvents = pgTable("mood_events", {
   moodBefore: integer("mood_before").notNull(), // Mood value before the event
   moodAfter: integer("mood_after").notNull(), // Mood value after the event
   description: text("description").notNull(), // Human-readable description of the event
-  monthOccurred: integer("month_occurred").notNull(), // Game month when this happened
+  weekOccurred: integer("week_occurred").notNull(), // Game week when this happened
   metadata: jsonb("metadata").default('{}'), // Additional event-specific data
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -89,8 +89,8 @@ export const projects = pgTable("projects", {
   budgetPerSong: integer("budget_per_song").default(0),
   totalCost: integer("total_cost").default(0),
   costUsed: integer("cost_used").default(0),
-  dueMonth: integer("due_month"),
-  startMonth: integer("start_month"),
+  dueWeek: integer("due_week"),
+  startWeek: integer("start_week"),
   gameId: uuid("game_id"),
   metadata: jsonb("metadata"), // Additional project-specific data
   // NEW FIELDS for multi-song support
@@ -121,7 +121,7 @@ export const songs = pgTable("songs", {
   quality: integer("quality").notNull(), // 20-100
   genre: text("genre"),
   mood: text("mood"), // upbeat, melancholic, aggressive, chill
-  createdMonth: integer("created_month"),
+  createdWeek: integer("created_week"),
   producerTier: text("producer_tier").default("local"), // local, regional, national, legendary
   timeInvestment: text("time_investment").default("standard"), // rushed, standard, extended, perfectionist
   isRecorded: boolean("is_recorded").default(false),
@@ -136,9 +136,9 @@ export const songs = pgTable("songs", {
   initialStreams: integer("initial_streams").default(0),
   totalStreams: integer("total_streams").default(0),
   totalRevenue: integer("total_revenue").default(0),
-  monthlyStreams: integer("monthly_streams").default(0),
-  lastMonthRevenue: integer("last_month_revenue").default(0),
-  releaseMonth: integer("release_month"),
+  weeklyStreams: integer("weekly_streams").default(0),
+  lastWeekRevenue: integer("last_week_revenue").default(0),
+  releaseWeek: integer("release_week"),
   
   // Investment tracking for ROI analysis
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
@@ -158,12 +158,12 @@ export const songs = pgTable("songs", {
 }, (table) => ({
   // Performance-optimized indexes for producer tier and time investment systems
   portfolioAnalysisIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_portfolio_analysis" ON ${table} ("game_id", "is_recorded", "producer_tier", "time_investment")`,
-  monthlyProcessingIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_monthly_processing" ON ${table} ("game_id", "created_month") WHERE "created_month" IS NOT NULL`,
-  artistHistoryIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_artist_history" ON ${table} ("artist_id", "is_released", "created_month" DESC) WHERE "is_released" = true`,
+  weeklyProcessingIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_weekly_processing" ON ${table} ("game_id", "created_week") WHERE "created_week" IS NOT NULL`,
+  artistHistoryIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_artist_history" ON ${table} ("artist_id", "is_released", "created_week" DESC) WHERE "is_released" = true`,
   tierPerformanceIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_tier_performance" ON ${table} ("game_id", "is_released", "producer_tier", "total_revenue", "total_streams") WHERE "is_released" = true`,
   recordedQualityIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_recorded_quality" ON ${table} ("game_id", "quality", "producer_tier") WHERE "is_recorded" = true`,
   revenueTrackingIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_revenue_tracking" ON ${table} ("game_id", "is_released", "total_revenue" DESC, "total_streams" DESC) WHERE "is_released" = true AND "total_revenue" > 0`,
-  monthlyRevenueIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_monthly_revenue" ON ${table} ("release_month", "last_month_revenue") WHERE "release_month" IS NOT NULL`,
+  weeklyRevenueIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_weekly_revenue" ON ${table} ("release_week", "last_week_revenue") WHERE "release_week" IS NOT NULL`,
   
   // Investment and ROI tracking indexes
   projectSongsIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_by_project" ON ${table} ("project_id") WHERE "project_id" IS NOT NULL`,
@@ -179,7 +179,7 @@ export const releases = pgTable("releases", {
   type: text("type").notNull(), // single, ep, album, compilation
   artistId: uuid("artist_id").references(() => artists.id, { onDelete: "cascade" }).notNull(),
   gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
-  releaseMonth: integer("release_month"),
+  releaseWeek: integer("release_week"),
   totalQuality: integer("total_quality").default(0), // aggregate of song qualities
   marketingBudget: integer("marketing_budget").default(0),
   status: text("status").default("planned"), // planned, released, catalog
@@ -212,7 +212,7 @@ export const dialogueChoices = pgTable("dialogue_choices", {
   sceneId: text("scene_id").notNull(),
   choiceText: text("choice_text").notNull(),
   immediateEffects: jsonb("immediate_effects"), // { money: -2000, reputation: 5 }
-  delayedEffects: jsonb("delayed_effects"), // Effects that happen at month end
+  delayedEffects: jsonb("delayed_effects"), // Effects that happen at week end
   requirements: jsonb("requirements"), // Conditions to show this choice
 });
 
@@ -231,7 +231,7 @@ export const gameEvents = pgTable("game_events", {
 export const gameStates = pgTable("game_states", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").references(() => users.id),
-  currentMonth: integer("current_month").default(1),
+  currentWeek: integer("current_week").default(1),
   money: integer("money").default(75000),
   reputation: integer("reputation").default(0),
   creativeCapital: integer("creative_capital").default(0),
@@ -244,13 +244,13 @@ export const gameStates = pgTable("game_states", {
   rngSeed: text("rng_seed"),
   campaignCompleted: boolean("campaign_completed").default(false),
   flags: jsonb("flags").default('{}'), // Game flags for delayed effects
-  monthlyStats: jsonb("monthly_stats").default('{}'), // Track monthly performance
+  weeklyStats: jsonb("weekly_stats").default('{}'), // Track weekly performance
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   // Indexes for producer tier performance optimization
   reputationLookupIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_reputation_lookup" ON ${table} ("id", "reputation")`,
-  userReputationIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_user_reputation" ON ${table} ("user_id", "reputation", "current_month")`,
+  userReputationIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_user_reputation" ON ${table} ("user_id", "reputation", "current_week")`,
 }));
 
 // TODO: Legacy executive state persisted for compatibility while the client UI is rebuilt (UI removed 2025-09-19).
@@ -262,7 +262,7 @@ export const executives = pgTable("executives", {
   level: integer("level").default(1),
   mood: integer("mood").default(50), // 0-100
   loyalty: integer("loyalty").default(50), // 0-100
-  lastActionMonth: integer("last_action_month"),
+  lastActionWeek: integer("last_action_week"),
   metadata: jsonb("metadata"), // For personality traits, history
 });
 
@@ -271,7 +271,7 @@ export const chartEntries = pgTable("chart_entries", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   songId: uuid("song_id").references(() => songs.id, { onDelete: "cascade" }), // Made optional for competitor songs
   gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
-  chartWeek: date("chart_week").notNull(), // DATE format for monthly snapshots
+  chartWeek: date("chart_week").notNull(), // DATE format for weekly snapshots
   streams: integer("streams").notNull(), // Stream count for chart calculation
   position: integer("position"), // Chart position 1-100+, nullable if not charting
   isCharting: boolean("is_charting").generatedAlwaysAs(sql`position IS NOT NULL AND position <= 100`),
@@ -298,17 +298,17 @@ export const musicLabels = pgTable("music_labels", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull().unique(),
-  foundedMonth: integer("founded_month").default(1),
+  foundedWeek: integer("founded_week").default(1),
   description: text("description"),
   genreFocus: text("genre_focus"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Monthly actions (for tracking player choices)
-export const monthlyActions = pgTable("monthly_actions", {
+// Weekly actions (for tracking player choices)
+export const weeklyActions = pgTable("weekly_actions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   gameId: uuid("game_id").references(() => gameStates.id),
-  month: integer("month").notNull(),
+  week: integer("week").notNull(),
   actionType: text("action_type").notNull(),
   targetId: uuid("target_id"), // Role ID, Project ID, etc.
   choiceId: uuid("choice_id"), // For dialogue choices
@@ -378,9 +378,9 @@ export const releaseSongsRelations = relations(releaseSongs, ({ one }) => ({
   }),
 }));
 
-export const monthlyActionsRelations = relations(monthlyActions, ({ one }) => ({
+export const weeklyActionsRelations = relations(weeklyActions, ({ one }) => ({
   gameState: one(gameStates, {
-    fields: [monthlyActions.gameId],
+    fields: [weeklyActions.gameId],
     references: [gameStates.id],
   }),
 }));
@@ -428,7 +428,7 @@ export const gameStatesRelations = relations(gameStates, ({ one, many }) => ({
   releases: many(releases),
   moodEvents: many(moodEvents),
   chartEntries: many(chartEntries),
-  monthlyActions: many(monthlyActions),
+  weeklyActions: many(weeklyActions),
 }));
 
 // Zod schemas
@@ -471,7 +471,7 @@ export const insertGameStateSchema = createInsertSchema(gameStates).omit({
   updatedAt: true,
 });
 
-export const insertMonthlyActionSchema = createInsertSchema(monthlyActions).omit({
+export const insertWeeklyActionSchema = createInsertSchema(weeklyActions).omit({
   id: true,
   createdAt: true,
 });
@@ -501,7 +501,7 @@ export const labelRequestSchema = createInsertSchema(musicLabels).pick({
   name: true,
   description: true,
   genreFocus: true,
-  foundedMonth: true,
+  foundedWeek: true,
 });
 
 // Types
@@ -536,8 +536,8 @@ export type GameEvent = typeof gameEvents.$inferSelect;
 export type GameState = typeof gameStates.$inferSelect;
 export type InsertGameState = z.infer<typeof insertGameStateSchema>;
 
-export type MonthlyAction = typeof monthlyActions.$inferSelect;
-export type InsertMonthlyAction = z.infer<typeof insertMonthlyActionSchema>;
+export type WeeklyAction = typeof weeklyActions.$inferSelect;
+export type InsertWeeklyAction = z.infer<typeof insertWeeklyActionSchema>;
 
 export type MoodEvent = typeof moodEvents.$inferSelect;
 export type InsertMoodEvent = z.infer<typeof insertMoodEventSchema>;

@@ -11,10 +11,10 @@ async function testExpenseMismatch() {
     // Create storage
     const storage = new DatabaseStorage();
     
-    // Create a mock game state for month 1
+    // Create a mock game state for week 1
     const mockGameState = {
       id: 'test-game',
-      currentMonth: 1,
+      currentWeek: 1,
       money: 500000,
       reputation: 5,
       creativeCapital: 10,
@@ -26,17 +26,17 @@ async function testExpenseMismatch() {
       campaignType: 'standard',
       rngSeed: 'test-seed-123',
       flags: {},
-      monthlyStats: {}
+      weeklyStats: {}
     };
     
     // Create game engine
     const gameEngine = new GameEngine(mockGameState as any, serverGameData, storage);
     
-    // Advance month with no actions (simulating month 1)
-    const result = await gameEngine.advanceMonth([]);
+    // Advance week with no actions (simulating week 1)
+    const result = await gameEngine.advanceWeek([]);
     
     console.log('\n=== EXPENSE MISMATCH TEST ===');
-    console.log('Month:', result.gameState.currentMonth);
+    console.log('Week:', result.gameState.currentWeek);
     console.log('\nMoney:');
     console.log('  Starting:', mockGameState.money);
     console.log('  Ending:', result.gameState.money);
@@ -49,13 +49,13 @@ async function testExpenseMismatch() {
     console.log('\nExpense breakdown:');
     const breakdown = result.summary.expenseBreakdown;
     if (breakdown) {
-      console.log('  monthlyOperations:', breakdown.monthlyOperations);
+      console.log('  weeklyOperations:', breakdown.weeklyOperations);
       console.log('  artistSalaries:', breakdown.artistSalaries);
       console.log('  projectCosts:', breakdown.projectCosts);
       console.log('  marketingCosts:', breakdown.marketingCosts);
       console.log('  roleMeetingCosts:', breakdown.roleMeetingCosts);
       
-      const tooltipTotal = breakdown.monthlyOperations + 
+      const tooltipTotal = breakdown.weeklyOperations + 
                           breakdown.artistSalaries + 
                           breakdown.projectCosts + 
                           breakdown.marketingCosts + 

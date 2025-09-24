@@ -188,10 +188,10 @@ export class MigrationValidator {
         }
 
         // Simulate routes.ts advancement decision
-        const routesDecision = this.simulateRoutesAdvancement(project, gameState.currentMonth || 1);
+        const routesDecision = this.simulateRoutesAdvancement(project, gameState.currentWeek || 1);
         
         // Simulate GameEngine advancement decision
-        const engineDecision = this.simulateEngineAdvancement(project, gameState.currentMonth || 1);
+        const engineDecision = this.simulateEngineAdvancement(project, gameState.currentWeek || 1);
         
         const matched = routesDecision.newStage === engineDecision.newStage;
         
@@ -233,14 +233,14 @@ export class MigrationValidator {
   /**
    * Simulates routes.ts project advancement logic
    */
-  private simulateRoutesAdvancement(project: any, currentMonth: number): {
+  private simulateRoutesAdvancement(project: any, currentWeek: number): {
     newStage: string;
     reason: string;
     shouldAdvance: boolean;
   } {
     const stages = ['planning', 'production', 'released'];
     const currentStageIndex = stages.indexOf(project.stage || 'planning');
-    const monthsElapsed = currentMonth - (project.startMonth || 1);
+    const weeksElapsed = currentWeek - (project.startWeek || 1);
     const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
     const songCount = project.songCount || 1;
     const songsCreated = project.songsCreated || 0;
@@ -250,27 +250,27 @@ export class MigrationValidator {
     let reason = `Staying in ${project.stage} - conditions not met`;
 
     // Replicate routes.ts logic exactly
-    if (currentStageIndex === 0 && monthsElapsed >= 1) {
+    if (currentStageIndex === 0 && weeksElapsed >= 1) {
       newStageIndex = 1;
-      reason = `Planning -> Production after ${monthsElapsed} month(s)`;
+      reason = `Planning -> Production after ${weeksElapsed} week(s)`;
     } else if (currentStageIndex === 1) {
       if (!isRecordingProject) {
-        if (monthsElapsed >= 2) {
+        if (weeksElapsed >= 2) {
           newStageIndex = 2;
-          reason = `Production -> Marketing after ${monthsElapsed} months (non-recording)`;
+          reason = `Production -> Marketing after ${weeksElapsed} weeks (non-recording)`;
         }
       } else {
-        if (allSongsCreated && monthsElapsed >= 2) {
+        if (allSongsCreated && weeksElapsed >= 2) {
           newStageIndex = 2;
-          reason = `Production -> Marketing: all ${songsCreated} songs completed after ${monthsElapsed} months`;
-        } else if (monthsElapsed >= 4) {
+          reason = `Production -> Marketing: all ${songsCreated} songs completed after ${weeksElapsed} weeks`;
+        } else if (weeksElapsed >= 4) {
           newStageIndex = 2;
-          reason = `Production -> Marketing: max time reached (${monthsElapsed} months, ${songsCreated}/${songCount} songs)`;
+          reason = `Production -> Marketing: max time reached (${weeksElapsed} weeks, ${songsCreated}/${songCount} songs)`;
         }
       }
-    } else if (currentStageIndex === 2 && monthsElapsed >= 3) {
+    } else if (currentStageIndex === 2 && weeksElapsed >= 3) {
       newStageIndex = 3;
-      reason = `Marketing -> Released after ${monthsElapsed} months`;
+      reason = `Marketing -> Released after ${weeksElapsed} weeks`;
     }
 
     return {
@@ -283,7 +283,7 @@ export class MigrationValidator {
   /**
    * Simulates GameEngine project advancement logic
    */
-  private simulateEngineAdvancement(project: any, currentMonth: number): {
+  private simulateEngineAdvancement(project: any, currentWeek: number): {
     newStage: string;
     reason: string;
     shouldAdvance: boolean;
@@ -291,7 +291,7 @@ export class MigrationValidator {
     // This should match the logic in GameEngine.advanceProjectStages()
     const stages = ['planning', 'production', 'released'];
     const currentStageIndex = stages.indexOf(project.stage || 'planning');
-    const monthsElapsed = currentMonth - (project.startMonth || 1);
+    const weeksElapsed = currentWeek - (project.startWeek || 1);
     const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
     const songCount = project.songCount || 1;
     const songsCreated = project.songsCreated || 0;
@@ -301,27 +301,27 @@ export class MigrationValidator {
     let reason = `Staying in ${project.stage} - conditions not met`;
 
     // Replicate GameEngine logic exactly
-    if (currentStageIndex === 0 && monthsElapsed >= 1) {
+    if (currentStageIndex === 0 && weeksElapsed >= 1) {
       newStageIndex = 1;
-      reason = `Planning complete after ${monthsElapsed} month${monthsElapsed > 1 ? 's' : ''}`;
+      reason = `Planning complete after ${weeksElapsed} week${weeksElapsed > 1 ? 's' : ''}`;
     } else if (currentStageIndex === 1) {
       if (!isRecordingProject) {
-        if (monthsElapsed >= 2) {
+        if (weeksElapsed >= 2) {
           newStageIndex = 2;
-          reason = `Production complete after ${monthsElapsed} months`;
+          reason = `Production complete after ${weeksElapsed} weeks`;
         }
       } else {
-        if (allSongsCreated && monthsElapsed >= 2) {
+        if (allSongsCreated && weeksElapsed >= 2) {
           newStageIndex = 2;
-          reason = `All ${songsCreated} songs completed after ${monthsElapsed} months`;
-        } else if (monthsElapsed >= 4) {
+          reason = `All ${songsCreated} songs completed after ${weeksElapsed} weeks`;
+        } else if (weeksElapsed >= 4) {
           newStageIndex = 2;
-          reason = `Maximum production time reached (${monthsElapsed} months, ${songsCreated}/${songCount} songs)`;
+          reason = `Maximum production time reached (${weeksElapsed} weeks, ${songsCreated}/${songCount} songs)`;
         }
       }
-    } else if (currentStageIndex === 2 && monthsElapsed >= 3) {
+    } else if (currentStageIndex === 2 && weeksElapsed >= 3) {
       newStageIndex = 3;
-      reason = `Marketing complete after ${monthsElapsed} months`;
+      reason = `Marketing complete after ${weeksElapsed} weeks`;
     }
 
     return {
@@ -370,7 +370,7 @@ export class MigrationValidator {
 
       for (const params of costParams) {
         // Create temporary GameEngine instance for testing
-        const gameState = { id: gameId, currentMonth: 1 } as any;
+        const gameState = { id: gameId, currentWeek: 1 } as any;
         const gameEngine = new GameEngine(gameState, serverGameData, null); // Storage not needed for cost calculation tests
         
         try {
@@ -519,21 +519,21 @@ export class MigrationValidator {
         return [];
       }
 
-      const currentMonth = gameState.currentMonth || 1;
+      const currentWeek = gameState.currentWeek || 1;
 
       // Find projects stuck in production for too long
       const stuckProjects = await db.execute(
         sql`SELECT * FROM projects 
          WHERE game_id = ${gameId} 
          AND stage = 'production' 
-         AND (${currentMonth} - start_month) > 4`
+         AND (${currentWeek} - start_week) > 4`
       );
 
       const stuckProjectsRows = (stuckProjects as any).rows;
       if (stuckProjectsRows.length > 0) {
         edgeCases.push({
           caseType: 'stuck_production_projects',
-          description: `${stuckProjectsRows.length} project(s) stuck in production > 4 months`,
+          description: `${stuckProjectsRows.length} project(s) stuck in production > 4 weeks`,
           affectedProjects: stuckProjectsRows,
           recommendation: 'Force advance to marketing stage or investigate song generation issues',
           severity: 'medium'
@@ -562,12 +562,12 @@ export class MigrationValidator {
       const simultaneousReleases = await db.execute(
         sql`SELECT artist_id, COUNT(*) as release_count, 
                 array_agg(title) as titles,
-                metadata->>'releaseMonth' as release_month
+                metadata->>'releaseWeek' as release_week
          FROM projects 
          WHERE game_id = ${gameId} 
          AND stage = 'released' 
-         AND metadata->>'releaseMonth' IS NOT NULL
-         GROUP BY artist_id, metadata->>'releaseMonth'
+         AND metadata->>'releaseWeek' IS NOT NULL
+         GROUP BY artist_id, metadata->>'releaseWeek'
          HAVING COUNT(*) > 1`
       );
 
@@ -575,7 +575,7 @@ export class MigrationValidator {
       if (simultaneousReleasesRows.length > 0) {
         edgeCases.push({
           caseType: 'simultaneous_releases',
-          description: `${simultaneousReleasesRows.length} instance(s) of multiple releases same month`,
+          description: `${simultaneousReleasesRows.length} instance(s) of multiple releases same week`,
           affectedProjects: simultaneousReleasesRows,
           recommendation: 'Review release scheduling logic',
           severity: 'low'

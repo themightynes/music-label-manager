@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { GameState, Artist, Project, Role, MonthlyAction, MusicLabel } from '@shared/schema';
+import type { GameState, Artist, Project, Role, WeeklyAction, MusicLabel } from '@shared/schema';
 import type { LabelData } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -11,14 +11,14 @@ interface GameStore {
   artists: Artist[];
   projects: Project[];
   roles: Role[];
-  monthlyActions: MonthlyAction[];
+  weeklyActions: WeeklyAction[];
   songs: any[];
   releases: any[];
 
   // UI state
   selectedActions: string[];
-  isAdvancingMonth: boolean;
-  monthlyOutcome: any | null;
+  isAdvancingWeek: boolean;
+  weeklyOutcome: any | null;
   campaignResults: any | null;
   
   // Actions
@@ -27,12 +27,12 @@ interface GameStore {
   createNewGame: (campaignType: string, labelData?: LabelData) => Promise<GameState>;
   updateGameState: (updates: Partial<GameState>) => Promise<void>;
   
-  // Monthly actions
+  // Weekly actions
   selectAction: (actionId: string) => Promise<void>;
   removeAction: (actionId: string) => Promise<void>;
   reorderActions: (startIndex: number, endIndex: number) => void;
   clearActions: () => void;
-  advanceMonth: () => Promise<void>;
+  advanceWeek: () => Promise<void>;
   
   // Artist management
   signArtist: (artistData: any) => Promise<void>;
@@ -55,12 +55,12 @@ export const useGameStore = create<GameStore>()(
       artists: [],
       projects: [],
       roles: [],
-      monthlyActions: [],
+      weeklyActions: [],
       songs: [],
       releases: [],
       selectedActions: [],
-      isAdvancingMonth: false,
-      monthlyOutcome: null,
+      isAdvancingWeek: false,
+      weeklyOutcome: null,
       campaignResults: null,
 
       // Load existing game
@@ -101,7 +101,7 @@ export const useGameStore = create<GameStore>()(
             artists: data.artists,
             projects: data.projects,
             roles: data.roles,
-            monthlyActions: data.monthlyActions,
+            weeklyActions: data.weeklyActions,
             songs,
             releases,
             selectedActions: []
@@ -143,10 +143,10 @@ export const useGameStore = create<GameStore>()(
             artists: savedGameData.artists || [],
             projects: savedGameData.projects || [],
             roles: savedGameData.roles || [],
-            monthlyActions: [], // Reset monthly actions
+            weeklyActions: [], // Reset weekly actions
             selectedActions: [],
             campaignResults: null,
-            monthlyOutcome: null
+            weeklyOutcome: null
           });
           
           // Update the game context with the loaded game's ID
@@ -162,7 +162,7 @@ export const useGameStore = create<GameStore>()(
         try {
           const newGameData = {
             // userId will be set by the server from authentication
-            currentMonth: 1,
+            currentWeek: 1,
             // money will be set by server from balance.json
             // reputation will be set by server from balance.json
             reputation: 0,
@@ -175,7 +175,7 @@ export const useGameStore = create<GameStore>()(
             campaignType,
             rngSeed: Math.random().toString(36),
             flags: {},
-            monthlyStats: {},
+            weeklyStats: {},
             campaignCompleted: false,
             ...(labelData && { labelData })
           };
@@ -185,7 +185,7 @@ export const useGameStore = create<GameStore>()(
 
           console.log('=== CREATE NEW GAME DEBUG ===');
           console.log('New game created:', gameState);
-          console.log('Month should be 1, actual:', gameState.currentMonth);
+          console.log('Week should be 1, actual:', gameState.currentWeek);
           console.log('Game ID:', gameState.id);
 
           // Follow-up GET request to ensure we have complete data including musicLabel
@@ -210,12 +210,12 @@ export const useGameStore = create<GameStore>()(
             artists: [],
             projects: [],
             roles: [],
-            monthlyActions: [],
+            weeklyActions: [],
             songs: [],
             releases: [],
             selectedActions: [],
             campaignResults: null,
-            monthlyOutcome: null
+            weeklyOutcome: null
           });
 
           // Return the new game state so the UI can update
@@ -290,7 +290,7 @@ export const useGameStore = create<GameStore>()(
         }
       },
 
-      // Monthly action selection
+      // Weekly action selection
       selectAction: async (actionId: string) => {
         const { selectedActions, gameState } = get();
         const availableSlots = gameState?.focusSlots || 3;
@@ -357,12 +357,12 @@ export const useGameStore = create<GameStore>()(
         });
       },
 
-      // Advance month
-      advanceMonth: async () => {
+      // Advance week
+      advanceWeek: async () => {
         const { gameState, selectedActions } = get();
         if (!gameState || selectedActions.length === 0) return;
 
-        set({ isAdvancingMonth: true });
+        set({ isAdvancingWeek: true });
 
         try {
           // Use the NEW API endpoint with campaign completion logic
@@ -413,11 +413,11 @@ export const useGameStore = create<GameStore>()(
           
           console.log('[DEBUG CLIENT] Complete advance request:', JSON.stringify(advanceRequest, null, 2));
 
-          const response = await apiRequest('POST', '/api/advance-month', advanceRequest);
+          const response = await apiRequest('POST', '/api/advance-week', advanceRequest);
           const result = await response.json();
           
           // Log the debugging information from our server response
-          console.log('=== ADVANCE MONTH DEBUG INFO ===');
+          console.log('=== ADVANCE WEEK DEBUG INFO ===');
           console.log('Server response result:', result);
           if (result.debugInfo) {
             console.log('Server debug info:', result.debugInfo);
@@ -443,16 +443,16 @@ export const useGameStore = create<GameStore>()(
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
 
-          console.log('=== POST-ADVANCE MONTH STATE SYNC ===');
+          console.log('=== POST-ADVANCE WEEK STATE SYNC ===');
           console.log('Game data releases count:', (gameData.releases || []).length);
           console.log('Direct releases fetch count:', (releases || []).length);
           console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
           console.log('=====================================');
 
-          // Ensure usedFocusSlots is reset to 0 for the new month and preserve musicLabel
+          // Ensure usedFocusSlots is reset to 0 for the new week and preserve musicLabel
           const syncedGameState = {
             ...result.gameState,
-            usedFocusSlots: 0,  // Always 0 at start of new month
+            usedFocusSlots: 0,  // Always 0 at start of new week
             musicLabel: (gameState as any).musicLabel  // Preserve existing music label
           };
 
@@ -462,10 +462,10 @@ export const useGameStore = create<GameStore>()(
             projects: gameData.projects || [], // Update projects with current state
             songs: songs || [], // Update songs to include newly recorded ones
             releases: releases || [], // FIXED: Use explicit releases fetch for accurate status
-            monthlyOutcome: result.summary,
+            weeklyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],
-            isAdvancingMonth: false
+            isAdvancingWeek: false
           });
           
           // Invalidate React Query caches to refresh UI components
@@ -476,8 +476,8 @@ export const useGameStore = create<GameStore>()(
           // CRITICAL: Invalidate executives cache to refresh mood/loyalty after meetings
           await queryClient.invalidateQueries({ queryKey: ['executives'] });
         } catch (error) {
-          console.error('=== ADVANCE MONTH ERROR ===');
-          console.error('Error occurred during month advancement');
+          console.error('=== ADVANCE WEEK ERROR ===');
+          console.error('Error occurred during week advancement');
           console.error('Error type:', typeof error);
           console.error('Error constructor:', error?.constructor?.name);
           console.error('Error instanceof Error:', error instanceof Error);
@@ -506,16 +506,16 @@ export const useGameStore = create<GameStore>()(
             } else if (details && details.message) {
               displayError = new Error(`Server Error: ${details.message}`);
             } else {
-              displayError = new Error(`Advance Month Failed: ${error.message}`);
+              displayError = new Error(`Advance Week Failed: ${error.message}`);
             }
           } else {
-            displayError = new Error(`Advance Month Failed: ${JSON.stringify(error)}`);
+            displayError = new Error(`Advance Week Failed: ${JSON.stringify(error)}`);
           }
           
           console.error('Final display error:', displayError.message);
           console.error('========================');
           
-          set({ isAdvancingMonth: false });
+          set({ isAdvancingWeek: false });
           throw displayError;
         }
       },
@@ -528,7 +528,7 @@ export const useGameStore = create<GameStore>()(
         try {
           const response = await apiRequest('POST', `/api/game/${gameState.id}/artists`, {
             ...artistData,
-            signedMonth: gameState.currentMonth,
+            signedWeek: gameState.currentWeek,
             isSigned: true
           });
           const newArtist = await response.json();
@@ -572,7 +572,7 @@ export const useGameStore = create<GameStore>()(
         try {
           const response = await apiRequest('POST', `/api/game/${gameState.id}/projects`, {
             ...projectData,
-            startMonth: gameState.currentMonth,
+            startWeek: gameState.currentWeek,
             stage: 'planning'
           });
           const newProject = await response.json();
@@ -664,7 +664,7 @@ export const useGameStore = create<GameStore>()(
               projects,
               roles
             },
-            month: gameState.currentMonth,
+            week: gameState.currentWeek,
             isAutosave: false
           };
 

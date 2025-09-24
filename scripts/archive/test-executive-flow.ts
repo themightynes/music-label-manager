@@ -1,4 +1,4 @@
-import { db } from '../server/db';
+import { db } from '../../server/db';
 import { executives, gameStates } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
@@ -47,7 +47,7 @@ async function testExecutiveFlow() {
         .set({ 
           mood: 75, 
           loyalty: 60,
-          lastActionMonth: 1
+          lastActionWeek: 1
         })
         .where(eq(executives.id, testExec.id));
       

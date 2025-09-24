@@ -1,7 +1,7 @@
 import { GameEngine } from './shared/engine/game-engine';
 import { ServerGameData } from './server/data/gameData';
 import { DatabaseStorage } from './server/storage';
-import { MonthSummary } from './shared/types/gameTypes';
+import { WeekSummary } from './shared/types/gameTypes';
 
 async function testFinancialFix() {
   try {
@@ -15,7 +15,7 @@ async function testFinancialFix() {
     // Create a mock game state
     const mockGameState = {
       id: 'test-game',
-      currentMonth: 5,
+      currentWeek: 5,
       money: 100000,
       reputation: 10,
       creativeCapital: 10,
@@ -27,22 +27,22 @@ async function testFinancialFix() {
       campaignType: 'standard',
       rngSeed: 'test-seed',
       flags: {},
-      monthlyStats: {}
+      weeklyStats: {}
     };
     
     // Create game engine
     const gameEngine = new GameEngine(mockGameState as any, serverGameData, storage);
     
     // Create a mock summary with some expenses that would normally be added during processing
-    const mockSummary: MonthSummary = {
-      month: 6,
+    const mockSummary: WeekSummary = {
+      week: 6,
       changes: [],
       revenue: 5000,  // Simulate some streaming revenue
       expenses: 0,    // Will be calculated
       reputationChanges: {},
       events: [],
       expenseBreakdown: {
-        monthlyOperations: 0,  // Will be calculated
+        weeklyOperations: 0,  // Will be calculated
         artistSalaries: 0,      // Will be calculated  
         projectCosts: 3000,     // Simulate a project moving to production
         marketingCosts: 2000,   // Simulate marketing budget
@@ -61,8 +61,8 @@ async function testFinancialFix() {
     console.log('\nRevenue to be tracked:');
     console.log('  - Streaming revenue: $5,000');
     
-    // Call the fixed calculateMonthlyFinancials function
-    const financials = await (gameEngine as any).calculateMonthlyFinancials(mockSummary);
+    // Call the fixed calculateWeeklyFinancials function
+    const financials = await (gameEngine as any).calculateWeeklyFinancials(mockSummary);
     
     console.log('\n=== RESULTS ===');
     console.log('Financial breakdown:', financials.breakdown);

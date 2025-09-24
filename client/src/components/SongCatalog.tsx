@@ -18,7 +18,7 @@ interface Song {
   quality: number;
   genre?: string;
   mood?: string;
-  createdMonth?: number;
+  createdWeek?: number;
   isRecorded: boolean;
   isReleased: boolean;
   releaseId?: string | null;
@@ -28,9 +28,9 @@ interface Song {
   initialStreams?: number;
   totalStreams?: number;
   totalRevenue?: number;
-  monthlyStreams?: number;
-  lastMonthRevenue?: number;
-  releaseMonth?: number;
+  weeklyStreams?: number;
+  lastWeekRevenue?: number;
+  releaseWeek?: number;
 
   // Chart-related fields
   currentChartPosition?: number | null;
@@ -52,15 +52,15 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Subscribe to gameState to detect month changes
-  const currentMonth = useGameStore((state) => state.gameState?.currentMonth);
+  // Subscribe to gameState to detect week changes
+  const currentWeek = useGameStore((state) => state.gameState?.currentWeek);
   const storeSongs = useGameStore((state) => state.songs);
 
   useEffect(() => {
     if (artistId && gameId) {
       loadArtistSongs();
     }
-  }, [artistId, gameId, currentMonth]); // Refresh when month changes
+  }, [artistId, gameId, currentWeek]); // Refresh when week changes
 
   const loadArtistSongs = async (isRetry = false) => {
     try {
@@ -246,7 +246,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   // Calculate aggregate metrics
   const totalRevenue = releasedSongs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
   const totalStreams = releasedSongs.reduce((sum, song) => sum + (song.totalStreams || 0), 0);
-  const lastMonthRevenue = releasedSongs.reduce((sum, song) => sum + (song.lastMonthRevenue || 0), 0);
+  const lastWeekRevenue = releasedSongs.reduce((sum, song) => sum + (song.lastWeekRevenue || 0), 0);
 
   return (
     <div className={className}>
@@ -291,11 +291,11 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
         </div>
       )}
       
-      {/* Last Month Performance - Only show if there was recent activity */}
-      {lastMonthRevenue > 0 && (
+      {/* Last Week Performance - Only show if there was recent activity */}
+      {lastWeekRevenue > 0 && (
         <div className="p-2 bg-gradient-to-r from-green-900/20 to-[#A75A5B]/20 border border-green-600/30 rounded mb-3">
           <div className="text-xs text-center">
-            <div className="font-medium text-white/90">Last Month: +${lastMonthRevenue.toLocaleString()}</div>
+            <div className="font-medium text-white/90">Last Week: +${lastWeekRevenue.toLocaleString()}</div>
             <div className="text-white/50">Recent Performance</div>
           </div>
         </div>
@@ -347,10 +347,10 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                   {song.mood && (
                     <span className="capitalize">{song.mood}</span>
                   )}
-                  {song.createdMonth && (
+                  {song.createdWeek && (
                     <div className="flex items-center space-x-1">
                       <Calendar className="w-3 h-3" />
-                      <span>Month {song.createdMonth}</span>
+                      <span>Week {song.createdWeek}</span>
                     </div>
                   )}
                 </div>
@@ -389,26 +389,26 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                     )}
                   </div>
                   
-                  {song.lastMonthRevenue && song.lastMonthRevenue > 0 && (
+                  {song.lastWeekRevenue && song.lastWeekRevenue > 0 && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Last Month:</span>
+                      <span className="text-white/50">Last Week:</span>
                       <div className="flex items-center space-x-1">
                         <span className="font-mono text-green-600">
-                          +${song.lastMonthRevenue.toLocaleString()}
+                          +${song.lastWeekRevenue.toLocaleString()}
                         </span>
-                        {song.monthlyStreams && (
+                        {song.weeklyStreams && (
                           <span className="text-white/50">
-                            ({song.monthlyStreams.toLocaleString()} streams)
+                            ({song.weeklyStreams.toLocaleString()} streams)
                           </span>
                         )}
                       </div>
                     </div>
                   )}
                   
-                  {song.releaseMonth && (
+                  {song.releaseWeek && (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-white/50">Released:</span>
-                      <span className="font-mono text-white/70">Month {song.releaseMonth}</span>
+                      <span className="font-mono text-white/70">Week {song.releaseWeek}</span>
                     </div>
                   )}
                 </div>

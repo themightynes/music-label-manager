@@ -22,7 +22,7 @@ console.log('- Total executive salaries: $25,000');
 console.log('');
 console.log('To test:');
 console.log('1. Start a new game or load an existing one');
-console.log('2. Click "Advance Month"');
+console.log('2. Click "Advance Week"');
 console.log('3. Check the console logs for the debug output');
 console.log('');
 console.log('=====================================================');

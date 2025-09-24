@@ -108,7 +108,7 @@ const PERFORMANCE_TYPES = [
     name: 'Mini Tour',
     icon: MapPin,
     description: 'Small tour across multiple cities',
-    duration: '1-2 months',
+    duration: '1-2 weeks',
     minCities: 3,
     maxCities: 8,
     defaultCities: 3

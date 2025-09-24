@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as schema from '../shared/schema';
+import * as schema from '../../shared/schema';
 import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
@@ -164,7 +164,7 @@ class SchemaAnalyzer {
       dialogue_choices: schema.dialogueChoices,
       game_events: schema.gameEvents,
       game_states: schema.gameStates,
-      monthly_actions: schema.monthlyActions,
+      weekly_actions: schema.weeklyActions,
     };
 
     for (const [tableName, tableSchema] of Object.entries(tableSchemas)) {

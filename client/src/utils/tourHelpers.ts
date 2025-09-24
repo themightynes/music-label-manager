@@ -18,7 +18,7 @@ export interface CityPerformanceData {
   tickets?: number; // Alternative field name for ticketsSold
   venue?: string;
   capacity?: number;
-  month?: number;
+  week?: number;
   economics?: {
     profit?: number;
     costs?: {

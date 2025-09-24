@@ -18,9 +18,9 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 5. ✅ **Project Revenue System** - Projects generate revenue, streams, and press coverage on completion
 6. ✅ **Dialogue System** - Role meetings with immediate/delayed effects
 7. ✅ **Save/Load System** - Multiple slots with export/import capability
-8. ✅ **Monthly Turn System** - 3-action planning with resource management
+8. ✅ **Weekly Turn System** - 3-action planning with resource management
 9. ✅ **Access Tier Progression** - Playlist, Press, Venue tier advancement
-10. ✅ **Month Summary Display** - Shows detailed results after month advancement
+10. ✅ **Week Summary Display** - Shows detailed results after week advancement
 11. ✅ **Clean Layer Separation** - Routes (HTTP only), GameData (data only), GameEngine (logic only)
 12. ✅ **Phase 1 & 2 UI/UX Enhancements** - Complete user experience with strategic recommendations
 
@@ -35,7 +35,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 - `client/src/store/gameStore.ts` - Zustand store (game state management)
 - `client/src/components/Dashboard.tsx` - Main game interface
 - `client/src/components/MonthPlanner.tsx` - Enhanced action planning UI with strategic recommendations
-- `client/src/components/MonthSummary.tsx` - Monthly results display
+- `client/src/components/WeekSummary.tsx` - Weekly results display
 - `client/src/components/ProjectCreationModal.tsx` - Project creation interface
 
 ### Backend
@@ -61,7 +61,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 ```typescript
 // All endpoints follow this pattern:
 /api/games/:gameId/[resource]
-/api/games/:gameId/advance-month
+/api/games/:gameId/advance-week
 /api/games/:gameId/actions
 ```
 
@@ -89,8 +89,8 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 4. Document change in CHANGELOG.md
 
 ### Debugging Turn Resolution
-1. Check `GameEngine.advanceMonth()` in shared/engine
-2. Look at `monthlyActions` table in database
+1. Check `GameEngine.advanceWeek()` in shared/engine
+2. Look at `weeklyActions` table in database
 3. Verify effects are being applied in `applyEffects()`
 4. Check browser console for client errors
 5. Check server logs for backend errors
@@ -98,7 +98,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 ## Testing Approach
 - Unit tests: Calculations in GameEngine
 - Integration tests: API endpoints
-- E2E tests: Complete month cycle
+- E2E tests: Complete week cycle
 - Manual tests: Dialogue flows, UI interactions
 
 ## Previous Issues - ALL RESOLVED ✅

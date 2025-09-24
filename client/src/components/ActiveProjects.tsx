@@ -40,7 +40,7 @@ export function ActiveProjects() {
         totalCost: projectData.totalCost || 0,
         costUsed: 0,
         quality: 0,
-        dueMonth: (gameState?.currentMonth || 1) + 3, // Due in 3 months
+        dueWeek: (gameState?.currentWeek || 1) + 3, // Due in 3 weeks
         songCount: projectData.songCount || 1, // Include song count for recording projects
         songsCreated: 0, // Initialize songs created counter
         metadata: {
@@ -718,9 +718,9 @@ export function ActiveProjects() {
                                             <span>{city.venue} ({city.capacity} capacity)</span>
                                             <span>{city.ticketsSold} tickets • {city.attendanceRate}%</span>
                                           </div>
-                                          {city.month && (
+                                          {city.week && (
                                             <div className="text-xs text-white/40">
-                                              Month {city.month}
+                                              Week {city.week}
                                             </div>
                                           )}
 

@@ -16,13 +16,13 @@ interface MarketConfig {
       first_week_multiplier: number;
       longevity_decay: number;
       ongoing_streams: {
-        monthly_decay_rate: number;
+        weekly_decay_rate: number;
         revenue_per_stream: number;
         ongoing_factor: number;
         reputation_bonus_factor: number;
         access_tier_bonus_factor: number;
         minimum_revenue_threshold: number;
-        max_decay_months: number;
+        max_decay_weeks: number;
       };
     };
     press_coverage: {
@@ -61,7 +61,7 @@ interface MarketConfig {
         maximum: number;
       };
       lead_single_strategy: {
-        optimal_timing_months_before: number[];
+        optimal_timing_weeks_before: number[];
         optimal_timing_bonus: number;
         good_timing_bonus: number;
         default_bonus: number;
@@ -134,13 +134,13 @@ export default function MarketsEditor() {
               "first_week_multiplier": 2.5,
               "longevity_decay": 0.85,
               "ongoing_streams": {
-                "monthly_decay_rate": 0.85,
+                "weekly_decay_rate": 0.85,
                 "revenue_per_stream": 0.05,
                 "ongoing_factor": 0.8,
                 "reputation_bonus_factor": 0.002,
                 "access_tier_bonus_factor": 0.1,
                 "minimum_revenue_threshold": 1,
-                "max_decay_months": 24
+                "max_decay_weeks": 24
               }
             },
             "press_coverage": {
@@ -199,7 +199,7 @@ export default function MarketsEditor() {
                 "maximum": 1.4
               },
               "lead_single_strategy": {
-                "optimal_timing_months_before": [1, 2],
+                "optimal_timing_weeks_before": [1, 2],
                 "optimal_timing_bonus": 1.25,
                 "good_timing_bonus": 1.15,
                 "default_bonus": 1.05,

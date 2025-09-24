@@ -40,5 +40,5 @@ export const ACCESS_TIERS = {
 // SAMPLE_DIALOGUE removed - obsolete hardcoded data
 // Use rich dialogue system from data/roles.json via API
 
-// MONTHLY_ACTIONS moved to data/actions.json - fetch via API
-// Use /api/actions/monthly endpoint instead of hardcoded data
+// WEEKLY_ACTIONS moved to data/actions.json - fetch via API
+// Use /api/actions/weekly endpoint instead of hardcoded data

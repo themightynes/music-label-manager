@@ -53,7 +53,7 @@ const GameArtistSchema = z.object({
   mood: z.number(),
   signed: z.boolean(),
   signingCost: z.number().optional(),
-  monthlyCost: z.number().optional(),
+  weeklyCost: z.number().optional(),
   bio: z.string().optional(),
   genre: z.string().optional(),
   age: z.number().optional()
@@ -259,7 +259,7 @@ export class GameDataLoader {
       
       // Time progression - WITH SEASONAL MODIFIERS CORRECTLY PLACED
       time_progression: {
-        campaign_length_months: projects.time_progression.campaign_length_months,
+        campaign_length_weeks: projects.time_progression.campaign_length_weeks,
         focus_slots_base: projects.time_progression.focus_slots_base,
         focus_slots_unlock_threshold: projects.time_progression.focus_slots_unlock_threshold,
         focus_slots_max: projects.time_progression.focus_slots_max,
@@ -317,7 +317,7 @@ export class GameDataLoader {
       version: z.string(),
       generated: z.string().optional(),
       description: z.string().optional(),
-      monthly_actions: z.array(z.object({
+      weekly_actions: z.array(z.object({
         id: z.string(),
         name: z.string(),
         type: z.string(),
@@ -373,7 +373,7 @@ export class GameDataLoader {
       generated: z.string(),
       seed: z.number().optional(),
       money_start: z.number().optional(),
-      monthly_burn_base: z.tuple([z.number(), z.number()]).optional(),
+      weekly_burn_base: z.tuple([z.number(), z.number()]).optional(),
       access_tiers: z.record(z.any()).optional(),
       mvp_caps: z.record(z.any()).optional(),
       unlock_thresholds: z.record(z.any()).optional(),

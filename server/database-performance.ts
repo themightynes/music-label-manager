@@ -18,7 +18,7 @@ export interface QueryPerformanceMetrics {
 export interface ProducerTierPerformanceReport {
   reputation_lookup_avg_ms: number;
   portfolio_analysis_avg_ms: number;
-  monthly_processing_avg_ms: number;
+  weekly_processing_avg_ms: number;
   tier_analytics_avg_ms: number;
   total_songs_analyzed: number;
   performance_score: number; // 0-100
@@ -33,7 +33,7 @@ export class DatabasePerformanceMonitor {
   private performanceThresholds = {
     reputation_lookup: 50,      // Producer availability check
     portfolio_analysis: 200,    // Song catalog loading
-    monthly_processing: 300,    // Quality calculations
+    weekly_processing: 300,    // Quality calculations
     tier_analytics: 500         // Portfolio analytics
   };
 
@@ -120,20 +120,20 @@ export class DatabasePerformanceMonitor {
   }
 
   /**
-   * Test monthly processing query performance
+   * Test weekly processing query performance
    */
-  async testMonthlyProcessingQuery(gameId: string, month: number): Promise<QueryPerformanceMetrics> {
+  async testWeeklyProcessingQuery(gameId: string, week: number): Promise<QueryPerformanceMetrics> {
     const query = db.execute(sql`
       SELECT s.*, a.mood 
       FROM songs s 
       JOIN artists a ON s.artist_id = a.id 
-      WHERE s.game_id = ${gameId} AND s.created_month = ${month}
+      WHERE s.game_id = ${gameId} AND s.created_week = ${week}
     `);
 
     await this.monitorQuery(
-      'monthly_processing',
+      'weekly_processing',
       query,
-      this.performanceThresholds.monthly_processing
+      this.performanceThresholds.weekly_processing
     );
 
     return this.getLastMetric();
@@ -162,20 +162,20 @@ export class DatabasePerformanceMonitor {
   /**
    * Run comprehensive performance test suite
    */
-  async runPerformanceTestSuite(gameId: string, currentMonth: number): Promise<ProducerTierPerformanceReport> {
+  async runPerformanceTestSuite(gameId: string, currentWeek: number): Promise<ProducerTierPerformanceReport> {
     console.log('Starting Producer Tier performance test suite...');
 
     const tests = await Promise.all([
       this.testProducerAvailabilityQuery(gameId),
       this.testPortfolioAnalysisQuery(gameId),
-      this.testMonthlyProcessingQuery(gameId, currentMonth),
+      this.testWeeklyProcessingQuery(gameId, currentWeek),
       this.testTierAnalyticsQuery(gameId)
     ]);
 
     const avgTimes = {
       reputation_lookup_avg_ms: tests[0].execution_time_ms,
       portfolio_analysis_avg_ms: tests[1].execution_time_ms,
-      monthly_processing_avg_ms: tests[2].execution_time_ms,
+      weekly_processing_avg_ms: tests[2].execution_time_ms,
       tier_analytics_avg_ms: tests[3].execution_time_ms
     };
 
@@ -311,8 +311,8 @@ export class DatabasePerformanceMonitor {
       score -= Math.min(25, (avgTimes.portfolio_analysis_avg_ms / thresholds.portfolio_analysis - 1) * 40);
     }
     
-    if (avgTimes.monthly_processing_avg_ms > thresholds.monthly_processing) {
-      score -= Math.min(25, (avgTimes.monthly_processing_avg_ms / thresholds.monthly_processing - 1) * 40);
+    if (avgTimes.weekly_processing_avg_ms > thresholds.weekly_processing) {
+      score -= Math.min(25, (avgTimes.weekly_processing_avg_ms / thresholds.weekly_processing - 1) * 40);
     }
     
     if (avgTimes.tier_analytics_avg_ms > thresholds.tier_analytics) {
@@ -334,8 +334,8 @@ export class DatabasePerformanceMonitor {
       recommendations.push('Portfolio analysis queries need optimization - check idx_songs_portfolio_analysis index');
     }
 
-    if (avgTimes.monthly_processing_avg_ms > thresholds.monthly_processing) {
-      recommendations.push('Monthly processing is slow - verify idx_songs_monthly_processing and artist join indexes');
+    if (avgTimes.weekly_processing_avg_ms > thresholds.weekly_processing) {
+      recommendations.push('Weekly processing is slow - verify idx_songs_weekly_processing and artist join indexes');
     }
 
     if (avgTimes.tier_analytics_avg_ms > thresholds.tier_analytics) {
@@ -434,11 +434,11 @@ export class ProducerTierQueryOptimizer {
   }
 
   /**
-   * Optimize monthly quality calculation query
+   * Optimize weekly quality calculation query
    */
-  static async getMonthlyQualityData(gameId: string, month: number) {
+  static async getWeeklyQualityData(gameId: string, week: number) {
     return dbPerformanceMonitor.monitorQuery(
-      'monthly_quality_optimized',
+      'weekly_quality_optimized',
       db.execute(sql`
         SELECT 
           s.id,
@@ -450,7 +450,7 @@ export class ProducerTierQueryOptimizer {
         FROM songs s 
         INNER JOIN artists a ON s.artist_id = a.id 
         WHERE s.game_id = ${gameId} 
-          AND s.created_month = ${month}
+          AND s.created_week = ${week}
           AND s.is_recorded = true
       `),
       300

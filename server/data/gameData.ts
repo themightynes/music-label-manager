@@ -98,25 +98,25 @@ export class ServerGameData {
     return meetings.find(meeting => meeting.id === meetingId);
   }
 
-  // Monthly actions data access
-  async getMonthlyActions(): Promise<any[]> {
+  // Weekly actions data access
+  async getWeeklyActions(): Promise<any[]> {
     await this.initialize();
     try {
       const actionsData = await this.dataLoader.loadActionsData();
-      return actionsData.monthly_actions || [];
+      return actionsData.weekly_actions || [];
     } catch (error) {
       console.error('Failed to load actions data:', error);
       return [];
     }
   }
 
-  // Get monthly actions with categories
-  async getMonthlyActionsWithCategories(): Promise<{ actions: any[], categories: any[] }> {
+  // Get weekly actions with categories
+  async getWeeklyActionsWithCategories(): Promise<{ actions: any[], categories: any[] }> {
     await this.initialize();
     try {
       const actionsData = await this.dataLoader.loadActionsData();
       return {
-        actions: actionsData.monthly_actions || [],
+        actions: actionsData.weekly_actions || [],
         categories: actionsData.action_categories || []
       };
     } catch (error) {
@@ -129,7 +129,7 @@ export class ServerGameData {
   async getActionById(actionId: string): Promise<any | undefined> {
     await this.initialize();
     try {
-      const actions = await this.getMonthlyActions();
+      const actions = await this.getWeeklyActions();
       return actions.find(action => action.id === actionId);
     } catch (error) {
       console.error('Failed to get action by ID:', actionId, error);
@@ -257,9 +257,9 @@ export class ServerGameData {
   // calculateProjectCost() - REMOVED (unused)
   // calculateStreamingOutcome() - REMOVED (GameEngine has correct implementation)
 
-  async shouldTriggerSideEvent(month: number): Promise<boolean> {
+  async shouldTriggerSideEvent(week: number): Promise<boolean> {
     const balance = await this.getBalanceConfig();
-    const chance = balance.side_events.monthly_chance;
+    const chance = balance.side_events.weekly_chance;
     return Math.random() < chance;
   }
 
@@ -381,15 +381,15 @@ export class ServerGameData {
     const balance = await this.getBalanceConfig();
     const events = balance.side_events;
     return {
-      monthly_chance: events?.monthly_chance || 0.20,
-      cooldown_months: events?.event_cooldown || 2,
-      max_per_year: events?.max_events_per_month * 12 || 12
+      weekly_chance: events?.weekly_chance || 0.20,
+      cooldown_weeks: events?.event_cooldown || 2,
+      max_per_year: events?.max_events_per_week * 12 || 12
     };
   }
 
-  async getMonthlyBurnRange(): Promise<[number, number]> {
+  async getWeeklyBurnRange(): Promise<[number, number]> {
     const balance = await this.getBalanceConfig();
-    const burnRange = balance.economy.monthly_burn_base;
+    const burnRange = balance.economy.weekly_burn_base;
     return [burnRange[0], burnRange[1]];
   }
 
@@ -405,13 +405,13 @@ export class ServerGameData {
         first_week_multiplier: 2.5,
         base_streams_per_point: 1000,
         ongoing_streams: {
-          monthly_decay_rate: 0.85,
+          weekly_decay_rate: 0.85,
           revenue_per_stream: 0.003,
           ongoing_factor: 0.1,
           reputation_bonus_factor: 0.002,
           access_tier_bonus_factor: 0.1,
           minimum_revenue_threshold: 1,
-          max_decay_months: 24
+          max_decay_weeks: 24
         }
       };
     }
@@ -579,26 +579,26 @@ export class ServerGameData {
   getEventConfigSync() {
     if (!this.balanceData) {
       return {
-        monthly_chance: 0.20,
-        cooldown_months: 2,
+        weekly_chance: 0.20,
+        cooldown_weeks: 2,
         max_per_year: 12
       };
     }
     
     const events = this.balanceData.side_events;
     return {
-      monthly_chance: events.monthly_chance,
-      cooldown_months: events.event_cooldown,
-      max_per_year: events.max_events_per_month * 12
+      weekly_chance: events.weekly_chance,
+      cooldown_weeks: events.event_cooldown,
+      max_per_year: events.max_events_per_week * 12
     };
   }
 
-  getMonthlyBurnRangeSync(): [number, number] {
+  getWeeklyBurnRangeSync(): [number, number] {
     if (!this.balanceData) {
       return [3000, 6000];
     }
     
-    const burnRange = this.balanceData.economy.monthly_burn_base;
+    const burnRange = this.balanceData.economy.weekly_burn_base;
     return [burnRange[0], burnRange[1]];
   }
 
@@ -810,8 +810,8 @@ export class ServerGameData {
         releasesWithLeadSingles.forEach((r: any) => {
           console.log(`  - "${r.title}":`, {
             releaseId: r.id,
-            releaseMonth: r.releaseMonth,
-            leadSingleMonth: r.metadata.leadSingleStrategy.leadSingleReleaseMonth,
+            releaseWeek: r.releaseWeek,
+            leadSingleWeek: r.metadata.leadSingleStrategy.leadSingleReleaseWeek,
             leadSingleId: r.metadata.leadSingleStrategy.leadSingleId
           });
         });
@@ -824,10 +824,10 @@ export class ServerGameData {
     }
   }
 
-  async getPlannedReleases(gameId: string, month: number, dbTransaction?: any) {
-    console.log('[ServerGameData] getPlannedReleases called for gameId:', gameId, 'month:', month, 'transaction:', !!dbTransaction);
+  async getPlannedReleases(gameId: string, week: number, dbTransaction?: any) {
+    console.log('[ServerGameData] getPlannedReleases called for gameId:', gameId, 'week:', week, 'transaction:', !!dbTransaction);
     try {
-      const plannedReleases = await storage.getPlannedReleases(gameId, month, dbTransaction);
+      const plannedReleases = await storage.getPlannedReleases(gameId, week, dbTransaction);
       console.log('[ServerGameData] getPlannedReleases returned:', plannedReleases?.length || 0, 'planned releases');
       return plannedReleases;
     } catch (error) {
@@ -853,7 +853,7 @@ export class ServerGameData {
             title: song.title,
             quality: song.quality,
             isReleased: song.isReleased,
-            releaseMonth: song.releaseMonth,
+            releaseWeek: song.releaseWeek,
             totalStreams: song.totalStreams || 0,
             totalRevenue: song.totalRevenue || 0
           });
@@ -901,11 +901,11 @@ export class ServerGameData {
       console.log(`[ServerGameData] Song #${index + 1}:`, {
         songId: update.songId,
         isReleased: update.isReleased,
-        releaseMonth: update.releaseMonth,
+        releaseWeek: update.releaseWeek,
         initialStreams: update.initialStreams,
         totalStreams: update.totalStreams,
         totalRevenue: update.totalRevenue,
-        isLeadSingleUpdate: update.releaseMonth && update.isReleased === true
+        isLeadSingleUpdate: update.releaseWeek && update.isReleased === true
       });
     });
     
@@ -979,25 +979,25 @@ export class ServerGameData {
     }
   }
 
-  async getNewlyReleasedProjects(gameId: string, currentMonth: number, dbConnection: any = null): Promise<any[]> {
-    console.log(`[ServerGameData] Getting newly released projects for game: ${gameId}, month: ${currentMonth}`);
+  async getNewlyReleasedProjects(gameId: string, currentWeek: number, dbConnection: any = null): Promise<any[]> {
+    console.log(`[ServerGameData] Getting newly released projects for game: ${gameId}, week: ${currentWeek}`);
     try {
       const dbContext = dbConnection || db;
       
-      // Get all projects in "released" stage and check metadata for release month
+      // Get all projects in "released" stage and check metadata for release week
       const releasedProjects = await dbContext.select()
         .from(projects)
         .where(and(eq(projects.gameId, gameId), eq(projects.stage, 'released')));
       
-      // Filter to only projects that were released this month
-      // Projects track their release month in metadata
+      // Filter to only projects that were released this week
+      // Projects track their release week in metadata
       const newlyReleased = releasedProjects.filter((project: any) => {
         const metadata = project.metadata as any;
-        const releaseMonth = metadata?.releaseMonth || metadata?.release_month;
-        return releaseMonth === currentMonth;
+        const releaseWeek = metadata?.releaseWeek || metadata?.release_week;
+        return releaseWeek === currentWeek;
       });
       
-      console.log(`[ServerGameData] Found ${newlyReleased.length} newly released projects for month ${currentMonth}`);
+      console.log(`[ServerGameData] Found ${newlyReleased.length} newly released projects for week ${currentWeek}`);
       return newlyReleased;
     } catch (error) {
       console.error('[ServerGameData] getNewlyReleasedProjects error:', error);

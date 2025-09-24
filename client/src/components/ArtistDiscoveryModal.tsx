@@ -22,7 +22,7 @@ interface Artist {
   loyalty: number;
   mood: number;
   signingCost: number;
-  monthlyCost: number;
+  weeklyCost: number;
   bio: string;
   genre: string;
   age: number;
@@ -187,7 +187,7 @@ export function ArtistDiscoveryModal({
                   <TableHead className="text-white/90 font-semibold">Work Ethic</TableHead>
                   <TableHead className="text-white/90 font-semibold">Popularity</TableHead>
                   <TableHead className="text-white/90 font-semibold">Signing Cost</TableHead>
-                  <TableHead className="text-white/90 font-semibold">Monthly Cost</TableHead>
+                  <TableHead className="text-white/90 font-semibold">Weekly Cost</TableHead>
                   <TableHead className="text-white/90 font-semibold">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -245,7 +245,7 @@ export function ArtistDiscoveryModal({
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="font-medium text-white/90">${(artist.monthlyCost || 800).toLocaleString()}/mo</div>
+                        <div className="font-medium text-white/90">${(artist.weeklyCost || 800).toLocaleString()}/mo</div>
                       </div>
                     </TableCell>
                     <TableCell>

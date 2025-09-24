@@ -7,12 +7,12 @@ function getRandom(min: number, max: number): number {
 }
 
 // Simulate what happens in the game engine
-function simulateMonthAdvance() {
-  console.log('=== SIMULATING MONTH ADVANCE ===\n');
+function simulateWeekAdvance() {
+  console.log('=== SIMULATING WEEK ADVANCE ===\n');
   
-  // Line 147: Calculate monthly burn FIRST TIME
+  // Line 147: Calculate weekly burn FIRST TIME
   const baseBurn1 = Math.round(getRandom(3000, 6000));
-  const artistCosts = 0; // No artists in month 1
+  const artistCosts = 0; // No artists in week 1
   const totalBurn1 = baseBurn1 + artistCosts;
   
   console.log('FIRST CALCULATION (line 147):');
@@ -22,7 +22,7 @@ function simulateMonthAdvance() {
   
   // Lines 162-163: Store in expense breakdown
   const expenseBreakdown = {
-    monthlyOperations: baseBurn1,
+    weeklyOperations: baseBurn1,
     artistSalaries: artistCosts,
     projectCosts: 0,
     marketingCosts: 0,
@@ -30,18 +30,18 @@ function simulateMonthAdvance() {
   };
   
   console.log('\nEXPENSE BREAKDOWN STORED:');
-  console.log('  monthlyOperations:', expenseBreakdown.monthlyOperations);
+  console.log('  weeklyOperations:', expenseBreakdown.weeklyOperations);
   console.log('  artistSalaries:', expenseBreakdown.artistSalaries);
   
-  // Line 3113: OLD WAY - Calculate monthly burn SECOND TIME (different random value!)
+  // Line 3113: OLD WAY - Calculate weekly burn SECOND TIME (different random value!)
   // const baseBurn2 = Math.round(getRandom(3000, 6000));
   // const totalBurn2 = baseBurn2 + artistCosts;
   
   // NEW WAY - Use the already calculated values from expense breakdown
   const operations = {
-    base: expenseBreakdown.monthlyOperations,
+    base: expenseBreakdown.weeklyOperations,
     artists: expenseBreakdown.artistSalaries,
-    total: expenseBreakdown.monthlyOperations + expenseBreakdown.artistSalaries
+    total: expenseBreakdown.weeklyOperations + expenseBreakdown.artistSalaries
   };
   
   console.log('\nFINANCIAL CALCULATION (line 3113):');
@@ -57,7 +57,7 @@ function simulateMonthAdvance() {
   console.log('  Money deducted:', operations.total);
   
   // What the UI shows
-  const tooltipTotal = expenseBreakdown.monthlyOperations + 
+  const tooltipTotal = expenseBreakdown.weeklyOperations + 
                       expenseBreakdown.artistSalaries + 
                       expenseBreakdown.projectCosts + 
                       expenseBreakdown.marketingCosts + 
@@ -66,7 +66,7 @@ function simulateMonthAdvance() {
   console.log('\nUI DISPLAY:');
   console.log('  "Spent" shown:', summaryExpenses);
   console.log('  Tooltip total:', tooltipTotal);
-  console.log('  Tooltip "Monthly Operations":', expenseBreakdown.monthlyOperations);
+  console.log('  Tooltip "Weekly Operations":', expenseBreakdown.weeklyOperations);
   
   console.log('\nVERIFICATION:');
   console.log('  All values should match:', 
@@ -74,4 +74,4 @@ function simulateMonthAdvance() {
 }
 
 // Run multiple times to show the issue
-simulateMonthAdvance();
+simulateWeekAdvance();

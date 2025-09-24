@@ -52,7 +52,7 @@ async function testGameUpdate() {
         'Cookie': cookies || ''
       },
       body: JSON.stringify({
-        currentMonth: 1,
+        currentWeek: 1,
         money: 500000
       })
     });
@@ -76,7 +76,7 @@ async function testGameUpdate() {
       'Cookie': cookies || ''
     },
     body: JSON.stringify({
-      currentMonth: 2,
+      currentWeek: 2,
       money: 450000
     })
   });

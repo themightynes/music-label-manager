@@ -102,7 +102,7 @@
         },
         {
           "id": "observe",
-          "label": "Observe for a month",
+          "label": "Observe for a week",
           "effects_immediate": {},
           "effects_delayed": {
             "learning_bonus": 1
@@ -185,7 +185,7 @@
             "money": -1000
           },
           "effects_delayed": {
-            "monthly_income_bonus": 500
+            "weekly_income_bonus": 500
           }
         },
         {

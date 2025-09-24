@@ -351,25 +351,25 @@ function MarketingBreakdown({ metrics, decisions }) {
 
 // Timeline View
 function TimelineView({ decisions, gameState }) {
-  const currentMonth = gameState?.currentMonth || 1;
-  const releaseMonth = decisions.releaseMonth || currentMonth + 2;
-  const leadSingleMonth = decisions.leadSingleMonth || releaseMonth - 1;
+  const currentWeek = gameState?.currentWeek || 1;
+  const releaseWeek = decisions.releaseWeek || currentWeek + 2;
+  const leadSingleWeek = decisions.leadSingleWeek || releaseWeek - 1;
   
   const timelineEvents = [
     {
-      month: currentMonth,
+      week: currentWeek,
       title: 'Planning Complete',
       type: 'milestone',
       status: 'completed'
     },
     ...(decisions.releaseType !== 'single' && decisions.leadSingle ? [{
-      month: leadSingleMonth,
+      week: leadSingleWeek,
       title: 'Lead Single Release',
       type: 'release',
       status: 'planned'
     }] : []),
     {
-      month: releaseMonth,
+      week: releaseWeek,
       title: `${decisions.releaseType || 'Single'} Release`,
       type: 'release',
       status: 'planned'
@@ -396,13 +396,13 @@ function TimelineView({ decisions, gameState }) {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{event.title}</span>
                     <Badge variant="outline" className="text-xs">
-                      Month {event.month}
+                      Week {event.week}
                     </Badge>
                   </div>
                   <div className="text-xs text-white/50">
-                    {event.month === currentMonth ? 'This month' : 
-                     event.month < currentMonth ? `${currentMonth - event.month} months ago` :
-                     `${event.month - currentMonth} months from now`}
+                    {event.week === currentWeek ? 'This week' : 
+                     event.week < currentWeek ? `${currentWeek - event.week} weeks ago` :
+                     `${event.week - currentWeek} weeks from now`}
                   </div>
                 </div>
               </div>

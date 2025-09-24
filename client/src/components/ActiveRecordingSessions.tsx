@@ -25,7 +25,7 @@ export function ActiveRecordingSessions() {
         totalCost: projectData.totalCost || 0,
         costUsed: 0,
         quality: 0,
-        dueMonth: (gameState?.currentMonth || 1) + 3,
+        dueWeek: (gameState?.currentWeek || 1) + 3,
         songCount: projectData.songCount || 1,
         songsCreated: 0,
         metadata: {

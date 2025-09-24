@@ -7,7 +7,7 @@ import { ActiveReleases } from './ActiveReleases';
 import { Top10ChartDisplay } from './Top10ChartDisplay';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
-import { MonthSummary } from './MonthSummary';
+import { WeekSummary } from './WeekSummary';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
@@ -21,23 +21,23 @@ export function Dashboard({
   showSaveModal = false,
   setShowSaveModal = () => {}
 }: DashboardProps) {
-  const { gameState, isAdvancingMonth, advanceMonth, monthlyOutcome, artists, projects, createProject } = useGameStore();
+  const { gameState, isAdvancingWeek, advanceWeek, weeklyOutcome, artists, projects, createProject } = useGameStore();
   const [, setLocation] = useLocation();
-  const [showMonthSummary, setShowMonthSummary] = useState(false);
-  const [lastProcessedMonth, setLastProcessedMonth] = useState<number | null>(null);
+  const [showWeekSummary, setShowWeekSummary] = useState(false);
+  const [lastProcessedWeek, setLastProcessedWeek] = useState<number | null>(null);
 
   useEffect(() => {
-    // Only auto-show if this is a fresh monthly outcome (not from page refresh)
-    if (monthlyOutcome && !isAdvancingMonth && gameState) {
-      const isCurrentMonthResult = monthlyOutcome.month === (gameState.currentMonth ?? 1) - 1;
-      const isNewResult = lastProcessedMonth !== monthlyOutcome.month;
+    // Only auto-show if this is a fresh weekly outcome (not from page refresh)
+    if (weeklyOutcome && !isAdvancingWeek && gameState) {
+      const isCurrentWeekResult = weeklyOutcome.week === (gameState.currentWeek ?? 1) - 1;
+      const isNewResult = lastProcessedWeek !== weeklyOutcome.week;
 
-      if (isCurrentMonthResult && isNewResult) {
-        setShowMonthSummary(true);
-        setLastProcessedMonth(monthlyOutcome.month);
+      if (isCurrentWeekResult && isNewResult) {
+        setShowWeekSummary(true);
+        setLastProcessedWeek(weeklyOutcome.week);
       }
     }
-  }, [monthlyOutcome, isAdvancingMonth, gameState, lastProcessedMonth]);
+  }, [weeklyOutcome, isAdvancingWeek, gameState, lastProcessedWeek]);
 
   if (!gameState) {
     return (
@@ -52,7 +52,7 @@ export function Dashboard({
 
 
   const handleCloseSummary = () => {
-    setShowMonthSummary(false);
+    setShowWeekSummary(false);
   };
 
 
@@ -98,8 +98,8 @@ export function Dashboard({
         </div>
       </main>
 
-      {/* Month Summary Modal */}
-      {showMonthSummary && monthlyOutcome && (
+      {/* Week Summary Modal */}
+      {showWeekSummary && weeklyOutcome && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={handleCloseSummary}
@@ -108,11 +108,11 @@ export function Dashboard({
             className="bg-[#2C222A] border border-[#4e324c] rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <MonthSummary
-              monthlyStats={monthlyOutcome}
-              onAdvanceMonth={handleCloseSummary}
+            <WeekSummary
+              weeklyStats={weeklyOutcome}
+              onAdvanceWeek={handleCloseSummary}
               isAdvancing={false}
-              isMonthResults={true}
+              isWeekResults={true}
               onClose={handleCloseSummary}
             />
           </div>

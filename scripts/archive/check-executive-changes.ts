@@ -1,4 +1,4 @@
-import { db } from '../server/db';
+import { db } from '../../server/db';
 import { executives, gameStates } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
@@ -9,7 +9,7 @@ async function checkExecutiveChanges() {
     // Find the most recent game
     const games = await db.select()
       .from(gameStates)
-      .orderBy(gameStates.currentMonth)
+      .orderBy(gameStates.currentWeek)
       .limit(1);
     
     if (games.length === 0) {
@@ -19,7 +19,7 @@ async function checkExecutiveChanges() {
     
     const game = games[0];
     console.log(`📊 Game: ${game.id}`);
-    console.log(`📅 Current Month: ${game.currentMonth}`);
+    console.log(`📅 Current Week: ${game.currentWeek}`);
     
     // Get all executives for this game
     const execs = await db.select()
@@ -33,7 +33,7 @@ async function checkExecutiveChanges() {
       console.log(`\n${exec.role}:`);
       console.log(`  • Mood: ${exec.mood}/100`);
       console.log(`  • Loyalty: ${exec.loyalty}/100`);
-      console.log(`  • Last Action Month: ${exec.lastActionMonth || 'Never'}`);
+      console.log(`  • Last Action Week: ${exec.lastActionWeek || 'Never'}`);
       console.log(`  • ID: ${exec.id}`);
       
       // Check if values changed from default

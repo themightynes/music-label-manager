@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertMonthlyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, monthlyActions, projects, songs, artists, releases, releaseSongs, roles, executives } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives } from "@shared/schema";
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
@@ -12,8 +12,8 @@ import { FinancialSystem, VenueCapacityManager } from "../shared/engine/Financia
 import { ChartService } from "../shared/engine/ChartService";
 import { Song } from "../shared/models/Song";
 import { 
-  AdvanceMonthRequest, 
-  AdvanceMonthResponse,
+  AdvanceWeekRequest, 
+  AdvanceWeekResponse,
   SelectActionsRequest,
   SelectActionsResponse,
   validateRequest,
@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const artists = await storage.getArtistsByGame(gameState.id);
       const projects = await storage.getProjectsByGame(gameState.id);
       const roles = await storage.getRolesByGame(gameState.id);
-      const monthlyActions = await storage.getMonthlyActions(gameState.id, gameState.currentMonth || 1);
+      const weeklyActions = await storage.getWeeklyActions(gameState.id, gameState.currentWeek || 1);
       const releases = await serverGameData.getReleasesByGame(gameState.id);
 
       res.json({
@@ -210,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         artists,
         projects,
         roles,
-        monthlyActions,
+        weeklyActions,
         releases
       });
     } catch (error) {
@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const musicLabelData = {
           name: validatedLabelData?.name || "New Music Label",
           gameId: gameState.id,
-          foundedMonth: validatedLabelData?.foundedMonth || 1,
+          foundedWeek: validatedLabelData?.foundedWeek || 1,
           description: validatedLabelData?.description || null,
           genreFocus: validatedLabelData?.genreFocus || null
         };
@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const musicLabelData = {
           name: validatedLabelData.name,
           gameId: gameId,
-          foundedMonth: validatedLabelData.foundedMonth || 1,
+          foundedWeek: validatedLabelData.foundedWeek || 1,
           description: validatedLabelData.description || null,
           genreFocus: validatedLabelData.genreFocus || null
         };
@@ -397,11 +397,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available monthly actions with enriched role data and categories
-  app.get("/api/actions/monthly", requireClerkUser, async (req, res) => {
+  // Get available weekly actions with enriched role data and categories
+  app.get("/api/actions/weekly", requireClerkUser, async (req, res) => {
     try {
       await serverGameData.initialize();
-      const actionsData = await serverGameData.getMonthlyActionsWithCategories();
+      const actionsData = await serverGameData.getWeeklyActionsWithCategories();
       const roles = await serverGameData.getAllRoles();
       
       // Enrich actions with role meeting data
@@ -424,8 +424,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categories: actionsData.categories || []
       });
     } catch (error) {
-      console.error('Failed to load monthly actions:', error);
-      res.status(500).json({ error: 'Failed to load monthly actions' });
+      console.error('Failed to load weekly actions:', error);
+      res.status(500).json({ error: 'Failed to load weekly actions' });
     }
   });
 
@@ -443,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Load actions using serverGameData
-      const actionsData = await serverGameData.getMonthlyActionsWithCategories();
+      const actionsData = await serverGameData.getWeeklyActionsWithCategories();
       const roleMeetings = actionsData.actions.filter((action: any) => 
         action.type === 'role_meeting' && 
         action.role_id === req.params.roleId
@@ -471,9 +471,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Use the same serverGameData methods that work elsewhere
       await serverGameData.initialize();
-      const actionsData = await serverGameData.getMonthlyActionsWithCategories();
+      const actionsData = await serverGameData.getWeeklyActionsWithCategories();
       
-      // Find the meeting in actions (getMonthlyActionsWithCategories returns actions array)
+      // Find the meeting in actions (getWeeklyActionsWithCategories returns actions array)
       const meeting = actionsData.actions.find((action: any) => 
         action.type === 'role_meeting' && 
         action.role_id === req.params.roleId && 
@@ -530,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Game not found" });
       }
       
-      // Store the executive action as a selected action for the month
+      // Store the executive action as a selected action for the week
       const executiveAction = {
         actionType: 'role_meeting' as const,
         targetId: execId,
@@ -555,7 +555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // NOTE: Executive mood/loyalty processing now handled during month advancement
+      // NOTE: Executive mood/loyalty processing now handled during week advancement
       // This ensures single source of truth and prevents duplicate processing
 
       // Update the used focus slots count
@@ -570,7 +570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         executiveId: execId,
         actionId: actionId,
         gameId: gameId,
-        month: gameState.currentMonth,
+        week: gameState.currentWeek,
         usedSlots: gameState.usedFocusSlots,
         totalSlots: totalSlots,
         message: "Executive action processed successfully"
@@ -614,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertArtistSchema.parse({
         ...req.body,
         gameId: gameId,
-        monthlyFee: req.body.monthlyCost || req.body.monthlyFee || 1200 // Store monthly cost from JSON data
+        weeklyFee: req.body.weeklyCost || req.body.weeklyFee || 1200 // Store weekly cost from JSON data
       });
       
       // Create artist and deduct money in a transaction-like operation
@@ -627,7 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Update artist count flag for GameEngine monthly costs
+      // Update artist count flag for GameEngine weekly costs
       const currentArtists = await storage.getArtistsByGame(gameId);
       const flags = gameState.flags || {};
       (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
@@ -822,14 +822,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Monthly action routes
+  // Weekly action routes
   app.post("/api/game/:gameId/actions", requireClerkUser, async (req, res) => {
     try {
-      const validatedData = insertMonthlyActionSchema.parse({
+      const validatedData = insertWeeklyActionSchema.parse({
         ...req.body,
         gameId: req.params.gameId
       });
-      const action = await storage.createMonthlyAction(validatedData);
+      const action = await storage.createWeeklyAction(validatedData);
       res.json(action);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -840,8 +840,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OLD ENDPOINT REMOVED - Use /api/advance-month instead
-  // This endpoint did not have 12-month campaign completion logic
+  // OLD ENDPOINT REMOVED - Use /api/advance-week instead
+  // This endpoint did not have 12-week campaign completion logic
 
   // Save game routes
   app.get("/api/saves", requireClerkUser, async (req, res) => {
@@ -1068,8 +1068,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rng = () => Math.random(); // Simple RNG for chart generation
       const chartService = new ChartService(serverGameData, rng, storage, gameId);
 
-      // Calculate current chart week from game month
-      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth ?? 1);
+      // Calculate current chart week from game week
+      const currentChartWeek = ChartService.generateChartWeekFromGameWeek(game.currentWeek ?? 1);
 
       // Get Top 10 chart data
       const top10Data = await chartService.getTop10ChartData(currentChartWeek);
@@ -1083,7 +1083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         chartWeek: currentChartWeek,
-        currentMonth: game.currentMonth,
+        currentWeek: game.currentWeek,
         top10: top10Data
       });
 
@@ -1128,8 +1128,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rng = () => Math.random(); // Simple RNG for chart generation
       const chartService = new ChartService(serverGameData, rng, storage, gameId);
 
-      // Calculate current chart week from game month
-      const currentChartWeek = ChartService.generateChartWeekFromGameMonth(game.currentMonth ?? 1);
+      // Calculate current chart week from game week
+      const currentChartWeek = ChartService.generateChartWeekFromGameWeek(game.currentWeek ?? 1);
 
       // Get Top 100 chart data (all charting songs)
       const currentEntries = await chartService.getCurrentWeekChartEntries(currentChartWeek);
@@ -1170,7 +1170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         chartWeek: currentChartWeek,
-        currentMonth: game.currentMonth,
+        currentWeek: game.currentWeek,
         top100: top100Entries
       });
 
@@ -1239,14 +1239,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mood: sql`${artists.mood}`.as('mood'),
           loyalty: sql`${artists.loyalty}`.as('loyalty'),
           archetype: sql`${artists.archetype}`.as('archetype'),
-          signedMonth: sql`${artists.signedMonth}`.as('signedMonth'),
+          signedWeek: sql`${artists.signedWeek}`.as('signedWeek'),
           readySongsCount: sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false THEN 1 END)`.as('readySongsCount'),
           totalSongsCount: sql`COUNT(${songs.id})`.as('totalSongsCount')
         })
         .from(artists)
         .leftJoin(songs, eq(songs.artistId, artists.id))
         .where(eq(artists.gameId, gameId))
-        .groupBy(artists.id, artists.name, artists.mood, artists.loyalty, artists.archetype, artists.signedMonth)
+        .groupBy(artists.id, artists.name, artists.mood, artists.loyalty, artists.archetype, artists.signedWeek)
         .having(sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false THEN 1 END) >= ${minSongs}`);
 
       const totalReadySongs = artistsResult.reduce((sum: number, artist: any) => sum + parseInt(artist.readySongsCount as string), 0);
@@ -1268,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           loyalty: artist.loyalty || 50,
           readySongsCount: parseInt(artist.readySongsCount as string),
           totalSongsCount: parseInt(artist.totalSongsCount as string),
-          lastProjectMonth: artist.signedMonth,
+          lastProjectWeek: artist.signedWeek,
           archetype: artist.archetype
         })),
         metadata: {
@@ -1337,14 +1337,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quality: song.quality,
         genre: song.genre || 'Pop',
         mood: song.mood || 'neutral',
-        createdMonth: song.createdMonth || 1,
+        createdWeek: song.createdWeek || 1,
         isRecorded: song.isRecorded,
         isReleased: song.isReleased,
         projectId: null, // Not available in current schema
         producerTier: song.producerTier || 'local',
         timeInvestment: song.timeInvestment || 'standard',
         estimatedMetrics: {
-          streams: song.monthlyStreams || 0, // Use actual streams if available, otherwise 0 (will be calculated properly in release preview)
+          streams: song.weeklyStreams || 0, // Use actual streams if available, otherwise 0 (will be calculated properly in release preview)
           revenue: song.totalRevenue || 0, // Use actual revenue if available, otherwise 0
           chartPotential: Math.min(100, Math.max(0, song.quality + ((artist.mood || 50) - 50) / 2))
         },
@@ -1391,7 +1391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         releaseType,
         leadSingleId,
         seasonalTiming,
-        scheduledReleaseMonth,
+        scheduledReleaseWeek,
         marketingBudget,
         leadSingleStrategy
       } = req.body;
@@ -1459,7 +1459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         releaseType: releaseType as 'single' | 'ep' | 'album',
         leadSingleId,
         seasonalTiming,
-        scheduledReleaseMonth,
+        scheduledReleaseWeek,
         marketingBudget: marketingBudget || {},
         leadSingleStrategy
       };
@@ -1513,7 +1513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         songIds,
         leadSingleId,
         seasonalTiming,
-        scheduledReleaseMonth,
+        scheduledReleaseWeek,
         marketingBudget,
         leadSingleStrategy,
         metadata
@@ -1597,13 +1597,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           artistId,
           title,
           type,
-          releaseMonth: scheduledReleaseMonth,
+          releaseWeek: scheduledReleaseWeek,
           status: 'planned',
           marketingBudget: totalBudget,
           metadata: {
             ...metadata,
             seasonalTiming,
-            scheduledReleaseMonth,
+            scheduledReleaseWeek,
             marketingChannels: Object.keys(marketingBudget || {}),
             leadSingleStrategy: leadSingleStrategy || null
           }
@@ -1650,7 +1650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           artistName: 'Artist Name', // Would need artist lookup
           songIds,
           leadSingleId,
-          scheduledReleaseMonth,
+          scheduledReleaseWeek,
           status: 'planned',
           estimatedMetrics: {
             streams: metadata?.estimatedStreams || 0,
@@ -1659,7 +1659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             chartPotential: 50
           },
           createdAt: result.createdAt?.toISOString(),
-          createdByMonth: updatedGameState.currentMonth
+          createdByWeek: updatedGameState.currentWeek
         },
         updatedGameState: {
           money: updatedGameState.money,
@@ -1668,7 +1668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             title: r.title,
             artistName: 'Artist Name', // Would need artist lookup
             type: r.type,
-            scheduledMonth: r.releaseMonth,
+            scheduledWeek: r.releaseWeek,
             status: r.status
           })),
           artistsAffected: [{
@@ -1723,7 +1723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           artistId: p.artistId,
           songCount: p.songCount,
           songsCreated: p.songsCreated,
-          startMonth: p.startMonth,
+          startWeek: p.startWeek,
           metadata: p.metadata
         })),
         songs: allSongs.map(s => ({
@@ -1733,7 +1733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quality: s.quality,
           isRecorded: s.isRecorded,
           isReleased: s.isReleased,
-          createdMonth: s.createdMonth,
+          createdWeek: s.createdWeek,
           metadata: s.metadata
         })),
         releasedProjects: releasedProjects.map(p => ({
@@ -1774,7 +1774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         releaseId: release.id,
         releaseTitle: release.title,
         releaseType: release.type,
-        scheduledMonth: release.releaseMonth,
+        scheduledWeek: release.releaseWeek,
         reservedSongs: reservedSongs.filter(s => s.releaseId === release.id).map(s => ({
           songId: s.id,
           songTitle: s.title,
@@ -2000,11 +2000,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select()
         .from(gameStates)
         .where(eq(gameStates.userId, userId))
-        .orderBy(desc(gameStates.currentMonth), desc(gameStates.updatedAt));
+        .orderBy(desc(gameStates.currentWeek), desc(gameStates.updatedAt));
 
       console.log('All games for user:', allGames.map(g => ({ 
         id: g.id.substring(0, 8), 
-        month: g.currentMonth, 
+        week: g.currentWeek, 
         money: g.money,
         updatedAt: g.updatedAt 
       })));
@@ -2027,7 +2027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const defaultState = {
         userId: userId,
-          currentMonth: 1,
+          currentWeek: 1,
           money: startingMoney,
           reputation: 5,
           creativeCapital: 10,
@@ -2039,7 +2039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           campaignType: "standard",
           rngSeed: Math.random().toString(36).substring(7),
           flags: {},
-          monthlyStats: {}
+          weeklyStats: {}
         };
         
         // Create game state without music label - label will be created separately via frontend flow
@@ -2175,11 +2175,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Month advancement with action processing using GameEngine and transactions
-  app.post("/api/advance-month", requireClerkUser, async (req, res) => {
+  // Week advancement with action processing using GameEngine and transactions
+  app.post("/api/advance-week", requireClerkUser, async (req, res) => {
     try {
       // Validate request using shared contract
-      const request = validateRequest(AdvanceMonthRequest, req.body);
+      const request = validateRequest(AdvanceWeekRequest, req.body);
       const { gameId, selectedActions } = request;
       
       // Wrap everything in a database transaction
@@ -2200,7 +2200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Convert database gameState to proper GameState type
         const gameStateForEngine = {
           ...gameState,
-          currentMonth: gameState.currentMonth || 1,
+          currentWeek: gameState.currentWeek || 1,
           money: gameState.money || startingMoney,
           reputation: gameState.reputation || 5,
           creativeCapital: gameState.creativeCapital || 10,
@@ -2212,12 +2212,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           campaignType: gameState.campaignType || 'standard',
           rngSeed: gameState.rngSeed || Math.random().toString(36).substring(7),
           flags: gameState.flags || {},
-          monthlyStats: gameState.monthlyStats || {}
+          weeklyStats: gameState.weeklyStats || {}
         };
         
         // Check if campaign is already completed before creating engine
         if (gameState.campaignCompleted) {
-          // Return campaign results without advancing month
+          // Return campaign results without advancing week
           const balanceConfig = await serverGameData.getBalanceConfig();
           const campaignResults = {
             campaignCompleted: true,
@@ -2230,14 +2230,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               accessTierBonus: 0
             },
             victoryType: gameState.money && gameState.money > 0 ? 'Survival' : 'Failure',
-            summary: 'Your 12-month campaign has ended. Time to start fresh!',
+            summary: 'Your 12-week campaign has ended. Time to start fresh!',
             achievements: ['📅 Campaign Completed']
           };
           
           return {
             gameState: gameStateForEngine,
             summary: {
-              month: gameState.currentMonth || 14,
+              week: gameState.currentWeek || 14,
               changes: [],
               revenue: 0,
               expenses: 0,
@@ -2271,8 +2271,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // DEBUGGING: Log current state before processing
         console.log('='.repeat(80));
-        console.log('[ADVANCE MONTH] Starting month advancement processing');
-        console.log('[ADVANCE MONTH] Current month:', gameStateForEngine.currentMonth);
+        console.log('[ADVANCE WEEK] Starting week advancement processing');
+        console.log('[ADVANCE WEEK] Current week:', gameStateForEngine.currentWeek);
         console.log('='.repeat(80));
 
         // Create GameEngine instance for this game state
@@ -2287,9 +2287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Use GameEngine for business logic - convert selectedActions to proper format
-        let monthResult: Awaited<ReturnType<GameEngine['advanceMonth']>> | undefined;
+        let weekResult: Awaited<ReturnType<GameEngine['advanceWeek']>> | undefined;
         try {
-          console.log('[DEBUG] Processing month advancement...');
+          console.log('[DEBUG] Processing week advancement...');
           console.log('[DEBUG SERVER] Raw selectedActions from client:', JSON.stringify(selectedActions, null, 2));
           
           const formattedActions = selectedActions.map(action => {
@@ -2314,28 +2314,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Now execute GameEngine with the updated project states within the same transaction
           console.log('[DEBUG] Starting GameEngine processing...');
-          monthResult = await gameEngine.advanceMonth(formattedActions, tx); // Pass transaction context
-          console.log('[DEBUG] Month advancement completed successfully');
+          weekResult = await gameEngine.advanceWeek(formattedActions, tx); // Pass transaction context
+          console.log('[DEBUG] Week advancement completed successfully');
           
           // PHASE 4 MIGRATION: Post-GameEngine advancement logic removed
           // All project stage advancement now handled within GameEngine.advanceProjectStages()
           console.log('[DEBUG] === PROJECT ADVANCEMENT COMPLETE (GameEngine handled all stages) ===');
         } catch (engineError) {
           console.error('[ERROR] GameEngine processing failed:', engineError);
-          throw new Error(`Month advancement failed: ${engineError instanceof Error ? engineError.message : 'Unknown error'}`);
+          throw new Error(`Week advancement failed: ${engineError instanceof Error ? engineError.message : 'Unknown error'}`);
         }
         
-        return { gameStateForEngine, monthResult };
+        return { gameStateForEngine, weekResult };
       }); // End the first transaction here
       
       console.log('[DEBUG] Project advancement transaction committed');
       
       // Destructure the result from the first transaction
-      const { gameStateForEngine, monthResult } = result;
+      const { gameStateForEngine, weekResult } = result;
       
-      // Ensure monthResult is defined (it should always be due to the throw in catch block)
-      if (!monthResult) {
-        throw new Error('Month advancement failed: No result returned from GameEngine');
+      // Ensure weekResult is defined (it should always be due to the throw in catch block)
+      if (!weekResult) {
+        throw new Error('Week advancement failed: No result returned from GameEngine');
       }
         
       // Now continue with the rest of the transaction for final updates
@@ -2345,35 +2345,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const [updatedGameState] = await tx
           .update(gameStates)
           .set({
-            currentMonth: monthResult.gameState.currentMonth,
-            money: Math.round(monthResult.gameState.money || 0), // Ensure integer for database
-            reputation: monthResult.gameState.reputation,
-            creativeCapital: monthResult.gameState.creativeCapital,
-            focusSlots: monthResult.gameState.focusSlots,
-            usedFocusSlots: monthResult.gameState.usedFocusSlots,
-            playlistAccess: monthResult.gameState.playlistAccess,
-            pressAccess: monthResult.gameState.pressAccess,
-            venueAccess: monthResult.gameState.venueAccess,
-            campaignCompleted: monthResult.gameState.campaignCompleted,
-            flags: monthResult.gameState.flags,
-            monthlyStats: monthResult.gameState.monthlyStats,
+            currentWeek: weekResult.gameState.currentWeek,
+            money: Math.round(weekResult.gameState.money || 0), // Ensure integer for database
+            reputation: weekResult.gameState.reputation,
+            creativeCapital: weekResult.gameState.creativeCapital,
+            focusSlots: weekResult.gameState.focusSlots,
+            usedFocusSlots: weekResult.gameState.usedFocusSlots,
+            playlistAccess: weekResult.gameState.playlistAccess,
+            pressAccess: weekResult.gameState.pressAccess,
+            venueAccess: weekResult.gameState.venueAccess,
+            campaignCompleted: weekResult.gameState.campaignCompleted,
+            flags: weekResult.gameState.flags,
+            weeklyStats: weekResult.gameState.weeklyStats,
             updatedAt: new Date()
           })
           .where(eq(gameStates.id, gameId))
           .returning();
         
-        // Save monthly actions
+        // Save weekly actions
         if (selectedActions.length > 0) {
-          await tx.insert(monthlyActions).values(
+          await tx.insert(weeklyActions).values(
             selectedActions.map(action => ({
               id: crypto.randomUUID(),
               gameId,
-              month: (monthResult.gameState.currentMonth || 1) - 1, // Previous month
+              week: (weekResult.gameState.currentWeek || 1) - 1, // Previous week
               actionType: action.actionType,
               targetId: action.targetId ? (action.targetId.length === 36 && action.targetId.includes('-')) ? action.targetId : null : null, // Only use if it's a valid UUID
               results: {
-                revenue: monthResult.summary.revenue / selectedActions.length,
-                expenses: monthResult.summary.expenses / selectedActions.length
+                revenue: weekResult.summary.revenue / selectedActions.length,
+                expenses: weekResult.summary.expenses / selectedActions.length
               },
               createdAt: new Date()
             }))
@@ -2405,8 +2405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             serverMessage: "Server-side processing completed",
             processingSteps: {
               totalProjectsCount: finalProjects?.length || 0,
-              gameEngineExecuted: !!monthResult,
-              monthResultSummary: !!monthResult.summary,
+              gameEngineExecuted: !!weekResult,
+              weekResultSummary: !!weekResult.summary,
               postEngineProjectCount: finalProjects?.length || 0
             },
             projectStates: {
@@ -2434,20 +2434,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           console.log('[DEBUG] Comprehensive debug info:', JSON.stringify(debugInfo, null, 2));
 
-          // Song release changes now handled by GameEngine during monthly processing
+          // Song release changes now handled by GameEngine during weekly processing
           console.log('[DEBUG] Song release revenue now processed by GameEngine, not routes.ts');
 
           return {
             gameState: updatedGameState,
-            summary: monthResult.summary,
-            campaignResults: monthResult.campaignResults,
+            summary: weekResult.summary,
+            campaignResults: weekResult.campaignResults,
             debug: debugInfo
           };
         });
       
       res.json(finalResult);
     } catch (error) {
-      console.error('=== ADVANCE MONTH ERROR ===');
+      console.error('=== ADVANCE WEEK ERROR ===');
       console.error('Error type:', typeof error);
       console.error('Error instance:', error?.constructor?.name);
       console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
@@ -2464,11 +2464,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ));
       }
       
-      const errorMessage = error instanceof Error ? error.message : 'Failed to advance month';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to advance week';
       console.error('Sending error response:', errorMessage);
       
       res.status(500).json(createErrorResponse(
-        'ADVANCE_MONTH_ERROR',
+        'ADVANCE_WEEK_ERROR',
         errorMessage
       ));
     }
@@ -2499,7 +2499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Convert database gameState to proper GameState type
         const gameStateForEngine = {
           ...gameState,
-          currentMonth: gameState.currentMonth || 1,
+          currentWeek: gameState.currentWeek || 1,
           money: gameState.money || startingMoney,
           reputation: gameState.reputation || 5,
           creativeCapital: gameState.creativeCapital || 10,
@@ -2511,7 +2511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           campaignType: gameState.campaignType || 'standard',
           rngSeed: gameState.rngSeed || Math.random().toString(36).substring(7),
           flags: gameState.flags || {},
-          monthlyStats: gameState.monthlyStats || {}
+          weeklyStats: gameState.weeklyStats || {}
         };
         
         // Create GameEngine instance and update action selection

@@ -35,7 +35,7 @@ export class Song {
   get quality(): number { return this.dbSong.quality; }
   get genre(): string | null { return this.dbSong.genre; }
   get mood(): string | null { return this.dbSong.mood; }
-  get createdMonth(): number | null { return this.dbSong.createdMonth; }
+  get createdWeek(): number | null { return this.dbSong.createdWeek; }
   get producerTier(): string { return this.dbSong.producerTier || 'local'; }
   get timeInvestment(): string { return this.dbSong.timeInvestment || 'standard'; }
   get isRecorded(): boolean { return this.dbSong.isRecorded || false; }
@@ -46,9 +46,9 @@ export class Song {
   get initialStreams(): number { return this.dbSong.initialStreams || 0; }
   get totalStreams(): number { return this.dbSong.totalStreams || 0; }
   get totalRevenue(): number { return this.dbSong.totalRevenue || 0; }
-  get monthlyStreams(): number { return this.dbSong.monthlyStreams || 0; }
-  get lastMonthRevenue(): number { return this.dbSong.lastMonthRevenue || 0; }
-  get releaseMonth(): number | null { return this.dbSong.releaseMonth; }
+  get weeklyStreams(): number { return this.dbSong.weeklyStreams || 0; }
+  get lastWeekRevenue(): number { return this.dbSong.lastWeekRevenue || 0; }
+  get releaseWeek(): number | null { return this.dbSong.releaseWeek; }
   get projectId(): string | null { return this.dbSong.projectId; }
   get productionBudget(): number { return this.dbSong.productionBudget || 0; }
   get marketingAllocation(): number { return this.dbSong.marketingAllocation || 0; }

@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ActionCard } from './ActionCard';
 
-interface MonthlyAction {
+interface WeeklyAction {
   id: string;
   name: string;
   type: string;
@@ -27,7 +27,7 @@ interface ActionDetails {
 }
 
 interface ActionSelectionPoolProps {
-  actions: MonthlyAction[];
+  actions: WeeklyAction[];
   categories?: any[];
   getActionDetails: (actionId: string) => ActionDetails;
   getActionRecommendation: (actionId: string) => { isRecommended: boolean; isUrgent: boolean; reason?: string };
@@ -90,7 +90,7 @@ export function ActionSelectionPool({
     }
     acc[categoryKey].push(action);
     return acc;
-  }, {} as Record<string, MonthlyAction[]>);
+  }, {} as Record<string, WeeklyAction[]>);
 
   // Use categories from API or fallback to defaults
   const categoriesConfig = categories && categories.length > 0 
@@ -202,7 +202,7 @@ export function ActionSelectionPool({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-              {category.actions.map((action: MonthlyAction) => {
+              {category.actions.map((action: WeeklyAction) => {
                 const actionDetails = getActionDetails(action.id);
                 const recommendation = getActionRecommendation(action.id);
                 const isSelected = selectedActions.includes(action.id);

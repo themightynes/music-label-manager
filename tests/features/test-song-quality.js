@@ -115,7 +115,7 @@ async function runTests() {
               workEthic: 60,
               popularity: 30,
               mood: 50,
-              monthlyFee: 5000
+              weeklyFee: 5000
             };
             
             // Generate 5 songs

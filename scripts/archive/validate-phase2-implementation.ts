@@ -4,10 +4,10 @@
  * Tests all implemented features to ensure they're working correctly
  */
 
-import { db } from '../server/db';
-import { songs, projects, artists } from '../shared/schema';
+import { db } from '../../server/db';
+import { songs, projects, artists } from '../../shared/schema';
 import { eq, and, isNotNull, desc } from 'drizzle-orm';
-import { FinancialSystem } from '../shared/engine/FinancialSystem';
+import { FinancialSystem } from '../../shared/engine/FinancialSystem';
 
 // Color codes for terminal output
 const GREEN = '\x1b[32m';

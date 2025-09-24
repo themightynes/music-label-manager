@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 
-interface MonthlyAction {
+interface WeeklyAction {
   id: string;
   name: string;
   type: string;
@@ -29,7 +29,7 @@ interface ActionDetails {
 }
 
 interface ActionCardProps {
-  action: MonthlyAction;
+  action: WeeklyAction;
   actionDetails: ActionDetails;
   isSelected: boolean;
   isRecommended: boolean;

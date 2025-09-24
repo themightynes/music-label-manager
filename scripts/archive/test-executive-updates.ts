@@ -5,7 +5,7 @@ const DEMO_USER = 'demo';
 const DEMO_PASS = 'maverickdemo';
 
 async function testExecutiveUpdates() {
-  console.log('=== Testing Executive Updates After Month Advancement ===\n');
+  console.log('=== Testing Executive Updates After Week Advancement ===\n');
 
   try {
     // 1. Login
@@ -39,7 +39,7 @@ async function testExecutiveUpdates() {
     console.log(`   ✓ Game found (gameId: ${gameId})\n`);
 
     // 3. Get executives before action
-    console.log('3. Getting executives BEFORE month advancement...');
+    console.log('3. Getting executives BEFORE week advancement...');
     const execBeforeResponse = await fetch(`${API_URL}/game/${gameId}/executives`, {
       method: 'GET',
       headers: { 
@@ -55,8 +55,8 @@ async function testExecutiveUpdates() {
     });
     console.log();
 
-    // 4. Simulate month advancement with executive actions
-    console.log('4. Advancing month with executive actions...');
+    // 4. Simulate week advancement with executive actions
+    console.log('4. Advancing week with executive actions...');
     const selectedActions = [
       {
         actionType: 'role_meeting',
@@ -86,7 +86,7 @@ async function testExecutiveUpdates() {
       console.log(`   - ${action.targetId} with executiveId: ${action.metadata.executiveId}`);
     });
 
-    const advanceResponse = await fetch(`${API_URL}/advance-month`, {
+    const advanceResponse = await fetch(`${API_URL}/advance-week`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -100,14 +100,14 @@ async function testExecutiveUpdates() {
 
     if (!advanceResponse.ok) {
       const errorText = await advanceResponse.text();
-      throw new Error(`Month advancement failed: ${advanceResponse.status} - ${errorText}`);
+      throw new Error(`Week advancement failed: ${advanceResponse.status} - ${errorText}`);
     }
 
     const advanceResult = await advanceResponse.json() as any;
-    console.log(`   ✓ Month advanced successfully\n`);
+    console.log(`   ✓ Week advanced successfully\n`);
 
     // 5. Get executives after action
-    console.log('5. Getting executives AFTER month advancement...');
+    console.log('5. Getting executives AFTER week advancement...');
     const execAfterResponse = await fetch(`${API_URL}/game/${gameId}/executives`, {
       method: 'GET',
       headers: { 

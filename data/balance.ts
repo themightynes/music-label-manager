@@ -35,7 +35,7 @@ const balance = {
   // Economy section
   economy: {
     starting_money: economy.starting_money,
-    monthly_burn_base: economy.monthly_burn_base,
+    weekly_burn_base: economy.weekly_burn_base,
     bankruptcy_threshold: economy.bankruptcy_threshold,
     rng_variance: economy.rng_variance,
     project_costs: economy.project_costs,
@@ -46,7 +46,7 @@ const balance = {
   
   // Time progression section
   time_progression: {
-    campaign_length_months: projects.time_progression.campaign_length_months,
+    campaign_length_weeks: projects.time_progression.campaign_length_weeks,
     focus_slots_base: projects.time_progression.focus_slots_base,
     focus_slots_unlock_threshold: projects.time_progression.focus_slots_unlock_threshold,
     focus_slots_max: projects.time_progression.focus_slots_max,

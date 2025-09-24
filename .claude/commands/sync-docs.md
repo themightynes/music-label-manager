@@ -57,7 +57,7 @@ Updating main documentation hub...
 **Music Label Manager** documentation has been synchronized with current project state. The MVP was completed in August 2025, and we're now in the post-MVP development phase focusing on advanced features with comprehensive documentation for continued development.
 
 **Key Features Documented:**
-- Complete 12-month campaign system
+- Complete 52-week campaign system
 - Artist discovery and signing workflow  
 - Project creation system (Singles, EPs, Mini-Tours)
 - Role-based dialogue system with 72+ choices

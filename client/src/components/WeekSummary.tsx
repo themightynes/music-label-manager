@@ -6,17 +6,17 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3 } from 'lucide-react';
 import { ChartPerformanceCard } from './ChartPerformanceCard';
-import { MonthSummary as MonthSummaryType, GameChange } from '../../../shared/types/gameTypes';
+import { WeekSummary as WeekSummaryType, GameChange } from '../../../shared/types/gameTypes';
 
-interface MonthSummaryProps {
-  monthlyStats: MonthSummaryType;
-  onAdvanceMonth: () => void;
+interface WeekSummaryProps {
+  weeklyStats: WeekSummaryType;
+  onAdvanceWeek: () => void;
   isAdvancing?: boolean;
-  isMonthResults?: boolean;
+  isWeekResults?: boolean;
   onClose?: () => void;
 }
 
-export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMonthResults, onClose }: MonthSummaryProps) {
+export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekResults, onClose }: WeekSummaryProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'projects'>('overview');
 
   const formatCurrency = (amount: number) => {
@@ -71,10 +71,10 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
     return categories;
   };
 
-  const revenue = monthlyStats?.revenue || 0;
-  const expenses = monthlyStats?.expenses || 0;
+  const revenue = weeklyStats?.revenue || 0;
+  const expenses = weeklyStats?.expenses || 0;
   const netIncome = revenue - expenses;
-  const changes = monthlyStats?.changes || [];
+  const changes = weeklyStats?.changes || [];
   const categorizedChanges = categorizeChanges(changes);
 
   return (
@@ -84,7 +84,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white">
-              {isMonthResults ? `Month ${monthlyStats?.month || ''} Results` : 'Month Summary'}
+              {isWeekResults ? `Week ${weeklyStats?.week || ''} Results` : 'Week Summary'}
             </h1>
             <p className="text-sm text-white/70 mt-1">
               Your financial performance and key achievements
@@ -221,7 +221,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
 
       {/* Main Content Area */}
       <div className="px-8 py-6">
-        {isMonthResults && (changes.length > 0 || (monthlyStats?.chartUpdates?.length ?? 0) > 0) ? (
+        {isWeekResults && (changes.length > 0 || (weeklyStats?.chartUpdates?.length ?? 0) > 0) ? (
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="overview" className="flex items-center space-x-2">
@@ -267,7 +267,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                 )}
 
                 {/* Chart Performance Summary for Overview */}
-                {monthlyStats?.chartUpdates && monthlyStats.chartUpdates.filter((update: any) => !update.isCompetitorSong).length > 0 && (
+                {weeklyStats?.chartUpdates && weeklyStats.chartUpdates.filter((update: any) => !update.isCompetitorSong).length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2 text-yellow-700 text-sm">
@@ -277,7 +277,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                     </CardHeader>
                     <CardContent>
                       <ChartPerformanceCard
-                        chartUpdates={monthlyStats.chartUpdates?.filter((update: any) => !update.isCompetitorSong) || []}
+                        chartUpdates={weeklyStats.chartUpdates?.filter((update: any) => !update.isCompetitorSong) || []}
                         showHeader={false}
                         compact={true}
                         variant="dark"
@@ -322,8 +322,8 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                       )}
                       <span className="text-sm font-semibold">
                         {netIncome >= 0 ? 
-                          `Excellent! You generated ${formatCurrency(netIncome)} in profit this month.` :
-                          `Focus needed: You had a ${formatCurrency(Math.abs(netIncome))} loss this month.`
+                          `Excellent! You generated ${formatCurrency(netIncome)} in profit this week.` :
+                          `Focus needed: You had a ${formatCurrency(Math.abs(netIncome))} loss this week.`
                         }
                       </span>
                     </div>
@@ -333,10 +333,10 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
             </TabsContent>
 
             <TabsContent value="charts" className="space-y-6">
-              {monthlyStats?.chartUpdates && monthlyStats.chartUpdates.filter((update: any) => !update.isCompetitorSong).length > 0 ? (
+              {weeklyStats?.chartUpdates && weeklyStats.chartUpdates.filter((update: any) => !update.isCompetitorSong).length > 0 ? (
                 <div className="space-y-6">
                   <ChartPerformanceCard
-                    chartUpdates={monthlyStats.chartUpdates?.filter((update: any) => !update.isCompetitorSong) || []}
+                    chartUpdates={weeklyStats.chartUpdates?.filter((update: any) => !update.isCompetitorSong) || []}
                     variant="dark"
                     className="border-[#4e324c]"
                   />
@@ -353,21 +353,21 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-yellow-500">
-                            {monthlyStats.chartUpdates.filter((u: any) => u.isDebut && !u.isCompetitorSong).length}
+                            {weeklyStats.chartUpdates.filter((u: any) => u.isDebut && !u.isCompetitorSong).length}
                           </div>
                           <div className="text-sm text-white/70">New Debuts</div>
                           <div className="text-xs text-white/50 mt-1">Your songs entering charts</div>
                         </div>
                         <div className="text-center">
                           <div className="text-2xl font-bold text-green-500">
-                            {monthlyStats.chartUpdates.filter((u: any) => u.movement && u.movement > 0 && !u.isCompetitorSong).length}
+                            {weeklyStats.chartUpdates.filter((u: any) => u.movement && u.movement > 0 && !u.isCompetitorSong).length}
                           </div>
                           <div className="text-sm text-white/70">Climbing</div>
                           <div className="text-xs text-white/50 mt-1">Your songs moving up</div>
                         </div>
                         <div className="text-center">
                           <div className="text-2xl font-bold text-blue-500">
-                            {monthlyStats.chartUpdates.filter((u: any) => u.position && u.position <= 10 && !u.isCompetitorSong).length}
+                            {weeklyStats.chartUpdates.filter((u: any) => u.position && u.position <= 10 && !u.isCompetitorSong).length}
                           </div>
                           <div className="text-sm text-white/70">Top 10</div>
                           <div className="text-xs text-white/50 mt-1">Your songs in elite positions</div>
@@ -381,7 +381,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                   <CardContent className="p-12 text-center">
                     <BarChart3 className="h-10 w-10 text-white/50 mx-auto mb-4" />
                     <h3 className="text-sm font-semibold text-white/70 mb-2">No Chart Activity</h3>
-                    <p className="text-xs text-white/50">No songs charted this month</p>
+                    <p className="text-xs text-white/50">No songs charted this week</p>
                   </CardContent>
                 </Card>
               )}
@@ -419,7 +419,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                   <CardContent className="p-12 text-center">
                     <Music className="h-10 w-10 text-white/50 mx-auto mb-4" />
                     <h3 className="text-sm font-semibold text-white/70 mb-2">No Projects Completed</h3>
-                    <p className="text-xs text-white/50">No projects were completed this month</p>
+                    <p className="text-xs text-white/50">No projects were completed this week</p>
                   </CardContent>
                 </Card>
               )}
@@ -433,7 +433,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                 <DollarSign className="h-6 w-6 text-white/50" />
               </div>
               <h3 className="text-base font-semibold text-white/70 mb-2">No Results Available</h3>
-              <p className="text-sm text-white/50">No detailed results are available for this month</p>
+              <p className="text-sm text-white/50">No detailed results are available for this week</p>
             </CardContent>
           </Card>
         )}
@@ -443,7 +443,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
       <div className="px-8 py-6 border-t border-[#4e324c] bg-[#3c252d]/20">
         <div className="max-w-md mx-auto">
           <Button
-            onClick={onAdvanceMonth}
+            onClick={onAdvanceWeek}
             disabled={isAdvancing}
             size="lg"
             className="w-full bg-[#A75A5B] hover:bg-[#A75A5B]/80 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
@@ -458,7 +458,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
               </span>
             ) : (
               <span className="flex items-center justify-center space-x-2">
-                {isMonthResults ? (
+                {isWeekResults ? (
                   <>
                     <DollarSign className="h-5 w-5" />
                     <span>Back to Dashboard</span>
@@ -466,7 +466,7 @@ export function MonthSummary({ monthlyStats, onAdvanceMonth, isAdvancing, isMont
                 ) : (
                   <>
                     <Zap className="h-5 w-5" />
-                    <span>Continue to Next Month</span>
+                    <span>Continue to Next Week</span>
                   </>
                 )}
               </span>
