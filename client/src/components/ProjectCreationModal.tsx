@@ -196,6 +196,7 @@ export function ProjectCreationModal({
 
   const currentMoney = gameState.money || 75000;
   const currentReputation = gameState.reputation || 0;
+  const currentCreativeCapital = gameState.creativeCapital || 0;
   const selectedProjectType = PROJECT_TYPES.find(type => type.id === selectedType);
   const selectedProducer = PRODUCER_TIERS.find(tier => tier.id === selectedProducerTier);
   const selectedTimeOption = TIME_INVESTMENT_OPTIONS.find(option => option.id === selectedTimeInvestment);
@@ -446,6 +447,8 @@ export function ProjectCreationModal({
   };
 
   const canAfford = finalTotalCost <= currentMoney;
+  const hasCreativeCapital = currentCreativeCapital >= 1;
+  
   // Check if budget is within valid range
   const isBudgetValid = (() => {
     if (!selectedType) return true; // Don't validate if no type selected
@@ -461,7 +464,7 @@ export function ProjectCreationModal({
     return true;
   })();
 
-  const isValid = selectedType && selectedArtist && title && canAfford && isBudgetValid;
+  const isValid = selectedType && selectedArtist && title && canAfford && hasCreativeCapital && isBudgetValid;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -799,6 +802,15 @@ export function ProjectCreationModal({
                 <div className="p-4 bg-red-100 border border-red-300 rounded-md">
                   <p className="text-red-800">
                     Insufficient funds! Need ${finalTotalCost.toLocaleString()} but only have ${currentMoney.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              
+              {/* Creative Capital Warning */}
+              {!hasCreativeCapital && (
+                <div className="p-4 bg-red-100 border border-red-300 rounded-md">
+                  <p className="text-red-800">
+                    Insufficient creative capital! Need 1 creative capital to start a new project, but you have {currentCreativeCapital}.
                   </p>
                 </div>
               )}

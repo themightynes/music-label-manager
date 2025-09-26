@@ -104,7 +104,7 @@ const getSeasonalAdjustment = (budgets: Record<string, number>, week: number, ba
 
 export default function PlanReleasePage() {
   const [, setLocation] = useLocation();
-  const { gameState, loadGame } = useGameStore();
+  const { gameState, loadGame, planRelease } = useGameStore();
 
   // Dynamic data state (loaded from balance config)
   const [marketingChannels, setMarketingChannels] = useState<MarketingChannel[]>([]);
@@ -219,39 +219,39 @@ export default function PlanReleasePage() {
   }, [gameState?.id]);
 
   // Load available songs for selected artist
-  useEffect(() => {
-    const loadArtistSongs = async () => {
-      if (!selectedArtist || !gameState?.id) {
-        setAvailableSongs([]);
-        return;
-      }
-      
-      setLoadingSongs(true);
-      setSongError(null);
-      try {
-        const response = await apiRequest('GET', 
-          `/api/game/${gameState.id}/artists/${selectedArtist}/songs/ready`);
-        const data = await response.json();
-        
-        const artist = artists.find(a => a.id === selectedArtist);
-        setAvailableSongs(data.songs.map((song: any) => transformSongData(song, artist?.name || '')));
-      } catch (error: any) {
-        console.error('Failed to load artist songs:', error);
-        
-        // Handle specific error types
-        if (error.status === 503 || error.message?.includes('unavailable')) {
-          setSongError('Database temporarily unavailable. Please try again in a moment.');
-        } else if (error.status === 504 || error.message?.includes('timeout')) {
-          setSongError('Request timed out. Please try again.');
-        } else {
-          setSongError(error.message || 'Failed to load songs. Please try again.');
-        }
-        setAvailableSongs([]);
-      } finally {
-        setLoadingSongs(false);
-      }
-    };
+  const loadArtistSongs = async () => {
+    if (!selectedArtist || !gameState?.id) {
+      setAvailableSongs([]);
+      return;
+    }
     
+    setLoadingSongs(true);
+    setSongError(null);
+    try {
+      const response = await apiRequest('GET', 
+        `/api/game/${gameState.id}/artists/${selectedArtist}/songs/ready`);
+      const data = await response.json();
+      
+      const artist = artists.find(a => a.id === selectedArtist);
+      setAvailableSongs(data.songs.map((song: any) => transformSongData(song, artist?.name || '')));
+    } catch (error: any) {
+      console.error('Failed to load artist songs:', error);
+      
+      // Handle specific error types
+      if (error.status === 503 || error.message?.includes('unavailable')) {
+        setSongError('Database temporarily unavailable. Please try again in a moment.');
+      } else if (error.status === 504 || error.message?.includes('timeout')) {
+        setSongError('Request timed out. Please try again.');
+      } else {
+        setSongError(error.message || 'Failed to load songs. Please try again.');
+      }
+      setAvailableSongs([]);
+    } finally {
+      setLoadingSongs(false);
+    }
+  };
+  
+  useEffect(() => {
     loadArtistSongs();
   }, [selectedArtist, gameState?.id, artists]);
 
@@ -374,10 +374,12 @@ export default function PlanReleasePage() {
     const errors: string[] = [];
     const totalMarketingCost = metrics?.totalMarketingCost || 0;
     const activeChannels = marketingChannels.filter(channel => (channelBudgets[channel.id] || 0) > 0);
+    const currentCreativeCapital = gameState?.creativeCapital || 0;
     
     if (!selectedArtist) errors.push('Please select an artist');
     if (selectedSongs.length === 0) errors.push('Please select at least one song');
     if (!releaseTitle.trim()) errors.push('Please enter a release title');
+    if (currentCreativeCapital < 1) errors.push('Insufficient creative capital. You need 1 creative capital to plan a release.');
     if (totalMarketingCost > (gameState?.money || 0)) errors.push('Insufficient funds for total marketing budget');
     if (activeChannels.length === 0) errors.push('Please allocate budget to at least one marketing channel');
     
@@ -452,32 +454,57 @@ export default function PlanReleasePage() {
         }
       };
       
-      const response = await apiRequest('POST', 
-        `/api/game/${gameState?.id}/releases/plan`, releaseData);
-      const result = await response.json();
+      const result = await planRelease(releaseData);
       
-      // Success - refresh game data and redirect to dashboard
-      alert('Release planned successfully! You can view it in your project pipeline.');
+      // Success - clear selected songs and refresh available songs immediately
+      setSelectedSongs([]);
+      setLeadSingle('');
+      setReleaseTitle('');
+      
+      // Refresh available songs to remove the ones that were just scheduled
+      await loadArtistSongs();
+      
+      // Success message with more detailed feedback
+      const scheduledSongTitles = selectedSongs.map(songId => {
+        const song = availableSongs.find(s => s.id === songId);
+        return song?.title || 'Unknown Song';
+      }).join(', ');
+      
+      alert(`Release "${releaseData.title}" planned successfully!\n\nScheduled songs: ${scheduledSongTitles}\n\nThese songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`);
       
       // Refresh game data to load the new planned release
       if (gameState?.id) {
         await loadGame(gameState.id);
       }
       
-      setLocation('/');
+      // Offer to plan another release or go to dashboard
+      const planAnother = confirm('Would you like to plan another release? Click OK to stay on this page, or Cancel to go to the dashboard.');
+      
+      if (!planAnother) {
+        setLocation('/');
+      }
       
     } catch (error: any) {
       console.error('Failed to create release:', error);
       
       // Handle specific error types
       if (error.status === 402) {
-        setValidationErrors(['Insufficient funds for total marketing budget']);
+        // Check if it's a creative capital error or money error
+        const errorMessage = error.message || '';
+        if (errorMessage.includes('creative capital')) {
+          setValidationErrors(['Insufficient creative capital. You need 1 creative capital to plan a release.']);
+        } else {
+          setValidationErrors(['Insufficient funds for total marketing budget']);
+        }
       } else if (error.status === 409) {
+        // Song conflict detected - refresh available songs to show current state
+        await loadArtistSongs();
+        
         const details = error.details || {};
         if (details.conflicts) {
           setValidationErrors(details.conflicts.map((c: any) => c.description));
         } else {
-          setValidationErrors(['Song scheduling conflict detected']);
+          setValidationErrors(['Song scheduling conflict detected. The song list has been refreshed to show current availability.']);
         }
       } else if (error.status === 400) {
         const details = error.details || [];

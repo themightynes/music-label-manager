@@ -728,6 +728,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error('Game state not found');
       }
       
+      // Check if user has sufficient creative capital
+      const currentCreativeCapital = gameState.creativeCapital || 0;
+      if (currentCreativeCapital < 1) {
+        throw new Error(`Insufficient creative capital. You need 1 creative capital to start a new project, but you have ${currentCreativeCapital}.`);
+      }
+      
       const projectCost = validatedData.totalCost || validatedData.budgetPerSong || 0;
       if (projectCost > (gameState.money ?? 0)) {
         throw new Error(`Insufficient funds. Project costs $${projectCost.toLocaleString()} but you only have $${(gameState.money ?? 0).toLocaleString()}`);
@@ -735,12 +741,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const project = await storage.createProject(validatedData);
       
-      // IMMEDIATELY deduct project cost to prevent timing exploit
+      // IMMEDIATELY deduct project cost and creative capital to prevent timing exploit
+      await storage.updateGameState(validatedData.gameId!, {
+        money: (gameState.money ?? 0) - projectCost,
+        creativeCapital: currentCreativeCapital - 1
+      });
+      
       if (projectCost > 0) {
-        await storage.updateGameState(validatedData.gameId!, {
-          money: (gameState.money ?? 0) - projectCost
-        });
-        console.log(`[PROJECT CREATION] Immediately deducted $${projectCost} for project "${project.title}"`);
+        console.log(`[PROJECT CREATION] Immediately deducted $${projectCost} and 1 creative capital for project "${project.title}"`);
+      } else {
+        console.log(`[PROJECT CREATION] Immediately deducted 1 creative capital for project "${project.title}"`);
       }
       
       console.log('[PROJECT CREATION] Project created in database:', JSON.stringify({
@@ -1263,14 +1273,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           loyalty: sql`${artists.loyalty}`.as('loyalty'),
           archetype: sql`${artists.archetype}`.as('archetype'),
           signedWeek: sql`${artists.signedWeek}`.as('signedWeek'),
-          readySongsCount: sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false THEN 1 END)`.as('readySongsCount'),
+          readySongsCount: sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false AND ${songs.releaseId} IS NULL THEN 1 END)`.as('readySongsCount'),
           totalSongsCount: sql`COUNT(${songs.id})`.as('totalSongsCount')
         })
         .from(artists)
         .leftJoin(songs, eq(songs.artistId, artists.id))
         .where(eq(artists.gameId, gameId))
         .groupBy(artists.id, artists.name, artists.mood, artists.loyalty, artists.archetype, artists.signedWeek)
-        .having(sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false THEN 1 END) >= ${minSongs}`);
+        .having(sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false AND ${songs.releaseId} IS NULL THEN 1 END) >= ${minSongs}`);
 
       const totalReadySongs = artistsResult.reduce((sum: number, artist: any) => sum + parseInt(artist.readySongsCount as string), 0);
       
@@ -1568,6 +1578,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalBudget = Object.values(marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) +
         (leadSingleStrategy ? Object.values(leadSingleStrategy.leadSingleBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) : 0);
+      
+      // Check if user has sufficient creative capital
+      const currentCreativeCapital = gameState.creativeCapital || 0;
+      if (currentCreativeCapital < 1) {
+        return res.status(402).json({
+          error: 'INSUFFICIENT_CREATIVE_CAPITAL',
+          message: 'Insufficient creative capital. You need 1 creative capital to plan a release.',
+          required: 1,
+          available: currentCreativeCapital
+        });
+      }
 
       if ((gameState.money || 0) < totalBudget) {
         return res.status(402).json({
@@ -1609,10 +1630,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create the planned release in a transaction
       const result = await db.transaction(async (tx) => {
-        // CRITICAL FIX: Single deduction of marketing budget (was double-deducting)
+        // CRITICAL FIX: Single deduction of marketing budget and creative capital
         await tx.update(gameStates)
-          .set({ money: (gameState.money || 0) - totalBudget })
+          .set({ 
+            money: (gameState.money || 0) - totalBudget,
+            creativeCapital: currentCreativeCapital - 1
+          })
           .where(eq(gameStates.id, gameId));
+        
+        console.log(`[PLAN RELEASE] Deducted $${totalBudget} and 1 creative capital for release planning`);
 
         // Create release record
         const [newRelease] = await tx.insert(releases).values({

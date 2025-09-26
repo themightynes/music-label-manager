@@ -43,6 +43,9 @@ interface GameStore {
   updateProject: (projectId: string, updates: any) => Promise<void>;
   cancelProject: (projectId: string, cancellationData: { refundAmount: number }) => Promise<void>;
   
+  // Release management
+  planRelease: (releaseData: any) => Promise<void>;
+  
   // Save management
   saveGame: (name: string) => Promise<void>;
 }
@@ -165,8 +168,8 @@ export const useGameStore = create<GameStore>()(
             currentWeek: 1,
             // money will be set by server from balance.json
             // reputation will be set by server from balance.json
+            // reputation and creativeCapital will be set by server from balance.json
             reputation: 0,
-            creativeCapital: 0,
             focusSlots: 3,
             usedFocusSlots: 0,
             playlistAccess: 'none',
@@ -580,17 +583,22 @@ export const useGameStore = create<GameStore>()(
           // Update projects array
           set({ projects: [...projects, newProject] });
 
-          // CRITICAL: Immediately update gameState to reflect cost deduction
-          // The server has already deducted the project cost, so we need to sync our local state
+          // CRITICAL: Immediately update gameState to reflect cost and creative capital deduction
+          // The server has already deducted both the project cost and creative capital, so we need to sync our local state
           const projectCost = projectData.totalCost || projectData.budgetPerSong || 0;
+          const currentCreativeCapital = gameState.creativeCapital || 0;
+          
+          const updatedGameState = {
+            ...gameState,
+            money: (gameState.money ?? 0) - projectCost,
+            creativeCapital: currentCreativeCapital - 1  // Deduct 1 creative capital
+          };
+          set({ gameState: updatedGameState });
+          
           if (projectCost > 0) {
-            const updatedGameState = {
-              ...gameState,
-              money: (gameState.money ?? 0) - projectCost
-            };
-            set({ gameState: updatedGameState });
             console.log(`[FRONTEND] Synced money deduction: -$${projectCost}, new balance: $${updatedGameState.money}`);
           }
+          console.log(`[FRONTEND] Synced creative capital deduction: -1, new balance: ${updatedGameState.creativeCapital}`);
         } catch (error) {
           console.error('Failed to create project:', error);
           throw error;
@@ -644,6 +652,36 @@ export const useGameStore = create<GameStore>()(
           console.log(`[CANCEL PROJECT] Project cancelled. Refund: $${result.refundAmount}, New balance: $${result.newBalance}`);
         } catch (error) {
           console.error('Failed to cancel project:', error);
+          throw error;
+        }
+      },
+
+      // Release management
+      planRelease: async (releaseData: any) => {
+        const { gameState } = get();
+        if (!gameState) return;
+
+        try {
+          const response = await apiRequest('POST', `/api/game/${gameState.id}/releases/plan`, releaseData);
+          const result = await response.json();
+
+          // Update game state to reflect marketing budget and creative capital deduction
+          const totalMarketingCost = releaseData.metadata?.totalInvestment || 0;
+          const currentCreativeCapital = gameState.creativeCapital || 0;
+          
+          const updatedGameState = {
+            ...gameState,
+            money: (gameState.money ?? 0) - totalMarketingCost,
+            creativeCapital: currentCreativeCapital - 1
+          };
+          
+          set({ gameState: updatedGameState });
+          
+          console.log(`[FRONTEND] Synced release planning: -$${totalMarketingCost}, -1 creative capital, new balances: $${updatedGameState.money}, ${updatedGameState.creativeCapital} creative capital`);
+          
+          return result;
+        } catch (error) {
+          console.error('Failed to plan release:', error);
           throw error;
         }
       },

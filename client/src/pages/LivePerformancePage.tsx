@@ -129,6 +129,7 @@ export default function LivePerformancePage() {
 
   const currentMoney = gameState?.money || 75000;
   const currentVenueAccess = gameState?.venueAccess || 'none';
+  const currentCreativeCapital = gameState?.creativeCapital || 0;
   const selectedPerformanceType = PERFORMANCE_TYPES.find(type => type.id === selectedType);
 
   // Handle URL parameter for artist pre-selection
@@ -560,7 +561,8 @@ export default function LivePerformancePage() {
   };
 
   const canAfford = estimateData?.canAfford ?? false;
-  const isValid = selectedType && selectedArtist && title && budgetPerCity > 0 && canAfford && availableArtists.length > 0;
+  const hasCreativeCapital = currentCreativeCapital >= 1;
+  const isValid = selectedType && selectedArtist && title && budgetPerCity > 0 && canAfford && hasCreativeCapital && availableArtists.length > 0;
 
   return (
     <GameLayout>
@@ -856,6 +858,15 @@ export default function LivePerformancePage() {
                 <div className="p-4 bg-red-100/10 border border-red-300/30 rounded-md">
                   <p className="text-red-400">
                     Insufficient funds! Need ${estimateData.totalBudget?.toLocaleString()} but only have ${currentMoney.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              
+              {/* Creative Capital Warning */}
+              {!hasCreativeCapital && (
+                <div className="p-4 bg-red-100/10 border border-red-300/30 rounded-md">
+                  <p className="text-red-400">
+                    Insufficient creative capital! You need 1 creative capital to book a performance, but you have {currentCreativeCapital}.
                   </p>
                 </div>
               )}
