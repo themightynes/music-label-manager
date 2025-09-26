@@ -240,14 +240,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('🎮🎮🎮 REPUTATION FROM BALANCE:', startingValues.reputation);
       console.error('💰💰💰 MONEY FROM BALANCE:', startingValues.money);
       console.error('🎨🎨🎨 CREATIVE CAPITAL FROM BALANCE:', startingValues.creativeCapital);
+
+      // Derive initial access tiers from starting reputation (ignore client-provided access fields)
+      const accessTiers = serverGameData.getAccessTiersSync() as any;
+      const rep = startingValues.reputation || 0;
+      const pickTier = (tiersObj: Record<string, { threshold: number }>) => (
+        Object.entries(tiersObj)
+          .sort(([, a], [, b]) => (b as any).threshold - (a as any).threshold)
+          .find(([, cfg]) => rep >= (cfg as any).threshold)?.[0] || 'none'
+      );
+      const initialPlaylist = pickTier(accessTiers.playlist_access);
+      const initialPress = pickTier(accessTiers.press_access);
+      const initialVenue = pickTier(accessTiers.venue_access);
+
       const gameDataWithBalance = {
         ...validatedData,
+        // Force correct initial access tiers based on reputation
+        playlistAccess: initialPlaylist,
+        pressAccess: initialPress,
+        venueAccess: initialVenue,
         money: startingValues.money,
         reputation: startingValues.reputation,
         creativeCapital: startingValues.creativeCapital, // FIXED: Use balance.json configuration like money and reputation
         userId: req.userId  // CRITICAL: Associate game with user
       };
-      console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation);
+      console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation, 'VenueAccess:', gameDataWithBalance.venueAccess);
 
       // Create game state and music label atomically within a transaction
       const result = await db.transaction(async (tx) => {
@@ -2073,6 +2090,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get starting values from balance configuration
       const startingValues = await serverGameData.getStartingValues();
 
+      // Determine initial access tiers based on starting reputation
+      // This ensures venue access starts at 'clubs' when starting reputation >= 5
+      const accessTiers = serverGameData.getAccessTiersSync() as any;
+      const rep = startingValues.reputation || 0;
+      const pickTier = (tiersObj: Record<string, { threshold: number }>) => {
+        return (
+          Object.entries(tiersObj)
+            .sort(([, a], [, b]) => (b as any).threshold - (a as any).threshold)
+            .find(([, cfg]) => rep >= (cfg as any).threshold)?.[0] || 'none'
+        );
+      };
+      const initialPlaylist = pickTier(accessTiers.playlist_access);
+      const initialPress = pickTier(accessTiers.press_access);
+      const initialVenue = pickTier(accessTiers.venue_access);
+
       const defaultState = {
         userId: userId,
           currentWeek: 1,
@@ -2081,9 +2113,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           creativeCapital: startingValues.creativeCapital,
           focusSlots: 3,
           usedFocusSlots: 0,
-          playlistAccess: "none",
-          pressAccess: "none",
-          venueAccess: "none",
+          playlistAccess: initialPlaylist,
+          pressAccess: initialPress,
+          venueAccess: initialVenue,
           campaignType: "standard",
           rngSeed: Math.random().toString(36).substring(7),
           flags: {},
