@@ -564,7 +564,7 @@ export function ReleaseWorkflowCard({
                 <span className="text-white/70">Total Marketing</span>
               </div>
               <span className="font-mono font-semibold">
-                ${(release.marketingBudget + (leadSingleStrategy?.totalLeadSingleBudget || 0)).toLocaleString()}
+                {formatCurrency(campaignData.totalInvestment)}
               </span>
             </div>
             
@@ -576,7 +576,7 @@ export function ReleaseWorkflowCard({
                 </div>
                 <div className="flex justify-between">
                   <span>Main Release Campaign:</span>
-                  <span>${release.marketingBudget.toLocaleString()}</span>
+                  <span>{formatCurrency(campaignData.mainBudget)}</span>
                 </div>
               </div>
             )}

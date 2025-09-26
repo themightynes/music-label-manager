@@ -412,6 +412,14 @@ export default function RecordingSessionPage() {
       // Calculate a reasonable default budget
       setBudgetPerSong(type === 'Single' ? 5000 : 5000);
     }
+
+    // Auto-generate title if artist is already selected
+    if (selectedArtist) {
+      const artist = artists.find(a => a.id === selectedArtist);
+      if (artist) {
+        setTitle(`${artist.name} Recording Session`);
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -541,14 +549,31 @@ export default function RecordingSessionPage() {
               {/* Artist Selection */}
               <div>
                 <Label htmlFor="artist" className="text-white">Artist</Label>
-                <Select value={selectedArtist} onValueChange={setSelectedArtist}>
+                <Select value={selectedArtist} onValueChange={(value) => {
+                  setSelectedArtist(value);
+                  const artist = artists.find(a => a.id === value);
+                  if (artist && selectedType) {
+                    setTitle(`${artist.name} Recording Session`);
+                  }
+                }}>
                   <SelectTrigger className="bg-[#1A111A] border-[#4e324c] text-white">
                     <SelectValue placeholder="Select an artist" />
                   </SelectTrigger>
                   <SelectContent>
                     {artists.map((artist) => (
                       <SelectItem key={artist.id} value={artist.id}>
-                        {artist.name}
+                        <div className="flex items-center space-x-2">
+                          <span>{artist.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            Pop: {artist.popularity || 0}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Mood: {artist.mood || 0}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Loyalty: {artist.loyalty || 0}
+                          </Badge>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -154,6 +154,13 @@ export const songs = pgTable("songs", {
   `),
   
   metadata: jsonb("metadata").default('{}'), // hooks, features, special attributes, decay data
+
+  // Awareness system columns
+  awareness: integer("awareness").default(0).notNull(), // Current cultural penetration (0-100 scale)
+  breakthrough_achieved: boolean("breakthrough_achieved").default(false).notNull(), // Has song achieved cultural breakthrough
+  peak_awareness: integer("peak_awareness").default(0).notNull(), // Historical peak awareness for analytics
+  awareness_decay_rate: real("awareness_decay_rate").default(0.05).notNull(), // Custom decay rate (breakthrough songs decay slower)
+
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   // Performance-optimized indexes for producer tier and time investment systems
@@ -170,6 +177,9 @@ export const songs = pgTable("songs", {
   artistRoiIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_artist_roi" ON ${table} ("artist_id", "roi_percentage" DESC) WHERE "is_released" = true AND "roi_percentage" IS NOT NULL`,
   producerRoiIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_producer_roi" ON ${table} ("producer_tier", "roi_percentage" DESC) WHERE "is_released" = true AND "roi_percentage" IS NOT NULL`,
   investmentAnalysisIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_investment_analysis" ON ${table} ("game_id", "total_investment", "total_revenue") WHERE "is_released" = true`,
+
+  // Awareness system indexes
+  awarenessQueriesIdx: sql`CREATE INDEX IF NOT EXISTS "idx_songs_awareness_queries" ON ${table} ("game_id", "awareness" DESC, "breakthrough_achieved") WHERE "is_released" = true`,
 }));
 
 // Releases (Singles, EPs, Albums, Compilations)

@@ -14,6 +14,7 @@ import { GameState, Artist, Project, Role, WeeklyAction, Song, Release, ReleaseS
 import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
+import { AchievementsEngine } from './AchievementsEngine';
 import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 
@@ -112,8 +113,13 @@ export class GameEngine {
     summary: WeekSummary;
     campaignResults?: CampaignResults;
   }> {
+    console.log('[DEBUG] GameEngine.advanceWeek ENTRY - starting execution');
+    console.log('[DEBUG] GameEngine current week:', this.gameState.currentWeek);
+    console.log('[DEBUG] GameEngine campaign completed:', this.gameState.campaignCompleted);
+
     // Check if campaign is already completed
     if (this.gameState.campaignCompleted) {
+      console.log('[DEBUG] Campaign already completed - throwing error');
       throw new Error('Campaign has already been completed. Start a new game to continue playing.');
     }
 
@@ -318,11 +324,21 @@ export class GameEngine {
       }
     }
     
-    return {
+    const result = {
       gameState: this.gameState,
       summary,
       campaignResults
     };
+
+    console.log('[DEBUG] GameEngine.advanceWeek returning:', {
+      hasGameState: !!result.gameState,
+      hasSummary: !!result.summary,
+      hasCampaignResults: !!result.campaignResults,
+      week: result.summary?.week,
+      resultType: typeof result
+    });
+
+    return result;
   }
 
   /**
@@ -845,9 +861,12 @@ export class GameEngine {
    * Processes ongoing revenue from individual released songs (streaming decay)
    * This simulates realistic revenue patterns where each song generates declining revenue over time
    */
-  private async processReleasedProjects(summary: MonthSummary): Promise<void> {
-    
+  private async processReleasedProjects(summary: WeekSummary): Promise<void> {
+
     try {
+      // Define current week for awareness calculations
+      const currentWeek = this.gameState.currentWeek || 1;
+
       // Get all released songs for this game
       const releasedSongs = await this.gameData.getReleasedSongs(this.gameState.id) || [];
 
@@ -868,12 +887,151 @@ export class GameEngine {
         }
       }
 
+      // Cache releases to avoid N+1 queries in the loop
+      let releaseMap: Map<string, any> = new Map();
+      if (this.storage?.getReleasesByGame) {
+        try {
+          const releases = await this.storage.getReleasesByGame(this.gameState.id);
+          if (releases && releases.length > 0) {
+            releases.forEach((release: any) => releaseMap.set(release.id, release));
+          }
+        } catch (error) {
+          console.error('[AWARENESS] Error caching releases, will fallback to individual lookups:', error);
+        }
+      }
+
       let totalOngoingRevenue = 0;
       const songUpdates = [];
       
       for (const song of releasedSongs) {
-        const ongoingRevenue = this.calculateOngoingSongRevenue(song);
-        
+        const ongoingRevenue = await this.calculateOngoingSongRevenue(song);
+
+        // Process awareness system (building in weeks 1-4, decay in weeks 5+)
+        let awarenessUpdate = null;
+        try {
+          const releaseWeek = song.releaseWeek || 1;
+          const weeksSinceRelease = currentWeek - releaseWeek;
+          const currentAwareness = song.awareness || 0;
+
+          if (weeksSinceRelease >= 1 && weeksSinceRelease <= 4) {
+            // Awareness Building Phase (Weeks 1-4)
+            if (song.releaseId) {
+              // Use cached release to avoid N+1 queries
+              let release = releaseMap.get(song.releaseId);
+              if (!release && this.storage?.getRelease) {
+                // Fallback to individual lookup if not in cache
+                release = await this.storage.getRelease(song.releaseId);
+              }
+              const marketingBreakdown = release?.metadata?.marketingBudgetBreakdown;
+
+              if (marketingBreakdown) {
+              const awarenessGain = this.financialSystem.calculateAwarenessGain(song, marketingBreakdown);
+              let newAwareness = Math.round(Math.min(currentAwareness + awarenessGain, 100));
+
+              // Check for breakthrough achievement during weeks 3-6
+              if (!song.breakthrough_achieved && weeksSinceRelease >= 3 && weeksSinceRelease <= 6) {
+                const balanceConfig = this.gameData.getBalanceConfigSync();
+                const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
+
+                if (awarenessConfig?.enabled) {
+                  // Calculate breakthrough potential
+                  let breakthroughPotential = 0;
+                  if (song.quality >= 80) {
+                    breakthroughPotential = Math.min(newAwareness / 40, 1) * 0.65;
+                  } else if (song.quality >= 70) {
+                    breakthroughPotential = Math.min(newAwareness / 60, 1) * 0.35;
+                  } else if (song.quality >= 60) {
+                    breakthroughPotential = Math.min(newAwareness / 80, 1) * 0.15;
+                  }
+
+                  // Roll for breakthrough (deterministic based on song properties)
+                  if (breakthroughPotential > 0) {
+                    const seed = (song.quality || 50) + currentWeek + newAwareness + (song.artistId?.slice(-2) || '00');
+                    const random = (Math.sin(seed) + 1) / 2;
+
+                    if (random < breakthroughPotential) {
+                      // BREAKTHROUGH ACHIEVED!
+                      const breakthroughEffects = awarenessConfig.breakthrough_effects || {};
+                      const awarenessMultiplier = breakthroughEffects.awareness_multiplier || 2.5;
+
+                      newAwareness = Math.round(Math.min(newAwareness * awarenessMultiplier, 100));
+
+                      summary.changes.push({
+                        type: 'breakthrough',
+                        description: `🔥 "${song.title}" BREAKTHROUGH ACHIEVED! Awareness exploded to ${newAwareness}/100`,
+                        amount: 0
+                      });
+
+                      awarenessUpdate = {
+                        awareness: newAwareness,
+                        peak_awareness: Math.round(Math.max(song.peak_awareness || 0, newAwareness)),
+                        awareness_decay_rate: breakthroughEffects.breakthrough_songs || 0.03,
+                        breakthrough_achieved: true
+                      };
+                    }
+                  }
+                }
+              }
+
+              // Standard awareness update if no breakthrough
+              if (!awarenessUpdate) {
+                const newPeakAwareness = Math.round(Math.max(song.peak_awareness || 0, newAwareness));
+
+                awarenessUpdate = {
+                  awareness: newAwareness,
+                  peak_awareness: newPeakAwareness,
+                  awareness_decay_rate: song.awareness_decay_rate || 0.05
+                };
+
+                if (awarenessGain > 0) {
+                  summary.changes.push({
+                    type: 'awareness_gain',
+                    description: `🎯 "${song.title}" awareness gained +${awarenessGain.toFixed(1)} (${newAwareness}/100)`,
+                    amount: 0
+                  });
+                }
+              }
+            }
+            }
+          } else if (weeksSinceRelease >= 5) {
+            // Awareness Decay Phase (Weeks 5+)
+            if (currentAwareness > 0) {
+              const balanceConfig = this.gameData.getBalanceConfigSync();
+              const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
+
+              if (awarenessConfig?.enabled) {
+                const decayRates = awarenessConfig.awareness_decay_rates || {};
+                let decayRate = song.breakthrough_achieved
+                  ? (decayRates.breakthrough_songs || 0.03)
+                  : (decayRates.standard_songs || 0.05);
+
+                // Apply quality bonus reduction for high-quality songs
+                if ((song.quality || 0) >= (decayRates.quality_bonus_threshold || 85)) {
+                  decayRate = Math.max(0, decayRate - (decayRates.quality_bonus_reduction || 0.01));
+                }
+
+                const newAwareness = Math.round(Math.max(0, currentAwareness * (1 - decayRate)));
+
+                awarenessUpdate = {
+                  awareness: newAwareness,
+                  peak_awareness: Math.round(song.peak_awareness || currentAwareness),
+                  awareness_decay_rate: decayRate
+                };
+
+                if (Math.abs(newAwareness - currentAwareness) > 0.1) {
+                  summary.changes.push({
+                    type: 'awareness_decay',
+                    description: `📉 "${song.title}" awareness decay ${newAwareness}/100 (-${currentAwareness - newAwareness})`,
+                    amount: 0
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`[AWARENESS] Error processing awareness for song ${song.id}:`, error);
+        }
+
         if (ongoingRevenue > 0) {
           totalOngoingRevenue += ongoingRevenue;
           
@@ -923,13 +1081,22 @@ export class GameEngine {
           }
 
           // Track song updates for batch processing
-          songUpdates.push({
+          const songUpdate = {
             songId: song.id,
             weeklyStreams: weeklyStreams,
             lastWeekRevenue: Math.round(ongoingRevenue),
             totalRevenue: Math.round((song.totalRevenue || 0) + ongoingRevenue),
             totalStreams: (song.totalStreams || 0) + weeklyStreams
-          });
+          };
+
+          // Add awareness updates if processed
+          if (awarenessUpdate) {
+            songUpdate.awareness = awarenessUpdate.awareness;
+            songUpdate.peak_awareness = awarenessUpdate.peak_awareness;
+            songUpdate.awareness_decay_rate = awarenessUpdate.awareness_decay_rate;
+          }
+
+          songUpdates.push(songUpdate);
           
           // Add to summary changes for transparency
           summary.changes.push({
@@ -937,6 +1104,15 @@ export class GameEngine {
             description: `🎵 "${song.title}" ongoing streams`,
             amount: ongoingRevenue
           });
+        } else if (awarenessUpdate) {
+          // Handle awareness updates for songs with no ongoing revenue
+          const songUpdate = {
+            songId: song.id,
+            awareness: awarenessUpdate.awareness,
+            peak_awareness: awarenessUpdate.peak_awareness,
+            awareness_decay_rate: awarenessUpdate.awareness_decay_rate
+          };
+          songUpdates.push(songUpdate);
         }
       }
       
@@ -965,8 +1141,8 @@ export class GameEngine {
    * Processes lead singles that are scheduled for release this week (before the main release)
    * Checks all planned releases for lead single strategies and releases them early
    */
-  private async processLeadSingles(summary: MonthSummary, dbTransaction?: any): Promise<void> {
-    const currentMonth = this.gameState.currentMonth || 1;
+  private async processLeadSingles(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const currentWeek = this.gameState.currentWeek || 1;
     
     try {
       // Get all planned releases from gameData to check for lead single strategies
@@ -985,7 +1161,7 @@ export class GameEngine {
         
         // Check if lead single should be released this month
         
-        if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseMonth === currentMonth) {
+        if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseWeek === currentWeek) {
           
           // Get the lead single song
           const releaseSongs = await this.gameData.getSongsByRelease(release.id, dbTransaction) || [];
@@ -1084,14 +1260,14 @@ export class GameEngine {
    * Processes planned releases that are scheduled for the current week
    * This executes the release, generates initial revenue, and updates song statuses
    */
-  private async processPlannedReleases(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processPlannedReleases(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     
     try {
-      // Get planned releases scheduled for this month
-      const currentMonth = this.gameState.currentMonth || 1;
+      // Get planned releases scheduled for this week
+      const currentWeek = this.gameState.currentWeek || 1;
       const plannedReleases = await this.gameData.getPlannedReleases(
         this.gameState.id,
-        currentMonth,
+        currentWeek,
         dbTransaction
       ) || [];
 
@@ -1152,8 +1328,9 @@ export class GameEngine {
           lastWeekRevenue: Math.round(songResult.revenue)
         }));
 
-        // Handle marketing investment allocation
-        const totalMarketingBudget = Object.values(metadata?.marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0);
+        // Handle marketing investment allocation - use actual charged amount including seasonal adjustments
+        const totalMarketingBudget = metadata?.totalInvestment ||
+          Object.values(metadata?.marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0);
         if (this.financialSystem.investmentTracker && totalMarketingBudget > 0) {
           try {
             await this.financialSystem.investmentTracker.allocateMarketingInvestment(
@@ -1295,7 +1472,7 @@ export class GameEngine {
    * Processes newly recorded projects - projects that became "recorded" this week
    * This marks songs as recorded but does not release them (no revenue yet)
    */
-  private async processNewlyRecordedProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processNewlyRecordedProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     
     try {
       // Check if we have a method to get newly released projects
@@ -1390,7 +1567,7 @@ export class GameEngine {
    * Processes song generation for recording projects
    * This is called during weekly processing to create songs for active recording projects
    */
-  private async processRecordingProjects(summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async processRecordingProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     
     try {
       // Get recording projects from database via ServerGameData
@@ -1402,7 +1579,7 @@ export class GameEngine {
 
       for (const project of recordingProjects) {
         if (this.shouldGenerateProjectSongs(project)) {
-          await this.generateMonthlyProjectSongs(project, summary, dbTransaction);
+          await this.generateWeeklyProjectSongs(project, summary, dbTransaction);
         }
       }
     } catch (error) {
@@ -1429,7 +1606,7 @@ export class GameEngine {
   /**
    * Generates songs for a recording project during weekly processing
    */
-  private async generateMonthlyProjectSongs(project: any, summary: MonthSummary, dbTransaction?: any): Promise<void> {
+  private async generateWeeklyProjectSongs(project: any, summary: WeekSummary, dbTransaction?: any): Promise<void> {
     
     try {
       const artist = await this.gameData.getArtistById(project.artistId);
@@ -1851,8 +2028,8 @@ export class GameEngine {
    * Each song has its own decay pattern based on individual quality and release timing
    */
   // DELEGATED TO FinancialSystem (originally lines 1714-1782)
-  private calculateOngoingSongRevenue(song: any): number {
-    return this.financialSystem.calculateOngoingSongRevenue(
+  private async calculateOngoingSongRevenue(song: any): Promise<number> {
+    return await this.financialSystem.calculateOngoingSongRevenue(
       song,
       this.gameState.currentWeek || 1,
       this.gameState.reputation || 0,
@@ -2988,160 +3165,22 @@ export class GameEngine {
     // Mark campaign as completed
     this.gameState.campaignCompleted = true;
 
-    // Calculate final score based on multiple factors
-    const scoreBreakdown = {
-      money: Math.max(0, Math.floor((this.gameState.money || 0) / 1000)), // 1 point per $1k
-      reputation: Math.max(0, Math.floor((this.gameState.reputation || 0) / 5)), // 1 point per 5 reputation
-      artistsSuccessful: 0, // TODO: Calculate based on artist success metrics
-      projectsCompleted: 0, // TODO: Calculate based on completed projects
-      accessTierBonus: this.calculateAccessTierBonus()
-    };
-
-    const finalScore = Object.values(scoreBreakdown).reduce((total, score) => total + score, 0);
-    
-    // Determine victory type based on game state
-    const victoryType = this.determineVictoryType(finalScore, scoreBreakdown);
-    
-    // Generate achievements
-    const achievements = this.calculateAchievements(scoreBreakdown);
-    
-    // Create summary based on victory type
-    const campaignSummary = this.generateCampaignSummary(victoryType, finalScore, scoreBreakdown);
-
-    const campaignResults: CampaignResults = {
-      campaignCompleted: true,
-      finalScore,
-      scoreBreakdown,
-      victoryType,
-      summary: campaignSummary,
-      achievements
-    };
+    // Calculate complete campaign results
+    const campaignResults = AchievementsEngine.calculateCampaignResults(this.gameState);
 
     // Add campaign completion to summary
     summary.changes.push({
       type: 'unlock',
-      description: `🎉 Campaign Completed! Final Score: ${finalScore}`,
-      amount: finalScore
+      description: `🎉 Campaign Completed! Final Score: ${campaignResults.finalScore}`,
+      amount: campaignResults.finalScore
     });
 
     return campaignResults;
   }
 
-  /**
-   * Calculate bonus points for access tier progression
-   */
-  private calculateAccessTierBonus(): number {
-    let bonus = 0;
-    
-    // Playlist access bonus (progressive tiers)
-    if (this.gameState.playlistAccess === 'flagship') bonus += 30;
-    else if (this.gameState.playlistAccess === 'mid') bonus += 20;
-    else if (this.gameState.playlistAccess === 'niche') bonus += 10;
-    
-    // Press access bonus (progressive tiers)
-    if (this.gameState.pressAccess === 'national') bonus += 30;
-    else if (this.gameState.pressAccess === 'mid_tier') bonus += 20;
-    else if (this.gameState.pressAccess === 'blogs') bonus += 10;
-    
-    // Venue access bonus (progressive tiers)
-    if (this.gameState.venueAccess === 'arenas') bonus += 30;
-    else if (this.gameState.venueAccess === 'theaters') bonus += 20;
-    else if (this.gameState.venueAccess === 'clubs') bonus += 10;
-    
-    return bonus;
-  }
 
-  /**
-   * Determine victory type based on final performance
-   */
-  private determineVictoryType(
-    finalScore: number, 
-    scoreBreakdown: CampaignResults['scoreBreakdown']
-  ): CampaignResults['victoryType'] {
-    // Check for failure conditions
-    if ((this.gameState.money || 0) < 0 || finalScore < 50) {
-      return 'Failure';
-    }
-    
-    // Survival if barely making it
-    if (finalScore < 100) {
-      return 'Survival';
-    }
-    
-    // Determine primary victory type based on strongest area
-    const moneyScore = scoreBreakdown.money;
-    const reputationScore = scoreBreakdown.reputation;
-    const balanceThreshold = 0.7;
-    
-    if (moneyScore > reputationScore * 1.5) {
-      return 'Commercial Success';
-    } else if (reputationScore > moneyScore * 1.5) {
-      return 'Critical Acclaim';
-    } else if (Math.min(moneyScore, reputationScore) / Math.max(moneyScore, reputationScore) >= balanceThreshold) {
-      return 'Balanced Growth';
-    } else {
-      return 'Commercial Success'; // Default to commercial
-    }
-  }
 
-  /**
-   * Calculate achievements based on performance
-   */
-  private calculateAchievements(scoreBreakdown: CampaignResults['scoreBreakdown']): string[] {
-    const achievements: string[] = [];
-    
-    // Money achievements
-    if (scoreBreakdown.money >= 100) achievements.push('💰 Big Money - Ended with $100k+');
-    else if (scoreBreakdown.money >= 50) achievements.push('💵 Profitable - Ended with $50k+');
-    
-    // Reputation achievements
-    if (scoreBreakdown.reputation >= 40) achievements.push('⭐ Industry Legend - 200+ Reputation');
-    else if (scoreBreakdown.reputation >= 20) achievements.push('🌟 Well Known - 100+ Reputation');
-    
-    // Access tier achievements
-    if (this.gameState.playlistAccess === 'mid' && this.gameState.pressAccess === 'mid_tier') {
-      achievements.push('🎵 Media Mogul - Maximum playlist and press access');
-    }
-    
-    // Survival achievements
-    if ((this.gameState.money || 0) >= 0 && achievements.length === 0) {
-      achievements.push('🛡️ Survivor - Made it through 12 weeks');
-    }
-    
-    return achievements;
-  }
 
-  /**
-   * Generate a narrative summary of the campaign
-   */
-  private generateCampaignSummary(
-    victoryType: CampaignResults['victoryType'],
-    finalScore: number,
-    scoreBreakdown: CampaignResults['scoreBreakdown']
-  ): string {
-    const money = this.gameState.money || 0;
-    const reputation = this.gameState.reputation || 0;
-    
-    switch (victoryType) {
-      case 'Commercial Success':
-        return `Your label became a commercial powerhouse! With $${(money/1000).toFixed(0)}k in the bank and ${reputation} reputation, you've proven that great music and smart business can go hand in hand.`;
-      
-      case 'Critical Acclaim':
-        return `Your label earned critical acclaim throughout the industry! With ${reputation} reputation points, you've built a respected brand that artists dream of joining, even if the bank account shows $${(money/1000).toFixed(0)}k.`;
-      
-      case 'Balanced Growth':
-        return `Your label achieved remarkable balanced growth! With $${(money/1000).toFixed(0)}k and ${reputation} reputation, you've built a sustainable business that excels in both artistic integrity and commercial success.`;
-      
-      case 'Survival':
-        return `Against all odds, your label survived the challenging first year! With $${(money/1000).toFixed(0)}k remaining and ${reputation} reputation, you've laid the foundation for future growth.`;
-      
-      case 'Failure':
-        return `The music industry proved challenging, and your label struggled to find its footing. With financial difficulties and limited industry recognition, this campaign serves as a learning experience for your next venture.`;
-      
-      default:
-        return `Your 12-week journey in the music industry has concluded with a final score of ${finalScore} points.`;
-    }
-  }
 
   /**
    * Validates producer tier and time investment combinations for state consistency
@@ -3431,7 +3470,7 @@ export class GameEngine {
       return;
     }
 
-    console.log(`[PROJECT ADVANCEMENT] Current month: ${this.gameState.currentMonth}`);
+    console.log(`[PROJECT ADVANCEMENT] Current month: ${this.gameState.currentWeek}`);
     
     try {
       // Import the required modules dynamically to avoid circular dependencies
@@ -3499,7 +3538,7 @@ export class GameEngine {
               description: `${project.title} production started (cost previously deducted at creation)`,
               amount: -project.totalCost,
               projectId: project.id,
-              note: 'Cost deducted at project creation, tracked here for reporting only - no additional money deduction'
+              description: 'Cost deducted at project creation, tracked here for reporting only - no additional money deduction'
             });
           }
         } else if (currentStageIndex === 1) {
@@ -3749,9 +3788,9 @@ export class GameEngine {
     // Get release planning configuration from balance.json with fallbacks
     const releasePlanningConfig = balance?.market_formulas?.release_planning || {
       release_type_bonuses: {
-        single: { revenue_multiplier: 1.2, marketing_efficiency: 1.1 },
-        ep: { revenue_multiplier: 1.15, marketing_efficiency: 1.05 },
-        album: { revenue_multiplier: 1.25, marketing_efficiency: 0.95 }
+        single: { revenue_multiplier: 1.2 },
+        ep: { revenue_multiplier: 1.15 },
+        album: { revenue_multiplier: 1.25 }
       },
       marketing_channels: {},
       seasonal_cost_multipliers: { q1: 0.85, q2: 0.95, q3: 1.1, q4: 1.4 },
@@ -3971,7 +4010,7 @@ export class GameEngine {
     const leadSingleStrategy = metadata?.leadSingleStrategy;
 
     // Reconstruct marketing budget from stored data structure
-    let marketingBudget = {};
+    let marketingBudget: Record<string, number> = {};
     if (metadata?.marketingBudgetBreakdown && typeof metadata.marketingBudgetBreakdown === 'object') {
       // CRITICAL FIX: Use stored per-channel budget breakdown instead of even distribution
       marketingBudget = metadata.marketingBudgetBreakdown;

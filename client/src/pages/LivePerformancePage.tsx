@@ -674,6 +674,12 @@ export default function LivePerformancePage() {
                             <Badge variant="outline" className="text-xs">
                               Pop: {artist.popularity || 0}
                             </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Mood: {artist.mood || 0}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Loyalty: {artist.loyalty || 0}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))

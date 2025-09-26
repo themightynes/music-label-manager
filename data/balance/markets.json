@@ -96,16 +96,13 @@
       
       "release_type_bonuses": {
         "single": {
-          "revenue_multiplier": 1.2,
-          "marketing_efficiency": 1.1
+          "revenue_multiplier": 1.2
         },
         "ep": {
-          "revenue_multiplier": 1.15,
-          "marketing_efficiency": 1.05
+          "revenue_multiplier": 1.15
         },
         "album": {
-          "revenue_multiplier": 1.25,
-          "marketing_efficiency": 0.95
+          "revenue_multiplier": 1.25
         }
       }
     },
@@ -122,6 +119,51 @@
         "low_streams_threshold": 1000,
         "low_streams_position_threshold": 90
       }
+    },
+
+    "awareness_system": {
+      "enabled": true,
+      "per_unit_spend": 1000,
+      "channel_awareness_coefficients": {
+        "radio": 0.1,
+        "digital": 0.2,
+        "pr": 0.4,
+        "influencer": 0.3
+      },
+      "breakthrough_thresholds": {
+        "high_quality": {
+          "min_quality": 80,
+          "awareness_needed": 40,
+          "base_chance": 0.65
+        },
+        "medium_quality": {
+          "min_quality": 70,
+          "awareness_needed": 60,
+          "base_chance": 0.35
+        },
+        "low_quality": {
+          "min_quality": 60,
+          "awareness_needed": 80,
+          "base_chance": 0.15
+        }
+      },
+      "awareness_impact_factors": {
+        "weeks_1_2": 0.1,
+        "weeks_3_6": 0.3,
+        "weeks_7_plus": 0.5
+      },
+      "awareness_decay_rates": {
+        "standard_songs": 0.05,
+        "breakthrough_songs": 0.03,
+        "quality_bonus_threshold": 85,
+        "quality_bonus_reduction": 0.01
+      },
+      "breakthrough_effects": {
+        "awareness_multiplier": 2.5,
+        "stream_growth_duration": 4,
+        "enhanced_decay_rate": 0.92
+      },
+      "max_awareness_modifier": 2.0
     }
   },
 

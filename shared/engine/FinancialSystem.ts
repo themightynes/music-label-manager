@@ -894,13 +894,14 @@ export class FinancialSystem {
    * Common decay calculation logic for both projects and individual songs
    * Extracted to eliminate duplication between calculateOngoingRevenue and calculateOngoingSongRevenue
    */
-  private calculateDecayRevenue(
+  private async calculateDecayRevenue(
     initialStreams: number,
     weeksSinceRelease: number,
     reputation: number,
     playlistAccess: string,
-    entityName: string = 'entity'
-  ): number {
+    entityName: string = 'entity',
+    song?: any
+  ): Promise<number> {
     // No revenue if just released this week or no initial streams
     if (weeksSinceRelease <= 0) {
       // console.log(`[DECAY CALC] No revenue for ${entityName} - just released or future release`);
@@ -930,19 +931,85 @@ export class FinancialSystem {
       return 0;
     }
     
-    // Decay formula: starts high, gradually decreases
-    const baseDecay = Math.pow(decayRate, weeksSinceRelease);
-    // console.log(`[DECAY CALC] Decay rate: ${decayRate}, Base decay: ${baseDecay.toFixed(4)}`);
-    
-    // Apply current reputation and access tier bonuses
+    // Apply reputation and access tier bonuses
     const reputationBonus = 1 + (reputation - this.CONSTANTS.REPUTATION_BASELINE) * reputationBonusFactor;
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
     const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
-    
-    // Calculate weekly streams with decay
-    const weeklyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
+
+    // BREAKTHROUGH EFFECT: Enhanced decay rate and stream growth
+    let weeklyStreams;
+    if (song?.breakthrough_achieved) {
+      try {
+        const balanceConfig = this.gameData.getBalanceConfigSync();
+        const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
+        const breakthroughEffects = awarenessConfig?.breakthrough_effects || {};
+
+        const streamGrowthDuration = breakthroughEffects.stream_growth_duration || 4;
+        const enhancedDecayRate = breakthroughEffects.enhanced_decay_rate || 0.92;
+
+        if (weeksSinceRelease <= streamGrowthDuration) {
+          // Stream growth phase: 20-40% increase instead of decay
+          const growthRate = 1.2 + (Math.random() * 0.2); // 1.2x to 1.4x growth
+          const growthDecay = Math.pow(growthRate, weeksSinceRelease - 1);
+          weeklyStreams = initialStreams * growthDecay * reputationBonus * accessBonus * ongoingFactor;
+        } else {
+          // After growth phase, use enhanced decay rate from peak
+          const postGrowthWeeks = weeksSinceRelease - streamGrowthDuration;
+          const baseDecay = Math.pow(enhancedDecayRate, postGrowthWeeks);
+          const peakStreams = initialStreams * Math.pow(1.3, streamGrowthDuration - 1); // Average growth peak
+          weeklyStreams = peakStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
+        }
+      } catch (error) {
+        console.warn(`[BREAKTHROUGH] Error applying breakthrough effects for song ${song?.id}:`, error);
+        // Fallback to standard calculation
+        const baseDecay = Math.pow(decayRate, weeksSinceRelease);
+        weeklyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
+      }
+    } else {
+      // Standard decay calculation
+      const baseDecay = Math.pow(decayRate, weeksSinceRelease);
+      weeklyStreams = initialStreams * baseDecay * reputationBonus * accessBonus * ongoingFactor;
+    }
+
+    // ENHANCEMENT: Apply marketing factor for weeks 2-4 after release
+    if (weeksSinceRelease >= 2 && weeksSinceRelease <= 4 && song?.releaseId) {
+      const marketingFactor = await this.calculateMarketingFactor(song, weeksSinceRelease);
+      weeklyStreams *= marketingFactor;
+    }
+
+    // ENHANCEMENT: Apply awareness modifier for weeks 5+ (sustained cultural impact)
+    if (weeksSinceRelease >= 5 && song?.awareness) {
+      try {
+        const balanceConfig = this.gameData.getBalanceConfigSync();
+        const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
+
+        if (awarenessConfig?.enabled) {
+          const impactFactors = awarenessConfig.awareness_impact_factors || {};
+
+          let impactFactor = 0;
+          if (weeksSinceRelease >= 7) {
+            impactFactor = impactFactors.weeks_7_plus ?? 0.5;
+          } else { // weeks 5-6
+            impactFactor = impactFactors.weeks_3_6 ?? 0.3;
+          }
+
+          // Calculate awareness modifier: 1.0 + (awareness/100) * impactFactor
+          let awarenessModifier = 1.0 + (song.awareness / 100) * impactFactor;
+
+          // Cap awareness modifier to prevent runaway multipliers
+          const maxModifier = awarenessConfig.max_awareness_modifier ?? 2.0;
+          awarenessModifier = Math.min(awarenessModifier, maxModifier);
+
+          weeklyStreams *= awarenessModifier;
+
+          // console.log(`[AWARENESS MOD] Applied awareness modifier ${awarenessModifier.toFixed(3)} to ${entityName}`);
+        }
+      } catch (error) {
+        console.warn(`[AWARENESS MOD] Failed to apply awareness modifier for song ${song?.id}:`, error);
+      }
+    }
     // console.log(`[DECAY CALC] Weekly streams for ${entityName}: ${weeklyStreams.toFixed(2)}`);
-    
+
     // Convert to revenue
     const revenue = Math.max(0, Math.round(weeklyStreams * revenuePerStream));
     
@@ -957,15 +1024,147 @@ export class FinancialSystem {
   }
 
   /**
+   * Calculate marketing factor for weeks 2-4 after release
+   * Uses stored marketing budget breakdown from release metadata
+   */
+  private async calculateMarketingFactor(song: any, weeksSinceRelease: number): Promise<number> {
+    try {
+      // Get release data for this song to access marketing budget breakdown
+      const release = await this.storage?.getRelease?.(song.releaseId);
+      if (!release?.metadata?.marketingBudgetBreakdown) {
+        return 1.0; // No marketing data available
+      }
+
+      const marketingBreakdown = release.metadata.marketingBudgetBreakdown;
+      let totalMarketingBoost = 1.0;
+
+      // Calculate awareness gain during weeks 1-4 (awareness building phase)
+      if (weeksSinceRelease >= 1 && weeksSinceRelease <= 4) {
+        const awarenessGain = this.calculateAwarenessGain(song, marketingBreakdown);
+        // Note: Actual awareness accumulation will be handled by GameEngine in next phase
+        // This calculation establishes the framework for awareness building
+      }
+
+      // Radio: 85% effectiveness, sustained discovery (weeks 2-4)
+      const radioSpend = marketingBreakdown.radio || 0;
+      if (radioSpend > 0) {
+        totalMarketingBoost += (radioSpend / 10000) * 0.85 * 0.2; // Up to 20% boost for $10k
+      }
+
+      // Digital: 92% effectiveness, algorithm feeding
+      const digitalSpend = marketingBreakdown.digital || 0;
+      if (digitalSpend > 0) {
+        totalMarketingBoost += (digitalSpend / 8000) * 0.92 * 0.25; // Up to 25% boost for $8k
+      }
+
+      // PR: 78% effectiveness, peaks in week 3
+      const prSpend = marketingBreakdown.pr || 0;
+      if (prSpend > 0) {
+        const prWeekMultiplier = weeksSinceRelease === 3 ? 1.2 : 0.8; // PR peaks week 3
+        totalMarketingBoost += (prSpend / 6000) * 0.78 * 0.3 * prWeekMultiplier;
+      }
+
+      // Influencer: 88% effectiveness, social momentum
+      const influencerSpend = marketingBreakdown.influencer || 0;
+      if (influencerSpend > 0) {
+        totalMarketingBoost += (influencerSpend / 5000) * 0.88 * 0.22; // Up to 22% boost for $5k
+      }
+
+      // Cap total marketing boost at 50%
+      return Math.min(totalMarketingBoost, 1.5);
+    } catch (error) {
+      console.warn(`[MARKETING FACTOR] Failed to calculate marketing factor for song ${song.id}:`, error);
+      return 1.0; // Fallback to no boost
+    }
+  }
+
+  /**
+   * Calculates awareness gain for a song based on marketing spend and channel coefficients
+   *
+   * @param song - Song object with quality and artistId
+   * @param marketingBreakdown - Marketing spend breakdown by channel (in USD)
+   * @returns Weekly awareness gain (0-25 points), scaled per $1,000 marketing spend
+   *
+   * Marketing spend is expected in USD and scaled per $1,000 increments.
+   * Each $1,000 spent is multiplied by the channel coefficient:
+   * - Radio: 0.1 per $1k
+   * - Digital: 0.2 per $1k
+   * - PR: 0.4 per $1k
+   * - Influencer: 0.3 per $1k
+   */
+  calculateAwarenessGain(song: any, marketingBreakdown: any): number {
+    try {
+      const balanceConfig = this.gameData.getBalanceConfigSync();
+      const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
+
+      if (!awarenessConfig?.enabled) {
+        return 0;
+      }
+
+      const channelCoefficients = awarenessConfig.channel_awareness_coefficients || {
+        radio: 0.1,
+        digital: 0.2,
+        pr: 0.4,
+        influencer: 0.3
+      };
+
+      const perUnitSpend = awarenessConfig.per_unit_spend || 1000;
+
+      // Calculate base awareness gain from marketing channels
+      let awarenessGain = 0;
+
+      // Radio awareness contribution
+      const radioSpend = marketingBreakdown.radio || 0;
+      if (radioSpend > 0) {
+        awarenessGain += (radioSpend / perUnitSpend) * channelCoefficients.radio;
+      }
+
+      // Digital awareness contribution
+      const digitalSpend = marketingBreakdown.digital || 0;
+      if (digitalSpend > 0) {
+        awarenessGain += (digitalSpend / perUnitSpend) * channelCoefficients.digital;
+      }
+
+      // PR awareness contribution
+      const prSpend = marketingBreakdown.pr || 0;
+      if (prSpend > 0) {
+        awarenessGain += (prSpend / perUnitSpend) * channelCoefficients.pr;
+      }
+
+      // Influencer awareness contribution
+      const influencerSpend = marketingBreakdown.influencer || 0;
+      if (influencerSpend > 0) {
+        awarenessGain += (influencerSpend / perUnitSpend) * channelCoefficients.influencer;
+      }
+
+      // Apply quality multiplier
+      const qualityMultiplier = (song.quality || 50) / 100;
+      awarenessGain *= qualityMultiplier;
+
+      // Apply artist popularity bonus
+      const artist = this.gameData.getArtistSync(song.artistId);
+      const artistPopularity = artist?.popularity || 0;
+      const popularityBonus = 1 + (artistPopularity / 200);
+      awarenessGain *= popularityBonus;
+
+      // Cap awareness gain at 25 points per week
+      return Math.min(awarenessGain, 25);
+    } catch (error) {
+      console.warn(`[AWARENESS GAIN] Failed to calculate awareness gain for song ${song.id}:`, error);
+      return 0;
+    }
+  }
+
+  /**
    * Calculates ongoing revenue for an individual released song
    * Originally from game-engine.ts line 1666-1732
    */
-  calculateOngoingSongRevenue(
-    song: any, 
-    currentWeek: number, 
-    reputation: number, 
+  async calculateOngoingSongRevenue(
+    song: any,
+    currentWeek: number,
+    reputation: number,
     playlistAccess: string
-  ): number {
+  ): Promise<number> {
     const releaseWeek = song.releaseWeek || 1;
     const weeksSinceRelease = currentWeek - releaseWeek;
     const initialStreams = song.initialStreams || 0;
@@ -975,13 +1174,14 @@ export class FinancialSystem {
     // console.log(`[SONG REVENUE CALC] Release week: ${releaseWeek}, Current week: ${currentWeek}`);
     // console.log(`[SONG REVENUE CALC] Weeks since release: ${weeksSinceRelease}`);
     
-    // Use common decay calculation logic
-    return this.calculateDecayRevenue(
+    // Use common decay calculation logic with marketing enhancement
+    return await this.calculateDecayRevenue(
       initialStreams,
       weeksSinceRelease,
       reputation,
       playlistAccess,
-      `"${song.title}"`
+      `"${song.title}"`,
+      song // Pass song object for marketing budget access
     );
   }
 

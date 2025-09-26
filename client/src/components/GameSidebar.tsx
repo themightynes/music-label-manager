@@ -445,6 +445,16 @@ export function GameSidebar({
                 </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  onClick={() => setLocation('/streaming-decay-tester')}
+                    isActive={currentPath === '/streaming-decay-tester'}
+                    tooltip="Streaming Decay Tester"
+                  >
+                    <TrendingUp />
+                    <span>Streaming Decay Tester</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
                   onClick={() => setLocation('/markets-editor')}
                     isActive={currentPath === '/markets-editor'}
                     tooltip="Markets.json Editor"

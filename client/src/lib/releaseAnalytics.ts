@@ -58,11 +58,16 @@ export function extractCampaignData(release: any): CampaignData {
   
   const hasLeadSingle = !!(leadSingleStrategy && release.type !== 'single');
   const leadSingleBudget = leadSingleStrategy?.totalLeadSingleBudget || 0;
-  // For the main budget, check both marketingBudget field and metadata.marketingBudget
-  const mainBudget = release.marketingBudget || metadata?.marketingBudget || 
-    (typeof metadata?.marketingBudget === 'object' ? 
-      Object.values(metadata.marketingBudget).reduce((a: number, b: any) => a + (b || 0), 0) : 0);
-  const totalInvestment = leadSingleBudget + mainBudget;
+
+  // CRITICAL FIX: Use actual charged amount (including seasonal adjustments) from metadata
+  const totalInvestment = metadata?.totalInvestment ||
+    // Fallback: calculate from raw budgets (for legacy releases)
+    (leadSingleBudget + (release.marketingBudget || metadata?.marketingBudget ||
+      (typeof metadata?.marketingBudget === 'object' ?
+        Object.values(metadata.marketingBudget).reduce((a: number, b: any) => a + (b || 0), 0) : 0)));
+
+  // For display purposes, separate out the components
+  const mainBudget = totalInvestment - leadSingleBudget;
   
   let campaignDuration = 1; // Default for single week releases
   if (hasLeadSingle && leadSingleStrategy.leadSingleReleaseWeek) {

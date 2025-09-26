@@ -346,8 +346,8 @@ export default function PlanReleasePage() {
     return () => clearTimeout(timer);
   }, [selectedArtist, selectedSongs, releaseType, channelBudgets, releaseWeek, leadSingle, leadSingleBudget, leadSingleWeek]);
 
-  // Use preview data or fallback to default values
-  const metrics = previewData || {
+  // Use preview data or fallback to default values (only when balance data is loaded)
+  const metrics = previewData || (!balanceData ? null : {
     songCount: selectedSongs.length,
     averageQuality: 0,
     estimatedStreams: 0,
@@ -359,19 +359,20 @@ export default function PlanReleasePage() {
     totalMarketingCost: calculateTotalMarketingCost(
       channelBudgets,
       releaseWeek,
+      balanceData,
       leadSingleBudget,
       leadSingleWeek
     ),
     diversityBonus: calculateChannelSynergies(channelBudgets),
     activeChannelCount: Object.keys(channelBudgets).filter(id => (channelBudgets[id] || 0) > 0).length,
-    channelEffectiveness: calculateChannelEffectiveness(channelBudgets),
+    channelEffectiveness: calculateChannelEffectiveness(channelBudgets, balanceData),
     projectedROI: 0
-  };
+  });
 
   // Validation
   const validateRelease = () => {
     const errors: string[] = [];
-    const totalMarketingCost = metrics.totalMarketingCost;
+    const totalMarketingCost = metrics?.totalMarketingCost || 0;
     const activeChannels = marketingChannels.filter(channel => (channelBudgets[channel.id] || 0) > 0);
     
     if (!selectedArtist) errors.push('Please select an artist');
@@ -437,15 +438,15 @@ export default function PlanReleasePage() {
           totalLeadSingleBudget: getTotalChannelBudget(leadSingleBudget)
         } : null,
         metadata: {
-          estimatedStreams: metrics.estimatedStreams,
-          estimatedRevenue: metrics.estimatedRevenue,
-          releaseBonus: metrics.releaseBonus,
-          seasonalMultiplier: metrics.seasonalMultiplier,
-          marketingMultiplier: metrics.marketingMultiplier,
-          leadSingleBoost: metrics.leadSingleBoost,
-          channelEffectiveness: metrics.channelEffectiveness,
-          projectedROI: metrics.projectedROI,
-          totalInvestment: metrics.totalMarketingCost,
+          estimatedStreams: metrics?.estimatedStreams || 0,
+          estimatedRevenue: metrics?.estimatedRevenue || 0,
+          releaseBonus: metrics?.releaseBonus || 0,
+          seasonalMultiplier: metrics?.seasonalMultiplier || 1,
+          marketingMultiplier: metrics?.marketingMultiplier || 1,
+          leadSingleBoost: metrics?.leadSingleBoost || 1,
+          channelEffectiveness: metrics?.channelEffectiveness || {},
+          projectedROI: metrics?.projectedROI || 0,
+          totalInvestment: metrics?.totalMarketingCost || 0,
           // Store the marketing budget in metadata as well for released items
           marketingBudget: getTotalChannelBudget(channelBudgets)
         }
@@ -767,8 +768,6 @@ export default function PlanReleasePage() {
                                 </div>
                               </div>
                               <div className="flex items-center space-x-4 text-sm text-white/70">
-                                <span>Est. {song.estimatedStreams.toLocaleString()} streams</span>
-                                <span>Est. ${song.estimatedRevenue.toLocaleString()} revenue</span>
                                 <span>Created Week {song.createdWeek}</span>
                               </div>
                             </div>
@@ -918,7 +917,7 @@ export default function PlanReleasePage() {
                       <div>Lead Single Total: ${getTotalChannelBudget(leadSingleBudget).toLocaleString()}</div>
                       {getSeasonalMultiplierValue(leadSingleWeek, balanceData) !== 1 && (
                         <div className="text-orange-600">
-                          Adjusted for {getQuarterInfoForWeek(leadSingleWeek).name}: ${Math.round(calculateTotalMarketingCost({}, 0, leadSingleBudget, leadSingleWeek)).toLocaleString()}
+                          Adjusted for {getQuarterInfoForWeek(leadSingleWeek).name}: ${Math.round(calculateTotalMarketingCost({}, 0, balanceData, leadSingleBudget, leadSingleWeek)).toLocaleString()}
                         </div>
                       )}
                     </div>
@@ -951,7 +950,7 @@ export default function PlanReleasePage() {
                       {marketingChannels.map(channel => {
                         const budget = channelBudgets[channel.id] || 0;
                         const isActive = budget > 0;
-                        const effectiveness = metrics.channelEffectiveness?.[channel.id];
+                        const effectiveness = metrics?.channelEffectiveness?.[channel.id];
                         
                         return (
                           <div key={channel.id} className={`p-4 border rounded-lg transition-all ${
@@ -1078,18 +1077,27 @@ export default function PlanReleasePage() {
                     </div>
                     
                     <div className="p-3 bg-[#23121c]/5 rounded-lg">
-                      <h4 className="text-sm font-semibold text-white/90 mb-2">Release Bonus</h4>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-white/70">
-                          {releaseTypes.find(rt => rt.id === releaseType)?.bonusType}
-                        </span>
-                        <span className="text-sm font-semibold text-green-600">
-                          +{releaseTypes.find(rt => rt.id === releaseType)?.bonusAmount}%
-                        </span>
-                      </div>
-                      <p className="text-xs text-white/50 mt-1">
-                        {releaseTypes.find(rt => rt.id === releaseType)?.description}
-                      </p>
+                      <h4 className="text-sm font-semibold text-white/90 mb-2">Release Type Benefits</h4>
+                      {(() => {
+                        const selectedType = releaseTypes.find(rt => rt.id === releaseType);
+                        if (!selectedType) return null;
+
+                        const revenueBonus = Math.round((selectedType.revenueMultiplier - 1) * 100);
+
+                        return (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-white/70">Revenue Bonus:</span>
+                              <span className="text-sm font-semibold text-green-600">
+                                +{revenueBonus}%
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/50 pt-1 border-t border-white/10">
+                              <span className="font-medium text-[#A75A5B]">{selectedType.bonusType}:</span> {selectedType.description}
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardContent>
@@ -1124,11 +1132,11 @@ export default function PlanReleasePage() {
                     <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="text-center p-3 bg-[#23121c]/5 rounded-lg">
-                        <div className="text-xl font-bold text-white">{metrics.songCount}</div>
+                        <div className="text-xl font-bold text-white">{metrics?.songCount || 0}</div>
                         <div className="text-white/70">Songs</div>
                       </div>
                       <div className="text-center p-3 bg-[#23121c]/5 rounded-lg">
-                        <div className="text-xl font-bold text-white">{metrics.averageQuality}</div>
+                        <div className="text-xl font-bold text-white">{metrics?.averageQuality || 0}</div>
                         <div className="text-white/70">Avg Quality</div>
                       </div>
                     </div>
@@ -1137,27 +1145,27 @@ export default function PlanReleasePage() {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-white/70">Estimated Streams:</span>
                         <span className="font-mono font-semibold text-[#A75A5B]">
-                          {metrics.estimatedStreams?.toLocaleString() || '0'}
+                          {metrics?.estimatedStreams?.toLocaleString() || '0'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-white/70">Estimated Revenue:</span>
                         <span className="font-mono font-semibold text-green-600">
-                          ${metrics.estimatedRevenue?.toLocaleString() || '0'}
+                          ${metrics?.estimatedRevenue?.toLocaleString() || '0'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-white/70">Marketing Cost:</span>
                         <span className="font-mono font-semibold text-red-600">
-                          -${metrics.totalMarketingCost.toLocaleString()}
+                          -${metrics?.totalMarketingCost.toLocaleString()}
                         </span>
                       </div>
                       <div className="border-t pt-3 flex justify-between items-center">
                         <span className="text-sm font-semibold text-white/90">Projected ROI:</span>
                         <span className={`font-mono font-bold ${
-                          metrics.projectedROI > 0 ? 'text-green-600' : 'text-red-600'
+                          metrics?.projectedROI > 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {metrics.projectedROI > 0 ? '+' : ''}{metrics.projectedROI}%
+                          {metrics?.projectedROI > 0 ? '+' : ''}{metrics?.projectedROI}%
                         </span>
                       </div>
                     </div>
@@ -1168,31 +1176,31 @@ export default function PlanReleasePage() {
                         <div className="space-y-1 text-xs">
                           <div className="flex justify-between">
                             <span className="text-white/70">Release Bonus:</span>
-                            <span className="font-mono">+{metrics.releaseBonus}%</span>
+                            <span className="font-mono">+{metrics?.releaseBonus}%</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-white/70">Seasonal Revenue:</span>
                             <span className="font-mono">
-                              {metrics.seasonalMultiplier > 1 ? '+' : ''}{Math.round((metrics.seasonalMultiplier - 1) * 100)}%
+                              {metrics?.seasonalMultiplier > 1 ? '+' : ''}{Math.round((metrics?.seasonalMultiplier - 1) * 100)}%
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-white/70">Marketing:</span>
                             <span className="font-mono">
-                              +{Math.round((metrics.marketingMultiplier - 1) * 100)}%
+                              +{Math.round((metrics?.marketingMultiplier - 1) * 100)}%
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-white/70">Channel Diversity:</span>
                             <span className="font-mono text-[#A75A5B]">
-                              +{Math.round((metrics.diversityBonus - 1) * 100)}% ({metrics.activeChannelCount} channels)
+                              +{Math.round((metrics?.diversityBonus - 1) * 100)}% ({metrics?.activeChannelCount} channels)
                             </span>
                           </div>
-                          {releaseType !== 'single' && leadSingle && metrics.leadSingleBoost > 1 && (
+                          {releaseType !== 'single' && leadSingle && metrics?.leadSingleBoost > 1 && (
                             <div className="flex justify-between">
                               <span className="text-white/70">Lead Single Boost:</span>
                               <span className="font-mono text-[#791014]">
-                                +{Math.round((metrics.leadSingleBoost - 1) * 100)}%
+                                +{Math.round((metrics?.leadSingleBoost - 1) * 100)}%
                               </span>
                             </div>
                           )}
@@ -1205,7 +1213,7 @@ export default function PlanReleasePage() {
                         <div className="space-y-1 text-xs">
                           {marketingChannels.map(channel => {
                             const budget = channelBudgets[channel.id] || 0;
-                            const effectiveness = metrics.channelEffectiveness?.[channel.id];
+                            const effectiveness = metrics?.channelEffectiveness?.[channel.id];
                             const adjustedBudget = effectiveness?.adjustedBudget || budget;
                             const seasonalCostChange = adjustedBudget - budget;
                             

@@ -6,6 +6,7 @@ import { testDatabaseConnection } from "./db";
 
 const app = express();
 app.use(express.json({
+  limit: '10mb',
   verify: (req: any, _res, buf) => {
     if (req.originalUrl?.startsWith('/api/webhooks/clerk')) {
       req.rawBody = buf;

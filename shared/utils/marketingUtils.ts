@@ -29,7 +29,6 @@ export interface ReleaseType {
   bonusType: string;
   bonusAmount: number;
   revenueMultiplier: number;
-  marketingEfficiency: number;
   icon: React.ComponentType; // Icon component for UI display
 }
 
@@ -113,7 +112,6 @@ export function getReleaseTypesFromBalance(balanceData?: any): ReleaseType[] {
     bonusType: getReleaseTypeBonusType(typeId),
     bonusAmount: Math.round((config.revenue_multiplier - 1) * 100), // Convert multiplier to percentage
     revenueMultiplier: config.revenue_multiplier || 1.0,
-    marketingEfficiency: config.marketing_efficiency || 1.0,
     icon: getReleaseTypeIcon(typeId)
   }));
 }
@@ -163,19 +161,25 @@ function getReleaseTypeIcon(typeId: string): React.ComponentType {
 /**
  * Calculate total marketing cost including seasonal multiplier
  * Single source of truth for cost calculations
+ * CRITICAL FIX: Requires balance data for seasonal calculations
  */
 export function calculateTotalMarketingCost(
   channelBudgets: Record<string, number>,
   releaseWeek: number,
+  balanceData: any,
   leadSingleBudget?: Record<string, number>,
   leadSingleWeek?: number
 ): number {
+  if (!balanceData) {
+    throw new Error('[MARKETING] CRITICAL: Balance data is required for marketing cost calculations. No fallback allowed.');
+  }
+
   const mainBudget = Object.values(channelBudgets).reduce((a, b) => a + b, 0);
-  const mainCost = mainBudget * getSeasonalMultiplierValue(releaseWeek);
+  const mainCost = mainBudget * getSeasonalMultiplierValue(releaseWeek, balanceData);
 
   if (leadSingleBudget && leadSingleWeek) {
     const leadBudget = Object.values(leadSingleBudget).reduce((a, b) => a + b, 0);
-    const leadCost = leadBudget * getSeasonalMultiplierValue(leadSingleWeek);
+    const leadCost = leadBudget * getSeasonalMultiplierValue(leadSingleWeek, balanceData);
     return mainCost + leadCost;
   }
 
@@ -216,23 +220,40 @@ export function calculateChannelSynergies(channelBudgets: Record<string, number>
 
 /**
  * Get marketing channel by ID
+ * CRITICAL FIX: Requires balance data for dynamic channel loading
  */
-export function getMarketingChannel(channelId: string): MarketingChannel | undefined {
-  return MARKETING_CHANNELS.find(channel => channel.id === channelId);
+export function getMarketingChannel(channelId: string, balanceData?: any): MarketingChannel | undefined {
+  if (!balanceData) {
+    throw new Error('[MARKETING] CRITICAL: Balance data is required to get marketing channel. No fallback allowed.');
+  }
+
+  const channels = getMarketingChannelsFromBalance(balanceData);
+  return channels.find(channel => channel.id === channelId);
 }
 
 /**
  * Get release type by ID
+ * CRITICAL FIX: Requires balance data for dynamic release type loading
  */
-export function getReleaseType(typeId: string): ReleaseType | undefined {
-  return RELEASE_TYPES.find(type => type.id === typeId);
+export function getReleaseType(typeId: string, balanceData?: any): ReleaseType | undefined {
+  if (!balanceData) {
+    throw new Error('[MARKETING] CRITICAL: Balance data is required to get release type. No fallback allowed.');
+  }
+
+  const types = getReleaseTypesFromBalance(balanceData);
+  return types.find(type => type.id === typeId);
 }
 
 /**
  * Validate channel budget against min/max constraints
+ * CRITICAL FIX: Requires balance data for dynamic channel validation
  */
-export function validateChannelBudget(channelId: string, budget: number): boolean {
-  const channel = getMarketingChannel(channelId);
+export function validateChannelBudget(channelId: string, budget: number, balanceData?: any): boolean {
+  if (!balanceData) {
+    throw new Error('[MARKETING] CRITICAL: Balance data is required for channel budget validation. No fallback allowed.');
+  }
+
+  const channel = getMarketingChannel(channelId, balanceData);
   if (!channel) return false;
 
   return budget >= channel.minBudget && budget <= channel.maxBudget;
@@ -240,14 +261,19 @@ export function validateChannelBudget(channelId: string, budget: number): boolea
 
 /**
  * Calculate weighted channel effectiveness for budget allocation
+ * CRITICAL FIX: Requires balance data for dynamic channel effectiveness
  */
-export function calculateChannelEffectiveness(channelBudgets: Record<string, number>): Record<string, number> {
+export function calculateChannelEffectiveness(channelBudgets: Record<string, number>, balanceData?: any): Record<string, number> {
+  if (!balanceData) {
+    throw new Error('[MARKETING] CRITICAL: Balance data is required for channel effectiveness calculations. No fallback allowed.');
+  }
+
   const effectiveness: Record<string, number> = {};
   const synergyMultiplier = calculateChannelSynergies(channelBudgets);
 
   for (const [channelId, budget] of Object.entries(channelBudgets)) {
     if (budget > 0) {
-      const channel = getMarketingChannel(channelId);
+      const channel = getMarketingChannel(channelId, balanceData);
       if (channel) {
         effectiveness[channelId] = channel.effectiveness * synergyMultiplier;
       }

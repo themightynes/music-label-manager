@@ -392,16 +392,15 @@ export class ChartService {
 
   /**
    * Normalizes chart week input to Date object for database operations
-   * @param chartWeek Date object or ISO date string (YYYY-WW-01 where WW is week number)
-   * @returns Date object normalized to week boundary
+   * @param chartWeek Date object or ISO date string (YYYY-MM-DD)
+   * @returns Date object representing the exact chart week
    */
   private toDbDate(chartWeek: Date | string): Date {
     if (chartWeek instanceof Date) {
       return chartWeek;
     }
-    // Parse ISO string and ensure it's the first day of the week
-    const date = new Date(chartWeek);
-    return new Date(date.getFullYear(), date.getMonth(), 1);
+    // Parse ISO string directly - no manipulation needed since generateChartWeekFromGameWeek now creates proper dates
+    return new Date(chartWeek);
   }
 
   /**
@@ -411,14 +410,16 @@ export class ChartService {
    * @returns ISO date string (YYYY-MM-DD) for the first day of the week
    */
   static generateChartWeekFromGameWeek(gameWeek: number, startYear: number = 2024): string {
-    // TRUE WEEKLY SYSTEM: 52 weeks per year
-    const weekIndex = ((gameWeek - 1) % 52);
-    const yearOffset = Math.floor((gameWeek - 1) / 52);
-    const year = startYear + yearOffset;
-    const week = weekIndex + 1;
+    // Calculate the actual calendar date for this game week
+    // Week 1 starts on January 1st, each subsequent week is 7 days later
+    const startDate = new Date(startYear, 0, 1); // January 1st of start year
+    const daysToAdd = (gameWeek - 1) * 7; // 7 days per week
 
-    // Return ISO week format (YYYY-WW-01 where WW is week number)
-    return `${year}-${week.toString().padStart(2, '0')}-01`;
+    const chartDate = new Date(startDate);
+    chartDate.setDate(startDate.getDate() + daysToAdd);
+
+    // Return proper ISO date string (YYYY-MM-DD)
+    return chartDate.toISOString().split('T')[0];
   }
 
   /**
