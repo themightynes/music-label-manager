@@ -14,7 +14,7 @@
     },
     "ep": {
       "min": 16000,
-      "max": 40000,
+      "max": 32000,
       "song_count_default": 4
     },
     "mini_tour": {

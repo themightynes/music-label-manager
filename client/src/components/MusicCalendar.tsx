@@ -14,6 +14,7 @@ interface CalendarEvent {
   type: 'release' | 'tour' | 'recording';
   from: string;
   to: string;
+  week: number;
   artistName?: string;
   releaseType?: string;
   status?: string;
@@ -41,6 +42,15 @@ export function MusicCalendar({
   weekPickerMode = false
 }: MusicCalendarProps) {
   const { gameState, releases, projects, artists } = useGameStore();
+
+  // Fast lookup of artist names by ID
+  const artistNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    (artists ?? []).forEach((a: any) => {
+      if (a?.id) map[a.id] = a?.name ?? 'Unknown Artist';
+    });
+    return map;
+  }, [artists]);
 
   // Calculate the start year from the game state or use current year
   const startYear = useMemo(() => {
@@ -113,10 +123,12 @@ export function MusicCalendar({
   const currentWeekDate = useMemo(() => weekToDate(currentGameWeek), [currentGameWeek, weekToDate]);
 
   const [internalSelectedWeek, setInternalSelectedWeek] = useState<number>(currentGameWeek);
-  const [selectedWeekDates, setSelectedWeekDates] = useState<Date[]>([]);
 
   // Use external selectedWeek prop in selection mode, otherwise use internal state
   const activeSelectedWeek = selectionMode ? (selectedWeek || currentGameWeek) : internalSelectedWeek;
+
+  // Derive all 7 dates for the active week (Sunday-Saturday)
+  const selectedWeekDates = useMemo(() => getWeekDates(activeSelectedWeek), [activeSelectedWeek, getWeekDates]);
 
   // Update internal selected week when current week changes (only in display mode)
   useEffect(() => {
@@ -125,22 +137,14 @@ export function MusicCalendar({
     }
   }, [currentGameWeek, selectionMode]);
 
-  // Update selected week dates when week changes
-  useEffect(() => {
-    setSelectedWeekDates(getWeekDates(activeSelectedWeek));
-  }, [activeSelectedWeek, getWeekDates]);
 
   // Get events from game state
   const events = useMemo(() => {
     const calendarEvents: CalendarEvent[] = [];
 
-    console.log('Calendar Debug - Releases:', releases);
-    console.log('Calendar Debug - Projects:', projects);
 
     // Add ALL release events (planned, released, etc.)
     releases?.forEach((release: any) => {
-      console.log('Processing release:', release);
-      console.log('Release metadata.leadSingleStrategy:', release.metadata?.leadSingleStrategy);
 
       // Add lead single event if it exists and has a different release week
       // Lead single strategy is stored in metadata field by the backend
@@ -155,10 +159,6 @@ export function MusicCalendar({
         // Find the lead single song title from the release data
         let leadSingleTitle = 'Lead Single';
 
-        console.log('Lead single strategy found:', leadSingleStrategy);
-        console.log('Looking for lead single ID:', leadSingleStrategy.leadSingleId);
-        console.log('Available songs in release:', release.songs);
-        console.log('Release releaseSongs:', release.releaseSongs);
 
         if (leadSingleStrategy.leadSingleId) {
           // Try to find the song in release.songs first
@@ -166,7 +166,6 @@ export function MusicCalendar({
             const leadSong = release.songs.find((song: any) => song.id === leadSingleStrategy.leadSingleId);
             if (leadSong && leadSong.title) {
               leadSingleTitle = leadSong.title;
-              console.log('Found lead single title in release.songs:', leadSingleTitle);
             }
           }
 
@@ -175,13 +174,11 @@ export function MusicCalendar({
             const leadReleaseSong = release.releaseSongs.find((rs: any) => rs.songId === leadSingleStrategy.leadSingleId || rs.song?.id === leadSingleStrategy.leadSingleId);
             if (leadReleaseSong && leadReleaseSong.song && leadReleaseSong.song.title) {
               leadSingleTitle = leadReleaseSong.song.title;
-              console.log('Found lead single title in releaseSongs:', leadSingleTitle);
             }
           }
 
           // If still not found, create a fallback title
           if (leadSingleTitle === 'Lead Single') {
-            console.log('Lead single song title not found, using fallback');
           }
         }
 
@@ -191,8 +188,7 @@ export function MusicCalendar({
           : `🎵 ${leadSingleTitle} (Lead Single)`;
 
         // Get artist name for lead single
-        const releaseArtist = artists.find(a => a.id === release.artistId);
-        const releaseArtistName = releaseArtist?.name || 'Unknown Artist';
+        const releaseArtistName = artistNameById[release.artistId] || 'Unknown Artist';
 
         calendarEvents.push({
           id: `lead-single-${release.id}`,
@@ -200,13 +196,12 @@ export function MusicCalendar({
           type: 'release',
           from: leadSingleDate.toISOString(),
           to: leadSingleDate.toISOString(),
+          week: leadSingleWeek,
           artistName: releaseArtistName,
           releaseType: 'single',
           status: release.status
         });
-        console.log('Added lead single event:', leadSingleTitle);
       } else {
-        console.log('No lead single strategy found for release:', release.title);
       }
 
       // Add main release event (only for unreleased releases)
@@ -227,8 +222,7 @@ export function MusicCalendar({
         }
 
         // Get artist name for main release
-        const mainReleaseArtist = artists.find(a => a.id === release.artistId);
-        const mainReleaseArtistName = mainReleaseArtist?.name || 'Unknown Artist';
+        const mainReleaseArtistName = artistNameById[release.artistId] || 'Unknown Artist';
 
         calendarEvents.push({
           id: `release-${release.id}`,
@@ -236,13 +230,12 @@ export function MusicCalendar({
           type: 'release',
           from: releaseDate.toISOString(),
           to: releaseDate.toISOString(),
+          week: release.releaseWeek,
           artistName: mainReleaseArtistName,
           releaseType: release.type,
           status: release.status
         });
-        console.log('Added release event:', eventTitle);
       } else {
-        console.log('Skipped release (no releaseWeek):', release.title, release.releaseWeek);
       }
     });
 
@@ -253,8 +246,7 @@ export function MusicCalendar({
         // They are processed during week advancement based on stage
 
         // Get artist name for all tour events
-        const artist = artists.find(a => a.id === project.artistId);
-        const tourArtistName = artist?.name || 'Unknown Artist';
+        const tourArtistName = artistNameById[project.artistId] || 'Unknown Artist';
 
         // For completed cities, show actual performance weeks if available
         const completedCities = getCompletedCities(project);
@@ -270,6 +262,7 @@ export function MusicCalendar({
                 type: 'tour',
                 from: cityDate.toISOString(),
                 to: cityDate.toISOString(),
+                week: city.week,
                 artistName: tourArtistName,
                 status: 'completed'
               });
@@ -282,14 +275,13 @@ export function MusicCalendar({
           const currentWeek = gameState?.currentWeek || 1;
           const tourMetadata = getTourMetadata(project);
           const plannedCities = tourMetadata.cities || 1;
-          const completedCities = getCompletedCities(project).length;
+          const completedCitiesCount = getCompletedCities(project).length;
 
           // Tours ALWAYS have startWeek set during creation (see gameStore.createProject)
           // Tour timeline: startWeek = planning week, startWeek+1 = first city, etc.
           let startWeek = project.startWeek;
 
           if (!startWeek) {
-            console.warn(`Tour ${project.title} missing startWeek - this should not happen`, project);
             // Emergency fallback only - tours should always have startWeek
             startWeek = currentWeek;
           }
@@ -308,6 +300,7 @@ export function MusicCalendar({
               type: 'tour',
               from: planningDate.toISOString(),
               to: planningDate.toISOString(),
+              week: startWeek,
               artistName: tourArtistName,
               status: 'planning'
             });
@@ -324,6 +317,7 @@ export function MusicCalendar({
                 type: 'tour',
                 from: tourDate.toISOString(),
                 to: tourDate.toISOString(),
+                week: weekNumber,
                 artistName: tourArtistName,
                 status: 'planning'
               });
@@ -339,10 +333,10 @@ export function MusicCalendar({
               let tourIcon, tourTitle;
 
               // For production tours, show which cities are completed vs upcoming
-              if (i < completedCities) {
+              if (i < completedCitiesCount) {
                 tourIcon = '✅';
                 tourTitle = `${project.title} - City ${cityNumber} (Completed)`;
-              } else if (i === completedCities) {
+              } else if (i === completedCitiesCount) {
                 tourIcon = '🎤';
                 tourTitle = `${project.title} - City ${cityNumber} (Current)`;
               } else {
@@ -356,6 +350,7 @@ export function MusicCalendar({
                 type: 'tour',
                 from: tourDate.toISOString(),
                 to: tourDate.toISOString(),
+                week: weekNumber,
                 artistName: tourArtistName,
                 status: project.stage
               });
@@ -364,12 +359,10 @@ export function MusicCalendar({
         }
       } else if (project.type === 'Single' || project.type === 'EP') {
         // Handle recording projects (Singles and EPs)
-        const artist = artists.find(a => a.id === project.artistId);
-        const artistName = artist?.name || 'Unknown Artist';
+        const artistName = artistNameById[project.artistId] || 'Unknown Artist';
         const projectStartWeek = project.startWeek;
 
         if (!projectStartWeek) {
-          console.warn(`Recording project ${project.title} missing startWeek`, project);
           return; // Skip projects without proper timing data
         }
 
@@ -382,6 +375,7 @@ export function MusicCalendar({
             type: 'recording',
             from: planningDate.toISOString(),
             to: planningDate.toISOString(),
+            week: projectStartWeek,
             artistName: artistName,
             status: 'planning'
           });
@@ -400,6 +394,7 @@ export function MusicCalendar({
               type: 'recording',
               from: recordingDate.toISOString(),
               to: recordingDate.toISOString(),
+              week: weekNumber,
               artistName: artistName,
               status: 'production'
             });
@@ -415,29 +410,22 @@ export function MusicCalendar({
             type: 'recording',
             from: completionDate.toISOString(),
             to: completionDate.toISOString(),
+            week: completionWeek,
             artistName: artistName,
             status: 'completed'
           });
         }
 
-        console.log(`Added recording session events for: ${project.title} - ${artistName} (${project.stage})`);
       }
     });
 
-    console.log('Total calendar events:', calendarEvents);
     return calendarEvents;
-  }, [releases, projects, weekToDate]);
+  }, [releases, projects, weekToDate, artistNameById, gameState]);
 
   // Get events for selected week
   const eventsForSelectedWeek = useMemo(() => {
-    if (selectedWeekDates.length === 0) return [];
-    return events.filter(event => {
-      const eventDate = new Date(event.from);
-      return selectedWeekDates.some(weekDate =>
-        eventDate.toDateString() === weekDate.toDateString()
-      );
-    });
-  }, [events, selectedWeekDates]);
+    return events.filter(event => event.week === activeSelectedWeek);
+  }, [events, activeSelectedWeek]);
 
   const formatDateRange = (from: string, to: string) => {
     const fromDate = new Date(from);
@@ -472,6 +460,48 @@ export function MusicCalendar({
         return <Clock className="h-3 w-3" />;
     }
   };
+
+  function WeekHeader({ week, dates }: { week: number; dates: Date[] }) {
+    return (
+      <div className="text-sm font-medium text-white">
+        Week {week}
+        {dates.length > 0 && (
+          <span className="text-xs text-white/70 block">
+            {dates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {dates[6]?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  function EventList({ events }: { events: CalendarEvent[] }) {
+    return (
+      <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
+        {events.length > 0 ? (
+          events.map((event) => (
+            <div
+              key={event.id}
+              className="bg-[#4e324c]/30 after:bg-[#A75A5B] relative rounded-md p-2 pl-6 text-sm after:absolute after:inset-y-2 after:left-2 after:w-1 after:rounded-full"
+            >
+              <div className="font-medium text-white flex items-center gap-2">
+                {getEventIcon(event.type)}
+                {event.title}
+              </div>
+              <div className="text-white/50 text-xs">
+                {formatDateRange(event.from, event.to)}
+                {event.artistName && ` • ${event.artistName}`}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center text-white/50 flex-1 flex flex-col justify-center">
+            <p className="text-sm">No events this week</p>
+            <p className="text-xs">Plan releases and sessions</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Week picker mode renders a simple grid with events on the right
   if (weekPickerMode) {
@@ -557,40 +587,10 @@ export function MusicCalendar({
               {/* Events on the right */}
               <div className="flex-1 border-l border-[#4e324c] pl-4 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm font-medium text-white">
-                    Week {activeSelectedWeek}
-                    {selectedWeekDates.length > 0 && (
-                      <span className="text-xs text-white/70 block">
-                        {selectedWeekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {selectedWeekDates[6]?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </span>
-                    )}
-                  </div>
+                  <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
                 </div>
 
-                <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
-                  {eventsForSelectedWeek.length > 0 ? (
-                    eventsForSelectedWeek.map((event) => (
-                      <div
-                        key={event.id}
-                        className="bg-[#4e324c]/30 after:bg-[#A75A5B] relative rounded-md p-2 pl-6 text-sm after:absolute after:inset-y-2 after:left-2 after:w-1 after:rounded-full"
-                      >
-                        <div className="font-medium text-white flex items-center gap-2">
-                          {getEventIcon(event.type)}
-                          {event.title}
-                        </div>
-                        <div className="text-white/50 text-xs">
-                          {formatDateRange(event.from, event.to)}
-                          {event.artistName && ` • ${event.artistName}`}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-white/50 flex-1 flex flex-col justify-center">
-                      <p className="text-sm">No events this week</p>
-                      <p className="text-xs">Plan releases and sessions</p>
-                    </div>
-                  )}
-                </div>
+                <EventList events={eventsForSelectedWeek} />
               </div>
             </div>
           </CardContent>
@@ -612,7 +612,6 @@ export function MusicCalendar({
               onSelect={(clickedDate) => {
                 // When a date is clicked, calculate which week it belongs to
                 if (clickedDate) {
-                  console.log('Date clicked:', clickedDate);
 
                   // Find which week this date belongs to by checking all weeks
                   for (let week = minWeek; week <= maxWeek; week++) {
@@ -621,7 +620,6 @@ export function MusicCalendar({
                       date.toDateString() === clickedDate.toDateString()
                     );
                     if (isInThisWeek) {
-                      console.log('Calculated week number:', week);
 
                       if (selectionMode && onWeekSelect) {
                         // In selection mode, call the callback
@@ -649,14 +647,7 @@ export function MusicCalendar({
           {/* Events on the right (display mode) or Week info (selection mode) */}
           <div className="flex-1 border-l border-[#4e324c] pl-4 flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-medium text-white">
-                Week {activeSelectedWeek}
-                {selectedWeekDates.length > 0 && (
-                  <span className="text-xs text-white/70 block">
-                    {selectedWeekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {selectedWeekDates[6]?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </span>
-                )}
-              </div>
+              <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
               {!selectionMode && (
                 <Button
                   variant="ghost"
@@ -670,30 +661,7 @@ export function MusicCalendar({
               )}
             </div>
 
-            <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
-              {eventsForSelectedWeek.length > 0 ? (
-                eventsForSelectedWeek.map((event) => (
-                  <div
-                    key={event.id}
-                    className="bg-[#4e324c]/30 after:bg-[#A75A5B] relative rounded-md p-2 pl-6 text-sm after:absolute after:inset-y-2 after:left-2 after:w-1 after:rounded-full"
-                  >
-                    <div className="font-medium text-white flex items-center gap-2">
-                      {getEventIcon(event.type)}
-                      {event.title}
-                    </div>
-                    <div className="text-white/50 text-xs">
-                      {formatDateRange(event.from, event.to)}
-                      {event.artistName && ` • ${event.artistName}`}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-white/50 flex-1 flex flex-col justify-center">
-                  <p className="text-sm">No events this week</p>
-                  <p className="text-xs">Plan releases and sessions</p>
-                </div>
-              )}
-            </div>
+            <EventList events={eventsForSelectedWeek} />
           </div>
         </div>
       </CardContent>

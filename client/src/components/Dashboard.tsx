@@ -1,7 +1,6 @@
 import { MetricsDashboard } from './MetricsDashboard';
 import { AccessTierBadges } from './AccessTierBadges';
 import { ArtistRoster } from './ArtistRoster';
-import { ActiveRecordingSessions } from './ActiveRecordingSessions';
 import { ActiveTours } from './ActiveTours';
 import { ActiveReleases } from './ActiveReleases';
 import { Top10ChartDisplay } from './Top10ChartDisplay';
@@ -78,10 +77,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Recording Sessions - Full Width */}
-        <div className="mb-6">
-          <ActiveRecordingSessions />
-        </div>
 
         {/* Tours Section - Full Width */}
         <div className="mb-6">

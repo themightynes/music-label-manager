@@ -24,10 +24,7 @@ export interface ProjectCreationData {
   timeInvestment: 'rushed' | 'standard' | 'extended' | 'perfectionist';
 }
 
-// PROJECT_TYPES moved to API - will be fetched from /api/project-types
-// Temporary fallback data with defensive programming
-// NOTE: Mini-Tour removed - now handled by dedicated Live Performance system
-const PROJECT_TYPES_FALLBACK = [
+const PROJECT_TYPES = [
   {
     id: 'Single' as const,
     name: 'Single',
@@ -51,9 +48,6 @@ const PROJECT_TYPES_FALLBACK = [
     defaultSongs: 4
   }
 ];
-
-// Use fallback data until API integration is complete
-const PROJECT_TYPES = PROJECT_TYPES_FALLBACK;
 
 const PRODUCER_TIERS = [
   {
@@ -205,126 +199,44 @@ export default function RecordingSessionPage() {
   const timeMultiplier = selectedTimeOption?.costMultiplier || 1.0;
   const finalTotalCost = Math.round(totalBaseCost * producerMultiplier * timeMultiplier);
 
-  // Calculate dynamic minimum viable cost (matches backend calculation)
-  const calculateDynamicMinViableCost = (projectType: string, producerTier: string, timeInvestment: string, songCount: number): number => {
-    // Base per-song costs
-    const baseCosts = {
-      'Single': 3500,
-      'EP': 4000,
-      'Mini-Tour': 3500
-    };
-    
-    let baseCostPerSong = baseCosts[projectType as keyof typeof baseCosts] || 3500;
-    
-    // Apply economies of scale for multi-song projects
-    if (songCount > 1) {
-      const economiesMultiplier = songCount >= 7 ? 0.8 :
-                                 songCount >= 4 ? 0.85 :
-                                 songCount >= 2 ? 0.9 : 1.0;
-      baseCostPerSong *= economiesMultiplier;
+  // Budget calculation state
+  const [budgetCalculation, setBudgetCalculation] = useState<{
+    budgetMultiplier: number;
+    efficiencyRating: { rating: string; description: string; color: string };
+    minimumViableCost: number;
+  } | null>(null);
+
+  // Fetch budget calculation from backend
+  const fetchBudgetCalculation = async () => {
+    if (!selectedType || !budgetPerSong || budgetPerSong <= 0) {
+      setBudgetCalculation(null);
+      return;
     }
-    
-    // Don't apply producer and time multipliers to minimum viable cost
-    // These are already reflected in the actual project cost the player pays
-    // The minimum viable should represent the baseline quality expectation
-    
-    // Apply baseline quality multiplier for recording sessions
-    // This ensures minimum selectable budgets don't give quality bonuses
-    const baselineQualityMultiplier = (projectType === 'Single' || projectType === 'EP') ? 1.5 : 1.0;
-    
-    return Math.round(baseCostPerSong * baselineQualityMultiplier);
-  };
-  
-  // Calculate budget multiplier using new 5-segment piecewise function
-  const calculateBudgetMultiplier = (budgetPerSong: number, projectType: string, producerTier: string, timeInvestment: string, songCount: number): number => {
-    if (budgetPerSong <= 0) return 1.0;
-    
-    const minViableCost = calculateDynamicMinViableCost(projectType, producerTier, timeInvestment, songCount);
-    let efficiencyRatio = budgetPerSong / minViableCost;
-    
-    // Apply dampening factor (matching backend logic)
-    const dampeningFactor = 0.7; // Must match quality.json
-    efficiencyRatio = 1 + dampeningFactor * (efficiencyRatio - 1);
-    
-    // 5-segment piecewise function (simplified version of backend)
-    const breakpoints = {
-      penalty_threshold: 0.6,
-      minimum_viable: 0.8,
-      optimal_efficiency: 1.2,
-      luxury_threshold: 2.0,
-      diminishing_threshold: 3.5
-    };
-    
-    let multiplier: number;
-    
-    if (efficiencyRatio < breakpoints.penalty_threshold) {
-      // Segment 1: Heavy penalty for insufficient budget
-      // Should be flat 0.65 for anything under 0.6x
-      multiplier = 0.65;
-    } else if (efficiencyRatio < breakpoints.minimum_viable) {
-      // Segment 2: Below standard to minimum viable
-      // Should go from 0.65 to 0.85
-      const progress = (efficiencyRatio - breakpoints.penalty_threshold) / (breakpoints.minimum_viable - breakpoints.penalty_threshold);
-      const startMult = 0.65;
-      const endMult = 0.85;
-      multiplier = startMult + (endMult - startMult) * progress;
-    } else if (efficiencyRatio <= breakpoints.optimal_efficiency) {
-      // Segment 3: Minimum viable to optimal efficiency (best value)
-      // Should go from 0.85 to 1.05
-      const progress = (efficiencyRatio - breakpoints.minimum_viable) / (breakpoints.optimal_efficiency - breakpoints.minimum_viable);
-      const startMult = 0.85;
-      const endMult = 1.05;
-      multiplier = startMult + (endMult - startMult) * progress;
-    } else if (efficiencyRatio <= breakpoints.luxury_threshold) {
-      // Segment 4: Optimal to luxury threshold
-      // Should go from 1.05 to 1.20
-      const progress = (efficiencyRatio - breakpoints.optimal_efficiency) / (breakpoints.luxury_threshold - breakpoints.optimal_efficiency);
-      const startMult = 1.05;
-      const endMult = 1.20;
-      multiplier = startMult + (endMult - startMult) * progress;
-    } else if (efficiencyRatio <= breakpoints.diminishing_threshold) {
-      // Segment 5: Luxury to diminishing threshold
-      // Should go from 1.20 to 1.35
-      const progress = (efficiencyRatio - breakpoints.luxury_threshold) / (breakpoints.diminishing_threshold - breakpoints.luxury_threshold);
-      const startMult = 1.20;
-      const endMult = 1.35;
-      multiplier = startMult + (endMult - startMult) * progress;
-    } else {
-      // Segment 6: Diminishing returns (logarithmic)
-      const baseMultiplier = 1.35;
-      const excessRatio = efficiencyRatio - breakpoints.diminishing_threshold;
-      const diminishingBonus = Math.log(1 + excessRatio) * 0.025;
-      multiplier = baseMultiplier + diminishingBonus;
-    }
-    
-    return Math.max(0.65, Math.min(1.35, multiplier));
-  };
-  
-  // Get budget efficiency rating for UI display
-  const getBudgetEfficiencyRating = (budgetPerSong: number, projectType: string, producerTier: string, timeInvestment: string, songCount: number): { rating: string, description: string, color: string } => {
-    if (budgetPerSong <= 0) return { rating: "Unknown", description: "Enter budget to see efficiency", color: "text-gray-400" };
-    
-    const minViableCost = calculateDynamicMinViableCost(projectType, producerTier, timeInvestment, songCount);
-    let efficiencyRatio = budgetPerSong / minViableCost;
-    
-    // Apply dampening factor (matching backend logic)
-    const dampeningFactor = 0.7; // Must match quality.json
-    efficiencyRatio = 1 + dampeningFactor * (efficiencyRatio - 1);
-    
-    if (efficiencyRatio < 0.6) {
-      return { rating: "Insufficient", description: "Budget too low for quality production", color: "text-red-500" };
-    } else if (efficiencyRatio < 0.8) {
-      return { rating: "Below Standard", description: "Minimal quality, corners will be cut", color: "text-orange-500" };
-    } else if (efficiencyRatio <= 1.2) {
-      return { rating: "Efficient", description: "Good value for money, solid quality", color: "text-green-500" };
-    } else if (efficiencyRatio <= 2.0) {
-      return { rating: "Premium", description: "High-end production, excellent quality", color: "text-blue-500" };
-    } else if (efficiencyRatio <= 3.5) {
-      return { rating: "Luxury", description: "Top-tier production, maximum quality", color: "text-purple-500" };
-    } else {
-      return { rating: "Excessive", description: "Diminishing returns, money could be better spent", color: "text-yellow-500" };
+
+    try {
+      const response = await apiRequest('POST', '/api/budget-calculation', {
+        budgetPerSong,
+        projectType: selectedType,
+        producerTier: selectedProducerTier,
+        timeInvestment: selectedTimeInvestment,
+        songCount
+      });
+      const data = await response.json();
+      setBudgetCalculation(data);
+    } catch (error) {
+      console.error('Failed to fetch budget calculation:', error);
+      setBudgetCalculation(null);
     }
   };
+
+  // Trigger budget calculation when relevant values change
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchBudgetCalculation();
+    }, 300); // Debounce API calls
+
+    return () => clearTimeout(timeoutId);
+  }, [budgetPerSong, selectedType, selectedProducerTier, selectedTimeInvestment, songCount]);
 
   // Calculate estimated quality with new multiplicative formula
   // IMPORTANT: This preview calculation must match the backend formula in:
@@ -361,18 +273,13 @@ export default function RecordingSessionPage() {
   const focusFactor = Math.pow(0.97, Math.max(0, songCount - 3));
   
   // 5. Budget factor
-  const budgetFactor = selectedProjectType?.isRecording ? 
-    calculateBudgetMultiplier(budgetPerSong, selectedType || '', selectedProducer?.id || 'local', selectedTimeOption?.id || 'standard', songCount) : 1.0;
-  
+  const budgetFactor = budgetCalculation?.budgetMultiplier || 1.0;
+
   // Get budget efficiency information for display
-  const budgetEfficiency = selectedProjectType?.isRecording && budgetPerSong > 0 ?
-    getBudgetEfficiencyRating(budgetPerSong, selectedType || '', selectedProducer?.id || 'local', selectedTimeOption?.id || 'standard', songCount) :
-    null;
-  
+  const budgetEfficiency = budgetCalculation?.efficiencyRating || null;
+
   // Calculate minimum viable cost for display
-  const minimumViableCost = selectedProjectType?.isRecording ?
-    calculateDynamicMinViableCost(selectedType || '', selectedProducer?.id || 'local', selectedTimeOption?.id || 'standard', songCount) :
-    0;
+  const minimumViableCost = budgetCalculation?.minimumViableCost || 0;
   
   // 6. Mood factor
   const artistMood = selectedArtistData?.mood || 50;
@@ -391,27 +298,26 @@ export default function RecordingSessionPage() {
 
   const handleTypeSelect = (type: 'Single' | 'EP') => {
     setSelectedType(type);
-    
-    // Use API data if available, otherwise fallback to local data
+
+    // Use API data
     const apiKey = type === 'Single' ? 'single' : 'ep';
     const apiProjectType = projectTypesAPI[apiKey];
     const fallbackProjectType = PROJECT_TYPES.find(p => p.id === type);
-    
+
     if (apiProjectType) {
-      // Use API data for song count first
-      const songCountDefault = (apiProjectType && 'song_count_default' in apiProjectType) ? apiProjectType.song_count_default : 1;
+      // Use API data for song count and budget
+      const songCountDefault = apiProjectType.song_count_default || fallbackProjectType?.defaultSongs || 1;
       setSongCount(songCountDefault);
-      
+
       // For recording projects, convert total to per-song
       const minPerSong = Math.round(apiProjectType.min / songCountDefault);
       const maxPerSong = Math.round(apiProjectType.max / songCountDefault);
       const defaultPerSong = Math.floor((minPerSong + maxPerSong) / 2);
       setBudgetPerSong(defaultPerSong);
-    } else if (fallbackProjectType) {
-      // Fallback to local data
-      setSongCount(fallbackProjectType.defaultSongs);
-      // Calculate a reasonable default budget
-      setBudgetPerSong(type === 'Single' ? 5000 : 5000);
+    } else {
+      // Use local data as fallback
+      setSongCount(fallbackProjectType?.defaultSongs || 1);
+      setBudgetPerSong(5000);
     }
 
     // Auto-generate title if artist is already selected
@@ -497,10 +403,7 @@ export default function RecordingSessionPage() {
               ) : projectTypesError ? (
                 <div className="col-span-2 text-center py-8">
                   <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-                  <p className="text-red-600 mb-4">Failed to load project types</p>
-                  <Button onClick={fetchProjectTypes} variant="outline" size="sm">
-                    Try Again
-                  </Button>
+                  <p className="text-red-600 mb-4">Failed to load project types. Please refresh the page.</p>
                 </div>
               ) : (
                 PROJECT_TYPES.map((type) => {
@@ -509,17 +412,14 @@ export default function RecordingSessionPage() {
                   const apiProjectType = projectTypesAPI[apiKey];
 
                   // Calculate per-song budget range for recording projects
-                  let budgetRange;
+                  let budgetRange = 'Loading...';
                   if (apiProjectType && type.isRecording) {
-                    const defaultSongCount = (apiProjectType && 'song_count_default' in apiProjectType ? apiProjectType.song_count_default : type.defaultSongs) || 1;
+                    const defaultSongCount = apiProjectType.song_count_default || type.defaultSongs || 1;
                     const minPerSong = Math.round(apiProjectType.min / defaultSongCount);
                     const maxPerSong = Math.round(apiProjectType.max / defaultSongCount);
                     budgetRange = `$${minPerSong.toLocaleString()} - $${maxPerSong.toLocaleString()} per song`;
                   } else if (apiProjectType) {
                     budgetRange = `$${apiProjectType.min?.toLocaleString()} - $${apiProjectType.max?.toLocaleString()}`;
-                  } else {
-                    // No API data, show placeholder
-                    budgetRange = type.isRecording ? 'Loading...' : '$5k - $15k';
                   }
 
                   return (

@@ -37,7 +37,9 @@ export class ServerGameData {
     try {
       console.log('Loading game data files...');
       const startTime = Date.now();
-      
+
+      // Clear any cached data to ensure fresh load
+      this.dataLoader.clearCache();
       await this.dataLoader.loadAllData();
       
       // Cache balance data for sync methods

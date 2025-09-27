@@ -1,7 +1,9 @@
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Heart, Info, ExternalLink } from 'lucide-react';
 import { SongCatalog } from './SongCatalog';
 import { useArtistROI } from '@/hooks/useAnalytics';
+import { useGameStore } from '@/store/gameStore';
 
 export interface ArtistCardProps {
   artist: any;
@@ -28,10 +30,40 @@ export function ArtistCard({
   gameState,
   roiData: passedRoiData
 }: ArtistCardProps) {
+  const { projects } = useGameStore();
+
   // Fetch ROI from backend only if not provided as prop (backward compatibility)
   const { data: fetchedRoiData } = useArtistROI(passedRoiData ? null : artist.id);
   const roiData = passedRoiData || fetchedRoiData;
   const avgROI = roiData?.overallROI ?? 0;
+
+  // Helper function to determine artist status based on current projects
+  const getArtistStatus = (artistId: string, currentWeek: number, projects: any[]) => {
+    if (!projects || !Array.isArray(projects)) return 'IDLE';
+
+    // Find active projects for this artist in the current week
+    const artistProjects = projects.filter(project =>
+      project.artistId === artistId &&
+      project.stage === 'production' &&
+      project.startWeek &&
+      currentWeek >= project.startWeek
+    );
+
+    // Check for active tours (Mini-Tour type in production)
+    const activeTour = artistProjects.find(project => project.type === 'Mini-Tour');
+    if (activeTour) return 'ON TOUR';
+
+    // Check for active recordings (Single/EP type in production)
+    const activeRecording = artistProjects.find(project =>
+      (project.type === 'Single' || project.type === 'EP')
+    );
+    if (activeRecording) return 'RECORDING';
+
+    return 'IDLE';
+  };
+
+  const currentWeek = gameState?.currentWeek || 1;
+  const artistStatus = getArtistStatus(artist.id, currentWeek, projects || []);
 
   // Get recommendations with backend ROI
   const getArtistRecommendations = (artist: any, insights: any, roi?: number) => {
@@ -92,14 +124,27 @@ export function ArtistCard({
             <span>${roiData?.totalRevenue?.toLocaleString() || insights.totalRevenue.toLocaleString()}</span>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleExpand}
-          className="text-white/50 hover:text-white/70 p-1"
-        >
-          <Info className="w-3 h-3" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Badge
+            className={`text-xs px-2 py-1 ${
+              artistStatus === 'ON TOUR' ? 'bg-[#A75A5B] text-white' :
+              artistStatus === 'RECORDING' ? 'bg-[#65557c] text-white' :
+              'bg-[#4e324c] text-white/70'
+            }`}
+          >
+            {artistStatus === 'ON TOUR' ? 'On Tour' :
+             artistStatus === 'RECORDING' ? 'Recording' :
+             'Idle'}
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleExpand}
+            className="text-white/50 hover:text-white/70 p-1"
+          >
+            <Info className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
 
       {/* Condensed Metrics */}

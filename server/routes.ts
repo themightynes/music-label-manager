@@ -620,6 +620,67 @@ const musicLabelData = {
     }
   });
 
+  // Calculate budget info for project creation
+  app.post("/api/budget-calculation", requireClerkUser, async (req, res) => {
+    try {
+      await serverGameData.initialize();
+      const {
+        budgetPerSong,
+        projectType = 'Single',
+        producerTier = 'local',
+        timeInvestment = 'standard',
+        songCount = 1
+      } = req.body;
+
+      if (!budgetPerSong || budgetPerSong <= 0) {
+        return res.json({
+          error: 'Invalid budget',
+          budgetMultiplier: 1.0,
+          efficiencyRating: { rating: "Unknown", description: "Enter budget to see efficiency", color: "text-gray-400" }
+        });
+      }
+
+      // Create FinancialSystem for budget calculations
+      await serverGameData.initialize();
+      const financialSystem = new FinancialSystem(serverGameData, () => Math.random());
+
+      // Calculate budget multiplier
+      const budgetMultiplier = financialSystem.calculateBudgetQualityMultiplier(
+        budgetPerSong,
+        projectType,
+        producerTier,
+        timeInvestment,
+        songCount
+      );
+
+      // Get efficiency rating
+      const efficiencyRating = financialSystem.getBudgetEfficiencyRating(
+        budgetPerSong,
+        projectType,
+        producerTier,
+        timeInvestment,
+        songCount
+      );
+
+      // Calculate minimum viable cost
+      const minimumViableCost = financialSystem.calculateDynamicMinimumViableCost(
+        projectType,
+        producerTier,
+        timeInvestment,
+        songCount
+      );
+
+      res.json({
+        budgetMultiplier,
+        efficiencyRating,
+        minimumViableCost
+      });
+    } catch (error) {
+      console.error('Failed to calculate budget:', error);
+      res.status(500).json({ error: 'Failed to calculate budget' });
+    }
+  });
+
   // Artist routes
   app.post("/api/game/:gameId/artists", requireClerkUser, async (req, res) => {
     try {
@@ -701,9 +762,12 @@ const musicLabelData = {
       
       // Additional budget validation based on economy.json
       const projectTypes = await serverGameData.getProjectTypes();
-      const projectTypeKey = validatedData.type === 'Single' ? 'single' : 
+      const projectTypeKey = validatedData.type === 'Single' ? 'single' :
                             validatedData.type === 'EP' ? 'ep' : 'mini_tour';
       const projectTypeConfig = projectTypes[projectTypeKey];
+
+      // Debug log to verify the configuration
+      console.log(`[PROJECT CREATION] Project type config for ${validatedData.type}:`, projectTypeConfig);
       
       if (projectTypeConfig && validatedData.type !== 'Mini-Tour') {
         // For recording projects, validate budget per song
