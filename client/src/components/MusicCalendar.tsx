@@ -1,12 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Music, Mic2, Clock } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { cn } from '@/lib/utils';
-import { getTourStats, getCompletedCities, getTourMetadata } from '@/utils/tourHelpers';
+import { getCompletedCities, getTourMetadata } from '@/utils/tourHelpers';
 
 interface CalendarEvent {
   id: string;
@@ -40,7 +40,7 @@ export function MusicCalendar({
   minWeek = 1,
   weekPickerMode = false
 }: MusicCalendarProps) {
-  const { gameState, releases, projects } = useGameStore();
+  const { gameState, releases, projects, artists } = useGameStore();
 
   // Calculate the start year from the game state or use current year
   const startYear = useMemo(() => {
@@ -146,7 +146,9 @@ export function MusicCalendar({
       // Lead single strategy is stored in metadata field by the backend
       const leadSingleStrategy = release.metadata?.leadSingleStrategy;
 
-      if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseWeek) {
+      // Only show lead single events for unreleased releases
+      if (leadSingleStrategy && leadSingleStrategy.leadSingleReleaseWeek &&
+          release.status !== 'released' && release.status !== 'catalog') {
         const leadSingleWeek = leadSingleStrategy.leadSingleReleaseWeek;
         const leadSingleDate = weekToDate(leadSingleWeek);
 
@@ -183,10 +185,14 @@ export function MusicCalendar({
           }
         }
 
-        // Fallback: if we can't find the specific song title, use release title + "Lead Single"
+        // Clean title format - artist name will appear in subtitle
         const displayTitle = leadSingleTitle === 'Lead Single'
-          ? `🎵 ${release.title} - Lead Single`
+          ? `🎵 ${release.title} (Lead Single)`
           : `🎵 ${leadSingleTitle} (Lead Single)`;
+
+        // Get artist name for lead single
+        const releaseArtist = artists.find(a => a.id === release.artistId);
+        const releaseArtistName = releaseArtist?.name || 'Unknown Artist';
 
         calendarEvents.push({
           id: `lead-single-${release.id}`,
@@ -194,7 +200,7 @@ export function MusicCalendar({
           type: 'release',
           from: leadSingleDate.toISOString(),
           to: leadSingleDate.toISOString(),
-          artistName: release.artist?.name,
+          artistName: releaseArtistName,
           releaseType: 'single',
           status: release.status
         });
@@ -203,8 +209,9 @@ export function MusicCalendar({
         console.log('No lead single strategy found for release:', release.title);
       }
 
-      // Add main release event
-      if (release.releaseWeek && release.releaseWeek > 0) {
+      // Add main release event (only for unreleased releases)
+      if (release.releaseWeek && release.releaseWeek > 0 &&
+          release.status !== 'released' && release.status !== 'catalog') {
         const releaseDate = weekToDate(release.releaseWeek);
         let eventTitle = release.title;
 
@@ -219,13 +226,17 @@ export function MusicCalendar({
           eventTitle = `${typeMap[release.type] || release.type} - ${release.title}`;
         }
 
+        // Get artist name for main release
+        const mainReleaseArtist = artists.find(a => a.id === release.artistId);
+        const mainReleaseArtistName = mainReleaseArtist?.name || 'Unknown Artist';
+
         calendarEvents.push({
           id: `release-${release.id}`,
           title: eventTitle,
           type: 'release',
           from: releaseDate.toISOString(),
           to: releaseDate.toISOString(),
-          artistName: release.artist?.name,
+          artistName: mainReleaseArtistName,
           releaseType: release.type,
           status: release.status
         });
@@ -241,6 +252,10 @@ export function MusicCalendar({
         // Tours don't have specific week scheduling like releases
         // They are processed during week advancement based on stage
 
+        // Get artist name for all tour events
+        const artist = artists.find(a => a.id === project.artistId);
+        const tourArtistName = artist?.name || 'Unknown Artist';
+
         // For completed cities, show actual performance weeks if available
         const completedCities = getCompletedCities(project);
         if (completedCities.length > 0) {
@@ -255,7 +270,7 @@ export function MusicCalendar({
                 type: 'tour',
                 from: cityDate.toISOString(),
                 to: cityDate.toISOString(),
-                artistName: project.artist?.name,
+                artistName: tourArtistName,
                 status: 'completed'
               });
             }
@@ -269,31 +284,60 @@ export function MusicCalendar({
           const plannedCities = tourMetadata.cities || 1;
           const completedCities = getCompletedCities(project).length;
 
-          // Use actual startWeek if tour has started, otherwise calculate for planning
-          let startWeek;
-          if (project.stage === 'production' && project.startWeek) {
-            // Tour is active and has a recorded start week
-            startWeek = project.startWeek;
-          } else if (project.stage === 'planning') {
-            // Planning tour - show starting next week (or use dueWeek if set)
-            startWeek = project.dueWeek || (currentWeek + 1);
-          } else {
-            // Fallback
+          // Tours ALWAYS have startWeek set during creation (see gameStore.createProject)
+          // Tour timeline: startWeek = planning week, startWeek+1 = first city, etc.
+          let startWeek = project.startWeek;
+
+          if (!startWeek) {
+            console.warn(`Tour ${project.title} missing startWeek - this should not happen`, project);
+            // Emergency fallback only - tours should always have startWeek
             startWeek = currentWeek;
           }
 
-          // Create calendar events for each week of the tour
-          for (let i = 0; i < plannedCities; i++) {
-            const weekNumber = startWeek + i;
-            const tourDate = weekToDate(weekNumber);
-            const cityNumber = i + 1;
+          // Artist name already set as tourArtistName above
 
-            let tourIcon, tourTitle;
+          // Create calendar events for tour progression
+          // Tour timeline: startWeek = planning, startWeek+1 = city 1, startWeek+2 = city 2, etc.
 
-            if (project.stage === 'planning') {
-              tourIcon = '📅';
-              tourTitle = `${project.title} - City ${cityNumber} (Planned)`;
-            } else {
+          if (project.stage === 'planning') {
+            // Show planning week
+            const planningDate = weekToDate(startWeek);
+            calendarEvents.push({
+              id: `tour-${project.id}-planning-${startWeek}`,
+              title: `📅 ${project.title} (Planning)`,
+              type: 'tour',
+              from: planningDate.toISOString(),
+              to: planningDate.toISOString(),
+              artistName: tourArtistName,
+              status: 'planning'
+            });
+
+            // Show planned cities starting from startWeek + 1
+            for (let i = 0; i < plannedCities; i++) {
+              const weekNumber = startWeek + 1 + i; // Cities start after planning week
+              const tourDate = weekToDate(weekNumber);
+              const cityNumber = i + 1;
+
+              calendarEvents.push({
+                id: `tour-${project.id}-city-${cityNumber}-planned`,
+                title: `📅 ${project.title} - City ${cityNumber} (Planned)`,
+                type: 'tour',
+                from: tourDate.toISOString(),
+                to: tourDate.toISOString(),
+                artistName: tourArtistName,
+                status: 'planning'
+              });
+            }
+          } else {
+            // Production stage: show actual progression
+            // Cities start from startWeek + 1 (after planning week)
+            for (let i = 0; i < plannedCities; i++) {
+              const weekNumber = startWeek + 1 + i; // Cities start after planning week
+              const tourDate = weekToDate(weekNumber);
+              const cityNumber = i + 1;
+
+              let tourIcon, tourTitle;
+
               // For production tours, show which cities are completed vs upcoming
               if (i < completedCities) {
                 tourIcon = '✅';
@@ -305,34 +349,78 @@ export function MusicCalendar({
                 tourIcon = '⏳';
                 tourTitle = `${project.title} - City ${cityNumber} (Upcoming)`;
               }
-            }
 
-            calendarEvents.push({
-              id: `tour-${project.id}-week-${weekNumber}`,
-              title: `${tourIcon} ${tourTitle}`,
-              type: 'tour',
-              from: tourDate.toISOString(),
-              to: tourDate.toISOString(),
-              artistName: project.artist?.name,
-              status: project.stage
-            });
+              calendarEvents.push({
+                id: `tour-${project.id}-city-${cityNumber}-production`,
+                title: `${tourIcon} ${tourTitle}`,
+                type: 'tour',
+                from: tourDate.toISOString(),
+                to: tourDate.toISOString(),
+                artistName: tourArtistName,
+                status: project.stage
+              });
+            }
           }
         }
-      } else {
-        // Handle regular recording projects
-        if (project.dueWeek && project.dueWeek > 0 && project.stage !== 'completed') {
-          const dueDate = weekToDate(project.dueWeek);
-          calendarEvents.push({
-            id: `project-${project.id}`,
-            title: `📝 ${project.title} Due`,
-            type: 'recording',
-            from: dueDate.toISOString(),
-            to: dueDate.toISOString(),
-            artistName: project.artist?.name,
-            status: project.stage
-          });
-          console.log('Added project event:', project.title);
+      } else if (project.type === 'Single' || project.type === 'EP') {
+        // Handle recording projects (Singles and EPs)
+        const artist = artists.find(a => a.id === project.artistId);
+        const artistName = artist?.name || 'Unknown Artist';
+        const projectStartWeek = project.startWeek;
+
+        if (!projectStartWeek) {
+          console.warn(`Recording project ${project.title} missing startWeek`, project);
+          return; // Skip projects without proper timing data
         }
+
+        if (project.stage === 'planning') {
+          // Show planning week
+          const planningDate = weekToDate(projectStartWeek);
+          calendarEvents.push({
+            id: `recording-${project.id}-planning`,
+            title: `📋 ${project.title} (Planning)`,
+            type: 'recording',
+            from: planningDate.toISOString(),
+            to: planningDate.toISOString(),
+            artistName: artistName,
+            status: 'planning'
+          });
+        } else if (project.stage === 'production') {
+          // Show recording weeks (estimate 2-4 weeks based on typical recording flow)
+          const recordingStartWeek = projectStartWeek + 1; // Recording starts after planning
+          const maxRecordingWeeks = 4; // Maximum recording duration per game engine
+
+          for (let i = 0; i < maxRecordingWeeks; i++) {
+            const weekNumber = recordingStartWeek + i;
+            const recordingDate = weekToDate(weekNumber);
+
+            calendarEvents.push({
+              id: `recording-${project.id}-recording-${i + 1}`,
+              title: `🎤 ${project.title} (Recording)`,
+              type: 'recording',
+              from: recordingDate.toISOString(),
+              to: recordingDate.toISOString(),
+              artistName: artistName,
+              status: 'production'
+            });
+          }
+        } else if (project.stage === 'recorded') {
+          // Show completed recording (optional - could skip if you don't want historical data)
+          const completionWeek = project.metadata?.recordingCompletedWeek || projectStartWeek + 3;
+          const completionDate = weekToDate(completionWeek);
+
+          calendarEvents.push({
+            id: `recording-${project.id}-completed`,
+            title: `✅ ${project.title} (Completed)`,
+            type: 'recording',
+            from: completionDate.toISOString(),
+            to: completionDate.toISOString(),
+            artistName: artistName,
+            status: 'completed'
+          });
+        }
+
+        console.log(`Added recording session events for: ${project.title} - ${artistName} (${project.stage})`);
       }
     });
 

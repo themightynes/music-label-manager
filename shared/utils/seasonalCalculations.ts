@@ -90,7 +90,7 @@ export function getSeasonalMultiplier(week: number, gameData: any): number {
 
   if (!seasonalModifiers) {
     console.warn('[SEASONAL] seasonal_modifiers not found in balance data, using fallback');
-    return SEASONAL_MULTIPLIERS[quarter as keyof typeof SEASONAL_MULTIPLIERS] || 1.0;
+    return FALLBACK_SEASONAL_MULTIPLIERS[quarter as keyof typeof FALLBACK_SEASONAL_MULTIPLIERS] || 1.0;
   }
 
   return seasonalModifiers[quarter] || 1.0;

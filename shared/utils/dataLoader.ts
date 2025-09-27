@@ -116,8 +116,11 @@ export class GameDataLoader {
       return this.dataCache as GameDataFiles;
     } catch (error) {
       console.error('Failed to load game data:', error);
-      console.error('Stack trace:', error.stack);
-      throw new Error(`Failed to load game data files: ${error.message}`);
+      if (error instanceof Error) {
+        console.error('Stack trace:', error.stack);
+        throw new Error(`Failed to load game data files: ${error.message}`);
+      }
+      throw new Error('Failed to load game data files');
     }
   }
 
@@ -424,7 +427,15 @@ export class GameDataLoader {
       roles: z.array(GameRoleSchema)
     });
 
-    return schema.parse(data);
+    const parsed = schema.parse(data);
+    // Ensure required fields for TypeScript types (relationship default)
+    return {
+      ...parsed,
+      roles: parsed.roles.map((role: any) => ({
+        relationship: role.relationship ?? 50,
+        ...role,
+      }))
+    };
   }
 
   // Helper functions to get specific data

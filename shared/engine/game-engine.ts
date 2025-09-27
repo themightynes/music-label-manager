@@ -22,6 +22,19 @@ import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalcu
 export type { WeekSummary } from '../types/gameTypes';
 import seedrandom from 'seedrandom';
 
+// Patch type for song updates applied during weekly processing
+// Allows optional awareness fields when only awareness changes occur
+export type SongUpdatePatch = {
+  songId: string;
+  weeklyStreams?: number;
+  lastWeekRevenue?: number;
+  totalRevenue?: number;
+  totalStreams?: number;
+  awareness?: number;
+  peak_awareness?: number;
+  awareness_decay_rate?: number;
+};
+
 // Extended WeeklyAction interface for game engine
 interface GameEngineAction {
   actionType: 'role_meeting' | 'start_project' | 'marketing' | 'artist_dialogue';
@@ -946,8 +959,9 @@ export class GameEngine {
 
                   // Roll for breakthrough (deterministic based on song properties)
                   if (breakthroughPotential > 0) {
-                    const seed = (song.quality || 50) + currentWeek + newAwareness + (song.artistId?.slice(-2) || '00');
-                    const random = (Math.sin(seed) + 1) / 2;
+                    const artistSuffix = parseInt((song.artistId?.slice(-2) || '00'), 16);
+                    const seedVal = (song.quality || 50) + currentWeek + newAwareness + (isNaN(artistSuffix) ? 0 : artistSuffix);
+                    const random = (Math.sin(seedVal) + 1) / 2;
 
                     if (random < breakthroughPotential) {
                       // BREAKTHROUGH ACHIEVED!
@@ -1081,7 +1095,18 @@ export class GameEngine {
           }
 
           // Track song updates for batch processing
-          const songUpdate = {
+          type SongUpdatePatch = {
+            songId: string;
+            weeklyStreams?: number;
+            lastWeekRevenue?: number;
+            totalRevenue?: number;
+            totalStreams?: number;
+            awareness?: number;
+            peak_awareness?: number;
+            awareness_decay_rate?: number;
+          };
+
+          const songUpdate: SongUpdatePatch = {
             songId: song.id,
             weeklyStreams: weeklyStreams,
             lastWeekRevenue: Math.round(ongoingRevenue),
@@ -1106,7 +1131,7 @@ export class GameEngine {
           });
         } else if (awarenessUpdate) {
           // Handle awareness updates for songs with no ongoing revenue
-          const songUpdate = {
+          const songUpdate: SongUpdatePatch = {
             songId: song.id,
             awareness: awarenessUpdate.awareness,
             peak_awareness: awarenessUpdate.peak_awareness,
@@ -3537,8 +3562,7 @@ export class GameEngine {
               type: 'expense_tracking',
               description: `${project.title} production started (cost previously deducted at creation)`,
               amount: -project.totalCost,
-              projectId: project.id,
-              description: 'Cost deducted at project creation, tracked here for reporting only - no additional money deduction'
+              projectId: project.id
             });
           }
         } else if (currentStageIndex === 1) {

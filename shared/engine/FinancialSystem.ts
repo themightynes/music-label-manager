@@ -400,6 +400,7 @@ export class InvestmentTracker {
 export class FinancialSystem {
   private gameData: any;
   private rng: () => number;
+  private storage?: any;
   public investmentTracker: InvestmentTracker | null = null;
   
   // Critical constants extracted for easier balance tweaking
@@ -434,8 +435,9 @@ export class FinancialSystem {
     // VALIDATE CONFIGURATION ON STARTUP - CRASH IF INCOMPLETE
     this.validateConfiguration();
 
-    // Initialize InvestmentTracker if storage is provided
+    // Initialize storage/investment tracker if storage is provided
     if (storage) {
+      this.storage = storage;
       this.investmentTracker = new InvestmentTracker(storage);
     }
   }

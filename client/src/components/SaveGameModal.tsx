@@ -155,7 +155,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      week: 'short',
+      weekday: 'short',
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit'

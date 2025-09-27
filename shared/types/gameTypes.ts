@@ -148,9 +148,9 @@ export interface BalanceConfig {
   version: string;
   economy: {
     starting_money: number;
-    weekly_burn_base: [number, number];
+    weekly_burn_base: number[];
     bankruptcy_threshold: number;
-    rng_variance: [number, number];
+    rng_variance: number[];
     project_costs: Record<string, any>;
     song_count_cost_system: Record<string, any>;
     marketing_costs: Record<string, any>;
@@ -161,11 +161,12 @@ export interface BalanceConfig {
     focus_slots_base: number;
     focus_slots_unlock_threshold: number;
     focus_slots_max: number;
-    project_durations: Record<string, [number, number]>;
+    project_durations: Record<string, number[]>;
     seasonal_modifiers: Record<string, number>;
   };
   reputation_system: {
     starting_reputation: number;
+    starting_creative_capital?: number;
     max_reputation: number;
     goal_failure_penalty: number;
     hit_single_bonus: number;
@@ -290,7 +291,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay';
   description: string;
   amount?: number;
   roleId?: string;

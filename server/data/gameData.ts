@@ -209,7 +209,7 @@ export class ServerGameData {
     return {
       money: balance.economy.starting_money,
       reputation: balance.reputation_system.starting_reputation,
-      creativeCapital: balance.reputation_system.starting_creative_capital
+      creativeCapital: balance.reputation_system.starting_creative_capital ?? 0
     };
   }
 

@@ -500,7 +500,6 @@ export const insertMoodEventSchema = createInsertSchema(moodEvents).omit({
 export const insertChartEntrySchema = createInsertSchema(chartEntries).omit({
   id: true,
   createdAt: true,
-  isCharting: true,
 });
 
 export const insertMusicLabelSchema = createInsertSchema(musicLabels).omit({
