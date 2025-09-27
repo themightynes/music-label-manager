@@ -8,6 +8,7 @@ import { Top10ChartDisplay } from './Top10ChartDisplay';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { WeekSummary } from './WeekSummary';
+import { MusicCalendar } from './MusicCalendar';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
@@ -63,18 +64,23 @@ export function Dashboard({
       <MetricsDashboard />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 md:py-2">
-        {/* Supporting Information Grid - Responsive */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
+        {/* Top Row - Artist Roster and Calendar */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 items-stretch">
 
           {/* Artist Management */}
           <div className="lg:col-span-1">
             <ArtistRoster />
           </div>
 
-          {/* Recording Sessions */}
+          {/* Music Calendar */}
           <div className="lg:col-span-1">
-            <ActiveRecordingSessions />
+            <MusicCalendar />
           </div>
+        </div>
+
+        {/* Recording Sessions - Full Width */}
+        <div className="mb-6">
+          <ActiveRecordingSessions />
         </div>
 
         {/* Tours Section - Full Width */}

@@ -12,7 +12,7 @@ import { useGameStore } from '@/store/gameStore';
 import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import GameLayout from '@/layouts/GameLayout';
-import { WeekPicker } from '@/components/WeekPicker';
+import { MusicCalendar } from '@/components/MusicCalendar';
 import { cn } from '@/lib/utils';
 import {
   getSeasonFromWeek,
@@ -678,13 +678,23 @@ export default function PlanReleasePage() {
             {/* Song Selection */}
             {selectedArtist && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Music className="w-5 h-5" />
-                    <span>Select Songs</span>
-                    <Badge variant="secondary">{selectedSongs.length} selected</Badge>
-                  </CardTitle>
-                </CardHeader>
+              <CardHeader className="flex items-start justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <Music className="w-5 h-5" />
+                  <span>Select Songs</span>
+                  <Badge variant="secondary">{selectedSongs.length} selected</Badge>
+                </CardTitle>
+                <div className="flex items-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedSongs(availableSongs.map(s => s.id))}
+                    disabled={availableSongs.length === 0 || selectedSongs.length === availableSongs.length}
+                  >
+                    Select all
+                  </Button>
+                </div>
+              </CardHeader>
                 <CardContent>
                   {loadingSongs ? (
                     <div className="text-center py-8">
@@ -862,54 +872,44 @@ export default function PlanReleasePage() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-white/70 mb-1 block">
-                        Lead Single Release
-                        <span className="ml-2 text-orange-600">
-                          ({getQuarterInfoForWeek(leadSingleWeek).name} - {(() => {
-                            const multiplier = getSeasonalMultiplierValue(leadSingleWeek, balanceData);
-                            const percentage = Math.round((multiplier - 1) * 100);
-                            return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
-                          })()} cost)
-                        </span>
-                      </label>
-                      <WeekPicker
-                        selectedWeek={leadSingleWeek}
-                        currentWeek={gameState?.currentWeek || 1}
-                        onWeekSelect={setLeadSingleWeek}
-                        maxWeek={releaseWeek - 1}
-                        renderSelectedInfo={(week) => {
-                          const quarter = getQuarterInfoForWeek(week);
-                          const multiplier = getSeasonalMultiplierValue(week, balanceData);
-                          return quarter ? (
-                            <div className="flex items-center justify-between p-2 rounded border border-[#A75A5B]/30 bg-[#23121c]/60">
-                              <div>
-                                <span className="text-xs text-[#A75A5B] font-medium">
-                                  Lead Single Week {week} • {quarter.name}
-                                </span>
-                              </div>
-                              <div className={cn(
-                                "px-2 py-1 rounded text-xs font-mono font-semibold",
-                                multiplier > 1
-                                  ? "bg-green-500/20 text-green-400"
-                                  : multiplier < 1
-                                  ? "bg-red-500/20 text-red-400"
-                                  : "bg-gray-500/20 text-gray-400"
-                              )}>
-                                {multiplier > 1 ? '+' : ''}{Math.round((multiplier - 1) * 100)}%
-                              </div>
-                            </div>
-                          ) : null;
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-white/70 mb-1 block">Main Release</label>
-                      <div className="p-2 bg-[#23121c]/10 rounded border text-sm text-white/90">
-                        Week {releaseWeek}
+                  {/* Timing Summary */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="p-3 bg-[#A75A5B]/10 rounded-lg border border-[#A75A5B]/30">
+                      <div className="text-xs font-medium text-[#A75A5B] mb-1">Lead Single Release</div>
+                      <div className="text-sm font-semibold text-white">Week {leadSingleWeek}</div>
+                      <div className="text-xs text-orange-600">
+                        {getQuarterInfoForWeek(leadSingleWeek).name} - {(() => {
+                          const multiplier = getSeasonalMultiplierValue(leadSingleWeek, balanceData);
+                          const percentage = Math.round((multiplier - 1) * 100);
+                          return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+                        })()} cost
                       </div>
                     </div>
+                    <div className="p-3 bg-[#23121c]/10 rounded-lg border border-[#4e324c]/50">
+                      <div className="text-xs font-medium text-white/70 mb-1">Main Release</div>
+                      <div className="text-sm font-semibold text-white">Week {releaseWeek}</div>
+                      <div className="text-xs text-orange-600">
+                        {getQuarterInfoForWeek(releaseWeek).name} - {(() => {
+                          const multiplier = getSeasonalMultiplierValue(releaseWeek, balanceData);
+                          const percentage = Math.round((multiplier - 1) * 100);
+                          return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+                        })()} cost
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lead Single Week Selection */}
+                  <div>
+                    <label className="text-xs text-white/70 mb-2 block">
+                      Select Lead Single Release Week
+                    </label>
+                    <MusicCalendar
+                      selectionMode={true}
+                      selectedWeek={leadSingleWeek}
+                      onWeekSelect={setLeadSingleWeek}
+                      maxWeek={releaseWeek - 1}
+                      className="max-w-lg"
+                    />
                   </div>
 
                   {/* Lead Single Marketing Budget */}
@@ -1028,7 +1028,7 @@ export default function PlanReleasePage() {
                     <div>
                       <div>
                         <label className="text-xs text-white/70 mb-1 block">
-                          Target Week 
+                          Target Week
                           <span className="ml-2 text-orange-600">
                             ({getQuarterInfoForWeek(releaseWeek).name} - {(() => {
                               const multiplier = getSeasonalMultiplierValue(releaseWeek, balanceData);
@@ -1037,36 +1037,11 @@ export default function PlanReleasePage() {
                             })()} cost)
                           </span>
                         </label>
-                        <WeekPicker
+<MusicCalendar
+                          selectionMode={true}
                           selectedWeek={releaseWeek}
-                          currentWeek={gameState?.currentWeek || 1}
                           onWeekSelect={setReleaseWeek}
-                          renderSelectedInfo={(week) => {
-                            const quarter = getQuarterInfoForWeek(week);
-                            const multiplier = getSeasonalMultiplierValue(week, balanceData);
-                            return quarter ? (
-                              <div className="flex items-center justify-between p-3 rounded-lg border border-[#A75A5B]/30 bg-[#23121c]/80">
-                                <div>
-                                  <h3 className="font-semibold text-sm text-[#A75A5B]">
-                                    Week {week} • {quarter.name}
-                                  </h3>
-                                  <p className="text-xs text-white/60 mt-1">
-                                    {quarter.description}
-                                  </p>
-                                </div>
-                                <div className={cn(
-                                  "px-3 py-1 rounded text-sm font-mono font-semibold",
-                                  multiplier > 1
-                                    ? "bg-green-500/20 text-green-400"
-                                    : multiplier < 1
-                                    ? "bg-red-500/20 text-red-400"
-                                    : "bg-gray-500/20 text-gray-400"
-                                )}>
-                                  {multiplier > 1 ? '+' : ''}{Math.round((multiplier - 1) * 100)}%
-                                </div>
-                              </div>
-                            ) : null;
-                          }}
+                          className="max-w-lg"
                         />
                       </div>
                     </div>

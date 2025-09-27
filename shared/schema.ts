@@ -309,6 +309,7 @@ export const musicLabels = pgTable("music_labels", {
   name: text("name").notNull(),
   gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull().unique(),
   foundedWeek: integer("founded_week").default(1),
+  foundedYear: integer("founded_year"),
   description: text("description"),
   genreFocus: text("genre_focus"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -512,6 +513,7 @@ export const labelRequestSchema = createInsertSchema(musicLabels).pick({
   description: true,
   genreFocus: true,
   foundedWeek: true,
+  foundedYear: true,
 });
 
 // Types

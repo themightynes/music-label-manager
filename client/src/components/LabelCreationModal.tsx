@@ -46,14 +46,16 @@ export function LabelCreationModal({ open, onOpenChange, onCreateLabel, isCreati
   const [labelName, setLabelName] = useState("");
   const [description, setDescription] = useState("");
   const [genreFocus, setGenreFocus] = useState("");
+  const [startingYear, setStartingYear] = useState<number>(new Date().getFullYear());
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Reset form state when modal closes
-  useEffect(() => {
+useEffect(() => {
     if (!open) {
       setLabelName("");
       setDescription("");
       setGenreFocus("");
+      setStartingYear(new Date().getFullYear());
       setErrors({});
     }
   }, [open]);
@@ -100,7 +102,7 @@ export function LabelCreationModal({ open, onOpenChange, onCreateLabel, isCreati
     setErrors(prev => ({ ...prev, name: error || "" }));
   };
 
-  const handleSubmit = () => {
+const handleSubmit = () => {
     const nameError = validateLabelName(labelName);
 
     if (nameError) {
@@ -108,10 +110,20 @@ export function LabelCreationModal({ open, onOpenChange, onCreateLabel, isCreati
       return;
     }
 
+    // Basic year validation
+    const minYear = 1900;
+    const maxYear = 2100;
+    const year = Number(startingYear);
+    if (!Number.isInteger(year) || year < minYear || year > maxYear) {
+      setErrors(prev => ({ ...prev, year: `Starting year must be between ${minYear} and ${maxYear}` }));
+      return;
+    }
+
     const labelData: LabelData = {
       name: labelName.trim(),
       description: description.trim() || undefined,
-      genreFocus: genreFocus || undefined
+      genreFocus: genreFocus || undefined,
+      foundedYear: year,
     };
 
     onCreateLabel(labelData);
@@ -209,7 +221,7 @@ export function LabelCreationModal({ open, onOpenChange, onCreateLabel, isCreati
               />
             </div>
 
-            {/* Genre Focus */}
+{/* Genre Focus */}
             <div className="space-y-2">
               <Label htmlFor="genreFocus" className="text-sm font-medium text-gray-300">
                 Genre Focus
@@ -230,6 +242,26 @@ export function LabelCreationModal({ open, onOpenChange, onCreateLabel, isCreati
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Starting Year */}
+            <div className="space-y-2">
+              <Label htmlFor="startingYear" className="text-sm font-medium text-gray-300">
+                Starting Year <span className="text-white/50 text-xs">(for calendar-based weeks)</span>
+              </Label>
+              <Input
+                id="startingYear"
+                type="number"
+                min={1900}
+                max={2100}
+                value={startingYear}
+                onChange={(e) => setStartingYear(Number(e.target.value))}
+                disabled={isCreating}
+                className="bg-[#2C222A] border-[#4e324c] text-white placeholder-gray-500 focus:border-[#A75A5B]"
+              />
+              {errors.year && (
+                <p className="text-red-400 text-xs">{errors.year}</p>
+              )}
             </div>
           </div>
 

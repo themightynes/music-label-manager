@@ -60,8 +60,8 @@ export function ArtistRoster() {
 
 
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-4">
+    <Card className="shadow-sm h-full">
+      <CardContent className="p-4 flex flex-col h-full">
         <h3 className="text-base font-semibold text-white mb-3 flex items-center justify-between">
           <div className="flex items-center">
             <i className="fas fa-microphone text-secondary mr-2"></i>
@@ -72,11 +72,11 @@ export function ArtistRoster() {
           </Badge>
         </h3>
 
-        <div className="space-y-3">
+        <div className="space-y-3 flex-1 flex flex-col">
 
           {/* Empty state when no artists */}
           {(!artists || artists.length === 0) && (
-            <div className="text-center text-white/50 py-6">
+            <div className="text-center text-white/50 flex-1 flex flex-col justify-center">
               <i className="fas fa-microphone text-white/30 text-3xl mb-3"></i>
               <p className="text-sm font-medium text-white/70 mb-2">No Artists Signed</p>
               <p className="text-xs text-white/50 mb-4">Discover talent to build your roster</p>

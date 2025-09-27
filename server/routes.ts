@@ -271,10 +271,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const gameState = await storage.createGameState(gameDataWithBalance, tx);
 
         // Create music label for the new game
-        const musicLabelData = {
+const musicLabelData = {
           name: validatedLabelData?.name || "New Music Label",
           gameId: gameState.id,
           foundedWeek: validatedLabelData?.foundedWeek || 1,
+          foundedYear: validatedLabelData?.foundedYear || new Date().getFullYear(),
           description: validatedLabelData?.description || null,
           genreFocus: validatedLabelData?.genreFocus || null
         };
@@ -351,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create/update music label for existing game
+// Create/update music label for existing game
   app.post("/api/game/:gameId/label", requireClerkUser, async (req, res) => {
     try {
       const { gameId } = req.params;
@@ -373,7 +374,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let musicLabel;
       if (existingLabel) {
         // Update existing label
-        musicLabel = await storage.updateMusicLabel(gameId, validatedLabelData);
+        musicLabel = await storage.updateMusicLabel(gameId, {
+          ...validatedLabelData,
+          foundedYear: validatedLabelData.foundedYear || existingLabel.foundedYear || new Date().getFullYear(),
+        });
         console.log('[POST /api/game/:gameId/label] Updated existing label:', musicLabel?.name);
       } else {
         // Create new label
@@ -381,6 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: validatedLabelData.name,
           gameId: gameId,
           foundedWeek: validatedLabelData.foundedWeek || 1,
+          foundedYear: validatedLabelData.foundedYear || new Date().getFullYear(),
           description: validatedLabelData.description || null,
           genreFocus: validatedLabelData.genreFocus || null
         };

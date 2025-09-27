@@ -103,6 +103,7 @@ export interface MusicLabel {
   name: string;
   gameId: string;
   foundedWeek?: number;
+  foundedYear?: number;
   description?: string;
   genreFocus?: string;
   createdAt?: string;
@@ -112,6 +113,7 @@ export interface LabelData {
   name: string;
   description?: string;
   genreFocus?: string;
+  foundedYear?: number;
 }
 
 export interface GameProject {
