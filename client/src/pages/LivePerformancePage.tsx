@@ -125,7 +125,7 @@ export default function LivePerformancePage() {
   const [tourConfig, setTourConfig] = useState<any>(null);
   const [venueAccessConfig, setVenueAccessConfig] = useState<any>(null);
   const [configError, setConfigError] = useState<string | null>(null);
-  const [selectedCapacity, setSelectedCapacity] = useState<number>(500); // Default capacity
+  const [selectedCapacity, setSelectedCapacity] = useState<number>(500); // Default capacity - will be updated based on venue access
 
   const currentMoney = gameState?.money || 75000;
   const currentVenueAccess = gameState?.venueAccess || 'none';
@@ -180,6 +180,20 @@ export default function LivePerformancePage() {
     };
     loadConfigurations();
   }, []);
+
+  // Set default capacity based on venue access tier when configuration loads
+  useEffect(() => {
+    if (venueAccessConfig && !selectedType) { // Only set default when first loading, not when user has already made selections
+      try {
+        const range = getCapacityRange();
+        const defaultCapacity = Math.round((range.min + range.max) / 2);
+        setSelectedCapacity(defaultCapacity);
+      } catch (error) {
+        console.error('CONFIGURATION ERROR: Could not set default capacity based on venue access:', error);
+        // Do not set any default - let UI show error state
+      }
+    }
+  }, [venueAccessConfig, selectedType, currentVenueAccess]);
   const selectedArtistData = selectedArtist ? artists.find(a => a.id === selectedArtist) : null;
 
   // Venue access integration using loaded configuration
@@ -459,12 +473,37 @@ export default function LivePerformancePage() {
     );
   };
 
-  // PHASE 3: Capacity range and strategic guidance helpers
+  // PHASE 3: Capacity range - NO FALLBACKS, FAIL FAST
   const getCapacityRange = () => {
-    if (!venueAccessConfig || !estimateData?.tierRange) {
-      return { min: 50, max: 2000 }; // Fallback range
+    // First try to get range from API response (most accurate)
+    if (estimateData?.tierRange) {
+      return estimateData.tierRange;
     }
-    return estimateData.tierRange;
+
+    // Use local venue access config - REQUIRED
+    if (!venueAccessConfig) {
+      throw new Error('Venue access configuration not loaded - cannot determine capacity range');
+    }
+
+    if (!currentVenueAccess) {
+      throw new Error('Current venue access tier not available - cannot determine capacity range');
+    }
+
+    const tierConfig = venueAccessConfig[currentVenueAccess];
+    if (!tierConfig) {
+      throw new Error(`Invalid venue access tier '${currentVenueAccess}' - not found in configuration`);
+    }
+
+    if (!tierConfig.capacity_range || !Array.isArray(tierConfig.capacity_range) || tierConfig.capacity_range.length !== 2) {
+      throw new Error(`Malformed capacity_range for venue tier '${currentVenueAccess}' - expected [min, max] array`);
+    }
+
+    const [min, max] = tierConfig.capacity_range;
+    if (typeof min !== 'number' || typeof max !== 'number' || min < 0 || max <= min) {
+      throw new Error(`Invalid capacity range [${min}, ${max}] for venue tier '${currentVenueAccess}' - values must be positive numbers with max > min`);
+    }
+
+    return { min, max };
   };
 
   const getVenueCategoryInfo = (capacity: number) => {
@@ -509,9 +548,15 @@ export default function LivePerformancePage() {
         const titleSuffix = type === 'single_show' ? 'Live' : 'Tour';
         setTitle(`${selectedArtistData.name} ${titleSuffix}`);
       }
-      // PHASE 3: Reset capacity to middle of range when type changes
-      const range = getCapacityRange();
-      setSelectedCapacity(Math.round((range.min + range.max) / 2));
+      // PHASE 3: Reset capacity to middle of venue access tier range when type changes
+      try {
+        const range = getCapacityRange();
+        const defaultCapacity = Math.round((range.min + range.max) / 2);
+        setSelectedCapacity(defaultCapacity);
+      } catch (error) {
+        console.error('CONFIGURATION ERROR: Could not set capacity based on venue access tier:', error);
+        // Do not change capacity - let UI show error state
+      }
     }
   };
 
@@ -750,102 +795,123 @@ export default function LivePerformancePage() {
               )}
 
               {/* PHASE 3: Venue Capacity Selection */}
-              <div className="bg-purple-500/10 rounded-lg p-4 border">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h4 className="font-medium text-purple-300 mb-1">Venue Capacity Selection</h4>
-                    <p className="text-xs text-white/60">Choose your target venue size</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-white">{selectedCapacity.toLocaleString()}</p>
-                    <p className="text-xs text-white/50">capacity</p>
-                  </div>
-                </div>
-
-                {/* Capacity Slider */}
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-xs text-white/50 mb-2">
-                      <span>{getCapacityRange().min}</span>
-                      <span>{getCapacityRange().max}</span>
-                    </div>
-                    <Slider
-                      value={[selectedCapacity]}
-                      onValueChange={(value) => setSelectedCapacity(value[0])}
-                      min={getCapacityRange().min}
-                      max={getCapacityRange().max}
-                      step={25}
-                      className="mb-2"
-                    />
-
-                    {/* Alternative number input */}
-                    <div className="mt-3">
-                      <Input
-                        type="number"
-                        value={selectedCapacity}
-                        onChange={(e) => {
-                          const value = Number(e.target.value);
-                          const range = getCapacityRange();
-                          if (value >= range.min && value <= range.max) {
-                            setSelectedCapacity(value);
-                          }
-                        }}
-                        min={getCapacityRange().min}
-                        max={getCapacityRange().max}
-                        className="text-center"
-                        placeholder="Enter capacity"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Strategic Guidance */}
-                  {(() => {
-                    const venueInfo = getVenueCategoryInfo(selectedCapacity);
-                    const IconComponent = venueInfo.icon;
-                    return (
-                      <div className="bg-black/30 rounded p-3">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <IconComponent className={`w-4 h-4 ${venueInfo.color}`} />
-                          <span className={`font-medium ${venueInfo.color}`}>{venueInfo.category}</span>
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${
-                              venueInfo.riskLevel === 'low' ? 'border-green-500 text-green-400' :
-                              venueInfo.riskLevel === 'medium' ? 'border-yellow-500 text-yellow-400' :
-                              'border-red-500 text-red-400'
-                            }`}
-                          >
-                            {venueInfo.riskLevel} risk
-                          </Badge>
+              {(() => {
+                try {
+                  const capacityRange = getCapacityRange();
+                  return (
+                    <div className="bg-purple-500/10 rounded-lg p-4 border">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium text-purple-300 mb-1">Venue Capacity Selection</h4>
+                          <p className="text-xs text-white/60">Choose your target venue size</p>
                         </div>
-                        <p className="text-xs text-white/70 mb-1">{venueInfo.description}</p>
-                        <p className="text-xs text-white/60">{venueInfo.advice}</p>
-
-                        {/* Real-time feedback if estimate is available */}
-                        {estimateData && estimateData.selectedCapacity && (
-                          <div className="mt-2 pt-2 border-t border-white/10">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-white/60">Expected attendance:</span>
-                              <span className="font-mono text-blue-300">
-                                {Math.round(estimateData.selectedCapacity * (estimateData.sellThroughRate || 0.7)).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs mt-1">
-                              <span className="text-white/60">Sell-through rate:</span>
-                              <span className={`font-mono ${
-                                (estimateData.sellThroughRate || 0) > 0.8 ? 'text-green-400' :
-                                (estimateData.sellThroughRate || 0) > 0.6 ? 'text-yellow-400' : 'text-red-400'
-                              }`}>
-                                {((estimateData.sellThroughRate || 0) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                          </div>
-                        )}
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-white">{selectedCapacity.toLocaleString()}</p>
+                          <p className="text-xs text-white/50">capacity</p>
+                        </div>
                       </div>
-                    );
-                  })()}
-                </div>
-              </div>
+
+                      {/* Capacity Slider */}
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between text-xs text-white/50 mb-2">
+                            <span>{capacityRange.min}</span>
+                            <span>{capacityRange.max}</span>
+                          </div>
+                          <Slider
+                            value={[selectedCapacity]}
+                            onValueChange={(value) => setSelectedCapacity(value[0])}
+                            min={capacityRange.min}
+                            max={capacityRange.max}
+                            step={25}
+                            className="mb-2"
+                          />
+
+                          {/* Alternative number input */}
+                          <div className="mt-3">
+                            <Input
+                              type="number"
+                              value={selectedCapacity}
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                if (value >= capacityRange.min && value <= capacityRange.max) {
+                                  setSelectedCapacity(value);
+                                }
+                              }}
+                              min={capacityRange.min}
+                              max={capacityRange.max}
+                              className="text-center"
+                              placeholder="Enter capacity"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Strategic Guidance */}
+                        {(() => {
+                          const venueInfo = getVenueCategoryInfo(selectedCapacity);
+                          const IconComponent = venueInfo.icon;
+                          return (
+                            <div className="bg-black/30 rounded p-3">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <IconComponent className={`w-4 h-4 ${venueInfo.color}`} />
+                                <span className={`font-medium ${venueInfo.color}`}>{venueInfo.category}</span>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${
+                                    venueInfo.riskLevel === 'low' ? 'border-green-500 text-green-400' :
+                                    venueInfo.riskLevel === 'medium' ? 'border-yellow-500 text-yellow-400' :
+                                    'border-red-500 text-red-400'
+                                  }`}
+                                >
+                                  {venueInfo.riskLevel} risk
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-white/70 mb-1">{venueInfo.description}</p>
+                              <p className="text-xs text-white/60">{venueInfo.advice}</p>
+
+                              {/* Real-time feedback if estimate is available */}
+                              {estimateData && estimateData.selectedCapacity && (
+                                <div className="mt-2 pt-2 border-t border-white/10">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-white/60">Expected attendance:</span>
+                                    <span className="font-mono text-blue-300">
+                                      {Math.round(estimateData.selectedCapacity * (estimateData.sellThroughRate || 0.7)).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs mt-1">
+                                    <span className="text-white/60">Sell-through rate:</span>
+                                    <span className={`font-mono ${
+                                      (estimateData.sellThroughRate || 0) > 0.8 ? 'text-green-400' :
+                                      (estimateData.sellThroughRate || 0) > 0.6 ? 'text-yellow-400' : 'text-red-400'
+                                    }`}>
+                                      {((estimateData.sellThroughRate || 0) * 100).toFixed(1)}%
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  );
+                } catch (error) {
+                  return (
+                    <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <AlertCircle className="w-5 h-5 text-red-400" />
+                        <h4 className="font-medium text-red-400">Venue Capacity Configuration Error</h4>
+                      </div>
+                      <p className="text-sm text-red-300 mb-2">
+                        {error instanceof Error ? error.message : 'Unknown venue configuration error'}
+                      </p>
+                      <p className="text-xs text-red-400/80">
+                        This is a configuration issue that needs to be fixed. Check browser console for details.
+                      </p>
+                    </div>
+                  );
+                }
+              })()}
 
               {/* Comprehensive Tour Analysis - Enhanced API Integration */}
               <div className="bg-[#A75A5B]/10 rounded-lg p-4 border">

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useGameStore } from '@/store/gameStore';
 import { useGameContext } from '@/contexts/GameContext';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -187,61 +187,33 @@ export function GameSidebar({
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
               <div className="text-sm font-semibold text-sidebar-foreground">{(gameState as any)?.musicLabel?.name || 'Music Label'}</div>
               <div className="flex items-center space-x-2 text-xs text-sidebar-foreground/70">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="cursor-help">
-                      {(() => {
-                        const week = gameState?.currentWeek || 1;
-                        const startYear = (gameState as any)?.musicLabel?.foundedYear || new Date().getFullYear();
+                <span>
+                  {(() => {
+                    const week = gameState?.currentWeek || 1;
+                    const startYear = (gameState as any)?.musicLabel?.foundedYear || new Date().getFullYear();
 
-                        // Sunday-based week calculation to match MusicCalendar
-                        const yearStart = new Date(startYear, 0, 1);
-                        const firstSunday = new Date(yearStart);
-                        const dayOfWeek = yearStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
-                        if (dayOfWeek !== 0) {
-                          firstSunday.setDate(yearStart.getDate() + (7 - dayOfWeek));
-                        }
+                    // Sunday-based week calculation to match MusicCalendar
+                    const yearStart = new Date(startYear, 0, 1);
+                    const firstSunday = new Date(yearStart);
+                    const dayOfWeek = yearStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                    if (dayOfWeek !== 0) {
+                      firstSunday.setDate(yearStart.getDate() + (7 - dayOfWeek));
+                    }
 
-                        const weekStartDate = new Date(firstSunday);
-                        weekStartDate.setDate(firstSunday.getDate() + (week - 1) * 7);
+                    const weekStartDate = new Date(firstSunday);
+                    weekStartDate.setDate(firstSunday.getDate() + (week - 1) * 7);
 
-                        const month = weekStartDate.getMonth() + 1;
-                        const dayOfMonth = weekStartDate.getDate();
-                        const weekOfMonth = Math.floor((dayOfMonth - 1) / 7) + 1;
-                        return `M${month}W${weekOfMonth}`;
-                      })()}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-[#23121c] border-[#A75A5B]/30 text-white/90">
-                    <div className="text-xs">
-                      {(() => {
-                        const week = gameState?.currentWeek || 1;
-                        const startYear = (gameState as any)?.musicLabel?.foundedYear || new Date().getFullYear();
+                    // Get Saturday (end of week)
+                    const weekEndDate = new Date(weekStartDate);
+                    weekEndDate.setDate(weekStartDate.getDate() + 6);
 
-                        // Sunday-based week calculation to match MusicCalendar
-                        const yearStart = new Date(startYear, 0, 1);
-                        const firstSunday = new Date(yearStart);
-                        const dayOfWeek = yearStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
-                        if (dayOfWeek !== 0) {
-                          firstSunday.setDate(yearStart.getDate() + (7 - dayOfWeek));
-                        }
+                    const month = String(weekEndDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(weekEndDate.getDate()).padStart(2, '0');
+                    const year = String(weekEndDate.getFullYear()).slice(-2);
 
-                        const weekStartDate = new Date(firstSunday);
-                        weekStartDate.setDate(firstSunday.getDate() + (week - 1) * 7);
-
-                        // Get Saturday (end of week)
-                        const weekEndDate = new Date(weekStartDate);
-                        weekEndDate.setDate(weekStartDate.getDate() + 6);
-
-                        const month = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-                        const day = String(weekEndDate.getDate()).padStart(2, '0');
-                        const year = String(weekEndDate.getFullYear()).slice(-2);
-
-                        return `Week ending ${month}/${day}/${year}`;
-                      })()}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
+                    return `${month}/${day}/${year}`;
+                  })()}
+                </span>
                 <span className="text-green-400">${(gameState?.money || 0).toLocaleString()}</span>
               </div>
             </div>
