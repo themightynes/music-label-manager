@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, uuid, real, date, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, uuid, real, date, uniqueIndex, bigint } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -247,6 +247,9 @@ export const gameStates = pgTable("game_states", {
   creativeCapital: integer("creative_capital").default(0),
   focusSlots: integer("focus_slots").default(3),
   usedFocusSlots: integer("used_focus_slots").default(0),
+  // A&R Office fields
+  arOfficeSlotUsed: boolean("ar_office_slot_used").default(false),
+  arOfficeSourcingType: text("ar_office_sourcing_type"),
   playlistAccess: text("playlist_access").default("none"), // none, niche, mid, flagship
   pressAccess: text("press_access").default("none"), // none, blogs, mid_tier, national
   venueAccess: text("venue_access").default("none"), // none, clubs, theaters, arenas

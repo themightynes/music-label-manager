@@ -1,9 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { GameState, Artist, Project, Role, WeeklyAction, MusicLabel } from '@shared/schema';
-import type { LabelData } from '@shared/types/gameTypes';
+import type { Artist, Project, Role, WeeklyAction, MusicLabel } from '@shared/schema';
+import type { GameState, LabelData, SourcingTypeString } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
+
+// Internal helper to sync focus slots and A&R operation status to the server
+async function syncSlotsPatch(
+  gameId: string,
+  payload: {
+    usedFocusSlots: number;
+    arOfficeSlotUsed: boolean;
+    arOfficeSourcingType: SourcingTypeString | null;
+  }
+) {
+  try {
+    await apiRequest('PATCH', `/api/game/${gameId}`, payload);
+  } catch (error) {
+    console.error('Failed to sync focus slots:', error);
+  }
+}
 
 interface GameStore {
   // Game state
@@ -14,6 +30,10 @@ interface GameStore {
   weeklyActions: WeeklyAction[];
   songs: any[];
   releases: any[];
+
+  // Discovered A&R artists (persisted client-side)
+  discoveredArtists: Artist[];
+  loadingDiscoveredArtists?: boolean;
 
   // UI state
   selectedActions: string[];
@@ -33,6 +53,21 @@ interface GameStore {
   reorderActions: (startIndex: number, endIndex: number) => void;
   clearActions: () => void;
   advanceWeek: () => Promise<void>;
+  
+  // A&R Office operations
+  consumeAROfficeSlot: (sourcingType: SourcingTypeString) => Promise<void>;
+  releaseAROfficeSlot: () => Promise<void>;
+  getAROfficeStatus: () => {
+    arOfficeSlotUsed: boolean;
+    arOfficeSourcingType: SourcingTypeString | null;
+  };
+  startAROfficeOperation: (sourcingType: SourcingTypeString) => Promise<void>;
+  cancelAROfficeOperation: () => Promise<void>;
+
+  // Discovered artists lifecycle
+  loadDiscoveredArtists: () => Promise<void>;
+  clearDiscoveredArtists: () => void;
+  removeDiscoveredArtist: (artistId: string) => void;
   
   // Artist management
   signArtist: (artistData: any) => Promise<void>;
@@ -61,6 +96,7 @@ export const useGameStore = create<GameStore>()(
       weeklyActions: [],
       songs: [],
       releases: [],
+      discoveredArtists: [],
       selectedActions: [],
       isAdvancingWeek: false,
       weeklyOutcome: null,
@@ -87,10 +123,15 @@ export const useGameStore = create<GameStore>()(
             releases: releases
           });
           
-          // Ensure usedFocusSlots is synced with selectedActions (should be 0 when loading)
+          // Preserve A&R status and sync usedFocusSlots with selectedActions + A&R usage
+          const arOfficeSlotUsed = !!(data.gameState?.arOfficeSlotUsed);
+          const arOfficeSourcingType = (data.gameState?.arOfficeSourcingType ?? null);
           const syncedGameState = {
             ...data.gameState,
-            usedFocusSlots: 0  // Reset to 0 since selectedActions is empty
+            arOfficeSlotUsed,
+            arOfficeSourcingType,
+            // selectedActions will be set to [], so usedFocusSlots reflects only A&R usage here
+            usedFocusSlots: (arOfficeSlotUsed ? 1 : 0)
           };
           
           // Include musicLabel in the gameState object
@@ -109,6 +150,11 @@ export const useGameStore = create<GameStore>()(
             releases,
             selectedActions: []
           });
+
+          // After loading game, try to load discovered artists if no active operation
+          if (!arOfficeSlotUsed) {
+            await get().loadDiscoveredArtists();
+          }
         } catch (error) {
           console.error('Failed to load game:', error);
           throw error;
@@ -135,10 +181,16 @@ export const useGameStore = create<GameStore>()(
             throw new Error('Invalid save data format');
           }
           
-          // Include musicLabel in the gameState object
+          // Preserve A&R status and include musicLabel
+          const arOfficeSlotUsed = !!(savedGameData.gameState?.arOfficeSlotUsed);
+          const arOfficeSourcingType = (savedGameData.gameState?.arOfficeSourcingType ?? null);
           const gameStateWithLabel = {
             ...savedGameData.gameState,
-            musicLabel: savedGameData.musicLabel || null
+            arOfficeSlotUsed,
+            arOfficeSourcingType,
+            musicLabel: savedGameData.musicLabel || null,
+            // selectedActions will be reset to [], so usedFocusSlots is A&R-only here
+            usedFocusSlots: (arOfficeSlotUsed ? 1 : 0)
           };
 
           set({
@@ -298,25 +350,26 @@ export const useGameStore = create<GameStore>()(
         const { selectedActions, gameState } = get();
         const availableSlots = gameState?.focusSlots || 3;
         
-        if (selectedActions.length < availableSlots && !selectedActions.includes(actionId) && gameState) {
+        if (
+          gameState &&
+          selectedActions.length < ((gameState.focusSlots || 0) - ((gameState.arOfficeSlotUsed) ? 1 : 0)) &&
+          !selectedActions.includes(actionId)
+        ) {
           const newSelectedActions = [...selectedActions, actionId];
-          const newUsedSlots = newSelectedActions.length;
+          const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
+          const newUsedSlots = newSelectedActions.length + arUsed;
           
           // Update local state
-          set({ 
+          set({
             selectedActions: newSelectedActions,
             gameState: { ...gameState, usedFocusSlots: newUsedSlots }
           });
-          
-          // Sync focus slots to server to prevent desync issues
-          try {
-            await apiRequest('PATCH', `/api/game/${gameState.id}`, {
-              usedFocusSlots: newUsedSlots
-            });
-          } catch (error) {
-            console.error('Failed to sync focus slots:', error);
-            // Don't fail the whole operation if sync fails
-          }
+
+          await syncSlotsPatch(gameState.id, {
+            usedFocusSlots: newUsedSlots,
+            arOfficeSlotUsed: !!gameState.arOfficeSlotUsed,
+            arOfficeSourcingType: gameState.arOfficeSourcingType ?? null,
+          });
         }
       },
 
@@ -324,23 +377,21 @@ export const useGameStore = create<GameStore>()(
         const { selectedActions, gameState } = get();
         if (selectedActions.includes(actionId) && gameState) {
           const newSelectedActions = selectedActions.filter(id => id !== actionId);
-          const newUsedSlots = newSelectedActions.length;
+          const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
+          const newUsedSlots = newSelectedActions.length + arUsed;
           
           // Update local state
-          set({ 
+          set({
             selectedActions: newSelectedActions,
             gameState: { ...gameState, usedFocusSlots: newUsedSlots }
           });
-          
-          // Sync focus slots to server to prevent desync issues
-          try {
-            await apiRequest('PATCH', `/api/game/${gameState.id}`, {
-              usedFocusSlots: newUsedSlots
-            });
-          } catch (error) {
-            console.error('Failed to sync focus slots:', error);
-            // Don't fail the whole operation if sync fails
-          }
+
+          // Sync focus slots and A&R status to server to prevent desync issues
+          await syncSlotsPatch(gameState.id, {
+            usedFocusSlots: newUsedSlots,
+            arOfficeSlotUsed: !!gameState.arOfficeSlotUsed,
+            arOfficeSourcingType: gameState.arOfficeSourcingType ?? null,
+          });
         }
       },
 
@@ -354,16 +405,18 @@ export const useGameStore = create<GameStore>()(
 
       clearActions: () => {
         const { gameState } = get();
+        const arUsed = gameState?.arOfficeSlotUsed ? 1 : 0;
         set({ 
           selectedActions: [],
-          gameState: gameState ? { ...gameState, usedFocusSlots: 0 } : gameState
+          gameState: gameState ? { ...gameState, usedFocusSlots: arUsed } : gameState
         });
       },
 
       // Advance week
       advanceWeek: async () => {
         const { gameState, selectedActions } = get();
-        if (!gameState || selectedActions.length === 0) return;
+        // Allow advancing the week if either there are selected actions OR an A&R operation is consuming a slot
+        if (!gameState || (selectedActions.length === 0 && !gameState.arOfficeSlotUsed)) return;
 
         set({ isAdvancingWeek: true });
 
@@ -452,11 +505,15 @@ export const useGameStore = create<GameStore>()(
           console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
           console.log('=====================================');
 
-          // Ensure usedFocusSlots is reset to 0 for the new week and preserve musicLabel
+          // Preserve A&R fields and recompute usedFocusSlots based on A&R usage after advancing week
+          const arOfficeSlotUsed = !!(result.gameState?.arOfficeSlotUsed ?? gameState.arOfficeSlotUsed);
+          const arOfficeSourcingType = result.gameState?.arOfficeSourcingType ?? gameState.arOfficeSourcingType ?? null;
           const syncedGameState = {
             ...result.gameState,
-            usedFocusSlots: 0,  // Always 0 at start of new week
-            musicLabel: (gameState as any).musicLabel  // Preserve existing music label
+            arOfficeSlotUsed,
+            arOfficeSourcingType,
+            usedFocusSlots: arOfficeSlotUsed ? 1 : 0,
+            musicLabel: gameState.musicLabel  // Preserve existing music label
           };
 
           set({
@@ -470,6 +527,39 @@ export const useGameStore = create<GameStore>()(
             selectedActions: [],
             isAdvancingWeek: false
           });
+
+          // Always attempt to load discovered artists after week advancement if there was an active A&R operation
+          const hadActiveAROperation = result?.summary?.arOffice?.completed;
+          if (hadActiveAROperation) {
+            console.log('[A&R] A&R operation completed, attempting to load discovered artists');
+
+            // Enhanced retry logic with exponential backoff
+            const loadWithRetry = async (attempt = 1): Promise<void> => {
+              try {
+                await get().loadDiscoveredArtists();
+                console.log(`[A&R] Successfully loaded discovered artists (attempt ${attempt})`);
+              } catch (error) {
+                console.error(`[A&R] Failed to load discovered artists (attempt ${attempt}):`, error);
+
+                if (attempt < 3) {
+                  const delay = 1000 * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+                  console.log(`[A&R] Retrying in ${delay}ms...`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  return loadWithRetry(attempt + 1);
+                } else {
+                  console.error('[A&R] All retry attempts failed, discovered artists may not be available');
+                  throw error;
+                }
+              }
+            };
+
+            try {
+              await loadWithRetry();
+            } catch (finalError) {
+              console.warn('[A&R] Failed to load discovered artists after all retries:', finalError);
+              // Don't throw - this is not critical enough to fail the entire week advancement
+            }
+          }
           
           // Invalidate React Query caches to refresh UI components
           await queryClient.invalidateQueries({ queryKey: ['artist-roi'] });
@@ -545,6 +635,9 @@ export const useGameStore = create<GameStore>()(
               money: Math.max(0, (gameState.money || 0) - signingCost)
             }
           });
+
+          // If this artist was in discovered list, remove it
+          get().removeDiscoveredArtist(newArtist.id);
         } catch (error) {
           console.error('Failed to sign artist:', error);
           throw error;
@@ -686,7 +779,174 @@ export const useGameStore = create<GameStore>()(
         }
       },
 
+      // A&R Office operations
+      consumeAROfficeSlot: async (sourcingType: SourcingTypeString) => {
+        const { gameState, selectedActions } = get();
+        if (!gameState) return;
+        const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
+        const totalUsed = selectedActions.length + arUsed;
+        if (totalUsed >= (gameState.focusSlots || 0) || gameState.arOfficeSlotUsed) return;
+
+        const updated: GameState = {
+          ...gameState,
+          arOfficeSlotUsed: true,
+          arOfficeSourcingType: sourcingType,
+          usedFocusSlots: selectedActions.length + 1,
+        } as GameState;
+
+        set({ gameState: updated });
+
+        await syncSlotsPatch(gameState.id, {
+          usedFocusSlots: updated.usedFocusSlots,
+          arOfficeSlotUsed: updated.arOfficeSlotUsed ?? false,
+          arOfficeSourcingType: updated.arOfficeSourcingType ?? null,
+        });
+      },
+
+      releaseAROfficeSlot: async () => {
+        const { gameState, selectedActions } = get();
+        if (!gameState || !gameState.arOfficeSlotUsed) return;
+
+        const updated: GameState = {
+          ...gameState,
+          arOfficeSlotUsed: false,
+          arOfficeSourcingType: null,
+          usedFocusSlots: selectedActions.length,
+        } as GameState;
+
+        set({ gameState: updated });
+
+        await syncSlotsPatch(gameState.id, {
+          usedFocusSlots: updated.usedFocusSlots,
+          arOfficeSlotUsed: updated.arOfficeSlotUsed ?? false,
+          arOfficeSourcingType: updated.arOfficeSourcingType ?? null,
+        });
+      },
+
+      getAROfficeStatus: () => {
+        const { gameState } = get();
+        return {
+          arOfficeSlotUsed: !!gameState?.arOfficeSlotUsed,
+          arOfficeSourcingType: (gameState?.arOfficeSourcingType as SourcingTypeString | null) ?? null,
+        };
+      },
+
+      startAROfficeOperation: async (sourcingType: SourcingTypeString) => {
+        const { gameState, consumeAROfficeSlot } = get();
+        if (!gameState) return;
+        console.log('[A&R CLIENT] Starting A&R operation:', sourcingType);
+        try {
+          const { startAROfficeOperation } = await import('../services/arOfficeService');
+          // Call server to start the operation
+          await startAROfficeOperation(gameState.id, sourcingType);
+          console.log('[A&R CLIENT] API call successful');
+
+          // Immediately reflect the active operation locally so the UI stays in sync
+          // This also patches usedFocusSlots and A&R flags to the server (idempotent)
+          await consumeAROfficeSlot(sourcingType);
+
+          // NOTE: No longer clearing discovered artists - we want to accumulate them across operations
+        } catch (e) {
+          console.error('[A&R CLIENT] API call failed:', e);
+          throw e; // Re-throw so the calling code can handle it
+        }
+      },
+
+
+      cancelAROfficeOperation: async () => {
+        const { gameState } = get();
+        if (!gameState) return;
+        try {
+          const { cancelAROfficeOperation } = await import('../services/arOfficeService');
+          await cancelAROfficeOperation(gameState.id);
+          // NOTE: Keep discovered artists on cancel - they were earned from previous operations
+        } catch (e) {
+          console.error('[A&R] cancel operation API failed', e);
+        } finally {
+          await get().releaseAROfficeSlot();
+        }
+      },
+
       // Save game
+      // Discovered artists lifecycle
+      loadDiscoveredArtists: async () => {
+        const { gameState } = get();
+        console.log('[A&R DEBUG] Loading discovered artists for game:', gameState?.id);
+        if (!gameState) {
+          console.warn('[A&R] No game state available for loading discovered artists');
+          return;
+        }
+
+        // Check if already loading to prevent concurrent requests
+        const loadingFlag = get().loadingDiscoveredArtists;
+        if (loadingFlag) {
+          console.log('[A&R] Already loading discovered artists, skipping duplicate request');
+          return;
+        }
+
+        try {
+          // Set loading flag
+          set({ loadingDiscoveredArtists: true });
+
+          const res = await apiRequest('GET', `/api/game/${gameState.id}/ar-office/artists`);
+          const data = await res.json();
+          console.log('[A&R DEBUG] API response:', data);
+
+          let artists = Array.isArray(data.artists) ? data.artists : [];
+
+          // Enhanced fallback with better error messages
+          if ((!artists || artists.length === 0) && (gameState as any)?.flags) {
+            const flags: any = (gameState as any).flags;
+            const discoveredId = flags?.ar_office_discovered_artist_id;
+            const info = flags?.ar_office_discovered_artist_info || {};
+            if (discoveredId) {
+              console.log('[A&R DEBUG] No artists from API, synthesizing from flags:', { discoveredId, info });
+              const synthesized = {
+                id: discoveredId,
+                name: info.name ?? 'Unknown Artist',
+                archetype: info.archetype ?? 'Unknown',
+                talent: info.talent ?? 0,
+                popularity: info.popularity ?? 0,
+                genre: info.genre ?? null,
+                isSigned: false,
+              } as any;
+              artists = [synthesized];
+              console.log('[A&R DEBUG] Synthesized discovered artist from flags:', synthesized);
+            } else {
+              console.log('[A&R DEBUG] No discovered artist ID in flags, returning empty list');
+            }
+          }
+
+          console.log('[A&R DEBUG] Setting discovered artists:', artists.length, 'artists');
+          set({ discoveredArtists: artists });
+        } catch (error) {
+          console.error('[A&R] Failed to load discovered artists:', error);
+
+          // Provide more specific error information
+          if (error instanceof Error) {
+            if (error.message.includes('404')) {
+              console.warn('[A&R] No discovered artists found (404) - this may be expected if no A&R operation was completed');
+            } else if (error.message.includes('500')) {
+              console.error('[A&R] Server error while loading discovered artists');
+            }
+          }
+
+          set({ discoveredArtists: [] });
+          throw error; // Re-throw to allow retry logic to handle it
+        } finally {
+          // Clear loading flag
+          set({ loadingDiscoveredArtists: false });
+        }
+      },
+      clearDiscoveredArtists: () => {
+        console.log('[A&R] Clearing discovered artists list');
+        set({ discoveredArtists: [] });
+      },
+      removeDiscoveredArtist: (artistId: string) => {
+        const { discoveredArtists } = get();
+        set({ discoveredArtists: discoveredArtists.filter((a: any) => a.id !== artistId) });
+      },
+
       saveGame: async (name: string) => {
         const { gameState, artists, projects, roles } = get();
         if (!gameState) return;
@@ -697,7 +957,7 @@ export const useGameStore = create<GameStore>()(
             name,
             gameState: {
               gameState,
-              musicLabel: (gameState as any).musicLabel,
+              musicLabel: gameState.musicLabel,
               artists,
               projects,
               roles
@@ -722,6 +982,7 @@ export const useGameStore = create<GameStore>()(
         roles: state.roles,
         songs: state.songs,
         releases: state.releases,
+        discoveredArtists: state.discoveredArtists,
         selectedActions: state.selectedActions
       })
     }

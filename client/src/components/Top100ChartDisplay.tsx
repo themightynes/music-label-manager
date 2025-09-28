@@ -72,12 +72,6 @@ export function Top100ChartDisplay() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="mb-8">
-          <div className="flex items-center space-x-2 mb-6">
-            <Trophy className="w-5 h-5 text-yellow-600" />
-            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
-          </div>
-        </div>
         <div className="flex items-center justify-center py-8">
           <RefreshCw className="w-6 h-6 animate-spin text-white/50" />
           <span className="ml-2 text-white/70">Loading chart data...</span>
@@ -89,12 +83,6 @@ export function Top100ChartDisplay() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="mb-8">
-          <div className="flex items-center space-x-2 mb-6">
-            <Trophy className="w-5 h-5 text-yellow-600" />
-            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
-          </div>
-        </div>
         <div className="text-center py-8">
           <div className="text-red-400 mb-4">{error}</div>
           <Button
@@ -114,12 +102,6 @@ export function Top100ChartDisplay() {
   if (!chartData || chartData.top100.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="mb-8">
-          <div className="flex items-center space-x-2 mb-6">
-            <Trophy className="w-5 h-5 text-yellow-600" />
-            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
-          </div>
-        </div>
         <div className="text-center py-8">
           <BarChart3 className="w-10 h-10 text-white/50 mx-auto mb-4" />
           <h3 className="text-sm font-semibold text-white/70 mb-2">No Chart Data</h3>
@@ -148,13 +130,7 @@ export function Top100ChartDisplay() {
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <Trophy className="w-5 h-5 text-yellow-600" />
-            <h1 className="text-xl md:text-2xl font-bold text-white">Top 100 Chart</h1>
-            <Badge variant="outline" className="text-xs">
-              Week {chartData.currentWeek}
-            </Badge>
-          </div>
+          <div></div>
 
           <div className="flex items-center space-x-4">
             {playerSongs.length > 0 && (

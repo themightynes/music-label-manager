@@ -420,6 +420,331 @@ const musicLabelData = {
     }
   });
 
+  // ========================= A&R OFFICE ENDPOINTS =========================
+  // Start an A&R sourcing operation
+  app.post('/api/game/:gameId/ar-office/start', requireClerkUser, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { sourcingType } = req.body || {};
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) return res.status(404).json({ message: 'Game not found' });
+
+      // Validate sourcingType
+      const validSourcingTypes = ['active', 'passive', 'specialized'];
+      if (!sourcingType || !validSourcingTypes.includes(sourcingType)) {
+        return res.status(400).json({
+          message: `Invalid sourcing type. Must be one of: ${validSourcingTypes.join(', ')}`,
+          received: sourcingType,
+          valid: validSourcingTypes
+        });
+      }
+
+      const total = gameState.focusSlots || 3;
+      const used = gameState.usedFocusSlots || 0;
+
+      // Disallow starting if an operation is already active
+      if (gameState.arOfficeSlotUsed) {
+        return res.status(400).json({ message: 'A&R operation already in progress' });
+      }
+
+      // Validate available slot capacity
+      if (used >= total) {
+        return res.status(400).json({ message: 'No focus slots available', used, total });
+      }
+
+      const newUsed = Math.min(total, used + 1);
+
+      // Track the start week in flags for completion validation
+      const flags = (gameState.flags || {}) as any;
+      flags.ar_office_start_week = gameState.currentWeek || 1;
+      // NOTE: Keep previous discovered artists - new discoveries will be added to the pool
+
+      const updated = await storage.updateGameState(gameId, {
+        arOfficeSlotUsed: true,
+        arOfficeSourcingType: sourcingType || 'active',
+        arOfficeOperationStart: Date.now(),
+        usedFocusSlots: newUsed,
+        flags
+      });
+
+      return res.json({ success: true, status: {
+        arOfficeSlotUsed: updated.arOfficeSlotUsed || false,
+        arOfficeSourcingType: (updated as any).arOfficeSourcingType || null,
+        arOfficeOperationStart: (updated as any).arOfficeOperationStart || null,
+        usedFocusSlots: updated.usedFocusSlots || newUsed,
+        focusSlots: updated.focusSlots || total
+      }});
+    } catch (error) {
+      console.error('[A&R] Start operation error:', error);
+      res.status(500).json({ message: 'Failed to start A&R operation' });
+    }
+  });
+
+
+  // Cancel an A&R sourcing operation
+  app.post('/api/game/:gameId/ar-office/cancel', requireClerkUser, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) return res.status(404).json({ message: 'Game not found' });
+
+      const used = gameState.usedFocusSlots || 0;
+      const newUsed = gameState.arOfficeSlotUsed ? Math.max(0, used - 1) : used;
+
+      // Clear only operation-related flags on cancel (keep discovered artists)
+      const flags = (gameState.flags || {}) as any;
+      delete flags.ar_office_start_week;
+      // NOTE: Keep ar_office_discovered_artists array - only clearing current operation state
+
+      const updated = await storage.updateGameState(gameId, {
+        arOfficeSlotUsed: false,
+        arOfficeSourcingType: null,
+        usedFocusSlots: newUsed,
+        flags
+      });
+
+      return res.json({ success: true, status: {
+        arOfficeSlotUsed: updated.arOfficeSlotUsed || false,
+        arOfficeSourcingType: (updated as any).arOfficeSourcingType || null,
+        usedFocusSlots: updated.usedFocusSlots || newUsed
+      }});
+    } catch (error) {
+      console.error('[A&R] Cancel operation error:', error);
+      res.status(500).json({ message: 'Failed to cancel A&R operation' });
+    }
+  });
+
+  // Get current A&R status
+  app.get('/api/game/:gameId/ar-office/status', requireClerkUser, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) return res.status(404).json({ message: 'Game not found' });
+
+      return res.json({
+        arOfficeSlotUsed: gameState.arOfficeSlotUsed || false,
+        arOfficeSourcingType: (gameState as any).arOfficeSourcingType || null,
+        arOfficeOperationStart: (gameState as any).arOfficeOperationStart || null,
+      });
+    } catch (error) {
+      console.error('[A&R] Status error:', error);
+      res.status(500).json({ message: 'Failed to fetch A&R status' });
+    }
+  });
+
+  // Get discovered artists for A&R (returns the persisted pick when operation is complete)
+  app.get('/api/game/:gameId/ar-office/artists', requireClerkUser, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      console.log('[A&R DEBUG] Backend: Getting discovered artists for game:', gameId);
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) {
+        console.log('[A&R DEBUG] Backend: Game not found');
+        return res.status(404).json({ message: 'Game not found' });
+      }
+
+      await serverGameData.initialize();
+
+      console.log('[A&R DEBUG] Backend: A&R slot used:', gameState.arOfficeSlotUsed);
+      console.log('[A&R DEBUG] Backend: A&R sourcing type:', (gameState as any).arOfficeSourcingType);
+
+      // If operation is active, no artists yet
+      if (gameState.arOfficeSlotUsed) {
+        console.log('[A&R DEBUG] Backend: Operation active, returning empty list');
+        return res.json({
+          artists: [],
+          metadata: {
+            operationActive: true,
+            sourcingType: (gameState as any).arOfficeSourcingType
+          }
+        });
+      }
+
+      // Enhanced flags reading and validation
+      const flags = (gameState.flags || {}) as any;
+      console.log('[A&R DEBUG] Backend: Full flags object:', JSON.stringify(flags, null, 2));
+
+      // Check for new discovered artists array (preferred method)
+      let discoveredArtistsArray = flags.ar_office_discovered_artists || [];
+      const legacyArtistId = flags.ar_office_discovered_artist_id; // backwards compatibility
+      const legacyArtistInfo = flags.ar_office_discovered_artist_info;
+
+      console.log('[A&R DEBUG] Backend: Discovered artists array:', discoveredArtistsArray.length, 'artists');
+      console.log('[A&R DEBUG] Backend: Legacy artist ID:', legacyArtistId);
+
+      // Migrate legacy format to new array format if needed
+      if (legacyArtistId && legacyArtistInfo && discoveredArtistsArray.length === 0) {
+        console.log('[A&R DEBUG] Backend: Migrating legacy artist to array format');
+        discoveredArtistsArray = [{
+          id: legacyArtistId,
+          name: legacyArtistInfo.name,
+          archetype: legacyArtistInfo.archetype,
+          talent: legacyArtistInfo.talent,
+          popularity: legacyArtistInfo.popularity,
+          genre: legacyArtistInfo.genre,
+          discoveryTime: flags.ar_office_discovery_time,
+          sourcingType: flags.ar_office_sourcing_type
+        }];
+
+        // Update flags with migrated data
+        flags.ar_office_discovered_artists = discoveredArtistsArray;
+        await storage.saveGameState(gameId, gameState);
+        console.log('[A&R DEBUG] Backend: Migration complete, saved to database');
+      }
+
+      if (discoveredArtistsArray.length > 0) {
+        // Return all discovered artists
+        const allGameArtists = await serverGameData.getAllArtists();
+        console.log('[A&R DEBUG] Backend: Loaded', allGameArtists?.length, 'total game artists');
+
+        const discoveredArtists = discoveredArtistsArray.map((discoveredArtist: any) => {
+          // First try to find the full artist data
+          const fullArtist = allGameArtists.find((a: any) => a.id === discoveredArtist.id);
+
+          if (fullArtist) {
+            // Return full artist data with discovery metadata
+            return {
+              ...fullArtist,
+              discoveryTime: discoveredArtist.discoveryTime,
+              discoveredVia: discoveredArtist.sourcingType
+            };
+          } else {
+            // Fallback to stored artist info if full data not found
+            return {
+              id: discoveredArtist.id,
+              name: discoveredArtist.name || 'Unknown Artist',
+              archetype: discoveredArtist.archetype || 'Unknown',
+              talent: discoveredArtist.talent || 0,
+              popularity: discoveredArtist.popularity || 0,
+              genre: discoveredArtist.genre || null,
+              discoveryTime: discoveredArtist.discoveryTime,
+              discoveredVia: discoveredArtist.sourcingType,
+              isFallback: true
+            };
+          }
+        });
+
+        console.log('[A&R DEBUG] Backend: Returning', discoveredArtists.length, 'discovered artists');
+
+        return res.json({
+          artists: discoveredArtists,
+          metadata: {
+            totalDiscovered: discoveredArtists.length,
+            isDiscoveredCollection: true,
+            discoveryTime: flags.ar_office_discovery_time,
+            sourcingType: flags.ar_office_sourcing_type
+          }
+        });
+      } else if (legacyArtistId) {
+        // Backwards compatibility: handle single legacy artist
+        const allArtists = await serverGameData.getAllArtists();
+        console.log('[A&R DEBUG] Backend: Loaded', allArtists?.length, 'total artists for legacy mode');
+
+        const artist = (allArtists || []).find((a: any) => a.id === legacyArtistId);
+        console.log('[A&R DEBUG] Backend: Found legacy artist for ID:', artist?.name || 'none');
+
+        if (artist) {
+          // Validate artist has all required fields
+          const requiredFields = ['id', 'name', 'archetype', 'talent', 'popularity'];
+          const missingFields = requiredFields.filter(field => artist[field] === undefined || artist[field] === null);
+
+          if (missingFields.length > 0) {
+            console.warn('[A&R DEBUG] Backend: Artist missing required fields:', missingFields);
+            // Add fallback values for missing fields
+            const enrichedArtist = {
+              ...artist,
+              talent: artist.talent ?? 50,
+              popularity: artist.popularity ?? 0,
+              archetype: artist.archetype ?? 'Unknown'
+            };
+            return res.json({
+              artists: [enrichedArtist],
+              metadata: {
+                missingFields,
+                enriched: true,
+                discoveryTime: flags.ar_office_discovery_time
+              }
+            });
+          }
+
+          return res.json({
+            artists: [artist],
+            metadata: {
+              discoveryTime: flags.ar_office_discovery_time,
+              sourcingType: flags.ar_office_sourcing_type,
+              isOriginalDiscovery: true,
+              discoveredArtistId: persistedId
+            }
+          });
+        } else {
+          // Artist ID not found in current data - fallback mechanism
+          console.warn('[A&R DEBUG] Backend: Artist ID not found in current data, generating fallback');
+
+          // Select a new random artist as fallback
+          const unsignedArtists = (allArtists || []).filter((a: any) => !a.isSigned);
+          if (unsignedArtists.length > 0) {
+            const fallbackArtist = unsignedArtists[Math.floor(Math.random() * unsignedArtists.length)];
+
+            // Update flags with new artist ID
+            const updatedFlags = { ...flags, ar_office_discovered_artist_id: fallbackArtist.id };
+            const updatedGameState = { ...gameState, flags: updatedFlags };
+            await storage.saveGameState(gameId, updatedGameState);
+
+            console.log('[A&R DEBUG] Backend: Updated flags with fallback artist:', fallbackArtist.id);
+
+            return res.json({
+              artists: [fallbackArtist],
+              metadata: {
+                isFallback: true,
+                isOriginalDiscovery: false,
+                originalDiscoveredArtistId: persistedId,
+                discoveredArtistId: fallbackArtist.id,
+                fallbackReason: 'Original artist not found in current data',
+                discoveryTime: flags.ar_office_discovery_time,
+                sourcingType: flags.ar_office_sourcing_type,
+                warning: 'The artist shown differs from the one in the weekly summary due to data changes'
+              }
+            });
+          }
+
+          console.warn('[A&R DEBUG] Backend: No unsigned artists available for fallback');
+          return res.json({
+            artists: [],
+            metadata: {
+              error: 'Artist not found and no fallback available',
+              isOriginalDiscovery: false,
+              originalDiscoveredArtistId: persistedId,
+              discoveredArtistId: null,
+              fallbackReason: 'Original artist not found and no unsigned artists available',
+              warning: 'No artist available - the weekly summary may show a different result'
+            }
+          });
+        }
+      }
+
+      // No persisted result yet (operation not completed properly) - return empty list
+      console.log('[A&R DEBUG] Backend: No persisted artist, returning empty list');
+      return res.json({
+        artists: [],
+        metadata: {
+          noPersistedResult: true,
+          hasFlags: Object.keys(flags).length > 0
+        }
+      });
+    } catch (error) {
+      console.error('[A&R] Get discovered artists error:', error);
+
+      // Enhanced error response with details
+      const errorDetails = {
+        message: 'Failed to fetch discovered artists',
+        type: error instanceof Error ? error.constructor.name : 'Unknown',
+        details: error instanceof Error ? error.message : String(error)
+      };
+
+      res.status(500).json(errorDetails);
+    }
+  });
+
   // Get available weekly actions with enriched role data and categories
   app.get("/api/actions/weekly", requireClerkUser, async (req, res) => {
     try {
@@ -717,8 +1042,21 @@ const musicLabelData = {
       
       // Update artist count flag for GameEngine weekly costs
       const currentArtists = await storage.getArtistsByGame(gameId);
-      const flags = gameState.flags || {};
+      const flags = (gameState.flags || {}) as any;
       (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
+      
+      // Remove this artist from discovered collections
+      if (flags.ar_office_discovered_artists) {
+        flags.ar_office_discovered_artists = flags.ar_office_discovered_artists.filter((a: any) => a.id !== artist.id);
+        console.log('[A&R DEBUG] Removed signed artist from discovered collection. Remaining:', flags.ar_office_discovered_artists.length);
+      }
+
+      // Legacy cleanup: If this artist is the persisted discovered one, clear it now
+      if (flags.ar_office_discovered_artist_id && flags.ar_office_discovered_artist_id === artist.id) {
+        delete flags.ar_office_discovered_artist_id;
+        delete flags.ar_office_discovered_artist_info;
+      }
+
       await storage.updateGameState(gameId, { flags });
       
       res.json(artist);
@@ -2355,6 +2693,9 @@ const musicLabelData = {
           creativeCapital: gameState.creativeCapital || startingValues.creativeCapital,
           focusSlots: gameState.focusSlots || 3,
           usedFocusSlots: gameState.usedFocusSlots || 0,
+          // A&R Office fields
+          arOfficeSlotUsed: (gameState as any).arOfficeSlotUsed || false,
+          arOfficeSourcingType: (gameState as any).arOfficeSourcingType || null,
           playlistAccess: gameState.playlistAccess || 'none',
           pressAccess: gameState.pressAccess || 'none',
           venueAccess: gameState.venueAccess || 'none',
@@ -2445,6 +2786,14 @@ const musicLabelData = {
         console.log('='.repeat(80));
         console.log('[ADVANCE WEEK] Starting week advancement processing');
         console.log('[ADVANCE WEEK] Current week:', gameStateForEngine.currentWeek);
+        console.log('[A&R DEBUG] gameState A&R fields from DB:', {
+          arOfficeSlotUsed: (gameState as any).arOfficeSlotUsed,
+          arOfficeSourcingType: (gameState as any).arOfficeSourcingType
+        });
+        console.log('[A&R DEBUG] gameStateForEngine A&R fields:', {
+          arOfficeSlotUsed: (gameStateForEngine as any).arOfficeSlotUsed,
+          arOfficeSourcingType: (gameStateForEngine as any).arOfficeSourcingType
+        });
         console.log('='.repeat(80));
 
         // Create GameEngine instance for this game state
@@ -2547,6 +2896,11 @@ const musicLabelData = {
             pressAccess: weekResult.gameState.pressAccess,
             venueAccess: weekResult.gameState.venueAccess,
             campaignCompleted: weekResult.gameState.campaignCompleted,
+            // Persist A&R Office state from GameEngine (columns must exist in schema)
+            // If your schema does not have these columns yet, consider storing them under flags instead.
+            arOfficeSlotUsed: (weekResult.gameState as any).arOfficeSlotUsed ?? null,
+            arOfficeSourcingType: (weekResult.gameState as any).arOfficeSourcingType ?? null,
+            arOfficeOperationStart: (weekResult.gameState as any).arOfficeOperationStart ?? null,
             flags: weekResult.gameState.flags,
             weeklyStats: weekResult.gameState.weeklyStats,
             updatedAt: new Date()
@@ -2697,6 +3051,9 @@ const musicLabelData = {
           creativeCapital: gameState.creativeCapital || startingValues.creativeCapital,
           focusSlots: gameState.focusSlots || 3,
           usedFocusSlots: gameState.usedFocusSlots || 0,
+          // A&R Office fields
+          arOfficeSlotUsed: (gameState as any).arOfficeSlotUsed || false,
+          arOfficeSourcingType: (gameState as any).arOfficeSourcingType || null,
           playlistAccess: gameState.playlistAccess || 'none',
           pressAccess: gameState.pressAccess || 'none',
           venueAccess: gameState.venueAccess || 'none',

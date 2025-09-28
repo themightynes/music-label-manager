@@ -107,6 +107,10 @@ export const gameStates = pgTable("game_states", {
 	creativeCapital: integer("creative_capital").default(0),
 	focusSlots: integer("focus_slots").default(3),
 	usedFocusSlots: integer("used_focus_slots").default(0),
+	// A&R Office fields
+	arOfficeSlotUsed: boolean("ar_office_slot_used").default(false),
+	arOfficeSourcingType: text("ar_office_sourcing_type"),
+	arOfficeOperationStart: integer("ar_office_operation_start"),
 	playlistAccess: text("playlist_access").default('none'),
 	pressAccess: text("press_access").default('none'),
 	venueAccess: text("venue_access").default('none'),

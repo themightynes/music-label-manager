@@ -39,6 +39,7 @@ import {
   TrendingUp,
   Zap,
   Settings,
+  Search,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -338,6 +339,17 @@ export function GameSidebar({
                   >
                     <Users />
                     <span>Artists</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLocation('/ar-office')}
+                    isActive={currentPath === '/ar-office' || currentPath.startsWith('/ar-office/')}
+                    tooltip="A&R Office"
+                  >
+                    <Search />
+                    <span>A&R Office</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

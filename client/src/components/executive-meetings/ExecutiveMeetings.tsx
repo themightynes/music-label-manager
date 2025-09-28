@@ -18,6 +18,11 @@ interface ExecutiveMeetingsProps {
     total: number;
     used: number;
   };
+  arOfficeStatus?: {
+    arOfficeSlotUsed: boolean;
+    arOfficeSourcingType: string | null;
+    arOfficeOperationStart: number | null;
+  };
   onImpactPreviewUpdate?: (preview: {
     immediate: Record<string, number>;
     delayed: Record<string, number>;
@@ -35,6 +40,7 @@ export function ExecutiveMeetings({
   gameId,
   onActionSelected,
   focusSlots,
+  arOfficeStatus: arOfficeStatusProp,
   onImpactPreviewUpdate,
 }: ExecutiveMeetingsProps) {
   const [executives, setExecutives] = useState<Executive[]>([]);
@@ -43,7 +49,7 @@ export function ExecutiveMeetings({
   const [roleSalaries, setRoleSalaries] = useState<Record<string, number>>({});
 
   // Watch for week changes to refresh executive data
-  const { gameState } = useGameStore();
+  const { gameState, getAROfficeStatus } = useGameStore();
 
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
@@ -55,6 +61,10 @@ export function ExecutiveMeetings({
 
   const { context } = state;
   const hasAvailableSlots = context.focusSlotsUsed < context.focusSlotsTotal;
+  const arOfficeStatus = arOfficeStatusProp ?? getAROfficeStatus();
+  const arUsed = arOfficeStatus.arOfficeSlotUsed ? 1 : 0;
+  const execUsed = Math.max(0, focusSlots.used - arUsed);
+  const available = Math.max(0, focusSlots.total - focusSlots.used);
 
   // Refetch executives when game loads or week changes
   useEffect(() => {
@@ -157,6 +167,16 @@ export function ExecutiveMeetings({
           <CardTitle className="flex items-center justify-between">
             Executive Meetings
             <div className="flex items-center gap-3">
+              {/* A&R operation status */}
+              {arOfficeStatus.arOfficeSlotUsed && (
+                <div className="text-xs text-white/70">
+                  A&R: {arOfficeStatus.arOfficeSourcingType || 'active'} • since {arOfficeStatus.arOfficeOperationStart ? new Date(arOfficeStatus.arOfficeOperationStart).toLocaleTimeString() : '—'}
+                </div>
+              )}
+              {/* Slot attribution */}
+              <div className="text-xs text-white/60">
+                Exec: {execUsed} • A&R: {arUsed} • Avail: {available}
+              </div>
               {hasAvailableSlots && (
                 <Button
                   variant="outline"
@@ -190,7 +210,9 @@ export function ExecutiveMeetings({
           ) : !hasAvailableSlots ? (
             <div className="text-center p-8 text-white/70">
               <p>No focus slots available</p>
-              <p className="text-sm text-white/50">Complete your current actions or advance the week to continue.</p>
+              <p className="text-sm text-white/50">
+                {arOfficeStatus.arOfficeSlotUsed ? 'A&R Office is consuming a focus slot this week.' : 'Complete your current actions or advance the week to continue.'}
+              </p>
             </div>
           ) : executives.length === 0 ? (
             <div className="text-center p-8 text-white/70">
@@ -199,15 +221,16 @@ export function ExecutiveMeetings({
             </div>
           ) : (
             <div className="space-y-4">
-              {executives.map((executive) => (
-                <ExecutiveCard
-                  key={executive.role}
-                  executive={executive}
-                  disabled={!hasAvailableSlots}
-                  onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
-                  weeklySalary={roleSalaries[executive.role]}
-                />
-              ))}
+                {executives.map((executive) => (
+                  <ExecutiveCard
+                    key={executive.role}
+                    executive={executive}
+                    disabled={!hasAvailableSlots}
+                    onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
+                    weeklySalary={roleSalaries[executive.role]}
+                    arOfficeStatus={arOfficeStatus}
+                  />
+                ))}
             </div>
           )}
 

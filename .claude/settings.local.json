@@ -59,7 +59,10 @@
       "mcp__shadcn__getComponents",
       "mcp__context7-mcp__get-library-docs",
       "mcp__context7-mcp__resolve-library-id",
-      "SlashCommand(/onboard)"
+      "SlashCommand(/onboard)",
+      "Bash(cat:*)",
+      "Bash(PORT=3000 npm run dev)",
+      "Bash(magick identify:*)"
     ],
     "deny": [],
     "ask": [],

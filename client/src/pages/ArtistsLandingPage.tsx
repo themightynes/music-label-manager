@@ -128,23 +128,34 @@ const ArtistsLandingPage: React.FC = () => {
 
   return (
     <GameLayout>
-      <div className="p-6 space-y-8">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Artists</h1>
-            <p className="text-gray-300">Manage your roster and discover new talent</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-6 mt-12">
+          <div className="flex items-center mb-4">
+            <img
+              src="/avatars/artists.png"
+              alt="Artists"
+              className="w-auto mr-4"
+              style={{ width: '459px', height: '135px' }}
+            />
           </div>
-          {availableSlots > 0 && (
-            <button
-              onClick={handleDiscoverArtists}
-              className="bg-[#A75A5B] hover:bg-[#B86B6C] text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
-            >
-              <UserPlus className="w-5 h-5" />
-              Discover Artists
-            </button>
-          )}
         </div>
+
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-gray-300">Manage your roster and discover new talent</p>
+            </div>
+            {availableSlots > 0 && (
+              <button
+                onClick={handleDiscoverArtists}
+                className="bg-[#A75A5B] hover:bg-[#B86B6C] text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
+              >
+                <UserPlus className="w-5 h-5" />
+                Scouted Artists
+              </button>
+            )}
+          </div>
 
         {/* Analytics Overview */}
         <div className="bg-[#23121c] rounded-[10px] shadow-lg border border-[#4e324c] p-4 md:p-6">
@@ -222,12 +233,12 @@ const ArtistsLandingPage: React.FC = () => {
             <div className="bg-[#3c252d]/[0.66] border border-[#65557c] rounded-lg p-12 text-center">
               <Users className="w-16 h-16 text-gray-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">No Artists Signed</h3>
-              <p className="text-gray-400 mb-6">Start building your roster by discovering new talent</p>
+              <p className="text-gray-400 mb-6">Start building your roster by scouting talent</p>
               <button
                 onClick={handleDiscoverArtists}
                 className="bg-[#A75A5B] hover:bg-[#B86B6C] text-white px-6 py-3 rounded-lg font-medium transition-colors"
               >
-                Discover Artists
+                Scouted Artists
               </button>
             </div>
           ) : (
@@ -333,7 +344,8 @@ const ArtistsLandingPage: React.FC = () => {
             onSignArtist={signArtist}
           />
         )}
-      </div>
+        </div>
+      </main>
     </GameLayout>
   );
 };

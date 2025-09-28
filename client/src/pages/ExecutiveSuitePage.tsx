@@ -7,6 +7,7 @@ import { AlertCircle, Loader2, Rocket, Users2, ArrowLeft } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { SelectionSummary } from '../components/SelectionSummary';
 import { ExecutiveMeetings } from '../components/executive-meetings/ExecutiveMeetings';
+import { FocusSlotAttribution } from '../components/executive-meetings/FocusSlotAttribution';
 import { useGameContext } from '@/contexts/GameContext';
 import GameLayout from '@/layouts/GameLayout';
 import { useState } from 'react';
@@ -58,7 +59,7 @@ interface WeeklyAction {
 
 export default function ExecutiveSuitePage(props: any = {}) {
   const { onAdvanceWeek, isAdvancing } = props as ExecutiveSuitePageProps;
-  const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
+  const { gameState, selectedActions, removeAction, reorderActions, selectAction, getAROfficeStatus } = useGameStore();
   const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
@@ -91,6 +92,9 @@ export default function ExecutiveSuitePage(props: any = {}) {
               <h2 className="text-xl md:text-2xl font-bold text-white">Week {gameState.currentWeek} Executive Meetings</h2>
               <p className="text-sm md:text-base text-white/70">
                 Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
+                {getAROfficeStatus().arOfficeSlotUsed && (
+                  <span className="ml-2 text-yellow-300">(A&R using 1 slot)</span>
+                )}
                 {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th Slot Unlocked!)</span>}
               </p>
             </div>
@@ -124,13 +128,21 @@ export default function ExecutiveSuitePage(props: any = {}) {
                     total: gameState.focusSlots || 3,
                     used: gameState.usedFocusSlots || 0,
                   }}
+                  arOfficeStatus={getAROfficeStatus()}
                   onImpactPreviewUpdate={setImpactPreview}
                 />
               )}
             </div>
 
             {/* Right Panel - Selection Summary */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 space-y-4">
+              <FocusSlotAttribution
+                focusSlotsTotal={gameState.focusSlots || 3}
+                focusSlotsUsed={gameState.usedFocusSlots || 0}
+                selectedActionsCount={selectedActions.length}
+                arOfficeStatus={getAROfficeStatus()}
+                selectedActions={selectedActions}
+              />
               <SelectionSummary
                 selectedActions={selectedActions}
                 actions={weeklyActions}

@@ -80,6 +80,8 @@ export interface DialogueScene {
   choices: DialogueChoice[];
 }
 
+export type SourcingTypeString = 'active' | 'passive' | 'specialized';
+
 export interface GameState {
   id: string;
   currentWeek: number;
@@ -88,6 +90,9 @@ export interface GameState {
   creativeCapital: number;
   focusSlots: number;
   usedFocusSlots: number;
+  // A&R Office state
+  arOfficeSlotUsed?: boolean;
+  arOfficeSourcingType?: SourcingTypeString | null;
   playlistAccess: string;
   pressAccess: string;
   venueAccess: string;
@@ -336,4 +341,10 @@ export interface WeekSummary {
   };
   financialBreakdown?: string; // Human-readable financial calculation
   chartUpdates?: ChartUpdate[]; // Chart position changes, debuts, and movements
+  // A&R Office weekly outcome
+  arOffice?: {
+    completed: boolean;
+    sourcingType?: 'active' | 'passive' | 'specialized' | null;
+    discoveredArtistId?: string | null;
+  };
 }

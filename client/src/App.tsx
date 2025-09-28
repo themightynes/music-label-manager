@@ -13,6 +13,7 @@ import PlanReleasePage from "@/pages/PlanReleasePage";
 import ArtistsLandingPage from "@/pages/ArtistsLandingPage";
 import ArtistPage from "@/pages/ArtistPage";
 import ExecutiveSuitePage from "@/pages/ExecutiveSuitePage";
+import AROfficePage from "@/pages/AROffice";
 import QualityTester from "@/pages/QualityTester";
 import TourVarianceTesterPage from "@/pages/TourVarianceTesterPage";
 import PopularityTester from "@/pages/PopularityTester";
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/artists" component={ArtistsLandingPage} />
       <Route path="/artist/:artistParam" component={ArtistPage} />
       <Route path="/executives" component={ExecutiveSuitePage} />
+      <Route path="/ar-office" component={AROfficePage} />
       <Route path="/recording-session" component={RecordingSessionPage} />
       <Route path="/live-performance" component={LivePerformancePage} />
       <Route path="/quality-tester" component={QualityTester} />

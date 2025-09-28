@@ -10,6 +10,11 @@ interface ExecutiveCardProps {
   disabled?: boolean;
   onSelect: () => void;
   weeklySalary?: number;
+  arOfficeStatus?: {
+    arOfficeSlotUsed: boolean;
+    arOfficeSourcingType: string | null;
+    arOfficeOperationStart: number | null;
+  };
 }
 
 const roleConfig = {
@@ -45,7 +50,7 @@ const roleConfig = {
   },
 } as const;
 
-export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySalary }: ExecutiveCardProps) {
+export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySalary, arOfficeStatus }: ExecutiveCardProps) {
   const config = roleConfig[executive.role as keyof typeof roleConfig] || {
     icon: Users,
     color: 'bg-gray-500',
@@ -55,10 +60,13 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
 
   const IconComponent = config.icon;
   const isCEO = executive.role === 'ceo';
+  const isHeadAR = executive.role === 'head_ar';
+  const isArBusy = !!(isHeadAR && arOfficeStatus?.arOfficeSlotUsed);
+  const effectiveDisabled = disabled || isArBusy;
 
   return (
     <Card className={`transition-all duration-200 hover:shadow-md bg-[#8B6B70]/20 border-[#65557c] ${
-      disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg hover:bg-[#8B6B70]/30'
+      effectiveDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg hover:bg-[#8B6B70]/30'
     }`}>
       <CardContent className="p-4">
         <div className="flex items-center space-x-4">
@@ -92,20 +100,23 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
             <div className="mb-2 flex items-start justify-between">
               <div>
                 <div className="font-semibold text-white text-base">{executive.role.toUpperCase()}</div>
-                <div className="text-sm text-white/70">
+                <div className="text-sm text-white/70 flex items-center gap-2">
                   {config.title}
+                  {isHeadAR && arOfficeStatus?.arOfficeSlotUsed && (
+                    <Badge variant="outline" className="text-[10px]">Consumes 1 slot</Badge>
+                  )}
                 </div>
               </div>
 
               {/* Meet button in top right */}
               <Button
                 onClick={onSelect}
-                disabled={disabled}
+                disabled={effectiveDisabled}
                 className="py-1 px-3 text-xs"
-                variant={disabled ? "secondary" : "default"}
+                variant={effectiveDisabled ? "secondary" : "default"}
                 size="sm"
               >
-                {disabled ? "No Slots" : isCEO ? "Strategic" : "Meet"}
+                {isArBusy ? "A&R Busy" : effectiveDisabled ? "No Slots" : isCEO ? "Strategic" : "Meet"}
               </Button>
             </div>
 
@@ -143,6 +154,21 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
             {!isCEO && weeklySalary !== undefined && (
               <div className="text-sm text-white/60">
                 Monthly Salary: {weeklySalary === 0 ? 'Equity Only' : `$${weeklySalary.toLocaleString()}`}
+              </div>
+            )}
+
+            {/* A&R Status for Head of A&R */}
+            {isHeadAR && arOfficeStatus?.arOfficeSlotUsed && (
+              <div className="mt-2 p-2 bg-[#3c252d]/30 rounded flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs">
+                  <Badge variant="outline" className="text-xs">Sourcing Active</Badge>
+                  {arOfficeStatus.arOfficeSourcingType && (
+                    <span className="text-white/70">{arOfficeStatus.arOfficeSourcingType}</span>
+                  )}
+                </div>
+                <div className="text-xs text-white/60">
+                  {arOfficeStatus.arOfficeOperationStart ? `since ${new Date(arOfficeStatus.arOfficeOperationStart).toLocaleTimeString()}` : ''}
+                </div>
               </div>
             )}
           </div>

@@ -79,14 +79,14 @@ export function ArtistRoster() {
             <div className="text-center text-white/50 flex-1 flex flex-col justify-center">
               <i className="fas fa-microphone text-white/30 text-3xl mb-3"></i>
               <p className="text-sm font-medium text-white/70 mb-2">No Artists Signed</p>
-              <p className="text-xs text-white/50 mb-4">Discover talent to build your roster</p>
+              <p className="text-xs text-white/50 mb-4">Scout talent to build your roster</p>
               <Button
                 onClick={() => setShowDiscoveryModal(true)}
                 size="sm"
                 className="bg-[#791014] text-white hover:bg-[#A75A5B] transition-colors"
               >
                 <i className="fas fa-search mr-1"></i>
-                Discover Artists
+                Scouted Artists
               </Button>
             </div>
           )}
@@ -125,7 +125,7 @@ export function ArtistRoster() {
                     className="bg-[#791014] text-white hover:bg-[#A75A5B] transition-colors"
                   >
                     <i className="fas fa-plus mr-1"></i>
-                    Discover More Artists ({3 - artists.length} slots available)
+                    Scouted Artists ({3 - artists.length} slots available)
                   </Button>
                 </div>
               )}

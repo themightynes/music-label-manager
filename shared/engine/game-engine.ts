@@ -142,7 +142,8 @@ export class GameEngine {
       revenue: 0,
       expenses: 0,
       reputationChanges: {},
-      events: []
+      events: [],
+      arOffice: { completed: false }
     };
 
     // Initialize runtime tracking for executive usage (not in interface)
@@ -151,6 +152,13 @@ export class GameEngine {
     // Reset weekly values
     this.gameState.usedFocusSlots = 0;
     this.gameState.currentWeek = (this.gameState.currentWeek || 0) + 1;
+
+    // Process A&R Office operation lifecycle (one-week sourcing completes on advance)
+    console.log('[A&R DEBUG] About to process A&R with game state:', {
+      arOfficeSlotUsed: (this.gameState as any).arOfficeSlotUsed,
+      arOfficeSourcingType: (this.gameState as any).arOfficeSourcingType
+    });
+    await this.processAROfficeWeekly(summary, dbTransaction);
 
     // PHASE 1: Process role_meeting actions first (executive meetings)
     const meetingActions = weeklyActions.filter(action => action.actionType === 'role_meeting');
@@ -352,6 +360,222 @@ export class GameEngine {
     });
 
     return result;
+  }
+
+  /**
+   * Completes in-progress A&R Office sourcing when the week advances.
+   * Frees the A&R focus slot but preserves the sourcing type so the client
+   * can fetch discovered artists from the new endpoint post-advance.
+   *
+   * IMPORTANT: The artist ID stored in flags and returned in the weekly summary
+   * may differ from the artist actually returned by /ar-office/artists if the
+   * original artist is no longer available (e.g., due to data file changes).
+   * The GET endpoint implements fallback logic that may select a different artist
+   * and update the flags accordingly. Client code should check the response
+   * metadata to detect when fallback artists are used.
+   */
+  private async processAROfficeWeekly(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    try {
+      const slotUsed = (this.gameState as any).arOfficeSlotUsed;
+      const sourcingType = (this.gameState as any).arOfficeSourcingType;
+      console.log('[A&R DEBUG] Processing A&R operation:', {
+        slotUsed,
+        sourcingType,
+        gameId: this.gameState.id,
+        currentWeek: this.gameState.currentWeek
+      });
+
+      if (slotUsed) {
+        // Complete the one-week operation: free the slot, clear start time
+        (this.gameState as any).arOfficeSlotUsed = false;
+        (this.gameState as any).arOfficeOperationStart = null;
+
+        // Enhanced flags initialization and management
+        let flags = (this.gameState.flags || {}) as any;
+        if (!flags || typeof flags !== 'object') {
+          console.log('[A&R DEBUG] Initializing flags object');
+          flags = {};
+          this.gameState.flags = flags;
+        }
+
+        // Clear start-week flag used by server validation
+        if ('ar_office_start_week' in flags) {
+          delete flags.ar_office_start_week;
+        }
+
+        // Add discovery timestamp for tracking
+        flags.ar_office_discovery_time = new Date().toISOString();
+        flags.ar_office_sourcing_type = sourcingType;
+
+        // Enhanced artist selection with better validation and error handling
+        try {
+          const allArtists = await this.gameData.getAllArtists();
+          console.log('[A&R DEBUG] All artists loaded:', allArtists?.length, 'artists');
+
+          if (!allArtists || allArtists.length === 0) {
+            console.error('[A&R DEBUG] No artists available in game data');
+            flags.ar_office_discovered_artist_id = null;
+            flags.ar_office_error = 'No artists available in game data';
+          } else {
+            let unsigned = [...allArtists];
+
+            // Enhanced signed and discovered artist filtering
+            try {
+              if (this.storage?.getArtistsByGame) {
+                const signed = await this.storage.getArtistsByGame(this.gameState.id);
+                console.log('[A&R DEBUG] Signed artists:', signed?.length, 'signed');
+                const signedIds = new Set((signed || []).map((a: any) => a.id));
+
+                // Also exclude already discovered artists from selection
+                const discoveredIds = new Set();
+                if (flags.ar_office_discovered_artists && Array.isArray(flags.ar_office_discovered_artists)) {
+                  flags.ar_office_discovered_artists.forEach((discovered: any) => {
+                    if (discovered.id) discoveredIds.add(discovered.id);
+                  });
+                }
+                console.log('[A&R DEBUG] Already discovered artists:', discoveredIds.size, 'discovered');
+
+                // Filter out both signed and already discovered artists
+                unsigned = allArtists.filter((a: any) => !signedIds.has(a.id) && !discoveredIds.has(a.id));
+                console.log('[A&R DEBUG] Available artists (unsigned + undiscovered):', unsigned?.length, 'available');
+              }
+            } catch (storageErr) {
+              console.warn('[A&R DEBUG] Failed to filter signed/discovered artists, using all artists:', storageErr);
+              // Continue with all artists if filtering fails
+            }
+
+            let picked: any | null = null;
+            if (unsigned.length > 0) {
+              // Enhanced artist selection logic with validation
+              if (sourcingType === 'active' || sourcingType === 'specialized') {
+                // Sort by combined talent and popularity, then validate the top pick
+                const sorted = [...unsigned].sort((a, b) => {
+                  const scoreA = (a.talent || 0) + (a.popularity || 0);
+                  const scoreB = (b.talent || 0) + (b.popularity || 0);
+                  return scoreB - scoreA;
+                });
+                picked = sorted[0];
+              } else {
+                // Random selection for passive sourcing
+                const idx = Math.floor(this.getRandom(0, unsigned.length));
+                picked = unsigned[idx];
+              }
+
+              // Validate the picked artist has required fields
+              if (picked) {
+                const requiredFields = ['id', 'name', 'archetype'];
+                const missingFields = requiredFields.filter(field => !picked[field]);
+
+                if (missingFields.length > 0) {
+                  console.warn('[A&R DEBUG] Selected artist missing required fields:', missingFields, 'Artist:', picked);
+                  // Add fallback values
+                  picked = {
+                    ...picked,
+                    name: picked.name || `Artist ${picked.id}`,
+                    archetype: picked.archetype || 'Unknown',
+                    talent: picked.talent || 50,
+                    popularity: picked.popularity || 0
+                  };
+                }
+              }
+            }
+
+            if (picked) {
+              console.log('[A&R DEBUG] Selected artist:', picked.name, 'ID:', picked.id, 'Talent:', picked.talent, 'Popularity:', picked.popularity);
+
+              // Initialize discovered artists array if it doesn't exist
+              if (!flags.ar_office_discovered_artists) {
+                flags.ar_office_discovered_artists = [];
+              }
+
+              // Add new discovered artist to the collection (no duplicate check needed since we pre-filtered)
+              flags.ar_office_discovered_artists.push({
+                id: picked.id,
+                name: picked.name,
+                archetype: picked.archetype,
+                talent: picked.talent || 0,
+                popularity: picked.popularity || 0,
+                genre: picked.genre || null,
+                discoveryTime: new Date().toISOString(),
+                sourcingType: sourcingType
+              });
+              console.log('[A&R DEBUG] Added artist to discovered collection. Total discovered:', flags.ar_office_discovered_artists.length);
+
+              // Keep legacy fields for backwards compatibility
+              flags.ar_office_discovered_artist_id = picked.id;
+              flags.ar_office_discovered_artist_info = {
+                name: picked.name,
+                archetype: picked.archetype,
+                talent: picked.talent || 0,
+                popularity: picked.popularity || 0,
+                genre: picked.genre || null
+              };
+
+              // Populate week summary A&R section with discovered artist id
+              // NOTE: This ID may differ from what /ar-office/artists returns if fallback logic is triggered
+              if (!summary.arOffice) summary.arOffice = { completed: true } as any;
+              summary.arOffice.completed = true;
+              summary.arOffice.sourcingType = sourcingType ?? null;
+              summary.arOffice.discoveredArtistId = picked.id;
+            } else {
+              console.log('[A&R DEBUG] No artist selected - no unsigned artists available');
+              flags.ar_office_discovered_artist_id = null;
+              flags.ar_office_error = 'No unsigned artists available';
+
+              // Create synthetic "no artists available" flag for better client handling
+              if (unsigned.length === 0) {
+                flags.ar_office_no_artists_reason = 'all_signed';
+              } else {
+                flags.ar_office_no_artists_reason = 'unknown';
+              }
+
+              if (!summary.arOffice) summary.arOffice = { completed: true } as any;
+              summary.arOffice.completed = true;
+              summary.arOffice.sourcingType = sourcingType ?? null;
+              summary.arOffice.discoveredArtistId = null;
+            }
+          }
+
+          // Ensure flags are properly set on gameState
+          this.gameState.flags = flags;
+          console.log('[A&R DEBUG] Final flags state:', JSON.stringify(flags, null, 2));
+
+        } catch (selectErr) {
+          console.error('[A&R] Failed to select/persist discovered artist:', selectErr);
+          flags.ar_office_discovered_artist_id = null;
+          flags.ar_office_error = selectErr instanceof Error ? selectErr.message : 'Artist selection failed';
+          this.gameState.flags = flags;
+        }
+
+        // Ensure WeekSummary A&R section is always properly populated
+        if (!summary.arOffice) {
+          summary.arOffice = {
+            completed: true,
+            sourcingType: sourcingType ?? null,
+            discoveredArtistId: flags.ar_office_discovered_artist_id || null
+          } as any;
+        }
+
+        // Add comprehensive change description
+        const discoveredArtistName = flags.ar_office_discovered_artist_info?.name;
+        let description;
+        if (discoveredArtistName) {
+          description = `A&R sourcing (${sourcingType || 'active'}) completed. Discovered ${discoveredArtistName}.`;
+        } else if (flags.ar_office_error) {
+          description = `A&R sourcing (${sourcingType || 'active'}) completed. ${flags.ar_office_error}`;
+        } else {
+          description = `A&R sourcing (${sourcingType || 'active'}) completed. Check discovered artists.`;
+        }
+
+        summary.changes.push({
+          type: 'unlock',
+          description,
+          amount: 0
+        });
+      }
+    } catch (e) {
+      console.warn('[A&R] Failed to process weekly A&R completion:', e);
+    }
   }
 
   /**
@@ -2230,28 +2454,40 @@ export class GameEngine {
    * Processes delayed effects from previous weeks
    */
   private async processDelayedEffects(summary: WeekSummary): Promise<void> {
-    // Initialize flags as array if it's not already
-    if (!Array.isArray(this.gameState.flags)) {
-      this.gameState.flags = [] as any;
+    // Delayed effects are stored as keyed entries on flags (object map), not as an array
+    try {
+      const flags = (this.gameState.flags || {}) as Record<string, any>;
+      const triggeredKeys: string[] = [];
+
+      for (const [key, value] of Object.entries(flags)) {
+        if (
+          value &&
+          typeof value === 'object' &&
+          'triggerWeek' in value &&
+          typeof (value as any).triggerWeek === 'number' &&
+          (value as any).triggerWeek === (this.gameState.currentWeek || 0)
+        ) {
+          try {
+            this.applyEffects((value as any).effects || {}, summary);
+            summary.changes.push({
+              type: 'delayed_effect',
+              description: 'Delayed effect triggered'
+            });
+          } finally {
+            triggeredKeys.push(key);
+          }
+        }
+      }
+
+      // Remove triggered delayed-effect entries while preserving other flags (like A&R discovery)
+      for (const key of triggeredKeys) {
+        delete flags[key];
+      }
+
+      this.gameState.flags = flags;
+    } catch (err) {
+      console.warn('[DELAYED EFFECTS] Failed to process delayed effects:', err);
     }
-    
-    const flags = this.gameState.flags as any[];
-    const triggeredFlags = flags.filter(
-      (f: any) => f.triggerWeek === this.gameState.currentWeek
-    );
-    
-    for (const flag of triggeredFlags) {
-      this.applyEffects(flag.effects, summary);
-      summary.changes.push({
-        type: 'delayed_effect',
-        description: 'Delayed effect triggered'
-      });
-    }
-    
-    // Remove triggered flags
-    this.gameState.flags = flags.filter(
-      (f: any) => f.triggerWeek !== this.gameState.currentWeek
-    ) as any;
   }
 
   /**

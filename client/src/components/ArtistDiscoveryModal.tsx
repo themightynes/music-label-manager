@@ -55,15 +55,21 @@ export function ArtistDiscoveryModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await apiRequest('GET', '/api/artists/available');
+      // Fetch scouted artists from A&R operations instead of all available artists
+      const response = await apiRequest('GET', `/api/game/${gameState.id}/ar-office/artists`);
       const data = await response.json();
-      const filtered = (data.artists || []).filter((artist: Artist) => 
+      console.log('[ArtistDiscoveryModal] A&R scouted artists response:', data);
+
+      // Filter out artists that are already signed
+      const scouted = (data.artists || []).filter((artist: Artist) =>
         !signedArtists.some(signed => signed.id === artist.id || signed.name === artist.name)
       );
-      setAvailableArtists(filtered);
+
+      console.log('[ArtistDiscoveryModal] Filtered scouted artists:', scouted.length);
+      setAvailableArtists(scouted);
     } catch (err) {
-      console.error('Failed to fetch available artists:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load artists');
+      console.error('Failed to fetch scouted artists:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load scouted artists');
       setAvailableArtists([]);
     } finally {
       setLoading(false);
@@ -91,7 +97,9 @@ export function ArtistDiscoveryModal({
     setSigningArtist(artist.id);
     try {
       await onSignArtist(artist);
-      onOpenChange(false);
+      // Refresh the artist list to remove the newly signed artist
+      await fetchAvailableArtists();
+      console.log('[ArtistDiscoveryModal] Refreshed artist list after signing:', artist.name);
     } catch (error) {
       console.error('Failed to sign artist:', error);
     } finally {
@@ -123,8 +131,11 @@ export function ArtistDiscoveryModal({
         <DialogHeader className="border-b border-[#4e324c] pb-4">
           <DialogTitle className="text-xl font-bold text-white flex items-center">
             <Music className="w-5 h-5 mr-2 text-[#A75A5B]" />
-            Discover Artists
+            Scouted Artists
           </DialogTitle>
+          <p className="text-sm text-white/70 mt-2">
+            Artists you've scouted through A&R operations
+          </p>
         </DialogHeader>
 
         {/* Search and Filters */}
@@ -161,7 +172,7 @@ export function ArtistDiscoveryModal({
           {loading ? (
             <div className="text-center py-8">
               <Music className="w-12 h-12 text-white/50 mx-auto mb-4 animate-pulse" />
-              <p className="text-white/70">Loading available artists...</p>
+              <p className="text-white/70">Loading scouted artists...</p>
             </div>
           ) : error ? (
             <div className="text-center py-8">
@@ -174,7 +185,14 @@ export function ArtistDiscoveryModal({
           ) : filteredArtists.length === 0 ? (
             <div className="text-center py-8">
               <Music className="w-12 h-12 text-white/50 mx-auto mb-4" />
-              <p className="text-white/70">No artists found matching your criteria</p>
+              {availableArtists.length === 0 ? (
+                <div>
+                  <p className="text-white/70 mb-2">No artists scouted yet</p>
+                  <p className="text-sm text-white/50">Use the A&R Office to scout for new talent</p>
+                </div>
+              ) : (
+                <p className="text-white/70">No artists found matching your criteria</p>
+              )}
             </div>
           ) : (
             <Table>
@@ -253,6 +271,7 @@ export function ArtistDiscoveryModal({
                         onClick={() => handleSignArtist(artist)}
                         disabled={
                           signingArtist === artist.id ||
+                          signedArtists.some(signed => signed.id === artist.id || signed.name === artist.name) ||
                           (gameState.money || 0) < (artist.signingCost || 5000) ||
                           signedArtists.length >= 3
                         }
@@ -260,6 +279,7 @@ export function ArtistDiscoveryModal({
                         variant={signingArtist === artist.id ? 'secondary' : 'default'}
                       >
                         {signingArtist === artist.id ? 'Signing...' :
+                         signedArtists.some(signed => signed.id === artist.id || signed.name === artist.name) ? 'Signed' :
                          (gameState.money || 0) < (artist.signingCost || 5000) ? 'Cannot Afford' :
                          signedArtists.length >= 3 ? 'Roster Full' :
                          'Sign'}
