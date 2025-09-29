@@ -77,13 +77,16 @@ export function SelectionSummary({
   isAdvancing,
   impactPreview
 }: SelectionSummaryProps) {
-  const { gameState } = useGameStore();
+  const { gameState, cancelAROfficeOperation } = useGameStore();
   const totalSlots = gameState?.focusSlots || 3;
   const usedSlots = gameState?.usedFocusSlots || 0;
   const availableSlots = totalSlots - usedSlots;
   
   console.log('SelectionSummary - selectedActions:', selectedActions);
   console.log('SelectionSummary - usedSlots:', usedSlots);
+
+  const arOfficeActive = !!gameState?.arOfficeSlotUsed;
+  const arOfficeSourcingType = (gameState?.arOfficeSourcingType as string | null) || null;
 
   // Unit tests via console.assert for both formats
   console.assert(
@@ -267,6 +270,35 @@ export function SelectionSummary({
                   snapshot.isDraggingOver ? 'border-[#A75A5B]/40 bg-[#A75A5B]/10' : 'border-[#4e324c]'
                 }`}
               >
+                {/* A&R active tile (non-draggable) */}
+                {arOfficeActive && (
+                  <div className="bg-[#3c252d]/66 border border-[#65557c] rounded-lg p-3 shadow-sm hover:shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 flex-1">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#A75A5B] to-[#8B4A6C] text-white rounded-lg flex items-center justify-center">
+                          <i className="fas fa-music text-sm"></i>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <i className="fas fa-music text-sm" style={{ color: '#A75A5B' }}></i>
+                            <h4 className="font-medium text-sm text-white">Head of A&R</h4>
+                          </div>
+                          <p className="text-xs text-white/50">A&R Scouting{arOfficeSourcingType ? ` — ${arOfficeSourcingType.charAt(0).toUpperCase()}${arOfficeSourcingType.slice(1)}` : ''}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => cancelAROfficeOperation()}
+                        className="text-white/50 hover:text-red-500 transition-colors p-1"
+                        title="Cancel A&R operation"
+                      >
+                        <i className="fas fa-times text-sm"></i>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {selectedActionObjects.length > 0 ? (
                   selectedActionObjects.map((action, index) => (
                     <Draggable key={action.id} draggableId={action.id} index={index}>
@@ -308,11 +340,13 @@ export function SelectionSummary({
                     </Draggable>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-white/50">
-                    <i className="fas fa-users text-2xl mb-2 block"></i>
-                    <p className="text-sm">Select executives to meet with</p>
-                    <p className="text-xs">Each executive meeting uses one focus slot</p>
-                  </div>
+                  !arOfficeActive && (
+                    <div className="text-center py-8 text-white/50">
+                      <i className="fas fa-users text-2xl mb-2 block"></i>
+                      <p className="text-sm">Select executives to meet with</p>
+                      <p className="text-xs">Each executive meeting uses one focus slot</p>
+                    </div>
+                  )
                 )}
                 {provided.placeholder}
               </div>
@@ -384,7 +418,7 @@ export function SelectionSummary({
           
           <Button
             onClick={onAdvanceWeek}
-            disabled={selectedActions.length === 0 || isAdvancing}
+            disabled={(selectedActions.length === 0 && !arOfficeActive) || isAdvancing}
             className="w-full bg-gradient-to-r from-[#A75A5B] to-[#8B4A6C] text-white hover:from-[#A75A5B]/80 hover:to-[#7A3F5E] py-3 font-medium shadow-lg"
             size="lg"
           >

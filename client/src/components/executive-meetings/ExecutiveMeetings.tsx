@@ -62,9 +62,6 @@ export function ExecutiveMeetings({
   const { context } = state;
   const hasAvailableSlots = context.focusSlotsUsed < context.focusSlotsTotal;
   const arOfficeStatus = arOfficeStatusProp ?? getAROfficeStatus();
-  const arUsed = arOfficeStatus.arOfficeSlotUsed ? 1 : 0;
-  const execUsed = Math.max(0, focusSlots.used - arUsed);
-  const available = Math.max(0, focusSlots.total - focusSlots.used);
 
   // Refetch executives when game loads or week changes
   useEffect(() => {
@@ -167,16 +164,6 @@ export function ExecutiveMeetings({
           <CardTitle className="flex items-center justify-between">
             Executive Meetings
             <div className="flex items-center gap-3">
-              {/* A&R operation status */}
-              {arOfficeStatus.arOfficeSlotUsed && (
-                <div className="text-xs text-white/70">
-                  A&R: {arOfficeStatus.arOfficeSourcingType || 'active'} • since {arOfficeStatus.arOfficeOperationStart ? new Date(arOfficeStatus.arOfficeOperationStart).toLocaleTimeString() : '—'}
-                </div>
-              )}
-              {/* Slot attribution */}
-              <div className="text-xs text-white/60">
-                Exec: {execUsed} • A&R: {arUsed} • Avail: {available}
-              </div>
               {hasAvailableSlots && (
                 <Button
                   variant="outline"
