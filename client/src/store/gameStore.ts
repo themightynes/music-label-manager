@@ -61,7 +61,7 @@ interface GameStore {
     arOfficeSlotUsed: boolean;
     arOfficeSourcingType: SourcingTypeString | null;
   };
-  startAROfficeOperation: (sourcingType: SourcingTypeString) => Promise<void>;
+  startAROfficeOperation: (sourcingType: SourcingTypeString, primaryGenre?: string, secondaryGenre?: string) => Promise<void>;
   cancelAROfficeOperation: () => Promise<void>;
 
   // Discovered artists lifecycle
@@ -831,14 +831,14 @@ export const useGameStore = create<GameStore>()(
         };
       },
 
-      startAROfficeOperation: async (sourcingType: SourcingTypeString) => {
+      startAROfficeOperation: async (sourcingType: SourcingTypeString, primaryGenre?: string, secondaryGenre?: string) => {
         const { gameState, consumeAROfficeSlot } = get();
         if (!gameState) return;
-        console.log('[A&R CLIENT] Starting A&R operation:', sourcingType);
+        console.log('[A&R CLIENT] Starting A&R operation:', { sourcingType, primaryGenre, secondaryGenre });
         try {
           const { startAROfficeOperation } = await import('../services/arOfficeService');
           // Call server to start the operation
-          await startAROfficeOperation(gameState.id, sourcingType);
+          await startAROfficeOperation(gameState.id, sourcingType, primaryGenre, secondaryGenre);
           console.log('[A&R CLIENT] API call successful');
 
           // Immediately reflect the active operation locally so the UI stays in sync

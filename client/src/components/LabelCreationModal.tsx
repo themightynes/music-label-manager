@@ -36,7 +36,8 @@ const genreOptions = [
   "Jazz",
   "Classical",
   "Alternative",
-  "Indie"
+  "Indie",
+  "Folk"
 ];
 
 const prefixes = ["Sonic", "Midnight", "Crystal", "Electric", "Golden", "Silver", "Neon", "Aurora", "Crimson", "Velvet"];

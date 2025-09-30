@@ -93,6 +93,8 @@ export interface GameState {
   // A&R Office state
   arOfficeSlotUsed?: boolean;
   arOfficeSourcingType?: SourcingTypeString | null;
+  arOfficePrimaryGenre?: string | null;
+  arOfficeSecondaryGenre?: string | null;
   playlistAccess: string;
   pressAccess: string;
   venueAccess: string;

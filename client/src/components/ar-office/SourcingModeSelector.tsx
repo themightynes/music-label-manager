@@ -72,7 +72,7 @@ export function SourcingModeSelector({ selectedMode, availableSlots, isOperation
         <CardOption
           mode="specialized"
           title="Specialized Search"
-          description="Target specific genres, venues, or platforms to find niche talent."
+          description="Target specific genres to find artists that match your label's focus. Uses genre filtering with fallback options."
           icon={<Target className="w-4 h-4 text-[#A75A5B]" />}
           consumesSlot={true}
         />

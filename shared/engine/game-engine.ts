@@ -378,17 +378,23 @@ export class GameEngine {
     try {
       const slotUsed = (this.gameState as any).arOfficeSlotUsed;
       const sourcingType = (this.gameState as any).arOfficeSourcingType;
+      const primaryGenre = (this.gameState as any).arOfficePrimaryGenre;
+      const secondaryGenre = (this.gameState as any).arOfficeSecondaryGenre;
       console.log('[A&R DEBUG] Processing A&R operation:', {
         slotUsed,
         sourcingType,
+        primaryGenre,
+        secondaryGenre,
         gameId: this.gameState.id,
         currentWeek: this.gameState.currentWeek
       });
 
       if (slotUsed) {
-        // Complete the one-week operation: free the slot, clear start time
+        // Complete the one-week operation: free the slot, clear start time and genre parameters
         (this.gameState as any).arOfficeSlotUsed = false;
         (this.gameState as any).arOfficeOperationStart = null;
+        (this.gameState as any).arOfficePrimaryGenre = null;
+        (this.gameState as any).arOfficeSecondaryGenre = null;
 
         // Enhanced flags initialization and management
         let flags = (this.gameState.flags || {}) as any;
@@ -445,10 +451,49 @@ export class GameEngine {
             }
 
             let picked: any | null = null;
+            let genreUsed: string | null = null;
             if (unsigned.length > 0) {
-              // Enhanced artist selection logic with validation
-              if (sourcingType === 'active' || sourcingType === 'specialized') {
-                // Sort by combined talent and popularity, then validate the top pick
+              // SPECIALIZED mode: Apply genre filtering with fallback logic
+              if (sourcingType === 'specialized') {
+                let pool = [...unsigned];
+
+                // Try primary genre first
+                if (primaryGenre) {
+                  const primaryMatches = pool.filter(a => a.genre === primaryGenre);
+                  if (primaryMatches.length > 0) {
+                    pool = primaryMatches;
+                    genreUsed = primaryGenre;
+                    console.log(`[A&R DEBUG] Found ${primaryMatches.length} artists matching primary genre: ${primaryGenre}`);
+                  } else {
+                    console.log(`[A&R DEBUG] No artists found for primary genre: ${primaryGenre}, trying secondary...`);
+                    // Try secondary genre
+                    if (secondaryGenre) {
+                      const secondaryMatches = pool.filter(a => a.genre === secondaryGenre);
+                      if (secondaryMatches.length > 0) {
+                        pool = secondaryMatches;
+                        genreUsed = secondaryGenre;
+                        console.log(`[A&R DEBUG] Found ${secondaryMatches.length} artists matching secondary genre: ${secondaryGenre}`);
+                      } else {
+                        console.log(`[A&R DEBUG] No artists found for secondary genre: ${secondaryGenre}, using all available`);
+                        genreUsed = 'any';
+                      }
+                    } else {
+                      console.log(`[A&R DEBUG] No secondary genre specified, using all available`);
+                      genreUsed = 'any';
+                    }
+                  }
+                }
+
+                // Pick best artist from filtered pool
+                const sorted = [...pool].sort((a, b) => {
+                  const scoreA = (a.talent || 0) + (a.popularity || 0);
+                  const scoreB = (b.talent || 0) + (b.popularity || 0);
+                  return scoreB - scoreA;
+                });
+                picked = sorted[0];
+
+              } else if (sourcingType === 'active') {
+                // ACTIVE mode: Pick best artist overall (no genre filtering)
                 const sorted = [...unsigned].sort((a, b) => {
                   const scoreA = (a.talent || 0) + (a.popularity || 0);
                   const scoreB = (b.talent || 0) + (b.popularity || 0);
@@ -456,7 +501,7 @@ export class GameEngine {
                 });
                 picked = sorted[0];
               } else {
-                // Random selection for passive sourcing
+                // PASSIVE mode: Random selection
                 const idx = Math.floor(this.getRandom(0, unsigned.length));
                 picked = unsigned[idx];
               }
@@ -497,9 +542,13 @@ export class GameEngine {
                 popularity: picked.popularity || 0,
                 genre: picked.genre || null,
                 discoveryTime: new Date().toISOString(),
-                sourcingType: sourcingType
+                sourcingType: sourcingType,
+                genreUsed: genreUsed || null // Track which genre filter was used
               });
               console.log('[A&R DEBUG] Added artist to discovered collection. Total discovered:', flags.ar_office_discovered_artists.length);
+              if (genreUsed) {
+                console.log('[A&R DEBUG] Genre filter result:', genreUsed);
+              }
 
               // Keep legacy fields for backwards compatibility
               flags.ar_office_discovered_artist_id = picked.id;

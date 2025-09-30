@@ -2,8 +2,17 @@ import { apiRequest } from '../lib/queryClient';
 import type { SourcingTypeString } from '@shared/types/gameTypes';
 
 // Start an A&R sourcing operation
-export async function startAROfficeOperation(gameId: string, sourcingType: SourcingTypeString) {
-  const res = await apiRequest('POST', `/api/game/${gameId}/ar-office/start`, { sourcingType });
+export async function startAROfficeOperation(
+  gameId: string,
+  sourcingType: SourcingTypeString,
+  primaryGenre?: string,
+  secondaryGenre?: string
+) {
+  const res = await apiRequest('POST', `/api/game/${gameId}/ar-office/start`, {
+    sourcingType,
+    primaryGenre,
+    secondaryGenre
+  });
   return res.json().catch(() => ({}));
 }
 

@@ -11,6 +11,7 @@ import type { SourcingTypeString } from '@shared/types/gameTypes';
 import { SourcingModeSelector } from './SourcingModeSelector';
 import { ArtistDiscoveryTable, type UIArtist } from './ArtistDiscoveryTable';
 import { FocusSlotStatus } from './FocusSlotStatus';
+import { GenreSelectionModal } from './GenreSelectionModal';
 
 interface AROfficeProps {
   gameId: string;
@@ -38,6 +39,11 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
   const [signingArtist, setSigningArtist] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Genre selection for specialized search
+  const [showGenreModal, setShowGenreModal] = useState(false);
+  const [selectedPrimaryGenre, setSelectedPrimaryGenre] = useState<string | null>(null);
+  const [selectedSecondaryGenre, setSelectedSecondaryGenre] = useState<string | null>(null);
 
   // Sync focus slots into the machine
   useEffect(() => {
@@ -134,8 +140,16 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
   }, []);
 
   const handleModeSelect = async (mode: SourcingType) => {
-    console.log(`[A&R] Starting ${mode} sourcing operation`);
+    console.log(`[A&R] Mode selected: ${mode}`);
     setSourcingMode(mode);
+
+    // If specialized search is selected, show genre selection modal
+    if (mode === 'specialized') {
+      setShowGenreModal(true);
+      return;
+    }
+
+    // For active and passive, proceed directly
     if (availableSlots > 0) {
       try {
         // If there's already an operation active, cancel it first
@@ -152,6 +166,34 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
         setError(e instanceof Error ? e.message : 'Failed to start sourcing operation');
         // Reset the mode selection since the operation failed
         setSourcingMode(null);
+      }
+    }
+  };
+
+  const handleGenreConfirm = async (primaryGenre: string, secondaryGenre?: string) => {
+    console.log(`[A&R] Starting specialized search with genres:`, { primaryGenre, secondaryGenre });
+    setSelectedPrimaryGenre(primaryGenre);
+    setSelectedSecondaryGenre(secondaryGenre || null);
+
+    if (availableSlots > 0) {
+      try {
+        // If there's already an operation active, cancel it first
+        if (isOperationActive) {
+          console.log('[A&R] Cancelling existing operation before starting new one');
+          await cancelAROfficeOperation();
+        }
+
+        // TODO: Update startAROfficeOperation to accept genre parameters
+        await startAROfficeOperation('specialized' as SourcingTypeString, primaryGenre, secondaryGenre);
+        send({ type: 'START_SOURCING', sourcingType: 'specialized' });
+        console.log(`[A&R] Successfully started specialized operation with genres`);
+      } catch (e) {
+        console.error('[A&R] Failed to start specialized sourcing operation', e);
+        setError(e instanceof Error ? e.message : 'Failed to start sourcing operation');
+        // Reset the mode selection since the operation failed
+        setSourcingMode(null);
+        setSelectedPrimaryGenre(null);
+        setSelectedSecondaryGenre(null);
       }
     }
   };
@@ -216,6 +258,16 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
             availableSlots={availableSlots}
             isOperationActive={isOperationActive}
             onModeSelect={handleModeSelect}
+          />
+
+          <GenreSelectionModal
+            open={showGenreModal}
+            onClose={() => {
+              setShowGenreModal(false);
+              setSourcingMode(null);
+            }}
+            onConfirm={handleGenreConfirm}
+            labelGenre={gameState.musicLabel?.genreFocus}
           />
 
           {state.matches('noSlotsAvailable') && (

@@ -425,7 +425,7 @@ const musicLabelData = {
   app.post('/api/game/:gameId/ar-office/start', requireClerkUser, async (req, res) => {
     try {
       const { gameId } = req.params;
-      const { sourcingType } = req.body || {};
+      const { sourcingType, primaryGenre, secondaryGenre } = req.body || {};
       const gameState = await storage.getGameState(gameId);
       if (!gameState) return res.status(404).json({ message: 'Game not found' });
 
@@ -462,14 +462,20 @@ const musicLabelData = {
       const updated = await storage.updateGameState(gameId, {
         arOfficeSlotUsed: true,
         arOfficeSourcingType: sourcingType || 'active',
+        arOfficePrimaryGenre: primaryGenre || null,
+        arOfficeSecondaryGenre: secondaryGenre || null,
         arOfficeOperationStart: Date.now(),
         usedFocusSlots: newUsed,
         flags
       });
 
+      console.log('[A&R] Started operation with genre filters:', { sourcingType, primaryGenre, secondaryGenre });
+
       return res.json({ success: true, status: {
         arOfficeSlotUsed: updated.arOfficeSlotUsed || false,
         arOfficeSourcingType: (updated as any).arOfficeSourcingType || null,
+        arOfficePrimaryGenre: (updated as any).arOfficePrimaryGenre || null,
+        arOfficeSecondaryGenre: (updated as any).arOfficeSecondaryGenre || null,
         arOfficeOperationStart: (updated as any).arOfficeOperationStart || null,
         usedFocusSlots: updated.usedFocusSlots || newUsed,
         focusSlots: updated.focusSlots || total
@@ -499,6 +505,8 @@ const musicLabelData = {
       const updated = await storage.updateGameState(gameId, {
         arOfficeSlotUsed: false,
         arOfficeSourcingType: null,
+        arOfficePrimaryGenre: null,
+        arOfficeSecondaryGenre: null,
         usedFocusSlots: newUsed,
         flags
       });
@@ -506,6 +514,8 @@ const musicLabelData = {
       return res.json({ success: true, status: {
         arOfficeSlotUsed: updated.arOfficeSlotUsed || false,
         arOfficeSourcingType: (updated as any).arOfficeSourcingType || null,
+        arOfficePrimaryGenre: null,
+        arOfficeSecondaryGenre: null,
         usedFocusSlots: updated.usedFocusSlots || newUsed
       }});
     } catch (error) {

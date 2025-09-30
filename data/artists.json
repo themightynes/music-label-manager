@@ -15,12 +15,12 @@
       "signingCost": 8000,
       "weeklyCost": 1200,
       "bio": "Experimental indie artist pushing boundaries with ethereal soundscapes",
-      "genre": "Experimental Pop",
+      "genre": "Pop",
       "age": 23,
       "signed": false
     },
     {
-      "id": "art_2", 
+      "id": "art_2",
       "name": "Mason Rivers",
       "archetype": "Workhorse",
       "talent": 70,
@@ -32,14 +32,14 @@
       "signingCost": 6000,
       "weeklyCost": 800,
       "bio": "Reliable songwriter with a gift for crafting memorable hooks",
-      "genre": "Folk Rock",
+      "genre": "Folk",
       "age": 28,
       "signed": false
     },
     {
       "id": "art_3",
       "name": "Luna Vee",
-      "archetype": "Trendsetter", 
+      "archetype": "Trendsetter",
       "talent": 75,
       "workEthic": 60,
       "popularity": 25,
@@ -49,7 +49,7 @@
       "signingCost": 12000,
       "weeklyCost": 1500,
       "bio": "Social media savvy artist with an ear for viral melodies",
-      "genre": "Pop/Electronic",
+      "genre": "Electronic",
       "age": 21,
       "signed": false
     },
@@ -66,7 +66,7 @@
       "signingCost": 15000,
       "weeklyCost": 2000,
       "bio": "Jazz fusion prodigy creating groundbreaking instrumental compositions",
-      "genre": "Jazz Fusion",
+      "genre": "Jazz",
       "age": 26,
       "signed": false
     },
@@ -100,7 +100,7 @@
       "signingCost": 10000,
       "weeklyCost": 1300,
       "bio": "K-pop inspired artist bridging Eastern and Western sounds",
-      "genre": "K-Pop/R&B",
+      "genre": "R&B",
       "age": 20,
       "signed": false
     }
