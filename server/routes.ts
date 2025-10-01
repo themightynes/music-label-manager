@@ -852,7 +852,12 @@ const musicLabelData = {
           });
         }
 
-        const discoveredArtists = discoveredArtistsArray.map((discoveredArtist: any) => {
+        // Filter out artists already signed to this game by name
+        const signedForGame = await storage.getArtistsByGame(gameId);
+        const signedNames = new Set((signedForGame || []).map(a => String(a.name || '').toLowerCase()))
+        const filteredDiscovered = discoveredArtistsArray.filter((a: any) => !signedNames.has(String(a?.name || '').toLowerCase()));
+
+        const discoveredArtists = filteredDiscovered.map((discoveredArtist: any) => {
           // First try to find the full artist data
           const fullArtist = allGameArtists.find((a: any) => a.id === discoveredArtist.id);
 
@@ -1310,6 +1315,13 @@ const musicLabelData = {
       if ((gameState.money || 0) < signingCost) {
         return res.status(400).json({ message: "Insufficient funds to sign artist" });
       }
+
+      // Prevent duplicate signings by name (case-insensitive) within the same game
+      const existing = await storage.getArtistsByGame(gameId);
+      const incomingName = String(req.body?.name || '').toLowerCase();
+      if (incomingName && existing.some(a => (a.name || '').toLowerCase() === incomingName)) {
+        return res.status(409).json({ code: 'DUPLICATE_ARTIST', message: 'This artist is already signed to your roster.' });
+      }
       
       // Prepare artist data
       const validatedData = insertArtistSchema.parse({
@@ -1333,16 +1345,24 @@ const musicLabelData = {
       const flags = (gameState.flags || {}) as any;
       (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
       
-      // Remove this artist from discovered collections
+      // Remove this artist from discovered collections using discovered (content) ID or name
       if (flags.ar_office_discovered_artists) {
-        flags.ar_office_discovered_artists = flags.ar_office_discovered_artists.filter((a: any) => a.id !== artist.id);
+        const discoveredId = req.body?.id;
+        const signedNameLc = String(artist.name || '').toLowerCase();
+        flags.ar_office_discovered_artists = flags.ar_office_discovered_artists.filter((a: any) => {
+          const aNameLc = String(a?.name || '').toLowerCase();
+          return (discoveredId ? a.id !== discoveredId : true) && aNameLc !== signedNameLc;
+        });
         console.log('[A&R DEBUG] Removed signed artist from discovered collection. Remaining:', flags.ar_office_discovered_artists.length);
       }
 
       // Legacy cleanup: If this artist is the persisted discovered one, clear it now
-      if (flags.ar_office_discovered_artist_id && flags.ar_office_discovered_artist_id === artist.id) {
-        delete flags.ar_office_discovered_artist_id;
-        delete flags.ar_office_discovered_artist_info;
+      if ((flags as any).ar_office_discovered_artist_id) {
+        const discoveredId = req.body?.id;
+        if ((flags as any).ar_office_discovered_artist_id === discoveredId) {
+          delete flags.ar_office_discovered_artist_id;
+          delete flags.ar_office_discovered_artist_info;
+        }
       }
 
       await storage.updateGameState(gameId, { flags });

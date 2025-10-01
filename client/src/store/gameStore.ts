@@ -616,7 +616,7 @@ export const useGameStore = create<GameStore>()(
 
       // Artist management
       signArtist: async (artistData: any) => {
-        const { gameState, artists } = get();
+        const { gameState, artists, removeDiscoveredArtist } = get();
         if (!gameState) return;
 
         try {
@@ -637,8 +637,15 @@ export const useGameStore = create<GameStore>()(
             }
           });
 
-          // If this artist was in discovered list, remove it
-          get().removeDiscoveredArtist(newArtist.id);
+          // If this artist was in discovered list, remove using the discovered (content) ID or name
+          if (artistData?.id) {
+            removeDiscoveredArtist(artistData.id);
+          } else if (artistData?.name) {
+            // Fallback: remove by name match if ID is unavailable
+            const current = get().discoveredArtists;
+            const toRemove = current.find(a => (a as any).name?.toLowerCase() === String(artistData.name).toLowerCase());
+            if (toRemove?.id) removeDiscoveredArtist(toRemove.id);
+          }
         } catch (error) {
           console.error('Failed to sign artist:', error);
           throw error;

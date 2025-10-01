@@ -209,19 +209,23 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
 
 
   const filteredArtists = useMemo(() => {
-    return (discoveredArtists as unknown as UIArtist[]).filter(a => {
-      const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || (a.genre || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesArchetype = selectedArchetype === 'All' || a.archetype === selectedArchetype;
-      return matchesSearch && matchesArchetype;
-    });
-  }, [discoveredArtists, searchTerm, selectedArchetype]);
+    const signedNames = new Set((signedArtists || []).map(a => (a.name || '').toLowerCase()));
+    return (discoveredArtists as unknown as UIArtist[])
+      .filter(a => !signedNames.has((a.name || '').toLowerCase()))
+      .filter(a => {
+        const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || (a.genre || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesArchetype = selectedArchetype === 'All' || a.archetype === selectedArchetype;
+        return matchesSearch && matchesArchetype;
+      });
+  }, [discoveredArtists, searchTerm, selectedArchetype, signedArtists]);
 
   const handleSignArtist = async (artist: UIArtist) => {
     if (signingArtist || (gameState.money || 0) < (artist.signingCost || 0)) return;
     setSigningArtist(artist.id || artist.name);
     try {
       await onSignArtist(artist);
-      // Optionally refresh list from store
+      // Optimistically remove from local discovered list and refresh from server
+      try { useGameStore.getState().removeDiscoveredArtist(artist.id as string); } catch {}
       loadDiscoveredArtists();
     } catch (e) {
       console.error('[A&R] Sign artist failed', e);

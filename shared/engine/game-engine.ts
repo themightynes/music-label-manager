@@ -130,6 +130,8 @@ export class GameEngine {
     console.log('[DEBUG] GameEngine.advanceWeek ENTRY - starting execution');
     console.log('[DEBUG] GameEngine current week:', this.gameState.currentWeek);
     console.log('[DEBUG] GameEngine campaign completed:', this.gameState.campaignCompleted);
+    console.log('[DEBUG] GameEngine storage available:', !!this.storage);
+    console.log('[DEBUG] GameEngine storage.createEmails available:', !!this.storage?.createEmails);
 
     // Check if campaign is already completed
     if (this.gameState.campaignCompleted) {
@@ -367,14 +369,54 @@ export class GameEngine {
   }
 
   private async generateAndPersistEmails(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    console.log('[EMAIL GENERATION] Starting email generation for week', summary.week);
+
     if (!this.storage || !this.storage.createEmails) {
+      console.warn('[EMAIL GENERATION] Skipped - storage.createEmails not available');
       return;
     }
 
     try {
-      const discoveredArtist = summary.arOffice?.discoveredArtistId
-        ? await this.storage.getArtist?.(summary.arOffice.discoveredArtistId)
-        : null;
+      console.log('[EMAIL GENERATION] Checking for discovered artist:', summary.arOffice?.discoveredArtistId);
+
+      // BUGFIX: Artist IDs from JSON files are strings (e.g., "art_3"), not UUIDs
+      // We already have the artist data cached in gameState.flags, so use that instead of database lookup
+      let discoveredArtist = null;
+      if (summary.arOffice?.discoveredArtistId) {
+        const artistInfo = (this.gameState.flags as any)?.ar_office_discovered_artist_info;
+        if (artistInfo) {
+          // Use cached artist info from flags (already populated by processAROfficeWeekly)
+          discoveredArtist = {
+            id: summary.arOffice.discoveredArtistId,
+            name: artistInfo.name,
+            archetype: artistInfo.archetype,
+            talent: artistInfo.talent,
+            genre: artistInfo.genre,
+            popularity: artistInfo.popularity,
+            // Fetch additional details from game data files
+            bio: null as string | null,
+            signingCost: null as number | null,
+            weeklyCost: null as number | null,
+          };
+
+          // Try to get full artist details from JSON data files (not database)
+          try {
+            const allArtists = await this.gameData.getAllArtists();
+            const fullArtist = allArtists.find((a: any) => a.id === summary.arOffice?.discoveredArtistId);
+            if (fullArtist) {
+              discoveredArtist.bio = fullArtist.bio ?? null;
+              discoveredArtist.signingCost = fullArtist.signingCost ?? null;
+              discoveredArtist.weeklyCost = (fullArtist as any).weeklyFee ?? null;
+            }
+          } catch (err) {
+            console.warn('[EMAIL GENERATION] Could not fetch full artist details from game data:', err);
+          }
+
+          console.log('[EMAIL GENERATION] Found discovered artist (from flags):', discoveredArtist.name);
+        } else {
+          console.warn('[EMAIL GENERATION] Artist ID exists but no cached info in flags:', summary.arOffice.discoveredArtistId);
+        }
+      }
 
       const emails = generateEmails({
         gameId: this.gameState.id,
@@ -384,22 +426,29 @@ export class GameEngine {
           ? {
               id: discoveredArtist.id,
               name: discoveredArtist.name,
-              archetype: (discoveredArtist as any).archetype ?? 'Unknown',
-              talent: (discoveredArtist as any).talent ?? 0,
-              genre: (discoveredArtist as any).genre ?? null,
-              bio: (discoveredArtist as any).bio ?? null,
-              signingCost: (discoveredArtist as any).signingCost ?? null,
-              weeklyCost: (discoveredArtist as any).weeklyFee ?? null,
+              archetype: discoveredArtist.archetype ?? 'Unknown',
+              talent: discoveredArtist.talent ?? 0,
+              genre: discoveredArtist.genre ?? null,
+              bio: discoveredArtist.bio ?? null,
+              signingCost: discoveredArtist.signingCost ?? null,
+              weeklyCost: discoveredArtist.weeklyCost ?? null,
             }
           : null,
       });
 
+      console.log('[EMAIL GENERATION] Generated', emails.length, 'emails');
+      if (emails.length > 0) {
+        console.log('[EMAIL GENERATION] Email categories:', emails.map(e => e.category).join(', '));
+      }
+
       if (emails.length === 0) {
+        console.warn('[EMAIL GENERATION] No emails generated - check summary data');
         return;
       }
 
       await this.storage.createEmails(emails, dbTransaction);
       (summary as any).generatedEmails = emails.length;
+      console.log('[EMAIL GENERATION] Successfully persisted', emails.length, 'emails to database');
     } catch (error) {
       console.error('[EMAIL GENERATION] Failed to generate or persist emails:', error);
     }
