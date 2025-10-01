@@ -11,6 +11,7 @@
  */
 
 import { GameState, Artist, Project, Role, WeeklyAction, Song, Release, ReleaseSong } from '../schema';
+import { generateEmails } from "@shared/engine/EmailGenerator";
 import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
@@ -279,6 +280,9 @@ export class GameEngine {
     // No need to overwrite them - they contain the complete picture
     
     console.log('[FINANCIAL BREAKDOWN]', financials.breakdown);
+
+    // Generate and persist weekly emails
+    await this.generateAndPersistEmails(summary, dbTransaction);
     
     // Generate economic insights for the week
     this.generateEconomicInsights(summary);
@@ -360,6 +364,45 @@ export class GameEngine {
     });
 
     return result;
+  }
+
+  private async generateAndPersistEmails(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    if (!this.storage || !this.storage.createEmails) {
+      return;
+    }
+
+    try {
+      const discoveredArtist = summary.arOffice?.discoveredArtistId
+        ? await this.storage.getArtist?.(summary.arOffice.discoveredArtistId)
+        : null;
+
+      const emails = generateEmails({
+        gameId: this.gameState.id,
+        weekSummary: summary,
+        chartUpdates: summary.chartUpdates ?? [],
+        discoveredArtist: discoveredArtist
+          ? {
+              id: discoveredArtist.id,
+              name: discoveredArtist.name,
+              archetype: (discoveredArtist as any).archetype ?? 'Unknown',
+              talent: (discoveredArtist as any).talent ?? 0,
+              genre: (discoveredArtist as any).genre ?? null,
+              bio: (discoveredArtist as any).bio ?? null,
+              signingCost: (discoveredArtist as any).signingCost ?? null,
+              weeklyCost: (discoveredArtist as any).weeklyFee ?? null,
+            }
+          : null,
+      });
+
+      if (emails.length === 0) {
+        return;
+      }
+
+      await this.storage.createEmails(emails, dbTransaction);
+      (summary as any).generatedEmails = emails.length;
+    } catch (error) {
+      console.error('[EMAIL GENERATION] Failed to generate or persist emails:', error);
+    }
   }
 
   /**
