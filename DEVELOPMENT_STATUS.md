@@ -144,7 +144,7 @@
   - [x] **StreamingDecayTester.tsx**: New comprehensive testing page with awareness integration
   - [x] **Awareness System Foundation**: Complete design specification for cultural penetration mechanics
 
-#### **September 28, 2025 - A&R Office Artist Discovery System Implementation**
+#### **September 28-30, 2025 - A&R Office Artist Discovery System Implementation**
 - [x] **Complete A&R Office Artist Discovery System** (**COMPLETED**) - Revolutionary artist scouting mechanics
   - [x] **A&R Office Page**: Dedicated page with Marcus Rodriguez executive avatar and professional A&R office interface
   - [x] **Three Sourcing Modes**: Active Scouting (higher quality), Passive Browsing (standard pool), Specialized Search (niche talent)
@@ -156,6 +156,18 @@
   - [x] **Discovery Persistence**: Artists stored in `gameState.flags.ar_office_discovered_artists` array with full metadata
   - [x] **Artist Signing Workflow**: Complete signing process with budget validation and roster integration
   - [x] **API Integration**: Four dedicated endpoints for starting, canceling, status checking, and retrieving discovered artists
+- [x] **Genre Selection Enhancement** (**COMPLETED**) - Specialized search with genre targeting
+  - [x] **GenreSelectionModal Component**: Modal interface for selecting primary and optional secondary genre
+  - [x] **Server-side Genre Parameters**: Modified A&R endpoints to accept `primaryGenre` and `secondaryGenre`
+  - [x] **Database Schema Updates**: Added `arOfficePrimaryGenre` and `arOfficeSecondaryGenre` columns
+  - [x] **GameEngine Integration**: Genre-filtered artist discovery in `processAROfficeWeekly()` method
+  - [x] **UI Genre Display**: Shows selected genres during active specialized search operations
+- [x] **Critical Bug Fixes & Error Handling** (**COMPLETED**) - Production stability improvements
+  - [x] **Database Schema Migration**: Fixed missing `ar_office_operation_start` column via `npm run db:push`
+  - [x] **Server Error Handling**: Graceful fallbacks when game data initialization fails (returns empty list vs 500 error)
+  - [x] **Artist Data Loading**: Enhanced error handling with fallback to flag-stored data when full artist enrichment fails
+  - [x] **Debug UI Enhancement**: Debug Info button now shows visible alert dialog with key troubleshooting data
+  - [x] **Empty State Handling**: Proper messaging when no discovered artists exist (first-time A&R Office visits)
 - [x] **Advanced UI Components** (**COMPLETED**) - Professional A&R interface with rich interactions
   - [x] **SourcingModeSelector**: Visual mode selection with descriptions, icons, and focus slot indicators
   - [x] **ArtistDiscoveryTable**: Searchable/filterable table with archetype filtering and signing capabilities
@@ -190,6 +202,22 @@
   - [x] Song title editing capabilities with API integration
   - [x] Enhanced seasonal timing selection with cost previews
   - [x] Real-time performance preview calculations using unified game engine
+
+#### **September 30, 2025 - Admin Portal & Developer Tools**
+- [x] **Admin Portal Implementation** (**COMPLETED**) - Clerk-based role-based access control for developer tools
+  - [x] **Admin Middleware**: `requireAdmin()` middleware checks Clerk `privateMetadata.role === 'admin'`
+  - [x] **Admin HOC**: `withAdmin()` higher-order component protects client-side routes with access checks
+  - [x] **Admin Layout**: Dedicated `/admin` portal page with centralized developer tools navigation
+  - [x] **Protected Routes**: All testing/debugging tools gated behind admin authentication
+  - [x] **User Metadata API**: GET `/api/me` endpoint returns current user info including `isAdmin` flag
+  - [x] **React Query Integration**: `useCurrentUser()` and `useIsAdmin()` hooks for admin status checks
+  - [x] **Admin Health Check**: GET `/api/admin/health` test endpoint validates admin middleware
+- [x] **Developer Tools Reorganization** (**COMPLETED**) - Consolidated testing utilities under admin portal
+  - [x] **Admin Routes**: Moved all dev tools to `/admin/*` routes (quality-tester, tour-variance-tester, etc.)
+  - [x] **Legacy Route Protection**: Original dev tool routes now protected with `withAdmin()` wrapper
+  - [x] **Sidebar Cleanup**: Removed 7 testing tool links from GameSidebar, replaced with single Admin link
+  - [x] **Admin Icon**: Shield icon indicates admin-only access in sidebar navigation
+  - [x] **Tool Collection**: 7 developer tools consolidated (Quality Tester, Tour Variance, Popularity, Streaming Decay, Markets Editor, Test Data, Tours Test)
 
 #### **Infrastructure & Architecture (September 26, 2025)**
 - [x] **UI/UX Navigation Improvements** (**COMPLETED**)
@@ -307,10 +335,29 @@
   - ✅ **Consistent Implementation** - All major game actions (recording, touring, releasing) follow same creative capital pattern
   - ✅ **Error Prevention** - Users cannot accidentally create projects without sufficient resources
 
-### **September 28, 2025 - A&R Office Artist Discovery System Complete Implementation**
+### **September 30, 2025 - Admin Portal & Critical Bug Fixes**
+- ✅ **Admin Portal with Role-Based Access Control** - Developer tools security and organization
+  - ✅ **Clerk Metadata Integration** - Admin role stored in Clerk user `privateMetadata.role === 'admin'`
+  - ✅ **Server-side Protection** - `requireAdmin()` Express middleware validates admin access on protected routes
+  - ✅ **Client-side HOC** - `withAdmin()` React higher-order component redirects non-admins to homepage
+  - ✅ **Admin Portal UI** - Dedicated `/admin` page with centralized navigation to 7 developer tools
+  - ✅ **User Metadata Endpoint** - GET `/api/me` returns authenticated user info with `isAdmin` boolean flag
+  - ✅ **React Hooks** - `useCurrentUser()` and `useIsAdmin()` for client-side admin status checks
+  - ✅ **Route Reorganization** - All testing tools moved to `/admin/*` routes with legacy routes protected
+  - ✅ **Sidebar Cleanup** - Replaced 7 individual tool links with single Shield-icon Admin link
+- ✅ **A&R Office Critical Bug Fixes** - Production stability and error handling improvements
+  - ✅ **Database Schema Migration** - Pushed missing `ar_office_operation_start` column to Railway PostgreSQL
+  - ✅ **Server Error Handling** - Added graceful fallbacks for game data initialization failures (no more 500 errors)
+  - ✅ **Artist Data Fallbacks** - Enhanced error recovery with flag-stored data when full artist enrichment fails
+  - ✅ **Debug UI Enhancement** - Debug Info button now shows alert dialog with actionable troubleshooting data
+  - ✅ **Empty State Handling** - Proper user-friendly messaging when no discovered artists exist (first-time visits)
+  - ✅ **Data Loading Resilience** - Three layers of error handling (init → getAllArtists → fallback to flags)
+
+### **September 28-30, 2025 - A&R Office Artist Discovery System Complete Implementation**
 - ✅ **Revolutionary Artist Scouting Mechanics** - Complete transformation from "all artists available" to strategic discovery system
   - ✅ **A&R Office Page Implementation** - Dedicated page with Marcus Rodriguez executive avatar and professional interface
   - ✅ **Three Strategic Sourcing Modes** - Active Scouting (higher quality), Passive Browsing (standard pool), Specialized Search (niche talent)
+  - ✅ **Genre Selection for Specialized Search** - Modal interface for selecting primary/secondary genre targets
   - ✅ **Focus Slot Resource Integration** - All A&R operations consume 1 Focus Slot, creating meaningful strategic trade-offs
   - ✅ **Sophisticated State Management** - XState machine (`arOfficeMachine.ts`) handles operation lifecycle and slot reservations
   - ✅ **Executive Coordination System** - Head of A&R becomes "busy" during operations, unavailable for weekly meetings

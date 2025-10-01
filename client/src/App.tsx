@@ -24,6 +24,8 @@ import MarketsEditor from "@/pages/MarketsEditor";
 import LandingPage from "@/pages/LandingPage";
 import RecordingSessionPage from "@/pages/RecordingSessionPage";
 import LivePerformancePage from "@/pages/LivePerformancePage";
+import AdminHome from "@/admin/AdminLayout";
+import { withAdmin } from "@/admin/withAdmin";
 
 function Router() {
   return (
@@ -36,14 +38,27 @@ function Router() {
       <Route path="/ar-office" component={AROfficePage} />
       <Route path="/recording-session" component={RecordingSessionPage} />
       <Route path="/live-performance" component={LivePerformancePage} />
-      <Route path="/quality-tester" component={QualityTester} />
-      <Route path="/tour-variance-tester" component={TourVarianceTesterPage} />
-      <Route path="/popularity-tester" component={PopularityTester} />
-      <Route path="/streaming-decay-tester" component={StreamingDecayTester} />
+
+      {/* Admin routes */}
+      <Route path="/admin" component={AdminHome} />
+      <Route path="/admin/quality-tester" component={withAdmin(QualityTester)} />
+      <Route path="/admin/tour-variance-tester" component={withAdmin(TourVarianceTesterPage)} />
+      <Route path="/admin/popularity-tester" component={withAdmin(PopularityTester)} />
+      <Route path="/admin/streaming-decay-tester" component={withAdmin(StreamingDecayTester)} />
+      <Route path="/admin/markets-editor" component={withAdmin(MarketsEditor)} />
+      <Route path="/admin/test-data" component={withAdmin(TestDataPage)} />
+      <Route path="/admin/tours-test" component={withAdmin(ToursTest)} />
+
+      {/* Legacy dev routes gated */}
+      <Route path="/quality-tester" component={withAdmin(QualityTester)} />
+      <Route path="/tour-variance-tester" component={withAdmin(TourVarianceTesterPage)} />
+      <Route path="/popularity-tester" component={withAdmin(PopularityTester)} />
+      <Route path="/streaming-decay-tester" component={withAdmin(StreamingDecayTester)} />
+      <Route path="/tours-test" component={withAdmin(ToursTest)} />
+      <Route path="/test-data" component={withAdmin(TestDataPage)} />
+      <Route path="/markets-editor" component={withAdmin(MarketsEditor)} />
+
       <Route path="/charts/top100" component={Top100ChartPage} />
-      <Route path="/tours-test" component={ToursTest} />
-      <Route path="/test-data" component={TestDataPage} />
-      <Route path="/markets-editor" component={MarketsEditor} />
       <Route component={NotFound} />
     </Switch>
   );

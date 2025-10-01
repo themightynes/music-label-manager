@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import type { GameState } from '@shared/schema';
+import type { GameState } from '@shared/types/gameTypes';
 import { Key, Music, Megaphone, Building, Info, ArrowRight, Lock } from 'lucide-react';
 import { useState } from 'react';
 

@@ -562,10 +562,11 @@ export class GameEngine {
 
               // Populate week summary A&R section with discovered artist id
               // NOTE: This ID may differ from what /ar-office/artists returns if fallback logic is triggered
-              if (!summary.arOffice) summary.arOffice = { completed: true } as any;
-              summary.arOffice.completed = true;
-              summary.arOffice.sourcingType = sourcingType ?? null;
-              summary.arOffice.discoveredArtistId = picked.id;
+              summary.arOffice = {
+                completed: true,
+                sourcingType: sourcingType ?? null,
+                discoveredArtistId: picked.id
+              };
             } else {
               console.log('[A&R DEBUG] No artist selected - no unsigned artists available');
               flags.ar_office_discovered_artist_id = null;
@@ -578,10 +579,11 @@ export class GameEngine {
                 flags.ar_office_no_artists_reason = 'unknown';
               }
 
-              if (!summary.arOffice) summary.arOffice = { completed: true } as any;
-              summary.arOffice.completed = true;
-              summary.arOffice.sourcingType = sourcingType ?? null;
-              summary.arOffice.discoveredArtistId = null;
+              summary.arOffice = {
+                completed: true,
+                sourcingType: sourcingType ?? null,
+                discoveredArtistId: null
+              };
             }
           }
 

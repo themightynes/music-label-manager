@@ -252,6 +252,7 @@ export const gameStates = pgTable("game_states", {
   arOfficeSourcingType: text("ar_office_sourcing_type"),
   arOfficePrimaryGenre: text("ar_office_primary_genre"),
   arOfficeSecondaryGenre: text("ar_office_secondary_genre"),
+  arOfficeOperationStart: bigint("ar_office_operation_start", { mode: "number" }),
   playlistAccess: text("playlist_access").default("none"), // none, niche, mid, flagship
   pressAccess: text("press_access").default("none"), // none, blogs, mid_tier, national
   venueAccess: text("venue_access").default("none"), // none, clubs, theaters, arenas

@@ -21,8 +21,9 @@ import {
 } from "@shared/api/contracts";
 import { db } from "./db";
 import { eq, desc, and, sql, inArray, ne } from "drizzle-orm";
-import { requireClerkUser, handleClerkWebhook } from './auth';
+import { requireClerkUser, handleClerkWebhook, requireAdmin } from './auth';
 import analyticsRouter from './routes/analytics';
+import { ClerkExpressWithAuth, clerkClient } from '@clerk/clerk-sdk-node';
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -32,6 +33,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Current user metadata (minimal): isAdmin flag derived from Clerk privateMetadata
+  app.get('/api/me', ClerkExpressWithAuth(), async (req, res) => {
+    try {
+      const clerkUserId = (req as any).auth?.userId;
+      if (!clerkUserId) {
+        return res.json({ isAuthenticated: false, isAdmin: false, user: null });
+      }
+      const user = await clerkClient.users.getUser(clerkUserId);
+      const isAdmin = (user as any)?.privateMetadata?.role === 'admin';
+      res.json({
+        isAuthenticated: true,
+        isAdmin,
+        user: {
+          id: user.id,
+          email: user.emailAddresses?.[0]?.emailAddress ?? null,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+        },
+      });
+    } catch (error) {
+      console.error('[API /me] Error:', error);
+      res.status(500).json({ isAuthenticated: false, isAdmin: false, user: null });
+    }
+  });
+
+  // Admin-only test endpoint
+  app.get('/api/admin/health', requireClerkUser, requireAdmin, (req, res) => {
+    res.json({ ok: true, timestamp: new Date().toISOString() });
   });
 
   // Debug endpoint to test data loading
@@ -553,7 +584,19 @@ const musicLabelData = {
         return res.status(404).json({ message: 'Game not found' });
       }
 
-      await serverGameData.initialize();
+      // Initialize game data - if this fails, return empty list instead of 500 error
+      try {
+        await serverGameData.initialize();
+      } catch (initError) {
+        console.error('[A&R] Failed to initialize game data:', initError);
+        return res.json({
+          artists: [],
+          metadata: {
+            error: 'Failed to load game data',
+            details: initError instanceof Error ? initError.message : String(initError)
+          }
+        });
+      }
 
       console.log('[A&R DEBUG] Backend: A&R slot used:', gameState.arOfficeSlotUsed);
       console.log('[A&R DEBUG] Backend: A&R sourcing type:', (gameState as any).arOfficeSourcingType);
@@ -598,14 +641,34 @@ const musicLabelData = {
 
         // Update flags with migrated data
         flags.ar_office_discovered_artists = discoveredArtistsArray;
-        await storage.saveGameState(gameId, gameState);
+        await storage.updateGameState(gameId, { flags });
         console.log('[A&R DEBUG] Backend: Migration complete, saved to database');
       }
 
       if (discoveredArtistsArray.length > 0) {
         // Return all discovered artists
-        const allGameArtists = await serverGameData.getAllArtists();
-        console.log('[A&R DEBUG] Backend: Loaded', allGameArtists?.length, 'total game artists');
+        let allGameArtists;
+        try {
+          allGameArtists = await serverGameData.getAllArtists();
+          console.log('[A&R DEBUG] Backend: Loaded', allGameArtists?.length, 'total game artists');
+        } catch (artistLoadError) {
+          console.error('[A&R] Failed to load game artists:', artistLoadError);
+          // Return the discovered artist data we have in flags without enrichment
+          return res.json({
+            artists: discoveredArtistsArray.map((a: any) => ({
+              ...a,
+              isFallback: true,
+              loadError: 'Could not enrich with full artist data'
+            })),
+            metadata: {
+              totalDiscovered: discoveredArtistsArray.length,
+              isDiscoveredCollection: true,
+              enrichmentFailed: true,
+              discoveryTime: flags.ar_office_discovery_time,
+              sourcingType: flags.ar_office_sourcing_type
+            }
+          });
+        }
 
         const discoveredArtists = discoveredArtistsArray.map((discoveredArtist: any) => {
           // First try to find the full artist data
@@ -647,8 +710,42 @@ const musicLabelData = {
         });
       } else if (legacyArtistId) {
         // Backwards compatibility: handle single legacy artist
-        const allArtists = await serverGameData.getAllArtists();
-        console.log('[A&R DEBUG] Backend: Loaded', allArtists?.length, 'total artists for legacy mode');
+        let allArtists;
+        try {
+          allArtists = await serverGameData.getAllArtists();
+          console.log('[A&R DEBUG] Backend: Loaded', allArtists?.length, 'total artists for legacy mode');
+        } catch (artistLoadError) {
+          console.error('[A&R] Failed to load game artists for legacy mode:', artistLoadError);
+          // Return fallback artist info if we can't load full data
+          if (legacyArtistInfo) {
+            return res.json({
+              artists: [{
+                id: legacyArtistId,
+                name: legacyArtistInfo.name || 'Unknown Artist',
+                archetype: legacyArtistInfo.archetype || 'Unknown',
+                talent: legacyArtistInfo.talent || 50,
+                popularity: legacyArtistInfo.popularity || 0,
+                genre: legacyArtistInfo.genre || null,
+                isFallback: true,
+                loadError: 'Could not load full artist data'
+              }],
+              metadata: {
+                isLegacyFallback: true,
+                enrichmentFailed: true,
+                discoveryTime: flags.ar_office_discovery_time,
+                sourcingType: flags.ar_office_sourcing_type
+              }
+            });
+          }
+          // If no legacy info available, return empty
+          return res.json({
+            artists: [],
+            metadata: {
+              error: 'Could not load artist data',
+              enrichmentFailed: true
+            }
+          });
+        }
 
         const artist = (allArtists || []).find((a: any) => a.id === legacyArtistId);
         console.log('[A&R DEBUG] Backend: Found legacy artist for ID:', artist?.name || 'none');
@@ -656,7 +753,7 @@ const musicLabelData = {
         if (artist) {
           // Validate artist has all required fields
           const requiredFields = ['id', 'name', 'archetype', 'talent', 'popularity'];
-          const missingFields = requiredFields.filter(field => artist[field] === undefined || artist[field] === null);
+          const missingFields = requiredFields.filter(field => (artist as any)[field] === undefined || (artist as any)[field] === null);
 
           if (missingFields.length > 0) {
             console.warn('[A&R DEBUG] Backend: Artist missing required fields:', missingFields);
@@ -683,7 +780,7 @@ const musicLabelData = {
               discoveryTime: flags.ar_office_discovery_time,
               sourcingType: flags.ar_office_sourcing_type,
               isOriginalDiscovery: true,
-              discoveredArtistId: persistedId
+              discoveredArtistId: legacyArtistId
             }
           });
         } else {
@@ -697,8 +794,7 @@ const musicLabelData = {
 
             // Update flags with new artist ID
             const updatedFlags = { ...flags, ar_office_discovered_artist_id: fallbackArtist.id };
-            const updatedGameState = { ...gameState, flags: updatedFlags };
-            await storage.saveGameState(gameId, updatedGameState);
+            await storage.updateGameState(gameId, { flags: updatedFlags });
 
             console.log('[A&R DEBUG] Backend: Updated flags with fallback artist:', fallbackArtist.id);
 
@@ -707,7 +803,7 @@ const musicLabelData = {
               metadata: {
                 isFallback: true,
                 isOriginalDiscovery: false,
-                originalDiscoveredArtistId: persistedId,
+                originalDiscoveredArtistId: legacyArtistId,
                 discoveredArtistId: fallbackArtist.id,
                 fallbackReason: 'Original artist not found in current data',
                 discoveryTime: flags.ar_office_discovery_time,
@@ -723,7 +819,7 @@ const musicLabelData = {
             metadata: {
               error: 'Artist not found and no fallback available',
               isOriginalDiscovery: false,
-              originalDiscoveredArtistId: persistedId,
+              originalDiscoveredArtistId: legacyArtistId,
               discoveredArtistId: null,
               fallbackReason: 'Original artist not found and no unsigned artists available',
               warning: 'No artist available - the weekly summary may show a different result'

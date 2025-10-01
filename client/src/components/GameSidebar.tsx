@@ -22,6 +22,7 @@ import { WeekSummary } from './WeekSummary';
 import { LabelCreationModal } from './LabelCreationModal';
 import type { LabelData } from '@shared/types/gameTypes';
 import { UserButton, useUser } from '@clerk/clerk-react';
+import { useIsAdmin } from '@/auth/useCurrentUser';
 import {
   Home,
   Rocket,
@@ -30,16 +31,14 @@ import {
   Plus,
   Play,
   Save,
-  Beaker,
   BarChart3,
   Users,
   Users2,
   Building2,
   Trophy,
-  TrendingUp,
   Zap,
-  Settings,
   Search,
+  Shield,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -67,6 +66,7 @@ export function GameSidebar({
   const [isAutoSelecting, setIsAutoSelecting] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [isCreatingGame, setIsCreatingGame] = useState(false);
+  const { isAdmin } = useIsAdmin();
 
   // Simple AUTO function for sidebar
   const handleAutoSelect = async () => {
@@ -449,65 +449,29 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
-          {/* Group 6: Testing Tools */}
-          <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation('/quality-tester')}
-                    isActive={currentPath === '/quality-tester'}
-                    tooltip="Quality Tester"
-                  >
-                    <Beaker />
-                    <span>Quality Tester</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation('/tour-variance-tester')}
-                    isActive={currentPath === '/tour-variance-tester'}
-                    tooltip="Tour Variance Tester"
-                  >
-                    <BarChart3 />
-                    <span>Tour Variance Tester</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation('/popularity-tester')}
-                    isActive={currentPath === '/popularity-tester'}
-                    tooltip="Popularity Tester"
-                  >
-                    <TrendingUp />
-                    <span>Popularity Tester</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation('/streaming-decay-tester')}
-                    isActive={currentPath === '/streaming-decay-tester'}
-                    tooltip="Streaming Decay Tester"
-                  >
-                    <TrendingUp />
-                    <span>Streaming Decay Tester</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setLocation('/markets-editor')}
-                    isActive={currentPath === '/markets-editor'}
-                    tooltip="Markets.json Editor"
-                  >
-                    <Settings />
-                    <span>Markets Editor</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {/* Admin entry */}
+          {isAdmin && (
+            <>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => setLocation('/admin')}
+                        isActive={currentPath === '/admin' || currentPath.startsWith('/admin/')}
+                        tooltip="Admin Tools"
+                      >
+                        <Shield />
+                        <span>Admin</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
 
-          <SidebarSeparator />
+              <SidebarSeparator />
+            </>
+          )}
 
 
           <div className="px-3 pb-4 space-y-3">

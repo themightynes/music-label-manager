@@ -60,6 +60,7 @@ interface GameStore {
   getAROfficeStatus: () => {
     arOfficeSlotUsed: boolean;
     arOfficeSourcingType: SourcingTypeString | null;
+    arOfficeOperationStart: number | null;
   };
   startAROfficeOperation: (sourcingType: SourcingTypeString, primaryGenre?: string, secondaryGenre?: string) => Promise<void>;
   cancelAROfficeOperation: () => Promise<void>;
@@ -828,6 +829,7 @@ export const useGameStore = create<GameStore>()(
         return {
           arOfficeSlotUsed: !!gameState?.arOfficeSlotUsed,
           arOfficeSourcingType: (gameState?.arOfficeSourcingType as SourcingTypeString | null) ?? null,
+          arOfficeOperationStart: gameState?.arOfficeOperationStart ?? null,
         };
       },
 

@@ -95,6 +95,7 @@ export interface GameState {
   arOfficeSourcingType?: SourcingTypeString | null;
   arOfficePrimaryGenre?: string | null;
   arOfficeSecondaryGenre?: string | null;
+  arOfficeOperationStart?: number | null;
   playlistAccess: string;
   pressAccess: string;
   venueAccess: string;
@@ -103,6 +104,11 @@ export interface GameState {
   flags: Record<string, any>;
   weeklyStats: Record<string, any>;
   musicLabel?: MusicLabel;
+  // Optional database fields (from Drizzle schema)
+  userId?: string | null;
+  createdAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+  campaignCompleted?: boolean | null;
 }
 
 export interface MusicLabel {

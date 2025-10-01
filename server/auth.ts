@@ -180,6 +180,29 @@ export async function handleClerkWebhook(req: Request, res: Response) {
   }
 }
 
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  (async () => {
+    try {
+      const clerkId = (req as any).clerkUserId || (req as any).auth?.userId;
+      if (!clerkId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const user = await clerkClient.users.getUser(clerkId);
+      const isAdmin = (user as any)?.privateMetadata?.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      (req as any).isAdmin = true;
+      next();
+    } catch (error) {
+      console.error('[Clerk] Failed admin check', error);
+      res.status(500).json({ message: 'Failed to verify admin access' });
+    }
+  })();
+}
+
 declare global {
   namespace Express {
     interface Request {
@@ -190,6 +213,7 @@ declare global {
         userId: string | null;
         sessionId: string | null;
       };
+      isAdmin?: boolean;
     }
   }
 }

@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Search, Music, TrendingUp, Zap, Heart, Star, AlertCircle } from 'lucide-react';
-import type { GameState } from '@shared/schema';
+import type { GameState } from '@shared/types/gameTypes';
 import { ARTIST_ARCHETYPES } from '@/lib/gameData';
 import { apiRequest } from '@/lib/queryClient';
 

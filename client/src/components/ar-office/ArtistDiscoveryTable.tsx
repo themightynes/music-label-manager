@@ -4,7 +4,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { AlertCircle, Music, TrendingUp, Zap, Heart, Star, MapPin, Globe } from 'lucide-react';
-import type { GameState, Artist as SharedArtist } from '@shared/schema';
+import type { GameState } from '@shared/types/gameTypes';
+import type { Artist as SharedArtist } from '@shared/schema';
 import type { SourcingType } from '../../machines/arOfficeMachine';
 
 // UIArtist extends the shared Artist with optional UI fields used in discovery views
@@ -144,9 +145,27 @@ export function ArtistDiscoveryTable({
               {process.env.NODE_ENV === 'development' && (
                 <Button
                   onClick={() => {
-                    console.log('[A&R Debug] Error details:', error);
-                    console.log('[A&R Debug] Sourcing mode:', sourcingMode);
-                    console.log('[A&R Debug] Game state:', gameState);
+                    const debugInfo = {
+                      error,
+                      sourcingMode,
+                      arOfficeSlotUsed: gameState.arOfficeSlotUsed,
+                      arOfficeSourcingType: (gameState as any).arOfficeSourcingType,
+                      gameId: gameState.id,
+                      currentWeek: gameState.currentWeek,
+                      flags: (gameState as any).flags
+                    };
+                    console.log('[A&R Debug Info]', debugInfo);
+                    // Show alert with key info
+                    alert(
+                      `A&R Debug Info:\n\n` +
+                      `Error: ${error}\n` +
+                      `Sourcing Mode: ${sourcingMode || 'none'}\n` +
+                      `Slot Used: ${gameState.arOfficeSlotUsed || false}\n` +
+                      `Sourcing Type: ${(gameState as any).arOfficeSourcingType || 'none'}\n` +
+                      `Game ID: ${gameState.id}\n` +
+                      `Week: ${gameState.currentWeek}\n\n` +
+                      `Full details logged to console.`
+                    );
                   }}
                   variant="ghost"
                   size="sm"
