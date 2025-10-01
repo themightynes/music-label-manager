@@ -140,7 +140,6 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
   }, []);
 
   const handleModeSelect = async (mode: SourcingType) => {
-    console.log(`[A&R] Mode selected: ${mode}`);
     setSourcingMode(mode);
 
     // If specialized search is selected, show genre selection modal

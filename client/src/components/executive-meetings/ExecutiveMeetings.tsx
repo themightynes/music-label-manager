@@ -7,9 +7,8 @@ import { DialogueInterface } from './DialogueInterface';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { ArrowLeft, Loader2, Zap } from 'lucide-react';
-import { fetchExecutives, fetchAllRoles } from '../../services/executiveService';
+import { fetchExecutives, fetchRoleMeetings, fetchMeetingDialogue, fetchAllRoles } from '../../services/executiveService';
 import { useGameStore } from '../../store/gameStore';
-import type { Executive } from '../../../../shared/types/gameTypes';
 
 interface ExecutiveMeetingsProps {
   gameId: string;
@@ -43,62 +42,51 @@ export function ExecutiveMeetings({
   arOfficeStatus: arOfficeStatusProp,
   onImpactPreviewUpdate,
 }: ExecutiveMeetingsProps) {
-  const [executives, setExecutives] = useState<Executive[]>([]);
-  const [executivesLoading, setExecutivesLoading] = useState(true);
-  const [executivesError, setExecutivesError] = useState<string | null>(null);
   const [roleSalaries, setRoleSalaries] = useState<Record<string, number>>({});
 
-  // Watch for week changes to refresh executive data
-  const { gameState, getAROfficeStatus } = useGameStore();
+  const { getAROfficeStatus, selectedActions } = useGameStore();
 
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
       gameId,
       focusSlotsTotal: focusSlots.total,
       onActionSelected,
+      fetchExecutives,
+      fetchRoleMeetings,
+      fetchMeetingDialogue,
     },
   });
 
   const { context } = state;
   const hasAvailableSlots = context.focusSlotsUsed < context.focusSlotsTotal;
   const arOfficeStatus = arOfficeStatusProp ?? getAROfficeStatus();
+  const executives = context.executives;
+  const executivesLoading = state.matches('loadingExecutives') || state.matches('refreshingExecutives');
+  const executivesError = context.error;
 
-  // Refetch executives when game loads or week changes
   useEffect(() => {
-    async function loadExecutivesAndRoles() {
+    let mounted = true;
+    const loadRoles = async () => {
       try {
-        setExecutivesLoading(true);
-        setExecutivesError(null);
-
-        // Load executives and roles data in parallel
-        const [fetchedExecutives, rolesData] = await Promise.all([
-          fetchExecutives(gameId),
-          fetchAllRoles().catch(() => [])
-        ]);
-
-        setExecutives(fetchedExecutives);
-
-        // Extract salary data from roles
+        const rolesData = await fetchAllRoles().catch(() => [] as any[]);
+        if (!mounted) return;
         const salaryMap: Record<string, number> = {};
         rolesData.forEach((role: any) => {
-          if (role.baseSalary !== undefined) {
+          if (role?.id && typeof role.baseSalary === 'number') {
             salaryMap[role.id] = role.baseSalary;
           }
         });
         setRoleSalaries(salaryMap);
       } catch (error) {
-        console.error('Failed to load executives:', error);
-        setExecutivesError(error instanceof Error ? error.message : 'Failed to load executives');
-        setExecutives([]);
-      } finally {
-        setExecutivesLoading(false);
+        console.error('Failed to load role salary data', error);
       }
-    }
+    };
 
-    if (gameId) {
-      loadExecutivesAndRoles();
-    }
-  }, [gameId, gameState?.currentWeek]); // Added currentWeek dependency
+    loadRoles();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Sync focus slots with the machine
   useEffect(() => {
@@ -110,7 +98,6 @@ export function ExecutiveMeetings({
   }, [focusSlots.used, focusSlots.total, send]);
 
   // Calculate impact preview when selectedActions change
-  const { selectedActions } = useGameStore();
   useEffect(() => {
     send({
       type: 'CALCULATE_IMPACT_PREVIEW',
@@ -124,38 +111,6 @@ export function ExecutiveMeetings({
       onImpactPreviewUpdate(context.impactPreview);
     }
   }, [context.impactPreview, onImpactPreviewUpdate]);
-
-  // Track when we complete a meeting to trigger executives refetch
-  const [lastCompletedMeeting, setLastCompletedMeeting] = useState<string | null>(null);
-
-  // Monitor state transitions to detect meeting completion
-  useEffect(() => {
-    if (state.matches('complete')) {
-      // Store a marker that a meeting was completed
-      const meetingKey = `${context.selectedExecutive?.id}-${context.selectedMeeting?.id}`;
-      setLastCompletedMeeting(meetingKey);
-    }
-  }, [state.value, context.selectedExecutive, context.selectedMeeting]);
-
-  // Refetch executives when returning to idle after a completed meeting
-  useEffect(() => {
-    if (state.matches('idle') && lastCompletedMeeting) {
-      // A meeting just completed, refetch executive data to get updated mood/loyalty
-      const refetchExecutives = async () => {
-        try {
-          setExecutivesLoading(true);
-          const fetchedExecutives = await fetchExecutives(gameId);
-          setExecutives(fetchedExecutives);
-          setLastCompletedMeeting(null); // Clear the completion marker
-        } catch (error) {
-          console.error('Failed to refetch executives after meeting:', error);
-        } finally {
-          setExecutivesLoading(false);
-        }
-      };
-      refetchExecutives();
-    }
-  }, [state.value, lastCompletedMeeting, gameId]);
 
   if (state.matches('idle')) {
     return (

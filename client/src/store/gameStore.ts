@@ -925,12 +925,15 @@ export const useGameStore = create<GameStore>()(
           console.error('[A&R] Failed to load discovered artists:', error);
 
           // Provide more specific error information
-          if (error instanceof Error) {
-            if (error.message.includes('404')) {
-              console.warn('[A&R] No discovered artists found (404) - this may be expected if no A&R operation was completed');
-            } else if (error.message.includes('500')) {
-              console.error('[A&R] Server error while loading discovered artists');
-            }
+          const status = (error as any)?.status;
+          if (status === 404) {
+            console.warn('[A&R] No discovered artists found (404) - treating as empty result');
+            set({ discoveredArtists: [] });
+            return;
+          }
+
+          if (error instanceof Error && error.message.includes('500')) {
+            console.error('[A&R] Server error while loading discovered artists');
           }
 
           set({ discoveredArtists: [] });

@@ -1,27 +1,44 @@
-import { createMachine, assign, fromPromise } from 'xstate';
-import type { GameRole, RoleMeeting, DialogueChoice, Executive } from '../../../shared/types/gameTypes';
+import { assign, fromPromise, setup } from 'xstate';
+import type { RoleMeeting, DialogueChoice, Executive } from '../../../shared/types/gameTypes';
 import { fetchExecutives, fetchRoleMeetings, fetchMeetingDialogue } from '../services/executiveService';
 
+type DialogueData = {
+  prompt: string;
+  choices: DialogueChoice[];
+};
+
+type AutoOption = {
+  executive: Executive;
+  meeting: RoleMeeting;
+  choice: DialogueChoice;
+  score: number;
+  actionData: {
+    roleId: string;
+    actionId: string;
+    choiceId: string;
+    executiveId?: string;
+  };
+};
+
+interface ExecutiveServices {
+  fetchExecutives: (gameId: string) => Promise<Executive[]>;
+  fetchRoleMeetings: (roleId: string) => Promise<RoleMeeting[]>;
+  fetchMeetingDialogue: (roleId: string, meetingId: string) => Promise<DialogueData>;
+}
+
 export interface ExecutiveMeetingContext {
+  gameId: string;
   executives: Executive[];
+  meetingsCache: Record<string, RoleMeeting[]>;
+  dialogueCache: Record<string, DialogueData>;
   selectedExecutive: Executive | null;
   availableMeetings: RoleMeeting[];
   selectedMeeting: RoleMeeting | null;
-  currentDialogue: {
-    prompt: string;
-    choices: DialogueChoice[];
-  } | null;
+  currentDialogue: DialogueData | null;
   focusSlotsUsed: number;
   focusSlotsTotal: number;
   error: string | null;
-  gameId: string;
-  autoOptions: Array<{
-    executive: Executive;
-    meeting: RoleMeeting;
-    choice: DialogueChoice;
-    score: number;
-    actionData: object;
-  }>;
+  autoOptions: AutoOption[];
   impactPreview: {
     immediate: Record<string, number>;
     delayed: Record<string, number>;
@@ -33,6 +50,8 @@ export interface ExecutiveMeetingContext {
       effects_delayed: Record<string, number>;
     }>;
   };
+  services: ExecutiveServices;
+  onActionSelected: (action: string) => void;
 }
 
 export type ExecutiveMeetingEvent =
@@ -46,16 +65,332 @@ export type ExecutiveMeetingEvent =
   | { type: 'AUTO_SELECT' }
   | { type: 'CALCULATE_IMPACT_PREVIEW'; selectedActions: string[] };
 
-export const executiveMeetingMachine = createMachine({
-  types: {} as {
-    context: ExecutiveMeetingContext & { onActionSelected: (action: string) => void };
-    events: ExecutiveMeetingEvent;
-    input: { gameId: string; focusSlotsTotal: number; onActionSelected: (action: string) => void };
+interface ExecutiveMeetingInput {
+  gameId: string;
+  focusSlotsTotal: number;
+  onActionSelected: (action: string) => void;
+  fetchExecutives?: ExecutiveServices['fetchExecutives'];
+  fetchRoleMeetings?: ExecutiveServices['fetchRoleMeetings'];
+  fetchMeetingDialogue?: ExecutiveServices['fetchMeetingDialogue'];
+}
+
+const createAutoActionData = (executive: Executive, meeting: RoleMeeting, choice: DialogueChoice) => ({
+  roleId: executive.role,
+  actionId: meeting.id,
+  choiceId: choice.id,
+  ...(executive.role !== 'ceo' && { executiveId: executive.id }),
+});
+
+export const executiveMeetingMachine = setup({
+  types: {
+    context: {} as ExecutiveMeetingContext,
+    events: {} as ExecutiveMeetingEvent,
+    input: {} as ExecutiveMeetingInput,
   },
+  guards: {
+    hasFocusSlots: ({ context }) => context.focusSlotsUsed < context.focusSlotsTotal,
+    hasCachedMeetings: ({ context, event }) =>
+      event.type === 'SELECT_EXECUTIVE' && Boolean(context.meetingsCache[event.executive.role]?.length),
+    hasFocusSlotsAndCachedMeetings: ({ context, event }) =>
+      event.type === 'SELECT_EXECUTIVE' &&
+      context.focusSlotsUsed < context.focusSlotsTotal &&
+      Boolean(context.meetingsCache[event.executive.role]?.length),
+    hasValidMeeting: ({ event }) => event.type === 'SELECT_MEETING' && Boolean(event.meeting?.id),
+    hasDialogueCached: ({ context, event }) =>
+      event.type === 'SELECT_MEETING' &&
+      Boolean(context.selectedExecutive && context.dialogueCache[`${context.selectedExecutive.role}::${event.meeting.id}`]),
+    hasSelectedActions: ({ event }) => event.type === 'CALCULATE_IMPACT_PREVIEW' && event.selectedActions.length > 0,
+  },
+  actions: {
+    syncSlots: assign(({ event }) =>
+      event.type === 'SYNC_SLOTS'
+        ? {
+            focusSlotsUsed: event.used,
+            focusSlotsTotal: event.total,
+          }
+        : {}
+    ),
+    setExecutives: assign(({ event }) => {
+      const output = (event as any)?.output as Executive[] | undefined;
+      if (!output) return {};
+      return {
+        executives: output,
+        error: null,
+      };
+    }),
+    captureError: assign(({ event }) => {
+      const message =
+        event instanceof Error
+          ? event.message
+          : typeof event === 'object' && event !== null && 'data' in event && event.data instanceof Error
+          ? event.data.message
+          : 'Unable to load executive data';
+      return { error: message } satisfies Partial<ExecutiveMeetingContext>;
+    }),
+    clearError: assign({ error: () => null }),
+    assignSelectedExecutive: assign(({ event }) =>
+      event.type === 'SELECT_EXECUTIVE'
+        ? {
+            selectedExecutive: event.executive,
+            selectedMeeting: null,
+            currentDialogue: null,
+            availableMeetings: [],
+            error: null,
+          }
+        : {}
+    ),
+    useCachedMeetings: assign(({ context, event }) => {
+      if (event.type !== 'SELECT_EXECUTIVE') return {};
+      const meetings = context.meetingsCache[event.executive.role] ?? [];
+      return {
+        selectedExecutive: event.executive,
+        availableMeetings: meetings,
+        selectedMeeting: null,
+        currentDialogue: null,
+        error: null,
+      } satisfies Partial<ExecutiveMeetingContext>;
+    }),
+    cacheMeetings: assign(({ context, event }) => {
+      if (!context.selectedExecutive) return {};
+      const output = (event as any)?.output as RoleMeeting[] | undefined;
+      if (!output) return {};
+      const role = context.selectedExecutive.role;
+      return {
+        meetingsCache: {
+          ...context.meetingsCache,
+          [role]: output,
+        },
+        availableMeetings: output,
+        error: null,
+      };
+    }),
+    selectMeeting: assign(({ event }) =>
+      event.type === 'SELECT_MEETING'
+        ? {
+            selectedMeeting: event.meeting,
+            error: null,
+          }
+        : {}
+    ),
+    cacheDialogue: assign(({ context, event }) => {
+      if (!context.selectedExecutive || !context.selectedMeeting) {
+        return {};
+      }
+      const output = (event as any)?.output as DialogueData | undefined;
+      if (!output) return {};
+      const key = `${context.selectedExecutive.role}::${context.selectedMeeting.id}`;
+      return {
+        dialogueCache: {
+          ...context.dialogueCache,
+          [key]: output,
+        },
+        currentDialogue: output,
+        error: null,
+      };
+    }),
+    useCachedDialogue: assign(({ context, event }) => {
+      if (event.type !== 'SELECT_MEETING' || !context.selectedExecutive) return {};
+      const role = context.selectedExecutive.role;
+      const key = `${role}::${event.meeting.id}`;
+      const dialogue = context.dialogueCache[key];
+      if (!dialogue) return {};
+      return {
+        selectedMeeting: event.meeting,
+        currentDialogue: dialogue,
+        error: null,
+      } satisfies Partial<ExecutiveMeetingContext>;
+    }),
+    clearSelection: assign({
+      selectedExecutive: () => null,
+      selectedMeeting: () => null,
+      availableMeetings: () => [],
+      currentDialogue: () => null,
+      autoOptions: () => [],
+      error: () => null,
+    }),
+    queueChoiceAction: ({ context, event }) => {
+      if (event.type !== 'SELECT_CHOICE') return;
+      const { selectedExecutive, selectedMeeting, onActionSelected } = context;
+      if (!selectedExecutive || !selectedMeeting) return;
+      const data = createAutoActionData(selectedExecutive, selectedMeeting, event.choice);
+      onActionSelected(JSON.stringify(data));
+    },
+    storeAutoOptions: assign(({ context, event }) => {
+      const result = (event as any)?.output as { options: AutoOption[]; meetings: Record<string, RoleMeeting[]> } | undefined;
+      if (!result) return {};
+      const { options, meetings } = result;
+      const updatedMeetings = { ...context.meetingsCache };
+      Object.entries(meetings).forEach(([role, list]) => {
+        if (list.length > 0) {
+          updatedMeetings[role] = list;
+        }
+      });
+      return {
+        autoOptions: options,
+        meetingsCache: updatedMeetings,
+      };
+    }),
+    executeAutoOptions: ({ context }) => {
+      context.autoOptions.forEach((option) => {
+        context.onActionSelected(JSON.stringify(option.actionData));
+      });
+    },
+    clearImpactPreview: assign({
+      impactPreview: () => ({ immediate: {}, delayed: {}, selectedChoices: [] }),
+    }),
+    updateImpactPreview: assign(({ context, event }) => {
+      const result = (event as any)?.output as {
+        preview: ExecutiveMeetingContext['impactPreview'];
+        dialogueUpdates: Record<string, DialogueData>;
+      } | undefined;
+      if (!result) return {};
+      const { preview, dialogueUpdates } = result;
+      return {
+        impactPreview: preview,
+        dialogueCache: { ...context.dialogueCache, ...dialogueUpdates },
+        error: null,
+      };
+    }),
+  },
+  actors: {
+    fetchExecutives: fromPromise(({ input }) => {
+      const { context } = input as { context: ExecutiveMeetingContext };
+      return context.services.fetchExecutives(context.gameId);
+    }),
+    fetchMeetings: fromPromise(({ input }) => {
+      const { context } = input as { context: ExecutiveMeetingContext };
+      if (!context.selectedExecutive) throw new Error('No executive selected');
+      return context.services.fetchRoleMeetings(context.selectedExecutive.role);
+    }),
+    fetchDialogue: fromPromise(({ input }) => {
+      const { context } = input as { context: ExecutiveMeetingContext };
+      if (!context.selectedExecutive || !context.selectedMeeting) {
+        throw new Error('Executive or meeting missing');
+      }
+      return context.services.fetchMeetingDialogue(context.selectedExecutive.role, context.selectedMeeting.id);
+    }),
+    prepareAutoSelections: fromPromise(async ({ input }) => {
+      const { context } = input as { context: ExecutiveMeetingContext };
+      const meetingsUpdates: Record<string, RoleMeeting[]> = {};
+      const ensureMeetings = async (role: string) => {
+        if (context.meetingsCache[role]?.length) {
+          return context.meetingsCache[role];
+        }
+        const fetched = await context.services.fetchRoleMeetings(role);
+        meetingsUpdates[role] = fetched;
+        return fetched;
+      };
+
+      const slotsRemaining = Math.max(0, context.focusSlotsTotal - context.focusSlotsUsed);
+      if (slotsRemaining === 0) {
+        return { options: [], meetings: meetingsUpdates };
+      }
+
+      const options: AutoOption[] = [];
+      for (const executive of context.executives) {
+        const meetings = await ensureMeetings(executive.role);
+        if (!meetings.length) continue;
+        const meeting = meetings[0];
+        const choice = meeting.choices?.[0];
+        if (!choice) continue;
+        const roleScores: Record<string, number> = {
+          ceo: 50,
+          head_ar: 40,
+          cmo: 30,
+          cco: 20,
+          head_distribution: 10,
+        };
+        const score =
+          (100 - (executive.mood ?? 50)) +
+          (100 - (executive.loyalty ?? 50)) +
+          (roleScores[executive.role] ?? 0);
+        options.push({
+          executive,
+          meeting,
+          choice,
+          score,
+          actionData: createAutoActionData(executive, meeting, choice),
+        });
+      }
+
+      options.sort((a, b) => b.score - a.score);
+      return {
+        options: options.slice(0, slotsRemaining),
+        meetings: meetingsUpdates,
+      };
+    }),
+    calculateImpactPreview: fromPromise(async ({ input }) => {
+      const { context, event } = input as { context: ExecutiveMeetingContext; event: ExecutiveMeetingEvent };
+      if (event.type !== 'CALCULATE_IMPACT_PREVIEW') {
+        return { preview: { immediate: {}, delayed: {}, selectedChoices: [] }, dialogueUpdates: {} };
+      }
+
+      const immediate: Record<string, number> = {};
+      const delayed: Record<string, number> = {};
+      const selectedChoices: ExecutiveMeetingContext['impactPreview']['selectedChoices'] = [];
+      const dialogueUpdates: Record<string, DialogueData> = {};
+
+      for (const actionString of event.selectedActions) {
+        try {
+          const actionData = JSON.parse(actionString) as {
+            roleId: string;
+            actionId: string;
+            choiceId: string;
+          };
+          const cacheKey = `${actionData.roleId}::${actionData.actionId}`;
+          let dialogue = context.dialogueCache[cacheKey];
+          if (!dialogue) {
+            dialogue = await context.services.fetchMeetingDialogue(actionData.roleId, actionData.actionId);
+            dialogueUpdates[cacheKey] = dialogue;
+          }
+          const choice = dialogue.choices.find((c: DialogueChoice) => c.id === actionData.choiceId);
+          if (!choice) continue;
+
+          const immediateEffects = Object.fromEntries(
+            Object.entries(choice.effects_immediate ?? {}).filter(([, value]) => typeof value === 'number')
+          ) as Record<string, number>;
+
+          const delayedEffects = Object.fromEntries(
+            Object.entries(choice.effects_delayed ?? {}).filter(([, value]) => typeof value === 'number')
+          ) as Record<string, number>;
+
+          selectedChoices.push({
+            executiveName: actionData.roleId.toUpperCase(),
+            meetingName: actionData.actionId.replace(/_/g, ' '),
+            choiceLabel: choice.label,
+            effects_immediate: immediateEffects,
+            effects_delayed: delayedEffects,
+          });
+
+          Object.entries(immediateEffects).forEach(([key, value]) => {
+            if (typeof value === 'number') {
+              immediate[key] = (immediate[key] ?? 0) + value;
+            }
+          });
+          Object.entries(delayedEffects).forEach(([key, value]) => {
+            if (typeof value === 'number') {
+              delayed[key] = (delayed[key] ?? 0) + value;
+            }
+          });
+        } catch (err) {
+          console.error('[IMPACT PREVIEW] Failed to process action', actionString, err);
+        }
+      }
+
+      return {
+        preview: { immediate, delayed, selectedChoices },
+        dialogueUpdates,
+      };
+    }),
+  },
+}).createMachine({
   id: 'executiveMeeting',
-  initial: 'idle',
+  initial: 'loadingExecutives',
   context: ({ input }) => ({
+    gameId: input.gameId,
     executives: [],
+    meetingsCache: {},
+    dialogueCache: {},
     selectedExecutive: null,
     availableMeetings: [],
     selectedMeeting: null,
@@ -63,123 +398,120 @@ export const executiveMeetingMachine = createMachine({
     focusSlotsUsed: 0,
     focusSlotsTotal: input.focusSlotsTotal,
     error: null,
-    gameId: input.gameId,
-    onActionSelected: input.onActionSelected,
     autoOptions: [],
-    impactPreview: {
-      immediate: {},
-      delayed: {},
-      selectedChoices: []
+    impactPreview: { immediate: {}, delayed: {}, selectedChoices: [] },
+    services: {
+      fetchExecutives: input.fetchExecutives ?? fetchExecutives,
+      fetchRoleMeetings: input.fetchRoleMeetings ?? fetchRoleMeetings,
+      fetchMeetingDialogue: input.fetchMeetingDialogue ?? fetchMeetingDialogue,
     },
+    onActionSelected: input.onActionSelected,
   }),
   on: {
+    SYNC_SLOTS: { actions: 'syncSlots' },
+    CALCULATE_IMPACT_PREVIEW: [
+      {
+        guard: 'hasSelectedActions' as const,
+        target: '#executiveMeeting.fetchingImpactPreview',
+        actions: 'clearImpactPreview',
+      },
+      {
+        actions: 'clearImpactPreview',
+      },
+    ],
     RESET: {
-      target: '.idle',
-      actions: 'clearSelection'
+      actions: 'clearSelection',
+      target: '#executiveMeeting.idle',
     },
     BACK_TO_EXECUTIVES: {
-      target: '.idle',
-      actions: 'clearSelection'
+      actions: 'clearSelection',
+      target: '#executiveMeeting.idle',
     },
-    BACK_TO_MEETINGS: [
-      {
-        guard: ({ context }) => !!context.selectedExecutive,
-        target: '.selectingMeeting',
-        actions: assign({ selectedMeeting: null, currentDialogue: null })
-      }
-    ],
-    SYNC_SLOTS: {
-      actions: assign({
-        focusSlotsUsed: ({ event }) => event.used,
-        focusSlotsTotal: ({ event }) => event.total
-      })
+    BACK_TO_MEETINGS: {
+      actions: assign({ selectedMeeting: () => null, currentDialogue: () => null }),
+      target: '#executiveMeeting.selectingMeeting',
     },
-    CALCULATE_IMPACT_PREVIEW: {
-      target: '.fetchingImpactPreview'
-    }
   },
   states: {
+    loadingExecutives: {
+      invoke: {
+        src: 'fetchExecutives',
+        input: ({ context }) => ({ context }),
+        onDone: {
+          target: 'idle',
+          actions: 'setExecutives',
+        },
+        onError: {
+          target: 'idle',
+          actions: 'captureError',
+        },
+      },
+    },
     idle: {
       on: {
-        SELECT_EXECUTIVE: {
-          target: 'loadingMeetings',
-          actions: assign({
-            selectedExecutive: ({ event }) => event.executive,
-            error: null,
-          }),
-          guard: 'hasFocusSlots',
-        },
+        SELECT_EXECUTIVE: [
+          {
+            guard: 'hasFocusSlotsAndCachedMeetings' as const,
+            target: 'selectingMeeting',
+            actions: 'useCachedMeetings',
+          },
+          {
+            guard: 'hasFocusSlots' as const,
+            target: 'loadingMeetings',
+            actions: 'assignSelectedExecutive',
+          },
+        ],
         AUTO_SELECT: {
+          guard: 'hasFocusSlots' as const,
           target: 'autoSelecting',
-          guard: 'hasFocusSlots',
         },
       },
     },
     loadingMeetings: {
       invoke: {
-        src: fromPromise(async ({ input }: { input: ExecutiveMeetingContext }) => {
-          if (!input.selectedExecutive) {
-            throw new Error('No executive selected');
-          }
-          return await fetchRoleMeetings(input.selectedExecutive.role);
-        }),
-        input: ({ context }) => context,
+        src: 'fetchMeetings',
+        input: ({ context }) => ({ context }),
         onDone: {
           target: 'selectingMeeting',
-          actions: assign({
-            availableMeetings: ({ event }) => event.output,
-          }),
+          actions: 'cacheMeetings',
         },
         onError: {
           target: 'idle',
-          actions: assign({
-            error: ({ event }) => (event.error as Error)?.message || 'Failed to load meetings',
-            selectedExecutive: null,
-          }),
+          actions: 'captureError',
         },
       },
     },
     selectingMeeting: {
       on: {
-        SELECT_MEETING: {
-          target: 'loadingDialogue',
-          actions: assign({
-            selectedMeeting: ({ event }) => event.meeting,
-            error: null,
-          }),
-          guard: 'hasValidMeeting',
-        },
+        SELECT_MEETING: [
+          {
+            guard: 'hasDialogueCached' as const,
+            target: 'inDialogue',
+            actions: 'useCachedDialogue',
+          },
+          {
+            guard: 'hasValidMeeting' as const,
+            target: 'loadingDialogue',
+            actions: 'selectMeeting',
+          },
+        ],
         BACK_TO_EXECUTIVES: {
           target: 'idle',
-          actions: assign({
-            selectedExecutive: null,
-            availableMeetings: [],
-            selectedMeeting: null,
-          }),
+          actions: 'clearSelection',
         },
       },
     },
     loadingDialogue: {
       invoke: {
-        src: fromPromise(async ({ input }: { input: ExecutiveMeetingContext }) => {
-          if (!input.selectedExecutive || !input.selectedMeeting) {
-            throw new Error('No executive or meeting selected');
-          }
-          return await fetchMeetingDialogue(input.selectedExecutive.role, input.selectedMeeting.id);
-        }),
-        input: ({ context }) => context,
+        src: 'fetchDialogue',
+        input: ({ context }) => ({ context }),
         onDone: {
           target: 'inDialogue',
-          actions: assign({
-            currentDialogue: ({ event }) => event.output,
-          }),
+          actions: 'cacheDialogue',
         },
         onError: {
           target: 'selectingMeeting',
-          actions: assign({
-            error: ({ event }) => (event.error as Error)?.message || 'Failed to load dialogue',
-            selectedMeeting: null,
-          }),
+          actions: 'captureError',
         },
       },
     },
@@ -187,304 +519,66 @@ export const executiveMeetingMachine = createMachine({
       on: {
         SELECT_CHOICE: {
           target: 'processingChoice',
-          actions: 'processChoice',
+          actions: 'queueChoiceAction',
         },
         BACK_TO_MEETINGS: {
           target: 'selectingMeeting',
-          actions: assign({
-            selectedMeeting: null,
-            currentDialogue: null,
-          }),
+          actions: assign({ selectedMeeting: () => null, currentDialogue: () => null }),
         },
       },
     },
     processingChoice: {
       after: {
-        500: {
+        400: 'refreshingExecutives',
+      },
+    },
+    refreshingExecutives: {
+      invoke: {
+        src: 'fetchExecutives',
+        input: ({ context }) => ({ context }),
+        onDone: {
           target: 'complete',
+          actions: 'setExecutives',
+        },
+        onError: {
+          target: 'complete',
+          actions: 'captureError',
         },
       },
     },
     complete: {
+      entry: 'clearSelection',
       after: {
-        1000: {
-          target: 'idle',
-          actions: 'clearSelection',
-        },
+        600: 'idle',
       },
     },
     autoSelecting: {
-      initial: 'loadingData',
-      states: {
-        loadingData: {
-          invoke: {
-            src: fromPromise(async ({ input }) => {
-              console.log('[AUTO] fetchAllExecutiveData actor called with input:', input);
-              const executives = await fetchExecutives(input.gameId);
-              const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
-              const allMeetings: Record<string, RoleMeeting[]> = {};
-
-              for (const role of roles) {
-                try {
-                  allMeetings[role] = await fetchRoleMeetings(role);
-                  console.log(`[AUTO] Fetched ${allMeetings[role].length} meetings for role: ${role}`);
-                } catch (error) {
-                  console.log(`[AUTO] Error fetching meetings for role ${role}:`, error);
-                  allMeetings[role] = [];
-                }
-              }
-
-              console.log('[AUTO] fetchAllExecutiveData completed:', {
-                executivesCount: executives.length,
-                meetingsKeys: Object.keys(allMeetings)
-              });
-              return { executives, allMeetings };
-            }),
-            input: ({ context }) => context,
-            onDone: {
-              target: 'selecting',
-              actions: 'calculateAutoOptions'
-            },
-            onError: {
-              target: '#executiveMeeting.idle'
-            }
-          }
-        },
-        selecting: {
-          entry: 'makeAutoSelections',
-          after: {
-            1000: '#executiveMeeting.idle'
-          }
-        }
-      }
-    },
-    fetchingImpactPreview: {
       invoke: {
-        src: fromPromise(async ({ input }) => {
-          console.log('[IMPACT PREVIEW] Fetching effects for actions:', input.selectedActions);
-          const immediate: Record<string, number> = {};
-          const delayed: Record<string, number> = {};
-          const selectedChoices = [];
-
-          // Fetch dialogue data for each selected action
-          for (const actionString of input.selectedActions) {
-            try {
-              const actionData = JSON.parse(actionString);
-              const { roleId, actionId, choiceId } = actionData;
-
-              // Fetch the meeting dialogue to get choice effects
-              const dialogue = await fetchMeetingDialogue(roleId, actionId);
-              const choice = dialogue.choices.find(c => c.id === choiceId);
-
-              if (choice) {
-                console.log(`[IMPACT PREVIEW] Found choice for ${roleId}/${actionId}/${choiceId}:`, choice);
-
-                selectedChoices.push({
-                  executiveName: roleId.toUpperCase(),
-                  meetingName: actionId.replace(/_/g, ' '),
-                  choiceLabel: choice.label,
-                  effects_immediate: choice.effects_immediate,
-                  effects_delayed: choice.effects_delayed
-                });
-
-                // Accumulate immediate effects
-                Object.entries(choice.effects_immediate).forEach(([effect, value]) => {
-                  if (value !== undefined) {
-                    immediate[effect] = (immediate[effect] || 0) + value;
-                  }
-                });
-
-                // Accumulate delayed effects
-                Object.entries(choice.effects_delayed).forEach(([effect, value]) => {
-                  if (value !== undefined) {
-                    delayed[effect] = (delayed[effect] || 0) + value;
-                  }
-                });
-              } else {
-                console.warn(`[IMPACT PREVIEW] Choice ${choiceId} not found in ${roleId}/${actionId}`);
-              }
-            } catch (error) {
-              console.error('[IMPACT PREVIEW] Error processing action:', actionString, error);
-            }
-          }
-
-          return { immediate, delayed, selectedChoices };
-        }),
-        input: ({ context, event }) => ({
-          ...context,
-          selectedActions: event.type === 'CALCULATE_IMPACT_PREVIEW' ? event.selectedActions : []
-        }),
+        src: 'prepareAutoSelections',
+        input: ({ context }) => ({ context }),
         onDone: {
           target: 'idle',
-          actions: assign(({ event }) => ({
-            impactPreview: event.output
-          }))
+          actions: ['storeAutoOptions', 'executeAutoOptions', 'clearSelection'],
         },
         onError: {
           target: 'idle',
-          actions: assign({
-            impactPreview: {
-              immediate: {},
-              delayed: {},
-              selectedChoices: []
-            }
-          })
-        }
-      }
-    },
-  },
-}, {
-  guards: {
-    hasFocusSlots: ({ context }) => context.focusSlotsUsed < context.focusSlotsTotal,
-    hasValidMeeting: ({ event }) => event.type === 'SELECT_MEETING' && !!event.meeting && !!event.meeting.id,
-  },
-  actions: {
-    processChoice: ({ context, event }) => {
-      if (event.type !== 'SELECT_CHOICE') return;
-
-      const { selectedExecutive, selectedMeeting, onActionSelected } = context;
-      if (!selectedExecutive || !selectedMeeting) return;
-
-      const actionData: {
-        roleId: string;
-        actionId: string;
-        choiceId: string;
-        executiveId?: string;
-      } = {
-        roleId: selectedExecutive.role,
-        actionId: selectedMeeting.id,
-        choiceId: event.choice.id,
-      };
-
-      if (selectedExecutive.role !== 'ceo') {
-        actionData.executiveId = selectedExecutive.id;
-      }
-
-      if (onActionSelected) {
-        onActionSelected(JSON.stringify(actionData));
-      }
-    },
-    clearSelection: assign({
-      selectedExecutive: null,
-      availableMeetings: [],
-      selectedMeeting: null,
-      currentDialogue: null,
-      error: null,
-      autoOptions: [],
-      impactPreview: {
-        immediate: {},
-        delayed: {},
-        selectedChoices: []
+          actions: 'captureError',
+        },
       },
-    }),
-    calculateImpactPreview: assign(({ context, event }) => {
-      if (event.type !== 'CALCULATE_IMPACT_PREVIEW') return {};
-
-      // Return empty preview for now - will be populated by async service
-      return {
-        impactPreview: {
-          immediate: {},
-          delayed: {},
-          selectedChoices: []
-        }
-      };
-    }),
-    calculateAutoOptions: assign(({ context, event }) => {
-      console.log('[AUTO] calculateAutoOptions called', { context, event });
-      // Type guard for events with output property
-      if (!('output' in event) || !event.output) {
-        console.warn('[AUTO] Event missing output property:', event);
-        return { autoOptions: [] };
-      }
-      const { executives } = (event as any).output;
-      const { allMeetings } = (event as any).output;
-      const remainingSlots = context.focusSlotsTotal - context.focusSlotsUsed;
-
-      console.log('[AUTO] Data received:', {
-        executivesCount: executives?.length,
-        allMeetings: Object.keys(allMeetings || {}),
-        remainingSlots
-      });
-
-      if (remainingSlots === 0) {
-        console.log('[AUTO] No remaining slots');
-        return { autoOptions: [] };
-      }
-
-      const options: Array<{ executive: Executive; meeting: RoleMeeting; choice: DialogueChoice; score: number; actionData: object }> = [];
-
-      // Generate all possible combinations
-      executives.forEach((executive: Executive) => {
-        const meetings = allMeetings[executive.role] || [];
-        console.log(`[AUTO] Executive ${executive.role}: ${meetings.length} meetings`);
-
-        if (meetings.length > 0) {
-          const meeting = meetings[0]; // Take first meeting
-          console.log(`[AUTO] First meeting for ${executive.role}:`, meeting.id, 'choices:', meeting.choices?.length);
-
-          if (meeting.choices && meeting.choices.length > 0) {
-            const choice = meeting.choices[0]; // Take first choice
-
-            // Simple scoring: prioritize by low mood/loyalty + role priority
-            const roleScores: Record<string, number> = {
-              'ceo': 50,
-              'head_ar': 40,
-              'cmo': 30,
-              'cco': 20,
-              'head_distribution': 10
-            };
-
-            const score = (100 - (executive.mood || 50)) +
-                         (100 - (executive.loyalty || 50)) +
-                         (roleScores[executive.role] || 0);
-
-            const actionData = {
-              roleId: executive.role,
-              actionId: meeting.id,
-              choiceId: choice.id,
-              ...(executive.role !== 'ceo' && { executiveId: executive.id })
-            };
-
-            console.log(`[AUTO] Created option for ${executive.role}:`, { score, actionData });
-
-            options.push({
-              executive,
-              meeting,
-              choice,
-              score,
-              actionData
-            });
-          }
-        }
-      });
-
-      // Sort by score and take top N
-      const sortedOptions = options.sort((a, b) => b.score - a.score);
-      const finalOptions = sortedOptions.slice(0, remainingSlots);
-
-      console.log('[AUTO] Final auto options:', finalOptions.length, finalOptions.map(o => o.actionData));
-
-      return {
-        autoOptions: finalOptions
-      };
-    }),
-    makeAutoSelections: ({ context }) => {
-      console.log('[AUTO] makeAutoSelections called', {
-        autoOptionsLength: context.autoOptions.length,
-        hasOnActionSelected: !!context.onActionSelected
-      });
-
-      context.autoOptions.forEach((option, index) => {
-        console.log(`[AUTO] Processing option ${index}:`, JSON.stringify(option.actionData));
-        if (context.onActionSelected) {
-          context.onActionSelected(JSON.stringify(option.actionData));
-          console.log(`[AUTO] Called onActionSelected for option ${index}`);
-        } else {
-          console.error('[AUTO] onActionSelected is not available!');
-        }
-      });
-
-      console.log('[AUTO] makeAutoSelections completed');
-    }
+    },
+    fetchingImpactPreview: {
+      invoke: {
+        src: 'calculateImpactPreview',
+        input: ({ context, event }) => ({ context, event }),
+        onDone: {
+          target: 'idle',
+          actions: 'updateImpactPreview',
+        },
+        onError: {
+          target: 'idle',
+          actions: ['captureError', 'clearImpactPreview'],
+        },
+      },
+    },
   },
 });
