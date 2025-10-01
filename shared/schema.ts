@@ -269,6 +269,26 @@ export const gameStates = pgTable("game_states", {
   userReputationIdx: sql`CREATE INDEX IF NOT EXISTS "idx_game_states_user_reputation" ON ${table} ("user_id", "reputation", "current_week")`,
 }));
 
+export const emails = pgTable("emails", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
+  week: integer("week").notNull(),
+  category: text("category").notNull(),
+  sender: text("sender").notNull(),
+  senderRoleId: text("sender_role_id"),
+  subject: text("subject").notNull(),
+  preview: text("preview"),
+  body: jsonb("body").notNull(),
+  metadata: jsonb("metadata").default('{}'),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  gameIdx: sql`CREATE INDEX IF NOT EXISTS "idx_emails_game_id" ON ${table} ("game_id")`,
+  unreadIdx: sql`CREATE INDEX IF NOT EXISTS "idx_emails_game_is_read" ON ${table} ("game_id", "is_read")`,
+  weekIdx: sql`CREATE INDEX IF NOT EXISTS "idx_emails_game_week" ON ${table} ("game_id", "week")`,
+}));
+
 // TODO: Legacy executive state persisted for compatibility while the client UI is rebuilt (UI removed 2025-09-19).
 // Executives table
 export const executives = pgTable("executives", {
@@ -424,6 +444,13 @@ export const chartEntriesRelations = relations(chartEntries, ({ one }) => ({
   }),
 }));
 
+export const emailsRelations = relations(emails, ({ one }) => ({
+  gameState: one(gameStates, {
+    fields: [emails.gameId],
+    references: [gameStates.id],
+  }),
+}));
+
 export const musicLabelsRelations = relations(musicLabels, ({ one }) => ({
   gameState: one(gameStates, {
     fields: [musicLabels.gameId],
@@ -446,6 +473,7 @@ export const gameStatesRelations = relations(gameStates, ({ one, many }) => ({
   moodEvents: many(moodEvents),
   chartEntries: many(chartEntries),
   weeklyActions: many(weeklyActions),
+  emails: many(emails),
 }));
 
 // Zod schemas
@@ -483,6 +511,16 @@ export const insertReleaseSchema = createInsertSchema(releases).omit({
 export const insertReleaseSongSchema = createInsertSchema(releaseSongs);
 
 export const insertGameStateSchema = createInsertSchema(gameStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmailSchema = createInsertSchema(emails, {
+  metadata: (schema) => schema.metadata.default({}),
+  preview: (schema) => schema.preview.default(null),
+  senderRoleId: (schema) => schema.senderRoleId.default(null),
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -565,3 +603,6 @@ export type InsertChartEntry = z.infer<typeof insertChartEntrySchema>;
 export type MusicLabel = typeof musicLabels.$inferSelect;
 export type InsertMusicLabel = z.infer<typeof insertMusicLabelSchema>;
 export type LabelRequest = z.infer<typeof labelRequestSchema>;
+
+export type Email = typeof emails.$inferSelect;
+export type InsertEmail = z.infer<typeof insertEmailSchema>;
