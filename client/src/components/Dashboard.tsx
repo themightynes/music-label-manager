@@ -8,6 +8,7 @@ import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { WeekSummary } from './WeekSummary';
 import { MusicCalendar } from './MusicCalendar';
+import { InboxWidget } from './InboxWidget';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
@@ -71,9 +72,10 @@ export function Dashboard({
             <ArtistRoster />
           </div>
 
-          {/* Music Calendar */}
-          <div className="lg:col-span-1">
+          {/* Music Calendar & Inbox */}
+          <div className="lg:col-span-1 space-y-4">
             <MusicCalendar />
+            <InboxWidget />
           </div>
         </div>
 
