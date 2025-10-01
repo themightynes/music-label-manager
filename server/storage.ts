@@ -1,13 +1,13 @@
 import {
   users, gameSaves, artists, roles, projects, dialogueChoices,
-  gameEvents, gameStates, weeklyActions, songs, releases, releaseSongs, executives, chartEntries, musicLabels,
+  gameEvents, gameStates, weeklyActions, songs, releases, releaseSongs, executives, chartEntries, musicLabels, emails,
   type User, type InsertUser, type GameSave, type InsertGameSave,
   type Artist, type InsertArtist, type Project, type InsertProject,
   type GameState, type InsertGameState, type WeeklyAction, type InsertWeeklyAction,
   type DialogueChoice, type GameEvent, type Role,
   type Song, type InsertSong, type Release, type InsertRelease,
   type ReleaseSong, type InsertReleaseSong, type ChartEntry as DbChartEntry, type InsertChartEntry,
-  type MusicLabel, type InsertMusicLabel
+  type MusicLabel, type InsertMusicLabel, type Email, type InsertEmail
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
@@ -94,6 +94,20 @@ export interface IStorage {
   getMusicLabel(gameId: string): Promise<MusicLabel | undefined>;
   createMusicLabel(label: InsertMusicLabel, dbTransaction?: any): Promise<MusicLabel>;
   updateMusicLabel(gameId: string, label: Partial<InsertMusicLabel>): Promise<MusicLabel | undefined>;
+
+  // Emails
+  getEmailsByGame(gameId: string, params?: {
+    isRead?: boolean;
+    category?: string;
+    week?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ emails: Email[]; total: number; unreadCount: number }>;
+  getEmailById(gameId: string, emailId: string): Promise<Email | undefined>;
+  createEmail(email: InsertEmail, dbTransaction?: any): Promise<Email>;
+  createEmails(emails: InsertEmail[], dbTransaction?: any): Promise<Email[]>;
+  markEmailRead(gameId: string, emailId: string, isRead: boolean): Promise<Email>;
+  deleteEmail(gameId: string, emailId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -709,6 +723,101 @@ export class DatabaseStorage implements IStorage {
         chartEntries.songId,
         desc(chartEntries.chartWeek)
       );
+  }
+
+  // Email storage implementation
+  async getEmailsByGame(
+    gameId: string,
+    params: {
+      isRead?: boolean;
+      category?: string;
+      week?: number;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<{ emails: Email[]; total: number; unreadCount: number }> {
+    const { isRead, category, week, limit = 50, offset = 0 } = params;
+    const filters: any[] = [eq(emails.gameId, gameId)];
+
+    if (typeof isRead === "boolean") {
+      filters.push(eq(emails.isRead, isRead));
+    }
+    if (category) {
+      filters.push(eq(emails.category, category));
+    }
+    if (typeof week === "number") {
+      filters.push(eq(emails.week, week));
+    }
+
+    let whereClause = filters[0];
+    if (filters.length > 1) {
+      whereClause = and(...filters);
+    }
+
+    const resultLimit = typeof limit === "number" ? Math.max(limit, 0) : 50;
+    const resultOffset = typeof offset === "number" ? Math.max(offset, 0) : 0;
+
+    const [totalResult, unreadResult, emailRows] = await Promise.all([
+      db.select({ value: sql<number>`count(*)::int` }).from(emails).where(whereClause),
+      db.select({ value: sql<number>`count(*)::int` }).from(emails).where(and(eq(emails.gameId, gameId), eq(emails.isRead, false))),
+      db.select().from(emails)
+        .where(whereClause)
+        .orderBy(desc(emails.createdAt))
+        .limit(resultLimit)
+        .offset(resultOffset)
+    ]);
+
+    const total = Number(totalResult[0]?.value ?? 0);
+    const unreadCount = Number(unreadResult[0]?.value ?? 0);
+
+    return {
+      emails: emailRows,
+      total,
+      unreadCount,
+    };
+  }
+
+  async getEmailById(gameId: string, emailId: string): Promise<Email | undefined> {
+    const [email] = await db.select()
+      .from(emails)
+      .where(and(eq(emails.gameId, gameId), eq(emails.id, emailId)))
+      .limit(1);
+
+    return email || undefined;
+  }
+
+  async createEmail(emailInput: InsertEmail, dbTransaction?: any): Promise<Email> {
+    const dbContext = dbTransaction || db;
+    const [created] = await dbContext.insert(emails).values(emailInput).returning();
+    return created;
+  }
+
+  async createEmails(emailInputs: InsertEmail[], dbTransaction?: any): Promise<Email[]> {
+    if (emailInputs.length === 0) return [];
+
+    const dbContext = dbTransaction || db;
+    return await dbContext.insert(emails).values(emailInputs).returning();
+  }
+
+  async markEmailRead(gameId: string, emailId: string, isRead: boolean): Promise<Email> {
+    const [updated] = await db.update(emails)
+      .set({
+        isRead,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(emails.gameId, gameId), eq(emails.id, emailId)))
+      .returning();
+
+    if (!updated) {
+      throw new Error(`Email ${emailId} not found for game ${gameId}`);
+    }
+
+    return updated;
+  }
+
+  async deleteEmail(gameId: string, emailId: string): Promise<void> {
+    await db.delete(emails)
+      .where(and(eq(emails.gameId, gameId), eq(emails.id, emailId)));
   }
 
   // Music Labels implementation

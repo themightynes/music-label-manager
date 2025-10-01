@@ -516,11 +516,7 @@ export const insertGameStateSchema = createInsertSchema(gameStates).omit({
   updatedAt: true,
 });
 
-export const insertEmailSchema = createInsertSchema(emails, {
-  metadata: (schema) => schema.metadata.default({}),
-  preview: (schema) => schema.preview.default(null),
-  senderRoleId: (schema) => schema.senderRoleId.default(null),
-}).omit({
+export const insertEmailSchema = createInsertSchema(emails).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
