@@ -27,13 +27,10 @@ import analyticsRouter from './routes/analytics';
 import { ClerkExpressWithAuth, clerkClient } from '@clerk/clerk-sdk-node';
 
 const EMAIL_CATEGORY_VALUES = [
-  "tour_completion",
-  "top_10_debut",
-  "release",
-  "number_one_debut",
-  "tier_unlock",
-  "artist_discovery",
-  "financial_report"
+  "chart",
+  "financial",
+  "artist",
+  "ar"
 ] as const satisfies readonly EmailCategory[];
 
 const emailCategoryEnum = z.enum(EMAIL_CATEGORY_VALUES);
@@ -71,6 +68,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { gameId } = req.params;
       const queryParams = emailQuerySchema.parse(req.query);
 
+      console.log('[API] GET /emails - Query params:', queryParams);
+
       const [gameOwnership] = await db
         .select({ id: gameStates.id })
         .from(gameStates)
@@ -84,13 +83,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await storage.getEmailsByGame(gameId, {
+      const storageParams = {
         isRead: typeof queryParams.isRead === 'string' ? queryParams.isRead === 'true' : undefined,
         category: queryParams.category,
         week: queryParams.week,
         limit: queryParams.limit,
         offset: queryParams.offset
-      });
+      };
+
+      console.log('[API] Calling storage.getEmailsByGame with:', storageParams);
+
+      const result = await storage.getEmailsByGame(gameId, storageParams);
+
+      console.log('[API] Storage returned:', { total: result.total, emailCount: result.emails.length });
 
       res.json(result);
     } catch (error) {
@@ -1344,6 +1349,21 @@ const musicLabelData = {
       const currentArtists = await storage.getArtistsByGame(gameId);
       const flags = (gameState.flags || {}) as any;
       (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
+
+      if (signingCost > 0) {
+        const signingEvent = {
+          artistId: artist.id,
+          name: artist.name,
+          amount: signingCost,
+          week: gameState.currentWeek || 1,
+          recordedAt: new Date().toISOString(),
+        };
+
+        if (!Array.isArray(flags.pending_signing_fees)) {
+          flags.pending_signing_fees = [];
+        }
+        flags.pending_signing_fees.push(signingEvent);
+      }
       
       // Remove this artist from discovered collections using discovered (content) ID or name
       if (flags.ar_office_discovered_artists) {
@@ -1366,7 +1386,37 @@ const musicLabelData = {
       }
 
       await storage.updateGameState(gameId, { flags });
-      
+
+      // Generate welcome email for signed artist
+      try {
+        const emailBody = {
+          artistId: artist.id,
+          name: artist.name,
+          archetype: artist.archetype ?? 'Unknown',
+          talent: artist.talent ?? 0,
+          genre: artist.genre ?? null,
+          signingCost: signingCost,
+          weeklyCost: artist.weeklyFee ?? null,
+        };
+
+        await storage.createEmail({
+          gameId: gameId,
+          week: gameState.currentWeek ?? 1,
+          category: 'ar',
+          sender: 'Marcus "Mac" Rodriguez',
+          senderRoleId: 'head_ar',
+          subject: `Welcome to the Roster – ${artist.name}`,
+          preview: `${artist.name} has officially signed with ${gameState.labelName || 'your label'}!`,
+          body: emailBody,
+          metadata: emailBody,
+          isRead: false,
+        });
+        console.log(`[ARTIST SIGNING] Generated welcome email for ${artist.name}`);
+      } catch (emailError) {
+        console.error('[ARTIST SIGNING] Failed to generate welcome email:', emailError);
+        // Don't fail the signing if email generation fails
+      }
+
       res.json(artist);
     } catch (error) {
       if (error instanceof z.ZodError) {

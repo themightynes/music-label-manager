@@ -569,6 +569,8 @@ export const useGameStore = create<GameStore>()(
           await queryClient.invalidateQueries({ queryKey: ['release-roi'] });
           // CRITICAL: Invalidate executives cache to refresh mood/loyalty after meetings
           await queryClient.invalidateQueries({ queryKey: ['executives'] });
+          // Invalidate emails cache to refresh inbox with new week's emails
+          await queryClient.invalidateQueries({ queryKey: ['emails'] });
         } catch (error) {
           console.error('=== ADVANCE WEEK ERROR ===');
           console.error('Error occurred during week advancement');

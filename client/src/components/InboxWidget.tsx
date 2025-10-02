@@ -10,9 +10,9 @@ import { InboxModal } from './InboxModal';
 export function InboxWidget() {
   const [open, setOpen] = useState(false);
   const { data: unreadData, isLoading: unreadLoading } = useUnreadEmailCount();
-  const { data, isLoading } = useEmails({ limit: 1 });
+  const { data, isLoading } = useEmails({ limit: 2 });
 
-  const latestEmail = data?.emails?.[0] ?? null;
+  const emails = data?.emails ?? [];
   const unreadCount = unreadData?.count ?? data?.unreadCount ?? 0;
 
   return (
@@ -27,7 +27,7 @@ export function InboxWidget() {
             setOpen(true);
           }
         }}
-        className="group relative cursor-pointer border-[#4e324c]/80 bg-gradient-to-br from-[#28131d] via-[#221018] to-[#1b0e14] transition hover:border-[#A75A5B] focus:outline-none focus:ring-2 focus:ring-[#A75A5B]"
+        className="group relative cursor-pointer border-[#4e324c]/80 bg-gradient-to-br from-[#28131d] via-[#221018] to-[#1b0e14] transition hover:border-[#A75A5B] focus:outline-none focus:ring-2 focus:ring-[#A75A5B] h-full flex flex-col"
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -38,23 +38,30 @@ export function InboxWidget() {
             {unreadLoading ? '—' : `${unreadCount} unread`}
           </Badge>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
           {isLoading ? (
-            <Skeleton className="h-14 w-full rounded-lg bg-white/10" />
-          ) : latestEmail ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-white">{latestEmail.subject}</p>
-                <Badge variant="outline" className="text-xs text-white/70">
-                  {formatCategory(latestEmail.category)}
-                </Badge>
-              </div>
-              <p className="text-xs text-white/60">
-                {latestEmail.preview ?? 'Open to read the full briefing.'}
-              </p>
-              <p className="text-[11px] uppercase tracking-wide text-white/40">
-                {formatTimestamp(latestEmail.createdAt)} • Week {latestEmail.week}
-              </p>
+              <Skeleton className="h-14 w-full rounded-lg bg-white/10" />
+              <Skeleton className="h-14 w-full rounded-lg bg-white/10" />
+            </div>
+          ) : emails.length > 0 ? (
+            <div className="space-y-3 flex-1 overflow-y-auto">
+              {emails.map((email) => (
+                <div key={email.id} className="space-y-2 pb-3 border-b border-white/10 last:border-b-0 last:pb-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-white">{email.subject}</p>
+                    <Badge variant="outline" className="text-xs text-white/70">
+                      {formatCategory(email.category)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-white/60">
+                    {email.preview ?? 'Open to read the full briefing.'}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-wide text-white/40">
+                    {formatTimestamp(email.createdAt)} • Week {email.week}
+                  </p>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-2 text-sm text-white/60">
@@ -78,7 +85,7 @@ export function InboxWidget() {
         </CardContent>
       </Card>
 
-      <InboxModal open={open} onOpenChange={setOpen} initialEmailId={latestEmail?.id ?? null} />
+      <InboxModal open={open} onOpenChange={setOpen} initialEmailId={emails[0]?.id ?? null} />
     </>
   );
 }
@@ -99,20 +106,14 @@ function formatTimestamp(value: string) {
 
 function formatCategory(category: string) {
   switch (category) {
-    case 'tour_completion':
-      return 'Tour';
-    case 'top_10_debut':
-      return 'Top 10 Debut';
-    case 'number_one_debut':
-      return '#1 Debut';
-    case 'release':
-      return 'Release';
-    case 'tier_unlock':
-      return 'Tier Unlock';
-    case 'artist_discovery':
-      return 'Artist Discovery';
-    case 'financial_report':
-      return 'Financial Report';
+    case 'chart':
+      return 'Chart';
+    case 'financial':
+      return 'Financial';
+    case 'artist':
+      return 'Artist';
+    case 'ar':
+      return 'A&R';
     default:
       return 'Update';
   }

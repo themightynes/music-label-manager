@@ -13,44 +13,32 @@ import { useEmails, useMarkEmailRead, useUnreadEmailCount } from '@/hooks/useEma
 import type { EmailCategory } from '@shared/types/emailTypes';
 import type { EmailTemplateData, EmailTemplateProps } from './email-templates';
 import {
-  ArtistDiscoveryEmail,
-  FinancialReportEmail,
-  NumberOneDebutEmail,
-  ReleaseEmail,
-  TierUnlockEmail,
-  Top10DebutEmail,
-  TourCompletionEmail,
+  AREmail,
+  ChartEmail,
+  ArtistEmail,
+  FinancialEmail,
 } from './email-templates';
 
 const CATEGORY_LABELS: Record<EmailCategory, string> = {
-  tour_completion: 'Tour Completion',
-  top_10_debut: 'Top 10 Debut',
-  release: 'Release',
-  number_one_debut: '#1 Debut',
-  tier_unlock: 'Tier Unlock',
-  artist_discovery: 'Artist Discovery',
-  financial_report: 'Financial Report',
+  chart: 'Chart',
+  financial: 'Financial',
+  artist: 'Artist',
+  ar: 'A&R',
 };
 
 const CATEGORY_OPTIONS: { value: 'all' | EmailCategory; label: string }[] = [
   { value: 'all', label: 'All categories' },
-  { value: 'tour_completion', label: 'Tour Completion' },
-  { value: 'top_10_debut', label: 'Top 10 Debut' },
-  { value: 'number_one_debut', label: '#1 Debut' },
-  { value: 'release', label: 'Releases' },
-  { value: 'tier_unlock', label: 'Tier Unlocks' },
-  { value: 'artist_discovery', label: 'Artist Discovery' },
-  { value: 'financial_report', label: 'Financial Reports' },
+  { value: 'chart', label: 'Chart' },
+  { value: 'financial', label: 'Financial' },
+  { value: 'artist', label: 'Artist' },
+  { value: 'ar', label: 'A&R' },
 ];
 
 const TEMPLATE_MAP: Record<EmailCategory, React.ComponentType<EmailTemplateProps>> = {
-  tour_completion: TourCompletionEmail,
-  top_10_debut: Top10DebutEmail,
-  release: ReleaseEmail,
-  number_one_debut: NumberOneDebutEmail,
-  tier_unlock: TierUnlockEmail,
-  artist_discovery: ArtistDiscoveryEmail,
-  financial_report: FinancialReportEmail,
+  chart: ChartEmail, // Handles both top 10 and #1 debuts
+  financial: FinancialEmail, // Handles financial reports and tier unlocks
+  artist: ArtistEmail, // Handles tours and releases
+  ar: AREmail, // Handles artist discovery and signing
 };
 
 interface InboxModalProps {

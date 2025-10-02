@@ -336,6 +336,7 @@ export interface WeekSummary {
     weeklyOperations: number;
     artistSalaries: number;
     executiveSalaries: number;
+    signingBonuses: number;
     projectCosts: number;
     marketingCosts: number;
     roleMeetingCosts: number;

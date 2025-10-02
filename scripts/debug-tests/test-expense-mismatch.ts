@@ -51,12 +51,16 @@ async function testExpenseMismatch() {
     if (breakdown) {
       console.log('  weeklyOperations:', breakdown.weeklyOperations);
       console.log('  artistSalaries:', breakdown.artistSalaries);
+      console.log('  executiveSalaries:', breakdown.executiveSalaries);
+      console.log('  signingBonuses:', breakdown.signingBonuses);
       console.log('  projectCosts:', breakdown.projectCosts);
       console.log('  marketingCosts:', breakdown.marketingCosts);
       console.log('  roleMeetingCosts:', breakdown.roleMeetingCosts);
       
       const tooltipTotal = breakdown.weeklyOperations + 
                           breakdown.artistSalaries + 
+                          (breakdown.executiveSalaries || 0) +
+                          (breakdown.signingBonuses || 0) +
                           breakdown.projectCosts + 
                           breakdown.marketingCosts + 
                           breakdown.roleMeetingCosts;

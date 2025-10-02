@@ -1,11 +1,8 @@
 export type EmailCategory =
-  | "tour_completion"
-  | "top_10_debut"
-  | "release"
-  | "number_one_debut"
-  | "tier_unlock"
-  | "artist_discovery"
-  | "financial_report";
+  | "chart"
+  | "financial"
+  | "artist"
+  | "ar";
 
 export interface EmailMetadataBase {
   [key: string]: unknown;

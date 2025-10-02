@@ -44,6 +44,8 @@ async function testFinancialFix() {
       expenseBreakdown: {
         weeklyOperations: 0,  // Will be calculated
         artistSalaries: 0,      // Will be calculated  
+        executiveSalaries: 0,
+        signingBonuses: 0,
         projectCosts: 3000,     // Simulate a project moving to production
         marketingCosts: 2000,   // Simulate marketing budget
         roleMeetingCosts: 500   // Simulate role meeting costs

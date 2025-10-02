@@ -78,14 +78,20 @@ export function useEmails(params: EmailListQuery = {}) {
   return useQuery<EmailListResponse>({
     queryKey: ['emails', gameId, memoizedParams],
     enabled: Boolean(gameId),
-    staleTime: 30_000,
+    staleTime: 0, // Always refetch to ensure filters work correctly
     queryFn: async () => {
       if (!gameId) {
         return { emails: [], total: 0, unreadCount: 0 };
       }
 
-      const response = await apiRequest('GET', `/api/game/${gameId}/emails${buildQueryString(memoizedParams)}`);
+      const queryString = buildQueryString(memoizedParams);
+      console.log('[useEmails] Fetching emails with params:', memoizedParams);
+      console.log('[useEmails] Query string:', queryString);
+
+      const response = await apiRequest('GET', `/api/game/${gameId}/emails${queryString}`);
       const data = await response.json();
+
+      console.log('[useEmails] Received response:', { total: data?.total, emailCount: data?.emails?.length });
 
       return {
         emails: Array.isArray(data?.emails) ? data.emails.map(normalizeEmail) : [],

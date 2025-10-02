@@ -26,7 +26,9 @@ export function ArtistDiscoveryEmail({ email }: EmailTemplateProps) {
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-white/60">Weekly Cost</span>
-          <span className="text-white font-semibold">{formatCurrency(body?.weeklyCost)}</span>
+          <span className="text-white font-semibold">
+            {body?.weeklyCost != null ? formatCurrency(body.weeklyCost) : 'TBD'}
+          </span>
         </div>
         <div className="text-xs text-white/50">
           Scouted via {body?.sourcingType ?? 'A&R initiative'}

@@ -24,6 +24,8 @@ function simulateWeekAdvance() {
   const expenseBreakdown = {
     weeklyOperations: baseBurn1,
     artistSalaries: artistCosts,
+    executiveSalaries: 0,
+    signingBonuses: 0,
     projectCosts: 0,
     marketingCosts: 0,
     roleMeetingCosts: 0
@@ -41,7 +43,12 @@ function simulateWeekAdvance() {
   const operations = {
     base: expenseBreakdown.weeklyOperations,
     artists: expenseBreakdown.artistSalaries,
-    total: expenseBreakdown.weeklyOperations + expenseBreakdown.artistSalaries
+    executives: expenseBreakdown.executiveSalaries,
+    signingBonuses: expenseBreakdown.signingBonuses,
+    total: expenseBreakdown.weeklyOperations +
+      expenseBreakdown.artistSalaries +
+      expenseBreakdown.executiveSalaries +
+      expenseBreakdown.signingBonuses
   };
   
   console.log('\nFINANCIAL CALCULATION (line 3113):');
@@ -59,6 +66,8 @@ function simulateWeekAdvance() {
   // What the UI shows
   const tooltipTotal = expenseBreakdown.weeklyOperations + 
                       expenseBreakdown.artistSalaries + 
+                      expenseBreakdown.executiveSalaries +
+                      expenseBreakdown.signingBonuses +
                       expenseBreakdown.projectCosts + 
                       expenseBreakdown.marketingCosts + 
                       expenseBreakdown.roleMeetingCosts;

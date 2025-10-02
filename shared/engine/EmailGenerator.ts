@@ -72,7 +72,7 @@ function buildTourCompletionEmails(ctx: EmailFactoryContext, completion: GameCha
     ? `Tour Metrics – ${completion.description}`
     : `Tour Performance Update`;
 
-  return createBaseEmail(ctx, "tour_completion", subject, {
+  return createBaseEmail(ctx, "artist", subject, {
     description: completion.description,
     amount: completion.amount ?? 0,
     projectId: completion.projectId ?? null,
@@ -98,7 +98,7 @@ function buildChartEmails(ctx: EmailFactoryContext, chart: ChartUpdate): Factory
   };
 
   if (chart.isDebut && chart.position === 1) {
-    emails.push(createBaseEmail(ctx, "number_one_debut", `#1 Debut – "${chart.songTitle}"`, {
+    emails.push(createBaseEmail(ctx, "chart", `#1 Debut – "${chart.songTitle}"`, {
       ...baseMetadata,
     }, {
       sender: EXECUTIVE_SENDERS.cmo,
@@ -110,7 +110,7 @@ function buildChartEmails(ctx: EmailFactoryContext, chart: ChartUpdate): Factory
   }
 
   if (chart.isDebut && chart.position !== null && chart.position <= 10) {
-    emails.push(createBaseEmail(ctx, "top_10_debut", `Top 10 Debut – "${chart.songTitle}" at #${chart.position}`, {
+    emails.push(createBaseEmail(ctx, "chart", `Top 10 Debut – "${chart.songTitle}" at #${chart.position}`, {
       ...baseMetadata,
     }, {
       sender: EXECUTIVE_SENDERS.cmo,
@@ -133,7 +133,7 @@ function buildReleaseEmails(ctx: EmailFactoryContext, change: GameChange): Facto
     projectId: change.projectId ?? null,
   };
 
-  return createBaseEmail(ctx, "release", change.description ?? "New Release", metadata, {
+  return createBaseEmail(ctx, "artist", change.description ?? "New Release", metadata, {
     sender: EXECUTIVE_SENDERS.head_distribution,
     senderRoleId: "head_distribution",
     preview: change.description ?? undefined,
@@ -180,7 +180,7 @@ function buildTierUnlockEmail(ctx: EmailFactoryContext, change: GameChange): Fac
     amount: change.amount ?? 0,
   };
 
-  return createBaseEmail(ctx, "tier_unlock", subject, metadata, {
+  return createBaseEmail(ctx, "financial", subject, metadata, {
     sender,
     senderRoleId,
     preview: change.description,
@@ -205,7 +205,7 @@ function buildArtistDiscoveryEmail(
     sourcingType: weekSummary.arOffice?.sourcingType ?? null,
   };
 
-  return createBaseEmail(ctx, "artist_discovery", `Artist Discovery – ${artist.name}`, metadata, {
+  return createBaseEmail(ctx, "ar", `Artist Discovery – ${artist.name}`, metadata, {
     sender: EXECUTIVE_SENDERS.head_ar,
     senderRoleId: "head_ar",
     preview: `Mac scouted ${artist.name}`,
@@ -224,7 +224,7 @@ function buildFinancialReportEmail(ctx: EmailFactoryContext, weekSummary: WeekSu
 
   const subject = `Week ${ctx.week} Financial Summary`;
 
-  return createBaseEmail(ctx, "financial_report", subject, metadata, {
+  return createBaseEmail(ctx, "financial", subject, metadata, {
     sender: EXECUTIVE_SENDERS.finance,
     senderRoleId: null,
     preview: `Revenue $${weekSummary.revenue} • Expenses $${weekSummary.expenses}`,
