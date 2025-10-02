@@ -809,9 +809,10 @@ export class GameEngine {
         await this.processArtistDialogue(action, summary);
         break;
     }
-    
-    // Consume focus slot
-    this.gameState.usedFocusSlots = (this.gameState.usedFocusSlots || 0) + 1;
+
+    // NOTE: Focus slots are consumed when actions are selected (via API endpoints),
+    // not when they're processed. Removing duplicate consumption here.
+    // this.gameState.usedFocusSlots = (this.gameState.usedFocusSlots || 0) + 1;
   }
 
   /**
