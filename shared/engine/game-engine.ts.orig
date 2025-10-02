@@ -76,7 +76,7 @@ interface RNGConfig {
  */
 export interface WeeklyFinancials {
   startingBalance: number;
-  operations: { base: number; artists: number; executives: number; signingBonuses: number; total: number };
+  operations: { base: number; artists: number; executives: number; total: number };
   projects: { costs: number; revenue: number };
   marketing: { costs: number };
   roleEffects: { costs: number; revenue: number };
@@ -148,8 +148,6 @@ export class GameEngine {
       events: [],
       arOffice: { completed: false }
     };
-
-    this.processPendingSigningFees(summary);
 
     // Initialize runtime tracking for executive usage (not in interface)
     (summary as any).usedExecutives = new Set<string>();
@@ -230,7 +228,6 @@ export class GameEngine {
         weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
-        signingBonuses: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -307,7 +304,6 @@ export class GameEngine {
         weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
-        signingBonuses: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -372,55 +368,6 @@ export class GameEngine {
     return result;
   }
 
-  private processPendingSigningFees(summary: WeekSummary): void {
-    const flags = (this.gameState.flags || {}) as Record<string, any>;
-    const pendingFees = Array.isArray(flags.pending_signing_fees) ? flags.pending_signing_fees : [];
-
-    if (!pendingFees.length) {
-      return;
-    }
-
-    if (!summary.expenseBreakdown) {
-      summary.expenseBreakdown = {
-        weeklyOperations: 0,
-        artistSalaries: 0,
-        executiveSalaries: 0,
-        signingBonuses: 0,
-        projectCosts: 0,
-        marketingCosts: 0,
-        roleMeetingCosts: 0,
-      };
-    } else if (typeof summary.expenseBreakdown.signingBonuses !== 'number') {
-      summary.expenseBreakdown.signingBonuses = 0;
-    }
-
-    let processedCount = 0;
-
-    for (const fee of pendingFees) {
-      const amount = Number(fee?.amount ?? 0);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        continue;
-      }
-
-      summary.expenseBreakdown.signingBonuses += amount;
-      summary.changes.push({
-        type: 'expense_tracking',
-        description: `Artist signing bonus paid${fee?.name ? ` – ${fee.name}` : ''}`,
-        amount: -amount,
-        artistId: typeof fee?.artistId === 'string' ? fee.artistId : undefined,
-      });
-
-      processedCount += 1;
-    }
-
-    if (processedCount > 0) {
-      console.log(`[FINANCIAL] Processed ${processedCount} pending artist signing fee${processedCount === 1 ? '' : 's'}`);
-    }
-
-    flags.pending_signing_fees = [];
-    this.gameState.flags = flags;
-  }
-
   private async generateAndPersistEmails(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log('[EMAIL GENERATION] Starting email generation for week', summary.week);
 
@@ -459,7 +406,7 @@ export class GameEngine {
             if (fullArtist) {
               discoveredArtist.bio = fullArtist.bio ?? null;
               discoveredArtist.signingCost = fullArtist.signingCost ?? null;
-              discoveredArtist.weeklyCost = fullArtist.weeklyCost ?? null;
+              discoveredArtist.weeklyCost = (fullArtist as any).weeklyFee ?? null;
             }
           } catch (err) {
             console.warn('[EMAIL GENERATION] Could not fetch full artist details from game data:', err);
@@ -809,10 +756,9 @@ export class GameEngine {
         await this.processArtistDialogue(action, summary);
         break;
     }
-
-    // NOTE: Focus slots are consumed when actions are selected (via API endpoints),
-    // not when they're processed. Removing duplicate consumption here.
-    // this.gameState.usedFocusSlots = (this.gameState.usedFocusSlots || 0) + 1;
+    
+    // Consume focus slot
+    this.gameState.usedFocusSlots = (this.gameState.usedFocusSlots || 0) + 1;
   }
 
   /**
@@ -1027,7 +973,6 @@ export class GameEngine {
                 weeklyOperations: 0,
                 artistSalaries: 0,
                 executiveSalaries: 0,
-                signingBonuses: 0,
                 projectCosts: 0,
                 marketingCosts: 0,
                 roleMeetingCosts: 0
@@ -1038,6 +983,7 @@ export class GameEngine {
           break;
         case 'reputation':
           this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + value));
+          summary.reputationChanges.global = (summary.reputationChanges.global || 0) + value;
           break;
         case 'creative_capital':
           this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + value);
@@ -1417,6 +1363,8 @@ export class GameEngine {
                   }
                 }
               }
+
+              // Standard awareness update if no breakthrough
               if (!awarenessUpdate) {
                 const newPeakAwareness = Math.round(Math.max(song.peak_awareness || 0, newAwareness));
 
@@ -1851,7 +1799,6 @@ export class GameEngine {
             weeklyOperations: 0,
             artistSalaries: 0,
             executiveSalaries: 0,
-            signingBonuses: 0,
             projectCosts: 0,
             marketingCosts: 0,
             roleMeetingCosts: 0
@@ -3496,7 +3443,6 @@ export class GameEngine {
         weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
-        signingBonuses: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -3993,14 +3939,13 @@ export class GameEngine {
                 weeklyOperations: 0,
                 artistSalaries: 0,
                 executiveSalaries: 0,
-                signingBonuses: 0,
                 projectCosts: 0,
                 marketingCosts: 0,
                 roleMeetingCosts: 0
               };
             }
             // Track for reporting but don't affect final money calculation
-            summary.expenseBreakdown!.projectCosts += project.totalCost;
+            summary.expenseBreakdown.projectCosts += project.totalCost;
 
             summary.changes.push({
               type: 'expense_tracking',
@@ -4039,8 +3984,7 @@ export class GameEngine {
                   type: 'project_complete',
                   description: `${project.title} tour completed - ${tourStats.cities.length} cities, ${avgAttendance}% avg attendance, $${totalRevenue.toLocaleString()} total revenue`,
                   amount: 0, // Revenue already counted weekly
-                  projectId: project.id,
-                  grossRevenue: totalRevenue
+                  projectId: project.id
                 });
               }
             } else if (weeksInProduction > 0) {
@@ -4166,12 +4110,6 @@ export class GameEngine {
     }
     if (f.operations.artists > 0) {
       parts.push(`- $${f.operations.artists.toLocaleString()} (artists)`);
-    }
-    if (f.operations.executives > 0) {
-      parts.push(`- $${f.operations.executives.toLocaleString()} (executives)`);
-    }
-    if (f.operations.signingBonuses > 0) {
-      parts.push(`- $${f.operations.signingBonuses.toLocaleString()} (signing bonuses)`);
     }
     if (f.projects.costs > 0) {
       parts.push(`- $${f.projects.costs.toLocaleString()} (projects)`);

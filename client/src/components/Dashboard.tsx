@@ -8,6 +8,7 @@ import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
 import { WeekSummary } from './WeekSummary';
 import { MusicCalendar } from './MusicCalendar';
+import { InboxWidget } from './InboxWidget';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
@@ -63,12 +64,12 @@ export function Dashboard({
       <MetricsDashboard />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 md:py-2">
-        {/* Top Row - Artist Roster and Calendar */}
+        {/* Top Row - Inbox and Calendar */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 items-stretch">
 
-          {/* Artist Management */}
+          {/* Inbox */}
           <div className="lg:col-span-1">
-            <ArtistRoster />
+            <InboxWidget />
           </div>
 
           {/* Music Calendar */}
@@ -77,6 +78,10 @@ export function Dashboard({
           </div>
         </div>
 
+        {/* Artist Roster Section - Full Width */}
+        <div className="mb-6">
+          <ArtistRoster />
+        </div>
 
         {/* Tours Section - Full Width */}
         <div className="mb-6">

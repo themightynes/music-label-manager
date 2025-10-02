@@ -36,6 +36,44 @@ export const ActionSchema = z.object({
   metadata: z.record(z.any()).optional()
 });
 
+// HARDCODED: Expand severity taxonomy when dedicated QA workflow lands
+export const bugSeverityEnum = z.enum(['low', 'medium', 'high', 'critical'] as const);
+// HARDCODED: Update affected area taxonomy once module ownership stabilizes
+export const bugAreaEnum = z.enum(['gameplay', 'ui', 'audio', 'performance', 'data', 'other'] as const);
+// HARDCODED: Revisit frequency values after gathering telemetry
+export const bugFrequencyEnum = z.enum(['once', 'intermittent', 'always'] as const);
+
+export const BugReportRequestSchema = z.object({
+  summary: z.string().min(6).max(200),
+  severity: bugSeverityEnum,
+  area: bugAreaEnum,
+  frequency: bugFrequencyEnum,
+  whatHappened: z.string().min(15).max(2000),
+  stepsToReproduce: z.string().max(2000).optional(),
+  expectedResult: z.string().max(1000).optional(),
+  additionalContext: z.string().max(1500).optional(),
+  contactEmail: z.string().email().optional(),
+  metadata: z.object({
+    gameId: z.string().optional(),
+    currentWeek: z.number().int().optional(),
+    userAgent: z.string().optional(),
+    platform: z.string().optional(),
+    language: z.string().optional(),
+    timeZone: z.string().optional(),
+    url: z.string().optional(),
+    screen: z.object({
+      width: z.number().optional(),
+      height: z.number().optional()
+    }).optional()
+  }).partial().optional()
+});
+
+export const BugReportResponseSchema = z.object({
+  success: z.boolean(),
+  reportId: z.string().uuid(),
+  message: z.string().optional()
+});
+
 // Game state request/response schemas
 export const GetGameStateRequest = z.object({
   gameId: z.string().uuid().optional()
@@ -156,6 +194,8 @@ export type StartProjectRequest = z.infer<typeof StartProjectRequest>;
 export type StartProjectResponse = z.infer<typeof StartProjectResponse>;
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
 export type GameEndpoints = typeof gameEndpoints;
+export type BugReportRequest = z.infer<typeof BugReportRequestSchema>;
+export type BugReportResponse = z.infer<typeof BugReportResponseSchema>;
 
 // Backward compatibility - keep existing routes for now
 export const API_ROUTES = {

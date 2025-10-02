@@ -51,6 +51,8 @@ async function testConsolidatedMoney() {
       expenseBreakdown: {
         weeklyOperations: 4000,  // Simulate weekly operations
         artistSalaries: 1200,      // Simulate artist salary
+        executiveSalaries: 0,
+        signingBonuses: 0,
         projectCosts: 3000,        // Simulate a project cost
         marketingCosts: 2000,      // Simulate marketing
         roleMeetingCosts: 500      // Simulate role meeting cost
@@ -58,7 +60,7 @@ async function testConsolidatedMoney() {
     };
     
     // Calculate expected totals
-    expectedExpenses = 4000 + 1200 + 3000 + 2000 + 500; // $10,700
+    expectedExpenses = 4000 + 1200 + 0 + 0 + 3000 + 2000 + 500; // $10,700
     expectedRevenue = 5000; // Simulate some streaming revenue
     
     // Set the accumulated values

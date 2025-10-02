@@ -5,6 +5,7 @@ import path from 'path';
 import { storage } from "./storage";
 import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives } from "@shared/schema";
 import { z } from "zod";
+import type { EmailCategory } from "@shared/types/emailTypes";
 import { serverGameData } from "./data/gameData";
 import { gameDataLoader } from "@shared/utils/dataLoader";
 import { GameEngine } from "../shared/engine/game-engine";
@@ -16,6 +17,7 @@ import {
   AdvanceWeekResponse,
   SelectActionsRequest,
   SelectActionsResponse,
+  BugReportRequestSchema,
   validateRequest,
   createErrorResponse 
 } from "@shared/api/contracts";
@@ -25,6 +27,27 @@ import { requireClerkUser, handleClerkWebhook, requireAdmin } from './auth';
 import analyticsRouter from './routes/analytics';
 import { ClerkExpressWithAuth, clerkClient } from '@clerk/clerk-sdk-node';
 
+const EMAIL_CATEGORY_VALUES = [
+  "chart",
+  "financial",
+  "artist",
+  "ar"
+] as const satisfies readonly EmailCategory[];
+
+const emailCategoryEnum = z.enum(EMAIL_CATEGORY_VALUES);
+
+const emailQuerySchema = z.object({
+  isRead: z.enum(["true", "false"]).optional(),
+  category: emailCategoryEnum.optional(),
+  week: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional()
+});
+
+const markEmailReadSchema = z.object({
+  isRead: z.boolean()
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
 
   // Clerk webhooks
@@ -33,6 +56,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Email endpoints
+  app.get('/api/game/:gameId/emails', requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { gameId } = req.params;
+      const queryParams = emailQuerySchema.parse(req.query);
+
+      console.log('[API] GET /emails - Query params:', queryParams);
+
+      const [gameOwnership] = await db
+        .select({ id: gameStates.id })
+        .from(gameStates)
+        .where(and(eq(gameStates.id, gameId), eq(gameStates.userId, userId)))
+        .limit(1);
+
+      if (!gameOwnership) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      const storageParams = {
+        isRead: typeof queryParams.isRead === 'string' ? queryParams.isRead === 'true' : undefined,
+        category: queryParams.category,
+        week: queryParams.week,
+        limit: queryParams.limit,
+        offset: queryParams.offset
+      };
+
+      console.log('[API] Calling storage.getEmailsByGame with:', storageParams);
+
+      const result = await storage.getEmailsByGame(gameId, storageParams);
+
+      console.log('[API] Storage returned:', { total: result.total, emailCount: result.emails.length });
+
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: 'Invalid query parameters',
+          errors: error.errors
+        });
+      }
+      console.error('[API] Failed to fetch emails:', error);
+      res.status(500).json({ message: 'Failed to fetch emails' });
+    }
+  });
+
+  app.get('/api/game/:gameId/emails/unread-count', requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { gameId } = req.params;
+
+      const [gameOwnership] = await db
+        .select({ id: gameStates.id })
+        .from(gameStates)
+        .where(and(eq(gameStates.id, gameId), eq(gameStates.userId, userId)))
+        .limit(1);
+
+      if (!gameOwnership) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      const result = await storage.getEmailsByGame(gameId, {
+        isRead: false,
+        limit: 1,
+        offset: 0
+      });
+
+      res.json({ count: result.unreadCount });
+    } catch (error) {
+      console.error('[API] Failed to fetch unread email count:', error);
+      res.status(500).json({ message: 'Failed to fetch unread email count' });
+    }
+  });
+
+  app.patch('/api/game/:gameId/emails/:emailId/read', requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { gameId, emailId } = req.params;
+      const body = markEmailReadSchema.parse(req.body);
+
+      const [gameOwnership] = await db
+        .select({ id: gameStates.id })
+        .from(gameStates)
+        .where(and(eq(gameStates.id, gameId), eq(gameStates.userId, userId)))
+        .limit(1);
+
+      if (!gameOwnership) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      const email = await storage.markEmailRead(gameId, emailId, body.isRead);
+      res.json({ success: true, email });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: 'Invalid request body',
+          errors: error.errors
+        });
+      }
+
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({ message: 'Email not found' });
+      }
+
+      console.error('[API] Failed to update email read status:', error);
+      res.status(500).json({ message: 'Failed to update email read status' });
+    }
+  });
+
+  app.delete('/api/game/:gameId/emails/:emailId', requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { gameId, emailId } = req.params;
+
+      const [gameOwnership] = await db
+        .select({ id: gameStates.id })
+        .from(gameStates)
+        .where(and(eq(gameStates.id, gameId), eq(gameStates.userId, userId)))
+        .limit(1);
+
+      if (!gameOwnership) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      const existingEmail = await storage.getEmailById(gameId, emailId);
+      if (!existingEmail) {
+        return res.status(404).json({ message: 'Email not found' });
+      }
+
+      await storage.deleteEmail(gameId, emailId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Failed to delete email:', error);
+      res.status(500).json({ message: 'Failed to delete email' });
+    }
   });
 
   // Current user metadata (minimal): isAdmin flag derived from Clerk privateMetadata
@@ -670,7 +858,12 @@ const musicLabelData = {
           });
         }
 
-        const discoveredArtists = discoveredArtistsArray.map((discoveredArtist: any) => {
+        // Filter out artists already signed to this game by name
+        const signedForGame = await storage.getArtistsByGame(gameId);
+        const signedNames = new Set((signedForGame || []).map(a => String(a.name || '').toLowerCase()))
+        const filteredDiscovered = discoveredArtistsArray.filter((a: any) => !signedNames.has(String(a?.name || '').toLowerCase()));
+
+        const discoveredArtists = filteredDiscovered.map((discoveredArtist: any) => {
           // First try to find the full artist data
           const fullArtist = allGameArtists.find((a: any) => a.id === discoveredArtist.id);
 
@@ -1128,6 +1321,13 @@ const musicLabelData = {
       if ((gameState.money || 0) < signingCost) {
         return res.status(400).json({ message: "Insufficient funds to sign artist" });
       }
+
+      // Prevent duplicate signings by name (case-insensitive) within the same game
+      const existing = await storage.getArtistsByGame(gameId);
+      const incomingName = String(req.body?.name || '').toLowerCase();
+      if (incomingName && existing.some(a => (a.name || '').toLowerCase() === incomingName)) {
+        return res.status(409).json({ code: 'DUPLICATE_ARTIST', message: 'This artist is already signed to your roster.' });
+      }
       
       // Prepare artist data
       const validatedData = insertArtistSchema.parse({
@@ -1150,21 +1350,75 @@ const musicLabelData = {
       const currentArtists = await storage.getArtistsByGame(gameId);
       const flags = (gameState.flags || {}) as any;
       (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
+
+      if (signingCost > 0) {
+        const signingEvent = {
+          artistId: artist.id,
+          name: artist.name,
+          amount: signingCost,
+          week: gameState.currentWeek || 1,
+          recordedAt: new Date().toISOString(),
+        };
+
+        if (!Array.isArray(flags.pending_signing_fees)) {
+          flags.pending_signing_fees = [];
+        }
+        flags.pending_signing_fees.push(signingEvent);
+      }
       
-      // Remove this artist from discovered collections
+      // Remove this artist from discovered collections using discovered (content) ID or name
       if (flags.ar_office_discovered_artists) {
-        flags.ar_office_discovered_artists = flags.ar_office_discovered_artists.filter((a: any) => a.id !== artist.id);
+        const discoveredId = req.body?.id;
+        const signedNameLc = String(artist.name || '').toLowerCase();
+        flags.ar_office_discovered_artists = flags.ar_office_discovered_artists.filter((a: any) => {
+          const aNameLc = String(a?.name || '').toLowerCase();
+          return (discoveredId ? a.id !== discoveredId : true) && aNameLc !== signedNameLc;
+        });
         console.log('[A&R DEBUG] Removed signed artist from discovered collection. Remaining:', flags.ar_office_discovered_artists.length);
       }
 
       // Legacy cleanup: If this artist is the persisted discovered one, clear it now
-      if (flags.ar_office_discovered_artist_id && flags.ar_office_discovered_artist_id === artist.id) {
-        delete flags.ar_office_discovered_artist_id;
-        delete flags.ar_office_discovered_artist_info;
+      if ((flags as any).ar_office_discovered_artist_id) {
+        const discoveredId = req.body?.id;
+        if ((flags as any).ar_office_discovered_artist_id === discoveredId) {
+          delete flags.ar_office_discovered_artist_id;
+          delete flags.ar_office_discovered_artist_info;
+        }
       }
 
       await storage.updateGameState(gameId, { flags });
-      
+
+      // Generate welcome email for signed artist
+      try {
+        const labelDisplay = ((gameState as any).labelName) || ((gameState as any).musicLabel?.name) || 'your label';
+        const emailBody = {
+          artistId: artist.id,
+          name: artist.name,
+          archetype: artist.archetype ?? 'Unknown',
+          talent: artist.talent ?? 0,
+          genre: artist.genre ?? null,
+          signingCost: signingCost,
+          weeklyCost: artist.weeklyFee ?? null,
+        };
+
+        await storage.createEmail({
+          gameId: gameId,
+          week: gameState.currentWeek ?? 1,
+          category: 'ar',
+          sender: 'Marcus "Mac" Rodriguez',
+          senderRoleId: 'head_ar',
+          subject: `New Artist! ${artist.name}`,
+          preview: `${artist.name} has officially signed with ${labelDisplay}!`,
+          body: emailBody,
+          metadata: emailBody,
+          isRead: false,
+        });
+        console.log(`[ARTIST SIGNING] Generated welcome email for ${artist.name}`);
+      } catch (emailError) {
+        console.error('[ARTIST SIGNING] Failed to generate welcome email:', emailError);
+        // Don't fail the signing if email generation fails
+      }
+
       res.json(artist);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -3203,6 +3457,73 @@ const musicLabelData = {
         'SELECT_ACTIONS_ERROR',
         error instanceof Error ? error.message : 'Failed to save action selection'
       ));
+    }
+  });
+
+  app.post('/api/bug-reports', requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json(createErrorResponse('UNAUTHENTICATED', 'Authentication required to submit bug reports'));
+      }
+
+      const payload = BugReportRequestSchema.parse(req.body);
+      const bugReportsPath = path.join(process.cwd(), 'data', 'bugReports.json');
+
+      let existingReports: any[] = [];
+      try {
+        const raw = await fs.readFile(bugReportsPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          existingReports = parsed;
+        }
+      } catch (error) {
+        const nodeError = error as NodeJS.ErrnoException;
+        if (nodeError.code !== 'ENOENT') {
+          throw error;
+        }
+      }
+
+      const clerkUserId = (req as any).clerkUserId as string | undefined;
+      const record = {
+        id: crypto.randomUUID(),
+        submittedAt: new Date().toISOString(),
+        summary: payload.summary,
+        severity: payload.severity,
+        area: payload.area,
+        frequency: payload.frequency,
+        whatHappened: payload.whatHappened,
+        stepsToReproduce: payload.stepsToReproduce ?? null,
+        expectedResult: payload.expectedResult ?? null,
+        additionalContext: payload.additionalContext ?? null,
+        reporter: {
+          userId,
+          clerkUserId: clerkUserId ?? null,
+          contactEmail: payload.contactEmail ?? null
+        },
+        metadata: {
+          ...(payload.metadata ?? {}),
+          ip: req.ip
+        }
+      };
+
+      existingReports.unshift(record);
+
+      const serialized = JSON.stringify(existingReports, null, 2);
+      await fs.writeFile(bugReportsPath, serialized, 'utf8');
+
+      res.status(201).json({ success: true, reportId: record.id });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(createErrorResponse(
+          'VALIDATION_ERROR',
+          'Invalid bug report submission',
+          error.errors
+        ));
+      }
+
+      console.error('Failed to persist bug report:', error);
+      res.status(500).json(createErrorResponse('BUG_REPORT_ERROR', 'Failed to submit bug report'));
     }
   });
 

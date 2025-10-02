@@ -1811,9 +1811,11 @@ export class FinancialSystem {
       base: summary.expenseBreakdown?.weeklyOperations || 0,
       artists: summary.expenseBreakdown?.artistSalaries || 0,
       executives: summary.expenseBreakdown?.executiveSalaries || 0,
+      signingBonuses: summary.expenseBreakdown?.signingBonuses || 0,
       total: (summary.expenseBreakdown?.weeklyOperations || 0) + 
              (summary.expenseBreakdown?.artistSalaries || 0) + 
-             (summary.expenseBreakdown?.executiveSalaries || 0)
+             (summary.expenseBreakdown?.executiveSalaries || 0) +
+             (summary.expenseBreakdown?.signingBonuses || 0)
     };
     
     // Use actual values from summary expense breakdown
@@ -1869,6 +1871,9 @@ export class FinancialSystem {
     if (f.operations.executives > 0) {
       // TODO: Revisit once the executive system redesign ships; this line still reports hidden salaries to players.
       parts.push(`- $${f.operations.executives.toLocaleString()} (executives)`);
+    }
+    if (f.operations.signingBonuses > 0) {
+      parts.push(`- $${f.operations.signingBonuses.toLocaleString()} (signing bonuses)`);
     }
     if (f.projects.costs > 0) {
       parts.push(`- $${f.projects.costs.toLocaleString()} (projects)`);

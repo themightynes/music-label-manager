@@ -207,7 +207,13 @@ export function MetricsDashboard() {
     }
 
     const breakdown = stats.expenseBreakdown;
-    const total = breakdown.weeklyOperations + breakdown.artistSalaries + (breakdown.executiveSalaries || 0) + breakdown.projectCosts + breakdown.marketingCosts + breakdown.roleMeetingCosts;
+    const total = breakdown.weeklyOperations +
+      breakdown.artistSalaries +
+      (breakdown.executiveSalaries || 0) +
+      (breakdown.signingBonuses || 0) +
+      breakdown.projectCosts +
+      breakdown.marketingCosts +
+      breakdown.roleMeetingCosts;
 
     return (
       <div className="space-y-2 text-xs">
@@ -228,6 +234,12 @@ export function MetricsDashboard() {
           <div className="flex justify-between">
             <span className="text-black/70">Executive Salaries:</span>
             <span className="font-medium">${breakdown.executiveSalaries.toLocaleString()}</span>
+          </div>
+        )}
+        {breakdown.signingBonuses > 0 && (
+          <div className="flex justify-between">
+            <span className="text-black/70">Signing Bonuses:</span>
+            <span className="font-medium">${breakdown.signingBonuses.toLocaleString()}</span>
           </div>
         )}
         {breakdown.projectCosts > 0 && (

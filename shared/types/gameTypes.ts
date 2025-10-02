@@ -309,6 +309,7 @@ export interface GameChange {
   amount?: number;
   roleId?: string;
   projectId?: string;
+  grossRevenue?: number;
   moodChange?: number;
   newMood?: number;
   loyaltyBoost?: number;
@@ -336,6 +337,7 @@ export interface WeekSummary {
     weeklyOperations: number;
     artistSalaries: number;
     executiveSalaries: number;
+    signingBonuses: number;
     projectCosts: number;
     marketingCosts: number;
     roleMeetingCosts: number;

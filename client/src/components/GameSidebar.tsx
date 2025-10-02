@@ -20,6 +20,7 @@ import { useGameContext } from '@/contexts/GameContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { WeekSummary } from './WeekSummary';
 import { LabelCreationModal } from './LabelCreationModal';
+import { BugReportModal } from './BugReportModal';
 import type { LabelData } from '@shared/types/gameTypes';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { useIsAdmin } from '@/auth/useCurrentUser';
@@ -39,6 +40,7 @@ import {
   Zap,
   Search,
   Shield,
+  Bug,
 } from 'lucide-react';
 
 interface GameSidebarProps {
@@ -66,6 +68,7 @@ export function GameSidebar({
   const [isAutoSelecting, setIsAutoSelecting] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [isCreatingGame, setIsCreatingGame] = useState(false);
+  const [showBugReportModal, setShowBugReportModal] = useState(false);
   const { isAdmin } = useIsAdmin();
 
   // Simple AUTO function for sidebar
@@ -443,6 +446,16 @@ export function GameSidebar({
                     <span>Save Game</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setShowBugReportModal(true)}
+                    tooltip="Report a Bug"
+                  >
+                    <Bug />
+                    <span>Report a Bug</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -554,6 +567,14 @@ export function GameSidebar({
           </div>
         </div>
       )}
+
+      <BugReportModal
+        open={showBugReportModal}
+        onOpenChange={setShowBugReportModal}
+        gameId={gameId}
+        currentWeek={gameState?.currentWeek ?? null}
+        defaultContactEmail={displayEmail}
+      />
 
       <LabelCreationModal
         open={showLabelModal}
