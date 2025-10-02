@@ -309,6 +309,7 @@ export interface GameChange {
   amount?: number;
   roleId?: string;
   projectId?: string;
+  grossRevenue?: number;
   moodChange?: number;
   newMood?: number;
   loyaltyBoost?: number;

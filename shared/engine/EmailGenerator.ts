@@ -74,14 +74,18 @@ function buildTourCompletionEmails(ctx: EmailFactoryContext, completion: GameCha
 
   return createBaseEmail(ctx, "artist", subject, {
     description: completion.description,
-    amount: completion.amount ?? 0,
+    amount: completion.grossRevenue ?? completion.amount ?? 0,
+    grossRevenue: completion.grossRevenue ?? null,
     projectId: completion.projectId ?? null,
     metadata,
   }, {
     sender: EXECUTIVE_SENDERS.head_distribution,
     senderRoleId: "head_distribution",
     preview: completion.description,
-    metadata,
+    metadata: {
+      ...metadata,
+      grossRevenue: completion.grossRevenue ?? null,
+    },
   });
 }
 

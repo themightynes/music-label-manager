@@ -1038,7 +1038,6 @@ export class GameEngine {
           break;
         case 'reputation':
           this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + value));
-          summary.reputationChanges.global = (summary.reputationChanges.global || 0) + value;
           break;
         case 'creative_capital':
           this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + value);
@@ -3994,13 +3993,14 @@ export class GameEngine {
                 weeklyOperations: 0,
                 artistSalaries: 0,
                 executiveSalaries: 0,
+                signingBonuses: 0,
                 projectCosts: 0,
                 marketingCosts: 0,
                 roleMeetingCosts: 0
               };
             }
             // Track for reporting but don't affect final money calculation
-            summary.expenseBreakdown.projectCosts += project.totalCost;
+            summary.expenseBreakdown!.projectCosts += project.totalCost;
 
             summary.changes.push({
               type: 'expense_tracking',
@@ -4039,7 +4039,8 @@ export class GameEngine {
                   type: 'project_complete',
                   description: `${project.title} tour completed - ${tourStats.cities.length} cities, ${avgAttendance}% avg attendance, $${totalRevenue.toLocaleString()} total revenue`,
                   amount: 0, // Revenue already counted weekly
-                  projectId: project.id
+                  projectId: project.id,
+                  grossRevenue: totalRevenue
                 });
               }
             } else if (weeksInProduction > 0) {

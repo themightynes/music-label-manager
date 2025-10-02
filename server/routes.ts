@@ -1389,6 +1389,7 @@ const musicLabelData = {
 
       // Generate welcome email for signed artist
       try {
+        const labelDisplay = ((gameState as any).labelName) || ((gameState as any).musicLabel?.name) || 'your label';
         const emailBody = {
           artistId: artist.id,
           name: artist.name,
@@ -1406,7 +1407,7 @@ const musicLabelData = {
           sender: 'Marcus "Mac" Rodriguez',
           senderRoleId: 'head_ar',
           subject: `New Artist! ${artist.name}`,
-          preview: `${artist.name} has officially signed with ${gameState.labelName || 'your label'}!`,
+          preview: `${artist.name} has officially signed with ${labelDisplay}!`,
           body: emailBody,
           metadata: emailBody,
           isRead: false,
