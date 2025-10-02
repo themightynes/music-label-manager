@@ -522,19 +522,29 @@ export class GameEngine {
               if (this.storage?.getArtistsByGame) {
                 const signed = await this.storage.getArtistsByGame(this.gameState.id);
                 console.log('[A&R DEBUG] Signed artists:', signed?.length, 'signed');
-                const signedIds = new Set((signed || []).map((a: any) => a.id));
+
+                // BUGFIX: Match by name (case-insensitive) instead of ID
+                // JSON artist IDs (e.g., "art_4") don't match database UUIDs
+                const signedNames = new Set(
+                  (signed || []).map((a: any) => String(a.name || '').toLowerCase())
+                );
 
                 // Also exclude already discovered artists from selection
-                const discoveredIds = new Set();
+                const discoveredNames = new Set();
                 if (flags.ar_office_discovered_artists && Array.isArray(flags.ar_office_discovered_artists)) {
                   flags.ar_office_discovered_artists.forEach((discovered: any) => {
-                    if (discovered.id) discoveredIds.add(discovered.id);
+                    if (discovered.name) {
+                      discoveredNames.add(String(discovered.name).toLowerCase());
+                    }
                   });
                 }
-                console.log('[A&R DEBUG] Already discovered artists:', discoveredIds.size, 'discovered');
+                console.log('[A&R DEBUG] Already discovered artists:', discoveredNames.size, 'discovered');
 
-                // Filter out both signed and already discovered artists
-                unsigned = allArtists.filter((a: any) => !signedIds.has(a.id) && !discoveredIds.has(a.id));
+                // Filter out both signed and already discovered artists by name
+                unsigned = allArtists.filter((a: any) => {
+                  const artistName = String(a.name || '').toLowerCase();
+                  return !signedNames.has(artistName) && !discoveredNames.has(artistName);
+                });
                 console.log('[A&R DEBUG] Available artists (unsigned + undiscovered):', unsigned?.length, 'available');
               }
             } catch (storageErr) {
