@@ -107,7 +107,7 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl border border-[#4e324c] bg-[#160c12] text-white">
+      <DialogContent className="max-w-5xl border border-[#4e324c] bg-[#160c12]/90 text-white backdrop-blur-sm">
         <DialogHeader className="border-b border-[#4e324c] pb-4">
           <DialogTitle className="flex items-center justify-between text-lg font-semibold text-white">
             <span>Inbox</span>
@@ -181,24 +181,21 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                         )}
                         onClick={() => setSelectedEmailId(email.id)}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            {!email.isRead && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
-                            <span className="text-sm font-semibold text-white">{email.subject}</span>
-                          </div>
-                          <span className="text-xs text-white/50">{formatTimestamp(email.createdAt)}</span>
+                        <div className="flex items-center gap-2">
+                          {!email.isRead && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
+                          <span className="text-sm font-semibold text-white">{email.subject}</span>
                         </div>
-                        <div className="mt-1 flex items-center justify-between">
-                          <span className="text-xs text-white/60">{email.sender}</span>
+                        <div className="mt-1 text-xs text-white/60">
+                          From: {email.sender}
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs text-white/70">
+                            Week {email.week}
+                          </Badge>
                           <Badge variant="outline" className="text-xs text-white/70">
                             {CATEGORY_LABELS[email.category]}
                           </Badge>
                         </div>
-                        {email.preview && (
-                          <p className="mt-2 text-xs text-white/55">
-                            {email.preview}
-                          </p>
-                        )}
                       </button>
                     ))
                   )}

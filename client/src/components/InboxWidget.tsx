@@ -58,7 +58,7 @@ export function InboxWidget() {
                     {email.preview ?? 'Open to read the full briefing.'}
                   </p>
                   <p className="text-[11px] uppercase tracking-wide text-white/40">
-                    {formatTimestamp(email.createdAt)} • Week {email.week}
+                    Week {email.week}
                   </p>
                 </div>
               ))}

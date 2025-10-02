@@ -1405,7 +1405,7 @@ const musicLabelData = {
           category: 'ar',
           sender: 'Marcus "Mac" Rodriguez',
           senderRoleId: 'head_ar',
-          subject: `Welcome to the Roster – ${artist.name}`,
+          subject: `New Artist! ${artist.name}`,
           preview: `${artist.name} has officially signed with ${gameState.labelName || 'your label'}!`,
           body: emailBody,
           metadata: emailBody,

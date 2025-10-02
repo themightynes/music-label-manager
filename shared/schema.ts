@@ -29,6 +29,7 @@ export const artists = pgTable("artists", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   archetype: text("archetype").notNull(), // Visionary, Workhorse, Trendsetter
+  genre: text("genre"), // Artist's primary genre (Pop, Rock, Jazz, etc.)
   mood: integer("mood").default(50),
   loyalty: integer("loyalty").default(50),
   popularity: integer("popularity").default(0),

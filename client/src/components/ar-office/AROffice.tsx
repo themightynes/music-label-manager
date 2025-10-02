@@ -234,8 +234,6 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
     }
   };
 
-  const machineStateStr = typeof state.value === 'string' ? state.value : JSON.stringify(state.value);
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -247,9 +245,6 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
           <FocusSlotStatus
             focusSlotsUsed={context.focusSlotsUsed}
             focusSlotsTotal={context.focusSlotsTotal}
-            machineState={machineStateStr}
-            sourcingType={context.sourcingType}
-            operationStartTime={isOperationActive ? (context.operationStartTime ?? null) : null}
             onCancelOperation={isOperationActive ? cancelOperation : undefined}
           />
         </CardTitle>
