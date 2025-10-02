@@ -76,7 +76,7 @@ interface RNGConfig {
  */
 export interface WeeklyFinancials {
   startingBalance: number;
-  operations: { base: number; artists: number; executives: number; signingBonuses: number; total: number };
+  operations: { base: number; artists: number; executives: number; total: number };
   projects: { costs: number; revenue: number };
   marketing: { costs: number };
   roleEffects: { costs: number; revenue: number };
@@ -148,8 +148,6 @@ export class GameEngine {
       events: [],
       arOffice: { completed: false }
     };
-
-    this.processPendingSigningFees(summary);
 
     // Initialize runtime tracking for executive usage (not in interface)
     (summary as any).usedExecutives = new Set<string>();
@@ -230,7 +228,6 @@ export class GameEngine {
         weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
-        signingBonuses: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -307,7 +304,6 @@ export class GameEngine {
         weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
-        signingBonuses: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -372,55 +368,6 @@ export class GameEngine {
     return result;
   }
 
-  private processPendingSigningFees(summary: WeekSummary): void {
-    const flags = (this.gameState.flags || {}) as Record<string, any>;
-    const pendingFees = Array.isArray(flags.pending_signing_fees) ? flags.pending_signing_fees : [];
-
-    if (!pendingFees.length) {
-      return;
-    }
-
-    if (!summary.expenseBreakdown) {
-      summary.expenseBreakdown = {
-        weeklyOperations: 0,
-        artistSalaries: 0,
-        executiveSalaries: 0,
-        signingBonuses: 0,
-        projectCosts: 0,
-        marketingCosts: 0,
-        roleMeetingCosts: 0,
-      };
-    } else if (typeof summary.expenseBreakdown.signingBonuses !== 'number') {
-      summary.expenseBreakdown.signingBonuses = 0;
-    }
-
-    let processedCount = 0;
-
-    for (const fee of pendingFees) {
-      const amount = Number(fee?.amount ?? 0);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        continue;
-      }
-
-      summary.expenseBreakdown.signingBonuses += amount;
-      summary.changes.push({
-        type: 'expense_tracking',
-        description: `Artist signing bonus paid${fee?.name ? ` – ${fee.name}` : ''}`,
-        amount: -amount,
-        artistId: typeof fee?.artistId === 'string' ? fee.artistId : undefined,
-      });
-
-      processedCount += 1;
-    }
-
-    if (processedCount > 0) {
-      console.log(`[FINANCIAL] Processed ${processedCount} pending artist signing fee${processedCount === 1 ? '' : 's'}`);
-    }
-
-    flags.pending_signing_fees = [];
-    this.gameState.flags = flags;
-  }
-
   private async generateAndPersistEmails(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     console.log('[EMAIL GENERATION] Starting email generation for week', summary.week);
 
@@ -459,7 +406,7 @@ export class GameEngine {
             if (fullArtist) {
               discoveredArtist.bio = fullArtist.bio ?? null;
               discoveredArtist.signingCost = fullArtist.signingCost ?? null;
-              discoveredArtist.weeklyCost = fullArtist.weeklyCost ?? null;
+              discoveredArtist.weeklyCost = (fullArtist as any).weeklyFee ?? null;
             }
           } catch (err) {
             console.warn('[EMAIL GENERATION] Could not fetch full artist details from game data:', err);
@@ -1026,7 +973,6 @@ export class GameEngine {
                 weeklyOperations: 0,
                 artistSalaries: 0,
                 executiveSalaries: 0,
-                signingBonuses: 0,
                 projectCosts: 0,
                 marketingCosts: 0,
                 roleMeetingCosts: 0
@@ -1417,6 +1363,8 @@ export class GameEngine {
                   }
                 }
               }
+
+              // Standard awareness update if no breakthrough
               if (!awarenessUpdate) {
                 const newPeakAwareness = Math.round(Math.max(song.peak_awareness || 0, newAwareness));
 
@@ -1851,7 +1799,6 @@ export class GameEngine {
             weeklyOperations: 0,
             artistSalaries: 0,
             executiveSalaries: 0,
-            signingBonuses: 0,
             projectCosts: 0,
             marketingCosts: 0,
             roleMeetingCosts: 0
@@ -3496,7 +3443,6 @@ export class GameEngine {
         weeklyOperations: 0,
         artistSalaries: 0,
         executiveSalaries: 0,
-        signingBonuses: 0,
         projectCosts: 0,
         marketingCosts: 0,
         roleMeetingCosts: 0
@@ -4164,12 +4110,6 @@ export class GameEngine {
     }
     if (f.operations.artists > 0) {
       parts.push(`- $${f.operations.artists.toLocaleString()} (artists)`);
-    }
-    if (f.operations.executives > 0) {
-      parts.push(`- $${f.operations.executives.toLocaleString()} (executives)`);
-    }
-    if (f.operations.signingBonuses > 0) {
-      parts.push(`- $${f.operations.signingBonuses.toLocaleString()} (signing bonuses)`);
     }
     if (f.projects.costs > 0) {
       parts.push(`- $${f.projects.costs.toLocaleString()} (projects)`);
