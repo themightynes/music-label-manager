@@ -17,6 +17,7 @@ import {
   AdvanceWeekResponse,
   SelectActionsRequest,
   SelectActionsResponse,
+  BugReportRequestSchema,
   validateRequest,
   createErrorResponse 
 } from "@shared/api/contracts";
@@ -3456,6 +3457,73 @@ const musicLabelData = {
         'SELECT_ACTIONS_ERROR',
         error instanceof Error ? error.message : 'Failed to save action selection'
       ));
+    }
+  });
+
+  app.post('/api/bug-reports', requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json(createErrorResponse('UNAUTHENTICATED', 'Authentication required to submit bug reports'));
+      }
+
+      const payload = BugReportRequestSchema.parse(req.body);
+      const bugReportsPath = path.join(process.cwd(), 'data', 'bugReports.json');
+
+      let existingReports: any[] = [];
+      try {
+        const raw = await fs.readFile(bugReportsPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          existingReports = parsed;
+        }
+      } catch (error) {
+        const nodeError = error as NodeJS.ErrnoException;
+        if (nodeError.code !== 'ENOENT') {
+          throw error;
+        }
+      }
+
+      const clerkUserId = (req as any).clerkUserId as string | undefined;
+      const record = {
+        id: crypto.randomUUID(),
+        submittedAt: new Date().toISOString(),
+        summary: payload.summary,
+        severity: payload.severity,
+        area: payload.area,
+        frequency: payload.frequency,
+        whatHappened: payload.whatHappened,
+        stepsToReproduce: payload.stepsToReproduce ?? null,
+        expectedResult: payload.expectedResult ?? null,
+        additionalContext: payload.additionalContext ?? null,
+        reporter: {
+          userId,
+          clerkUserId: clerkUserId ?? null,
+          contactEmail: payload.contactEmail ?? null
+        },
+        metadata: {
+          ...(payload.metadata ?? {}),
+          ip: req.ip
+        }
+      };
+
+      existingReports.unshift(record);
+
+      const serialized = JSON.stringify(existingReports, null, 2);
+      await fs.writeFile(bugReportsPath, serialized, 'utf8');
+
+      res.status(201).json({ success: true, reportId: record.id });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(createErrorResponse(
+          'VALIDATION_ERROR',
+          'Invalid bug report submission',
+          error.errors
+        ));
+      }
+
+      console.error('Failed to persist bug report:', error);
+      res.status(500).json(createErrorResponse('BUG_REPORT_ERROR', 'Failed to submit bug report'));
     }
   });
 
