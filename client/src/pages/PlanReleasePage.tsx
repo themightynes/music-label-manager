@@ -583,7 +583,7 @@ export default function PlanReleasePage() {
     <GameLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-white">Plan Release</h1>
+          <h1 className="text-xl md:text-2xl font-heading font-bold text-white">Plan Release</h1>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
@@ -907,6 +907,7 @@ export default function PlanReleasePage() {
                       selectionMode={true}
                       selectedWeek={leadSingleWeek}
                       onWeekSelect={setLeadSingleWeek}
+                      minWeek={gameState ? gameState.currentWeek + 1 : 1}
                       maxWeek={releaseWeek - 1}
                       className="max-w-lg"
                     />
@@ -1041,6 +1042,7 @@ export default function PlanReleasePage() {
                           selectionMode={true}
                           selectedWeek={releaseWeek}
                           onWeekSelect={setReleaseWeek}
+                          minWeek={gameState ? gameState.currentWeek + 1 : 1}
                           className="max-w-lg"
                         />
                       </div>

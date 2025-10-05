@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useLocation } from 'wouter';
@@ -85,67 +86,73 @@ export default function ExecutiveSuitePage(props: any = {}) {
 
   return (
     <GameLayout>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section - Executive Suite */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="flex-1">
-              <h2 className="text-xl md:text-2xl font-bold text-white">Week {gameState.currentWeek} Executive Meetings</h2>
-              <p className="text-sm md:text-base text-white/70">
-                Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
-                {gameState?.focusSlots === 4 && <span className="text-green-600 font-semibold"> (4th Slot Unlocked!)</span>}
-              </p>
-            </div>
-            <div className="hidden md:block" title="Focus Slots are your weekly action points. Each strategic action requires one focus slot.">
-              <i className="fas fa-info-circle text-white/50 hover:text-white/70 cursor-help"></i>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <header className="mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
+            Executive Suite
           </div>
+          <h1 className="mt-4 text-3xl font-heading font-bold text-white">Week {gameState.currentWeek} Executive Meetings</h1>
+          <p className="mt-2 text-sm md:text-base text-white/70 flex items-center gap-2">
+            Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
+            {gameState?.focusSlots === 4 && <Badge variant="outline" className="text-green-400 border-green-400/30">4th Slot Unlocked</Badge>}
+          </p>
+        </header>
 
-          {/* Focus Action Selection - Split Panel Design */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Panel - Action Selection Pool */}
-            <div className="lg:col-span-2">
-              {loading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
-                  <p className="text-white/70">Loading available actions...</p>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8">
-                  <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-                  <p className="text-red-600 mb-4">Failed to load actions</p>
-                  <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-                    Try Again
-                  </Button>
-                </div>
-              ) : (
-                <ExecutiveMeetings
-                  gameId={gameId}
-                  onActionSelected={selectAction}
-                  focusSlots={{
-                    total: gameState.focusSlots || 3,
-                    used: gameState.usedFocusSlots || 0,
-                  }}
-                  arOfficeStatus={getAROfficeStatus()}
-                  onImpactPreviewUpdate={setImpactPreview}
+        <section
+          className="relative overflow-hidden rounded-3xl border border-[#d99696]/30 bg-[#120910]/90 p-8 bg-contain bg-center bg-no-repeat min-h-[600px]"
+          style={{ backgroundImage: "url('/executivesuite_background.png')" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-[#2a1624]/70 via-transparent to-[#1b0e19]/80" aria-hidden />
+          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-[#a75a5b]/20 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
+
+          <div className="relative z-10">
+            {/* Focus Action Selection - Split Panel Design */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Panel - Action Selection Pool */}
+              <div className="lg:col-span-2">
+                {loading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                    <p className="text-white/70">Loading available actions...</p>
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+                    <p className="text-red-600 mb-4">Failed to load actions</p>
+                    <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                      Try Again
+                    </Button>
+                  </div>
+                ) : (
+                  <ExecutiveMeetings
+                    gameId={gameId}
+                    onActionSelected={selectAction}
+                    focusSlots={{
+                      total: gameState.focusSlots || 3,
+                      used: gameState.usedFocusSlots || 0,
+                    }}
+                    arOfficeStatus={getAROfficeStatus()}
+                    onImpactPreviewUpdate={setImpactPreview}
+                  />
+                )}
+              </div>
+
+              {/* Right Panel - Selection Summary */}
+              <div className="lg:col-span-1 space-y-4">
+                <SelectionSummary
+                  selectedActions={selectedActions}
+                  actions={weeklyActions}
+                  onRemoveAction={removeAction}
+                  onReorderActions={reorderActions}
+                  onAdvanceWeek={handleAdvanceWeek}
+                  isAdvancing={handleIsAdvancing}
+                  impactPreview={impactPreview}
                 />
-              )}
-            </div>
-
-            {/* Right Panel - Selection Summary */}
-            <div className="lg:col-span-1 space-y-4">
-              <SelectionSummary
-                selectedActions={selectedActions}
-                actions={weeklyActions}
-                onRemoveAction={removeAction}
-                onReorderActions={reorderActions}
-                onAdvanceWeek={handleAdvanceWeek}
-                isAdvancing={handleIsAdvancing}
-                impactPreview={impactPreview}
-              />
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </main>
     </GameLayout>
   );

@@ -72,6 +72,7 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "browsermcp"
+    "browsermcp",
+    "shadcn"
   ]
 }

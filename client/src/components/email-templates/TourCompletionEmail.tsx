@@ -15,7 +15,7 @@ export function TourCompletionEmail({ email }: EmailTemplateProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="rounded-lg border border-white/10 bg-black/40 p-4">
           <div className="text-white/60 text-xs uppercase tracking-wide">Gross Revenue</div>
-          <div className="text-lg font-semibold text-green-300">{formatCurrency(body?.amount ?? metadata?.amount)}</div>
+          <div className="text-lg font-semibold text-green-300">{formatCurrency(body?.grossRevenue ?? body?.amount ?? metadata?.amount)}</div>
         </div>
         <div className="rounded-lg border border-white/10 bg-black/40 p-4">
           <div className="text-white/60 text-xs uppercase tracking-wide">Project</div>

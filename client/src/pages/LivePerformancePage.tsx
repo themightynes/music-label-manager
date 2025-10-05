@@ -622,7 +622,7 @@ export default function LivePerformancePage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold text-white">Live Performance</h1>
+          <h1 className="text-2xl font-heading font-bold text-white">Live Performance</h1>
         </div>
 
         {configError ? (

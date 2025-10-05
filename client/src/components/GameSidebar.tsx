@@ -186,10 +186,10 @@ export function GameSidebar({
             <img
               src="/logo4.png"
               alt="Music Label Manager"
-              className="h-8 w-auto"
+              className="h-8 w-auto object-contain group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
             />
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <div className="text-sm font-semibold text-sidebar-foreground">{(gameState as any)?.musicLabel?.name || 'Music Label'}</div>
+              <div className="text-sm font-heading font-semibold text-sidebar-foreground">{(gameState as any)?.musicLabel?.name || 'Music Label'}</div>
               <div className="flex items-center space-x-2 text-xs text-sidebar-foreground/70">
                 <span>
                   {(() => {
@@ -295,41 +295,43 @@ export function GameSidebar({
                     </SidebarMenuButton>
 
                     {((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) > 0 && (
-                      <HoverCard openDelay={300}>
-                        <HoverCardTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="ml-1 px-2 h-6 text-xs bg-burgundy-600/20 border-burgundy-400/30 hover:bg-burgundy-600/30"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAutoSelect();
-                            }}
-                            disabled={isAutoSelecting}
+                      <div className="ml-1 group-data-[collapsible=icon]:hidden">
+                        <HoverCard openDelay={300}>
+                          <HoverCardTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="px-2 h-6 text-xs bg-burgundy-600/20 border-burgundy-400/30 hover:bg-burgundy-600/30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAutoSelect();
+                              }}
+                              disabled={isAutoSelecting}
+                            >
+                              {isAutoSelecting ? (
+                                <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                              ) : (
+                                <Zap className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </HoverCardTrigger>
+                          <HoverCardContent
+                            side="right"
+                            className="w-48 border-burgundy-600/50 text-white shadow-xl"
+                            style={{ backgroundColor: '#1d0e18' }}
                           >
-                            {isAutoSelecting ? (
-                              <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                              <Zap className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </HoverCardTrigger>
-                        <HoverCardContent
-                          side="right"
-                          className="w-48 border-burgundy-600/50 text-white shadow-xl"
-                          style={{ backgroundColor: '#1d0e18' }}
-                        >
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-3.5 w-3.5 text-yellow-400" />
-                              <span className="font-medium text-sm">AUTO</span>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Zap className="h-3.5 w-3.5 text-yellow-400" />
+                                <span className="font-medium text-sm">AUTO</span>
+                              </div>
+                              <p className="text-xs text-white/80">
+                                Smart-fills {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} slot{((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) !== 1 ? 's' : ''} with executives who need attention most.
+                              </p>
                             </div>
-                            <p className="text-xs text-white/80">
-                              Smart-fills {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} slot{((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) !== 1 ? 's' : ''} with executives who need attention most.
-                            </p>
-                          </div>
-                        </HoverCardContent>
-                      </HoverCard>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </div>
                     )}
                   </div>
                 </SidebarMenuItem>

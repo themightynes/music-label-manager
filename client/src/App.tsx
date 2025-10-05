@@ -14,6 +14,7 @@ import ArtistsLandingPage from "@/pages/ArtistsLandingPage";
 import ArtistPage from "@/pages/ArtistPage";
 import ExecutiveSuitePage from "@/pages/ExecutiveSuitePage";
 import AROfficePage from "@/pages/AROffice";
+import OfficePage from "@/pages/OfficePage";
 import QualityTester from "@/pages/QualityTester";
 import TourVarianceTesterPage from "@/pages/TourVarianceTesterPage";
 import PopularityTester from "@/pages/PopularityTester";
@@ -24,6 +25,7 @@ import MarketsEditor from "@/pages/MarketsEditor";
 import LandingPage from "@/pages/LandingPage";
 import RecordingSessionPage from "@/pages/RecordingSessionPage";
 import LivePerformancePage from "@/pages/LivePerformancePage";
+import BugReportsPage from '@/pages/BugReportsPage';
 import AdminHome from "@/admin/AdminLayout";
 import { withAdmin } from "@/admin/withAdmin";
 
@@ -36,11 +38,12 @@ function Router() {
       <Route path="/artist/:artistParam" component={ArtistPage} />
       <Route path="/executives" component={ExecutiveSuitePage} />
       <Route path="/ar-office" component={AROfficePage} />
+      <Route path="/office" component={OfficePage} />
       <Route path="/recording-session" component={RecordingSessionPage} />
       <Route path="/live-performance" component={LivePerformancePage} />
 
       {/* Admin routes */}
-      <Route path="/admin" component={AdminHome} />
+      <Route path="/admin" component={withAdmin(AdminHome)} />
       <Route path="/admin/quality-tester" component={withAdmin(QualityTester)} />
       <Route path="/admin/tour-variance-tester" component={withAdmin(TourVarianceTesterPage)} />
       <Route path="/admin/popularity-tester" component={withAdmin(PopularityTester)} />
@@ -48,6 +51,7 @@ function Router() {
       <Route path="/admin/markets-editor" component={withAdmin(MarketsEditor)} />
       <Route path="/admin/test-data" component={withAdmin(TestDataPage)} />
       <Route path="/admin/tours-test" component={withAdmin(ToursTest)} />
+      <Route path="/admin/bug-reports" component={withAdmin(BugReportsPage)} />
 
       {/* Legacy dev routes gated */}
       <Route path="/quality-tester" component={withAdmin(QualityTester)} />

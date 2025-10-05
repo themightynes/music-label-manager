@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Major+Mono+Display&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
 @tailwind base;
@@ -47,6 +47,7 @@
   --font-sans: 'Inter', 'Open Sans', sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Menlo', monospace;
+  --font-heading: 'Major Mono Display', 'Courier New', monospace;
   --radius: 1.3rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00);

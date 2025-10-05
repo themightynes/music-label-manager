@@ -224,7 +224,7 @@ export function SelectionSummary({
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
       <CardHeader className="p-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">Focus Slots</h3>

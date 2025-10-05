@@ -114,7 +114,7 @@ export function ExecutiveMeetings({
 
   if (state.matches('idle')) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Executive Meetings
@@ -188,7 +188,7 @@ export function ExecutiveMeetings({
 
   if (state.matches('loadingMeetings')) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Button
@@ -213,7 +213,7 @@ export function ExecutiveMeetings({
 
   if (state.matches('selectingMeeting')) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Button
@@ -239,7 +239,7 @@ export function ExecutiveMeetings({
 
   if (state.matches('loadingDialogue')) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Button
@@ -264,7 +264,7 @@ export function ExecutiveMeetings({
 
   if (state.matches('inDialogue')) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Button
@@ -292,7 +292,7 @@ export function ExecutiveMeetings({
 
   if (state.matches('processingChoice')) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
         <CardContent className="p-8">
           <div className="flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-white" />
@@ -305,7 +305,7 @@ export function ExecutiveMeetings({
 
   if (state.matches('complete')) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
         <CardContent className="p-8">
           <div className="text-center">
             <div className="text-green-300 font-medium">Meeting completed successfully!</div>
