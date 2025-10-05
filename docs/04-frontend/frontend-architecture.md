@@ -14,6 +14,7 @@ The Music Label Manager frontend is a **React 18** application built with **Type
 - **React 18** with Hooks and Context
 - **TypeScript** for type safety
 - **Vite** for fast development and building
+- **Motion.dev** for production-grade animations (successor to Framer Motion)
 - **Tailwind CSS** for styling with custom plum/burgundy theme
 - **Zustand** for game state management
 - **React Query** for server state management
@@ -185,6 +186,179 @@ The August 31, 2025 update represented a complete visual transformation:
 - 10px rounded corners for modern aesthetic
 
 This transformation maintains all functionality while dramatically improving visual appeal and user experience.
+
+---
+
+## 🎬 Animation System (Motion.dev)
+
+### **Motion.dev Integration**
+*Added: January 2025*
+
+The Music Label Manager uses **Motion.dev** (v12.23.22), the next-generation successor to Framer Motion, for production-grade animations and interactive UI elements.
+
+**Key Features**:
+- **40% smaller bundle size** compared to Framer Motion
+- **Hybrid animation engine** combining JavaScript and native browser APIs
+- **Seamless Radix UI integration** via `asChild` prop pattern
+- **Hardware-accelerated animations** for optimal performance
+- **First-class React 18 support** with modern hooks
+
+**Installation**:
+```bash
+npm install motion lucide-react
+```
+
+**Import Patterns**:
+```typescript
+// Core Motion components
+import { motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
+
+// Animation hooks
+import { useScroll, useSpring, useInView } from "motion/react"
+```
+
+### **Animation Use Cases**
+
+#### **1. Component Entrance Animations**
+```typescript
+// Fade in on mount
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3 }}
+>
+  <Card>...</Card>
+</motion.div>
+```
+
+#### **2. Interactive Hover States**
+```typescript
+// Magnetic button effect
+<motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  className="bg-brand-burgundy"
+>
+  Create Project
+</motion.button>
+```
+
+#### **3. Page Transitions**
+```typescript
+// Smooth screen transitions
+<AnimatePresence mode="wait">
+  {currentView === 'dashboard' && (
+    <motion.div
+      key="dashboard"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+    >
+      <Dashboard />
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+#### **4. Animated Counters**
+```typescript
+// Budget/revenue number animations
+import { useSpring, useTransform } from "motion/react"
+
+function AnimatedNumber({ value }: { value: number }) {
+  const spring = useSpring(value, { stiffness: 100, damping: 30 })
+  const rounded = useTransform(spring, Math.round)
+
+  return <motion.span>{rounded}</motion.span>
+}
+```
+
+#### **5. Scroll-Triggered Animations**
+```typescript
+// Animate chart positions as they enter viewport
+<motion.div
+  initial={{ opacity: 0 }}
+  whileInView={{ opacity: 1 }}
+  viewport={{ once: true }}
+>
+  <ChartPosition song={song} />
+</motion.div>
+```
+
+#### **6. Layout Animations**
+```typescript
+// Automatically animate layout changes
+<motion.div layout className="artist-card">
+  {/* Content automatically animates when size/position changes */}
+</motion.div>
+```
+
+### **Integration with Radix UI**
+
+Motion.dev works seamlessly with our existing Radix UI components using the `asChild` pattern:
+
+```typescript
+// Animated Dialog
+import { Dialog } from "@radix-ui/react-dialog"
+
+<Dialog.Content asChild>
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+  >
+    {/* Dialog content */}
+  </motion.div>
+</Dialog.Content>
+```
+
+### **Planned Animation Implementations**
+
+**Phase 1: Core UI Polish**
+- ✅ **Installed**: Motion.dev and dependencies
+- ✅ **Label Name Scramble**: Text scramble animation for music label name in Dashboard header
+- ✅ **Glow Effect**: Implemented on Label Creation Modal with brand burgundy colors (rotating glow)
+- 🔄 **Budget Counter**: Animated number transitions for money/reputation changes
+- 🔄 **KPI Cards**: Entrance animations for dashboard metrics
+- 🔄 **Button Interactions**: Hover/tap states for all primary actions
+
+**Phase 2: Strategic Enhancements**
+- 🔄 **Meeting Transitions**: Smooth panel transitions in DialogueModal
+- 🔄 **Project Cards**: Hover effects and status change animations
+- 🔄 **Chart Reveals**: In-view animations for chart positions
+- 🔄 **Tier Badges**: Glow effects for achievement unlocks
+
+**Phase 3: Advanced Polish**
+- 🔄 **Monthly Summary**: Animated list of changes with stagger effect
+- 🔄 **Artist Discovery**: Card flip/reveal animations
+- 🔄 **Save Slots**: Loading transitions and save confirmations
+- 🔄 **Campaign Results**: Celebration animations for completion
+
+### **Performance Considerations**
+
+- **Hardware Acceleration**: All transforms/opacity changes use GPU
+- **Bundle Impact**: Motion.dev adds ~40KB (gzipped), 40% smaller than Framer Motion
+- **Selective Loading**: Can lazy load animation components for modals
+- **Development Mode**: Animation inspector available via `@statelyai/inspect`
+
+### **Migration from Framer Motion**
+
+Motion.dev and Framer Motion can coexist during gradual migration:
+
+```typescript
+// Existing Framer Motion code continues working
+import { motion } from "framer-motion"
+
+// New components use Motion.dev
+import { motion } from "motion/react"
+```
+
+**Migration Strategy**:
+1. Keep Framer Motion for existing animations
+2. Use Motion.dev for all new components
+3. Gradually migrate high-traffic components
+4. Remove Framer Motion once migration complete
 
 ---
 

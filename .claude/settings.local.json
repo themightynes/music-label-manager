@@ -62,7 +62,8 @@
       "SlashCommand(/onboard)",
       "Bash(cat:*)",
       "Bash(PORT=3000 npm run dev)",
-      "Bash(magick identify:*)"
+      "Bash(magick identify:*)",
+      "Bash(npx motion-primitives@latest add:*)"
     ],
     "deny": [],
     "ask": [],

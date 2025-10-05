@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Shuffle, Music } from "lucide-react";
+import { BorderTrail } from "./motion-primitives/border-trail";
 import type { LabelData } from "@shared/types/gameTypes";
 
 interface LabelCreationModalProps {
@@ -135,7 +136,7 @@ const handleSubmit = () => {
   return (
     <Dialog open={open} onOpenChange={isCreating ? undefined : onOpenChange}>
       <DialogContent
-        className={`max-w-md bg-brand-dark-card border-brand-purple text-white ${
+        className={`max-w-md border-0 bg-transparent p-0 shadow-none ${
           isCreating ? '[&>button]:hidden' : ''
         }`}
         onEscapeKeyDown={(e) => {
@@ -149,7 +150,17 @@ const handleSubmit = () => {
           }
         }}
       >
-        <DialogHeader className="border-b border-brand-purple pb-4">
+        <div className="relative rounded-lg border border-brand-purple bg-brand-dark-card p-6 text-white shadow-lg">
+          <BorderTrail
+            size={360}
+            className="bg-gradient-to-l from-brand-burgundy via-brand-gold to-brand-rose"
+            transition={{
+              repeat: Infinity,
+              duration: 4,
+              ease: "linear"
+            }}
+          />
+            <DialogHeader className="border-b border-brand-purple pb-4">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
             <Music className="w-5 h-5 text-brand-burgundy" />
             Create Your Music Label
@@ -285,6 +296,7 @@ const handleSubmit = () => {
               {isCreating ? "Creating..." : "Create Label"}
             </Button>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

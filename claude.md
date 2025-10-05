@@ -3,7 +3,7 @@
 ## 📊 Project Architecture Overview
 TypeScript monorepo with Express backend and React frontend for a music industry simulation game.
 
-**Stack**: React 18 + Vite, Wouter routing, TanStack Query, Clerk auth, Zustand state, XState flows, Express + Drizzle ORM + PostgreSQL
+**Stack**: React 18 + Vite, Wouter routing, TanStack Query, Clerk auth, Zustand state, XState flows, Motion.dev animations, Express + Drizzle ORM + PostgreSQL
 
 **Key Components**:
 - Monorepo with coordinated npm scripts (`dev`, `build`, `db:push`)

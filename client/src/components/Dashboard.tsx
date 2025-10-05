@@ -9,6 +9,7 @@ import { ToastNotification } from './ToastNotification';
 import { WeekSummary } from './WeekSummary';
 import { MusicCalendar } from './MusicCalendar';
 import { InboxWidget } from './InboxWidget';
+import { TextScramble } from './motion-primitives/text-scramble';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
@@ -64,7 +65,15 @@ export function Dashboard({
       <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
         <h1 className="text-3xl font-heading font-bold text-white flex items-center gap-3">
           <i className="fas fa-compact-disc text-white"></i>
-          {(gameState as any)?.musicLabel?.name || 'Music Label'}
+          <TextScramble
+            as="span"
+            className="text-3xl font-heading font-bold text-white"
+            duration={0.5}
+            speed={0.05}
+            trigger={true}
+          >
+            {(gameState as any)?.musicLabel?.name || 'Music Label'}
+          </TextScramble>
         </h1>
       </header>
 

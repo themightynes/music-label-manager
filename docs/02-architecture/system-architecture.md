@@ -144,6 +144,7 @@ POST /api/saves/:saveId/load
 - **TypeScript**: Type safety throughout the application
 - **Zustand**: Global state management
 - **React Query**: Server state caching and synchronization
+- **Motion.dev**: Production-grade animation library (successor to Framer Motion)
 - **Tailwind CSS**: Utility-first styling with custom dark plum/burgundy theme
 - **Vite**: Fast development and optimized builds
 
