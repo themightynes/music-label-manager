@@ -60,6 +60,14 @@ export function Dashboard({
 
   return (
     <>
+      {/* Label Name Header - Above Everything */}
+      <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
+        <h1 className="text-3xl font-heading font-bold text-white flex items-center gap-3">
+          <i className="fas fa-compact-disc text-white"></i>
+          {(gameState as any)?.musicLabel?.name || 'Music Label'}
+        </h1>
+      </header>
+
       {/* Floating Metrics Dashboard */}
       <MetricsDashboard />
 
