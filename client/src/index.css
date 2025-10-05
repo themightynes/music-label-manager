@@ -14,8 +14,6 @@
   --popover-foreground: hsl(210 25% 7.8431%);
   --primary: hsl(238.5 94.1% 67.1%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: #791014;
-  --secondary-foreground: hsl(0 0% 100%);
   --success: hsl(142.1 76.2% 36.3%);
   --success-foreground: hsl(0 0% 100%);
   --warning: hsl(43.2 97.8% 48.8%);
@@ -32,18 +30,18 @@
   --input: hsl(200 23.0769% 97.4510%);
   --ring: hsl(238.5 94.1% 67.1%);
   --chart-1: hsl(238.5 94.1% 67.1%);
-  --chart-2: hsl(142.1 76.2% 36.3%);
-  --chart-3: hsl(43.2 97.8% 48.8%);
-  --chart-4: hsl(147.1429 78.5047% 41.9608%);
-  --chart-5: hsl(341.4894 75.2000% 50.9804%);
-  --sidebar: #2C222A;
+  --sidebar: rgb(44 34 42 / 0.5);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #A75A5B;
-  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #4e324c;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #4e324c;
   --sidebar-ring: #A75A5B;
+  --chart-2: hsl(142.1 76.2% 36.3%);
+  --chart-3: hsl(43.2 97.8% 48.8%);
+  --chart-4: hsl(147.1429 78.5047% 41.9608%);
+  --chart-5: hsl(341.4894 75.2000% 50.9804%);
   --font-sans: 'Inter', 'Open Sans', sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Menlo', monospace;
@@ -70,8 +68,6 @@
   --popover-foreground: hsl(200 6.6667% 91.1765%);
   --primary: hsl(238.5 94.1% 67.1%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: #791014;
-  --secondary-foreground: hsl(0 0% 100%);
   --success: hsl(142.1 76.2% 36.3%);
   --success-foreground: hsl(0 0% 100%);
   --warning: hsl(43.2 97.8% 48.8%);
@@ -88,18 +84,18 @@
   --input: hsl(207.6923 27.6596% 18.4314%);
   --ring: hsl(238.5 94.1% 67.1%);
   --chart-1: hsl(238.5 94.1% 67.1%);
-  --chart-2: hsl(142.1 76.2% 36.3%);
-  --chart-3: hsl(43.2 97.8% 48.8%);
-  --chart-4: hsl(147.1429 78.5047% 41.9608%);
-  --chart-5: hsl(341.4894 75.2000% 50.9804%);
-  --sidebar: #2C222A;
+  --sidebar: rgb(44 34 42 / 0.5);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #A75A5B;
-  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #4e324c;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #4e324c;
   --sidebar-ring: #A75A5B;
+  --chart-2: hsl(142.1 76.2% 36.3%);
+  --chart-3: hsl(43.2 97.8% 48.8%);
+  --chart-4: hsl(147.1429 78.5047% 41.9608%);
+  --chart-5: hsl(341.4894 75.2000% 50.9804%);
 }
 
 @layer base {

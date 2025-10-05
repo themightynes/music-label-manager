@@ -122,7 +122,7 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
               </Badge>
             )}
             {isHighlighted && (
-              <Badge variant="secondary" className="bg-[#A75A5B] px-1 text-xs text-white">
+              <Badge variant="secondary" className="bg-brand-burgundy px-1 text-xs text-white">
                 YOURS
               </Badge>
             )}

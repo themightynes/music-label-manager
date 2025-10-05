@@ -27,6 +27,13 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 - All JSON data must validate with Zod schemas
 - Use small, incremental changes: Plan → Propose → Build → Verify
 
+## 🎨 Color System
+- **Brand Colors**: Use `brand-*` Tailwind classes for game-specific UI (e.g., `bg-brand-burgundy`, `text-brand-rose`)
+- **Semantic Colors**: Use semantic classes for generic UI (e.g., `bg-success`, `text-warning`, `bg-sidebar`)
+- **Documentation**: See the comprehensive color system documentation in `tailwind.config.ts` header comments
+- **Tier Badges**: Bronze (amber), Silver (gray), Gold (brand-gold), Platinum (purple)
+- **Never use inline hex colors** - all colors must use Tailwind utility classes
+
 ## 🔐 Authentication & API Integration
 - Authentication is powered by Clerk; rely on Clerk React hooks and components (`useUser()`, `useAuth()`, `<SignedIn>`, `<SignedOut>`, `<UserButton>`)
 - Never roll your own auth helpers—extend behavior by composing Clerk primitives and reference Clerk documentation for additional components

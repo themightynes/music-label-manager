@@ -240,7 +240,7 @@ export default function ArtistPage() {
   const getReleaseTypeBadge = (type: string) => {
     const typeConfig = {
       single: { label: 'Single', color: 'bg-blue-500/20 text-blue-800' },
-      ep: { label: 'EP', color: 'bg-[#791014]/20 text-[#791014]' },
+      ep: { label: 'EP', color: 'bg-brand-burgundy-dark/20 text-brand-burgundy-dark' },
       album: { label: 'Album', color: 'bg-green-500/20 text-green-800' }
     };
     
@@ -293,7 +293,7 @@ export default function ArtistPage() {
   
   const getArchetypeInfo = (archetype: string) => {
     const archetypeData: Record<string, any> = {
-      'Visionary': { color: 'text-[#791014]', icon: Star, description: 'Creative and experimental' },
+      'Visionary': { color: 'text-brand-burgundy-dark', icon: Star, description: 'Creative and experimental' },
       'Workhorse': { color: 'text-blue-600', icon: Target, description: 'Reliable and productive' },
       'Commercial': { color: 'text-green-600', icon: TrendingUp, description: 'Market-focused and strategic' }
     };
@@ -402,7 +402,7 @@ export default function ArtistPage() {
           {/* Move artist header info here as hero section */}
           <div className="mb-8 mt-8">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#A75A5B]/80 to-[#791014]/80 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-burgundy/80 to-brand-burgundy-dark/80 flex items-center justify-center">
                 <User className="w-8 h-8 text-white" />
               </div>
               <div>
@@ -563,7 +563,7 @@ export default function ArtistPage() {
                     ) : (
                       <>
                         {songs.slice(0, 3).map(song => (
-                          <div key={song.id} className="flex items-center justify-between p-2 bg-[#23121c]/5 rounded">
+                          <div key={song.id} className="flex items-center justify-between p-2 bg-brand-dark-card/5 rounded">
                             <div>
                               <div className="text-sm font-medium">{song.title}</div>
                               <div className="text-xs text-white/50">
@@ -736,7 +736,7 @@ export default function ArtistPage() {
                 
                 {/* Overall Summary for all releases */}
                 {songs.filter(s => s.isReleased).length > 0 && (
-                  <div className="mt-6 pt-4 border-t-2 border-[#4e324c]/50">
+                  <div className="mt-6 pt-4 border-t-2 border-brand-purple/50">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-lg">Career Totals</h3>
                       <div className="flex items-center space-x-4">
@@ -753,7 +753,7 @@ export default function ArtistPage() {
                           <div className="text-xs text-white/70">Total Revenue</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xl font-bold text-[#791014]">
+                          <div className="text-xl font-bold text-brand-burgundy-dark">
                             {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length}
                           </div>
                           <div className="text-xs text-white/70">Releases</div>
@@ -887,7 +887,7 @@ export default function ArtistPage() {
                                       idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
                                       idx === 1 ? 'bg-gray-500/20 text-white/90' :
                                       idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                      'bg-[#65557c]/10 text-white/70'
+                                      'bg-brand-purple-light/10 text-white/70'
                                     }`}>
                                       {idx + 1}
                                     </div>
@@ -954,7 +954,7 @@ export default function ArtistPage() {
                                       idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
                                       idx === 1 ? 'bg-gray-500/20 text-white/90' :
                                       idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                      'bg-[#65557c]/10 text-white/70'
+                                      'bg-brand-purple-light/10 text-white/70'
                                     }`}>
                                       {idx + 1}
                                     </div>
@@ -1017,7 +1017,7 @@ export default function ArtistPage() {
                   </div>
                   
                   {/* Archetype Information */}
-                  <div className="p-4 border border-[#4e324c]/50 rounded-lg">
+                  <div className="p-4 border border-brand-purple/50 rounded-lg">
                     <h4 className="font-medium mb-2">Archetype: {artist.archetype}</h4>
                     <p className="text-sm text-white/70 mb-3">{archetypeInfo.description}</p>
                     <div className="text-xs text-white/50">
@@ -1069,7 +1069,7 @@ export default function ArtistPage() {
                     View Contract
                   </Button>
                   
-                  <div className="pt-3 border-t border-[#4e324c]/50">
+                  <div className="pt-3 border-t border-brand-purple/50">
                     <div className="text-sm text-white/70 mb-2">Weekly Cost</div>
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-semibold">${(artist.weeklyCost || artist.weeklyFee || 0).toLocaleString()}</span>
@@ -1124,8 +1124,8 @@ function PerformanceMetrics({
           <div className="text-lg font-bold text-green-700">{projectCount}</div>
           <div className="text-xs text-white/70">Projects</div>
         </div>
-        <div className="p-3 bg-[#791014]/10 rounded-lg">
-          <div className="text-lg font-bold text-[#791014]">{readySongs}</div>
+        <div className="p-3 bg-brand-burgundy-dark/10 rounded-lg">
+          <div className="text-lg font-bold text-brand-burgundy-dark">{readySongs}</div>
           <div className="text-xs text-white/70">Ready Songs</div>
         </div>
         <div className="p-3 bg-orange-500/10 rounded-lg">
@@ -1135,7 +1135,7 @@ function PerformanceMetrics({
       </div>
       
       {/* Financial metrics - separate section */}
-      <div className="pt-3 border-t border-[#4e324c]/50">
+      <div className="pt-3 border-t border-brand-purple/50">
         <div className="grid grid-cols-2 gap-3">
           {/* Revenue and Streams */}
           <div className="p-3 bg-green-500/10 rounded-lg">
@@ -1152,14 +1152,14 @@ function PerformanceMetrics({
           </div>
           
           {/* Costs */}
-          <div className="p-3 bg-[#65557c]/10 rounded-lg">
-            <div className="text-lg font-bold text-[#65557c]">
+          <div className="p-3 bg-brand-purple-light/10 rounded-lg">
+            <div className="text-lg font-bold text-brand-purple-light">
               ${(totalProductionCost / 1000).toFixed(1)}k
             </div>
             <div className="text-xs text-white/70">Recording Costs</div>
           </div>
-          <div className="p-3 bg-[#A75A5B]/10 rounded-lg">
-            <div className="text-lg font-bold text-[#A75A5B]">
+          <div className="p-3 bg-brand-burgundy/10 rounded-lg">
+            <div className="text-lg font-bold text-brand-burgundy">
               ${(totalMarketingCost / 1000).toFixed(1)}k
             </div>
             <div className="text-xs text-white/70">Marketing Costs</div>

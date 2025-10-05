@@ -374,7 +374,7 @@ function TableDashboardView({ tour }: { tour: typeof mockTourData }) {
   return (
     <div className="space-y-6">
       {/* Data Table */}
-      <Card className="bg-[#2C222A] border-[#4e324c]">
+      <Card className="bg-brand-dark-card border-brand-purple">
         <CardHeader>
           <CardTitle className="text-white">{tour.title} - {tour.artistName} • {tour.metadata.cities} Cities • Completed</CardTitle>
         </CardHeader>
@@ -383,27 +383,27 @@ function TableDashboardView({ tour }: { tour: typeof mockTourData }) {
             <TableHeader>
               <TableRow>
                 <TableHead
-                  className="text-white cursor-pointer hover:text-[#A75A5B]"
+                  className="text-white cursor-pointer hover:text-brand-burgundy"
                   onClick={() => handleSort('city')}
                 >
                   City {sortBy === 'city' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead className="text-white">Venue</TableHead>
                 <TableHead
-                  className="text-white cursor-pointer hover:text-[#A75A5B] text-right"
+                  className="text-white cursor-pointer hover:text-brand-burgundy text-right"
                   onClick={() => handleSort('attendance')}
                 >
                   Attendance {sortBy === 'attendance' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead
-                  className="text-white cursor-pointer hover:text-[#A75A5B] text-right"
+                  className="text-white cursor-pointer hover:text-brand-burgundy text-right"
                   onClick={() => handleSort('revenue')}
                 >
                   Revenue {sortBy === 'revenue' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead className="text-white text-right">Costs</TableHead>
                 <TableHead
-                  className="text-white cursor-pointer hover:text-[#A75A5B] text-right"
+                  className="text-white cursor-pointer hover:text-brand-burgundy text-right"
                   onClick={() => handleSort('profit')}
                 >
                   Profit {sortBy === 'profit' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -413,12 +413,12 @@ function TableDashboardView({ tour }: { tour: typeof mockTourData }) {
             </TableHeader>
             <TableBody>
               {sortedCities.map((city) => (
-                <TableRow key={city.cityNumber} className="border-[#4e324c]">
+                <TableRow key={city.cityNumber} className="border-brand-purple">
                   <TableCell className="text-white font-medium">{city.cityName}</TableCell>
                   <TableCell className="text-white/70">{city.venue}</TableCell>
                   <TableCell className="text-right text-white">
                     <div>{city.ticketsSold.toLocaleString()}/{city.capacity.toLocaleString()}</div>
-                    <div className="text-xs text-[#A75A5B]">{city.attendanceRate}%</div>
+                    <div className="text-xs text-brand-burgundy">{city.attendanceRate}%</div>
                   </TableCell>
                   <TableCell className="text-right text-green-400 font-mono">
                     ${city.revenue.toLocaleString()}
@@ -436,12 +436,12 @@ function TableDashboardView({ tour }: { tour: typeof mockTourData }) {
               ))}
 
               {/* Totals Row */}
-              <TableRow className="border-t-2 border-[#A75A5B] bg-[#3C252D]/30">
+              <TableRow className="border-t-2 border-brand-burgundy bg-brand-dark-card/30">
                 <TableCell className="text-white font-bold">TOTALS</TableCell>
                 <TableCell className="text-white/70">-</TableCell>
                 <TableCell className="text-right text-white font-bold">
                   <div>{totals.tickets.toLocaleString()}</div>
-                  <div className="text-xs text-[#A75A5B]">{Math.round((totals.tickets / totals.capacity) * 100)}%</div>
+                  <div className="text-xs text-brand-burgundy">{Math.round((totals.tickets / totals.capacity) * 100)}%</div>
                 </TableCell>
                 <TableCell className="text-right text-green-400 font-mono font-bold">
                   ${totals.revenue.toLocaleString()}
@@ -466,7 +466,7 @@ function TableDashboardView({ tour }: { tour: typeof mockTourData }) {
 
 export default function ToursTest() {
   return (
-    <div className="min-h-screen bg-[#2C222A] text-white p-6">
+    <div className="min-h-screen bg-brand-dark-card text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -480,7 +480,7 @@ export default function ToursTest() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <div className="h-6 w-px bg-[#4e324c]"></div>
+            <div className="h-6 w-px bg-brand-purple"></div>
             <h1 className="text-2xl font-bold text-white">Tour Performance</h1>
           </div>
         </div>

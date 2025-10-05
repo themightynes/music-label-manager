@@ -91,10 +91,10 @@ export function ChartDataTable<TData>({
   );
 
   return (
-    <div className={cn('rounded-md border border-[#4e324c] bg-[#1f1720]/60', className)}>
+    <div className={cn('rounded-md border border-brand-purple bg-brand-dark-mid/60', className)}>
       <Table>
         <TableHeader className="bg-black/20">
-          <TableRow className="border-[#4e324c]">
+          <TableRow className="border-brand-purple">
             {columns.map(column => {
               const direction = sortState?.columnId === column.id ? sortState.direction : null;
 
@@ -121,10 +121,10 @@ export function ChartDataTable<TData>({
               <TableRow
                 key={getRowKey ? getRowKey(row, index) : index}
                 className={cn(
-                  'border-[#4e324c] transition-colors',
+                  'border-brand-purple transition-colors',
                   rowHighlight?.(row)
-                    ? 'bg-[#A75A5B]/10 hover:bg-[#A75A5B]/20'
-                    : 'hover:bg-[#3c252d]/30'
+                    ? 'bg-brand-burgundy/10 hover:bg-brand-burgundy/20'
+                    : 'hover:bg-brand-dark-card/30'
                 )}
               >
                 {columns.map(column => (

@@ -317,8 +317,7 @@ export function GameSidebar({
                           </HoverCardTrigger>
                           <HoverCardContent
                             side="right"
-                            className="w-48 border-burgundy-600/50 text-white shadow-xl"
-                            style={{ backgroundColor: '#1d0e18' }}
+                            className="w-48 bg-brand-dark border-burgundy-600/50 text-white shadow-xl"
                           >
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
@@ -498,8 +497,8 @@ export function GameSidebar({
                 appearance={{
                   elements: {
                     userButtonAvatarBox: 'h-10 w-10',
-                    userButtonTrigger: 'focus:ring-2 focus:ring-[#A75A5B] rounded-full transition-shadow',
-                    userButtonPopoverCard: 'bg-[#1A111A] text-white border border-white/10 shadow-xl',
+                    userButtonTrigger: 'focus:ring-2 focus:ring-brand-burgundy rounded-full transition-shadow',
+                    userButtonPopoverCard: 'bg-brand-dark text-white border border-white/10 shadow-xl',
                     userButtonPopoverFooter: 'hidden',
                   },
                 }}
@@ -536,7 +535,7 @@ export function GameSidebar({
           onClick={() => setShowWeekSummary(false)}
         >
           <div
-            className="bg-[#2C222A] border border-[#4e324c] rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            className="bg-brand-dark-card border border-brand-purple rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <WeekSummary
@@ -552,7 +551,7 @@ export function GameSidebar({
       {/* No Results Available Modal */}
       {showWeekSummary && !weeklyOutcome && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-[#2C222A] border border-[#4e324c] rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-brand-dark-card border border-brand-purple rounded-lg p-6 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="text-4xl mb-4">📊</div>
               <h3 className="text-lg font-semibold text-white mb-2">No Weekly Results</h3>
@@ -561,7 +560,7 @@ export function GameSidebar({
               </p>
               <Button
                 onClick={() => setShowWeekSummary(false)}
-                className="bg-[#A75A5B] hover:bg-[#D99696] text-white border-0"
+                className="bg-brand-burgundy hover:bg-brand-rose text-white border-0"
               >
                 Close
               </Button>

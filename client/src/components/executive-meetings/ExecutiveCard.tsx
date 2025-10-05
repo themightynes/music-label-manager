@@ -65,15 +65,15 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
   const effectiveDisabled = disabled || isArBusy;
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md bg-[#8B6B70]/20 border-[#65557c] ${
-      effectiveDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg hover:bg-[#8B6B70]/30'
+    <Card className={`transition-all duration-200 hover:shadow-md bg-brand-mauve/20 border-brand-purple-light ${
+      effectiveDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg hover:bg-brand-mauve/30'
     }`}>
       <CardContent className="p-4">
         <div className="flex items-center space-x-4">
           {/* Avatar/Icon column */}
           <div className="flex-shrink-0 flex flex-col items-center justify-center">
             {/* Avatar/Icon Box */}
-            <div className="w-36 h-36 bg-[#8B6B70]/30 border border-[#65557c] rounded-lg overflow-hidden relative">
+            <div className="w-36 h-36 bg-brand-mauve/30 border border-brand-purple-light rounded-lg overflow-hidden relative">
               {config.avatar ? (
                 <img
                   src={config.avatar}
@@ -86,7 +86,7 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
                   }}
                 />
               ) : (
-                <div className={`w-full h-full bg-[#3c252d]/50 flex items-center justify-center`}>
+                <div className={`w-full h-full bg-brand-dark-card/50 flex items-center justify-center`}>
                   <div className={`p-3 rounded-lg ${config.color} text-white`}>
                     <IconComponent className="h-12 w-12" />
                   </div>
@@ -123,19 +123,19 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
             {/* Metrics */}
             {!isCEO ? (
               <div className="grid grid-cols-3 gap-2 mb-3">
-                <div className="p-2 bg-[#3c252d]/30 rounded text-center text-xs">
+                <div className="p-2 bg-brand-dark-card/30 rounded text-center text-xs">
                   <div className={`font-medium ${(executive.loyalty || 50) >= 70 ? 'text-green-600' : (executive.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
                     {executive.loyalty || 50}
                   </div>
                   <div className="text-white/50">Loyalty</div>
                 </div>
-                <div className="p-2 bg-[#3c252d]/30 rounded text-center text-xs">
+                <div className="p-2 bg-brand-dark-card/30 rounded text-center text-xs">
                   <div className={`font-medium ${(executive.mood || 50) >= 70 ? 'text-green-600' : (executive.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
                     {executive.mood || 50}
                   </div>
                   <div className="text-white/50">Mood</div>
                 </div>
-                <div className="p-2 bg-[#3c252d]/30 rounded text-center text-xs">
+                <div className="p-2 bg-brand-dark-card/30 rounded text-center text-xs">
                   <div className="font-medium text-white">
                     Lv.{executive.level || 1}
                   </div>
@@ -159,7 +159,7 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
 
             {/* A&R Status for Head of A&R */}
             {isHeadAR && arOfficeStatus?.arOfficeSlotUsed && (
-              <div className="mt-2 p-2 bg-[#3c252d]/30 rounded flex items-center justify-between">
+              <div className="mt-2 p-2 bg-brand-dark-card/30 rounded flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs">
                   <Badge variant="outline" className="text-xs">Sourcing Active</Badge>
                   {arOfficeStatus.arOfficeSourcingType && (

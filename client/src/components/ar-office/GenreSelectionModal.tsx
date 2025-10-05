@@ -59,7 +59,7 @@ export function GenreSelectionModal({ open, onClose, onConfirm, labelGenre }: Ge
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-[#A75A5B]" />
+            <Target className="w-5 h-5 text-brand-burgundy" />
             Specialized Search - Genre Targeting
           </DialogTitle>
           <DialogDescription className="text-white/70">
@@ -81,7 +81,7 @@ export function GenreSelectionModal({ open, onClose, onConfirm, labelGenre }: Ge
                 {AVAILABLE_GENRES.map((genre) => (
                   <SelectItem key={genre} value={genre}>
                     {genre}
-                    {genre === labelGenre && <span className="ml-2 text-xs text-[#A75A5B]">(Your Label)</span>}
+                    {genre === labelGenre && <span className="ml-2 text-xs text-brand-burgundy">(Your Label)</span>}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -134,7 +134,7 @@ export function GenreSelectionModal({ open, onClose, onConfirm, labelGenre }: Ge
           <Button
             onClick={handleConfirm}
             disabled={!primaryGenre}
-            className="bg-[#A75A5B] hover:bg-[#8a4a4b]"
+            className="bg-brand-burgundy hover:bg-brand-burgundy"
           >
             Start Specialized Search
           </Button>

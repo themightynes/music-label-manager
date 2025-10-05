@@ -63,7 +63,7 @@ export function ToastNotification() {
       className: type === 'achievement' ? 'border-yellow-200 bg-yellow-50' : 
                  type === 'success' ? 'border-green-200 bg-green-50' :
                  type === 'warning' ? 'border-orange-200 bg-orange-50' : 
-                 'border-[#A75A5B]/20 bg-[#A75A5B]/10'
+                 'border-brand-burgundy/20 bg-brand-burgundy/10'
     };
 
     // Add action button if provided
@@ -72,7 +72,7 @@ export function ToastNotification() {
         <ToastAction 
           altText={action.label}
           onClick={action.onClick}
-          className="bg-[#23121c] hover:bg-[#A75A5B]/20 border-[#4e324c] text-white"
+          className="bg-brand-dark-card hover:bg-brand-burgundy/20 border-brand-purple text-white"
         >
           {action.label}
         </ToastAction>

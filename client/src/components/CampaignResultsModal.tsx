@@ -30,9 +30,9 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
       case 'Commercial Success':
         return 'bg-green-500';
       case 'Critical Acclaim':
-        return 'bg-[#791014]';
+        return 'bg-brand-burgundy-dark';
       case 'Balanced Growth':
-        return 'bg-[#A75A5B]/100';
+        return 'bg-brand-burgundy/100';
       case 'Survival':
         return 'bg-yellow-500';
       case 'Failure':
@@ -62,7 +62,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="text-center border-b border-[#4e324c] pb-6">
+        <DialogHeader className="text-center border-b border-brand-purple pb-6">
           <div className="text-6xl mb-4">
             {getVictoryTypeIcon(campaignResults.victoryType)}
           </div>
@@ -112,13 +112,13 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
                   <div className="text-sm text-white/70">Money</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[#791014]">
+                  <div className="text-2xl font-bold text-brand-burgundy-dark">
                     {campaignResults.scoreBreakdown.reputation}
                   </div>
                   <div className="text-sm text-white/70">Reputation</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[#A75A5B]">
+                  <div className="text-2xl font-bold text-brand-burgundy">
                     {campaignResults.scoreBreakdown.artistsSuccessful}
                   </div>
                   <div className="text-sm text-white/70">Artist Success</div>
@@ -152,7 +152,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
                   {campaignResults.achievements.map((achievement, index) => (
                     <div
                       key={index}
-                      className="flex items-center space-x-3 p-3 bg-[#3c252d]/20 rounded-lg"
+                      className="flex items-center space-x-3 p-3 bg-brand-dark-card/20 rounded-lg"
                     >
                       <div className="text-xl">🏅</div>
                       <div className="text-white/90 font-medium">
@@ -167,7 +167,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center space-x-4 p-6 border-t border-[#4e324c]">
+        <div className="flex justify-center space-x-4 p-6 border-t border-brand-purple">
           <Button
             variant="outline"
             onClick={onClose}
@@ -177,7 +177,7 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
           </Button>
           <Button
             onClick={onNewGame}
-            className="px-8 py-3 bg-primary text-white hover:bg-[#8B4A6C]"
+            className="px-8 py-3 bg-primary text-white hover:bg-brand-burgundy"
           >
             Start New Campaign
           </Button>

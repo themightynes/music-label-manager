@@ -481,7 +481,7 @@ export function MusicCalendar({
           events.map((event) => (
             <div
               key={event.id}
-              className="bg-[#4e324c]/30 after:bg-[#A75A5B] relative rounded-md p-2 pl-6 text-sm after:absolute after:inset-y-2 after:left-2 after:w-1 after:rounded-full"
+              className="bg-brand-purple/30 after:bg-brand-burgundy relative rounded-md p-2 pl-6 text-sm after:absolute after:inset-y-2 after:left-2 after:w-1 after:rounded-full"
             >
               <div className="font-medium text-white flex items-center gap-2">
                 {getEventIcon(event.type)}
@@ -507,13 +507,13 @@ export function MusicCalendar({
   if (weekPickerMode) {
     return (
       <TooltipProvider>
-        <Card className={cn("py-4 bg-[#23121c] border-[#4e324c] h-full", className)}>
+        <Card className={cn("py-4 bg-brand-dark-card border-brand-purple h-full", className)}>
           <CardContent className="px-4 h-full flex flex-col">
             <div className="flex gap-4 flex-1">
               {/* Week picker grid on the left */}
               <div className="flex-shrink-0">
-                <div className="border border-[#A75A5B]/30 rounded-lg p-4 bg-[#23121c]/40">
-                  <h3 className="text-sm font-semibold text-[#A75A5B] mb-4 text-center">
+                <div className="border border-brand-burgundy/30 rounded-lg p-4 bg-brand-dark-card/40">
+                  <h3 className="text-sm font-semibold text-brand-burgundy mb-4 text-center">
                     Select Week
                   </h3>
 
@@ -541,15 +541,15 @@ export function MusicCalendar({
                           className={cn(
                             "w-12 h-8 rounded text-[10px] font-medium transition-all duration-150 relative",
                             // Base styles - uniform plum burgundy theme
-                            "border border-white/10 bg-[#A75A5B]/10",
+                            "border border-white/10 bg-brand-burgundy/10",
                             // Selection state
-                            isSelected && "ring-2 ring-[#A75A5B]/70 bg-[#A75A5B] text-white font-bold z-10",
+                            isSelected && "ring-2 ring-brand-burgundy/70 bg-brand-burgundy text-white font-bold z-10",
                             // Current week
-                            isCurrent && !isSelected && "border-[#A75A5B]/50 bg-[#A75A5B]/20",
+                            isCurrent && !isSelected && "border-brand-burgundy/50 bg-brand-burgundy/20",
                             // Past weeks
                             isPast && "opacity-30 cursor-not-allowed bg-gray-600/20",
                             // Future weeks (clickable)
-                            !isPast && !isSelected && "hover:bg-[#A75A5B]/20 hover:border-[#A75A5B]/40 hover:scale-110"
+                            !isPast && !isSelected && "hover:bg-brand-burgundy/20 hover:border-brand-burgundy/40 hover:scale-110"
                           )}
                         >
                           {formatWeekLabel(week)}
@@ -570,7 +570,7 @@ export function MusicCalendar({
                                   {weekButton}
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent className="bg-[#23121c] border-[#A75A5B]/30 text-white/90">
+                              <TooltipContent className="bg-brand-dark-card border-brand-burgundy/30 text-white/90">
                                 <div className="text-xs">Week ending {weekEndingDate}</div>
                               </TooltipContent>
                             </Tooltip>
@@ -585,7 +585,7 @@ export function MusicCalendar({
               </div>
 
               {/* Events on the right */}
-              <div className="flex-1 border-l border-[#4e324c] pl-4 flex flex-col">
+              <div className="flex-1 border-l border-brand-purple pl-4 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
                   <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
                 </div>
@@ -600,7 +600,7 @@ export function MusicCalendar({
   }
 
   return (
-    <Card className={cn("py-4 bg-[#23121c] border-[#4e324c] h-full", className)}>
+    <Card className={cn("py-4 bg-brand-dark-card border-brand-purple h-full", className)}>
       <CardContent className="px-4 h-full flex flex-col">
         <div className="flex gap-4 flex-1">
           {/* Calendar on the left */}
@@ -633,26 +633,26 @@ export function MusicCalendar({
                   }
                 }
               }}
-              className="bg-transparent p-0 [&_.rdp-day]:text-white/90 [&_.rdp-day_selected]:bg-[#A75A5B] [&_.rdp-day_selected]:text-white [&_.rdp-day_today]:bg-[#A75A5B]/20 [&_.rdp-day_today]:text-[#A75A5B] [&_.rdp-caption]:text-white [&_.rdp-nav_button]:text-white/70 [&_.rdp-nav_button:hover]:text-white [&_.rdp-head_cell]:text-white/50"
+              className="bg-transparent p-0 [&_.rdp-day]:text-white/90 [&_.rdp-day_selected]:bg-brand-burgundy [&_.rdp-day_selected]:text-white [&_.rdp-day_today]:bg-brand-burgundy/20 [&_.rdp-day_today]:text-brand-burgundy [&_.rdp-caption]:text-white [&_.rdp-nav_button]:text-white/70 [&_.rdp-nav_button:hover]:text-white [&_.rdp-head_cell]:text-white/50"
               modifiers={{
                 selected_week: selectedWeekDates,
               }}
               modifiersClassNames={{
-                selected_week: 'bg-[#A75A5B]/40 text-white border border-[#A75A5B]/60'
+                selected_week: 'bg-brand-burgundy/40 text-white border border-brand-burgundy/60'
               }}
               required
             />
           </div>
 
           {/* Events on the right (display mode) or Week info (selection mode) */}
-          <div className="flex-1 border-l border-[#4e324c] pl-4 flex flex-col">
+          <div className="flex-1 border-l border-brand-purple pl-4 flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
               {!selectionMode && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-6 text-white/70 hover:text-white hover:bg-[#A75A5B]/20"
+                  className="size-6 text-white/70 hover:text-white hover:bg-brand-burgundy/20"
                   title="Add Event"
                 >
                   <Plus className="h-4 w-4" />

@@ -110,8 +110,8 @@ export function ActiveReleases() {
 
   const getReleaseTypeBadge = (type: string) => {
     const typeConfig = {
-      single: { label: 'Single', color: 'bg-[#A75A5B]/20 text-[#A75A5B]' },
-      ep: { label: 'EP', color: 'bg-[#791014]/10 text-[#791014]' },
+      single: { label: 'Single', color: 'bg-brand-burgundy/20 text-brand-burgundy' },
+      ep: { label: 'EP', color: 'bg-brand-burgundy-dark/10 text-brand-burgundy-dark' },
       album: { label: 'Album', color: 'bg-green-100 text-green-800' },
       compilation: { label: 'Compilation', color: 'bg-orange-100 text-orange-800' }
     };
@@ -205,7 +205,7 @@ export function ActiveReleases() {
               </div>
             )}
             {stateSync === 'syncing' && (
-              <div className="flex items-center space-x-1 text-[#A75A5B]">
+              <div className="flex items-center space-x-1 text-brand-burgundy">
                 <Clock className="w-4 h-4 animate-spin" />
                 <span className="text-xs">Syncing...</span>
               </div>
@@ -220,11 +220,11 @@ export function ActiveReleases() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 bg-[#3c252d]/30 p-1 rounded-lg mb-6">
+        <div className="flex space-x-1 bg-brand-dark-card/30 p-1 rounded-lg mb-6">
           <button
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === 'upcoming' 
-                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm' 
+                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm' 
                 : 'text-white/70 hover:text-white'
             }`}
             onClick={() => setActiveTab('upcoming')}
@@ -234,7 +234,7 @@ export function ActiveReleases() {
           <button
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === 'released' 
-                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm' 
+                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm' 
                 : 'text-white/70 hover:text-white'
             }`}
             onClick={() => setActiveTab('released')}
@@ -283,10 +283,10 @@ export function ActiveReleases() {
                     const top40Songs = chartingSongs.filter(s => s.chartPosition && s.chartPosition <= 40);
 
                     return chartingSongs.length > 0 ? (
-                      <div className="mb-6 p-4 bg-[#3c252d]/30 rounded-lg border border-[#A75A5B]/20">
+                      <div className="mb-6 p-4 bg-brand-dark-card/30 rounded-lg border border-brand-burgundy/20">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="text-sm font-semibold text-white flex items-center space-x-2">
-                            <BarChart3 className="w-4 h-4 text-[#A75A5B]" />
+                            <BarChart3 className="w-4 h-4 text-brand-burgundy" />
                             <span>Chart Performance</span>
                           </h4>
                           <div className="text-xs text-white/50">

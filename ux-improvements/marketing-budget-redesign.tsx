@@ -86,7 +86,7 @@ export function ImprovedMarketingBudget({
                   <div
                     key={preset.id}
                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      isSelected ? 'border-blue-500 bg-blue-50' : 'border-[#4e324c]/50 hover:border-[#65557c]/60'
+                      isSelected ? 'border-blue-500 bg-blue-50' : 'border-brand-purple/50 hover:border-brand-purple-light/60'
                     }`}
                     onClick={() => setChannelBudgets(preset.allocation)}
                   >
@@ -180,7 +180,7 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
       </div>
       
       {/* Quick total budget slider */}
-      <div className="p-3 bg-[#3c252d]/10 rounded-lg">
+      <div className="p-3 bg-brand-dark-card/10 rounded-lg">
         <label className="text-xs text-white/70 mb-2 block">Quick Budget Adjust</label>
         <Slider
           value={[totalBudget]}
@@ -216,7 +216,7 @@ function AdvancedChannelBudgeting({ budgets, setBudgets, channels, gameState, ti
             <div
               key={channel.id}
               className={`border rounded-lg transition-all ${
-                isActive ? 'border-blue-200 bg-blue-50' : 'border-[#4e324c]/50'
+                isActive ? 'border-blue-200 bg-blue-50' : 'border-brand-purple/50'
               }`}
             >
               {/* Channel Header */}

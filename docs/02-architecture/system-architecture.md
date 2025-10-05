@@ -148,7 +148,7 @@ POST /api/saves/:saveId/load
 - **Vite**: Fast development and optimized builds
 
 **Visual Theme System** *(Updated: August 31, 2025)*:
-- **Dark Plum Theme**: Comprehensive UI overhaul with #2C222A base and #23121c containers
+- **Dark Plum Theme**: Comprehensive UI overhaul with #2a1821 base and #2a1821 containers
 - **Burgundy Accents**: Secondary color changed from purple to #791014 burgundy
 - **Background Integration**: Full-opacity plum background image (plum_background.880Z.png)
 - **Accessibility**: White/white-70 text on dark backgrounds with WCAG AA compliance

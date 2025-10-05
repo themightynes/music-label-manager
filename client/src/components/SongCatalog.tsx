@@ -116,7 +116,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
 
   const getStatusBadge = (song: Song) => {
     if (song.isReleased) {
-      return <Badge variant="default" className="bg-[#A75A5B]/20 text-[#A75A5B]">Released</Badge>;
+      return <Badge variant="default" className="bg-brand-burgundy/20 text-brand-burgundy">Released</Badge>;
     }
     if (song.isRecorded) {
       return <Badge variant="secondary" className="bg-green-900/30 text-green-300 border border-green-600/40">Ready</Badge>;
@@ -223,7 +223,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
     return (
       <div className={className}>
         <h5 className="text-xs font-semibold text-white/90 mb-2">Song Catalog</h5>
-        <div className="text-xs text-white/50 p-3 bg-[#3c252d]/20 rounded border border-[#4e324c]">
+        <div className="text-xs text-white/50 p-3 bg-brand-dark-card/20 rounded border border-brand-purple">
           <div className="flex items-center space-x-2 mb-2">
             <Music className="w-4 h-4" />
             <span className="font-medium">No songs yet</span>
@@ -293,7 +293,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       
       {/* Last Week Performance - Only show if there was recent activity */}
       {lastWeekRevenue > 0 && (
-        <div className="p-2 bg-gradient-to-r from-green-900/20 to-[#A75A5B]/20 border border-green-600/30 rounded mb-3">
+        <div className="p-2 bg-gradient-to-r from-green-900/20 to-brand-burgundy/20 border border-green-600/30 rounded mb-3">
           <div className="text-xs text-center">
             <div className="font-medium text-white/90">Last Week: +${lastWeekRevenue.toLocaleString()}</div>
             <div className="text-white/50">Recent Performance</div>
@@ -304,7 +304,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       {/* Song List */}
       <div className="space-y-2 max-h-64 overflow-y-auto">
         {songs.map((song) => (
-          <Card key={song.id} className="border border-[#4e324c]">
+          <Card key={song.id} className="border border-brand-purple">
             <CardContent className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
@@ -366,13 +366,13 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
 
               {/* Individual Song Metrics - Only show for released songs */}
               {song.isReleased && (song.totalStreams || song.totalRevenue) && (
-                <div className="pt-2 border-t border-[#4e324c]/50 space-y-1">
+                <div className="pt-2 border-t border-brand-purple/50 space-y-1">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {song.totalStreams && (
                       <div className="flex items-center space-x-1">
-                        <PlayCircle className="w-3 h-3 text-[#A75A5B]" />
+                        <PlayCircle className="w-3 h-3 text-brand-burgundy" />
                         <span className="text-white/50">Streams:</span>
-                        <span className="font-mono text-[#A75A5B]">
+                        <span className="font-mono text-brand-burgundy">
                           {song.totalStreams.toLocaleString()}
                         </span>
                       </div>

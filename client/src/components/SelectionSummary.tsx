@@ -111,13 +111,13 @@ export function SelectionSummary({
 
     // Map executive data for both formats
     const executives: Record<string, { name: string; icon: string; color: string }> = {
-      'ceo': { name: 'CEO', icon: 'fas fa-crown', color: '#FFD700' },
+      'ceo': { name: 'CEO', icon: 'fas fa-crown', color: 'yellow-400' },
       'head': { name: 'Head of A&R', icon: 'fas fa-music', color: '#A75A5B' },
       'head_ar': { name: 'Head of A&R', icon: 'fas fa-music', color: '#A75A5B' },
-      'cmo': { name: 'CMO', icon: 'fas fa-bullhorn', color: '#5AA75A' },
-      'cco': { name: 'CCO', icon: 'fas fa-palette', color: '#5A75A7' },
-      'head_distribution': { name: 'Head of Distribution', icon: 'fas fa-truck', color: '#A75A85' },
-      'distribution': { name: 'Head of Distribution', icon: 'fas fa-truck', color: '#A75A85' }
+      'cmo': { name: 'CMO', icon: 'fas fa-bullhorn', color: 'green-500' },
+      'cco': { name: 'CCO', icon: 'fas fa-palette', color: 'blue-500' },
+      'head_distribution': { name: 'Head of Distribution', icon: 'fas fa-truck', color: '#A75A5B' },
+      'distribution': { name: 'Head of Distribution', icon: 'fas fa-truck', color: '#A75A5B' }
     };
 
     if (parsed.format === 'json') {
@@ -212,7 +212,7 @@ export function SelectionSummary({
   };
 
   const getProgressColor = () => {
-    if (usedSlots === 0) return 'bg-[#65557c]/30';
+    if (usedSlots === 0) return 'bg-brand-purple-light/30';
     if (usedSlots < totalSlots) return 'bg-yellow-400';
     return 'bg-green-500';
   };
@@ -224,11 +224,11 @@ export function SelectionSummary({
   };
 
   return (
-    <Card className="h-full bg-[#3c252d]/50 backdrop-blur-sm border-white/10">
+    <Card className="h-full bg-brand-dark-card/50 backdrop-blur-sm border-white/10">
       <CardHeader className="p-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">Focus Slots</h3>
-          <Badge variant="secondary" className="text-sm bg-[#A75A5B] text-white">
+          <Badge variant="secondary" className="text-sm bg-brand-burgundy text-white">
             {usedSlots}/{totalSlots} Used
           </Badge>
         </div>
@@ -240,8 +240,8 @@ export function SelectionSummary({
               key={index}
               className={`flex-1 h-2 rounded-full transition-all ${
                 index < usedSlots
-                  ? 'bg-gradient-to-r from-[#A75A5B] to-[#8B4A6C]'
-                  : 'bg-[#65557c]/30'
+                  ? 'bg-gradient-to-r from-brand-burgundy to-brand-burgundy'
+                  : 'bg-brand-purple-light/30'
               }`}
               title={`Slot ${index + 1}`}
             />
@@ -267,15 +267,15 @@ export function SelectionSummary({
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 className={`space-y-3 min-h-[200px] p-3 rounded-lg border-2 border-dashed transition-colors ${
-                  snapshot.isDraggingOver ? 'border-[#A75A5B]/40 bg-[#A75A5B]/10' : 'border-[#4e324c]'
+                  snapshot.isDraggingOver ? 'border-brand-burgundy/40 bg-brand-burgundy/10' : 'border-brand-purple'
                 }`}
               >
                 {/* A&R active tile (non-draggable) */}
                 {arOfficeActive && (
-                  <div className="bg-[#3c252d]/66 border border-[#65557c] rounded-lg p-3 shadow-sm hover:shadow-md">
+                  <div className="bg-brand-dark-card/66 border border-brand-purple-light rounded-lg p-3 shadow-sm hover:shadow-md">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 flex-1">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#A75A5B] to-[#8B4A6C] text-white rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-gradient-to-br from-brand-burgundy to-brand-burgundy text-white rounded-lg flex items-center justify-center">
                           <i className="fas fa-music text-sm"></i>
                         </div>
                         <div className="flex-1">
@@ -306,7 +306,7 @@ export function SelectionSummary({
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`bg-[#3c252d]/66 border border-[#65557c] rounded-lg p-3 shadow-sm transition-all ${
+                          className={`bg-brand-dark-card/66 border border-brand-purple-light rounded-lg p-3 shadow-sm transition-all ${
                             snapshot.isDragging ? 'shadow-lg rotate-2' : 'hover:shadow-md'
                           }`}
                         >
@@ -314,7 +314,7 @@ export function SelectionSummary({
                             <div className="flex items-center space-x-3 flex-1">
                               <div
                                 {...provided.dragHandleProps}
-                                className="w-8 h-8 bg-gradient-to-br from-[#A75A5B] to-[#8B4A6C] text-white rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing"
+                                className="w-8 h-8 bg-gradient-to-br from-brand-burgundy to-brand-burgundy text-white rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing"
                               >
                                 <span className="text-sm font-bold">{index + 1}</span>
                               </div>
@@ -356,10 +356,10 @@ export function SelectionSummary({
 
         {/* Impact Preview */}
         {selectedActions.length > 0 && (
-          <Card className="bg-[#3c252d]/30 border-[#65557c]/30">
+          <Card className="bg-brand-dark-card/30 border-brand-purple-light/30">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-[#D4A373]" />
+                <BarChart3 className="h-4 w-4 text-brand-gold" />
                 <span className="text-sm font-medium text-white">Impact Preview</span>
               </div>
             </CardHeader>
@@ -408,9 +408,9 @@ export function SelectionSummary({
         {/* Advance Week Button */}
         <div className="space-y-3">
           {usedSlots < totalSlots && (
-            <div className="text-center p-3 bg-[#8B4A6C]/10 border border-[#8B4A6C]/30 rounded-lg">
-              <i className="fas fa-info-circle text-[#D4A373] mr-2"></i>
-              <span className="text-sm text-[#D4A373]">
+            <div className="text-center p-3 bg-brand-burgundy/10 border border-brand-burgundy/30 rounded-lg">
+              <i className="fas fa-info-circle text-brand-gold mr-2"></i>
+              <span className="text-sm text-brand-gold">
                 Allocate {availableSlots} more focus slot{availableSlots !== 1 ? 's' : ''} to continue
               </span>
             </div>
@@ -419,7 +419,7 @@ export function SelectionSummary({
           <Button
             onClick={onAdvanceWeek}
             disabled={(selectedActions.length === 0 && !arOfficeActive) || isAdvancing}
-            className="w-full bg-gradient-to-r from-[#A75A5B] to-[#8B4A6C] text-white hover:from-[#A75A5B]/80 hover:to-[#7A3F5E] py-3 font-medium shadow-lg"
+            className="w-full bg-gradient-to-r from-brand-burgundy to-brand-burgundy text-white hover:from-brand-burgundy/80 hover:to-brand-purple-light py-3 font-medium shadow-lg"
             size="lg"
           >
             {isAdvancing ? (

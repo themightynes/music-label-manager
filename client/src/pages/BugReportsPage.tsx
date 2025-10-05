@@ -196,10 +196,10 @@ export default function BugReportsPage() {
 
         <div className="flex gap-4 mb-6">
           <Select value={severityFilter} onValueChange={setSeverityFilter}>
-            <SelectTrigger className="w-[180px] bg-[#1f1720] border-[#4e324c] text-white">
+            <SelectTrigger className="w-[180px] bg-brand-dark-mid border-brand-purple text-white">
               <SelectValue placeholder="All Severities" />
             </SelectTrigger>
-            <SelectContent className="bg-[#1f1720] border-[#4e324c] text-white">
+            <SelectContent className="bg-brand-dark-mid border-brand-purple text-white">
               <SelectItem value="all">All Severities</SelectItem>
               {severityOptions.map((option) => (
                 <SelectItem key={option} value={option}>
@@ -210,10 +210,10 @@ export default function BugReportsPage() {
           </Select>
 
           <Select value={areaFilter} onValueChange={setAreaFilter}>
-            <SelectTrigger className="w-[180px] bg-[#1f1720] border-[#4e324c] text-white">
+            <SelectTrigger className="w-[180px] bg-brand-dark-mid border-brand-purple text-white">
               <SelectValue placeholder="All Areas" />
             </SelectTrigger>
-            <SelectContent className="bg-[#1f1720] border-[#4e324c] text-white">
+            <SelectContent className="bg-brand-dark-mid border-brand-purple text-white">
               <SelectItem value="all">All Areas</SelectItem>
               {areaOptions.map((option) => (
                 <SelectItem key={option} value={option}>
@@ -224,10 +224,10 @@ export default function BugReportsPage() {
           </Select>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px] bg-[#1f1720] border-[#4e324c] text-white">
+            <SelectTrigger className="w-[180px] bg-brand-dark-mid border-brand-purple text-white">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
-            <SelectContent className="bg-[#1f1720] border-[#4e324c] text-white">
+            <SelectContent className="bg-brand-dark-mid border-brand-purple text-white">
               <SelectItem value="all">All Statuses</SelectItem>
               {statusOptions.map((option) => (
                 <SelectItem key={option} value={option}>
@@ -240,7 +240,7 @@ export default function BugReportsPage() {
           <Button
             onClick={toggleSort}
             variant="outline"
-            className="bg-[#1f1720] border-[#4e324c] text-white hover:bg-[#3c252d]/30"
+            className="bg-brand-dark-mid border-brand-purple text-white hover:bg-brand-dark-card/30"
           >
             Sort by Date
             {sortDirection === 'desc' ? (
@@ -264,10 +264,10 @@ export default function BugReportsPage() {
         )}
 
         {!loading && !error && filteredAndSortedReports.length > 0 && (
-          <div className="bg-[#1f1720] border border-[#4e324c] rounded-lg overflow-hidden">
+          <div className="bg-brand-dark-mid border border-brand-purple rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="border-[#4e324c] hover:bg-transparent">
+                <TableRow className="border-brand-purple hover:bg-transparent">
                   <TableHead className="text-white/80">Date</TableHead>
                   <TableHead className="text-white/80">Summary</TableHead>
                   <TableHead className="text-white/80">Severity</TableHead>
@@ -283,7 +283,7 @@ export default function BugReportsPage() {
                   const isExpanded = expandedRows.has(report.id);
                   return (
                     <>
-                      <TableRow key={report.id} className="border-[#4e324c] hover:bg-[#3c252d]/30">
+                      <TableRow key={report.id} className="border-brand-purple hover:bg-brand-dark-card/30">
                         <TableCell className="text-white/80">
                           {formatDate(report.submittedAt)}
                         </TableCell>
@@ -309,10 +309,10 @@ export default function BugReportsPage() {
                             onValueChange={(value) => handleStatusChange(report.id, value as BugReportStatus)}
                             disabled={updatingStatus.has(report.id)}
                           >
-                            <SelectTrigger className="w-[140px] h-8 bg-[#1f1720] border-[#4e324c] text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                            <SelectTrigger className="w-[140px] h-8 bg-brand-dark-mid border-brand-purple text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#1f1720] border-[#4e324c] text-white">
+                            <SelectContent className="bg-brand-dark-mid border-brand-purple text-white">
                               {statusOptions.map((option) => (
                                 <SelectItem key={option} value={option}>
                                   <span className={getStatusColor(option) + ' px-2 py-1 rounded text-xs'}>
@@ -330,7 +330,7 @@ export default function BugReportsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-[#A75A5B] hover:bg-[#3c252d]/30"
+                            className="text-brand-burgundy hover:bg-brand-dark-card/30"
                             onClick={() => toggleRow(report.id)}
                             aria-expanded={isExpanded}
                             aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
@@ -344,7 +344,7 @@ export default function BugReportsPage() {
                         </TableCell>
                       </TableRow>
                       {isExpanded && (
-                        <TableRow key={`${report.id}-details`} className="border-[#4e324c] bg-[#23121c]">
+                        <TableRow key={`${report.id}-details`} className="border-brand-purple bg-brand-dark-card">
                           <TableCell colSpan={8} className="p-6">
                             <div className="grid gap-4">
                               <div>

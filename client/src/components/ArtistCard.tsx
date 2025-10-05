@@ -108,7 +108,7 @@ export function ArtistCard({
   const StatusIcon = relationship.statusIcon;
 
   return (
-    <div className="border border-[#4e324c] rounded-lg p-3">
+    <div className="border border-brand-purple rounded-lg p-3">
       {/* Condensed Artist Header */}
       <div className="flex items-center justify-between mb-2">
         <div>
@@ -127,9 +127,9 @@ export function ArtistCard({
         <div className="flex items-center gap-2">
           <Badge
             className={`text-xs px-2 py-1 ${
-              artistStatus === 'ON TOUR' ? 'bg-[#A75A5B] text-white' :
-              artistStatus === 'RECORDING' ? 'bg-[#65557c] text-white' :
-              'bg-[#4e324c] text-white/70'
+              artistStatus === 'ON TOUR' ? 'bg-brand-burgundy text-white' :
+              artistStatus === 'RECORDING' ? 'bg-brand-purple-light text-white' :
+              'bg-brand-purple text-white/70'
             }`}
           >
             {artistStatus === 'ON TOUR' ? 'On Tour' :
@@ -149,29 +149,29 @@ export function ArtistCard({
 
       {/* Condensed Metrics */}
       <div className="grid grid-cols-5 gap-2 mb-2 text-center">
-        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
+        <div className="p-1 bg-brand-dark-card/30 rounded text-xs">
           <div className="font-medium text-white">{insights.projects}</div>
           <div className="text-white/50">Projects</div>
         </div>
-        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
+        <div className="p-1 bg-brand-dark-card/30 rounded text-xs">
           <div className={`font-medium ${avgROI >= 0 ? 'text-green-600' : avgROI < 0 ? 'text-red-600' : 'text-white'}`}>
             {roiData && (roiData.totalInvestment > 0 || roiData.totalRevenue > 0) ? `${avgROI > 0 ? '+' : ''}${avgROI.toFixed(0)}%` : '--'}
           </div>
           <div className="text-white/50">ROI</div>
         </div>
-        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
+        <div className="p-1 bg-brand-dark-card/30 rounded text-xs">
           <div className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
             {artist.mood || 50}%
           </div>
           <div className="text-white/50">Mood</div>
         </div>
-        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
+        <div className="p-1 bg-brand-dark-card/30 rounded text-xs">
           <div className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
             {artist.loyalty || 50}%
           </div>
           <div className="text-white/50">Loyalty</div>
         </div>
-        <div className="p-1 bg-[#3c252d]/30 rounded text-xs">
+        <div className="p-1 bg-brand-dark-card/30 rounded text-xs">
           <div className={`font-medium ${(artist.popularity || 0) >= 70 ? 'text-green-600' : (artist.popularity || 0) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
             {artist.popularity || 0}%
           </div>
@@ -184,7 +184,7 @@ export function ArtistCard({
         <div className="mb-2">
           <div className={`text-xs p-2 rounded flex items-center space-x-2 ${
             recommendations[0].type === 'urgent' ? 'bg-red-900/30 text-red-300 border border-red-600/40' :
-            recommendations[0].type === 'action' ? 'bg-[#A75A5B]/20 text-[#A75A5B] border border-[#A75A5B]/40' :
+            recommendations[0].type === 'action' ? 'bg-brand-burgundy/20 text-brand-burgundy border border-brand-burgundy/40' :
             'bg-amber-900/30 text-amber-300 border border-amber-600/40'
           }`}>
             <span>{recommendations[0].icon}</span>
@@ -195,29 +195,29 @@ export function ArtistCard({
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="mt-4 pt-3 border-t border-[#4e324c] space-y-3">
+        <div className="mt-4 pt-3 border-t border-brand-purple space-y-3">
           {/* Financial Summary */}
           {roiData && (roiData.totalRevenue > 0 || roiData.totalInvestment > 0) && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-              <div className="p-2 bg-[#3c252d]/30 rounded">
+              <div className="p-2 bg-brand-dark-card/30 rounded">
                 <div className="text-white/50 mb-0.5">Total Revenue</div>
                 <div className="font-mono font-semibold text-green-600">
                   ${(roiData.totalRevenue || 0).toLocaleString()}
                 </div>
               </div>
-              <div className="p-2 bg-[#3c252d]/30 rounded">
+              <div className="p-2 bg-brand-dark-card/30 rounded">
                 <div className="text-white/50 mb-0.5">Total Streams</div>
                 <div className="font-mono font-semibold text-blue-600">
                   {((roiData.totalStreams || 0) / 1000).toFixed(0)}k
                 </div>
               </div>
-              <div className="p-2 bg-[#3c252d]/30 rounded">
+              <div className="p-2 bg-brand-dark-card/30 rounded">
                 <div className="text-white/50 mb-0.5">Recording Costs</div>
                 <div className="font-mono font-semibold text-white/70">
                   ${(roiData.totalProductionInvestment || 0).toLocaleString()}
                 </div>
               </div>
-              <div className="p-2 bg-[#3c252d]/30 rounded">
+              <div className="p-2 bg-brand-dark-card/30 rounded">
                 <div className="text-white/50 mb-0.5">Marketing Costs</div>
                 <div className="font-mono font-semibold text-white/70">
                   ${(roiData.totalMarketingInvestment || 0).toLocaleString()}
@@ -252,9 +252,9 @@ export function ArtistCard({
           </div>
 
           {/* Management Tips */}
-          <div className="p-2 bg-[#A75A5B]/20 border border-[#A75A5B]/40 rounded">
-            <div className="text-xs font-medium text-[#A75A5B] mb-1">💡 Management Tip</div>
-            <p className="text-xs text-[#A75A5B]">{archetype.tips}</p>
+          <div className="p-2 bg-brand-burgundy/20 border border-brand-burgundy/40 rounded">
+            <div className="text-xs font-medium text-brand-burgundy mb-1">💡 Management Tip</div>
+            <p className="text-xs text-brand-burgundy">{archetype.tips}</p>
           </div>
 
           {/* Detailed Mood/Loyalty Factors */}
@@ -288,7 +288,7 @@ export function ArtistCard({
                 {recommendations.slice(2).map((rec, index) => (
                   <div key={index} className={`text-xs p-2 rounded flex items-center space-x-2 ${
                     rec.type === 'urgent' ? 'bg-red-900/30 text-red-300 border border-red-600/40' :
-                    rec.type === 'action' ? 'bg-[#A75A5B]/20 text-[#A75A5B] border border-[#A75A5B]/40' :
+                    rec.type === 'action' ? 'bg-brand-burgundy/20 text-brand-burgundy border border-brand-burgundy/40' :
                     'bg-amber-900/30 text-amber-300 border border-amber-600/40'
                   }`}>
                     <span>{rec.icon}</span>

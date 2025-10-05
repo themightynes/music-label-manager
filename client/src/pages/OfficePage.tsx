@@ -12,11 +12,11 @@ export default function OfficePage() {
         </header>
 
         <section
-          className="relative overflow-hidden rounded-3xl border border-[#d99696]/30 bg-[#120910]/90 min-h-[420px] bg-cover bg-center"
+          className="relative overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 min-h-[420px] bg-cover bg-center"
           style={{ backgroundImage: "url('/theoffice_background.png')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#2a1624]/70 via-transparent to-[#1b0e19]/80" aria-hidden />
-          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-[#a75a5b]/20 blur-3xl" aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
+          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-brand-burgundy/20 blur-3xl" aria-hidden />
           <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
           <div className="relative flex h-full items-center justify-center">
             <div className="h-full w-full bg-black/30" />

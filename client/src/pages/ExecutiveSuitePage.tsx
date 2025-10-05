@@ -99,11 +99,11 @@ export default function ExecutiveSuitePage(props: any = {}) {
         </header>
 
         <section
-          className="relative overflow-hidden rounded-3xl border border-[#d99696]/30 bg-[#120910]/90 p-8 bg-contain bg-center bg-no-repeat min-h-[600px]"
+          className="relative overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 p-8 bg-contain bg-center bg-no-repeat min-h-[600px]"
           style={{ backgroundImage: "url('/executivesuite_background.png')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#2a1624]/70 via-transparent to-[#1b0e19]/80" aria-hidden />
-          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-[#a75a5b]/20 blur-3xl" aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
+          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-brand-burgundy/20 blur-3xl" aria-hidden />
           <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
 
           <div className="relative z-10">
@@ -113,7 +113,7 @@ export default function ExecutiveSuitePage(props: any = {}) {
               <div className="lg:col-span-2">
                 {loading ? (
                   <div className="text-center py-8">
-                    <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                     <p className="text-white/70">Loading available actions...</p>
                   </div>
                 ) : error ? (

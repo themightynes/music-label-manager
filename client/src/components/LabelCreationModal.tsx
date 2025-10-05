@@ -135,7 +135,7 @@ const handleSubmit = () => {
   return (
     <Dialog open={open} onOpenChange={isCreating ? undefined : onOpenChange}>
       <DialogContent
-        className={`max-w-md bg-[#23121c] border-[#4e324c] text-white ${
+        className={`max-w-md bg-brand-dark-card border-brand-purple text-white ${
           isCreating ? '[&>button]:hidden' : ''
         }`}
         onEscapeKeyDown={(e) => {
@@ -149,9 +149,9 @@ const handleSubmit = () => {
           }
         }}
       >
-        <DialogHeader className="border-b border-[#4e324c] pb-4">
+        <DialogHeader className="border-b border-brand-purple pb-4">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Music className="w-5 h-5 text-[#A75A5B]" />
+            <Music className="w-5 h-5 text-brand-burgundy" />
             Create Your Music Label
           </DialogTitle>
         </DialogHeader>
@@ -168,7 +168,7 @@ const handleSubmit = () => {
                   size="sm"
                   onClick={() => handleSuggestedNameClick(name)}
                   disabled={isCreating}
-                  className="text-xs h-8 bg-[#2C222A] hover:bg-[#3c252d] border border-[#4e324c] text-gray-300 hover:text-white"
+                  className="text-xs h-8 bg-brand-dark-card hover:bg-brand-dark-card border border-brand-purple text-gray-300 hover:text-white"
                 >
                   {name}
                 </Button>
@@ -179,7 +179,7 @@ const handleSubmit = () => {
               size="sm"
               onClick={generateRandomName}
               disabled={isCreating}
-              className="w-full h-8 bg-[#2C222A] hover:bg-[#3c252d] border-[#4e324c] text-gray-300 hover:text-white"
+              className="w-full h-8 bg-brand-dark-card hover:bg-brand-dark-card border-brand-purple text-gray-300 hover:text-white"
             >
               <Shuffle className="w-3 h-3 mr-2" />
               Random Name
@@ -191,7 +191,7 @@ const handleSubmit = () => {
             {/* Label Name */}
             <div className="space-y-2">
               <Label htmlFor="labelName" className="text-sm font-medium text-gray-300">
-                Label Name <span className="text-[#A75A5B]">*</span>
+                Label Name <span className="text-brand-burgundy">*</span>
               </Label>
               <Input
                 id="labelName"
@@ -199,7 +199,7 @@ const handleSubmit = () => {
                 onChange={(e) => handleLabelNameChange(e.target.value)}
                 placeholder="Enter your label name..."
                 disabled={isCreating}
-                className="bg-[#2C222A] border-[#4e324c] text-white placeholder-gray-500 focus:border-[#A75A5B]"
+                className="bg-brand-dark-card border-brand-purple text-white placeholder-gray-500 focus:border-brand-burgundy"
               />
               {errors.name && (
                 <p className="text-red-400 text-xs">{errors.name}</p>
@@ -218,7 +218,7 @@ const handleSubmit = () => {
                 placeholder="Tell the story of your label..."
                 disabled={isCreating}
                 rows={3}
-                className="bg-[#2C222A] border-[#4e324c] text-white placeholder-gray-500 focus:border-[#A75A5B] resize-none"
+                className="bg-brand-dark-card border-brand-purple text-white placeholder-gray-500 focus:border-brand-burgundy resize-none"
               />
             </div>
 
@@ -228,15 +228,15 @@ const handleSubmit = () => {
                 Genre Focus
               </Label>
               <Select value={genreFocus} onValueChange={setGenreFocus} disabled={isCreating}>
-                <SelectTrigger className="bg-[#2C222A] border-[#4e324c] text-white focus:border-[#A75A5B]">
+                <SelectTrigger className="bg-brand-dark-card border-brand-purple text-white focus:border-brand-burgundy">
                   <SelectValue placeholder="Select a genre (optional)" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2C222A] border-[#4e324c]">
+                <SelectContent className="bg-brand-dark-card border-brand-purple">
                   {genreOptions.map((genre) => (
                     <SelectItem
                       key={genre}
                       value={genre}
-                      className="text-white hover:bg-[#3c252d] focus:bg-[#3c252d]"
+                      className="text-white hover:bg-brand-dark-card focus:bg-brand-dark-card"
                     >
                       {genre}
                     </SelectItem>
@@ -258,7 +258,7 @@ const handleSubmit = () => {
                 value={startingYear}
                 onChange={(e) => setStartingYear(Number(e.target.value))}
                 disabled={isCreating}
-                className="bg-[#2C222A] border-[#4e324c] text-white placeholder-gray-500 focus:border-[#A75A5B]"
+                className="bg-brand-dark-card border-brand-purple text-white placeholder-gray-500 focus:border-brand-burgundy"
               />
               {errors.year && (
                 <p className="text-red-400 text-xs">{errors.year}</p>
@@ -272,7 +272,7 @@ const handleSubmit = () => {
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isCreating}
-              className="flex-1 bg-[#2C222A] hover:bg-[#3c252d] border-[#4e324c] text-gray-300 hover:text-white"
+              className="flex-1 bg-brand-dark-card hover:bg-brand-dark-card border-brand-purple text-gray-300 hover:text-white"
             >
               Cancel
             </Button>

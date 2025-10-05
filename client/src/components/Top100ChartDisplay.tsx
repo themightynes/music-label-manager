@@ -135,7 +135,7 @@ export function Top100ChartDisplay() {
           <div className="flex items-center space-x-4">
             {playerSongs.length > 0 && (
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-[#A75A5B] rounded-full"></div>
+                <div className="w-2 h-2 bg-brand-burgundy rounded-full"></div>
                 <span className="text-xs text-white/70">
                   {playerSongs.length} Your Song{playerSongs.length !== 1 ? 's' : ''}
                 </span>
@@ -190,7 +190,7 @@ export function Top100ChartDisplay() {
         />
 
         {chartData.top100.length > 0 && (
-          <div className="pt-4 border-t border-[#4e324c]">
+          <div className="pt-4 border-t border-brand-purple">
             <div className="grid grid-cols-4 gap-4 text-center text-xs">
               <div>
                 <div className="font-semibold text-white/90">{playerSongs.length}</div>

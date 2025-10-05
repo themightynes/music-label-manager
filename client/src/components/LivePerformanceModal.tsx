@@ -570,7 +570,7 @@ export function LivePerformanceModal({
         ) : !tourConfig || !venueAccessConfig ? (
           <div className="flex items-center justify-center p-8">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A75A5B] mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-burgundy mx-auto mb-4"></div>
               <p className="text-white/70">Loading tour and venue configurations...</p>
               <p className="text-xs text-white/50 mt-2">Game cannot continue without configuration data</p>
             </div>
@@ -578,10 +578,10 @@ export function LivePerformanceModal({
         ) : (
         <div className="space-y-6">
           {/* Current Venue Access Display */}
-          <div className="bg-[#3c252d]/20 rounded-lg p-4 border">
+          <div className="bg-brand-dark-card/20 rounded-lg p-4 border">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <MapPin className="w-5 h-5 text-[#A75A5B]" />
+                <MapPin className="w-5 h-5 text-brand-burgundy" />
                 <div>
                   <h4 className="font-semibold text-white">Current Venue Access</h4>
                   <p className="text-sm text-white/70">Determines available venue capacity</p>
@@ -608,13 +608,13 @@ export function LivePerformanceModal({
                 <Card 
                   key={type.id}
                   className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedType === type.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
+                    selectedType === type.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
                   }`}
                   onClick={() => handleTypeSelect(type.id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-3">
-                      <type.icon className="w-6 h-6 text-[#A75A5B]" />
+                      <type.icon className="w-6 h-6 text-brand-burgundy" />
                       <div>
                         <h3 className="font-semibold">{type.name}</h3>
                         <p className="text-sm text-white/70">{type.description}</p>
@@ -818,8 +818,8 @@ export function LivePerformanceModal({
               </div>
 
               {/* Comprehensive Tour Analysis - Enhanced API Integration */}
-              <div className="bg-[#A75A5B]/10 rounded-lg p-4 border">
-                <h4 className="font-medium text-[#A75A5B] mb-3">Comprehensive Tour Analysis</h4>
+              <div className="bg-brand-burgundy/10 rounded-lg p-4 border">
+                <h4 className="font-medium text-brand-burgundy mb-3">Comprehensive Tour Analysis</h4>
                 {renderEstimate()}
               </div>
 

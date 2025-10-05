@@ -131,15 +131,15 @@ export function ActiveProjects() {
 
   const getStatusBadgeClass = (stage: string) => {
     switch (stage) {
-      case 'planning': return 'bg-[#65557c] text-white';
+      case 'planning': return 'bg-brand-purple-light text-white';
       case 'writing': return 'bg-warning text-white';
-      case 'recording': return 'bg-[#A75A5B] text-white';
+      case 'recording': return 'bg-brand-burgundy text-white';
       case 'recorded': return 'bg-green-500 text-white';
       case 'production': return 'bg-warning text-white'; // Legacy support
-      case 'marketing': return 'bg-[#A75A5B] text-white'; // Legacy support 
+      case 'marketing': return 'bg-brand-burgundy text-white'; // Legacy support 
       case 'released': return 'bg-success text-white'; // Legacy support
       case 'cancelled': return 'bg-red-600 text-white'; // Cancelled tours
-      default: return 'bg-[#65557c] text-white';
+      default: return 'bg-brand-purple-light text-white';
     }
   };
 
@@ -276,7 +276,7 @@ export function ActiveProjects() {
     if (!metrics || !metrics.totalRevenue) return null;
     
     return (
-      <div className="pt-2 border-t border-[#4e324c] space-y-1">
+      <div className="pt-2 border-t border-brand-purple space-y-1">
         <div className="flex items-center justify-between text-xs">
           <span className="text-white/50">Total Revenue</span>
           <span className="font-mono text-green-600">
@@ -293,7 +293,7 @@ export function ActiveProjects() {
         
         <div className="flex items-center justify-between text-xs">
           <span className="text-white/50">Songs Released</span>
-          <span className="font-mono text-[#791014]">
+          <span className="font-mono text-brand-burgundy-dark">
             {metrics.songCount} song{metrics.songCount > 1 ? 's' : ''}
           </span>
         </div>
@@ -308,7 +308,7 @@ export function ActiveProjects() {
     if (isLoading || !stats || stats.releasedSongs === 0) return null;
     
     return (
-      <div className="mb-3 p-3 bg-[#3c252d]/20 rounded-lg border">
+      <div className="mb-3 p-3 bg-brand-dark-card/20 rounded-lg border">
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="text-center">
             <div className="font-medium text-green-600">${stats.totalRevenue.toLocaleString()}</div>
@@ -338,7 +338,7 @@ export function ActiveProjects() {
       <CardContent className="p-4">
         <h3 className="text-base font-semibold text-white mb-3 flex items-center justify-between">
           <div className="flex items-center">
-            <i className="fas fa-music text-[#A75A5B] mr-2"></i>
+            <i className="fas fa-music text-brand-burgundy mr-2"></i>
             Projects
           </div>
           <Badge variant="secondary" className="text-xs">
@@ -347,12 +347,12 @@ export function ActiveProjects() {
         </h3>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 mb-4 bg-[#3c252d]/30 p-1 rounded-lg">
+        <div className="flex space-x-1 mb-4 bg-brand-dark-card/30 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab('active')}
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
               activeTab === 'active'
-                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
                 : 'text-white/70 hover:text-white'
             }`}
           >
@@ -367,7 +367,7 @@ export function ActiveProjects() {
             onClick={() => setActiveTab('completed')}
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
               activeTab === 'completed'
-                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
                 : 'text-white/70 hover:text-white'
             }`}
           >
@@ -386,7 +386,7 @@ export function ActiveProjects() {
           {currentRecordingSessions.length > 0 && (
             <div>
               <h4 className="text-sm font-medium text-white/90 mb-2 flex items-center">
-                <i className="fas fa-microphone text-[#A75A5B] mr-2"></i>
+                <i className="fas fa-microphone text-brand-burgundy mr-2"></i>
                 Recording Sessions
                 <Badge variant="secondary" className="ml-2 text-xs">
                   {currentRecordingSessions.length}
@@ -394,7 +394,7 @@ export function ActiveProjects() {
               </h4>
               <div className="space-y-3">
                 {currentRecordingSessions.map(project => (
-                  <div key={project.id} className="border border-[#4e324c] rounded-lg p-3">
+                  <div key={project.id} className="border border-brand-purple rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <h4 className="font-medium text-white text-sm">{project.title}</h4>
@@ -478,7 +478,7 @@ export function ActiveProjects() {
                       : 0;
                     
                     return (
-                      <div className="pt-2 border-t border-[#4e324c] space-y-1">
+                      <div className="pt-2 border-t border-brand-purple space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Tour Completed</span>
                           <span className="font-mono text-green-600">
@@ -495,7 +495,7 @@ export function ActiveProjects() {
                         
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Average Attendance</span>
-                          <span className="font-mono text-[#A75A5B]">
+                          <span className="font-mono text-brand-burgundy">
                             {avgAttendance}%
                           </span>
                         </div>
@@ -514,7 +514,7 @@ export function ActiveProjects() {
                     const readySongs = projectSongs.filter(song => song.isRecorded && !song.isReleased);
                     
                     return (
-                      <div className="pt-2 border-t border-[#4e324c] space-y-1">
+                      <div className="pt-2 border-t border-brand-purple space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Songs Recorded</span>
                           <span className="font-mono text-green-600">
@@ -524,7 +524,7 @@ export function ActiveProjects() {
                         
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Ready for Release</span>
-                          <span className="font-mono text-[#A75A5B]">
+                          <span className="font-mono text-brand-burgundy">
                             {readySongs.length} song{readySongs.length !== 1 ? 's' : ''}
                           </span>
                         </div>
@@ -556,7 +556,7 @@ export function ActiveProjects() {
             {currentTours.length > 0 && (
               <div>
                 <h4 className="text-sm font-medium text-white/90 mb-2 flex items-center">
-                  <i className="fas fa-route text-[#A75A5B] mr-2"></i>
+                  <i className="fas fa-route text-brand-burgundy mr-2"></i>
                   Tours
                   <Badge variant="secondary" className="ml-2 text-xs">
                     {currentTours.length}
@@ -564,7 +564,7 @@ export function ActiveProjects() {
                 </h4>
                 <div className="space-y-3">
                   {currentTours.map(project => (
-                    <div key={project.id} className="border border-[#4e324c] rounded-lg p-3">
+                    <div key={project.id} className="border border-brand-purple rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <h4 className="font-medium text-white text-sm">{project.title}</h4>
@@ -627,12 +627,12 @@ export function ActiveProjects() {
                           
                           if (completedCities.length > 0) {
                             return (
-                              <div className="pt-2 border-t border-[#4e324c] space-y-1">
+                              <div className="pt-2 border-t border-brand-purple space-y-1">
                                 <div className="text-xs text-white/60 font-medium mb-1">
                                   Cities Completed ({completedCities.length}/{cityCounts.planned})
                                 </div>
                                 {completedCities.map((city: any, index: number) => (
-                                  <div key={index} className="bg-[#3c252d]/30 rounded p-2 text-xs space-y-1">
+                                  <div key={index} className="bg-brand-dark-card/30 rounded p-2 text-xs space-y-1">
                                     <div className="flex items-center justify-between">
                                       <span className="text-white/70 font-medium">City {city.cityNumber}</span>
                                       <span className="font-mono text-green-500">${city.revenue?.toLocaleString() || 0}</span>
@@ -659,7 +659,7 @@ export function ActiveProjects() {
                             : 0;
                           
                           return (
-                            <div className="pt-2 border-t border-[#4e324c] space-y-1">
+                            <div className="pt-2 border-t border-brand-purple space-y-1">
                               <div className="flex items-center justify-between text-xs">
                                 <span className="text-white/50">Tour Completed</span>
                                 <span className="font-mono text-green-600">
@@ -676,7 +676,7 @@ export function ActiveProjects() {
                               
                               <div className="flex items-center justify-between text-xs">
                                 <span className="text-white/50">Average Attendance</span>
-                                <span className="font-mono text-[#A75A5B]">
+                                <span className="font-mono text-brand-burgundy">
                                   {avgAttendance}%
                                 </span>
                               </div>
@@ -698,7 +698,7 @@ export function ActiveProjects() {
                                       const hasEconomics = city.economics; // Check if enhanced data is available
 
                                       return (
-                                        <div key={index} className="bg-[#3c252d]/40 rounded p-2 text-xs space-y-1">
+                                        <div key={index} className="bg-brand-dark-card/40 rounded p-2 text-xs space-y-1">
                                           {/* Main city info - always visible */}
                                           <div className="flex items-center justify-between">
                                             <div className="flex items-center space-x-2">
@@ -876,7 +876,7 @@ export function ActiveProjects() {
                 </p>
                 
                 {/* Cost Breakdown */}
-                <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-4 space-y-3">
+                <div className="bg-brand-dark-card border border-brand-purple rounded-lg p-4 space-y-3">
                   <h4 className="font-semibold text-white mb-2">Cancellation Breakdown</h4>
                   
                   <div className="space-y-2 text-sm">
@@ -900,7 +900,7 @@ export function ActiveProjects() {
                       <span className="font-mono text-white">{details.remainingCities}</span>
                     </div>
                     
-                    <hr className="border-[#4e324c]" />
+                    <hr className="border-brand-purple" />
                     
                     <div className="flex justify-between">
                       <span className="text-red-400">Sunk Costs (non-refundable):</span>
@@ -919,7 +919,7 @@ export function ActiveProjects() {
                   <Button 
                     variant="outline" 
                     onClick={() => setShowCancelModal(false)}
-                    className="border-[#4e324c] text-white hover:bg-[#4e324c]"
+                    className="border-brand-purple text-white hover:bg-brand-purple"
                   >
                     Keep Tour
                   </Button>

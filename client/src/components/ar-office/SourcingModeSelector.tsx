@@ -28,7 +28,7 @@ export function SourcingModeSelector({ selectedMode, availableSlots, isOperation
     const isDisabled = isOperationActive || !!disabled || (consumesSlot ? !canConsume : false);
 
     return (
-      <Card className={`w-full transition-colors ${active ? 'border-[#A75A5B]' : ''}`}>
+      <Card className={`w-full transition-colors ${active ? 'border-brand-burgundy' : ''}`}>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             {icon}
@@ -59,21 +59,21 @@ export function SourcingModeSelector({ selectedMode, availableSlots, isOperation
           mode="active"
           title="Active Scouting"
           description="Dedicate focus to actively scout the scene. Unlocks higher-quality discoveries and detailed insights."
-          icon={<Rocket className="w-4 h-4 text-[#A75A5B]" />}
+          icon={<Rocket className="w-4 h-4 text-brand-burgundy" />}
           consumesSlot={true}
         />
         <CardOption
           mode="passive"
           title="Passive Browsing"
           description="Browse the standard discovery pool. Consumes 1 Focus Slot and completes after week advance."
-          icon={<Compass className="w-4 h-4 text-[#A75A5B]" />}
+          icon={<Compass className="w-4 h-4 text-brand-burgundy" />}
           consumesSlot={true}
         />
         <CardOption
           mode="specialized"
           title="Specialized Search"
           description="Target specific genres to find artists that match your label's focus. Uses genre filtering with fallback options."
-          icon={<Target className="w-4 h-4 text-[#A75A5B]" />}
+          icon={<Target className="w-4 h-4 text-brand-burgundy" />}
           consumesSlot={true}
         />
       </div>

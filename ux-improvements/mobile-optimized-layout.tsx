@@ -27,9 +27,9 @@ export function MobilePlanReleaseLayout({
   const STEP_NAMES = ['Artist', 'Songs', 'Marketing', 'Review'];
 
   return (
-    <div className="min-h-screen bg-[#3c252d]/10">
+    <div className="min-h-screen bg-brand-dark-card/10">
       {/* Mobile Header with Progress */}
-      <header className="bg-white shadow-sm border-b border-[#4e324c]/50 sticky top-0 z-40">
+      <header className="bg-white shadow-sm border-b border-brand-purple/50 sticky top-0 z-40">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <Button
@@ -43,7 +43,7 @@ export function MobilePlanReleaseLayout({
             </Button>
             
             {/* Money indicator */}
-            <div className="flex items-center space-x-2 bg-[#65557c]/20 px-3 py-1 rounded-lg text-sm">
+            <div className="flex items-center space-x-2 bg-brand-purple-light/20 px-3 py-1 rounded-lg text-sm">
               <DollarSign className="w-4 h-4 text-green-600" />
               <span className="font-mono font-semibold">${(gameState?.money || 0).toLocaleString()}</span>
             </div>
@@ -56,7 +56,7 @@ export function MobilePlanReleaseLayout({
                 <span>Step {currentStep} of {totalSteps}</span>
                 <span>{STEP_NAMES[currentStep - 1]}</span>
               </div>
-              <div className="w-full bg-[#65557c]/30 rounded-full h-2">
+              <div className="w-full bg-brand-purple-light/30 rounded-full h-2">
                 <div 
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(currentStep / totalSteps) * 100}%` }}
@@ -89,7 +89,7 @@ export function MobilePlanReleaseLayout({
       </main>
 
       {/* Floating action area */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#4e324c]/50 p-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-brand-purple/50 p-4">
         <MobileActionArea 
           currentStep={currentStep}
           totalSteps={totalSteps}
@@ -112,7 +112,7 @@ export function MobileArtistGrid({ artists, selectedArtist, onSelect }) {
           className={`p-4 border rounded-lg transition-all ${
             selectedArtist === artist.id 
               ? 'border-blue-500 bg-blue-50' 
-              : 'border-[#4e324c]/50'
+              : 'border-brand-purple/50'
           }`}
           onClick={() => onSelect(artist.id)}
         >
@@ -155,7 +155,7 @@ export function MobileSongList({ songs, selectedSongs, onToggle }) {
           <div
             key={song.id}
             className={`p-4 border rounded-lg transition-all ${
-              isSelected ? 'border-blue-500 bg-blue-50' : 'border-[#4e324c]/50'
+              isSelected ? 'border-blue-500 bg-blue-50' : 'border-brand-purple/50'
             }`}
             onClick={() => onToggle(song.id)}
           >
@@ -163,7 +163,7 @@ export function MobileSongList({ songs, selectedSongs, onToggle }) {
               {/* Large touch target for checkbox */}
               <div className="pt-1">
                 <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                  isSelected ? 'bg-blue-600 border-blue-600' : 'border-[#65557c]/60'
+                  isSelected ? 'bg-blue-600 border-blue-600' : 'border-brand-purple-light/60'
                 }`}>
                   {isSelected && <div className="w-3 h-3 bg-white rounded-sm" />}
                 </div>
@@ -309,7 +309,7 @@ function MobileBudgetSlider({ value, min, max, step, onChange }) {
           step={step}
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value))}
-          className="w-full h-8 bg-[#65557c]/30 rounded-lg appearance-none cursor-pointer slider-thumb-large"
+          className="w-full h-8 bg-brand-purple-light/30 rounded-lg appearance-none cursor-pointer slider-thumb-large"
         />
         <div className="flex justify-between text-xs text-white/50 mt-1">
           <span>${min.toLocaleString()}</span>
@@ -326,13 +326,13 @@ function MobilePreviewContent({ metrics }) {
     <div className="space-y-4 pt-4">
       {/* Key metrics in large, readable format */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
+        <div className="text-center p-4 bg-brand-dark-card/10 rounded-lg">
           <div className="text-2xl font-bold text-blue-600">
             {metrics.estimatedStreams?.toLocaleString() || '0'}
           </div>
           <div className="text-sm text-white/70">Est. Streams</div>
         </div>
-        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
+        <div className="text-center p-4 bg-brand-dark-card/10 rounded-lg">
           <div className="text-2xl font-bold text-green-600">
             ${metrics.estimatedRevenue?.toLocaleString() || '0'}
           </div>
@@ -341,13 +341,13 @@ function MobilePreviewContent({ metrics }) {
       </div>
       
       <div className="grid grid-cols-2 gap-4">
-        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
+        <div className="text-center p-4 bg-brand-dark-card/10 rounded-lg">
           <div className="text-2xl font-bold text-red-600">
             -${metrics.totalMarketingCost?.toLocaleString() || '0'}
           </div>
           <div className="text-sm text-white/70">Marketing Cost</div>
         </div>
-        <div className="text-center p-4 bg-[#3c252d]/10 rounded-lg">
+        <div className="text-center p-4 bg-brand-dark-card/10 rounded-lg">
           <div className={`text-2xl font-bold ${
             (metrics.projectedROI || 0) > 0 ? 'text-green-600' : 'text-red-600'
           }`}>

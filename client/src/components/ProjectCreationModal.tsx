@@ -488,7 +488,7 @@ export function ProjectCreationModal({
             <div className="grid grid-cols-2 gap-4 mt-2">
               {loadingProjectTypes ? (
                 <div className="col-span-2 text-center py-8">
-                  <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                   <p className="text-white/70">Loading project types...</p>
                 </div>
               ) : projectTypesError ? (
@@ -523,13 +523,13 @@ export function ProjectCreationModal({
                     <Card 
                       key={type.id}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedType === type.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
+                        selectedType === type.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
                       }`}
                       onClick={() => handleTypeSelect(type.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-3">
-                          <type.icon className="w-6 h-6 text-[#A75A5B]" />
+                          <type.icon className="w-6 h-6 text-brand-burgundy" />
                           <div>
                             <h3 className="font-semibold">{type.name}</h3>
                             <p className="text-sm text-white/70">{type.description}</p>
@@ -586,14 +586,14 @@ export function ProjectCreationModal({
                         className={`cursor-pointer transition-all ${
                           !isUnlocked ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
                         } ${
-                          selectedProducerTier === tier.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
+                          selectedProducerTier === tier.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
                         }`}
                         onClick={() => isUnlocked && setSelectedProducerTier(tier.id)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <tier.icon className="w-5 h-5 text-[#A75A5B]" />
+                              <tier.icon className="w-5 h-5 text-brand-burgundy" />
                               <div>
                                 <h4 className="font-semibold">{tier.name}</h4>
                                 <p className="text-sm text-white/70">{tier.description}</p>
@@ -623,14 +623,14 @@ export function ProjectCreationModal({
                     <Card 
                       key={option.id}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedTimeInvestment === option.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
+                        selectedTimeInvestment === option.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
                       }`}
                       onClick={() => setSelectedTimeInvestment(option.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <option.icon className="w-5 h-5 text-[#A75A5B]" />
+                            <option.icon className="w-5 h-5 text-brand-burgundy" />
                             <div>
                               <h4 className="font-semibold">{option.name}</h4>
                               <p className="text-sm text-white/70">{option.description}</p>
@@ -686,7 +686,7 @@ export function ProjectCreationModal({
                 />
                 <div className="mt-2 text-sm space-y-1">
                   {selectedProjectType?.isRecording && (
-                    <div className="p-3 bg-[#3c252d]/20 rounded-lg border">
+                    <div className="p-3 bg-brand-dark-card/20 rounded-lg border">
                       <h4 className="font-medium text-white/90 mb-2">Cost Calculation:</h4>
                       <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
@@ -711,7 +711,7 @@ export function ProjectCreationModal({
                         </div>
                         <div className="flex justify-between border-t pt-1 font-semibold">
                           <span className="text-white">Final total cost:</span>
-                          <span className="font-mono text-[#A75A5B]">${finalTotalCost.toLocaleString()}</span>
+                          <span className="font-mono text-brand-burgundy">${finalTotalCost.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -722,39 +722,39 @@ export function ProjectCreationModal({
                     </div>
                   )}
                   {/* Quality Preview with Breakdown */}
-                  <div className="p-3 bg-[#A75A5B]/10 rounded-lg border">
-                    <h4 className="font-medium text-[#A75A5B] mb-2">Quality Preview:</h4>
+                  <div className="p-3 bg-brand-burgundy/10 rounded-lg border">
+                    <h4 className="font-medium text-brand-burgundy mb-2">Quality Preview:</h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-[#A75A5B]">Base (talent+producer):</span>
+                        <span className="text-brand-burgundy">Base (talent+producer):</span>
                         <span className="font-mono">{Math.round(baseQuality)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#A75A5B]">Time & Work Ethic factor:</span>
+                        <span className="text-brand-burgundy">Time & Work Ethic factor:</span>
                         <span className="font-mono">×{timeFactor.toFixed(2)}</span>
                       </div>
                       {selectedArtist && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-[#A75A5B]">Popularity factor:</span>
+                            <span className="text-brand-burgundy">Popularity factor:</span>
                             <span className="font-mono">×{popularityFactor.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-[#A75A5B]">Mood factor:</span>
+                            <span className="text-brand-burgundy">Mood factor:</span>
                             <span className="font-mono">×{moodFactor.toFixed(2)}</span>
                           </div>
                         </>
                       )}
                       {songCount > 3 && (
                         <div className="flex justify-between">
-                          <span className="text-[#A75A5B]">Session fatigue:</span>
+                          <span className="text-brand-burgundy">Session fatigue:</span>
                           <span className="font-mono text-amber-500">×{focusFactor.toFixed(2)}</span>
                         </div>
                       )}
                       {selectedProjectType?.isRecording && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-[#A75A5B]">Budget factor:</span>
+                            <span className="text-brand-burgundy">Budget factor:</span>
                             <span className="font-mono font-semibold text-green-600">
                               ×{budgetFactor.toFixed(2)}
                             </span>
@@ -768,8 +768,8 @@ export function ProjectCreationModal({
                         </>
                       )}
                       <div className="flex justify-between border-t pt-1">
-                        <span className="text-[#A75A5B] font-medium">Est. quality:</span>
-                        <span className="font-mono font-bold text-[#A75A5B]">{Math.round(estimatedQuality)}</span>
+                        <span className="text-brand-burgundy font-medium">Est. quality:</span>
+                        <span className="font-mono font-bold text-brand-burgundy">{Math.round(estimatedQuality)}</span>
                       </div>
                       {selectedProjectType?.isRecording && selectedArtist && selectedProducer && (
                         <div className="text-xs text-white/50 mt-1">

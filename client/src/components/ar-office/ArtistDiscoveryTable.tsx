@@ -63,10 +63,10 @@ export function ArtistDiscoveryTable({
 
   const getArchetypeColor = (archetype?: string) => {
     switch (archetype) {
-      case 'Visionary': return 'bg-[#791014]/20 text-[#B34A4F] border-[#791014]/30';
-      case 'Workhorse': return 'bg-[#A75A5B]/20 text-[#A75A5B] border-[#A75A5B]/30';
+      case 'Visionary': return 'bg-brand-burgundy-dark/20 text-brand-burgundy border-brand-burgundy-dark/30';
+      case 'Workhorse': return 'bg-brand-burgundy/20 text-brand-burgundy border-brand-burgundy/30';
       case 'Trendsetter': return 'bg-green-500/20 text-green-300 border-green-400/30';
-      default: return 'bg-[#65557c]/20 text-[#65557c] border-[#65557c]/30';
+      default: return 'bg-brand-purple-light/20 text-brand-purple-light border-brand-purple-light/30';
     }
   };
 
@@ -79,7 +79,7 @@ export function ArtistDiscoveryTable({
             placeholder="Search artists by name or genre..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-3 pr-3 h-10 rounded-md bg-[#23121c] border border-[#4e324c] text-white w-full"
+            className="pl-3 pr-3 h-10 rounded-md bg-brand-dark-card border border-brand-purple text-white w-full"
           />
         </div>
         <div className="flex gap-2">
@@ -205,7 +205,7 @@ export function ArtistDiscoveryTable({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-[#4e324c] hover:bg-[#2C222A]">
+              <TableRow className="border-brand-purple hover:bg-brand-dark-card">
                 <TableHead className="text-white/90 font-semibold w-20">Avatar</TableHead>
                 <TableHead className="text-white/90 font-semibold">Artist</TableHead>
                 <TableHead className="text-white/90 font-semibold">Archetype</TableHead>
@@ -222,9 +222,9 @@ export function ArtistDiscoveryTable({
             </TableHeader>
             <TableBody>
               {artists.map((artist: UIArtist) => (
-                <TableRow key={artist.id || artist.name} className="border-[#4e324c] hover:bg-[#2C222A]/50">
+                <TableRow key={artist.id || artist.name} className="border-brand-purple hover:bg-brand-dark-card/50">
                   <TableCell className="w-20">
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-[#2C222A]">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-brand-dark-card">
                       <img
                         src={`/avatars/${String(artist.name || '').toLowerCase().replace(/\s+/g, '_')}_full.png`}
                         alt={`${artist.name} avatar`}
@@ -240,11 +240,11 @@ export function ArtistDiscoveryTable({
                     <HoverCard>
                       <HoverCardTrigger asChild>
                         <div className="cursor-pointer">
-                          <div className="font-semibold text-white text-base hover:text-[#A75A5B] transition-colors">{artist.name}</div>
+                          <div className="font-semibold text-white text-base hover:text-brand-burgundy transition-colors">{artist.name}</div>
                           <div className="text-xs text-white/70">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</div>
                         </div>
                       </HoverCardTrigger>
-                      <HoverCardContent side="right" className="w-80 bg-[#23121c] border-[#4e324c] text-white">
+                      <HoverCardContent side="right" className="w-80 bg-brand-dark-card border-brand-purple text-white">
                         <div className="space-y-2">
                           <h4 className="text-sm font-semibold">{artist.name}</h4>
                           <p className="text-sm text-white/70">{artist.bio || 'Talented artist...'}</p>
