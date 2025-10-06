@@ -107,11 +107,11 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl border border-[#4e324c] bg-[#160c12]/90 text-white backdrop-blur-sm">
-        <DialogHeader className="border-b border-[#4e324c] pb-4">
+      <DialogContent className="max-w-5xl border border-brand-purple bg-brand-dark/90 text-white backdrop-blur-sm">
+        <DialogHeader className="border-b border-brand-purple pb-4">
           <DialogTitle className="flex items-center justify-between text-lg font-semibold text-white">
             <span>Inbox</span>
-            <Badge variant="secondary" className="bg-[#A75A5B] text-white">
+            <Badge variant="secondary" className="bg-brand-burgundy text-white">
               {unreadCount} unread
             </Badge>
           </DialogTitle>
@@ -119,15 +119,15 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
 
         <div className="mt-4 flex h-[70vh] flex-col gap-4 lg:flex-row">
           <aside className="w-full flex-shrink-0 lg:w-72">
-            <div className="flex h-full flex-col rounded-xl border border-[#4e324c] bg-[#1b1016]">
-              <div className="space-y-4 border-b border-[#4e324c] p-4">
+            <div className="flex h-full flex-col rounded-xl border border-brand-purple bg-brand-dark">
+              <div className="space-y-4 border-b border-brand-purple p-4">
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wide text-white/60">Category</Label>
                   <Select value={category} onValueChange={(value) => setCategory(value as 'all' | EmailCategory)}>
-                    <SelectTrigger className="h-9 border-[#4e324c] bg-black/40 text-white">
+                    <SelectTrigger className="h-9 border-brand-purple bg-black/40 text-white">
                       <SelectValue placeholder="All categories" />
                     </SelectTrigger>
-                    <SelectContent className="border-[#4e324c] bg-[#160c12] text-white">
+                    <SelectContent className="border-brand-purple bg-brand-dark text-white">
                       {CATEGORY_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value} className="text-sm">
                           {option.label}
@@ -174,10 +174,10 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                         key={email.id}
                         type="button"
                         className={cn(
-                          'w-full rounded-lg border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-[#A75A5B]',
+                          'w-full rounded-lg border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-brand-burgundy',
                           selectedEmailId === email.id
-                            ? 'border-[#A75A5B] bg-[#A75A5B]/20'
-                            : 'border-transparent bg-black/20 hover:border-[#4e324c] hover:bg-black/30'
+                            ? 'border-brand-burgundy bg-brand-burgundy/20'
+                            : 'border-transparent bg-black/20 hover:border-brand-purple hover:bg-black/30'
                         )}
                         onClick={() => setSelectedEmailId(email.id)}
                       >
@@ -204,15 +204,15 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
             </div>
           </aside>
 
-          <section className="flex-1 rounded-xl border border-[#4e324c] bg-[#1b1016]">
+          <section className="flex-1 rounded-xl border border-brand-purple bg-brand-dark">
             {selectedEmail && TemplateComponent ? (
               <div className="flex h-full flex-col">
-                <div className="space-y-3 border-b border-[#4e324c] p-4">
+                <div className="space-y-3 border-b border-brand-purple p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="bg-white/10 text-white/80">
                       Week {selectedEmail.week}
                     </Badge>
-                    <Badge variant="outline" className="border-[#A75A5B] text-[#F6B5B6]">
+                    <Badge variant="outline" className="border-brand-burgundy text-brand-pink">
                       {CATEGORY_LABELS[selectedEmail.category]}
                     </Badge>
                     {!selectedEmail.isRead && (
@@ -235,7 +235,7 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                       size="sm"
                       onClick={handleToggleRead}
                       disabled={markEmailRead.isPending}
-                      className="border-[#4e324c] text-xs text-white hover:border-[#A75A5B] hover:text-white"
+                      className="border-brand-purple text-xs text-white hover:border-brand-burgundy hover:text-white"
                     >
                       {selectedEmail.isRead ? 'Mark unread' : 'Mark as read'}
                     </Button>
@@ -255,7 +255,7 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
 
                 <ScrollArea className="flex-1">
                   <div className="space-y-4 p-4">
-                    <Separator className="border-[#4e324c]" />
+                    <Separator className="border-brand-purple" />
                     <TemplateComponent email={selectedEmail as EmailTemplateData} />
                   </div>
                 </ScrollArea>

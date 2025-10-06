@@ -169,7 +169,7 @@ Select {availableSlots} more action{availableSlots !== 1 ? 's' : ''}
       className={`flex-1 h-2 rounded-full transition-all ${
         index < usedSlots
           ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
-          : 'bg-[#65557c]/30'
+          : 'bg-brand-purple-light/30'
       }`}
       title={`Slot ${index + 1}`}
     />

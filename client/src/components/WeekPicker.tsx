@@ -81,8 +81,8 @@ export const WeekPicker = ({
       {renderSelectedInfo && renderSelectedInfo(selectedWeek)}
 
       {/* Pure 52-Week Grid */}
-      <div className="border border-[#A75A5B]/30 rounded-lg p-4 bg-[#23121c]/40">
-        <h3 className="text-sm font-semibold text-[#A75A5B] mb-4 text-center">
+      <div className="border border-brand-burgundy/30 rounded-lg p-4 bg-brand-dark-card/40">
+        <h3 className="text-sm font-semibold text-brand-burgundy mb-4 text-center">
           Select Week
         </h3>
 
@@ -102,15 +102,15 @@ export const WeekPicker = ({
                 className={cn(
                   "w-12 h-8 rounded text-[10px] font-medium transition-all duration-150 relative",
                   // Base styles - uniform plum burgundy theme
-                  "border border-white/10 bg-[#A75A5B]/10",
+                  "border border-white/10 bg-brand-burgundy/10",
                   // Selection state
-                  isSelected && "ring-2 ring-[#A75A5B]/70 bg-[#A75A5B] text-white font-bold z-10",
+                  isSelected && "ring-2 ring-brand-burgundy/70 bg-brand-burgundy text-white font-bold z-10",
                   // Current week
-                  isCurrent && !isSelected && "border-[#A75A5B]/50 bg-[#A75A5B]/20",
+                  isCurrent && !isSelected && "border-brand-burgundy/50 bg-brand-burgundy/20",
                   // Past weeks
                   isPast && "opacity-30 cursor-not-allowed bg-gray-600/20",
                   // Future weeks (clickable)
-                  !isPast && !isSelected && "hover:bg-[#A75A5B]/20 hover:border-[#A75A5B]/40 hover:scale-110"
+                  !isPast && !isSelected && "hover:bg-brand-burgundy/20 hover:border-brand-burgundy/40 hover:scale-110"
                 )}
               >
                 {formatWeekLabel(week)}
@@ -143,7 +143,7 @@ export const WeekPicker = ({
                         {weekButton}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-[#23121c] border-[#A75A5B]/30 text-white/90">
+                    <TooltipContent className="bg-brand-dark-card border-brand-burgundy/30 text-white/90">
                       <div className="text-xs">Week ending {weekEndingDate}</div>
                     </TooltipContent>
                   </Tooltip>

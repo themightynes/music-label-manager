@@ -354,11 +354,11 @@ app.post('/api/tour/estimate', async (req, res) => {
 ---
 
 ### **🗑️ PHASE 4: ELIMINATE FRONTEND CALCULATIONS**
-**Goal**: Remove ALL math from LivePerformanceModal
+**Goal**: Remove ALL math from LivePerformancePage
 
 #### **4.1 Remove Client-Side Calculation Logic**
 ```typescript
-// LivePerformanceModal.tsx - DELETE THESE ENTIRELY:
+// LivePerformancePage.tsx - DELETE THESE ENTIRELY:
 
 // ❌ DELETE calculateEstimatedRevenue() function (lines 194-235)
 // ❌ DELETE costCalculation useMemo (lines 237-253)
@@ -370,7 +370,7 @@ app.post('/api/tour/estimate', async (req, res) => {
 
 #### **4.2 Replace with API Integration**
 ```typescript
-// LivePerformanceModal.tsx - NEW APPROACH
+// LivePerformancePage.tsx - NEW APPROACH
 const [estimateData, setEstimateData] = useState<TourEstimate | null>(null)
 const [estimateLoading, setEstimateLoading] = useState(false)
 const [estimateError, setEstimateError] = useState<string | null>(null)

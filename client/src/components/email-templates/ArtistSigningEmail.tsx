@@ -30,7 +30,7 @@ export function ArtistSigningEmail({ email }: EmailTemplateProps) {
 
       <div className="flex items-start gap-4">
         {/* Avatar Box */}
-        <div className="flex-shrink-0 w-24 h-36 bg-[#8B6B70] border border-[#65557c] rounded-lg overflow-hidden relative">
+        <div className="flex-shrink-0 w-24 h-36 bg-brand-mauve border border-brand-purple-light rounded-lg overflow-hidden relative">
           <img
             src={getAvatarUrl(body?.name ?? '')}
             alt={`${body?.name ?? 'Artist'} avatar`}

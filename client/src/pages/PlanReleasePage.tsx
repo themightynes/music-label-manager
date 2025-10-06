@@ -507,8 +507,50 @@ export default function PlanReleasePage() {
           setValidationErrors(['Song scheduling conflict detected. The song list has been refreshed to show current availability.']);
         }
       } else if (error.status === 400) {
-        const details = error.details || [];
-        setValidationErrors(details.map((d: any) => d.issue || d.message || 'Validation error'));
+        const details = error.details;
+        const extractMessage = (entry: any): string | null => {
+          if (!entry) return null;
+          if (typeof entry === 'string') return entry;
+          if (typeof entry === 'object') {
+            return entry.issue || entry.message || null;
+          }
+          return null;
+        };
+
+        let messages: string[] = [];
+
+        if (Array.isArray(details)) {
+          details.forEach((entry: any) => {
+            const message = extractMessage(entry);
+            if (message) messages.push(message);
+          });
+        } else if (details?.issues && Array.isArray(details.issues)) {
+          details.issues.forEach((entry: any) => {
+            const message = extractMessage(entry);
+            if (message) messages.push(message);
+          });
+        } else if (typeof details === 'string') {
+          messages = [details];
+        } else if (details && typeof details === 'object') {
+          messages = Object.values(details).reduce<string[]>((acc, value: any) => {
+            if (Array.isArray(value)) {
+              value.forEach(item => {
+                const message = extractMessage(item);
+                if (message) acc.push(message);
+              });
+            } else {
+              const message = extractMessage(value);
+              if (message) acc.push(message);
+            }
+            return acc;
+          }, []);
+        }
+
+        if (messages.length === 0 && error.message) {
+          messages = [error.message];
+        }
+
+        setValidationErrors(messages.length > 0 ? messages : ['Validation error']);
       } else {
         setValidationErrors(['Failed to create release. Please try again.']);
       }
@@ -519,7 +561,7 @@ export default function PlanReleasePage() {
 
   const getQualityColor = (quality: number) => {
     if (quality >= 90) return 'text-green-600';
-    if (quality >= 80) return 'text-[#A75A5B]';
+    if (quality >= 80) return 'text-brand-burgundy';
     if (quality >= 70) return 'text-yellow-600';
     return 'text-red-600';
   };
@@ -583,7 +625,7 @@ export default function PlanReleasePage() {
     <GameLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-white">Plan Release</h1>
+          <h1 className="text-xl md:text-2xl font-heading font-bold text-white">Plan Release</h1>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
@@ -601,7 +643,7 @@ export default function PlanReleasePage() {
               <CardContent>
                 {loadingArtists || !balanceData || marketingChannels.length === 0 || releaseTypes.length === 0 ? (
                   <div className="text-center py-8">
-                    <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                     <p className="text-white/70">
                       {!balanceData ? 'Loading balance data...' :
                        marketingChannels.length === 0 || releaseTypes.length === 0 ? 'Loading configuration...' :
@@ -629,8 +671,8 @@ export default function PlanReleasePage() {
                         key={artist.id}
                         className={`p-4 border rounded-lg cursor-pointer transition-all ${
                           selectedArtist === artist.id 
-                            ? 'border-[#A75A5B] bg-[#A75A5B]/10' 
-                            : 'border-[#4e324c]/50 hover:border-[#65557c]/60'
+                            ? 'border-brand-burgundy bg-brand-burgundy/10' 
+                            : 'border-brand-purple/50 hover:border-brand-purple-light/60'
                         }`}
                         onClick={() => {
                           setSelectedArtist(artist.id);
@@ -646,7 +688,7 @@ export default function PlanReleasePage() {
                                 e.stopPropagation();
                                 setLocation(`/artist/${artist.id}`);
                               }}
-                              className="text-[#A75A5B] hover:text-[#A75A5B] text-xs"
+                              className="text-brand-burgundy hover:text-brand-burgundy text-xs"
                               title="View artist details"
                             >
                               <i className="fas fa-external-link-alt"></i>
@@ -698,7 +740,7 @@ export default function PlanReleasePage() {
                 <CardContent>
                   {loadingSongs ? (
                     <div className="text-center py-8">
-                      <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                      <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                       <p className="text-white/70">Loading available songs...</p>
                     </div>
                   ) : songError ? (
@@ -725,8 +767,8 @@ export default function PlanReleasePage() {
                           key={song.id}
                           className={`p-4 border rounded-lg transition-all ${
                             selectedSongs.includes(song.id)
-                              ? 'border-[#A75A5B] bg-[#A75A5B]/10'
-                              : 'border-[#4e324c]/50 hover:border-[#65557c]/60'
+                              ? 'border-brand-burgundy bg-brand-burgundy/10'
+                              : 'border-brand-purple/50 hover:border-brand-purple-light/60'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
@@ -859,23 +901,23 @@ export default function PlanReleasePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="p-3 bg-[#A75A5B]/10 rounded-lg border border-[#A75A5B]/30">
-                    <h4 className="text-sm font-semibold text-[#A75A5B] mb-2">Selected Lead Single</h4>
-                    <p className="text-sm text-[#A75A5B]">
+                  <div className="p-3 bg-brand-burgundy/10 rounded-lg border border-brand-burgundy/30">
+                    <h4 className="text-sm font-semibold text-brand-burgundy mb-2">Selected Lead Single</h4>
+                    <p className="text-sm text-brand-burgundy">
                       {(() => {
                         const leadSong = availableSongs.find(s => s.id === leadSingle);
                         return leadSong ? (songTitles[leadSong.id] || leadSong.title) : 'No lead single selected';
                       })()}
                     </p>
-                    <p className="text-xs text-[#A75A5B] mt-1">
+                    <p className="text-xs text-brand-burgundy mt-1">
                       This single will build momentum for the full {releaseType} release
                     </p>
                   </div>
 
                   {/* Timing Summary */}
                   <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="p-3 bg-[#A75A5B]/10 rounded-lg border border-[#A75A5B]/30">
-                      <div className="text-xs font-medium text-[#A75A5B] mb-1">Lead Single Release</div>
+                    <div className="p-3 bg-brand-burgundy/10 rounded-lg border border-brand-burgundy/30">
+                      <div className="text-xs font-medium text-brand-burgundy mb-1">Lead Single Release</div>
                       <div className="text-sm font-semibold text-white">Week {leadSingleWeek}</div>
                       <div className="text-xs text-orange-600">
                         {getQuarterInfoForWeek(leadSingleWeek).name} - {(() => {
@@ -885,7 +927,7 @@ export default function PlanReleasePage() {
                         })()} cost
                       </div>
                     </div>
-                    <div className="p-3 bg-[#23121c]/10 rounded-lg border border-[#4e324c]/50">
+                    <div className="p-3 bg-brand-dark-card/10 rounded-lg border border-brand-purple/50">
                       <div className="text-xs font-medium text-white/70 mb-1">Main Release</div>
                       <div className="text-sm font-semibold text-white">Week {releaseWeek}</div>
                       <div className="text-xs text-orange-600">
@@ -907,6 +949,7 @@ export default function PlanReleasePage() {
                       selectionMode={true}
                       selectedWeek={leadSingleWeek}
                       onWeekSelect={setLeadSingleWeek}
+                      minWeek={gameState ? gameState.currentWeek + 1 : 1}
                       maxWeek={releaseWeek - 1}
                       className="max-w-lg"
                     />
@@ -968,7 +1011,7 @@ export default function PlanReleasePage() {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-medium text-white/90">Budget Allocation</h4>
-                      <span className="text-sm font-mono font-semibold text-[#A75A5B]">
+                      <span className="text-sm font-mono font-semibold text-brand-burgundy">
                         Total: ${getTotalChannelBudget(channelBudgets).toLocaleString()}
                       </span>
                     </div>
@@ -981,11 +1024,11 @@ export default function PlanReleasePage() {
                         
                         return (
                           <div key={channel.id} className={`p-4 border rounded-lg transition-all ${
-                            isActive ? 'border-[#A75A5B] bg-[#A75A5B]/10' : 'border-[#4e324c]/50'
+                            isActive ? 'border-brand-burgundy bg-brand-burgundy/10' : 'border-brand-purple/50'
                           }`}>
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-3">
-                                <i className={`${channel.icon} text-lg ${isActive ? 'text-[#A75A5B]' : 'text-white/40'}`} />
+                                <i className={`${channel.icon} text-lg ${isActive ? 'text-brand-burgundy' : 'text-white/40'}`} />
                                 <div>
                                   <h5 className="font-semibold text-white">{channel.name}</h5>
                                   <p className="text-xs text-white/70">{channel.description}</p>
@@ -1041,6 +1084,7 @@ export default function PlanReleasePage() {
                           selectionMode={true}
                           selectedWeek={releaseWeek}
                           onWeekSelect={setReleaseWeek}
+                          minWeek={gameState ? gameState.currentWeek + 1 : 1}
                           className="max-w-lg"
                         />
                       </div>
@@ -1078,7 +1122,7 @@ export default function PlanReleasePage() {
                       />
                     </div>
                     
-                    <div className="p-3 bg-[#23121c]/5 rounded-lg">
+                    <div className="p-3 bg-brand-dark-card/5 rounded-lg">
                       <h4 className="text-sm font-semibold text-white/90 mb-2">Release Type Benefits</h4>
                       {(() => {
                         const selectedType = releaseTypes.find(rt => rt.id === releaseType);
@@ -1095,7 +1139,7 @@ export default function PlanReleasePage() {
                               </span>
                             </div>
                             <p className="text-xs text-white/50 pt-1 border-t border-white/10">
-                              <span className="font-medium text-[#A75A5B]">{selectedType.bonusType}:</span> {selectedType.description}
+                              <span className="font-medium text-brand-burgundy">{selectedType.bonusType}:</span> {selectedType.description}
                             </p>
                           </div>
                         );
@@ -1113,7 +1157,7 @@ export default function PlanReleasePage() {
                   <CardTitle className="flex items-center space-x-2">
                     <TrendingUp className="w-5 h-5" />
                     <span>Performance Preview</span>
-                    {calculatingPreview && <Loader2 className="w-4 h-4 animate-spin text-[#A75A5B]" />}
+                    {calculatingPreview && <Loader2 className="w-4 h-4 animate-spin text-brand-burgundy" />}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1127,17 +1171,17 @@ export default function PlanReleasePage() {
                     </div>
                   ) : calculatingPreview && !previewData ? (
                     <div className="text-center py-8">
-                      <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                      <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                       <p className="text-white/70">Calculating release metrics...</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="text-center p-3 bg-[#23121c]/5 rounded-lg">
+                      <div className="text-center p-3 bg-brand-dark-card/5 rounded-lg">
                         <div className="text-xl font-bold text-white">{metrics?.songCount || 0}</div>
                         <div className="text-white/70">Songs</div>
                       </div>
-                      <div className="text-center p-3 bg-[#23121c]/5 rounded-lg">
+                      <div className="text-center p-3 bg-brand-dark-card/5 rounded-lg">
                         <div className="text-xl font-bold text-white">{metrics?.averageQuality || 0}</div>
                         <div className="text-white/70">Avg Quality</div>
                       </div>
@@ -1146,7 +1190,7 @@ export default function PlanReleasePage() {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-white/70">Estimated Streams:</span>
-                        <span className="font-mono font-semibold text-[#A75A5B]">
+                        <span className="font-mono font-semibold text-brand-burgundy">
                           {metrics?.estimatedStreams?.toLocaleString() || '0'}
                         </span>
                       </div>
@@ -1194,14 +1238,14 @@ export default function PlanReleasePage() {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-white/70">Channel Diversity:</span>
-                            <span className="font-mono text-[#A75A5B]">
+                            <span className="font-mono text-brand-burgundy">
                               +{Math.round((metrics?.diversityBonus - 1) * 100)}% ({metrics?.activeChannelCount} channels)
                             </span>
                           </div>
                           {releaseType !== 'single' && leadSingle && metrics?.leadSingleBoost > 1 && (
                             <div className="flex justify-between">
                               <span className="text-white/70">Lead Single Boost:</span>
-                              <span className="font-mono text-[#791014]">
+                              <span className="font-mono text-brand-burgundy-dark">
                                 +{Math.round((metrics?.leadSingleBoost - 1) * 100)}%
                               </span>
                             </div>
@@ -1239,7 +1283,7 @@ export default function PlanReleasePage() {
                           {releaseType !== 'single' && leadSingle && getTotalChannelBudget(leadSingleBudget) > 0 && (
                             <div className="flex justify-between border-t pt-1">
                               <span className="text-white/70">Lead Single Budget:</span>
-                              <div className="text-right font-mono text-[#791014]">
+                              <div className="text-right font-mono text-brand-burgundy-dark">
                                 <div>${Math.round(getAdjustedBudget(leadSingleBudget, leadSingleWeek, balanceData)).toLocaleString()}</div>
                                 {getSeasonalMultiplierValue(leadSingleWeek, balanceData) !== 1 && (
                                   <div className="text-xs text-orange-600">

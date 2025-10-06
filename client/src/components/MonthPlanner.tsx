@@ -41,7 +41,7 @@ interface WeeklyAction {
 }
 
 export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
-  const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
+  const { gameState, selectedActions, removeAction, reorderActions, selectAction, getAROfficeStatus } = useGameStore();
   const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
 
@@ -58,7 +58,7 @@ export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
     <Card className="shadow-lg">
       <CardContent className="p-4 md:p-6 lg:p-8">
         <div className="flex items-center space-x-4 mb-6">
-          <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-[#A75A5B] to-[#8B4A6C] rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-brand-burgundy to-brand-burgundy rounded-xl flex items-center justify-center shadow-lg">
             <i className="fas fa-calendar-alt text-white text-xl md:text-2xl"></i>
           </div>
           <div className="flex-1">
@@ -75,13 +75,13 @@ export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
 
 
         {/* Focus Action Selection - Split Panel Design */}
-        <div className="bg-[#3c252d]/[0.66] rounded-[8px] border border-[#65557c] shadow-sm mb-4 md:mb-6">
+        <div className="bg-brand-dark-card/[0.66] rounded-[8px] border border-brand-purple-light shadow-sm mb-4 md:mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
             {/* Left Panel - Action Selection Pool */}
             <div className="lg:col-span-2">
               {loading ? (
                 <div className="text-center py-8">
-                  <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                   <p className="text-white/70">Loading available actions...</p>
                 </div>
               ) : error ? (
@@ -95,11 +95,13 @@ export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
               ) : (
                 <ExecutiveMeetings
                   gameId={gameId}
+                  currentWeek={gameState.currentWeek}
                   onActionSelected={selectAction}
                   focusSlots={{
                     total: gameState.focusSlots || 3,
                     used: gameState.usedFocusSlots || 0,
                   }}
+                  arOfficeStatus={getAROfficeStatus()}
                 />
               )}
             </div>

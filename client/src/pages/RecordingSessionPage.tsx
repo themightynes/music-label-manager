@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
@@ -377,18 +377,28 @@ export default function RecordingSessionPage() {
   return (
     <GameLayout>
       <div className="container mx-auto p-6 max-w-6xl">
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.history.back()}
-            className="text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold text-white">Recording Session</h1>
-        </div>
+        <header className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-white">Recording Session</h1>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
+            The Studio
+          </div>
+        </header>
+
+        <section
+          className="relative mb-8 overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 min-h-[320px] bg-cover bg-center"
+          style={{ backgroundImage: "url('/recording_session_background.png')" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
+          <div className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-brand-burgundy/20 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-32 -left-10 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
+          <div className="absolute bottom-6 left-0 right-0 flex justify-center px-6">
+            <Badge variant="outline" className="inline-flex items-center gap-1 px-4 py-2 text-sm font-normal text-white/80 bg-white/10 border-white/30 text-center max-w-full">
+              Smooth sessions lift spirits; tough takes linger—your artist’s <span className="font-semibold text-brand-rose">Mood</span> and each song’s <span className="font-semibold text-brand-gold">Quality</span> shift with every take you chase.
+            </Badge>
+          </div>
+        </section>
 
         <div className="space-y-6">
           {/* Project Type Selection */}
@@ -397,7 +407,7 @@ export default function RecordingSessionPage() {
             <div className="grid grid-cols-2 gap-4 mt-2">
               {loadingProjectTypes ? (
                 <div className="col-span-2 text-center py-8">
-                  <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                   <p className="text-white/70">Loading project types...</p>
                 </div>
               ) : projectTypesError ? (
@@ -425,14 +435,14 @@ export default function RecordingSessionPage() {
                   return (
                     <Card
                       key={type.id}
-                      className={`cursor-pointer transition-all hover:shadow-md bg-[#2C222A] border-[#4e324c] ${
-                        selectedType === type.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
+                      className={`cursor-pointer transition-all hover:shadow-md bg-brand-dark-card border-brand-purple ${
+                        selectedType === type.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
                       }`}
                       onClick={() => handleTypeSelect(type.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-3">
-                          <type.icon className="w-6 h-6 text-[#A75A5B]" />
+                          <type.icon className="w-6 h-6 text-brand-burgundy" />
                           <div>
                             <h3 className="font-semibold text-white">{type.name}</h3>
                             <p className="text-sm text-white/70">{type.description}</p>
@@ -459,7 +469,7 @@ export default function RecordingSessionPage() {
                     setTitle(`${artist.name} Recording Session`);
                   }
                 }}>
-                  <SelectTrigger className="bg-[#1A111A] border-[#4e324c] text-white">
+                  <SelectTrigger className="bg-brand-dark border-brand-purple text-white">
                     <SelectValue placeholder="Select an artist" />
                   </SelectTrigger>
                   <SelectContent>
@@ -491,7 +501,7 @@ export default function RecordingSessionPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter project title"
-                  className="bg-[#1A111A] border-[#4e324c] text-white"
+                  className="bg-brand-dark border-brand-purple text-white"
                 />
               </div>
 
@@ -504,17 +514,17 @@ export default function RecordingSessionPage() {
                     return (
                       <Card
                         key={tier.id}
-                        className={`cursor-pointer transition-all bg-[#2C222A] border-[#4e324c] ${
+                        className={`cursor-pointer transition-all bg-brand-dark-card border-brand-purple ${
                           !isUnlocked ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
                         } ${
-                          selectedProducerTier === tier.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
+                          selectedProducerTier === tier.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
                         }`}
                         onClick={() => isUnlocked && setSelectedProducerTier(tier.id)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <tier.icon className="w-5 h-5 text-[#A75A5B]" />
+                              <tier.icon className="w-5 h-5 text-brand-burgundy" />
                               <div>
                                 <h4 className="font-semibold text-white">{tier.name}</h4>
                                 <p className="text-sm text-white/70">{tier.description}</p>
@@ -543,15 +553,15 @@ export default function RecordingSessionPage() {
                   {TIME_INVESTMENT_OPTIONS.map((option) => (
                     <Card
                       key={option.id}
-                      className={`cursor-pointer transition-all hover:shadow-md bg-[#2C222A] border-[#4e324c] ${
-                        selectedTimeInvestment === option.id ? 'ring-2 ring-[#A75A5B] bg-[#A75A5B]/10' : ''
+                      className={`cursor-pointer transition-all hover:shadow-md bg-brand-dark-card border-brand-purple ${
+                        selectedTimeInvestment === option.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
                       }`}
                       onClick={() => setSelectedTimeInvestment(option.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <option.icon className="w-5 h-5 text-[#A75A5B]" />
+                            <option.icon className="w-5 h-5 text-brand-burgundy" />
                             <div>
                               <h4 className="font-semibold text-white">{option.name}</h4>
                               <p className="text-sm text-white/70">{option.description}</p>
@@ -582,7 +592,7 @@ export default function RecordingSessionPage() {
                   type="number"
                   value={budgetPerSong}
                   onChange={(e) => setBudgetPerSong(Number(e.target.value))}
-                  className={`bg-[#1A111A] border-[#4e324c] text-white ${!isBudgetValid && budgetPerSong > 0 ? 'border-red-500' : ''}`}
+                  className={`bg-brand-dark border-brand-purple text-white ${!isBudgetValid && budgetPerSong > 0 ? 'border-red-500' : ''}`}
                   min={(() => {
                     if (!selectedType) return undefined;
                     const apiKey = selectedType === 'Single' ? 'single' : 'ep';
@@ -607,7 +617,7 @@ export default function RecordingSessionPage() {
                 />
                 <div className="mt-2 text-sm space-y-1">
                   {selectedProjectType?.isRecording && (
-                    <div className="p-3 bg-[#3c252d]/20 rounded-lg border border-[#4e324c]">
+                    <div className="p-3 bg-brand-dark-card/20 rounded-lg border border-brand-purple">
                       <h4 className="font-medium text-white/90 mb-2">Cost Calculation:</h4>
                       <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
@@ -618,7 +628,7 @@ export default function RecordingSessionPage() {
                           <span className="text-white/70">Number of songs:</span>
                           <span className="font-mono text-white">{songCount} song{songCount > 1 ? 's' : ''}</span>
                         </div>
-                        <div className="flex justify-between border-t border-[#4e324c] pt-1">
+                        <div className="flex justify-between border-t border-brand-purple pt-1">
                           <span className="text-white/70">Base cost:</span>
                           <span className="font-mono text-white">${totalBaseCost.toLocaleString()}</span>
                         </div>
@@ -630,9 +640,9 @@ export default function RecordingSessionPage() {
                           <span className="text-white/70">Time investment ({timeMultiplier}x):</span>
                           <span className="font-mono text-white">${finalTotalCost.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between border-t border-[#4e324c] pt-1 font-semibold">
+                        <div className="flex justify-between border-t border-brand-purple pt-1 font-semibold">
                           <span className="text-white">Final total cost:</span>
-                          <span className="font-mono text-[#A75A5B]">${finalTotalCost.toLocaleString()}</span>
+                          <span className="font-mono text-brand-burgundy">${finalTotalCost.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -643,39 +653,39 @@ export default function RecordingSessionPage() {
                     </div>
                   )}
                   {/* Quality Preview with Breakdown */}
-                  <div className="p-3 bg-[#A75A5B]/10 rounded-lg border border-[#4e324c]">
-                    <h4 className="font-medium text-[#A75A5B] mb-2">Quality Preview:</h4>
+                  <div className="p-3 bg-brand-burgundy/10 rounded-lg border border-brand-purple">
+                    <h4 className="font-medium text-brand-burgundy mb-2">Quality Preview:</h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-[#A75A5B]">Base (talent+producer):</span>
+                        <span className="text-brand-burgundy">Base (talent+producer):</span>
                         <span className="font-mono text-white">{Math.round(baseQuality)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#A75A5B]">Time & Work Ethic factor:</span>
+                        <span className="text-brand-burgundy">Time & Work Ethic factor:</span>
                         <span className="font-mono text-white">×{timeFactor.toFixed(2)}</span>
                       </div>
                       {selectedArtist && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-[#A75A5B]">Popularity factor:</span>
+                            <span className="text-brand-burgundy">Popularity factor:</span>
                             <span className="font-mono text-white">×{popularityFactor.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-[#A75A5B]">Mood factor:</span>
+                            <span className="text-brand-burgundy">Mood factor:</span>
                             <span className="font-mono text-white">×{moodFactor.toFixed(2)}</span>
                           </div>
                         </>
                       )}
                       {songCount > 3 && (
                         <div className="flex justify-between">
-                          <span className="text-[#A75A5B]">Session fatigue:</span>
+                          <span className="text-brand-burgundy">Session fatigue:</span>
                           <span className="font-mono text-amber-500">×{focusFactor.toFixed(2)}</span>
                         </div>
                       )}
                       {selectedProjectType?.isRecording && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-[#A75A5B]">Budget factor:</span>
+                            <span className="text-brand-burgundy">Budget factor:</span>
                             <span className="font-mono font-semibold text-green-600">
                               ×{budgetFactor.toFixed(2)}
                             </span>
@@ -688,9 +698,9 @@ export default function RecordingSessionPage() {
                           )}
                         </>
                       )}
-                      <div className="flex justify-between border-t border-[#4e324c] pt-1">
-                        <span className="text-[#A75A5B] font-medium">Est. quality:</span>
-                        <span className="font-mono font-bold text-[#A75A5B]">{Math.round(estimatedQuality)}</span>
+                      <div className="flex justify-between border-t border-brand-purple pt-1">
+                        <span className="text-brand-burgundy font-medium">Est. quality:</span>
+                        <span className="font-mono font-bold text-brand-burgundy">{Math.round(estimatedQuality)}</span>
                       </div>
                       {selectedProjectType?.isRecording && selectedArtist && selectedProducer && (
                         <div className="text-xs text-white/50 mt-1">
@@ -714,7 +724,7 @@ export default function RecordingSessionPage() {
                     onChange={(e) => setSongCount(Number(e.target.value))}
                     min={selectedProjectType.minSongs}
                     max={selectedProjectType.maxSongs}
-                    className="bg-[#1A111A] border-[#4e324c] text-white"
+                    className="bg-brand-dark border-brand-purple text-white"
                   />
                 </div>
               )}
@@ -745,7 +755,7 @@ export default function RecordingSessionPage() {
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid || isCreating}
-                  className="bg-[#A75A5B] hover:bg-[#D99696] text-white"
+                  className="bg-brand-burgundy hover:bg-brand-rose text-white"
                 >
                   {isCreating ? 'Creating...' : 'Start Recording Session'}
                 </Button>

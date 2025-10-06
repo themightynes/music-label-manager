@@ -118,19 +118,19 @@ export function ArtistDiscoveryModal({
 
   const getArchetypeColor = (archetype: string) => {
     switch (archetype) {
-      case 'Visionary': return 'bg-[#791014]/20 text-[#B34A4F] border-[#791014]/30';
-      case 'Workhorse': return 'bg-[#A75A5B]/20 text-[#A75A5B] border-[#A75A5B]/30';
+      case 'Visionary': return 'bg-brand-burgundy-dark/20 text-brand-burgundy border-brand-burgundy-dark/30';
+      case 'Workhorse': return 'bg-brand-burgundy/20 text-brand-burgundy border-brand-burgundy/30';
       case 'Trendsetter': return 'bg-green-500/20 text-green-300 border-green-400/30';
-      default: return 'bg-[#65557c]/20 text-[#65557c] border-[#65557c]/30';
+      default: return 'bg-brand-purple-light/20 text-brand-purple-light border-brand-purple-light/30';
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
-        <DialogHeader className="border-b border-[#4e324c] pb-4">
+        <DialogHeader className="border-b border-brand-purple pb-4">
           <DialogTitle className="text-xl font-bold text-white flex items-center">
-            <Music className="w-5 h-5 mr-2 text-[#A75A5B]" />
+            <Music className="w-5 h-5 mr-2 text-brand-burgundy" />
             Scouted Artists
           </DialogTitle>
           <p className="text-sm text-white/70 mt-2">
@@ -139,7 +139,7 @@ export function ArtistDiscoveryModal({
         </DialogHeader>
 
         {/* Search and Filters */}
-        <div className="p-6 border-b border-[#4e324c]">
+        <div className="p-6 border-b border-brand-purple">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-white/50" />
@@ -197,7 +197,7 @@ export function ArtistDiscoveryModal({
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-[#4e324c] hover:bg-[#2C222A]">
+                <TableRow className="border-brand-purple hover:bg-brand-dark-card">
                   <TableHead className="text-white/90 font-semibold w-20">Avatar</TableHead>
                   <TableHead className="text-white/90 font-semibold">Artist</TableHead>
                   <TableHead className="text-white/90 font-semibold">Archetype</TableHead>
@@ -211,9 +211,9 @@ export function ArtistDiscoveryModal({
               </TableHeader>
               <TableBody>
                 {filteredArtists.map(artist => (
-                  <TableRow key={artist.id} className="border-[#4e324c] hover:bg-[#2C222A]/50">
+                  <TableRow key={artist.id} className="border-brand-purple hover:bg-brand-dark-card/50">
                     <TableCell className="w-20">
-                      <div className="w-16 h-16 rounded-full overflow-hidden bg-[#2C222A]">
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-brand-dark-card">
                         <img
                           src={`/avatars/${artist.name.toLowerCase().replace(/\s+/g, '_')}_full.png`}
                           alt={`${artist.name} avatar`}
@@ -229,11 +229,11 @@ export function ArtistDiscoveryModal({
                       <HoverCard>
                         <HoverCardTrigger asChild>
                           <div className="cursor-pointer">
-                            <div className="font-semibold text-white text-base hover:text-[#A75A5B] transition-colors">{artist.name}</div>
+                            <div className="font-semibold text-white text-base hover:text-brand-burgundy transition-colors">{artist.name}</div>
                             <div className="text-xs text-white/70">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</div>
                           </div>
                         </HoverCardTrigger>
-                        <HoverCardContent side="right" className="w-80 bg-[#23121c] border-[#4e324c] text-white">
+                        <HoverCardContent side="right" className="w-80 bg-brand-dark-card border-brand-purple text-white">
                           <div className="space-y-2">
                             <h4 className="text-sm font-semibold">{artist.name}</h4>
                             <p className="text-sm text-white/70">{artist.bio || 'Talented artist...'}</p>
@@ -293,7 +293,7 @@ export function ArtistDiscoveryModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-[#4e324c] flex justify-between items-center">
+        <div className="p-6 border-t border-brand-purple flex justify-between items-center">
           <div className="text-sm text-white/70">
             Budget: <span className="font-semibold">${(gameState.money || 0).toLocaleString()}</span>
             {' • '}

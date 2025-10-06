@@ -14,6 +14,7 @@ The Music Label Manager frontend is a **React 18** application built with **Type
 - **React 18** with Hooks and Context
 - **TypeScript** for type safety
 - **Vite** for fast development and building
+- **Motion.dev** for production-grade animations (successor to Framer Motion)
 - **Tailwind CSS** for styling with custom plum/burgundy theme
 - **Zustand** for game state management
 - **React Query** for server state management
@@ -62,7 +63,7 @@ body::after {
 ```typescript
 // Card components
 const Card = {
-  background: '#23121c',    // Dark plum container
+  background: '#2a1821',    // Dark plum container
   border: '#4e324c',        // Plum border
   text: '#ffffff',          // White primary text
   textSecondary: 'rgba(255, 255, 255, 0.7)' // White/70 secondary
@@ -70,7 +71,7 @@ const Card = {
 
 // Header elements
 const Header = {
-  background: '#2C222A',    // Base plum background
+  background: '#2a1821',    // Base plum background
   border: '#4e324c',        // Consistent plum borders
   text: '#ffffff'           // White text
 };
@@ -115,7 +116,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
     <div
       ref={ref}
       className={cn(
-        "rounded-[10px] bg-[#23121c] border border-[#4e324c] text-white shadow-sm",
+        "rounded-[10px] bg-brand-dark-card border border-brand-purple text-white shadow-sm",
         className
       )}
       {...props}
@@ -129,10 +130,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#A75A5B] text-[#A75A5B]-foreground hover:bg-[#A75A5B]/90",
-        outline: "border border-[#4e324c] bg-transparent text-white hover:bg-[#A75A5B]/20",
-        secondary: "bg-[#3c252d] text-white hover:bg-[#3c252d]/80",
-        ghost: "hover:bg-[#A75A5B]/10 hover:text-white"
+        default: "bg-brand-burgundy text-brand-burgundy-foreground hover:bg-brand-burgundy/90",
+        outline: "border border-brand-purple bg-transparent text-white hover:bg-brand-burgundy/20",
+        secondary: "bg-brand-dark-card text-white hover:bg-brand-dark-card/80",
+        ghost: "hover:bg-brand-burgundy/10 hover:text-white"
       }
     }
   }
@@ -177,7 +178,7 @@ The August 31, 2025 update represented a complete visual transformation:
 - Light card containers
 
 **After (Dark Plum Theme)**:
-- Dark plum backgrounds (#2C222A, #23121c)
+- Dark plum backgrounds (#2a1821, #2a1821)
 - White/white-70 text for readability
 - Burgundy accent colors (#791014)
 - Plum borders (#4e324c) 
@@ -185,6 +186,179 @@ The August 31, 2025 update represented a complete visual transformation:
 - 10px rounded corners for modern aesthetic
 
 This transformation maintains all functionality while dramatically improving visual appeal and user experience.
+
+---
+
+## 🎬 Animation System (Motion.dev)
+
+### **Motion.dev Integration**
+*Added: January 2025*
+
+The Music Label Manager uses **Motion.dev** (v12.23.22), the next-generation successor to Framer Motion, for production-grade animations and interactive UI elements.
+
+**Key Features**:
+- **40% smaller bundle size** compared to Framer Motion
+- **Hybrid animation engine** combining JavaScript and native browser APIs
+- **Seamless Radix UI integration** via `asChild` prop pattern
+- **Hardware-accelerated animations** for optimal performance
+- **First-class React 18 support** with modern hooks
+
+**Installation**:
+```bash
+npm install motion lucide-react
+```
+
+**Import Patterns**:
+```typescript
+// Core Motion components
+import { motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
+
+// Animation hooks
+import { useScroll, useSpring, useInView } from "motion/react"
+```
+
+### **Animation Use Cases**
+
+#### **1. Component Entrance Animations**
+```typescript
+// Fade in on mount
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3 }}
+>
+  <Card>...</Card>
+</motion.div>
+```
+
+#### **2. Interactive Hover States**
+```typescript
+// Magnetic button effect
+<motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  className="bg-brand-burgundy"
+>
+  Create Project
+</motion.button>
+```
+
+#### **3. Page Transitions**
+```typescript
+// Smooth screen transitions
+<AnimatePresence mode="wait">
+  {currentView === 'dashboard' && (
+    <motion.div
+      key="dashboard"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+    >
+      <Dashboard />
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+#### **4. Animated Counters**
+```typescript
+// Budget/revenue number animations
+import { useSpring, useTransform } from "motion/react"
+
+function AnimatedNumber({ value }: { value: number }) {
+  const spring = useSpring(value, { stiffness: 100, damping: 30 })
+  const rounded = useTransform(spring, Math.round)
+
+  return <motion.span>{rounded}</motion.span>
+}
+```
+
+#### **5. Scroll-Triggered Animations**
+```typescript
+// Animate chart positions as they enter viewport
+<motion.div
+  initial={{ opacity: 0 }}
+  whileInView={{ opacity: 1 }}
+  viewport={{ once: true }}
+>
+  <ChartPosition song={song} />
+</motion.div>
+```
+
+#### **6. Layout Animations**
+```typescript
+// Automatically animate layout changes
+<motion.div layout className="artist-card">
+  {/* Content automatically animates when size/position changes */}
+</motion.div>
+```
+
+### **Integration with Radix UI**
+
+Motion.dev works seamlessly with our existing Radix UI components using the `asChild` pattern:
+
+```typescript
+// Animated Dialog
+import { Dialog } from "@radix-ui/react-dialog"
+
+<Dialog.Content asChild>
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+  >
+    {/* Dialog content */}
+  </motion.div>
+</Dialog.Content>
+```
+
+### **Planned Animation Implementations**
+
+**Phase 1: Core UI Polish**
+- ✅ **Installed**: Motion.dev and dependencies
+- ✅ **Label Name Scramble**: Text scramble animation for music label name in Dashboard header
+- ✅ **Glow Effect**: Implemented on Label Creation Modal with brand burgundy colors (rotating glow)
+- 🔄 **Budget Counter**: Animated number transitions for money/reputation changes
+- 🔄 **KPI Cards**: Entrance animations for dashboard metrics
+- 🔄 **Button Interactions**: Hover/tap states for all primary actions
+
+**Phase 2: Strategic Enhancements**
+- 🔄 **Meeting Transitions**: Smooth panel transitions in DialogueModal
+- 🔄 **Project Cards**: Hover effects and status change animations
+- 🔄 **Chart Reveals**: In-view animations for chart positions
+- 🔄 **Tier Badges**: Glow effects for achievement unlocks
+
+**Phase 3: Advanced Polish**
+- 🔄 **Monthly Summary**: Animated list of changes with stagger effect
+- 🔄 **Artist Discovery**: Card flip/reveal animations
+- 🔄 **Save Slots**: Loading transitions and save confirmations
+- 🔄 **Campaign Results**: Celebration animations for completion
+
+### **Performance Considerations**
+
+- **Hardware Acceleration**: All transforms/opacity changes use GPU
+- **Bundle Impact**: Motion.dev adds ~40KB (gzipped), 40% smaller than Framer Motion
+- **Selective Loading**: Can lazy load animation components for modals
+- **Development Mode**: Animation inspector available via `@statelyai/inspect`
+
+### **Migration from Framer Motion**
+
+Motion.dev and Framer Motion can coexist during gradual migration:
+
+```typescript
+// Existing Framer Motion code continues working
+import { motion } from "framer-motion"
+
+// New components use Motion.dev
+import { motion } from "motion/react"
+```
+
+**Migration Strategy**:
+1. Keep Framer Motion for existing animations
+2. Use Motion.dev for all new components
+3. Gradually migrate high-traffic components
+4. Remove Framer Motion once migration complete
 
 ---
 
@@ -270,7 +444,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen font-sans">
-      <header className="bg-[#2C222A] shadow-sm border-b border-[#4e324c]">
+      <header className="bg-brand-dark-card shadow-sm border-b border-brand-purple">
         {/* Game title, month counter, money display, save button */}
       </header>
       
@@ -431,7 +605,7 @@ export function DialogueModal({ roleId, meetingId, gameId, onClose, onChoiceSele
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-[#3c252d]/10 p-4 rounded-lg">
+          <div className="bg-brand-dark-card/10 p-4 rounded-lg">
             <p className="text-sm text-white/70 italic">
               "{selectedMeeting?.prompt || "How are things going this month?"}"
             </p>
@@ -1113,9 +1287,9 @@ The application features a comprehensive **dark plum/burgundy theme** implemente
 // Primary Theme Colors
 const themeColors = {
   // Main Background Colors
-  baseBackground: '#2C222A',     // Base plum background
-  cardBackground: '#23121c',     // Dark plum for cards/containers
-  headerBackground: '#2C222A',   // Header background
+  baseBackground: '#2a1821',     // Base plum background
+  cardBackground: '#2a1821',     // Dark plum for cards/containers
+  headerBackground: '#2a1821',   // Header background
   
   // Border Colors
   primaryBorder: '#4e324c',      // Plum borders for cards/inputs
@@ -1175,49 +1349,49 @@ body::after {
 
 /* Card components with dark plum theme */
 .card-base {
-  @apply rounded-[10px] bg-[#23121c] border border-[#4e324c] text-white shadow-sm;
+  @apply rounded-[10px] bg-brand-dark-card border border-brand-purple text-white shadow-sm;
 }
 
 /* Interactive elements */
 .action-button {
-  @apply p-4 border border-[#4e324c] rounded-[10px] bg-[#23121c] text-white;
-  @apply hover:bg-[#D99696] transition-colors;
+  @apply p-4 border border-brand-purple rounded-[10px] bg-brand-dark-card text-white;
+  @apply hover:bg-brand-rose transition-colors;
 }
 
 /* Button variants */
 .button-primary {
-  @apply bg-[#A75A5B] text-white hover:bg-[#A75A5B]/90;
+  @apply bg-brand-burgundy text-white hover:bg-brand-burgundy/90;
 }
 
 .button-secondary {
-  @apply bg-[#3c252d] text-white hover:bg-[#3c252d]/80;
+  @apply bg-brand-dark-card text-white hover:bg-brand-dark-card/80;
 }
 
 .button-outline {
-  @apply border border-[#4e324c] bg-transparent text-white;
-  @apply hover:bg-[#A75A5B]/20 hover:text-white;
+  @apply border border-brand-purple bg-transparent text-white;
+  @apply hover:bg-brand-burgundy/20 hover:text-white;
 }
 
 /* Status indicators with dark theme compatibility */
 .status-positive { @apply text-green-400 bg-green-900/20; }
 .status-negative { @apply text-red-400 bg-red-900/20; }
-.status-neutral { @apply text-white/70 bg-[#3c252d]/10; }
+.status-neutral { @apply text-white/70 bg-brand-dark-card/10; }
 
 /* Resource displays */
 .resource-card {
-  @apply bg-[#23121c] border border-[#4e324c] rounded-[10px] shadow-sm border p-4;
+  @apply bg-brand-dark-card border border-brand-purple rounded-[10px] shadow-sm border p-4;
 }
 .kpi-value { @apply text-2xl font-bold font-mono text-white; }
 
 /* Header styling */
 .header-base {
-  @apply bg-[#2C222A] border-b border-[#4e324c] shadow-sm;
+  @apply bg-brand-dark-card border-b border-brand-purple shadow-sm;
 }
 
 /* Input styling */
 .input-base {
-  @apply bg-[#23121c] border border-[#4e324c] text-white rounded-[10px];
-  @apply focus:border-[#A75A5B] focus:ring-[#A75A5B];
+  @apply bg-brand-dark-card border border-brand-purple text-white rounded-[10px];
+  @apply focus:border-brand-burgundy focus:ring-brand-burgundy;
 }
 ```
 
@@ -1231,14 +1405,14 @@ body::after {
 #### **Responsive Design Integration**
 ```typescript
 // Theme-aware responsive patterns
-<div className="bg-[#2C222A] text-white">
+<div className="bg-brand-dark-card text-white">
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {/* Cards automatically adapt with consistent theming */}
   </div>
 </div>
 
 // Mobile-optimized theme elements
-<div className="bg-[#23121c] border border-[#4e324c] rounded-[10px]">
+<div className="bg-brand-dark-card border border-brand-purple rounded-[10px]">
   <div className="flex flex-col md:flex-row gap-4">
     {/* Stack vertically on mobile, horizontally on larger screens */}
   </div>
@@ -1248,7 +1422,7 @@ body::after {
 ### **Legacy Theme Migration**
 The UI was completely transformed from a light slate/gray theme to the current dark plum system:
 - **Before**: Light backgrounds with slate-600 text
-- **After**: Dark plum backgrounds (#2C222A, #23121c) with white text
+- **After**: Dark plum backgrounds (#2a1821, #2a1821) with white text
 - **Accent Evolution**: Purple accents replaced with burgundy (#791014)
 - **Border Updates**: All gray borders converted to plum (#4e324c)
 - **Hover States**: New plum hover color (#D99696) for better interaction feedback

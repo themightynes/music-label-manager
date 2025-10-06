@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
 import { Clock, DollarSign, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import type { RoleMeeting, ChoiceEffect } from '../../../../shared/types/gameTypes';
 
@@ -107,58 +108,37 @@ export function MeetingSelector({ meetings, onSelectMeeting, onBack }: MeetingSe
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
+    <Carousel
+      className="w-full max-w-md mx-auto"
+      opts={{
+        loop: true,
+      }}
+    >
+      <CarouselContent>
         {meetings.map((meeting) => (
-          <Card key={meeting.id} className="hover:shadow-md transition-all duration-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">{meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-white/70 italic">
-                "{meeting.prompt}"
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                <ChoicePreview choices={meeting.choices} />
-                <MeetingCostEstimate choices={meeting.choices} />
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-white/50 uppercase tracking-wide">
-                  Choice Preview
-                </div>
-                <div className="space-y-1">
-                  {meeting.choices.slice(0, 2).map((choice, index) => (
-                    <div key={choice.id} className="text-xs p-2 bg-black/20 rounded">
-                      <div className="font-medium text-white/80">{choice.label}</div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {Object.entries(choice.effects_immediate).map(([effect, value]) =>
-                          value !== undefined ? (
-                            <EffectBadge key={effect} effect={effect} value={value} />
-                          ) : null
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {meeting.choices.length > 2 && (
-                    <div className="text-xs text-white/50 text-center py-1">
-                      +{meeting.choices.length - 2} more choices
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <Button
-                onClick={() => onSelectMeeting(meeting)}
-                className="w-full"
-              >
-                Start Meeting
-              </Button>
-            </CardContent>
-          </Card>
+          <CarouselItem key={meeting.id}>
+            <Card className="hover:shadow-md transition-all duration-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">{meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-white/70 italic">
+                  "{meeting.prompt}"
+                </p>
+                <Button
+                  onClick={() => onSelectMeeting(meeting)}
+                  size="sm"
+                  className="w-full"
+                >
+                  Start Meeting
+                </Button>
+              </CardContent>
+            </Card>
+          </CarouselItem>
         ))}
-      </div>
-    </div>
+      </CarouselContent>
+      <CarouselPrevious className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
+      <CarouselNext className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
+    </Carousel>
   );
 }

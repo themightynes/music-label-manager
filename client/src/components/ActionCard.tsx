@@ -50,15 +50,15 @@ export function ActionCard({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getBorderClass = () => {
-    if (isSelected) return 'border-[#A75A5B] bg-[#A75A5B]/10';
+    if (isSelected) return 'border-brand-burgundy bg-brand-burgundy/10';
     if (isUrgent) return 'border-red-400 hover:border-red-500';
-    if (isRecommended) return 'border-[#5AA75A] hover:border-[#4A8F4A]';
-    return 'border-[#4e324c] hover:border-[#4e324c]';
+    if (isRecommended) return 'border-[green-500] hover:border-[green-600]';
+    return 'border-brand-purple hover:border-brand-purple';
   };
 
   const getRecommendationBadge = () => {
     if (isUrgent) return <Badge variant="destructive" className="text-xs">Urgent</Badge>;
-    if (isRecommended) return <Badge variant="default" className="text-xs bg-[#5AA75A] text-white">Recommended</Badge>;
+    if (isRecommended) return <Badge variant="default" className="text-xs bg-[green-500] text-white">Recommended</Badge>;
     return null;
   };
 
@@ -67,7 +67,7 @@ export function ActionCard({
       <CardHeader className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#A75A5B] to-[#8B4A6C] text-white rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-brand-burgundy to-brand-burgundy text-white rounded-lg flex items-center justify-center">
               <i className={`${action.icon} text-sm`}></i>
             </div>
             <div className="flex-1">
@@ -76,7 +76,7 @@ export function ActionCard({
                 <div className="flex items-center space-x-2">
                   {getRecommendationBadge()}
                   {isSelected && (
-                    <div className="w-5 h-5 bg-[#A75A5B]/100 text-white rounded-full flex items-center justify-center">
+                    <div className="w-5 h-5 bg-brand-burgundy/100 text-white rounded-full flex items-center justify-center">
                       <i className="fas fa-check text-xs"></i>
                     </div>
                   )}
@@ -114,13 +114,13 @@ export function ActionCard({
 
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleContent>
-          <CardContent className="p-3 pt-0 border-t border-[#4e324c]/50">
+          <CardContent className="p-3 pt-0 border-t border-brand-purple/50">
             <div className="space-y-2 text-xs">
               <p className="text-white/90">{actionDetails.description}</p>
               
-              <div className="flex justify-between bg-[#A75A5B]/10 rounded p-1">
-                <span className="text-[#A75A5B] font-medium">Focus Cost:</span>
-                <span className="font-bold text-[#A75A5B]">1 Slot</span>
+              <div className="flex justify-between bg-brand-burgundy/10 rounded p-1">
+                <span className="text-brand-burgundy font-medium">Focus Cost:</span>
+                <span className="font-bold text-brand-burgundy">1 Slot</span>
               </div>
               
               {actionDetails.cost && (

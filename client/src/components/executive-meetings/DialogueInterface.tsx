@@ -2,6 +2,9 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
+import { BorderTrail } from '../motion-primitives/border-trail';
+import { GlowEffect } from '../motion-primitives/glow-effect';
 import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft } from 'lucide-react';
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
 
@@ -114,51 +117,64 @@ function ChoiceEffects({ choice }: { choice: DialogueChoice }) {
 export function DialogueInterface({ dialogue, onSelectChoice, onBack }: DialogueInterfaceProps) {
   return (
     <div className="space-y-6">
-      <div className="bg-muted/30 p-4 rounded-lg border-l-4 border-primary">
-        <p className="text-base italic leading-relaxed">
-          "{dialogue.prompt}"
-        </p>
-      </div>
+      <Card className="relative overflow-hidden w-full max-w-md mx-auto">
+        <GlowEffect
+          mode="static"
+          colors={['#4e324c', '#65557c', '#8B6B70', '#9B7B80']}
+          blur="medium"
+        />
+        <CardContent className="p-4 relative z-10">
+          <p className="text-base italic leading-relaxed text-white">
+            "{dialogue.prompt}"
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="space-y-4">
-        <div className="text-sm font-medium text-white/50 uppercase tracking-wide">
-          Choose Your Response
-        </div>
 
-        <div className="grid gap-3">
-          {dialogue.choices.map((choice) => (
-            <Card key={choice.id} className="hover:shadow-md transition-all duration-200">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="font-medium text-sm leading-relaxed text-white">
-                    {choice.label}
-                  </div>
-
-                  <ChoiceEffects choice={choice} />
-
-                  <Button
-                    onClick={() => onSelectChoice(choice)}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    Choose This Response
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div className="pt-4 border-t">
-        <Button
-          onClick={onBack}
-          variant="ghost"
-          className="flex items-center gap-2"
+        <Carousel
+          className="w-full max-w-md mx-auto"
+          opts={{
+            loop: true,
+          }}
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Meetings
-        </Button>
+          <CarouselContent>
+            {dialogue.choices.map((choice) => (
+              <CarouselItem key={choice.id}>
+                <Card className="relative hover:shadow-md transition-all duration-200">
+                  <BorderTrail
+                    size={180}
+                    className="bg-gradient-to-l from-brand-burgundy via-brand-gold to-brand-rose"
+                    transition={{
+                      repeat: Infinity,
+                      duration: 4,
+                      ease: "linear"
+                    }}
+                  />
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="font-medium text-sm leading-relaxed text-white">
+                        {choice.label}
+                      </div>
+
+                      <ChoiceEffects choice={choice} />
+
+                      <Button
+                        onClick={() => onSelectChoice(choice)}
+                        className="w-full"
+                        size="sm"
+                      >
+                        Choose This Response
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
+          <CarouselNext className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
+        </Carousel>
       </div>
     </div>
   );

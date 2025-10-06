@@ -130,7 +130,7 @@ export function TourVarianceTester() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Calculator className="w-5 h-5 text-[#A75A5B]" />
+            <Calculator className="w-5 h-5 text-brand-burgundy" />
             <span>Tour Variance Tester</span>
           </CardTitle>
         </CardHeader>
@@ -231,7 +231,7 @@ export function TourVarianceTester() {
           <CardContent>
             <div className="space-y-4">
               {/* Overall Summary */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-[#3c252d]/20 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-brand-dark-card/20 rounded-lg">
                 <div>
                   <h4 className="font-medium text-white mb-2">Projected Totals</h4>
                   <div className="space-y-1 text-sm">
@@ -278,7 +278,7 @@ export function TourVarianceTester() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[#4e324c] text-white/70">
+                    <tr className="border-b border-brand-purple text-white/70">
                       <th className="text-left p-2">City</th>
                       <th className="text-right p-2">Attendance</th>
                       <th className="text-right p-2">Revenue</th>
@@ -288,7 +288,7 @@ export function TourVarianceTester() {
                   </thead>
                   <tbody>
                     {actualResults.map((city) => (
-                      <tr key={city.cityNumber} className="border-b border-[#4e324c]/50">
+                      <tr key={city.cityNumber} className="border-b border-brand-purple/50">
                         <td className="p-2 font-medium">City {city.cityNumber}</td>
                         <td className="text-right p-2">
                           <div className="space-y-1">
@@ -341,7 +341,7 @@ export function TourVarianceTester() {
               </div>
 
               {/* Variance Statistics */}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-[#4e324c]/20 rounded-lg">
+              <div className="grid grid-cols-3 gap-4 p-4 bg-brand-purple/20 rounded-lg">
                 <div className="text-center">
                   <div className="text-lg font-bold text-white">
                     {actualResults.filter(c => c.varianceFactor > 1).length}

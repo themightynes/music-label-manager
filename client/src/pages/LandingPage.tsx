@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react';
 
 function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0D060F] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-brand-dark text-slate-100 flex flex-col">
       <header className="px-6 py-5 flex items-center justify-between border-b border-white/10">
         <div className="flex items-center gap-3">
           <img src="/logo4.png" alt="Music Label Manager" className="h-10 w-auto" />
@@ -17,7 +17,7 @@ function LandingPage() {
             </Button>
           </SignInButton>
           <SignUpButton mode="modal">
-            <Button className="bg-[#A75A5B] hover:bg-[#D07A7C] border-0 text-white">
+            <Button className="bg-brand-burgundy hover:bg-brand-burgundy-light border-0 text-white">
               Get started
             </Button>
           </SignUpButton>
@@ -34,7 +34,7 @@ function LandingPage() {
         }}
       >
         {/* Overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-[#0D060F]/30"></div>
+        <div className="absolute inset-0 bg-brand-dark/30"></div>
 
         <div className="max-w-3xl space-y-8 relative z-10 mb-20 mr-80 text-left">
           <div className="space-y-6">
@@ -46,7 +46,7 @@ function LandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <SignUpButton mode="modal">
-              <Button size="lg" className="bg-[#A75A5B] hover:bg-[#D07A7C] border-0 text-white flex items-center gap-2">
+              <Button size="lg" className="bg-brand-burgundy hover:bg-brand-burgundy-light border-0 text-white flex items-center gap-2">
                 Create your label
                 <ArrowRight className="h-4 w-4" />
               </Button>

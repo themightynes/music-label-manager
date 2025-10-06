@@ -9,6 +9,7 @@ import { ToastNotification } from './ToastNotification';
 import { WeekSummary } from './WeekSummary';
 import { MusicCalendar } from './MusicCalendar';
 import { InboxWidget } from './InboxWidget';
+import { TextScramble } from './motion-primitives/text-scramble';
 import { useGameStore } from '@/store/gameStore';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
@@ -60,6 +61,22 @@ export function Dashboard({
 
   return (
     <>
+      {/* Label Name Header - Above Everything */}
+      <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
+        <h1 className="text-3xl font-heading font-bold text-white flex items-center gap-3">
+          <i className="fas fa-compact-disc text-white"></i>
+          <TextScramble
+            as="span"
+            className="text-3xl font-heading font-bold text-white"
+            duration={0.5}
+            speed={0.05}
+            trigger={true}
+          >
+            {(gameState as any)?.musicLabel?.name || 'Music Label'}
+          </TextScramble>
+        </h1>
+      </header>
+
       {/* Floating Metrics Dashboard */}
       <MetricsDashboard />
 
@@ -111,7 +128,7 @@ export function Dashboard({
           onClick={handleCloseSummary}
         >
           <div
-            className="bg-[#2C222A] border border-[#4e324c] rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            className="bg-brand-dark-card border border-brand-purple rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <WeekSummary

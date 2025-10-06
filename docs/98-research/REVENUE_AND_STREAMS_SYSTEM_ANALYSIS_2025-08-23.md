@@ -395,7 +395,7 @@ interface Song {
 **Individual Song Display:**
 ```tsx
 {songs.map(song => (
-  <Card key={song.id} className="border border-[#4e324c]/50">
+  <Card key={song.id} className="border border-brand-purple/50">
     <CardContent className="p-4">
       <div className="flex items-center justify-between">
         <div>

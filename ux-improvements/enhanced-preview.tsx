@@ -107,7 +107,7 @@ function PerformanceCard({ title, value, subtitle, trend, icon: Icon, color }) {
     green: 'border-green-200 bg-green-50',
     blue: 'border-blue-200 bg-blue-50',
     red: 'border-red-200 bg-red-50',
-    slate: 'border-[#4e324c]/50 bg-[#3c252d]/10'
+    slate: 'border-brand-purple/50 bg-brand-dark-card/10'
   };
 
   const textColorClasses = {
@@ -145,7 +145,7 @@ function QualityIndicator({ quality }) {
   };
 
   return (
-    <div className="w-full bg-[#65557c]/30 rounded-full h-1.5 mt-1">
+    <div className="w-full bg-brand-purple-light/30 rounded-full h-1.5 mt-1">
       <div
         className={`h-1.5 rounded-full transition-all ${getQualityColor(quality)}`}
         style={{ width: `${quality}%` }}
@@ -160,7 +160,7 @@ function SeasonalIndicator({ multiplier }) {
   return (
     <Badge
       variant={isPositive ? "default" : "secondary"}
-      className={`text-xs mt-1 ${isPositive ? 'bg-green-100 text-green-700' : 'bg-[#65557c]/20 text-white/70'}`}
+      className={`text-xs mt-1 ${isPositive ? 'bg-green-100 text-green-700' : 'bg-brand-purple-light/20 text-white/70'}`}
     >
       {isPositive ? 'Optimal' : 'Off-peak'}
     </Badge>
@@ -247,7 +247,7 @@ function RevenueFlowBar({ baseRevenue, marketingCost, netProfit }) {
       <div className="flex items-center space-x-2">
         <div className="w-4 h-4 bg-green-500 rounded-sm" />
         <span className="text-xs text-white/70">Revenue</span>
-        <div className="flex-1 bg-[#65557c]/30 rounded-full h-2">
+        <div className="flex-1 bg-brand-purple-light/30 rounded-full h-2">
           <div
             className="bg-green-500 h-2 rounded-full"
             style={{ width: `${(baseRevenue / maxValue) * 100}%` }}
@@ -258,7 +258,7 @@ function RevenueFlowBar({ baseRevenue, marketingCost, netProfit }) {
       <div className="flex items-center space-x-2">
         <div className="w-4 h-4 bg-red-500 rounded-sm" />
         <span className="text-xs text-white/70">Costs</span>
-        <div className="flex-1 bg-[#65557c]/30 rounded-full h-2">
+        <div className="flex-1 bg-brand-purple-light/30 rounded-full h-2">
           <div
             className="bg-red-500 h-2 rounded-full"
             style={{ width: `${(marketingCost / maxValue) * 100}%` }}
@@ -281,10 +281,10 @@ function MultiplierStack({ base, multipliers }) {
         if (!isBase) runningTotal += contribution;
         
         const colors = {
-          base: 'bg-[#65557c]/80',
+          base: 'bg-brand-purple-light/80',
           bonus: 'bg-blue-500',
           seasonal: 'bg-green-500',
-          marketing: 'bg-[#791014]',
+          marketing: 'bg-brand-burgundy-dark',
           lead: 'bg-orange-500'
         };
         
@@ -329,7 +329,7 @@ function MarketingBreakdown({ metrics, decisions }) {
                     <span className="text-sm font-medium capitalize">{channelId}</span>
                     <span className="text-sm font-mono">${data.budget.toLocaleString()}</span>
                   </div>
-                  <div className="w-full bg-[#65557c]/30 rounded-full h-2">
+                  <div className="w-full bg-brand-purple-light/30 rounded-full h-2">
                     <div
                       className="bg-blue-500 h-2 rounded-full"
                       style={{ width: `${data.contribution}%` }}

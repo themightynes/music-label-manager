@@ -78,9 +78,9 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   const categorizedChanges = categorizeChanges(changes);
 
   return (
-    <div className="bg-[#23121c] rounded-xl shadow-xl border border-[#4e324c] w-full max-w-7xl mx-auto">
+    <div className="bg-brand-dark-card rounded-xl shadow-xl border border-brand-purple w-full max-w-7xl mx-auto">
       {/* Header Section - Clean and prominent */}
-      <div className="bg-gradient-to-r from-[#3c252d]/50 to-[#A75A5B]/10 px-8 py-6 border-b border-[#4e324c]">
+      <div className="bg-gradient-to-r from-brand-dark-card/50 to-brand-burgundy/10 px-8 py-6 border-b border-brand-purple">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white">
@@ -127,11 +127,11 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       </div>
 
       {/* Financial Summary Bar - Horizontal layout for easy scanning */}
-      <div className="px-8 py-6 bg-[#3c252d]/20 border-b border-[#4e324c]">
+      <div className="px-8 py-6 bg-brand-dark-card/20 border-b border-brand-purple">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Revenue Card */}
-          <div className="bg-[#3c252d]/66 rounded-lg p-6 border border-[#65557c] shadow-sm">
+          <div className="bg-brand-dark-card/66 rounded-lg p-6 border border-brand-purple-light shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-green-500/20 rounded-lg">
@@ -151,7 +151,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </div>
 
           {/* Expenses Card */}
-          <div className="bg-[#3c252d]/66 rounded-lg p-6 border border-[#65557c] shadow-sm">
+          <div className="bg-brand-dark-card/66 rounded-lg p-6 border border-brand-purple-light shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-red-500/20 rounded-lg">
@@ -171,21 +171,21 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </div>
 
           {/* Profit Margin Card */}
-          <div className="bg-[#3c252d]/66 rounded-lg p-6 border border-[#65557c] shadow-sm">
+          <div className="bg-brand-dark-card/66 rounded-lg p-6 border border-brand-purple-light shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-[#A75A5B]/20' : 'bg-orange-500/20'}`}>
-                  <DollarSign className={`h-5 w-5 ${netIncome >= 0 ? 'text-[#A75A5B]' : 'text-orange-600'}`} />
+                <div className={`p-2 rounded-lg ${netIncome >= 0 ? 'bg-brand-burgundy/20' : 'bg-orange-500/20'}`}>
+                  <DollarSign className={`h-5 w-5 ${netIncome >= 0 ? 'text-brand-burgundy' : 'text-orange-600'}`} />
                 </div>
                 <div>
-                  <h3 className={`text-sm font-semibold ${netIncome >= 0 ? 'text-[#A75A5B]' : 'text-orange-700'}`}>
+                  <h3 className={`text-sm font-semibold ${netIncome >= 0 ? 'text-brand-burgundy' : 'text-orange-700'}`}>
                     Profit Margin
                   </h3>
                   <p className="text-xs text-white/50">Performance ratio</p>
                 </div>
               </div>
               <div className="text-right">
-                <div className={`text-lg font-bold ${netIncome >= 0 ? 'text-[#A75A5B]' : 'text-orange-700'}`}>
+                <div className={`text-lg font-bold ${netIncome >= 0 ? 'text-brand-burgundy' : 'text-orange-700'}`}>
                   {revenue > 0 ? `${((netIncome / revenue) * 100).toFixed(1)}%` : '0%'}
                 </div>
               </div>
@@ -202,7 +202,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             </div>
           </div>
           
-          <div className="relative bg-[#610b16] rounded-full h-4 overflow-hidden">
+          <div className="relative bg-brand-burgundy-dark rounded-full h-4 overflow-hidden">
             {revenue > 0 && (
               <div 
                 className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-500"
@@ -291,16 +291,16 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                 {categorizedChanges.achievements.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center space-x-2 text-[#A75A5B] text-sm">
+                      <CardTitle className="flex items-center space-x-2 text-brand-burgundy text-sm">
                         <Trophy className="h-4 w-4" />
                         <span>Achievements</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {categorizedChanges.achievements.map((change: GameChange, index: number) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 bg-[#A75A5B]/10 rounded-lg border border-[#A75A5B]/20">
+                        <div key={index} className="flex items-center space-x-3 p-3 bg-brand-burgundy/10 rounded-lg border border-brand-burgundy/20">
                           <span className="text-sm">{getChangeIcon(change.type)}</span>
-                          <span className="text-sm font-medium text-[#A75A5B]">{change.description}</span>
+                          <span className="text-sm font-medium text-brand-burgundy">{change.description}</span>
                         </div>
                       ))}
                     </CardContent>
@@ -338,11 +338,11 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                   <ChartPerformanceCard
                     chartUpdates={weeklyStats.chartUpdates?.filter((update: any) => !update.isCompetitorSong) || []}
                     variant="dark"
-                    className="border-[#4e324c]"
+                    className="border-brand-purple"
                   />
 
                   {/* Chart Movement Summary */}
-                  <Card className="border-[#4e324c]">
+                  <Card className="border-brand-purple">
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2 text-white text-sm">
                         <BarChart3 className="h-4 w-4" />
@@ -377,7 +377,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                   </Card>
                 </div>
               ) : (
-                <Card className="border-[#4e324c]">
+                <Card className="border-brand-purple">
                   <CardContent className="p-12 text-center">
                     <BarChart3 className="h-10 w-10 text-white/50 mx-auto mb-4" />
                     <h3 className="text-sm font-semibold text-white/70 mb-2">No Chart Activity</h3>
@@ -391,7 +391,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
               {changes.filter((c: GameChange) => c.type === 'project_complete' || c.type === 'song_release').length > 0 ? (
                 <div className="grid gap-4">
                   {changes.filter((c: GameChange) => c.type === 'project_complete' || c.type === 'song_release').map((change: GameChange, index: number) => (
-                    <Card key={index} className="border-[#4e324c] hover:shadow-md transition-shadow">
+                    <Card key={index} className="border-brand-purple hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
@@ -429,7 +429,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           /* Empty state for no results */
           <Card>
             <CardContent className="p-12 text-center">
-              <div className="p-4 bg-[#3c252d]/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <div className="p-4 bg-brand-dark-card/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-white/50" />
               </div>
               <h3 className="text-base font-semibold text-white/70 mb-2">No Results Available</h3>
@@ -440,13 +440,13 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       </div>
 
       {/* Footer */}
-      <div className="px-8 py-6 border-t border-[#4e324c] bg-[#3c252d]/20">
+      <div className="px-8 py-6 border-t border-brand-purple bg-brand-dark-card/20">
         <div className="max-w-md mx-auto">
           <Button
             onClick={onAdvanceWeek}
             disabled={isAdvancing}
             size="lg"
-            className="w-full bg-[#A75A5B] hover:bg-[#A75A5B]/80 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+            className="w-full bg-brand-burgundy hover:bg-brand-burgundy/80 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
           >
             {isAdvancing ? (
               <span className="flex items-center justify-center">

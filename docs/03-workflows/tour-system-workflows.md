@@ -14,7 +14,7 @@ The Tour System enables players to book live performances for their artists, fro
 ## 📋 **Tour System Components**
 
 ### **Frontend Components**
-- `LivePerformanceModal.tsx` (862 lines) - Tour creation interface
+- `LivePerformancePage.tsx` (961 lines) - Tour creation interface
 - `ActiveTours.tsx` (878 lines) - Tour management and analytics
 - `useGameStore` - State management for tours
 
@@ -31,12 +31,12 @@ The Tour System enables players to book live performances for their artists, fro
 
 ## 🎪 **User Journey: Creating a Tour**
 
-### **Phase 1: Tour Planning (LivePerformanceModal)**
+### **Phase 1: Tour Planning (LivePerformancePage)**
 
 ```
 User clicks "Live Performance" button
     ↓
-Modal opens with venue access display
+Page opens with venue access display
     ↓
 User selects performance type:
     • Single Show (1 night, 1 city)

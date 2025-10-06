@@ -151,10 +151,10 @@ export function BugReportModal({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (!isSubmitting ? onOpenChange(next) : undefined)}>
-      <DialogContent className="max-w-xl bg-[#23121c] border-[#4e324c] text-white">
-        <DialogHeader className="border-b border-[#4e324c] pb-3">
+      <DialogContent className="max-w-xl bg-brand-dark-card border-brand-purple text-white">
+        <DialogHeader className="border-b border-brand-purple pb-3">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Bug className="h-5 w-5 text-[#A75A5B]" />
+            <Bug className="h-5 w-5 text-brand-burgundy" />
             Report a Bug
           </DialogTitle>
           <DialogDescription className="text-xs text-white/70">
@@ -166,14 +166,14 @@ export function BugReportModal({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="bug-summary" className="text-sm text-gray-200">
-                Short summary <span className="text-[#A75A5B]">*</span>
+                Short summary <span className="text-brand-burgundy">*</span>
               </Label>
               <Input
                 id="bug-summary"
                 value={formValues.summary}
                 onChange={(event) => handleChange("summary")(event.target.value)}
                 placeholder="e.g. Artist roster fails to load"
-                className="bg-[#2C222A] border-[#4e324c] text-white placeholder:text-white/40"
+                className="bg-brand-dark-card border-brand-purple text-white placeholder:text-white/40"
                 disabled={isSubmitting}
               />
               {errors.summary && <p className="text-xs text-red-400">{errors.summary}</p>}
@@ -181,13 +181,13 @@ export function BugReportModal({
 
             <div className="space-y-2">
               <Label className="text-sm text-gray-200">
-                Severity <span className="text-[#A75A5B]">*</span>
+                Severity <span className="text-brand-burgundy">*</span>
               </Label>
               <Select value={formValues.severity} onValueChange={handleChange("severity")} disabled={isSubmitting}>
-                <SelectTrigger className="bg-[#2C222A] border-[#4e324c] text-white">
+                <SelectTrigger className="bg-brand-dark-card border-brand-purple text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2C222A] border-[#4e324c]">
+                <SelectContent className="bg-brand-dark-card border-brand-purple">
                   {severityOptions.map((option) => (
                     <SelectItem key={option} value={option} className="text-white">
                       {option === "low" && "Low — Cosmetic or minor inconvenience"}
@@ -203,13 +203,13 @@ export function BugReportModal({
 
             <div className="space-y-2">
               <Label className="text-sm text-gray-200">
-                Where you saw it <span className="text-[#A75A5B]">*</span>
+                Where you saw it <span className="text-brand-burgundy">*</span>
               </Label>
               <Select value={formValues.area} onValueChange={handleChange("area")} disabled={isSubmitting}>
-                <SelectTrigger className="bg-[#2C222A] border-[#4e324c] text-white">
+                <SelectTrigger className="bg-brand-dark-card border-brand-purple text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2C222A] border-[#4e324c]">
+                <SelectContent className="bg-brand-dark-card border-brand-purple">
                   {areaOptions.map((option) => (
                     <SelectItem key={option} value={option} className="text-white">
                       {option === "gameplay" && "Gameplay / systems"}
@@ -227,13 +227,13 @@ export function BugReportModal({
 
             <div className="space-y-2">
               <Label className="text-sm text-gray-200">
-                How often does it happen? <span className="text-[#A75A5B]">*</span>
+                How often does it happen? <span className="text-brand-burgundy">*</span>
               </Label>
               <Select value={formValues.frequency} onValueChange={handleChange("frequency")} disabled={isSubmitting}>
-                <SelectTrigger className="bg-[#2C222A] border-[#4e324c] text-white">
+                <SelectTrigger className="bg-brand-dark-card border-brand-purple text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2C222A] border-[#4e324c]">
+                <SelectContent className="bg-brand-dark-card border-brand-purple">
                   {frequencyOptions.map((option) => (
                     <SelectItem key={option} value={option} className="text-white">
                       {option === "once" && "Just once"}
@@ -249,7 +249,7 @@ export function BugReportModal({
 
           <div className="space-y-2">
             <Label htmlFor="bug-details" className="text-sm text-gray-200">
-              What happened? <span className="text-[#A75A5B]">*</span>
+              What happened? <span className="text-brand-burgundy">*</span>
             </Label>
             <Textarea
               id="bug-details"
@@ -257,7 +257,7 @@ export function BugReportModal({
               onChange={(event) => handleChange("whatHappened")(event.target.value)}
               placeholder="Tell us exactly what you observed, including any error text."
               rows={4}
-              className="bg-[#2C222A] border-[#4e324c] text-white placeholder:text-white/40 resize-none"
+              className="bg-brand-dark-card border-brand-purple text-white placeholder:text-white/40 resize-none"
               disabled={isSubmitting}
             />
             {errors.whatHappened && <p className="text-xs text-red-400">{errors.whatHappened}</p>}
@@ -275,7 +275,7 @@ export function BugReportModal({
 2) Click...
 3) Observe..."
               rows={3}
-              className="bg-[#2C222A] border-[#4e324c] text-white placeholder:text-white/40 resize-none"
+              className="bg-brand-dark-card border-brand-purple text-white placeholder:text-white/40 resize-none"
               disabled={isSubmitting}
             />
             {errors.stepsToReproduce && <p className="text-xs text-red-400">{errors.stepsToReproduce}</p>}
@@ -291,7 +291,7 @@ export function BugReportModal({
                 value={formValues.expectedResult}
                 onChange={(event) => handleChange("expectedResult")(event.target.value)}
                 rows={3}
-                className="bg-[#2C222A] border-[#4e324c] text-white placeholder:text-white/40 resize-none"
+                className="bg-brand-dark-card border-brand-purple text-white placeholder:text-white/40 resize-none"
                 disabled={isSubmitting}
               />
               {errors.expectedResult && <p className="text-xs text-red-400">{errors.expectedResult}</p>}
@@ -306,7 +306,7 @@ export function BugReportModal({
                 value={formValues.additionalContext}
                 onChange={(event) => handleChange("additionalContext")(event.target.value)}
                 rows={3}
-                className="bg-[#2C222A] border-[#4e324c] text-white placeholder:text-white/40 resize-none"
+                className="bg-brand-dark-card border-brand-purple text-white placeholder:text-white/40 resize-none"
                 disabled={isSubmitting}
               />
               {errors.additionalContext && <p className="text-xs text-red-400">{errors.additionalContext}</p>}
@@ -323,7 +323,7 @@ export function BugReportModal({
               value={formValues.contactEmail}
               onChange={(event) => handleChange("contactEmail")(event.target.value)}
               placeholder="We'll reach out if we need clarification."
-              className="bg-[#2C222A] border-[#4e324c] text-white placeholder:text-white/40"
+              className="bg-brand-dark-card border-brand-purple text-white placeholder:text-white/40"
               disabled={isSubmitting}
             />
             {errors.contactEmail && <p className="text-xs text-red-400">{errors.contactEmail}</p>}
@@ -344,7 +344,7 @@ export function BugReportModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="bg-[#2C222A] border-[#4e324c] text-white hover:bg-[#3c252d]"
+              className="bg-brand-dark-card border-brand-purple text-white hover:bg-brand-dark-card"
             >
               Cancel
             </Button>
@@ -352,7 +352,7 @@ export function BugReportModal({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !formValues.summary.trim() || !formValues.whatHappened.trim()}
-              className="bg-[#A75A5B] hover:bg-[#D99696] text-white"
+              className="bg-brand-burgundy hover:bg-brand-rose text-white"
             >
               {isSubmitting ? "Sending..." : "Submit bug"}
             </Button>

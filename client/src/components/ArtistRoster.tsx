@@ -83,7 +83,7 @@ export function ArtistRoster() {
               <Button
                 onClick={() => setShowDiscoveryModal(true)}
                 size="sm"
-                className="bg-[#791014] text-white hover:bg-[#A75A5B] transition-colors"
+                className="bg-brand-burgundy-dark text-white hover:bg-brand-burgundy transition-colors"
               >
                 <i className="fas fa-search mr-1"></i>
                 Scouted Artists
@@ -122,7 +122,7 @@ export function ArtistRoster() {
                   <Button
                     onClick={() => setShowDiscoveryModal(true)}
                     size="sm"
-                    className="bg-[#791014] text-white hover:bg-[#A75A5B] transition-colors"
+                    className="bg-brand-burgundy-dark text-white hover:bg-brand-burgundy transition-colors"
                   >
                     <i className="fas fa-plus mr-1"></i>
                     Scouted Artists ({3 - artists.length} slots available)

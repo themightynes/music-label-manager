@@ -23,14 +23,14 @@ export function ActiveRecordingSessions() {
 
   const getStatusBadgeClass = (stage: string) => {
     switch (stage) {
-      case 'planning': return 'bg-[#65557c] text-white';
+      case 'planning': return 'bg-brand-purple-light text-white';
       case 'writing': return 'bg-warning text-white';
-      case 'recording': return 'bg-[#A75A5B] text-white';
+      case 'recording': return 'bg-brand-burgundy text-white';
       case 'recorded': return 'bg-green-500 text-white';
       case 'production': return 'bg-warning text-white';
-      case 'marketing': return 'bg-[#A75A5B] text-white';
+      case 'marketing': return 'bg-brand-burgundy text-white';
       case 'released': return 'bg-success text-white';
-      default: return 'bg-[#65557c] text-white';
+      default: return 'bg-brand-purple-light text-white';
     }
   };
 
@@ -89,7 +89,7 @@ export function ActiveRecordingSessions() {
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-semibold text-white flex items-center">
-            <i className="fas fa-microphone text-[#A75A5B] mr-2"></i>
+            <i className="fas fa-microphone text-brand-burgundy mr-2"></i>
             Recording Sessions
           </h3>
           <div className="flex items-center space-x-2">
@@ -99,7 +99,7 @@ export function ActiveRecordingSessions() {
             <Button
               size="sm"
               onClick={handleNavigateToRecordingSession}
-              className="bg-[#A75A5B] hover:bg-[#8a4a4b] text-white text-xs px-3 py-1.5"
+              className="bg-brand-burgundy hover:bg-brand-burgundy text-white text-xs px-3 py-1.5"
             >
               + Recording Session
             </Button>
@@ -107,12 +107,12 @@ export function ActiveRecordingSessions() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 mb-4 bg-[#3c252d]/30 p-1 rounded-lg">
+        <div className="flex space-x-1 mb-4 bg-brand-dark-card/30 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab('active')}
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
               activeTab === 'active'
-                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
                 : 'text-white/70 hover:text-white'
             }`}
           >
@@ -127,7 +127,7 @@ export function ActiveRecordingSessions() {
             onClick={() => setActiveTab('completed')}
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
               activeTab === 'completed'
-                ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
                 : 'text-white/70 hover:text-white'
             }`}
           >
@@ -154,7 +154,7 @@ export function ActiveRecordingSessions() {
             </div>
           ) : (
             currentRecordingSessions.map(project => (
-              <div key={project.id} className="border border-[#4e324c] rounded-lg p-3">
+              <div key={project.id} className="border border-brand-purple rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <h4 className="font-medium text-white text-sm">{project.title}</h4>
@@ -186,7 +186,7 @@ export function ActiveRecordingSessions() {
                     const songsRecorded = project.songsCreated || project.songCount || 0;
 
                     return (
-                      <div className="pt-2 border-t border-[#4e324c] space-y-1">
+                      <div className="pt-2 border-t border-brand-purple space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Songs Recorded</span>
                           <span className="font-mono text-green-600">
@@ -203,7 +203,7 @@ export function ActiveRecordingSessions() {
 
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-white/50">Songs Released</span>
-                          <span className="font-mono text-[#A75A5B]">
+                          <span className="font-mono text-brand-burgundy">
                             {releasedSongs.length} song{releasedSongs.length !== 1 ? 's' : ''}
                           </span>
                         </div>

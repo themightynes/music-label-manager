@@ -1,1 +1,75 @@
-[]
+[
+  {
+    "id": "2f3c368f-26cf-4fc2-a208-f6a4a48090ab",
+    "submittedAt": "2025-10-04T23:42:09.146Z",
+    "summary": "Plan-Release Calendar Issues",
+    "severity": "medium",
+    "area": "gameplay",
+    "frequency": "always",
+    "status": "completed",
+    "whatHappened": "In /plan-release both the single and EP release timings allows the user to select weeks that are the current or even previous weeks, which could cause isses.",
+    "stepsToReproduce": "1. Click Plan Release in sidebar\n2. Select Artist and Songs\n3. Scroll down Release Timing",
+    "expectedResult": "Not allowed to pick weeks that match the current game week we are in or previous weeks.",
+    "additionalContext": null,
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "a83dd485-367f-4c82-9294-c7307659b888",
+      "currentWeek": 23,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/plan-release",
+      "screen": {
+        "width": 1670,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    },
+    "resolution": {
+      "resolvedAt": "2025-10-05T00:00:00.000Z",
+      "resolvedBy": "Claude Code",
+      "fixDescription": "Added client-side and server-side week validation to prevent selecting current or past weeks. MusicCalendar components now use minWeek={currentWeek + 1}, and server validates scheduledReleaseWeek and leadSingleReleaseWeek must be > currentWeek.",
+      "filesModified": [
+        "client/src/pages/PlanReleasePage.tsx",
+        "server/routes.ts"
+      ]
+    }
+  },
+  {
+    "id": "93627957-6e4e-4e1e-8766-e0a608d40635",
+    "submittedAt": "2025-10-04T22:49:20.043Z",
+    "summary": "Tour complete. Email shows zero revenue.",
+    "severity": "low",
+    "area": "ui",
+    "frequency": "intermittent",
+    "status": "completed",
+    "whatHappened": "When the tour finishes, there is an email that gets sent that says \"Tour Metrics\". When you go and open the email, there is a box that says \"Revenue\" and it shows up as zero.",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": null,
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "a83dd485-367f-4c82-9294-c7307659b888",
+      "currentWeek": 20,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/",
+      "screen": {
+        "width": 1670,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    }
+  }
+]

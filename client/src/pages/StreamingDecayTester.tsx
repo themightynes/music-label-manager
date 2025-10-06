@@ -587,7 +587,7 @@ export default function StreamingDecayTester() {
                 <CardTitle className="flex items-center space-x-2">
                   <BarChart3 className="w-5 h-5" />
                   <span>8-Week Streaming Progression</span>
-                  {isCalculating && <Loader2 className="w-4 h-4 animate-spin text-[#A75A5B]" />}
+                  {isCalculating && <Loader2 className="w-4 h-4 animate-spin text-brand-burgundy" />}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -602,7 +602,7 @@ export default function StreamingDecayTester() {
                   </div>
                 ) : isCalculating && testResults.length === 0 ? (
                   <div className="text-center py-8">
-                    <Loader2 className="w-8 h-8 text-[#A75A5B] mx-auto mb-4 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
                     <p className="text-white/70">Calculating streaming progression...</p>
                   </div>
                 ) : testResults.length === 0 ? (
@@ -641,7 +641,7 @@ export default function StreamingDecayTester() {
                             <div className="w-12 text-xs text-white/70 text-right">
                               Week {result.week}
                             </div>
-                            <div className="flex-1 relative h-8 bg-[#23121c] rounded">
+                            <div className="flex-1 relative h-8 bg-brand-dark-card rounded">
                               {/* Without Marketing Bar (Gray) */}
                               <div
                                 className="absolute left-0 top-0 h-full bg-gray-500/60 rounded transition-all"
@@ -690,7 +690,7 @@ export default function StreamingDecayTester() {
                     </div>
 
                     {/* Summary Stats */}
-                    <div className="mt-6 p-4 bg-[#23121c]/50 rounded-lg">
+                    <div className="mt-6 p-4 bg-brand-dark-card/50 rounded-lg">
                       <h4 className="text-sm font-semibold text-white/90 mb-3">8-Week Summary</h4>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>

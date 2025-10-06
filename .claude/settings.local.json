@@ -62,7 +62,10 @@
       "SlashCommand(/onboard)",
       "Bash(cat:*)",
       "Bash(PORT=3000 npm run dev)",
-      "Bash(magick identify:*)"
+      "Bash(magick identify:*)",
+      "Bash(npx motion-primitives@latest add:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(printf \"N\\nN\\nN\\n\")"
     ],
     "deny": [],
     "ask": [],
@@ -72,6 +75,7 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "browsermcp"
+    "browsermcp",
+    "shadcn"
   ]
 }

@@ -8,6 +8,7 @@ import { ArtistCard as RichArtistCard, getArchetypeInfo, getRelationshipStatus }
 import { useGameStore } from '../store/gameStore';
 import { usePortfolioROI, useArtistROI } from '../hooks/useAnalytics';
 import { generateArtistSlug } from '../utils/artistSlug';
+import { Card, CardContent } from '../components/ui/card';
 import {
   Menubar,
   MenubarContent,
@@ -149,7 +150,7 @@ const ArtistsLandingPage: React.FC = () => {
             {availableSlots > 0 && (
               <button
                 onClick={handleDiscoverArtists}
-                className="bg-[#A75A5B] hover:bg-[#B86B6C] text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
+                className="bg-brand-burgundy hover:bg-brand-burgundy-light text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
               >
                 <UserPlus className="w-5 h-5" />
                 Scouted Artists
@@ -158,9 +159,10 @@ const ArtistsLandingPage: React.FC = () => {
           </div>
 
         {/* Analytics Overview */}
-        <div className="bg-[#23121c] rounded-[10px] shadow-lg border border-[#4e324c] p-4 md:p-6">
+        <Card>
+          <CardContent className="p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-[#3c252d]/[0.66] border border-[#65557c] rounded-lg p-6">
+          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-300 text-sm font-medium">Total Artists</p>
@@ -171,7 +173,7 @@ const ArtistsLandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-[#3c252d]/[0.66] border border-[#65557c] rounded-lg p-6">
+          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-300 text-sm font-medium">Portfolio Revenue</p>
@@ -190,7 +192,7 @@ const ArtistsLandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-[#3c252d]/[0.66] border border-[#65557c] rounded-lg p-6">
+          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-300 text-sm font-medium">Average ROI</p>
@@ -209,7 +211,7 @@ const ArtistsLandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-[#3c252d]/[0.66] border border-[#65557c] rounded-lg p-6">
+          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-300 text-sm font-medium">Success Rate</p>
@@ -220,23 +222,25 @@ const ArtistsLandingPage: React.FC = () => {
             </div>
           </div>
           </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Signed Artists Grid */}
-        <div className="bg-[#23121c] rounded-[10px] shadow-lg border border-[#4e324c] p-4 md:p-6">
+        <Card>
+          <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-white">Signed Artists</h2>
             <p className="text-gray-400">{signedArtists.length} of {maxArtists} artists signed</p>
           </div>
 
           {signedArtists.length === 0 ? (
-            <div className="bg-[#3c252d]/[0.66] border border-[#65557c] rounded-lg p-12 text-center">
+            <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-12 text-center">
               <Users className="w-16 h-16 text-gray-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">No Artists Signed</h3>
               <p className="text-gray-400 mb-6">Start building your roster by scouting talent</p>
               <button
                 onClick={handleDiscoverArtists}
-                className="bg-[#A75A5B] hover:bg-[#B86B6C] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="bg-brand-burgundy hover:bg-brand-burgundy-light text-white px-6 py-3 rounded-lg font-medium transition-colors"
               >
                 Scouted Artists
               </button>
@@ -250,13 +254,13 @@ const ArtistsLandingPage: React.FC = () => {
                 const isExpanded = expandedArtist === artist.id;
 
                 return (
-                  <div key={artist.id} className="border border-[#4e324c] rounded-lg p-4 bg-[#23121c]">
+                  <Card key={artist.id} className="p-4">
                     <div className="flex items-center space-x-4">
                       {/* Avatar and Meet button column */}
                       <div className="flex-shrink-0 flex flex-col items-center justify-center space-y-2">
                         {/* Avatar Box */}
                         <div
-                          className="w-24 h-32 bg-[#8B6B70] border border-[#65557c] rounded-lg overflow-hidden relative cursor-pointer hover:bg-[#9B7B80] transition-colors"
+                          className="w-24 h-32 bg-brand-mauve border border-brand-purple-light rounded-lg overflow-hidden relative cursor-pointer hover:bg-brand-mauve-light transition-colors"
                           onClick={() => handleNavigateToArtist(artist)}
                         >
                           <img
@@ -273,35 +277,35 @@ const ArtistsLandingPage: React.FC = () => {
                         </div>
 
                         {/* Artist Actions Menubar */}
-                        <Menubar className="w-24 h-8 p-0 bg-[#A75A5B] border-[#65557c] rounded-lg">
+                        <Menubar className="w-24 h-8 p-0 bg-brand-burgundy border-brand-purple-light rounded-lg">
                           <MenubarMenu>
-                            <MenubarTrigger className="w-full h-full text-xs text-white px-2 py-1 hover:bg-[#B86B6C] data-[state=open]:bg-[#B86B6C] data-[state=open]:text-white justify-center rounded-lg">
+                            <MenubarTrigger className="w-full h-full text-xs text-white px-2 py-1 hover:bg-brand-burgundy-light data-[state=open]:bg-brand-burgundy-light data-[state=open]:text-white justify-center rounded-lg">
                               Actions
                             </MenubarTrigger>
-                            <MenubarContent className="bg-[#23121c] border-[#4e324c] text-white">
+                            <MenubarContent className="bg-brand-dark-card border-brand-purple text-white">
                               <MenubarItem
-                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
                                 onClick={() => handleMeetArtist(artist)}
                               >
                                 <CalendarDays className="w-4 h-4 mr-2 text-gray-300" />
                                 Meet
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
                                 onClick={() => handlePlanTour(artist)}
                               >
                                 <Mic className="w-4 h-4 mr-2 text-gray-300" />
                                 Tour
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
                                 onClick={() => handleStartRecording(artist)}
                               >
                                 <Disc3 className="w-4 h-4 mr-2 text-gray-300" />
                                 Record
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-[#A75A5B] hover:text-white cursor-pointer focus:bg-[#A75A5B] focus:text-white"
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
                                 onClick={() => handlePlanRelease(artist)}
                               >
                                 <Rocket className="w-4 h-4 mr-2 text-gray-300" />
@@ -327,12 +331,13 @@ const ArtistsLandingPage: React.FC = () => {
                         />
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Artist Discovery Modal */}
         {isDiscoveryModalOpen && gameState && (

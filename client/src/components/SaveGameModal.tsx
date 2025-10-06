@@ -165,14 +165,14 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader className="border-b border-[#4e324c] pb-4">
+        <DialogHeader className="border-b border-brand-purple pb-4">
           <DialogTitle className="text-lg font-semibold text-white">Save & Load Game</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-4">
           {/* Existing saves */}
           {(saves as any[]).map((save: any) => (
-            <div key={save.id} className="border border-[#4e324c] rounded-lg p-4 hover:bg-[#A75A5B]/10">
+            <div key={save.id} className="border border-brand-purple rounded-lg p-4 hover:bg-brand-burgundy/10">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-white">{save.name}</div>
@@ -209,7 +209,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
           {/* Empty slots */}
           {Array.from({ length: Math.max(0, 3 - (saves as any[]).length) }).map((_, index) => (
-            <div key={`empty-${index}`} className="border-2 border-dashed border-[#4e324c] rounded-lg p-4 text-center">
+            <div key={`empty-${index}`} className="border-2 border-dashed border-brand-purple rounded-lg p-4 text-center">
               <i className="fas fa-plus text-white/50 text-xl mb-2"></i>
               <p className="text-sm text-white/50">Empty Slot</p>
             </div>
@@ -226,19 +226,19 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
             <Button
               onClick={handleSave}
               disabled={!newSaveName.trim() || saving}
-              className="w-full bg-[#A75A5B] text-white hover:bg-[#8B4A6C]"
+              className="w-full bg-brand-burgundy text-white hover:bg-brand-burgundy"
             >
               {saving ? 'Saving...' : 'Save Game'}
             </Button>
           </div>
         </div>
 
-        <div className="p-6 border-t border-[#4e324c] flex justify-between">
+        <div className="p-6 border-t border-brand-purple flex justify-between">
           <div className="flex space-x-3">
             <Button
               variant="ghost"
               onClick={handleExport}
-              className="text-[#A75A5B] hover:text-[#8B4A6C] font-medium"
+              className="text-brand-burgundy hover:text-brand-burgundy font-medium"
             >
               Export JSON
             </Button>

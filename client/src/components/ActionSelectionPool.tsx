@@ -181,7 +181,7 @@ export function ActionSelectionPool({
                   </Badge>
                 )}
                 {category.recommendedCount > 0 && (
-                  <Badge variant="default" className="text-xs px-1 bg-[#5AA75A] text-white">
+                  <Badge variant="default" className="text-xs px-1 bg-[green-500] text-white">
                     {category.recommendedCount}
                   </Badge>
                 )}
@@ -194,7 +194,7 @@ export function ActionSelectionPool({
         {categoryStats.map((category) => (
           <TabsContent key={category.key} value={category.key} className="space-y-4">
             <div className="flex items-center space-x-2 text-sm text-white/70">
-              <i className={`${category.icon} text-[#A75A5B]`}></i>
+              <i className={`${category.icon} text-brand-burgundy`}></i>
               <span>{category.description}</span>
               <Badge variant="secondary" className="text-xs">
                 {category.totalCount} action{category.totalCount !== 1 ? 's' : ''}

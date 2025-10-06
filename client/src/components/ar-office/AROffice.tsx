@@ -239,7 +239,7 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Music className="w-5 h-5 text-[#A75A5B]" />
+            <Music className="w-5 h-5 text-brand-burgundy" />
             A&R Office
           </span>
           <FocusSlotStatus

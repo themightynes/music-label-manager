@@ -14,20 +14,26 @@ export const gameEndpoints = {
   getGame: '/api/games/:gameId',
   createGame: '/api/games',
   saveGame: '/api/games/:gameId',
-  
+
   // Game actions
   advanceWeek: '/api/games/:gameId/advance-week',
   selectActions: '/api/games/:gameId/actions',
-  
+
   // Game resources
   getArtists: '/api/games/:gameId/artists',
   getProjects: '/api/games/:gameId/projects',
   getRoles: '/api/games/:gameId/roles',
-  
+
   // Dialogues
   getDialogue: '/api/games/:gameId/dialogues/:dialogueId',
   selectChoice: '/api/games/:gameId/dialogues/:dialogueId/choices/:choiceId',
 };
+
+// Bug report endpoints
+export const bugEndpoints = {
+  list: '/api/bug-reports',
+  updateStatus: '/api/bug-reports/:id/status',
+} as const;
 
 // Action schema for consistency
 export const ActionSchema = z.object({
@@ -42,6 +48,8 @@ export const bugSeverityEnum = z.enum(['low', 'medium', 'high', 'critical'] as c
 export const bugAreaEnum = z.enum(['gameplay', 'ui', 'audio', 'performance', 'data', 'other'] as const);
 // HARDCODED: Revisit frequency values after gathering telemetry
 export const bugFrequencyEnum = z.enum(['once', 'intermittent', 'always'] as const);
+// HARDCODED: Expand status taxonomy if workflow requires additional states (e.g., 'duplicate', 'wont_fix')
+export const bugStatusEnum = z.enum(['new', 'in_review', 'completed'] as const);
 
 export const BugReportRequestSchema = z.object({
   summary: z.string().min(6).max(200),
@@ -72,6 +80,55 @@ export const BugReportResponseSchema = z.object({
   success: z.boolean(),
   reportId: z.string().uuid(),
   message: z.string().optional()
+});
+
+export const BugReportRecordSchema = z.object({
+  id: z.string().uuid(),
+  submittedAt: z.string(),
+  summary: z.string(),
+  severity: bugSeverityEnum,
+  area: bugAreaEnum,
+  frequency: bugFrequencyEnum,
+  status: bugStatusEnum.default('new'),
+  whatHappened: z.string(),
+  stepsToReproduce: z.string().nullable(),
+  expectedResult: z.string().nullable(),
+  additionalContext: z.string().nullable(),
+  reporter: z.object({
+    userId: z.string(),
+    clerkUserId: z.string().nullable(),
+    contactEmail: z.string().nullable()
+  }),
+  metadata: z.object({
+    gameId: z.string().optional(),
+    currentWeek: z.number().int().optional(),
+    userAgent: z.string().optional(),
+    platform: z.string().optional(),
+    language: z.string().optional(),
+    timeZone: z.string().optional(),
+    url: z.string().optional(),
+    screen: z.object({
+      width: z.number().optional(),
+      height: z.number().optional()
+    }).optional(),
+    ip: z.string().optional()
+  }).partial()
+});
+
+export const BugReportListResponseSchema = z.object({
+  success: z.boolean(),
+  reports: z.array(BugReportRecordSchema),
+  count: z.number()
+});
+
+export const BugReportStatusUpdateRequestSchema = z.object({
+  status: bugStatusEnum
+});
+
+export const BugReportStatusUpdateResponseSchema = z.object({
+  success: z.boolean(),
+  reportId: z.string().uuid(),
+  status: bugStatusEnum
 });
 
 // Game state request/response schemas
@@ -196,6 +253,11 @@ export type ErrorResponse = z.infer<typeof ErrorResponse>;
 export type GameEndpoints = typeof gameEndpoints;
 export type BugReportRequest = z.infer<typeof BugReportRequestSchema>;
 export type BugReportResponse = z.infer<typeof BugReportResponseSchema>;
+export type BugReportRecord = z.infer<typeof BugReportRecordSchema>;
+export type BugReportListResponse = z.infer<typeof BugReportListResponseSchema>;
+export type BugReportStatus = z.infer<typeof bugStatusEnum>;
+export type BugReportStatusUpdateRequest = z.infer<typeof BugReportStatusUpdateRequestSchema>;
+export type BugReportStatusUpdateResponse = z.infer<typeof BugReportStatusUpdateResponseSchema>;
 
 // Backward compatibility - keep existing routes for now
 export const API_ROUTES = {

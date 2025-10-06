@@ -145,33 +145,33 @@ export function MetricsDashboard() {
   const getPlaylistTierColor = () => {
     const currentTier = getCurrentTier('playlist');
     switch (currentTier.level) {
-      case 0: return 'bg-[#65557c] text-white';
+      case 0: return 'bg-brand-purple-light text-white';
       case 1: return 'bg-green-500 text-white';
-      case 2: return 'bg-[#A75A5B]/100 text-white';
-      case 3: return 'bg-[#791014] text-white';
-      default: return 'bg-[#65557c] text-white';
+      case 2: return 'bg-brand-burgundy/100 text-white';
+      case 3: return 'bg-brand-burgundy-dark text-white';
+      default: return 'bg-brand-purple-light text-white';
     }
   };
 
   const getPressTierColor = () => {
     const currentTier = getCurrentTier('press');
     switch (currentTier.level) {
-      case 0: return 'bg-[#65557c] text-white';
+      case 0: return 'bg-brand-purple-light text-white';
       case 1: return 'bg-green-500 text-white';
-      case 2: return 'bg-[#A75A5B]/100 text-white';
-      case 3: return 'bg-[#791014] text-white';
-      default: return 'bg-[#65557c] text-white';
+      case 2: return 'bg-brand-burgundy/100 text-white';
+      case 3: return 'bg-brand-burgundy-dark text-white';
+      default: return 'bg-brand-purple-light text-white';
     }
   };
 
   const getVenueTierColor = () => {
     const currentTier = getCurrentTier('venue');
     switch (currentTier.level) {
-      case 0: return 'bg-[#65557c] text-white';
+      case 0: return 'bg-brand-purple-light text-white';
       case 1: return 'bg-green-500 text-white';
-      case 2: return 'bg-[#A75A5B]/100 text-white';
-      case 3: return 'bg-[#791014] text-white';
-      default: return 'bg-[#65557c] text-white';
+      case 2: return 'bg-brand-burgundy/100 text-white';
+      case 3: return 'bg-brand-burgundy-dark text-white';
+      default: return 'bg-brand-purple-light text-white';
     }
   };
 
@@ -350,16 +350,16 @@ export function MetricsDashboard() {
   return (
     <TooltipProvider>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="bg-[#23121c] rounded-[10px] shadow-lg border border-[#4e324c] p-4 md:p-6 mb-6">
+        <div className="bg-brand-dark-card/50 rounded-[10px] shadow-lg border border-brand-purple p-4 md:p-6 mb-6">
         
         {/* Desktop Layout */}
         <div className="hidden lg:block">
           <div className="grid grid-cols-11 gap-6">
             
             {/* Core Status Section */}
-            <div className="col-span-3 bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
+            <div className="col-span-3 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
-                <i className="fas fa-tachometer-alt mr-2 text-[#A75A5B]"></i>
+                <i className="fas fa-tachometer-alt mr-2 text-brand-burgundy"></i>
                 Core Status
               </h3>
               <div className="grid grid-cols-3 gap-3">
@@ -380,14 +380,14 @@ export function MetricsDashboard() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-[#A75A5B]">{gameState.creativeCapital || 0}</div>
+                  <div className="text-lg font-bold text-brand-burgundy">{gameState.creativeCapital || 0}</div>
                   <div className="text-xs text-white/50">Creative Capital</div>
                 </div>
               </div>
             </div>
 
             {/* Weekly Performance Section */}
-            <div className="col-span-5 bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
+            <div className="col-span-5 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
                 <i className="fas fa-chart-line mr-2 text-green-600"></i>
                 Weekly Performance
@@ -437,9 +437,9 @@ export function MetricsDashboard() {
             </div>
 
             {/* Access Tiers Section */}
-            <div className="col-span-3 bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
+            <div className="col-span-3 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
-                <i className="fas fa-trophy mr-2 text-[#791014]"></i>
+                <i className="fas fa-trophy mr-2 text-brand-burgundy-dark"></i>
                 Access Tiers
               </h3>
               <div className="grid grid-cols-3 gap-3">
@@ -470,20 +470,20 @@ export function MetricsDashboard() {
         <div className="hidden md:block lg:hidden">
           <div className="space-y-3">
             {/* Core Status Row */}
-            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
+            <div className="bg-brand-dark-card/[0.66] rounded-[8px] p-3 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
-                <i className="fas fa-tachometer-alt mr-2 text-[#A75A5B]"></i>
+                <i className="fas fa-tachometer-alt mr-2 text-brand-burgundy"></i>
                 Core Status
               </h3>
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded-lg">
+                <div className="text-center p-2 bg-brand-purple/20 rounded-lg">
                   <div className="text-lg font-bold text-white">{gameState.reputation || 0}</div>
                   <div className="text-xs text-white/50">Reputation</div>
                   <div className={`text-xs font-medium ${reputationChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {reputationChange >= 0 ? '+' : ''}{reputationChange}
                   </div>
                 </div>
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded-lg">
+                <div className="text-center p-2 bg-brand-purple/20 rounded-lg">
                   <div className="text-lg font-bold text-white">
                     {gameState.usedFocusSlots || 0}/{gameState.focusSlots || 3}
                   </div>
@@ -492,25 +492,25 @@ export function MetricsDashboard() {
                     {(gameState.focusSlots || 3) - (gameState.usedFocusSlots || 0)} available
                   </div>
                 </div>
-                <div className="text-center p-2 bg-[#A75A5B]/10 rounded-lg">
-                  <div className="text-lg font-bold text-[#A75A5B]">{gameState.creativeCapital || 0}</div>
+                <div className="text-center p-2 bg-brand-burgundy/10 rounded-lg">
+                  <div className="text-lg font-bold text-brand-burgundy">{gameState.creativeCapital || 0}</div>
                   <div className="text-xs text-white/50">Creative Capital</div>
                 </div>
               </div>
             </div>
 
             {/* Performance Row */}
-            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
+            <div className="bg-brand-dark-card/[0.66] rounded-[8px] p-3 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
                 <i className="fas fa-chart-line mr-2 text-green-600"></i>
                 Weekly Performance
               </h3>
               <div className="grid grid-cols-5 gap-2">
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded">
+                <div className="text-center p-2 bg-brand-purple/20 rounded">
                   <div className="text-base font-bold text-white">{stats.streams.toLocaleString()}</div>
                   <div className="text-xs text-white/50">plays</div>
                 </div>
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded">
+                <div className="text-center p-2 bg-brand-purple/20 rounded">
                   <div className="text-base font-bold text-white">{stats.pressMentions}</div>
                   <div className="text-xs text-white/50">press</div>
                 </div>
@@ -540,7 +540,7 @@ export function MetricsDashboard() {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded">
+                <div className="text-center p-2 bg-brand-purple/20 rounded">
                   <div className={`text-base font-bold ${netProfitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {netProfitLoss >= 0 ? '+' : ''}${netProfitLoss.toLocaleString()}
                   </div>
@@ -550,9 +550,9 @@ export function MetricsDashboard() {
             </div>
 
             {/* Impact Preview Row */}
-            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
+            <div className="bg-brand-dark-card/[0.66] rounded-[8px] p-3 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
-                <BarChart3 className="h-3.5 w-3.5 mr-2 text-[#D4A373]" />
+                <BarChart3 className="h-3.5 w-3.5 mr-2 text-brand-gold" />
                 Impact Preview
               </h3>
 
@@ -601,20 +601,20 @@ export function MetricsDashboard() {
         <div className="block md:hidden">
           <div className="space-y-3">
             {/* Core Status */}
-            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
+            <div className="bg-brand-dark-card/[0.66] rounded-[8px] p-3 border border-brand-purple-light">
               <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
-                <i className="fas fa-tachometer-alt mr-2 text-[#A75A5B]"></i>
+                <i className="fas fa-tachometer-alt mr-2 text-brand-burgundy"></i>
                 Core Status
               </h4>
               <div className="grid grid-cols-3 gap-2">
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded-lg">
+                <div className="text-center p-2 bg-brand-purple/20 rounded-lg">
                   <div className="text-base font-bold text-white">{gameState.reputation || 0}</div>
                   <div className="text-xs text-white/50">Reputation</div>
                   <div className={`text-xs font-medium ${reputationChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {reputationChange >= 0 ? '+' : ''}{reputationChange}
                   </div>
                 </div>
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded-lg">
+                <div className="text-center p-2 bg-brand-purple/20 rounded-lg">
                   <div className="text-base font-bold text-white">
                     {gameState.usedFocusSlots || 0}/{gameState.focusSlots || 3}
                   </div>
@@ -623,8 +623,8 @@ export function MetricsDashboard() {
                     {(gameState.focusSlots || 3) - (gameState.usedFocusSlots || 0)} left
                   </div>
                 </div>
-                <div className="text-center p-2 bg-[#A75A5B]/10 rounded-lg">
-                  <div className="text-base font-bold text-[#A75A5B]">{gameState.creativeCapital || 0}</div>
+                <div className="text-center p-2 bg-brand-burgundy/10 rounded-lg">
+                  <div className="text-base font-bold text-brand-burgundy">{gameState.creativeCapital || 0}</div>
                   <div className="text-xs text-white/50">Creative</div>
                   <div className="text-xs text-white/70">capital</div>
                 </div>
@@ -632,17 +632,17 @@ export function MetricsDashboard() {
             </div>
 
             {/* Performance Highlights */}
-            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
+            <div className="bg-brand-dark-card/[0.66] rounded-[8px] p-3 border border-brand-purple-light">
               <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
                 <i className="fas fa-chart-line mr-2 text-green-600"></i>
                 Performance
               </h4>
               <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded-lg">
+                <div className="text-center p-2 bg-brand-purple/20 rounded-lg">
                   <div className="text-base font-bold text-white">{stats.streams.toLocaleString()}</div>
                   <div className="text-xs text-white/50">total streams</div>
                 </div>
-                <div className="text-center p-2 bg-[#4e324c]/20 rounded-lg">
+                <div className="text-center p-2 bg-brand-purple/20 rounded-lg">
                   <div className={`text-base font-bold ${netProfitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {netProfitLoss >= 0 ? '+' : ''}${netProfitLoss.toLocaleString()}
                   </div>
@@ -682,9 +682,9 @@ export function MetricsDashboard() {
             </div>
 
             {/* Access Tiers Mobile */}
-            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-3 border border-[#65557c]">
+            <div className="bg-brand-dark-card/[0.66] rounded-[8px] p-3 border border-brand-purple-light">
               <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center">
-                <i className="fas fa-trophy mr-2 text-[#791014]"></i>
+                <i className="fas fa-trophy mr-2 text-brand-burgundy-dark"></i>
                 Access Tiers
               </h4>
               <div className="grid grid-cols-3 gap-2">
@@ -716,9 +716,9 @@ export function MetricsDashboard() {
         {/* Impact Preview - Bottom Section */}
         {selectedActions.length > 0 && (
           <div className="mt-4">
-            <div className="bg-[#3c252d]/[0.66] rounded-[8px] p-4 border border-[#65557c]">
+            <div className="bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
-                <BarChart3 className="h-3.5 w-3.5 mr-2 text-[#D4A373]" />
+                <BarChart3 className="h-3.5 w-3.5 mr-2 text-brand-gold" />
                 Executive Meetings Impact Preview
               </h3>
 

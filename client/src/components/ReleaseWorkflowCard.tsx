@@ -185,14 +185,14 @@ export function ReleaseWorkflowCard({
       case 'pre-campaign':
         return {
           icon: Clock,
-          color: 'text-white/50 bg-[#3c252d]/30',
+          color: 'text-white/50 bg-brand-dark-card/30',
           label: 'Campaign Planned',
           description: 'Release strategy ready to execute'
         };
       case 'lead-single-active':
         return {
           icon: Play,
-          color: 'text-[#A75A5B] bg-[#A75A5B]/20',
+          color: 'text-brand-burgundy bg-brand-burgundy/20',
           label: 'Lead Single Live',
           description: 'Building momentum for main release'
         };
@@ -327,16 +327,16 @@ export function ReleaseWorkflowCard({
         </h4>
         
         {trackBreakdown.leadSingle && (
-          <div className="p-3 bg-[#A75A5B]/10 border border-[#A75A5B]/20 rounded-lg">
+          <div className="p-3 bg-brand-burgundy/10 border border-brand-burgundy/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Star className="w-4 h-4 text-[#A75A5B]" />
+                <Star className="w-4 h-4 text-brand-burgundy" />
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="font-medium text-sm">{trackBreakdown.leadSingle.song.title}</span>
                     {renderChartBadge(trackBreakdown.leadSingle.song)}
                   </div>
-                  <div className="text-xs text-[#A75A5B]">Lead Single</div>
+                  <div className="text-xs text-brand-burgundy">Lead Single</div>
                 </div>
               </div>
               <div className="text-right">
@@ -351,7 +351,7 @@ export function ReleaseWorkflowCard({
           <div className="space-y-2">
             <div className="text-xs text-white/50 font-medium">All Tracks:</div>
             {trackBreakdown.mainTracks.slice(0, showDetailedAnalytics ? undefined : 3).map((track, index) => (
-              <div key={track.song.id} className="flex items-center justify-between p-2 bg-[#3c252d]/20 rounded">
+              <div key={track.song.id} className="flex items-center justify-between p-2 bg-brand-dark-card/20 rounded">
                 <div className="flex items-center space-x-2">
                   <span className="text-xs text-white/50 w-4">#{track.rank}</span>
                   <div>
@@ -400,28 +400,28 @@ export function ReleaseWorkflowCard({
         </h4>
         
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-2 bg-[#3c252d]/20 rounded">
+          <div className="p-2 bg-brand-dark-card/20 rounded">
             <div className="text-xs text-white/50">Campaign Effectiveness</div>
             <div className={`text-sm font-semibold ${effectivenessStyle.color.split(' ')[0]}`}>
               {effectivenessStyle.label}
             </div>
           </div>
           
-          <div className="p-2 bg-[#3c252d]/20 rounded">
+          <div className="p-2 bg-brand-dark-card/20 rounded">
             <div className="text-xs text-white/50">Cost Per Stream</div>
             <div className="text-sm font-mono font-semibold">
               ${performanceMetrics.costPerStream.toFixed(3)}
             </div>
           </div>
           
-          <div className="p-2 bg-[#3c252d]/20 rounded">
+          <div className="p-2 bg-brand-dark-card/20 rounded">
             <div className="text-xs text-white/50">Avg Revenue/Track</div>
             <div className="text-sm font-mono font-semibold">
               {formatCurrency(performanceMetrics.averageRevenuePerTrack)}
             </div>
           </div>
           
-          <div className="p-2 bg-[#3c252d]/20 rounded">
+          <div className="p-2 bg-brand-dark-card/20 rounded">
             <div className="text-xs text-white/50">Stream Distribution</div>
             <div className="text-sm font-semibold capitalize">
               {performanceMetrics.streamDistribution.replace('_', ' ')}
@@ -434,7 +434,7 @@ export function ReleaseWorkflowCard({
 
   return (
     <Card className={`transition-all ${
-      timeline.phase === 'lead-single-active' ? 'ring-2 ring-[#A75A5B]/20 bg-[#A75A5B]/10/30' : ''
+      timeline.phase === 'lead-single-active' ? 'ring-2 ring-brand-burgundy/20 bg-brand-burgundy/10/30' : ''
     }`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -458,7 +458,7 @@ export function ReleaseWorkflowCard({
 
       <CardContent className="space-y-4">
         {/* Phase Status */}
-        <div className="flex items-center justify-between p-3 bg-[#3c252d]/20 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-brand-dark-card/20 rounded-lg">
           <div>
             <div className="font-medium text-sm text-white">{phaseInfo.label}</div>
             <div className="text-xs text-white/70">{phaseInfo.description}</div>
@@ -495,14 +495,14 @@ export function ReleaseWorkflowCard({
                   ? 'bg-green-900/30 border border-green-600/40' 
                   : currentWeek === leadSingleStrategy.leadSingleReleaseWeek - 1
                   ? 'bg-amber-900/30 border border-amber-600/40'
-                  : 'bg-[#3c252d]/20'
+                  : 'bg-brand-dark-card/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                   currentWeek >= leadSingleStrategy.leadSingleReleaseWeek 
                     ? 'bg-green-600' 
                     : currentWeek === leadSingleStrategy.leadSingleReleaseWeek - 1
                     ? 'bg-amber-600'
-                    : 'bg-[#65557c]/60'
+                    : 'bg-brand-purple-light/60'
                 }`} />
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
@@ -529,14 +529,14 @@ export function ReleaseWorkflowCard({
                   ? 'bg-green-900/30 border border-green-600/40' 
                   : currentWeek === release.releaseWeek - 1
                   ? 'bg-amber-900/30 border border-amber-600/40'
-                  : 'bg-[#3c252d]/20'
+                  : 'bg-brand-dark-card/20'
               }`}>
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
                   currentWeek >= release.releaseWeek 
                     ? 'bg-green-600' 
                     : currentWeek === release.releaseWeek - 1
                     ? 'bg-amber-600'
-                    : 'bg-[#65557c]/60'
+                    : 'bg-brand-purple-light/60'
                 }`} />
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
@@ -557,7 +557,7 @@ export function ReleaseWorkflowCard({
 
         {/* Marketing Investment */}
         {release.marketingBudget && (
-          <div className="pt-2 border-t border-[#4e324c]">
+          <div className="pt-2 border-t border-brand-purple">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center space-x-2">
                 <TrendingUp className="w-4 h-4 text-white/70" />
@@ -587,10 +587,10 @@ export function ReleaseWorkflowCard({
         {isReleased && (
           <div className="space-y-4">
             {/* Basic Performance Metrics */}
-            <div className="pt-2 border-t border-[#4e324c]">
+            <div className="pt-2 border-t border-brand-purple">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="text-center">
-                  <div className="font-mono font-semibold text-[#A75A5B]">
+                  <div className="font-mono font-semibold text-brand-burgundy">
                     {formatStreams(actualTotalStreams)}
                   </div>
                   <div className="text-xs text-white/70">Total Streams</div>
@@ -611,7 +611,7 @@ export function ReleaseWorkflowCard({
             {renderTrackBreakdown()}
             
             {/* Detailed Analytics Toggle */}
-            <div className="pt-2 border-t border-[#4e324c]">
+            <div className="pt-2 border-t border-brand-purple">
               <button
                 onClick={() => setShowDetailedAnalytics(!showDetailedAnalytics)}
                 className="w-full text-sm text-white/70 hover:text-white flex items-center justify-center space-x-2 py-2"

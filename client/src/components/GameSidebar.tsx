@@ -186,10 +186,10 @@ export function GameSidebar({
             <img
               src="/logo4.png"
               alt="Music Label Manager"
-              className="h-8 w-auto"
+              className="h-8 w-auto object-contain group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
             />
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <div className="text-sm font-semibold text-sidebar-foreground">{(gameState as any)?.musicLabel?.name || 'Music Label'}</div>
+              <div className="text-sm font-heading font-semibold text-sidebar-foreground">{(gameState as any)?.musicLabel?.name || 'Music Label'}</div>
               <div className="flex items-center space-x-2 text-xs text-sidebar-foreground/70">
                 <span>
                   {(() => {
@@ -295,41 +295,42 @@ export function GameSidebar({
                     </SidebarMenuButton>
 
                     {((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) > 0 && (
-                      <HoverCard openDelay={300}>
-                        <HoverCardTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="ml-1 px-2 h-6 text-xs bg-burgundy-600/20 border-burgundy-400/30 hover:bg-burgundy-600/30"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAutoSelect();
-                            }}
-                            disabled={isAutoSelecting}
+                      <div className="ml-1 group-data-[collapsible=icon]:hidden">
+                        <HoverCard openDelay={300}>
+                          <HoverCardTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="px-2 h-6 text-xs bg-burgundy-600/20 border-burgundy-400/30 hover:bg-burgundy-600/30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAutoSelect();
+                              }}
+                              disabled={isAutoSelecting}
+                            >
+                              {isAutoSelecting ? (
+                                <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                              ) : (
+                                <Zap className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </HoverCardTrigger>
+                          <HoverCardContent
+                            side="right"
+                            className="w-48 bg-brand-dark border-burgundy-600/50 text-white shadow-xl"
                           >
-                            {isAutoSelecting ? (
-                              <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                              <Zap className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </HoverCardTrigger>
-                        <HoverCardContent
-                          side="right"
-                          className="w-48 border-burgundy-600/50 text-white shadow-xl"
-                          style={{ backgroundColor: '#1d0e18' }}
-                        >
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-3.5 w-3.5 text-yellow-400" />
-                              <span className="font-medium text-sm">AUTO</span>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Zap className="h-3.5 w-3.5 text-yellow-400" />
+                                <span className="font-medium text-sm">AUTO</span>
+                              </div>
+                              <p className="text-xs text-white/80">
+                                Smart-fills {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} slot{((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) !== 1 ? 's' : ''} with executives who need attention most.
+                              </p>
                             </div>
-                            <p className="text-xs text-white/80">
-                              Smart-fills {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} slot{((gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)) !== 1 ? 's' : ''} with executives who need attention most.
-                            </p>
-                          </div>
-                        </HoverCardContent>
-                      </HoverCard>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </div>
                     )}
                   </div>
                 </SidebarMenuItem>
@@ -496,8 +497,8 @@ export function GameSidebar({
                 appearance={{
                   elements: {
                     userButtonAvatarBox: 'h-10 w-10',
-                    userButtonTrigger: 'focus:ring-2 focus:ring-[#A75A5B] rounded-full transition-shadow',
-                    userButtonPopoverCard: 'bg-[#1A111A] text-white border border-white/10 shadow-xl',
+                    userButtonTrigger: 'focus:ring-2 focus:ring-brand-burgundy rounded-full transition-shadow',
+                    userButtonPopoverCard: 'bg-brand-dark text-white border border-white/10 shadow-xl',
                     userButtonPopoverFooter: 'hidden',
                   },
                 }}
@@ -534,7 +535,7 @@ export function GameSidebar({
           onClick={() => setShowWeekSummary(false)}
         >
           <div
-            className="bg-[#2C222A] border border-[#4e324c] rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            className="bg-brand-dark-card border border-brand-purple rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <WeekSummary
@@ -550,7 +551,7 @@ export function GameSidebar({
       {/* No Results Available Modal */}
       {showWeekSummary && !weeklyOutcome && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-[#2C222A] border border-[#4e324c] rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-brand-dark-card border border-brand-purple rounded-lg p-6 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="text-4xl mb-4">📊</div>
               <h3 className="text-lg font-semibold text-white mb-2">No Weekly Results</h3>
@@ -559,7 +560,7 @@ export function GameSidebar({
               </p>
               <Button
                 onClick={() => setShowWeekSummary(false)}
-                className="bg-[#A75A5B] hover:bg-[#D99696] text-white border-0"
+                className="bg-brand-burgundy hover:bg-brand-rose text-white border-0"
               >
                 Close
               </Button>

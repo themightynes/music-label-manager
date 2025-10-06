@@ -27,14 +27,14 @@ export function InboxWidget() {
             setOpen(true);
           }
         }}
-        className="group relative cursor-pointer border-[#4e324c]/80 bg-gradient-to-br from-[#28131d] via-[#221018] to-[#1b0e14] transition hover:border-[#A75A5B] focus:outline-none focus:ring-2 focus:ring-[#A75A5B] h-full flex flex-col"
+        className="group relative cursor-pointer border-brand-purple/80 bg-gradient-to-br from-brand-dark-mid via-brand-dark-mid to-brand-dark transition hover:border-brand-burgundy focus:outline-none focus:ring-2 focus:ring-brand-burgundy h-full flex flex-col"
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="flex items-center gap-2 text-xl">
-            <Inbox className="h-5 w-5 text-[#F6B5B6]" />
+            <Inbox className="h-5 w-5 text-brand-pink" />
             Inbox
           </CardTitle>
-          <Badge className="bg-[#A75A5B] text-white">
+          <Badge className="bg-brand-burgundy text-white">
             {unreadLoading ? '—' : `${unreadCount} unread`}
           </Badge>
         </CardHeader>
@@ -74,7 +74,7 @@ export function InboxWidget() {
             type="button"
             variant="secondary"
             size="sm"
-            className="bg-[#A75A5B] text-white hover:bg-[#c3747a]"
+            className="bg-brand-burgundy text-white hover:bg-brand-burgundy-light"
             onClick={(event) => {
               event.stopPropagation();
               setOpen(true);

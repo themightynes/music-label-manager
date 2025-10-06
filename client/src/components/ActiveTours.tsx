@@ -93,7 +93,7 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
   );
 
   return (
-    <div className="border border-[#4e324c] rounded-lg p-4">
+    <div className="border border-brand-purple rounded-lg p-4">
       {/* Tour Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -111,7 +111,7 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
             <select
               value={selectedTour.id}
               onChange={(e) => setSelectedTourId(e.target.value)}
-              className="bg-[#23121c] border border-[#4e324c] text-white text-xs px-2 py-1 rounded"
+              className="bg-brand-dark-card border border-brand-purple text-white text-xs px-2 py-1 rounded"
             >
               {allCompletedTours.map(tour => (
                 <option key={tour.id} value={tour.id}>
@@ -126,7 +126,7 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
       {/* Tour Table */}
       <Table>
         <TableHeader>
-          <TableRow className="border-[#4e324c]">
+          <TableRow className="border-brand-purple">
             <TableHead
               className="text-white/70 text-sm cursor-pointer hover:text-white"
               onClick={() => handleSort('city')}
@@ -159,7 +159,7 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
         <TableBody>
           {cities.length === 0 ? (
             <>
-              <TableRow className="border-[#4e324c]">
+              <TableRow className="border-brand-purple">
                 <TableCell colSpan={7} className="text-center py-8 text-white/50">
                   {selectedTour.stage === 'cancelled' ? (
                     <div>
@@ -177,7 +177,7 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
                 </TableCell>
               </TableRow>
               {selectedTour.stage === 'cancelled' && (
-                <TableRow className="border-t border-[#4e324c]">
+                <TableRow className="border-t border-brand-purple">
                   <TableCell className="text-white font-bold text-sm">TOTAL LOSS</TableCell>
                   <TableCell className="text-white/50 text-sm">-</TableCell>
                   <TableCell className="text-right text-white font-bold text-sm">
@@ -198,7 +198,7 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
           ) : (
             <>
               {sortedCities.map((city, index) => (
-                <TableRow key={city.cityNumber || index} className="border-[#4e324c]">
+                <TableRow key={city.cityNumber || index} className="border-brand-purple">
                   <TableCell className="text-white text-sm">
                     {city.cityName || `City ${city.cityNumber}`}
                   </TableCell>
@@ -229,7 +229,7 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
               ))}
 
               {/* Totals Row */}
-              <TableRow className="border-t border-[#4e324c]">
+              <TableRow className="border-t border-brand-purple">
                 <TableCell className="text-white font-bold text-sm">TOTALS</TableCell>
                 <TableCell className="text-white/50 text-sm">-</TableCell>
                 <TableCell className="text-right text-white font-bold text-sm">
@@ -318,15 +318,15 @@ export function ActiveTours() {
 
   const getStatusBadgeClass = (stage: string) => {
     switch (stage) {
-      case 'planning': return 'bg-[#65557c] text-white';
+      case 'planning': return 'bg-brand-purple-light text-white';
       case 'writing': return 'bg-warning text-white';
-      case 'recording': return 'bg-[#A75A5B] text-white';
+      case 'recording': return 'bg-brand-burgundy text-white';
       case 'recorded': return 'bg-green-500 text-white';
       case 'production': return 'bg-warning text-white';
-      case 'marketing': return 'bg-[#A75A5B] text-white';
+      case 'marketing': return 'bg-brand-burgundy text-white';
       case 'released': return 'bg-success text-white';
       case 'cancelled': return 'bg-red-600 text-white';
-      default: return 'bg-[#65557c] text-white';
+      default: return 'bg-brand-purple-light text-white';
     }
   };
 
@@ -411,7 +411,7 @@ export function ActiveTours() {
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-semibold text-white flex items-center">
-              <i className="fas fa-route text-[#A75A5B] mr-2"></i>
+              <i className="fas fa-route text-brand-burgundy mr-2"></i>
               Tours
             </h3>
             <div className="flex items-center space-x-2">
@@ -421,7 +421,7 @@ export function ActiveTours() {
               <Button
                 size="sm"
                 onClick={handleNavigateToLivePerformance}
-                className="bg-[#A75A5B] hover:bg-[#8a4a4b] text-white text-xs px-3 py-1.5"
+                className="bg-brand-burgundy hover:bg-brand-burgundy text-white text-xs px-3 py-1.5"
               >
                 + Live Performance
               </Button>
@@ -429,12 +429,12 @@ export function ActiveTours() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex space-x-1 mb-4 bg-[#3c252d]/30 p-1 rounded-lg">
+          <div className="flex space-x-1 mb-4 bg-brand-dark-card/30 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab('active')}
               className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
                 activeTab === 'active'
-                  ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                  ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
                   : 'text-white/70 hover:text-white'
               }`}
             >
@@ -449,7 +449,7 @@ export function ActiveTours() {
               onClick={() => setActiveTab('completed')}
               className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
                 activeTab === 'completed'
-                  ? 'bg-[#A75A5B]/20 text-white border border-[#A75A5B]/40 shadow-sm'
+                  ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
                   : 'text-white/70 hover:text-white'
               }`}
             >
@@ -474,7 +474,7 @@ export function ActiveTours() {
               </div>
             ) : (
               currentTours.map(project => (
-                <div key={project.id} className="border border-[#4e324c] rounded-lg p-3">
+                <div key={project.id} className="border border-brand-purple rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <h4 className="font-medium text-white text-sm">{project.title}</h4>
@@ -526,12 +526,12 @@ export function ActiveTours() {
 
                       if (completedCities.length > 0) {
                         return (
-                          <div className="pt-2 border-t border-[#4e324c] space-y-1">
+                          <div className="pt-2 border-t border-brand-purple space-y-1">
                             <div className="text-xs text-white/60 font-medium mb-1">
                               Cities Completed ({completedCities.length}/{cityCounts.planned})
                             </div>
                             {completedCities.map((city: any, index: number) => (
-                              <div key={index} className="bg-[#3c252d]/30 rounded p-2 text-xs space-y-1">
+                              <div key={index} className="bg-brand-dark-card/30 rounded p-2 text-xs space-y-1">
                                 <div className="flex items-center justify-between">
                                   <span className="text-white/70 font-medium">City {city.cityNumber}</span>
                                   <span className="font-mono text-green-500">${city.revenue?.toLocaleString() || 0}</span>
@@ -558,7 +558,7 @@ export function ActiveTours() {
                         : 0;
 
                       return (
-                        <div className="pt-2 border-t border-[#4e324c] space-y-1">
+                        <div className="pt-2 border-t border-brand-purple space-y-1">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-white/50">Tour Completed</span>
                             <span className="font-mono text-green-600">
@@ -575,7 +575,7 @@ export function ActiveTours() {
 
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-white/50">Average Attendance</span>
-                            <span className="font-mono text-[#A75A5B]">
+                            <span className="font-mono text-brand-burgundy">
                               {avgAttendance}%
                             </span>
                           </div>
@@ -597,7 +597,7 @@ export function ActiveTours() {
                                   const hasEconomics = city.economics;
 
                                   return (
-                                    <div key={index} className="bg-[#3c252d]/40 rounded p-2 text-xs space-y-1">
+                                    <div key={index} className="bg-brand-dark-card/40 rounded p-2 text-xs space-y-1">
                                       {/* Main city info - always visible */}
                                       <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-2">
@@ -753,7 +753,7 @@ export function ActiveTours() {
                 </p>
 
                 {/* Cost Breakdown */}
-                <div className="bg-[#23121c] border border-[#4e324c] rounded-lg p-4 space-y-3">
+                <div className="bg-brand-dark-card border border-brand-purple rounded-lg p-4 space-y-3">
                   <h4 className="font-semibold text-white mb-2">Cancellation Breakdown</h4>
 
                   <div className="space-y-2 text-sm">
@@ -777,7 +777,7 @@ export function ActiveTours() {
                       <span className="font-mono text-white">{remainingCities}</span>
                     </div>
 
-                    <hr className="border-[#4e324c]" />
+                    <hr className="border-brand-purple" />
 
                     <div className="flex justify-between">
                       <span className="text-red-400">Sunk Costs (non-refundable):</span>
@@ -796,7 +796,7 @@ export function ActiveTours() {
                   <Button
                     variant="outline"
                     onClick={() => setShowCancelModal(false)}
-                    className="border-[#4e324c] text-white hover:bg-[#4e324c]"
+                    className="border-brand-purple text-white hover:bg-brand-purple"
                   >
                     Keep Tour
                   </Button>

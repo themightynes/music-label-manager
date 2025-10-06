@@ -42,7 +42,7 @@ export function FocusSlotAttribution({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-          <div className="p-2 bg-[#3c252d]/30 rounded">
+          <div className="p-2 bg-brand-dark-card/30 rounded">
             <div className="flex items-center gap-2">
               <Users className="w-3.5 h-3.5 text-white/70" />
               <span className="text-white/80">Executive Meetings</span>
@@ -53,7 +53,7 @@ export function FocusSlotAttribution({
             )}
           </div>
 
-          <div className="p-2 bg-[#3c252d]/30 rounded">
+          <div className="p-2 bg-brand-dark-card/30 rounded">
             <div className="flex items-center gap-2">
               <Zap className="w-3.5 h-3.5 text-white/70" />
               <span className="text-white/80">A&R Office</span>
@@ -70,7 +70,7 @@ export function FocusSlotAttribution({
             )}
           </div>
 
-          <div className="p-2 bg-[#3c252d]/30 rounded">
+          <div className="p-2 bg-brand-dark-card/30 rounded">
             <div className="flex items-center gap-2">
               <span className="text-white/80">Available</span>
               <Badge variant="outline" className="ml-auto">{available}</Badge>

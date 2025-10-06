@@ -250,7 +250,7 @@
   - [x] Updated landing/register experience to themed Clerk components
   - [x] Added Clerk `UserButton` profile dropdown to the in-app sidebar
 - [x] **Tour System - Complete Implementation** (**COMPLETED September 14, 2025**)
-  - [x] LivePerformanceModal.tsx (862 lines) - Sophisticated tour creation interface
+- [x] LivePerformancePage.tsx (961 lines) - Sophisticated tour creation interface
   - [x] ActiveTours.tsx (878 lines) - Complete tour management and analytics
   - [x] Real-time tour estimation via /api/tour/estimate endpoint
   - [x] VenueCapacityManager - Configuration-driven capacity validation
@@ -495,7 +495,7 @@
 
 ### **September 14, 2025 - Tour System Complete Implementation**
 - ✅ **Tour System Architecture - Full End-to-End Implementation** - Complete live performance and tour management system
-  - ✅ **LivePerformanceModal.tsx** (862 lines) - Sophisticated tour creation interface
+- ✅ **LivePerformancePage.tsx** (961 lines) - Sophisticated tour creation interface
     - ✅ Real-time tour estimation with 500ms debounced API calls
     - ✅ Venue capacity selection with strategic guidance and risk assessment
     - ✅ Artist availability filtering (prevents double-booking on active tours)
@@ -788,7 +788,7 @@
 
 ### **August 31, 2025 - UI/UX Overhaul with Plum Theme**
 - ✅ **Complete Visual Theme Transformation** - New plum/burgundy color scheme implementation
-  - ✅ Replaced light theme with dark plum background (#2C222A base color)
+  - ✅ Replaced light theme with dark plum background (#2a1821 base color)
   - ✅ Added custom plum background image with full opacity for immersive experience
   - ✅ Updated all 40+ UI components with consistent plum/burgundy color palette
   - ✅ Changed secondary color from purple to burgundy (#791014) across light/dark modes
