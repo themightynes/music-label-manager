@@ -4,6 +4,18 @@ import { useGameStore } from '@/store/gameStore';
 import { apiRequest } from '@/lib/queryClient';
 import type { EmailRecord, EmailCategory } from '@shared/types/emailTypes';
 
+const VALID_EMAIL_CATEGORIES: EmailCategory[] = ['chart', 'financial', 'artist', 'ar'];
+
+const LEGACY_CATEGORY_MAP: Record<string, EmailCategory> = {
+  financial_report: 'financial',
+  tier_unlock: 'financial',
+  tour_completion: 'artist',
+  release: 'artist',
+  top_10_debut: 'chart',
+  number_one_debut: 'chart',
+  artist_discovery: 'ar',
+};
+
 export interface EmailListQuery {
   isRead?: boolean;
   category?: EmailCategory;
@@ -54,11 +66,17 @@ function normalizeEmail(email: any): EmailRecord<Record<string, unknown>> {
       ? email.updatedAt
       : createdAt;
 
+  const rawCategory = typeof email?.category === 'string' ? email.category : null;
+  const mappedCategory = rawCategory ? LEGACY_CATEGORY_MAP[rawCategory] ?? rawCategory : null;
+  const category: EmailCategory = mappedCategory && VALID_EMAIL_CATEGORIES.includes(mappedCategory as EmailCategory)
+    ? (mappedCategory as EmailCategory)
+    : 'financial';
+
   return {
     id: email?.id ?? '',
     gameId: email?.gameId ?? '',
     week: Number(email?.week ?? 0),
-    category: email?.category ?? 'financial_report',
+    category,
     sender: email?.sender ?? 'System',
     senderRoleId: email?.senderRoleId ?? null,
     subject: email?.subject ?? 'Message',
