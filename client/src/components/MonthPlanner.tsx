@@ -41,7 +41,7 @@ interface WeeklyAction {
 }
 
 export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
-  const { gameState, selectedActions, removeAction, reorderActions, selectAction } = useGameStore();
+  const { gameState, selectedActions, removeAction, reorderActions, selectAction, getAROfficeStatus } = useGameStore();
   const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
 
@@ -95,11 +95,13 @@ export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
               ) : (
                 <ExecutiveMeetings
                   gameId={gameId}
+                  currentWeek={gameState.currentWeek}
                   onActionSelected={selectAction}
                   focusSlots={{
                     total: gameState.focusSlots || 3,
                     used: gameState.usedFocusSlots || 0,
                   }}
+                  arOfficeStatus={getAROfficeStatus()}
                 />
               )}
             </div>

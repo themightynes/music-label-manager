@@ -87,19 +87,21 @@ export default function ExecutiveSuitePage(props: any = {}) {
   return (
     <GameLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <header className="mb-10">
+        <header className="mb-10 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-heading font-bold text-white">Week {gameState.currentWeek} Executive Meetings</h1>
+            <p className="mt-2 text-sm md:text-base text-white/70 flex items-center gap-2">
+              Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
+              {gameState?.focusSlots === 4 && <Badge variant="outline" className="text-green-400 border-green-400/30">4th Slot Unlocked</Badge>}
+            </p>
+          </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
             Executive Suite
           </div>
-          <h1 className="mt-4 text-3xl font-heading font-bold text-white">Week {gameState.currentWeek} Executive Meetings</h1>
-          <p className="mt-2 text-sm md:text-base text-white/70 flex items-center gap-2">
-            Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
-            {gameState?.focusSlots === 4 && <Badge variant="outline" className="text-green-400 border-green-400/30">4th Slot Unlocked</Badge>}
-          </p>
         </header>
 
         <section
-          className="relative overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 p-8 bg-contain bg-center bg-no-repeat min-h-[600px]"
+          className="relative overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 p-8 bg-contain bg-top bg-no-repeat min-h-[600px]"
           style={{ backgroundImage: "url('/executivesuite_background.png')" }}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
@@ -107,10 +109,10 @@ export default function ExecutiveSuitePage(props: any = {}) {
           <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
 
           <div className="relative z-10">
-            {/* Focus Action Selection - Split Panel Design */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Panel - Action Selection Pool */}
-              <div className="lg:col-span-2">
+            {/* Two Row Layout - Executive Meetings Top, Focus Slots Bottom */}
+            <div className="space-y-6">
+              {/* Top Row - Executive Meetings */}
+              <div>
                 {loading ? (
                   <div className="text-center py-8">
                     <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
@@ -127,6 +129,7 @@ export default function ExecutiveSuitePage(props: any = {}) {
                 ) : (
                   <ExecutiveMeetings
                     gameId={gameId}
+                    currentWeek={gameState.currentWeek}
                     onActionSelected={selectAction}
                     focusSlots={{
                       total: gameState.focusSlots || 3,
@@ -138,8 +141,8 @@ export default function ExecutiveSuitePage(props: any = {}) {
                 )}
               </div>
 
-              {/* Right Panel - Selection Summary */}
-              <div className="lg:col-span-1 space-y-4">
+              {/* Bottom Row - Focus Slots / Selection Summary */}
+              <div>
                 <SelectionSummary
                   selectedActions={selectedActions}
                   actions={weeklyActions}

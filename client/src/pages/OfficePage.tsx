@@ -4,11 +4,13 @@ export default function OfficePage() {
   return (
     <GameLayout>
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <header className="mb-10">
+        <header className="mb-10 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-heading font-bold text-white">Headquarters</h1>
+          </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
             The Office
           </div>
-          <h1 className="mt-4 text-3xl font-heading font-bold text-white">Headquarters</h1>
         </header>
 
         <section

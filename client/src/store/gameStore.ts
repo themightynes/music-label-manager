@@ -882,7 +882,6 @@ export const useGameStore = create<GameStore>()(
       // Discovered artists lifecycle
       loadDiscoveredArtists: async () => {
         const { gameState } = get();
-        console.log('[A&R DEBUG] Loading discovered artists for game:', gameState?.id);
         if (!gameState) {
           console.warn('[A&R] No game state available for loading discovered artists');
           return;
@@ -901,7 +900,6 @@ export const useGameStore = create<GameStore>()(
 
           const res = await apiRequest('GET', `/api/game/${gameState.id}/ar-office/artists`);
           const data = await res.json();
-          console.log('[A&R DEBUG] API response:', data);
 
           let artists = Array.isArray(data.artists) ? data.artists : [];
 
@@ -911,7 +909,6 @@ export const useGameStore = create<GameStore>()(
             const discoveredId = flags?.ar_office_discovered_artist_id;
             const info = flags?.ar_office_discovered_artist_info || {};
             if (discoveredId) {
-              console.log('[A&R DEBUG] No artists from API, synthesizing from flags:', { discoveredId, info });
               const synthesized = {
                 id: discoveredId,
                 name: info.name ?? 'Unknown Artist',
@@ -922,13 +919,9 @@ export const useGameStore = create<GameStore>()(
                 isSigned: false,
               } as any;
               artists = [synthesized];
-              console.log('[A&R DEBUG] Synthesized discovered artist from flags:', synthesized);
-            } else {
-              console.log('[A&R DEBUG] No discovered artist ID in flags, returning empty list');
             }
           }
 
-          console.log('[A&R DEBUG] Setting discovered artists:', artists.length, 'artists');
           set({ discoveredArtists: artists });
         } catch (error) {
           console.error('[A&R] Failed to load discovered artists:', error);

@@ -3090,21 +3090,21 @@ const musicLabelData = {
         const gameStateForEngine = {
           ...gameState,
           currentWeek: gameState.currentWeek || 1,
-          money: gameState.money || startingValues.money,
-          reputation: gameState.reputation || startingValues.reputation,
-          creativeCapital: gameState.creativeCapital || startingValues.creativeCapital,
-          focusSlots: gameState.focusSlots || 3,
-          usedFocusSlots: gameState.usedFocusSlots || 0,
+          money: gameState.money ?? startingValues.money,
+          reputation: gameState.reputation ?? startingValues.reputation,
+          creativeCapital: gameState.creativeCapital ?? startingValues.creativeCapital,
+          focusSlots: gameState.focusSlots ?? 3,
+          usedFocusSlots: gameState.usedFocusSlots ?? 0,
           // A&R Office fields
           arOfficeSlotUsed: (gameState as any).arOfficeSlotUsed || false,
           arOfficeSourcingType: (gameState as any).arOfficeSourcingType || null,
-          playlistAccess: gameState.playlistAccess || 'none',
-          pressAccess: gameState.pressAccess || 'none',
-          venueAccess: gameState.venueAccess || 'none',
-          campaignType: gameState.campaignType || 'standard',
-          rngSeed: gameState.rngSeed || Math.random().toString(36).substring(7),
-          flags: gameState.flags || {},
-          weeklyStats: gameState.weeklyStats || {},
+          playlistAccess: gameState.playlistAccess ?? 'none',
+          pressAccess: gameState.pressAccess ?? 'none',
+          venueAccess: gameState.venueAccess ?? 'none',
+          campaignType: gameState.campaignType ?? 'standard',
+          rngSeed: gameState.rngSeed ?? Math.random().toString(36).substring(7),
+          flags: gameState.flags ?? {},
+          weeklyStats: gameState.weeklyStats ?? {},
           // BUGFIX: Reset campaignCompleted flag if we're clearly not at the end
           // Campaigns should only be completed at week 52 or later
           campaignCompleted: (gameState.currentWeek || 1) >= 52 ? gameState.campaignCompleted : false
@@ -3448,21 +3448,21 @@ const musicLabelData = {
         const gameStateForEngine = {
           ...gameState,
           currentWeek: gameState.currentWeek || 1,
-          money: gameState.money || startingValues.money,
-          reputation: gameState.reputation || startingValues.reputation,
-          creativeCapital: gameState.creativeCapital || startingValues.creativeCapital,
-          focusSlots: gameState.focusSlots || 3,
-          usedFocusSlots: gameState.usedFocusSlots || 0,
+          money: gameState.money ?? startingValues.money,
+          reputation: gameState.reputation ?? startingValues.reputation,
+          creativeCapital: gameState.creativeCapital ?? startingValues.creativeCapital,
+          focusSlots: gameState.focusSlots ?? 3,
+          usedFocusSlots: gameState.usedFocusSlots ?? 0,
           // A&R Office fields
           arOfficeSlotUsed: (gameState as any).arOfficeSlotUsed || false,
           arOfficeSourcingType: (gameState as any).arOfficeSourcingType || null,
-          playlistAccess: gameState.playlistAccess || 'none',
-          pressAccess: gameState.pressAccess || 'none',
-          venueAccess: gameState.venueAccess || 'none',
-          campaignType: gameState.campaignType || 'standard',
-          rngSeed: gameState.rngSeed || Math.random().toString(36).substring(7),
-          flags: gameState.flags || {},
-          weeklyStats: gameState.weeklyStats || {}
+          playlistAccess: gameState.playlistAccess ?? 'none',
+          pressAccess: gameState.pressAccess ?? 'none',
+          venueAccess: gameState.venueAccess ?? 'none',
+          campaignType: gameState.campaignType ?? 'standard',
+          rngSeed: gameState.rngSeed ?? Math.random().toString(36).substring(7),
+          flags: gameState.flags ?? {},
+          weeklyStats: gameState.weeklyStats ?? {}
         };
         
         // Create GameEngine instance and update action selection

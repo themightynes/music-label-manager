@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
@@ -377,18 +377,28 @@ export default function RecordingSessionPage() {
   return (
     <GameLayout>
       <div className="container mx-auto p-6 max-w-6xl">
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.history.back()}
-            className="text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-heading font-bold text-white">Recording Session</h1>
-        </div>
+        <header className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-white">Recording Session</h1>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
+            The Studio
+          </div>
+        </header>
+
+        <section
+          className="relative mb-8 overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 min-h-[320px] bg-cover bg-center"
+          style={{ backgroundImage: "url('/recording_session_background.png')" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
+          <div className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-brand-burgundy/20 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-32 -left-10 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
+          <div className="absolute bottom-6 left-0 right-0 flex justify-center px-6">
+            <Badge variant="outline" className="inline-flex items-center gap-1 px-4 py-2 text-sm font-normal text-white/80 bg-white/10 border-white/30 text-center max-w-full">
+              Smooth sessions lift spirits; tough takes linger—your artist’s <span className="font-semibold text-brand-rose">Mood</span> and each song’s <span className="font-semibold text-brand-gold">Quality</span> shift with every take you chase.
+            </Badge>
+          </div>
+        </section>
 
         <div className="space-y-6">
           {/* Project Type Selection */}

@@ -154,7 +154,6 @@ export function ArtistDiscoveryTable({
                       currentWeek: gameState.currentWeek,
                       flags: (gameState as any).flags
                     };
-                    console.log('[A&R Debug Info]', debugInfo);
                     // Show alert with key info
                     alert(
                       `A&R Debug Info:\n\n` +
@@ -164,7 +163,7 @@ export function ArtistDiscoveryTable({
                       `Sourcing Type: ${(gameState as any).arOfficeSourcingType || 'none'}\n` +
                       `Game ID: ${gameState.id}\n` +
                       `Week: ${gameState.currentWeek}\n\n` +
-                      `Full details logged to console.`
+                      `Full details: ${JSON.stringify(debugInfo, null, 2)}`
                     );
                   }}
                   variant="ghost"

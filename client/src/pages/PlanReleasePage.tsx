@@ -507,8 +507,50 @@ export default function PlanReleasePage() {
           setValidationErrors(['Song scheduling conflict detected. The song list has been refreshed to show current availability.']);
         }
       } else if (error.status === 400) {
-        const details = error.details || [];
-        setValidationErrors(details.map((d: any) => d.issue || d.message || 'Validation error'));
+        const details = error.details;
+        const extractMessage = (entry: any): string | null => {
+          if (!entry) return null;
+          if (typeof entry === 'string') return entry;
+          if (typeof entry === 'object') {
+            return entry.issue || entry.message || null;
+          }
+          return null;
+        };
+
+        let messages: string[] = [];
+
+        if (Array.isArray(details)) {
+          details.forEach((entry: any) => {
+            const message = extractMessage(entry);
+            if (message) messages.push(message);
+          });
+        } else if (details?.issues && Array.isArray(details.issues)) {
+          details.issues.forEach((entry: any) => {
+            const message = extractMessage(entry);
+            if (message) messages.push(message);
+          });
+        } else if (typeof details === 'string') {
+          messages = [details];
+        } else if (details && typeof details === 'object') {
+          messages = Object.values(details).reduce<string[]>((acc, value: any) => {
+            if (Array.isArray(value)) {
+              value.forEach(item => {
+                const message = extractMessage(item);
+                if (message) acc.push(message);
+              });
+            } else {
+              const message = extractMessage(value);
+              if (message) acc.push(message);
+            }
+            return acc;
+          }, []);
+        }
+
+        if (messages.length === 0 && error.message) {
+          messages = [error.message];
+        }
+
+        setValidationErrors(messages.length > 0 ? messages : ['Validation error']);
       } else {
         setValidationErrors(['Failed to create release. Please try again.']);
       }

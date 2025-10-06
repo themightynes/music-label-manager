@@ -58,13 +58,9 @@ export async function fetchExecutives(gameId: string): Promise<Executive[]> {
 
 export async function fetchRoleMeetings(roleId: string): Promise<RoleMeeting[]> {
   try {
-    console.log('[EXECUTIVE SERVICE] Fetching meetings for role:', roleId);
-
     // Use the proper API endpoint that loads from roles.json and actions.json
     const response = await apiRequest('GET', `/api/roles/${roleId}`);
     const roleData = await response.json();
-
-    console.log('[EXECUTIVE SERVICE] Role data received:', roleData);
 
     // The API should return meetings from actions.json filtered by role_id
     // Transform the action data to our RoleMeeting format
@@ -74,7 +70,6 @@ export async function fetchRoleMeetings(roleId: string): Promise<RoleMeeting[]> 
       choices: action.choices || []
     }));
 
-    console.log('[EXECUTIVE SERVICE] Transformed meetings:', meetings);
     return meetings;
   } catch (error) {
     console.error('Failed to fetch role meetings:', error);
@@ -88,13 +83,9 @@ export async function fetchMeetingDialogue(roleId: string, meetingId: string): P
   choices: DialogueChoice[];
 }> {
   try {
-    console.log('[EXECUTIVE SERVICE] Fetching dialogue for role:', roleId, 'meeting:', meetingId);
-
     // Use the proper API endpoint that loads specific meeting from actions.json
     const response = await apiRequest('GET', `/api/roles/${roleId}/meetings/${meetingId}`);
     const meetingData = await response.json();
-
-    console.log('[EXECUTIVE SERVICE] Meeting dialogue data received:', meetingData);
 
     return {
       prompt: meetingData.prompt,

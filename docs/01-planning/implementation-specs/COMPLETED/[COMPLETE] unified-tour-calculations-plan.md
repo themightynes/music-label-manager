@@ -370,7 +370,7 @@ Looking at the code structure, here are the key differences between tour informa
   - NO MATH - asks FinancialSystem for all calculations
 
   ---
-  📱 Frontend (LivePerformanceModal.tsx) - THE ESTIMATOR
+📱 Frontend (LivePerformancePage.tsx) - THE ESTIMATOR
 
   Role: User tour planning interface
 
@@ -457,7 +457,7 @@ Looking at the code structure, here are the key differences between tour informa
 
   Phase 4: Clean Frontend
 
-  1. ❌ Remove calculation logic from LivePerformanceModal
+1. ❌ Remove calculation logic from LivePerformancePage
   2. ✅ Replace with API calls
   3. ✅ Update UI to display API results
 

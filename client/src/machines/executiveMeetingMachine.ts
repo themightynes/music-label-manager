@@ -63,7 +63,8 @@ export type ExecutiveMeetingEvent =
   | { type: 'RESET' }
   | { type: 'SYNC_SLOTS'; used: number; total: number }
   | { type: 'AUTO_SELECT' }
-  | { type: 'CALCULATE_IMPACT_PREVIEW'; selectedActions: string[] };
+  | { type: 'CALCULATE_IMPACT_PREVIEW'; selectedActions: string[] }
+  | { type: 'REFRESH_EXECUTIVES' };
 
 interface ExecutiveMeetingInput {
   gameId: string;
@@ -419,6 +420,10 @@ export const executiveMeetingMachine = setup({
         actions: 'clearImpactPreview',
       },
     ],
+    REFRESH_EXECUTIVES: {
+      target: '#executiveMeeting.refreshingExecutives',
+      actions: 'clearSelection',
+    },
     RESET: {
       actions: 'clearSelection',
       target: '#executiveMeeting.idle',
@@ -495,6 +500,18 @@ export const executiveMeetingMachine = setup({
             actions: 'selectMeeting',
           },
         ],
+        SELECT_EXECUTIVE: [
+          {
+            guard: 'hasFocusSlotsAndCachedMeetings' as const,
+            target: 'selectingMeeting',
+            actions: 'useCachedMeetings',
+          },
+          {
+            guard: 'hasFocusSlots' as const,
+            target: 'loadingMeetings',
+            actions: 'assignSelectedExecutive',
+          },
+        ],
         BACK_TO_EXECUTIVES: {
           target: 'idle',
           actions: 'clearSelection',
@@ -521,6 +538,18 @@ export const executiveMeetingMachine = setup({
           target: 'processingChoice',
           actions: 'queueChoiceAction',
         },
+        SELECT_EXECUTIVE: [
+          {
+            guard: 'hasFocusSlotsAndCachedMeetings' as const,
+            target: 'selectingMeeting',
+            actions: 'useCachedMeetings',
+          },
+          {
+            guard: 'hasFocusSlots' as const,
+            target: 'loadingMeetings',
+            actions: 'assignSelectedExecutive',
+          },
+        ],
         BACK_TO_MEETINGS: {
           target: 'selectingMeeting',
           actions: assign({ selectedMeeting: () => null, currentDialogue: () => null }),
