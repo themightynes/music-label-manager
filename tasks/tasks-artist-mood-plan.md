@@ -15,7 +15,7 @@
 - `data/dialogue.json` - Artist dialogue scenes with choice effects
 - `data/balance/artists.json` - Balance configuration for mood effects, thresholds, archetype modifiers
 - `server/routes.ts` - API route definitions
-- `server/routes/mood.ts` - NEW: Mood-specific API endpoints (history, recommendations, analytics)
+- `server/routes/mood.ts` - NEW: Mood-specific API endpoints (recommendations, analytics, predictions)
 - `migrations/000X_add_project_performance_fields.sql` - NEW: Add performance tracking for advanced mood factors
 - `migrations/000X_create_mood_analytics_table.sql` - NEW: Store mood analytics and predictions
 
@@ -25,7 +25,6 @@
 - `client/src/components/Dashboard.tsx` - Main dashboard for overview widgets
 - `client/src/components/MoodIndicator.tsx` - Reusable mood display (existing from Phase 2)
 - `client/src/components/ux-prototypes/MoodSystemPrototype.tsx` - NEW: UI mockup for initial review
-- `client/src/components/MoodHistoryChart.tsx` - NEW: Mood trend visualization over time
 - `client/src/components/MoodRecommendations.tsx` - NEW: AI-driven mood improvement suggestions
 - `client/src/components/MoodAnalyticsDashboard.tsx` - NEW: Comprehensive mood analytics view
 - `client/src/components/MoodPredictionWidget.tsx` - NEW: Mood forecasting component
@@ -39,7 +38,6 @@
 - `tests/features/mood-dialogue-integration.test.ts` - NEW: Dialogue mood effect tests
 - `tests/features/mood-events.test.ts` - NEW: Mood event trigger tests
 - `tests/features/mood-advanced-factors.test.ts` - NEW: Advanced mood calculation tests
-- `tests/components/MoodHistoryChart.test.tsx` - NEW: Mood chart component tests
 - `tests/components/MoodRecommendations.test.tsx` - NEW: Recommendations component tests
 
 ### Notes
@@ -203,64 +201,47 @@
 
 ---
 
-### 4.0 Build enhanced UI feedback and mood history (Phase 8 - Frontend)
+### 4.0 Build enhanced UI feedback and recommendations (Phase 8 - Frontend)
 **Goal**: Create real UI components with API integration for mood management
 
-- [ ] 4.1 Create MoodHistoryChart component
-  - Create `client/src/components/MoodHistoryChart.tsx`
-  - Accept artistId prop and fetch mood history data
-  - Render line chart showing mood over time (use recharts or similar)
-  - Display mood level ranges with color coding
-  - Add trend indicators (↗️ improving, ↘️ declining)
-
-- [ ] 4.2 Create MoodRecommendations component
+- [ ] 4.1 Create MoodRecommendations component
   - Create `client/src/components/MoodRecommendations.tsx`
   - Accept artist prop with current mood state
   - Display 3-5 actionable recommendations based on mood level
   - Include priority indicators and action buttons (future: link to actions)
   - Use card/badge UI from existing components
 
-- [ ] 4.3 Create useMoodAnalytics hook
+- [ ] 4.2 Create useMoodAnalytics hook
   - Create `client/src/hooks/useMoodAnalytics.ts`
-  - Fetch mood history data for artist: `GET /api/artists/:id/mood-history`
   - Fetch mood recommendations: `GET /api/mood/recommendations/:artistId`
   - Handle loading and error states
   - Cache results with React Query
 
-- [ ] 4.4 Add mood history API endpoint
-  - Create `server/routes/mood.ts` if needed
-  - Add `GET /api/artists/:id/mood-history` endpoint
-  - Query mood_events table for artist's mood changes
-  - Return array of {week, mood, change, event_type}
-  - Limit to last 52 weeks (1 year)
-
-- [ ] 4.5 Add mood recommendations API endpoint
+- [ ] 4.3 Add mood recommendations API endpoint
   - Add `GET /api/mood/recommendations/:artistId` endpoint
   - Analyze artist's current mood, workload, recent projects
   - Generate 3-5 recommendations (STUB: hardcoded suggestions initially)
   - Return array of {priority, title, description, actionType}
 
-- [ ] 4.6 Enhance ArtistRoster with mood components
+- [ ] 4.4 Enhance ArtistRoster with mood components
   - Update `client/src/components/ArtistRoster.tsx`
-  - Add MoodHistoryChart to expanded artist view
   - Add MoodRecommendations below mood indicator
   - Display mood factors list (workload, recent projects)
   - Show project performance attribution with mood impact
 
-- [ ] 4.7 Add mood change notifications to MonthSummary
+- [ ] 4.5 Add mood change notifications to MonthSummary
   - Update `client/src/components/MonthSummary.tsx`
   - Display mood events from WeekSummary.events
   - Style low mood warnings with warning colors
   - Style excellent mood opportunities with success colors
   - Include artist name and clickable link to artist card
 
-- [ ] 4.8 Register mood routes in server/routes.ts
+- [ ] 4.6 Register mood routes in server/routes.ts
   - Import mood router or add routes directly
   - Ensure routes are protected with requireClerkUser middleware
   - Add error handling for missing artists
 
-- [ ] 4.9 Write component tests
-  - Create `tests/components/MoodHistoryChart.test.tsx`
+- [ ] 4.7 Write component tests
   - Create `tests/components/MoodRecommendations.test.tsx`
   - Test: Components render with mock data
   - Test: Loading and error states display correctly
@@ -402,7 +383,6 @@
   - Update `client/src/components/ArtistRoster.tsx`
   - Add MoodPredictionWidget to expanded artist view
   - Add MoodManagementGuide link/modal
-  - Display historical mood patterns
   - Show mood correlation with project performance
 
 - [ ] 6.11 Add mood section to MonthSummary
@@ -428,7 +408,7 @@
 
 **Status**: ✅ All sub-tasks generated and ready for implementation
 
-**Total Tasks**: 6 parent tasks, 63 sub-tasks
+**Total Tasks**: 6 parent tasks, 57 sub-tasks (6 removed: mood history chart feature)
 
 **Recommended Implementation Order**:
 1. Start with 1.0 (UI Prototype) for design validation
