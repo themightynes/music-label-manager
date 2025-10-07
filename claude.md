@@ -57,6 +57,12 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 - **Annotate Everything**: Mark all hardcoded values, stubs, and missing features with clear TODO/STUB/HARDCODED comments for easy identification later
 - Commit incomplete working code > complete non-working code
 
+# AI Dev Tasks
+Use these files when I request structured feature development using PRDs:
+/docs/ai-dev-tasks/create-prd.md
+/docs/ai-dev-tasks/generate-tasks.md
+/docs/ai-dev-tasks/process-task-list.md
+
 **Annotation Standards:**
 ```javascript
 // STUB: Will be replaced with complex logic in Phase 2
