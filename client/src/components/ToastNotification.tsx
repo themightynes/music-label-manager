@@ -182,12 +182,12 @@ export function ToastNotification() {
       const revenueChanges = weeklyOutcome.changes.filter((c: any) => c.type === 'revenue');
       const achievements = weeklyOutcome.changes.filter((c: any) => c.type === 'unlock');
       
-      // Enhanced: Filter mood and loyalty changes from executive meetings
+      // Enhanced: Filter mood and energy changes from executive meetings
       const moodChanges = weeklyOutcome.changes.filter((c: any) => 
         c.type === 'mood' && c.description.includes('meeting decision')
       );
-      const loyaltyChanges = weeklyOutcome.changes.filter((c: any) => 
-        c.type === 'mood' && c.loyaltyBoost && c.description.includes('meeting decision')
+      const energyChanges = weeklyOutcome.changes.filter((c: any) => 
+        c.type === 'mood' && typeof c.energyBoost === 'number'
       );
 
       // Enhanced project completion notifications
@@ -274,15 +274,15 @@ export function ToastNotification() {
         }, (projectCompletions.length + revenueChanges.length + achievements.length) * 1500 + index * 800);
       });
 
-      // Enhanced: Artist loyalty change notifications from executive meetings  
-      loyaltyChanges.forEach((change: any, index: number) => {
+      // Enhanced: Artist energy change notifications from executive meetings  
+      energyChanges.forEach((change: any, index: number) => {
         setTimeout(() => {
-          const isPositive = (change.loyaltyBoost || 0) > 0;
-          const loyaltyValue = Math.abs(change.loyaltyBoost || 0);
+          const isPositive = (change.amount || 0) > 0;
+          const energyValue = Math.abs(change.amount || 0);
           
           showEnhancedToast({
-            title: `${isPositive ? '💖' : '💔'} Artist Loyalty ${isPositive ? 'Increased' : 'Decreased'}`,
-            description: `Executive meeting decision ${isPositive ? 'strengthened' : 'weakened'} all artists' loyalty by ${loyaltyValue} points.`,
+            title: `${isPositive ? '⚡️' : '⚠️'} Artist Energy ${isPositive ? 'Increased' : 'Decreased'}`,
+            description: `Executive meeting decision ${isPositive ? 'strengthened' : 'weakened'} all artists' energy by ${energyValue} points.`,
             type: isPositive ? 'success' : 'warning',
             duration: 4000,
             action: {

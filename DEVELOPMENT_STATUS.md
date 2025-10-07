@@ -315,6 +315,20 @@
   - [ ] Long-term vs short-term marketing ROI analysis
   - [ ] Portfolio management for catalog awareness building
 
+### **October 2025 - Artist Loyalty → Energy Rebrand**
+- ✅ **System-wide Terminology Update**
+  - ✅ Database migration `0019_rename_artist_loyalty_to_energy` renamed `artists.loyalty` → `artists.energy`
+  - ✅ TypeScript schemas now expose `GameArtist.energy`, `ChoiceEffect.artist_energy`, `GameChange.energyBoost/newEnergy`
+  - ✅ Game engine effect processing updated from `artist_loyalty` → `artist_energy`
+  - ✅ API contracts now serve `energy`; data loaders provide a transitional fallback for legacy content
+  - ✅ Narrative data (`artists.json`, `dialogue.json`, `actions.json`) converted to the new field
+  - ✅ Frontend components (roster, artist pages, discovery modal, plan release, live performance, recording session, toast notifications) fully rebranded
+  - ✅ Documentation refreshed (database design, content schemas, development status)
+- ✅ **Clarified Relationship Systems**
+  - ✅ **Artist Energy**: Display-oriented stat for narrative feedback; currently does not influence project mechanics
+  - ✅ **Executive Loyalty**: Gameplay-impacting relationship metric (+5 when utilized monthly, −5 after 3 months inactive)
+  - ✅ This separation enables future enhancements where energy could inform availability, creativity bursts, or touring stamina without perturbing existing executive mechanics
+
 ---
 
 ## ✅ **RECENTLY COMPLETED** (Last 30 Days)

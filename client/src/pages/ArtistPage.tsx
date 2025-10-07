@@ -52,7 +52,7 @@ interface Artist {
   workEthic?: number | null;
   popularity?: number | null;
   temperament?: number | null;
-  loyalty: number | null;
+  energy: number | null;
   mood: number | null;
   signed?: boolean | null;
   isSigned?: boolean | null;
@@ -162,7 +162,8 @@ export default function ArtistPage() {
           const transformedArtist: Artist = {
             ...foundArtist,
             mood: foundArtist.mood || 50,
-            loyalty: foundArtist.loyalty || 50,
+            energy: (foundArtist as any).energy ?? (foundArtist as any).loyalty ?? 50,
+            loyalty: (foundArtist as any).energy ?? (foundArtist as any).loyalty ?? 50,
             talent: foundArtist.talent || 50,
             workEthic: foundArtist.workEthic || 50,
             popularity: foundArtist.popularity || 0,
@@ -323,7 +324,7 @@ export default function ArtistPage() {
   // Enhanced artist analytics (for artist card)
   const getArtistInsights = (artist: Artist) => {
     const mood = artist.mood || 50;
-    const loyalty = artist.loyalty || 50;
+    const energy = artist.energy ?? (artist as any).loyalty ?? 50;
     const popularity = artist.popularity || 0;
 
     // Total revenue from songs
@@ -337,7 +338,8 @@ export default function ArtistPage() {
       totalRevenue,
       archetype: artist.archetype,
       mood,
-      loyalty,
+      energy,
+      loyalty: energy,
       popularity
     };
   };
@@ -466,7 +468,7 @@ export default function ArtistPage() {
                   <ArtistCard
                     artist={artist}
                     insights={getArtistInsights(artist)}
-                    relationship={getRelationshipStatus(artist.mood || 50, artist.loyalty || 50)}
+                    relationship={getRelationshipStatus(artist.mood || 50, artist.energy ?? (artist as any).loyalty ?? 50)}
                     archetype={getArtistCardArchetypeInfo(artist.archetype)}
                     isExpanded={expandedArtist}
                     onToggleExpand={() => setExpandedArtist(!expandedArtist)}
@@ -500,12 +502,12 @@ export default function ArtistPage() {
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span>Loyalty</span>
-                        <span className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {artist.loyalty || 50}%
+                      <span>Energy</span>
+                        <span className={`font-medium ${((artist.energy ?? (artist as any).loyalty ?? 50) >= 70) ? 'text-green-600' : ((artist.energy ?? (artist as any).loyalty ?? 50) >= 40) ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {artist.energy ?? (artist as any).loyalty ?? 50}%
                         </span>
                       </div>
-                      <Progress value={artist.loyalty || 50} className="h-2" />
+                      <Progress value={artist.energy ?? (artist as any).loyalty ?? 50} className="h-2" />
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">

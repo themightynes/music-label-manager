@@ -60,7 +60,7 @@ const ArtistsLandingPage: React.FC = () => {
   // Helper function to get artist insights for rich cards
   const getArtistInsights = (artist: Artist) => {
     const mood = artist.mood || 50;
-    const loyalty = artist.loyalty || 50;
+    const energy = (artist as any).energy ?? (artist as any).loyalty ?? 50;
     const popularity = artist.popularity || 0;
 
     // Get projects for this artist
@@ -79,7 +79,8 @@ const ArtistsLandingPage: React.FC = () => {
       totalRevenue,
       archetype: artist.archetype,
       mood,
-      loyalty,
+      energy,
+      loyalty: energy,
       popularity
     };
   };
@@ -249,7 +250,7 @@ const ArtistsLandingPage: React.FC = () => {
             <div className="space-y-4">
               {signedArtists.map((artist) => {
                 const insights = getArtistInsights(artist);
-                const relationship = getRelationshipStatus(artist.mood || 50, artist.loyalty || 50);
+                const relationship = getRelationshipStatus(artist.mood || 50, (artist as any).energy ?? (artist as any).loyalty ?? 50);
                 const archetype = getArchetypeInfo(artist.archetype);
                 const isExpanded = expandedArtist === artist.id;
 

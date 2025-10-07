@@ -33,8 +33,10 @@ function EffectBadge({ effect, value, isDelayed = false }: { effect: string; val
         return `${val > 0 ? '+' : ''}${val} Creative`;
       case 'artist_mood':
         return `${val > 0 ? '+' : ''}${val} Mood`;
-      case 'artist_loyalty':
-        return `${val > 0 ? '+' : ''}${val} Loyalty`;
+    case 'artist_energy':
+      return `${val > 0 ? '+' : ''}${val} Energy`;
+    case 'artist_loyalty':
+      return `${val > 0 ? '+' : ''}${val} Energy`;
       case 'quality_bonus':
         return `${val > 0 ? '+' : ''}${val} Quality`;
       case 'press_story_flag':

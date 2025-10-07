@@ -34,7 +34,7 @@ export function ArtistRoster() {
   const getArtistInsights = (artist: any) => {
     const archetype = artist.archetype;
     const mood = artist.mood || 50;
-    const loyalty = artist.loyalty || 50;
+    const energy = artist.energy ?? artist.loyalty ?? 50;
     const popularity = artist.popularity || 0;
     
     // Artist projects
@@ -53,7 +53,7 @@ export function ArtistRoster() {
       totalRevenue,
       archetype,
       mood,
-      loyalty,
+      energy,
       popularity
     };
   };
@@ -97,7 +97,7 @@ export function ArtistRoster() {
               {artists.map(artist => {
                 const insights = getArtistInsights(artist);
                 const archetype = getArchetypeInfo(artist.archetype);
-                const relationship = getRelationshipStatus(artist.mood || 50, artist.loyalty || 50);
+                const relationship = getRelationshipStatus(artist.mood || 50, artist.energy ?? artist.loyalty ?? 50);
                 const isExpanded = expandedArtist === artist.id;
 
                 return (

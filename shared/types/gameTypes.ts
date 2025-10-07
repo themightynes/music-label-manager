@@ -8,7 +8,7 @@ export interface GameArtist {
   workEthic: number;
   popularity: number;
   temperament: number;
-  loyalty: number;
+  energy: number;
   mood: number;
   signed: boolean;
   signingCost?: number;
@@ -22,8 +22,10 @@ export interface ChoiceEffect {
   money?: number;
   reputation?: number;
   creative_capital?: number;
-  artist_loyalty?: number;
+  artist_energy?: number;
   artist_mood?: number;
+  /** @deprecated Use `artist_energy` */
+  artist_loyalty?: never;
   [key: string]: number | undefined;
 }
 
@@ -312,8 +314,8 @@ export interface GameChange {
   grossRevenue?: number;
   moodChange?: number;
   newMood?: number;
-  loyaltyBoost?: number;
-  newLoyalty?: number;
+  energyBoost?: number;
+  newEnergy?: number;
   source?: string;
   artistId?: string;
 }

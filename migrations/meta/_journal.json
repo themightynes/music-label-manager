@@ -50,6 +50,13 @@
       "when": 1758091858513,
       "tag": "0006_perpetual_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1759000000000,
+      "tag": "0019_rename_artist_loyalty_to_energy",
+      "breakpoints": true
     }
   ]
 }

@@ -19,7 +19,7 @@ interface Artist {
   workEthic: number;
   popularity: number;
   temperament: number;
-  loyalty: number;
+  energy: number;
   mood: number;
   signingCost: number;
   weeklyCost: number;

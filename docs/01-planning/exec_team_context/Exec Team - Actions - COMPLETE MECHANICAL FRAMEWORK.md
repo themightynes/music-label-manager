@@ -257,10 +257,10 @@ _Theme: Quality enhancement, artistic credibility, creative risks_
 |1-2|$5,000 + 2 CC|60%|+20 loyalty, +10 quality|Artist feels controlled, -10 loyalty|
 |3-4|$5,000 + 1 CC|70%|+25 loyalty, +15 quality|-5 loyalty|
 |5-6|$4,000 + 1 CC|80%|+30 loyalty, +20 quality, artist is "reinvigorated"|No change|
-|7-9|$3,000|90%|+35 loyalty, +25 quality, prevent artist departure|No change|
+|7-9|$3,000|90%|+35 loyalty, +25 quality|No change|
 |10|$2,000|100%|Complete revival, Max loyalty, +30 quality|N/A|
 
-**Timing:** Immediate **Special:** Can prevent artist from leaving if used in same month as departure warning
+**Timing:** Immediate
 
 ---
 

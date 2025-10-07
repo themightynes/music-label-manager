@@ -86,7 +86,7 @@
           "id": "euro_circuit",
           "label": "European circuit - build international",
           "effects_immediate": { "money": -12000 },
-          "effects_delayed": { "international_rep": 2, "artist_loyalty": 1 }
+          "effects_delayed": { "international_rep": 2 }
         },
         {
           "id": "profitable_path",
@@ -179,7 +179,7 @@
           "id": "double_down_rock",
           "label": "Double down - rock will come back",
           "effects_immediate": { "creative_capital": -2, "money": -5000 },
-          "effects_delayed": { "artist_loyalty": 3, "niche_dominance": 1 }
+          "effects_delayed": { "niche_dominance": 1 }
         },
         {
           "id": "gradual_evolution",
@@ -234,7 +234,7 @@
         {
           "id": "artist_vision",
           "label": "Trust the artist's instincts",
-          "effects_immediate": { "artist_loyalty": 2 },
+          "effects_immediate": {},
           "effects_delayed": { "authenticity_bonus": 2, "commercial_risk": 1 }
         },
         {
@@ -545,7 +545,7 @@
           "id": "small_rooms",
           "label": "Small rooms, aim for sell-outs",
           "effects_immediate": { "money": -5000 },
-          "effects_delayed": { "venue_stability": 1, "artist_loyalty": 2 }
+          "effects_delayed": { "venue_stability": 1 }
         },
         {
           "id": "mid_rooms",

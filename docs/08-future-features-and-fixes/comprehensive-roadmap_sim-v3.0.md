@@ -16,17 +16,9 @@ Transform Music Label Manager from a solid MVP into the **definitive music indus
 
 ### **Artist Loyalty Effects System**
 **Origin**: v1.0 Sprint 6 (Weeks 11-12) - Not implemented
+**Status**: REMOVED - Loyalty tracking exists but will remain display-only
 
-**System**: Long-term relationship quality affecting costs and cooperation
-**Effects**: 
-- High loyalty (80+): -20% tour costs, -50% marketing costs
-- Low loyalty (0-20): +20% cost penalty, 15% departure risk
-
-**Implementation Requirements**:
-- Loyalty tracking separate from mood (mood = short-term, loyalty = long-term)
-- Loyalty builds slowly through consistent positive treatment
-- Contract negotiation advantages for high loyalty artists
-- Long-term relationship investment payoffs
+**Note**: Artist loyalty is tracked and modified through dialogue/meetings but has no gameplay impact. This is intentional - loyalty serves as relationship flavor rather than mechanical consequences.
 
 ### **Music Creation & Release Cycle - Advanced Phases**
 **Origin**: v1.0 Phases 3-4 - Not implemented

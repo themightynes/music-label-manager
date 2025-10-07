@@ -204,9 +204,9 @@ const artist = await storage.createArtist(validatedData);
 - **Archetype-specific**: Different factors affect different archetypes
 
 **Loyalty System (0-100 scale):**
-- **Affects**: Long-term relationship stability, contract renewals
+- **Affects**: Long-term relationship stability (display only in current implementation)
 - **Influenced by**: Consistent treatment, meeting expectations, success
-- **Consequences**: Low loyalty may lead to departure or demands
+- **Consequences**: Currently no mechanical impact; tracked for narrative flavor
 
 **Dialogue Integration:**
 ```typescript
@@ -454,12 +454,13 @@ metadata: {
 **Mood Impact on Performance:**
 - **High Mood (70+)**: +4 to +10 quality bonus, better project outcomes
 - **Average Mood (40-70)**: -2 to +4 quality bonus, neutral performance
-- **Low Mood (0-40)**: -10 to -2 quality penalty, potential departure
+- **Low Mood (0-40)**: -10 to -2 quality penalty
 
 **Loyalty Long-term Effects:**
-- **High Loyalty (80+)**: Reduced departure risk, bonus collaboration opportunities
-- **Medium Loyalty (40-80)**: Standard relationship, occasional demands
-- **Low Loyalty (0-40)**: High departure risk, difficult negotiations
+- **Note**: Loyalty is tracked but has no current mechanical impact
+- **High Loyalty (80+)**: Indicates strong relationship (display only)
+- **Medium Loyalty (40-80)**: Standard relationship
+- **Low Loyalty (0-40)**: Indicates strained relationship (display only)
 
 ### Project Assignment Optimization
 **Archetype-Project Matching:**
