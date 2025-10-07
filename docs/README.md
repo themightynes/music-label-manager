@@ -52,6 +52,9 @@
 - [Content Editing Guide](./06-development/content-editing-guide.md)
 - [Documentation Governance](./06-development/documentation-governance.md)
 
+### **ai-dev-tasks** - Structured AI Feature Development
+- [AI Dev Tasks](./ai-dev-tasks/README.md) - Workflow templates for PRD creation, task generation, and implementation
+
 ### **08-Future Features** - Roadmap
 - [Comprehensive Roadmap (v3.0+)](./08-future-features-and-fixes/comprehensive-roadmap_sim-v3.0.md) - Long-term vision
 - [Content Management Features](./08-future-features-and-fixes/content-management-features.md)
@@ -80,6 +83,7 @@
 | `04-frontend/` | React app architecture | Frontend devs | Component design, UI patterns | Backend details, content editing |
 | `05-backend/` | Server implementation | Backend devs | Server setup, API implementation | Architecture theory, user guides |
 | `06-development/` | Practical dev guides | All developers | Setup guides, how-to content | Architectural theory, future plans |
+| `ai-dev-tasks/` | AI-assisted development workflow | Developers using AI tools | PRD templates, task planning prompts | Completed features, code examples |
 | `08-future-features/` | Roadmap & ideas | PMs, Developers | Future enhancements, research | Current implementation, user guides |
 | `09-troubleshooting/` | Problem solving | All roles | Debugging, fixes, known issues | General documentation, tutorials |
 
