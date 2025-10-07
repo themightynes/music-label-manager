@@ -162,3 +162,24 @@ export function useMarkEmailRead() {
     },
   });
 }
+
+export function useDeleteEmail() {
+  const gameId = useGameStore((state) => state.gameState?.id);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (emailId: string) => {
+      if (!gameId) {
+        throw new Error('No game selected');
+      }
+
+      const response = await apiRequest('DELETE', `/api/game/${gameId}/emails/${emailId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      if (!gameId) return;
+      queryClient.invalidateQueries({ queryKey: ['emails', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['emails', gameId, 'unread-count'] });
+    },
+  });
+}

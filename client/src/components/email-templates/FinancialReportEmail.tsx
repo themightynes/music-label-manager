@@ -1,5 +1,6 @@
 import { formatCurrency } from './utils';
 import type { EmailTemplateProps } from './types';
+import { EmailSignature } from './EmailSignature';
 
 export function FinancialReportEmail({ email }: EmailTemplateProps) {
   const body = email.body as Record<string, any>;
@@ -35,6 +36,8 @@ export function FinancialReportEmail({ email }: EmailTemplateProps) {
           {body.financialBreakdown}
         </div>
       )}
+
+      <EmailSignature sender={email.sender} senderRoleId={email.senderRoleId} />
     </div>
   );
 }

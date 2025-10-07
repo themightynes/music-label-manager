@@ -1,5 +1,6 @@
 import { formatCurrency, formatNumber } from './utils';
 import type { EmailTemplateProps } from './types';
+import { EmailSignature } from './EmailSignature';
 
 export function ArtistSigningEmail({ email }: EmailTemplateProps) {
   const body = email.body as Record<string, any>;
@@ -72,6 +73,8 @@ export function ArtistSigningEmail({ email }: EmailTemplateProps) {
           💡 <span className="font-semibold">Next Steps:</span> Head to the Recording Session or Plan Release to start working on {body?.name ?? 'their'} first project.
         </p>
       </div>
+
+      <EmailSignature sender={email.sender} senderRoleId={email.senderRoleId} />
     </div>
   );
 }

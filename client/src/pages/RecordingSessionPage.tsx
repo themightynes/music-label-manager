@@ -484,7 +484,7 @@ export default function RecordingSessionPage() {
                             Mood: {artist.mood || 0}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
-                            Loyalty: {artist.loyalty || 0}
+                            Energy: {artist.energy ?? artist.loyalty ?? 0}
                           </Badge>
                         </div>
                       </SelectItem>

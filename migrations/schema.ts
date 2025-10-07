@@ -80,7 +80,7 @@ export const artists = pgTable("artists", {
 	name: text().notNull(),
 	archetype: text().notNull(),
 	mood: integer().default(50),
-	loyalty: integer().default(50),
+	energy: integer().default(50),
 	popularity: integer().default(0),
 	signedWeek: integer("signed_week"),
 	isSigned: boolean("is_signed").default(false),

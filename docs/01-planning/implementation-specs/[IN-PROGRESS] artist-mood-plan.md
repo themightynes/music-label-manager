@@ -270,7 +270,6 @@ CREATE TABLE mood_events (
 
 **Event Types**:
 - Warning: "Artist [name] seems stressed and unhappy"
-- Crisis: "Artist [name] is considering leaving the label"
 - Opportunity: "Artist [name] is in excellent spirits and ready for big projects"
 
 ---

@@ -1,5 +1,6 @@
 import { formatCurrency, formatNumber } from './utils';
 import type { EmailTemplateProps } from './types';
+import { EmailSignature } from './EmailSignature';
 
 export function ArtistDiscoveryEmail({ email }: EmailTemplateProps) {
   const body = email.body as Record<string, any>;
@@ -69,6 +70,8 @@ export function ArtistDiscoveryEmail({ email }: EmailTemplateProps) {
           Scouted via {body?.sourcingType ?? 'A&R initiative'}
         </div>
       </div>
+
+      <EmailSignature sender={email.sender} senderRoleId={email.senderRoleId} />
     </div>
   );
 }

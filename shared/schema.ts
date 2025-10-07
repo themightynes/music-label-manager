@@ -31,7 +31,7 @@ export const artists = pgTable("artists", {
   archetype: text("archetype").notNull(), // Visionary, Workhorse, Trendsetter
   genre: text("genre"), // Artist's primary genre (Pop, Rock, Jazz, etc.)
   mood: integer("mood").default(50),
-  loyalty: integer("loyalty").default(50),
+  energy: integer("energy").default(50),
   popularity: integer("popularity").default(0),
   signedWeek: integer("signed_week"),
   isSigned: boolean("is_signed").default(false),

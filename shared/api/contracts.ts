@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
+import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
 const ApiResponseSchema = z.object({
@@ -200,13 +201,18 @@ export const SignArtistRequest = z.object({
 });
 
 export const SignArtistResponse = z.object({
-  artist: z.object({
+  artist: ArtistSchema.pick({
+    id: true,
+    name: true,
+    archetype: true,
+    mood: true,
+    energy: true,
+    popularity: true,
+    signedWeek: true,
+    isSigned: true,
+    gameId: true
+  }).extend({
     id: z.string().uuid(),
-    name: z.string(),
-    archetype: z.string(),
-    mood: z.number(),
-    loyalty: z.number(),
-    popularity: z.number(),
     signedWeek: z.number().nullable(),
     isSigned: z.boolean(),
     gameId: z.string().nullable()

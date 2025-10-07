@@ -64,6 +64,8 @@ export function ArtistCard({
 
   const currentWeek = gameState?.currentWeek || 1;
   const artistStatus = getArtistStatus(artist.id, currentWeek, projects || []);
+  const energyValue = artist.energy ?? artist.loyalty ?? 50;
+  const energyColor = energyValue >= 70 ? 'text-green-600' : energyValue >= 40 ? 'text-yellow-600' : 'text-red-600';
 
   // Get recommendations with backend ROI
   const getArtistRecommendations = (artist: any, insights: any, roi?: number) => {
@@ -166,10 +168,10 @@ export function ArtistCard({
           <div className="text-white/50">Mood</div>
         </div>
         <div className="p-1 bg-brand-dark-card/30 rounded text-xs">
-          <div className={`font-medium ${(artist.loyalty || 50) >= 70 ? 'text-green-600' : (artist.loyalty || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-            {artist.loyalty || 50}%
+          <div className={`font-medium ${energyColor}`}>
+            {energyValue}%
           </div>
-          <div className="text-white/50">Loyalty</div>
+          <div className="text-white/50">Energy</div>
         </div>
         <div className="p-1 bg-brand-dark-card/30 rounded text-xs">
           <div className={`font-medium ${(artist.popularity || 0) >= 70 ? 'text-green-600' : (artist.popularity || 0) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
@@ -257,7 +259,7 @@ export function ArtistCard({
             <p className="text-xs text-brand-burgundy">{archetype.tips}</p>
           </div>
 
-          {/* Detailed Mood/Loyalty Factors */}
+          {/* Detailed Mood Factors */}
           <div>
             <h5 className="text-xs font-semibold text-white/90 mb-2">What Affects {artist.name}</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
@@ -353,11 +355,11 @@ export const getArchetypeInfo = (archetype: string) => {
   return archetypeData[archetype] || archetypeData['Workhorse'];
 };
 
-export const getRelationshipStatus = (mood: number, loyalty: number) => {
+export const getRelationshipStatus = (mood: number, energy: number) => {
   const moodStatus = mood >= 80 ? 'excellent' : mood >= 60 ? 'good' : mood >= 40 ? 'okay' : 'poor';
-  const loyaltyStatus = loyalty >= 80 ? 'excellent' : loyalty >= 60 ? 'good' : loyalty >= 40 ? 'okay' : 'poor';
+  const energyStatus = energy >= 80 ? 'excellent' : energy >= 60 ? 'good' : energy >= 40 ? 'okay' : 'poor';
 
-  const overallStatus = Math.floor((mood + loyalty) / 2);
+  const overallStatus = Math.floor((mood + energy) / 2);
 
   let statusColor = 'text-green-600';
   let statusIcon = TrendingUp;
@@ -373,5 +375,13 @@ export const getRelationshipStatus = (mood: number, loyalty: number) => {
     statusText = 'Stable';
   }
 
-  return { moodStatus, loyaltyStatus, overallStatus, statusColor, statusIcon, statusText };
+  return {
+    moodStatus,
+    energyStatus,
+    loyaltyStatus: energyStatus,
+    overallStatus,
+    statusColor,
+    statusIcon,
+    statusText
+  };
 };

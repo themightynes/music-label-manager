@@ -248,11 +248,15 @@ interface ArtistDialogue {
 interface ArtistChoice extends DialogueChoice {
   artist_effects?: {
     mood?: number;
-    loyalty?: number;
+    energy?: number;
     creativity?: number;
   };
 }
 ```
+
+```
+
+> **Note:** `artist_effects.energy` is a display-only value that communicates narrative feedback. It does _not_ modify gameplay systems, whereas executive loyalty remains a fully functional mechanic.
 
 ### **Example Dialogue**
 ```json
@@ -271,7 +275,7 @@ interface ArtistChoice extends DialogueChoice {
       },
       "artist_effects": {
         "mood": 5,
-        "loyalty": 2,
+        "energy": 2,
         "creativity": 3
       }
     }

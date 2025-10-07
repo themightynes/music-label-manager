@@ -53,7 +53,7 @@ interface Artist {
   readySongs: number;
   totalSongs: number;
   mood: number;
-  loyalty: number;
+  energy: number;
 }
 
 // Marketing and Release types now imported from shared utilities
@@ -69,7 +69,7 @@ const transformArtistData = (backendArtist: any): Artist => ({
   readySongs: parseInt(backendArtist.readySongsCount || '0'),
   totalSongs: parseInt(backendArtist.totalSongsCount || '0'),
   mood: backendArtist.mood || 50, // Honor actual mood from backend
-  loyalty: backendArtist.loyalty || 50 // Honor actual loyalty from backend
+  energy: backendArtist.energy ?? backendArtist.loyalty ?? 50 // TEMP: fallback to legacy loyalty
 });
 
 const transformSongData = (backendSong: any, artistName: string): Song => ({
@@ -706,8 +706,8 @@ export default function PlanReleasePage() {
                             <span className="font-mono font-semibold">{artist.mood}%</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Loyalty:</span>
-                            <span className="font-mono font-semibold">{artist.loyalty}%</span>
+                            <span>Energy:</span>
+                            <span className="font-mono font-semibold">{(artist.energy ?? (artist as any).loyalty ?? 0)}%</span>
                           </div>
                         </div>
                       </div>

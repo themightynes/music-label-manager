@@ -1,5 +1,6 @@
 import { formatNumber } from './utils';
 import type { EmailTemplateProps } from './types';
+import { EmailSignature } from './EmailSignature';
 
 export function NumberOneDebutEmail({ email }: EmailTemplateProps) {
   const body = email.body as Record<string, any>;
@@ -33,6 +34,8 @@ export function NumberOneDebutEmail({ email }: EmailTemplateProps) {
           <li>Playlist teams asking for expedited follow-up</li>
         </ul>
       </div>
+
+      <EmailSignature sender={email.sender} senderRoleId={email.senderRoleId} />
     </div>
   );
 }

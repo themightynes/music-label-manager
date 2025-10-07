@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ArtistSchema } from '../schemas/artist';
 import type {
   GameDataFiles,
   GameArtist,
@@ -41,23 +42,19 @@ const GameRoleSchema = z.object({
   meetings: z.array(RoleMeetingSchema).optional().default([])
 });
 
-const GameArtistSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  archetype: z.enum(['Visionary', 'Workhorse', 'Trendsetter']),
-  talent: z.number(),
-  workEthic: z.number(),
-  popularity: z.number(),
-  temperament: z.number(),
-  loyalty: z.number(),
-  mood: z.number(),
-  signed: z.boolean(),
-  signingCost: z.number().optional(),
-  weeklyCost: z.number().optional(),
-  bio: z.string().optional(),
-  genre: z.string().optional(),
-  age: z.number().optional()
+const TransitionalArtistSchema = ArtistSchema.extend({
+  energy: ArtistSchema.shape.energy.optional(),
+  loyalty: z.number().optional(),
+  signed: z.boolean().optional()
+}).transform(artist => {
+  const { loyalty, energy, ...rest } = artist;
+  return {
+    ...rest,
+    energy: energy ?? loyalty ?? 50
+  };
 });
+
+const GameArtistSchema = TransitionalArtistSchema;
 
 const EventChoiceSchema = z.object({
   id: z.string(),
@@ -402,7 +399,31 @@ export class GameDataLoader {
       additional_scenes: z.array(DialogueSceneSchema)
     });
 
-    return schema.parse(data);
+    const parsed = schema.parse(data);
+
+    const normalizeEffectKeys = (effects: Record<string, number> | undefined) => {
+      if (!effects) return effects;
+      if ('artist_loyalty' in effects && !('artist_energy' in effects)) {
+        const { artist_loyalty, ...rest } = effects;
+        return {
+          ...rest,
+          artist_energy: artist_loyalty as number
+        };
+      }
+      return effects;
+    };
+
+    return {
+      ...parsed,
+      additional_scenes: parsed.additional_scenes.map(scene => ({
+        ...scene,
+        choices: scene.choices.map(choice => ({
+          ...choice,
+          effects_immediate: normalizeEffectKeys(choice.effects_immediate),
+          effects_delayed: normalizeEffectKeys(choice.effects_delayed)
+        }))
+      }))
+    };
   }
 
   async loadEventsData() {

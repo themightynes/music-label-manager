@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,8 +18,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEmails, useMarkEmailRead, useUnreadEmailCount } from '@/hooks/useEmails';
+import { useEmails, useMarkEmailRead, useDeleteEmail, useUnreadEmailCount } from '@/hooks/useEmails';
 import type { EmailCategory } from '@shared/types/emailTypes';
 import type { EmailTemplateData, EmailTemplateProps } from './email-templates';
 import {
@@ -51,6 +62,7 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
   const [category, setCategory] = useState<'all' | EmailCategory>('all');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const queryParams = useMemo(
     () => ({
@@ -64,6 +76,7 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
   const { data, isLoading, isFetching, refetch } = useEmails(queryParams);
   const { data: unreadData } = useUnreadEmailCount();
   const markEmailRead = useMarkEmailRead();
+  const deleteEmail = useDeleteEmail();
 
   const emails = data?.emails ?? [];
   const unreadCount = unreadData?.count ?? data?.unreadCount ?? 0;
@@ -103,6 +116,20 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
   const handleToggleRead = () => {
     if (!selectedEmail) return;
     markEmailRead.mutate({ emailId: selectedEmail.id, isRead: !selectedEmail.isRead });
+  };
+
+  const handleDeleteEmail = () => {
+    if (!selectedEmail) return;
+
+    deleteEmail.mutate(selectedEmail.id, {
+      onSuccess: () => {
+        setShowDeleteConfirm(false);
+        // Select next email or previous if this was the last one
+        const currentIndex = emails.findIndex(e => e.id === selectedEmail.id);
+        const nextEmail = emails[currentIndex + 1] ?? emails[currentIndex - 1] ?? null;
+        setSelectedEmailId(nextEmail?.id ?? null);
+      },
+    });
   };
 
   return (
@@ -250,6 +277,16 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                     >
                       Show all
                     </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      disabled={deleteEmail.isPending}
+                      className="ml-auto text-xs"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
                   </div>
                 </div>
 
@@ -268,6 +305,29 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
           </section>
         </div>
       </DialogContent>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="border-brand-purple bg-brand-dark text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete this email?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/70">
+              This action cannot be undone. This will permanently delete this email from your inbox.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-brand-purple text-white hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEmail}
+              disabled={deleteEmail.isPending}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleteEmail.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

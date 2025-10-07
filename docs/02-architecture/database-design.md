@@ -89,7 +89,7 @@ CREATE TABLE artists (
   
   -- Stats
   talent INTEGER DEFAULT 50,
-  loyalty INTEGER DEFAULT 50,
+  energy INTEGER DEFAULT 50,
   mood INTEGER DEFAULT 50,
   popularity INTEGER DEFAULT 0,
   
@@ -114,7 +114,16 @@ CREATE INDEX idx_artists_signed_month ON artists(signed_month);
 ```
 
 **Purpose**: Artist roster management and relationship tracking  
-**Key Features**: Multi-archetype system, mood/loyalty mechanics, economic modeling
+**Key Features**: Multi-archetype system, mood/energy tracking, economic modeling
+
+**Important Distinction: Artist Energy vs Executive Loyalty**
+
+The database tracks two separate relationship metrics:
+
+- **Artist Energy** (`artists.energy`): A display-focused stat that reflects an artist’s current enthusiasm. It is surfaced in UI, narrative beats, and notifications, but it does **not** alter project outcomes or economic calculations.
+- **Executive Loyalty** (`executives.loyalty`): A gameplay-impacting system. Executives gain +5 loyalty when assigned each month and lose 5 loyalty after three months of inactivity. Loyalty influences executive availability and future narrative hooks.
+
+This separation keeps artist presentation flavorful while preserving the strategic depth of the executive relationship loop.
 
 #### **projects** - Music Production Projects
 ```sql

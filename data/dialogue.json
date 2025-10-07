@@ -13,7 +13,7 @@
           "id": "support_vision",
           "label": "Your art comes first - we'll find the audience",
           "effects_immediate": {
-            "artist_loyalty": 3
+            "artist_energy": 3
           },
           "effects_delayed": {
             "creative_breakthrough": 2,
@@ -59,7 +59,7 @@
           },
           "effects_delayed": {
             "innovation_bonus": 3,
-            "artist_loyalty": 2
+            "artist_energy": 2
           }
         },
         {
@@ -110,7 +110,7 @@
             "money": -3000
           },
           "effects_delayed": {
-            "artist_loyalty": 2,
+            "artist_energy": 2,
             "refreshed_creativity": 1
           }
         },
@@ -200,7 +200,7 @@
           "id": "double_down_uniqueness",
           "label": "Double down on what makes you unique",
           "effects_immediate": {
-            "artist_loyalty": 2
+            "artist_energy": 2
           },
           "effects_delayed": {
             "brand_strength": 2,

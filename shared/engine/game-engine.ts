@@ -1064,25 +1064,26 @@ export class GameEngine {
           }
           break;
           
-        case 'artist_loyalty':
+        case 'artist_energy':
           // Enhanced effect processing with validation and logging
           if (!summary.artistChanges) summary.artistChanges = {};
-          const previousLoyaltyChange = summary.artistChanges.loyalty || 0;
-          summary.artistChanges.loyalty = previousLoyaltyChange + value;
+          const previousEnergyChange = summary.artistChanges.energy || 0;
+          summary.artistChanges.energy = previousEnergyChange + value;
           
           // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist loyalty effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.loyalty})`);
+          console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.energy})`);
           
-          // Add to summary changes for UI display (using mood type with loyaltyBoost field)
+          // Add to summary changes for UI display (using mood type with energyBoost field)
           summary.changes.push({
             type: 'mood',
-            description: `Artist loyalty ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
-            loyaltyBoost: value
+            description: `Artist energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            energyBoost: value,
+            amount: value
           });
           
           // Validation: Warn if accumulated changes are extreme
-          if (Math.abs(summary.artistChanges.loyalty) > 10) {
-            console.warn(`[EFFECT VALIDATION] Large accumulated loyalty change: ${summary.artistChanges.loyalty}`);
+          if (Math.abs(summary.artistChanges.energy) > 10) {
+            console.warn(`[EFFECT VALIDATION] Large accumulated energy change: ${summary.artistChanges.energy}`);
           }
           break;
           
@@ -2697,13 +2698,13 @@ export class GameEngine {
   }
 
   /**
-   * Apply global artist mood/loyalty changes from executive meetings to database
-   * This processes changes accumulated in summary.artistChanges.mood/loyalty
+   * Apply global artist mood/energy changes from executive meetings to database
+   * This processes changes accumulated in summary.artistChanges.mood/energy
    * and applies them to ALL artists immediately
    */
   private async applyArtistChangesToDatabase(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     // Check if there are any artist changes to apply
-    if (!summary.artistChanges || (!summary.artistChanges.mood && !summary.artistChanges.loyalty && !summary.artistChanges.popularity)) {
+    if (!summary.artistChanges || (!summary.artistChanges.mood && !summary.artistChanges.energy && !summary.artistChanges.popularity)) {
       return;
     }
 
@@ -2715,15 +2716,15 @@ export class GameEngine {
     
     const artists = await this.storage.getArtistsByGame(this.gameState.id);
     if (!artists || artists.length === 0) {
-      console.log('[ARTIST CHANGES] No artists found for mood/loyalty updates');
+      console.log('[ARTIST CHANGES] No artists found for mood/energy updates');
       return;
     }
 
     const moodChange = summary.artistChanges.mood || 0;
-    const loyaltyChange = summary.artistChanges.loyalty || 0;
+    const energyChange = summary.artistChanges.energy || 0;
     const popularityChange = summary.artistChanges.popularity || 0;
 
-    console.log(`[ARTIST CHANGES] Applying global changes: mood ${moodChange}, loyalty ${loyaltyChange}, popularity ${popularityChange} to ${artists.length} artists`);
+    console.log(`[ARTIST CHANGES] Applying global changes: mood ${moodChange}, energy ${energyChange}, popularity ${popularityChange} to ${artists.length} artists`);
 
     // Apply changes to all artists
     for (const artist of artists) {
@@ -2740,14 +2741,14 @@ export class GameEngine {
         console.log(`[ARTIST CHANGES] ${artist.name}: mood ${currentMood} → ${newMood} (${moodChange > 0 ? '+' : ''}${moodChange})`);
       }
 
-      // Apply loyalty change
-      if (loyaltyChange !== 0) {
-        const currentLoyalty = artist.loyalty || 50;
-        const newLoyalty = Math.max(0, Math.min(100, currentLoyalty + loyaltyChange));
-        updates.loyalty = newLoyalty;
+      // Apply energy change
+      if (energyChange !== 0) {
+        const currentEnergy = artist.energy || 50;
+        const newEnergy = Math.max(0, Math.min(100, currentEnergy + energyChange));
+        updates.energy = newEnergy;
         hasUpdates = true;
         
-        console.log(`[ARTIST CHANGES] ${artist.name}: loyalty ${currentLoyalty} → ${newLoyalty} (${loyaltyChange > 0 ? '+' : ''}${loyaltyChange})`);
+        console.log(`[ARTIST CHANGES] ${artist.name}: energy ${currentEnergy} → ${newEnergy} (${energyChange > 0 ? '+' : ''}${energyChange})`);
       }
 
       // Apply popularity change
@@ -2775,11 +2776,12 @@ export class GameEngine {
       });
     }
 
-    if (loyaltyChange !== 0) {
+    if (energyChange !== 0) {
       summary.changes.push({
         type: 'mood',
-        description: `Executive meeting ${loyaltyChange > 0 ? 'boosted' : 'lowered'} all artists' loyalty (${loyaltyChange > 0 ? '+' : ''}${loyaltyChange})`,
-        loyaltyBoost: loyaltyChange
+        description: `Executive meeting ${energyChange > 0 ? 'boosted' : 'lowered'} all artists' energy (${energyChange > 0 ? '+' : ''}${energyChange})`,
+        energyBoost: energyChange,
+        amount: energyChange
       });
     }
 
@@ -2793,7 +2795,7 @@ export class GameEngine {
 
     // Clear the global changes since they've been applied
     summary.artistChanges.mood = 0;
-    summary.artistChanges.loyalty = 0;
+    summary.artistChanges.energy = 0;
     summary.artistChanges.popularity = 0;
   }
 
@@ -3555,14 +3557,14 @@ export class GameEngine {
     // In full implementation, this would load from dialogue.json additional_scenes
     const dialogueEffects = {
       mood: this.getRandom(-2, 3),
-      loyalty: this.getRandom(-1, 2),
+      energy: this.getRandom(-1, 2),
       creativity: this.getRandom(0, 2)
     };
     
     // Apply artist-specific effects
     if (!summary.artistChanges) summary.artistChanges = {};
     summary.artistChanges.mood = (summary.artistChanges.mood || 0) + dialogueEffects.mood;
-    summary.artistChanges.loyalty = (summary.artistChanges.loyalty || 0) + dialogueEffects.loyalty;
+    summary.artistChanges.energy = (summary.artistChanges.energy || 0) + dialogueEffects.energy;
     
     // Some dialogue choices might affect creative capital
     if (dialogueEffects.creativity > 0) {

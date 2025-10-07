@@ -29,13 +29,6 @@
       "neutral": [41, 60, 0.0],
       "good": [61, 80, 0.10],
       "excellent": [81, 100, 0.25]
-    },
-    
-    "loyalty_effects": {
-      "disloyal": [0, 20, 0.5],
-      "neutral": [21, 60, 0.0],
-      "loyal": [61, 80, -0.2],
-      "devoted": [81, 100, -0.5]
     }
   }
 }

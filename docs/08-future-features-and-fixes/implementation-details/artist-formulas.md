@@ -194,12 +194,12 @@
   STRESS_WARNING = 70      // UI shows orange warning
   STRESS_CRITICAL = 85     // UI shows red alert, forces events
   MOOD_WARNING = 30        // Performance penalties begin
-  MOOD_CRITICAL = 15       // Major performance hit, departure risk
+  MOOD_CRITICAL = 15       // Major performance hit
 
-  // Success Zones  
+  // Success Zones
   MOOD_OPTIMAL = 70        // Performance bonuses kick in
   POPULARITY_BREAKTHROUGH = 60  // Unlock higher tier venues/deals
-  LOYALTY_DEVOTED = 80     // Cost discounts, departure immunity
+  LOYALTY_DEVOTED = 80     // High relationship quality (display only)
 
   // Natural Limits
   MAX_POPULARITY_GAIN = 15      // Per month cap
