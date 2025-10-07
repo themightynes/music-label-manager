@@ -15,9 +15,9 @@
 - `data/dialogue.json` - Artist dialogue scenes with choice effects
 - `data/balance/artists.json` - Balance configuration for mood effects, thresholds, archetype modifiers
 - `server/routes.ts` - API route definitions
-- `server/routes/mood.ts` - NEW: Mood-specific API endpoints (recommendations, analytics, predictions)
+- `server/routes/mood.ts` - NEW: Mood-specific API endpoints (recommendations, predictions)
 - `migrations/000X_add_project_performance_fields.sql` - NEW: Add performance tracking for advanced mood factors
-- `migrations/000X_create_mood_analytics_table.sql` - NEW: Store mood analytics and predictions
+- `migrations/000X_create_mood_predictions_table.sql` - NEW: Store mood predictions
 
 ### Frontend Files
 - `client/src/components/ArtistRoster.tsx` - Main artist display component with mood indicators
@@ -26,7 +26,6 @@
 - `client/src/components/MoodIndicator.tsx` - Reusable mood display (existing from Phase 2)
 - `client/src/components/ux-prototypes/MoodSystemPrototype.tsx` - NEW: UI mockup for initial review
 - `client/src/components/MoodRecommendations.tsx` - NEW: AI-driven mood improvement suggestions
-- `client/src/components/MoodAnalyticsDashboard.tsx` - NEW: Comprehensive mood analytics view
 - `client/src/components/MoodPredictionWidget.tsx` - NEW: Mood forecasting component
 - `client/src/components/MoodManagementGuide.tsx` - NEW: Interactive help system for mood management
 - `client/src/hooks/useMoodAnalytics.ts` - NEW: Mood data processing hook
@@ -319,96 +318,75 @@
 
 ---
 
-### 6.0 Create comprehensive mood analytics and polish (Phase 10 - Frontend)
-**Goal**: Complete mood management experience with analytics and predictive features
+### 6.0 Create mood predictions and polish (Phase 10 - Frontend)
+**Goal**: Complete mood management experience with predictions and guidance
 
-- [ ] 6.1 Create mood analytics database table
-  - Create migration `migrations/000X_create_mood_analytics_table.sql`
-  - Create mood_analytics table with columns: id, artist_id, game_id, month, mood_prediction, risk_factors (JSONB), recommendations (JSONB), created_at
+- [ ] 6.1 Create mood predictions database table
+  - Create migration `migrations/000X_create_mood_predictions_table.sql`
+  - Create mood_predictions table with columns: id, artist_id, game_id, month, mood_prediction, risk_factors (JSONB), created_at
   - Run migration with `npm run db:push`
 
-- [ ] 6.2 Create MoodAnalyticsDashboard component
-  - Create `client/src/components/MoodAnalyticsDashboard.tsx`
-  - Display mood overview for all artists in roster
-  - Show mood distribution (how many artists in each mood range)
-  - Highlight artists needing attention (mood < 40)
-  - Include roster-wide mood trends
-
-- [ ] 6.3 Create MoodPredictionWidget component
+- [ ] 6.2 Create MoodPredictionWidget component
   - Create `client/src/components/MoodPredictionWidget.tsx`
   - Accept artist prop and current factors (workload, recent performance)
   - Calculate predicted mood for next month (STUB: simple +/- calculation)
   - Display prediction with confidence indicator
   - Show factors affecting prediction
 
-- [ ] 6.4 Create moodAnalytics utility library
+- [ ] 6.3 Create moodAnalytics utility library
   - Create `client/src/lib/moodAnalytics.ts`
   - Export `calculateMoodPrediction(artist, factors): number`
   - Export `identifyRiskFactors(artist): RiskFactor[]`
-  - Export `generateRecommendations(artist, risks): Recommendation[]`
   - All can be STUB/simple logic initially
 
-- [ ] 6.5 Create MoodManagementGuide component
+- [ ] 6.4 Create MoodManagementGuide component
   - Create `client/src/components/MoodManagementGuide.tsx`
   - Interactive help system explaining mood mechanics
   - Show mood ranges and their effects
   - Explain mood factors (workload, success, dialogue)
   - Provide strategic tips for mood management
 
-- [ ] 6.6 Add mood analytics API endpoint
-  - Add `GET /api/mood/analytics/:gameId` endpoint to `server/routes/mood.ts`
-  - Calculate mood statistics for all artists in game
-  - Return mood distribution, average mood, artists at risk
-  - Cache results for performance
-
-- [ ] 6.7 Add mood predictions API endpoint
-  - Add `GET /api/mood/predictions/:artistId` endpoint
+- [ ] 6.5 Add mood predictions API endpoint
+  - Add `GET /api/mood/predictions/:artistId` endpoint to `server/routes/mood.ts`
   - Calculate predicted mood based on current factors (STUB initially)
-  - Store prediction in mood_analytics table
+  - Store prediction in mood_predictions table
   - Return prediction with confidence score and factors
 
-- [ ] 6.8 Add mood interventions tracking endpoint
+- [ ] 6.6 Add mood interventions tracking endpoint
   - Add `POST /api/mood/interventions` endpoint
   - Log when player takes action based on mood recommendation
   - Track intervention type and artist_id
   - Use for future analytics and tutorial improvements
 
-- [ ] 6.9 Integrate mood analytics into Dashboard
-  - Update `client/src/components/Dashboard.tsx`
-  - Add MoodAnalyticsDashboard widget to main dashboard
-  - Display high-level mood overview
-  - Link to detailed artist views
-
-- [ ] 6.10 Add final mood polish to ArtistRoster
+- [ ] 6.7 Add final mood polish to ArtistRoster
   - Update `client/src/components/ArtistRoster.tsx`
   - Add MoodPredictionWidget to expanded artist view
   - Add MoodManagementGuide link/modal
   - Show mood correlation with project performance
 
-- [ ] 6.11 Add mood section to MonthSummary
+- [ ] 6.8 Add mood section to MonthSummary
   - Update `client/src/components/MonthSummary.tsx`
   - Create dedicated mood changes section
   - List all artist mood changes with reasons
   - Highlight significant changes (>10 points)
   - Link to artist cards for details
 
-- [ ] 6.12 Write analytics tests
+- [ ] 6.9 Write prediction tests
   - Test mood prediction calculations
   - Test risk factor identification
-  - Test recommendation generation
-  - Test API endpoints for analytics and predictions
+  - Test API endpoints for predictions
 
 **Implementation Notes**:
 - Prediction algorithms can be simple initially (STUB)
 - Focus on UI/UX polish and complete experience
-- All analytics should feel helpful, not overwhelming
+- Keep predictions artist-specific (no roster-wide analytics)
 - Cache expensive calculations for performance
 
 ---
 
 **Status**: ✅ All sub-tasks generated and ready for implementation
 
-**Total Tasks**: 6 parent tasks, 57 sub-tasks (6 removed: mood history chart feature)
+**Total Tasks**: 6 parent tasks, 51 sub-tasks (12 removed: mood history chart + analytics dashboard)
 
 **Recommended Implementation Order**:
 1. Start with 1.0 (UI Prototype) for design validation
