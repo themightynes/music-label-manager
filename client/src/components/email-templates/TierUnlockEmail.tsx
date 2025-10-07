@@ -1,5 +1,6 @@
 import { formatCurrency } from './utils';
 import type { EmailTemplateProps } from './types';
+import { EmailSignature } from './EmailSignature';
 
 export function TierUnlockEmail({ email }: EmailTemplateProps) {
   const body = email.body as Record<string, any>;
@@ -20,6 +21,8 @@ export function TierUnlockEmail({ email }: EmailTemplateProps) {
       <p className="text-xs text-white/60">
         Keep momentum going by planning complementary actions while the market is excited.
       </p>
+
+      <EmailSignature sender={email.sender} senderRoleId={email.senderRoleId} />
     </div>
   );
 }

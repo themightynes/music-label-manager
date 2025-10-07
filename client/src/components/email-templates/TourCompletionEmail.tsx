@@ -1,5 +1,6 @@
 import { formatCurrency, formatNumber } from './utils';
 import type { EmailTemplateProps } from './types';
+import { EmailSignature } from './EmailSignature';
 
 export function TourCompletionEmail({ email }: EmailTemplateProps) {
   const body = email.body as Record<string, any>;
@@ -43,6 +44,8 @@ export function TourCompletionEmail({ email }: EmailTemplateProps) {
           </div>
         </div>
       )}
+
+      <EmailSignature sender={email.sender} senderRoleId={email.senderRoleId} />
     </div>
   );
 }

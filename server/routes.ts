@@ -1420,7 +1420,7 @@ const musicLabelData = {
           category: 'ar',
           sender: 'Marcus "Mac" Rodriguez',
           senderRoleId: 'head_ar',
-          subject: `New Artist! ${artist.name}`,
+          subject: `Artist Signed – ${artist.name}`,
           preview: `${artist.name} has officially signed with ${labelDisplay}!`,
           body: emailBody,
           metadata: emailBody,

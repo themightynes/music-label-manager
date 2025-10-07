@@ -305,16 +305,29 @@ export interface ChartUpdate {
    - Right: Email content viewer
    - Actions: Mark as Read, Delete, Close (X)
 
-### Executive Team - Email Senders
+### Executive Team - Email Senders ✅ **IMPLEMENTED WITH SIGNATURES**
 **Reference**: `data/roles.json`, `docs/01-planning/exec_team_context/Exec Team - Character Bible.md`
 
 Your executive team will send emails based on their expertise areas:
 
 1. **Marcus "Mac" Rodriguez** - Head of A&R (`head_ar`)
+   - ✅ Profile Image: `/avatars/marcus_rodriguez_exec@0.5x.png`
+   - ✅ Initials Fallback: MR
+
 2. **Dante "D-Wave" Washington** - Chief Creative Officer (`cco`)
+   - ✅ Profile Image: `/avatars/dante_washingtong_exec@0.5x.png`
+   - ✅ Initials Fallback: DW
+
 3. **Samara "Sam" Chen** - Chief Marketing Officer (`cmo`)
+   - ✅ Profile Image: `/avatars/samara_chen_exec@0.5x.png`
+   - ✅ Initials Fallback: SC
+
 4. **Patricia "Pat" Williams, PhD** - Head of Distribution/Operations (`head_distribution`)
+   - ✅ Profile Image: `/avatars/patricia_williams_exec@0.5x.png`
+   - ✅ Initials Fallback: PW
+
 5. **Finance Team** - Generic sender for financial reports (CEO receives these)
+   - ✅ No profile image - shows initials only
 
 #### Executive Voice Profiles
 
@@ -931,6 +944,8 @@ Mark email as read
 #### DELETE `/api/game/:gameId/emails/:emailId`
 Delete email
 
+**Status**: ✅ **IMPLEMENTED** (Backend + Frontend)
+
 **Response**:
 ```typescript
 {
@@ -938,164 +953,252 @@ Delete email
 }
 ```
 
+**Frontend Implementation**:
+- Hook: `useDeleteEmail()` in `client/src/hooks/useEmails.ts`
+- UI: Delete button with confirmation dialog in `InboxModal.tsx`
+- Uses Shadcn AlertDialog for confirmation
+- Automatic cache invalidation on success
+- Smart email selection after deletion (next/previous/null)
+
 ---
 
 ### Frontend Components
 
 #### 1. InboxWidget Component
-**Location**: `client/src/components/InboxWidget.tsx` (to be created)
+**Location**: `client/src/components/InboxWidget.tsx` ✅ **CREATED**
 
 **Props**: None (reads from game store)
 
 **Functionality**:
-- Displays "Inbox • X Unread Emails"
-- Fetches unread count via API
-- Clicking opens InboxModal
-- Updates in real-time when new week is processed
+- ✅ Displays "Inbox • X Unread Emails"
+- ✅ Fetches unread count via API
+- ✅ Clicking opens InboxModal
+- ✅ Updates in real-time when new week is processed
+- ✅ Shows latest 2 emails preview
+- ✅ "Open inbox" button
 
 **Dependencies**:
 - `useGameStore()` - Get current gameId
-- `useQuery()` - Fetch unread count
+- `useEmails()` - Fetch emails with limit
+- `useUnreadEmailCount()` - Fetch unread count
 - `useState()` - Modal open/close state
 
 ---
 
 #### 2. InboxModal Component
-**Location**: `client/src/components/InboxModal.tsx` (to be created)
+**Location**: `client/src/components/InboxModal.tsx` ✅ **CREATED**
 
 **Props**:
 ```typescript
 {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialEmailId?: string | null;
 }
 ```
 
 **Functionality**:
-- Two-column layout (list + viewer)
-- Fetches all emails via API
-- Sortable by date/subject
-- Mark as read on click
-- Delete button per email
-- Shows email content in viewer pane
+- ✅ Two-column layout (list + viewer)
+- ✅ Fetches all emails via API with filtering
+- ✅ Category filter dropdown (All/Chart/Financial/Artist/A&R)
+- ✅ Unread-only toggle switch
+- ✅ Mark as read/unread toggle per email
+- ✅ **Delete button with confirmation dialog** ✅ **NEW**
+- ✅ Shows email content in viewer pane with template rendering
+- ✅ Refresh button for manual sync
+- ✅ Smart email selection after deletion
 
 **Dependencies**:
-- `useQuery()` - Fetch emails
-- `useMutation()` - Mark as read / delete
+- `useEmails()` - Fetch emails with filtering
+- `useUnreadEmailCount()` - Fetch unread count
+- `useMarkEmailRead()` - Mark as read mutation
+- `useDeleteEmail()` - Delete email mutation ✅ **NEW**
 - Shadcn Dialog component
-- Email template renderers
+- Shadcn AlertDialog component (for delete confirmation) ✅ **NEW**
+- Email template renderers (AREmail, ChartEmail, ArtistEmail, FinancialEmail)
 
 ---
 
 #### 3. Email Template Renderers
-**Location**: `client/src/components/email-templates/` (to be created)
+**Location**: `client/src/components/email-templates/` ✅ **CREATED**
 
 **Files**:
-- `TourCompletionEmail.tsx`
-- `Top10DebutEmail.tsx`
-- `ReleaseEmail.tsx`
-- `NumberOneDebutEmail.tsx`
-- `TierUnlockEmail.tsx`
-- `ArtistDiscoveryEmail.tsx`
-- `FinancialReportEmail.tsx`
+- ✅ `TourCompletionEmail.tsx`
+- ✅ `Top10DebutEmail.tsx`
+- ✅ `ReleaseEmail.tsx`
+- ✅ `NumberOneDebutEmail.tsx`
+- ✅ `TierUnlockEmail.tsx`
+- ✅ `ArtistDiscoveryEmail.tsx`
+- ✅ `FinancialReportEmail.tsx`
+- ✅ `ArtistSigningEmail.tsx`
+- ✅ **`EmailSignature.tsx`** - Reusable signature block component ✅ **NEW (2025-10-06)**
 
-**Each Component**:
+**EmailSignature Component**:
 ```typescript
-interface EmailTemplateProps {
-  metadata: any; // Parsed from email.metadata
-  week: number;
+interface EmailSignatureProps {
+  sender: string;
+  senderRoleId?: string | null;
 }
 ```
+
+**Features**:
+- ✅ Shadcn Avatar component with executive profile images
+- ✅ Executive profiles mapped: Mac (A&R), Sam (CMO), Pat (Distribution), D-Wave (CCO)
+- ✅ Displays name, title, and avatar with brand styling
+- ✅ Fallback initials when no image available
+- ✅ Integrated into all 7+ email templates
+
+**Each Template Component**:
+```typescript
+interface EmailTemplateProps {
+  email: EmailRecord<Record<string, unknown>>;
+}
+```
+
+**All templates now include**:
+```tsx
+<EmailSignature sender={email.sender} senderRoleId={email.senderRoleId} />
+```
+
+**Signature Block Visual Design**:
+```tsx
+<div className="mt-6 pt-4 border-t border-white/10">
+  <div className="flex items-center gap-3">
+    <Avatar className="h-10 w-10 ring-2 ring-brand-purple/50">
+      <AvatarImage src={profile.image} alt={sender} />
+      <AvatarFallback className="bg-brand-mauve text-white text-sm font-semibold">
+        {profile.initials}
+      </AvatarFallback>
+    </Avatar>
+    <div>
+      <p className="text-sm font-semibold text-white">{sender}</p>
+      <p className="text-xs text-white/60">{profile.title}</p>
+    </div>
+  </div>
+</div>
+```
+
+**Signature Examples**:
+- **Mac (A&R)**: Avatar + "Marcus 'Mac' Rodriguez" + "Head of A&R"
+- **Sam (CMO)**: Avatar + "Samara 'Sam' Chen" + "Chief Marketing Officer"
+- **Pat (Distribution)**: Avatar + "Patricia 'Pat' Williams, PhD" + "Head of Distribution & Operations"
+- **D-Wave (CCO)**: Avatar + "Dante 'D-Wave' Washington" + "Chief Creative Officer"
+- **Finance**: Initials only (no avatar) + "Finance Department"
 
 ---
 
 ## Implementation Strategy
 
-### Phase 1: Backend Foundation
+### Phase 1: Backend Foundation ✅ **COMPLETE**
 **Goal**: Store emails in database, generate from game engine
 
 **Tasks**:
-1. Create `emails` table migration
-2. Create email generation functions
-3. Integrate email generation into `processWeek()`
-4. Create API endpoints (CRUD)
-5. Test email generation with existing games
+1. ✅ Create `emails` table migration
+2. ✅ Create email generation functions
+3. ✅ Integrate email generation into `processWeek()`
+4. ✅ Create API endpoints (CRUD)
+5. ✅ Test email generation with existing games
 
-**Files to Create/Modify**:
-- `migrations/XXXX_create_emails_table.sql`
-- `shared/engine/EmailGenerator.ts` (new)
-- `shared/engine/game-engine.ts` (modify)
-- `server/routes/emails.ts` (new)
-- `server/index.ts` (register email routes)
+**Files Created/Modified**:
+- ✅ `migrations/0015_create_emails_table.sql` (created)
+- ✅ `migrations/0016_consolidate_email_categories.sql` (created)
+- ✅ `shared/engine/EmailGenerator.ts` (created)
+- ✅ `shared/engine/game-engine.ts` (modified - integrated email generation)
+- ✅ `server/routes.ts` (modified - added email endpoints)
+- ✅ `server/storage.ts` (modified - added email CRUD methods)
 
 ---
 
-### Phase 2: Frontend UI
+### Phase 2: Frontend UI ✅ **COMPLETE**
 **Goal**: Display emails in dashboard + modal
 
 **Tasks**:
-1. Create InboxWidget component (dashboard integration)
-2. Create InboxModal component (email list + viewer)
-3. Create email template components (7 templates)
-4. Add API hooks for email operations
-5. Style components to match game aesthetic
+1. ✅ Create InboxWidget component (dashboard integration)
+2. ✅ Create InboxModal component (email list + viewer)
+3. ✅ Create email template components (8 templates)
+4. ✅ Add API hooks for email operations
+5. ✅ Style components to match game aesthetic
+6. ✅ **Add delete functionality with confirmation dialog** (Update 2025-10-06)
 
-**Files to Create**:
-- `client/src/components/InboxWidget.tsx`
-- `client/src/components/InboxModal.tsx`
-- `client/src/components/email-templates/[7 templates].tsx`
-- `client/src/hooks/useEmails.ts` (API hooks)
-- Styling updates
+**Files Created**:
+- ✅ `client/src/components/InboxWidget.tsx`
+- ✅ `client/src/components/InboxModal.tsx` (includes delete button + AlertDialog)
+- ✅ `client/src/components/email-templates/AREmail.tsx`
+- ✅ `client/src/components/email-templates/ArtistEmail.tsx`
+- ✅ `client/src/components/email-templates/ChartEmail.tsx`
+- ✅ `client/src/components/email-templates/FinancialEmail.tsx`
+- ✅ `client/src/components/email-templates/ArtistDiscoveryEmail.tsx`
+- ✅ `client/src/components/email-templates/ArtistSigningEmail.tsx`
+- ✅ `client/src/components/email-templates/TourCompletionEmail.tsx`
+- ✅ `client/src/components/email-templates/Top10DebutEmail.tsx`
+- ✅ `client/src/components/email-templates/NumberOneDebutEmail.tsx`
+- ✅ `client/src/components/email-templates/ReleaseEmail.tsx`
+- ✅ `client/src/components/email-templates/TierUnlockEmail.tsx`
+- ✅ `client/src/components/email-templates/FinancialReportEmail.tsx`
+- ✅ **`client/src/components/email-templates/EmailSignature.tsx`** - Executive signature block (2025-10-06)
+- ✅ `client/src/hooks/useEmails.ts` (includes useEmails, useUnreadEmailCount, useMarkEmailRead, **useDeleteEmail**)
 
 ---
 
-### Phase 3: Polish & Integration
+### Phase 3: Polish & Integration ✅ **MOSTLY COMPLETE**
 **Goal**: Smooth UX, edge cases handled
 
 **Tasks**:
-1. Add loading states / skeletons
-2. Add empty states ("No emails yet")
-3. Add email count badges
-4. Test with various game scenarios
-5. Add animations / transitions
-6. Performance optimization (pagination, caching)
+1. ✅ Add loading states / skeletons (LoadingList component)
+2. ✅ Add empty states ("No emails yet")
+3. ✅ Add email count badges (unread badge in widget + modal header)
+4. ✅ Test with various game scenarios
+5. ⏳ Add animations / transitions (basic, could be enhanced)
+6. ✅ Performance optimization (pagination limit 50, React Query caching, memoized params)
+
+**Additional Polish Completed (2025-10-06)**:
+7. ✅ Delete functionality with confirmation dialog
+8. ✅ Smart email selection after deletion
+9. ✅ Category filtering (All/Chart/Financial/Artist/A&R)
+10. ✅ Unread-only toggle
+11. ✅ Refresh button
+12. ✅ Responsive two-pane layout
+13. ✅ **Executive signature blocks with Shadcn Avatar components** (2025-10-06)
+14. ✅ **Profile images for all executives (Mac, Sam, Pat, D-Wave)** (2025-10-06)
 
 ---
 
-## Open Implementation Questions
+## Implementation Decisions ✅ **RESOLVED**
 
-### 1. Email Body Format
-**Options**:
-- **Plain JSON**: Store structured data, render client-side
-- **HTML String**: Pre-render HTML server-side
-- **Markdown**: Store markdown, render client-side
+### 1. Email Body Format ✅ **IMPLEMENTED**
+**Decision**: Plain JSON (most flexible, easier to update templates)
 
-**Recommendation**: Plain JSON (most flexible, easier to update templates)
+**Implementation**:
+- ✅ Backend stores structured JSON in `body` field
+- ✅ Frontend renders via template components (AREmail, ChartEmail, ArtistEmail, FinancialEmail)
+- ✅ Metadata field stores additional context
 
-### 2. Email Deduplication
-**Question**: If multiple songs debut Top 10 in same week, send one email or multiple?
+### 2. Email Deduplication ✅ **IMPLEMENTED**
+**Decision**: One email per significant event (aligns with CEO inbox realism)
 
-**Options**:
-- One email per event (more detailed)
-- One email per category per week (consolidated)
+**Implementation**:
+- ✅ Each chart debut gets separate email
+- ✅ Each tour completion gets separate email
+- ✅ Each tier unlock gets separate email
+- ✅ Financial report always generated (one per week)
 
-**Recommendation**: One email per significant event (aligns with CEO inbox realism)
+### 3. Historical Chart Context ⏳ **DEFERRED TO FUTURE**
+**Decision**: Start simple, add context later
 
-### 3. Historical Chart Context
-**Question**: For chart emails, include competitor context? (e.g., "You beat Song X for this spot")
+**Current State**:
+- `ChartUpdate.isCompetitorSong` flag exists in data
+- Not yet displayed in email templates
+- Future enhancement opportunity
 
-**Data Available**: `ChartUpdate.isCompetitorSong` flag exists
+### 4. Email Actions ✅ **PARTIALLY IMPLEMENTED**
+**Current Actions**:
+- ✅ Mark as read/unread
+- ✅ Delete (with confirmation)
+- ✅ Category filtering
+- ✅ Unread-only toggle
 
-**Recommendation**: Phase 2 feature - start simple, add context later
-
-### 4. Email Attachments/Actions
-**Question**: Should emails have interactive actions beyond Mark Read/Delete?
-
-**Examples**:
-- "View Artist Roster" button in discovery email
-- "See Chart" button in chart emails
-
-**Decision**: No actions for MVP (per user's minimal deployment strategy)
+**Future Enhancement**:
+- Deep links to artist roster, charts, projects (deferred)
 
 ---
 
