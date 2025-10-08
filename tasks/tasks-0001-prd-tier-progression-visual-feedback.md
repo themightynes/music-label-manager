@@ -53,16 +53,16 @@
   - [x] 3.5 Add conditional rendering: `{tier.name !== 'None' && gameState.tierUnlockHistory?.[tierType]?.[getTierKey(tier.name)] && (<span className=\"text-xs text-white/50 ml-2\">• Unlocked Week {gameState.tierUnlockHistory[tierType][getTierKey(tier.name)]}</span>)}`
   - [x] 3.6 Verify the unlock week appears next to unlocked tier names in the expanded view
 
-- [ ] 4.0 Add toast notifications for tier unlocks
+- [x] 4.0 Add toast notifications for tier unlocks
   - [x] 4.1 Write unit tests for toast notifications (mock `toast` and assert it is called for unlock changes with correct messages/icons)
   - [x] 4.2 Determine best location for toast trigger: check if `GamePage.tsx` or `gameStore.ts` handles week advance responses
   - [x] 4.3 Import `toast` from `@/hooks/use-toast` at the top of the chosen file
-  - [ ] 4.4 Import icons from lucide-react: `import { Music, Megaphone, Building } from 'lucide-react';`
+- [x] 4.4 Import icons from lucide-react: `import { Music, Megaphone, Building } from 'lucide-react';`
   - [x] 4.4 After receiving `WeekSummary` from week advance API response, add toast logic: iterate through `weekSummary.changes` array
   - [x] 4.5 For each change with `type === 'unlock'`, check if description includes 'playlist', 'press', or 'venue' keywords
   - [x] 4.6 Trigger toast with appropriate icon and message: `toast({ title: "🔓 New Access Unlocked", description: change.description });`
   - [x] 4.7 Add helper function to get tier icon: `const getTierIcon = (desc: string) => desc.includes('playlist') ? Music : desc.includes('press') ? Megaphone : Building;`
-  - [ ] 4.9 Enhance toast to include icon component in title or description for better visual feedback
+  - [x] 4.9 Enhance toast to include icon component in title or description for better visual feedback
 
 - [ ] 5.0 Test and verify tier unlock system
   - [ ] 5.1 Start dev server with `npm run dev` and load an existing game save
