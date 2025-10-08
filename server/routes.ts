@@ -24,7 +24,9 @@ import {
   BugReportStatusUpdateRequestSchema,
   BugReportStatusUpdateResponseSchema,
   validateRequest,
-  createErrorResponse
+  createErrorResponse,
+  ArtistDialogueRequestSchema,
+  ArtistDialogueResponse
 } from "@shared/api/contracts";
 import { db } from "./db";
 import { eq, desc, and, sql, inArray, ne } from "drizzle-orm";
@@ -1245,6 +1247,156 @@ const musicLabelData = {
     }
   });
 
+  // ========================================
+  // Artist Dialogue Endpoint
+  // ========================================
+
+  app.post("/api/game/:gameId/artist-dialogue", requireClerkUser, async (req, res) => {
+    try {
+      // 1. Extract and validate request data
+      const { gameId } = req.params;
+      const requestBody = req.body;
+
+      const validationResult = ArtistDialogueRequestSchema.safeParse(requestBody);
+      if (!validationResult.success) {
+        console.error('Artist dialogue validation failed:', validationResult.error);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid request data",
+          details: validationResult.error.errors
+        });
+      }
+
+      const { artistId, sceneId, choiceId } = validationResult.data;
+      console.log(`Processing artist dialogue - Game: ${gameId}, Artist: ${artistId}, Scene: ${sceneId}, Choice: ${choiceId}`);
+
+      // 2. Validate game and artist
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState) {
+        return res.status(404).json({
+          success: false,
+          message: "Game not found"
+        });
+      }
+
+      const artist = await storage.getArtist(artistId);
+      if (!artist) {
+        return res.status(404).json({
+          success: false,
+          message: "Artist not found"
+        });
+      }
+
+      if (artist.gameId !== gameId) {
+        return res.status(400).json({
+          success: false,
+          message: "Artist does not belong to this game"
+        });
+      }
+
+      // 3. Load and validate dialogue choice
+      await serverGameData.initialize();
+      const choice = await serverGameData.getDialogueChoiceById(sceneId, choiceId);
+
+      if (!choice) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid dialogue choice"
+        });
+      }
+
+      console.log('Loaded dialogue choice:', { sceneId, choiceId, choice });
+
+      // Helper function to clamp values
+      const clamp = (value: number, min: number, max: number): number => {
+        return Math.max(min, Math.min(max, value));
+      };
+
+      // 4. Apply immediate effects to database
+      const effectsImmediate = choice.effects_immediate || {};
+      const effectsApplied: Record<string, number> = {};
+      const gamePatch: Record<string, number> = {};
+
+      for (const [effectKey, effectValue] of Object.entries(effectsImmediate)) {
+        if (typeof effectValue !== 'number') {
+          continue;
+        }
+
+        console.log(`Applying immediate effect: ${effectKey} = ${effectValue}`);
+
+        if (effectKey === 'artist_mood') {
+          const current = artist.mood ?? 50;
+          const newMood = clamp(current + Number(effectValue), 0, 100);
+          await storage.updateArtist(artistId, { mood: newMood });
+          effectsApplied[effectKey] = Number(effectValue);
+        } else if (effectKey === 'artist_energy') {
+          const current = artist.energy ?? 50;
+          const newEnergy = clamp(current + Number(effectValue), 0, 100);
+          await storage.updateArtist(artistId, { energy: newEnergy });
+          effectsApplied[effectKey] = Number(effectValue);
+        } else if (effectKey === 'artist_popularity') {
+          const current = artist.popularity ?? 50;
+          const newPopularity = clamp(current + Number(effectValue), 0, 100);
+          await storage.updateArtist(artistId, { popularity: newPopularity });
+          effectsApplied[effectKey] = Number(effectValue);
+        } else if (effectKey === 'money') {
+          gamePatch.money = gameState.money + Number(effectValue);
+          effectsApplied[effectKey] = Number(effectValue);
+        } else if (effectKey === 'reputation') {
+          gamePatch.reputation = clamp(gameState.reputation + Number(effectValue), 0, 100);
+          effectsApplied[effectKey] = Number(effectValue);
+        } else if (effectKey === 'creative_capital') {
+          gamePatch.creativeCapital = gameState.creativeCapital + Number(effectValue);
+          effectsApplied[effectKey] = Number(effectValue);
+        }
+      }
+
+      // Apply batched game state updates
+      if (Object.keys(gamePatch).length > 0) {
+        await storage.updateGameState(gameId, gamePatch as any);
+      }
+
+      // 5. Store delayed effects in game state flags
+      const effectsDelayed = choice.effects_delayed || {};
+
+      if (Object.keys(effectsDelayed).length > 0) {
+        const flags = gameState.flags || {};
+        const delayedKey = `dialogue-${artistId}-${sceneId}-${choiceId}-${Date.now()}`;
+
+        flags[delayedKey] = {
+          triggerWeek: gameState.currentWeek + 1,
+          effects: effectsDelayed,
+          artistId
+        };
+
+        await storage.updateGameState(gameId, { flags: flags as any });
+        console.log('Stored delayed effects:', { delayedKey, effects: effectsDelayed, artistId });
+      }
+
+      // 6. Return success response
+      const response: ArtistDialogueResponse = {
+        success: true,
+        artistId,
+        artistName: artist.name,
+        sceneId,
+        choiceId,
+        effects: effectsApplied,
+        delayedEffects: effectsDelayed,
+        message: "Conversation completed successfully"
+      };
+
+      console.log('Artist dialogue processed successfully:', response);
+      res.json(response);
+
+    } catch (error) {
+      console.error('Failed to process artist dialogue:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to process artist dialogue"
+      });
+    }
+  });
+
   // Get project types and configuration
   app.get("/api/project-types", requireClerkUser, async (req, res) => {
     try {
@@ -1770,6 +1922,23 @@ const musicLabelData = {
       res.json(choices);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch dialogue choices" });
+    }
+  });
+
+  // Get all dialogue scenes for frontend random selection
+  app.get("/api/dialogue-scenes", async (req, res) => {
+    try {
+      const dialogueData = await gameDataLoader.loadDialogueData();
+      res.json({
+        version: dialogueData.version,
+        scenes: dialogueData.additional_scenes
+      });
+    } catch (error) {
+      console.error('[API] Failed to load dialogue data:', error);
+      res.status(500).json({
+        message: "Failed to load dialogue data",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

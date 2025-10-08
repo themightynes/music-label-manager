@@ -2666,6 +2666,11 @@ export class GameEngine {
       const flags = (this.gameState.flags || {}) as Record<string, any>;
       const triggeredKeys: string[] = [];
 
+      // Helper function to clamp values
+      const clamp = (value: number, min: number, max: number): number => {
+        return Math.max(min, Math.min(max, value));
+      };
+
       for (const [key, value] of Object.entries(flags)) {
         if (
           value &&
@@ -2675,11 +2680,57 @@ export class GameEngine {
           (value as any).triggerWeek === (this.gameState.currentWeek || 0)
         ) {
           try {
-            this.applyEffects((value as any).effects || {}, summary);
-            summary.changes.push({
-              type: 'delayed_effect',
-              description: 'Delayed effect triggered'
-            });
+            // Check if this is a dialogue delayed effect (has artistId)
+            if (key.startsWith('dialogue-') && (value as any).artistId) {
+              const artistId = (value as any).artistId;
+              const effects = (value as any).effects || {};
+
+              console.log(`[DELAYED EFFECTS] Processing dialogue delayed effects for artist ${artistId}:`, effects);
+
+              // Apply artist-specific delayed effects
+              for (const [effectKey, effectValue] of Object.entries(effects)) {
+                try {
+                  if (effectKey === 'artist_mood' || effectKey === 'artist_energy' || effectKey === 'artist_popularity') {
+                    // Apply to specific artist
+                    const artist = await this.storage.getArtist(artistId);
+                    if (artist) {
+                      const field = effectKey.replace('artist_', '') as 'mood' | 'energy' | 'popularity';
+                      const currentValue = artist[field];
+                      const newValue = clamp(currentValue + (effectValue as number), 0, 100);
+
+                      await this.storage.updateArtist(artistId, { [field]: newValue });
+                      console.log(`[DELAYED EFFECTS] Applied ${effectKey} to artist ${artistId}: ${currentValue} + ${effectValue} = ${newValue}`);
+
+                      summary.changes.push({
+                        type: 'delayed_effect',
+                        description: `${artist.name}'s ${field} changed by ${effectValue > 0 ? '+' : ''}${effectValue}`
+                      });
+                    } else {
+                      console.warn(`[DELAYED EFFECTS] Artist ${artistId} not found for delayed effect`);
+                    }
+                  } else if (effectKey === 'money' || effectKey === 'reputation' || effectKey === 'creative_capital') {
+                    // Apply to game state
+                    const gameStateEffect: Record<string, number> = {};
+                    gameStateEffect[effectKey] = effectValue as number;
+                    this.applyEffects(gameStateEffect, summary);
+                  }
+                } catch (effectError) {
+                  console.error(`[DELAYED EFFECTS] Error applying delayed effect ${effectKey}:`, effectError);
+                }
+              }
+
+              summary.changes.push({
+                type: 'delayed_effect',
+                description: 'Artist dialogue delayed effect triggered'
+              });
+            } else {
+              // Old-style delayed effect (global)
+              this.applyEffects((value as any).effects || {}, summary);
+              summary.changes.push({
+                type: 'delayed_effect',
+                description: 'Delayed effect triggered'
+              });
+            }
           } finally {
             triggeredKeys.push(key);
           }

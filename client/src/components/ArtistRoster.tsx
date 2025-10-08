@@ -1,21 +1,86 @@
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
+} from '@/components/ui/menubar';
 import { useGameStore } from '@/store/gameStore';
 import { ArtistDiscoveryModal } from './ArtistDiscoveryModal';
-import { ArtistCard, getArchetypeInfo, getRelationshipStatus } from './ArtistCard';
-import { useState } from 'react';
-import { TrendingUp, TrendingDown, Heart, Star, Info, DollarSign, ExternalLink } from 'lucide-react';
-import { SongCatalog } from './SongCatalog';
+import { ArtistDashboardCard } from './ArtistDashboardCard';
+import { ArtistDialogueModal } from './artist-dialogue/ArtistDialogueModal';
+import { SyntheticEvent, useMemo, useState } from 'react';
+import { CalendarDays, Disc3, Mic, Rocket } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { useArtistROI } from '@/hooks/useAnalytics';
+import { generateArtistSlug } from '@/utils/artistSlug';
+import type { GameArtist } from '@shared/types/gameTypes';
+import type { Artist as DbArtist } from '@shared/schema';
+
+const toGameArtist = (artist: DbArtist | (DbArtist & { loyalty?: number | null })): GameArtist => {
+  const source = artist as Record<string, any>;
+
+  return {
+    id: artist.id,
+    name: artist.name,
+    archetype: (artist.archetype as GameArtist['archetype']) ?? 'Workhorse',
+    talent: artist.talent ?? 50,
+    workEthic: artist.workEthic ?? 50,
+    popularity: artist.popularity ?? 0,
+    temperament: source.temperament ?? 50,
+    energy: artist.energy ?? source.loyalty ?? 50,
+    mood: artist.mood ?? 50,
+    signed: true,
+    signingCost: source.signingCost ?? undefined,
+    weeklyCost: source.weeklyCost ?? source.weeklyFee ?? undefined,
+    bio: source.bio ?? undefined,
+    genre: artist.genre ?? undefined,
+    age: source.age ?? undefined,
+  };
+};
 
 export function ArtistRoster() {
-  const { gameState, artists, signArtist, projects } = useGameStore();
+  const { gameState, artists, signArtist, projects, loadGame } = useGameStore();
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
-  const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
+  const [isDialogueModalOpen, setIsDialogueModalOpen] = useState(false);
+  const [selectedArtistForDialogue, setSelectedArtistForDialogue] = useState<DbArtist | null>(null);
   const [, setLocation] = useLocation();
+
+  const sortedArtists = useMemo(() => {
+    if (!artists || artists.length === 0) {
+      return [] as DbArtist[];
+    }
+
+    return [...artists].sort((a, b) => {
+      const weekA = a.signedWeek ?? Number.MAX_SAFE_INTEGER;
+      const weekB = b.signedWeek ?? Number.MAX_SAFE_INTEGER;
+
+      if (weekA !== weekB) {
+        return weekA - weekB;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [artists]);
+
+  const getAvatarUrl = (artistName: string) => {
+    const filename = artistName
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '') + '_full.png';
+
+    return `/avatars/${filename}`;
+  };
+
+  const handleImageError = (event: SyntheticEvent<HTMLImageElement, Event>) => {
+    const img = event.currentTarget;
+    if (!img.src.endsWith('/avatars/blank_full.png')) {
+      img.src = '/avatars/blank_full.png';
+    }
+  };
 
   const handleSignArtist = async (artistData: any) => {
     try {
@@ -27,18 +92,81 @@ export function ArtistRoster() {
   };
 
   const handleArtistMeeting = (artist: any) => {
-    console.info(`[ArtistRoster] Artist meetings temporarily unavailable for ${artist.name}.`);
+    if (!artist) {
+      return;
+    }
+    setSelectedArtistForDialogue(artist);
+    setIsDialogueModalOpen(true);
+  };
+
+  const handleDialogueModalChange = (open: boolean) => {
+    setIsDialogueModalOpen(open);
+    if (!open) {
+      setSelectedArtistForDialogue(null);
+    }
+  };
+
+  const handleDialogueComplete = async () => {
+    if (!gameState?.id || typeof loadGame !== 'function') {
+      return;
+    }
+
+    try {
+      await loadGame(gameState.id);
+    } catch (error) {
+      console.error('[ArtistRoster] Failed to refresh game state after dialogue', error);
+    }
+  };
+
+  const handleNavigateToArtist = (artist: any) => {
+    const slug = generateArtistSlug(artist.name);
+    setLocation(`/artist/${slug}`);
+  };
+
+  const handlePlanTour = (artistId: string) => {
+    setLocation(`/live-performance?artistId=${artistId}`);
+  };
+
+  const handleStartRecording = (artistId: string) => {
+    setLocation(`/recording-session?artistId=${artistId}`);
+  };
+
+  const handlePlanRelease = (artistId: string) => {
+    setLocation(`/plan-release?artistId=${artistId}`);
   };
 
   // Enhanced artist analytics (ROI moved to backend)
+  const currentWeek = gameState?.currentWeek || 1;
+
+  const getArtistStatus = (artistId: string) => {
+    if (!projects || !Array.isArray(projects)) return 'IDLE';
+
+    const artistProjects = projects.filter((project: any) =>
+      project.artistId === artistId &&
+      project.stage === 'production' &&
+      project.startWeek &&
+      currentWeek >= project.startWeek
+    );
+
+    const activeTour = artistProjects.find((project: any) => project.type === 'Mini-Tour');
+    if (activeTour) return 'ON TOUR';
+
+    const activeRecording = artistProjects.find((project: any) =>
+      project.type === 'Single' || project.type === 'EP'
+    );
+    if (activeRecording) return 'RECORDING';
+
+    return 'IDLE';
+  };
+
   const getArtistInsights = (artist: any) => {
     const archetype = artist.archetype;
     const mood = artist.mood || 50;
-    const energy = artist.energy ?? artist.loyalty ?? 50;
+    const energy = (artist as any).energy ?? (artist as any).loyalty ?? 50;
     const popularity = artist.popularity || 0;
     
     // Artist projects
-    const artistProjects = projects.filter(p => p.artistId === artist.id);
+    const artistProjects = (projects || []).filter((p: any) => p.artistId === artist.id);
     const releasedProjects = artistProjects.filter(p => p.stage === 'released');
     
     // Total revenue now comes from backend, keeping this for backward compatibility
@@ -51,7 +179,6 @@ export function ArtistRoster() {
       projects: artistProjects.length,
       releasedProjects: releasedProjects.length,
       totalRevenue,
-      archetype,
       mood,
       energy,
       popularity
@@ -68,15 +195,15 @@ export function ArtistRoster() {
             Artist Roster
           </div>
           <Badge variant="secondary" className="text-xs">
-            {artists?.length || 0}/3
+            {sortedArtists.length}/3
           </Badge>
         </h3>
 
-        <div className="space-y-3 flex-1 flex flex-col">
+        <div className="flex-1">
 
           {/* Empty state when no artists */}
-          {(!artists || artists.length === 0) && (
-            <div className="text-center text-white/50 flex-1 flex flex-col justify-center">
+          {sortedArtists.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center text-center text-white/50">
               <i className="fas fa-microphone text-white/30 text-3xl mb-3"></i>
               <p className="text-sm font-medium text-white/70 mb-2">No Artists Signed</p>
               <p className="text-xs text-white/50 mb-4">Scout talent to build your roster</p>
@@ -92,32 +219,88 @@ export function ArtistRoster() {
           )}
 
           {/* Enhanced Artist Cards */}
-          {artists && artists.length > 0 && (
+          {sortedArtists.length > 0 && (
             <>
-              {artists.map(artist => {
-                const insights = getArtistInsights(artist);
-                const archetype = getArchetypeInfo(artist.archetype);
-                const relationship = getRelationshipStatus(artist.mood || 50, artist.energy ?? artist.loyalty ?? 50);
-                const isExpanded = expandedArtist === artist.id;
+              <div className="flex flex-wrap justify-center gap-4">
+                {sortedArtists.map(artist => {
+                  const insights = getArtistInsights(artist);
+                  const status = getArtistStatus(artist.id);
 
-                return (
-                  <ArtistCard
-                    key={artist.id}
-                    artist={artist}
-                    insights={insights}
-                    relationship={relationship}
-                    archetype={archetype}
-                    isExpanded={isExpanded}
-                    onToggleExpand={() => setExpandedArtist(isExpanded ? null : artist.id)}
-                    onMeet={() => handleArtistMeeting(artist)}
-                    onNavigate={() => setLocation(`/artist/${artist.id}`)}
-                    gameState={gameState}
-                  />
-                );
-              })}
+                  return (
+                    <div
+                      key={artist.id}
+                      className="flex w-max items-start gap-4 rounded-lg border border-brand-purple-light bg-brand-dark-card/40 p-3"
+                    >
+                      <div className="flex w-24 flex-shrink-0 flex-col items-center justify-center space-y-2">
+                        <div
+                          className="relative h-32 w-24 cursor-pointer overflow-hidden rounded-lg border border-brand-purple-light bg-brand-mauve"
+                          onClick={() => handleNavigateToArtist(artist)}
+                        >
+                          <img
+                            src={getAvatarUrl(artist.name)}
+                            alt={`${artist.name} avatar`}
+                            className="absolute h-[450px] w-full object-cover"
+                            style={{ top: '-14px', objectPosition: 'center top' }}
+                            onError={handleImageError}
+                          />
+                        </div>
+
+                        <Menubar className="h-8 w-full rounded-lg border-brand-purple-light bg-brand-burgundy p-0">
+                          <MenubarMenu>
+                            <MenubarTrigger className="h-full w-full justify-center rounded-lg px-2 py-1 text-xs text-white hover:bg-brand-burgundy-light data-[state=open]:bg-brand-burgundy-light data-[state=open]:text-white">
+                              Actions
+                            </MenubarTrigger>
+                            <MenubarContent className="border-brand-purple bg-brand-dark-card text-white">
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                onClick={() => handleArtistMeeting(artist)}
+                              >
+                                <CalendarDays className="mr-2 h-4 w-4 text-gray-300" />
+                                Meet
+                              </MenubarItem>
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                onClick={() => handlePlanTour(artist.id)}
+                              >
+                                <Mic className="mr-2 h-4 w-4 text-gray-300" />
+                                Tour
+                              </MenubarItem>
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                onClick={() => handleStartRecording(artist.id)}
+                              >
+                                <Disc3 className="mr-2 h-4 w-4 text-gray-300" />
+                                Record
+                              </MenubarItem>
+                              <MenubarItem
+                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                onClick={() => handlePlanRelease(artist.id)}
+                              >
+                                <Rocket className="mr-2 h-4 w-4 text-gray-300" />
+                                Release
+                              </MenubarItem>
+                            </MenubarContent>
+                          </MenubarMenu>
+                        </Menubar>
+                      </div>
+
+                      <div className="flex-none">
+                        <ArtistDashboardCard
+                          artist={artist}
+                          status={status}
+                          mood={insights.mood}
+                          energy={insights.energy}
+                          popularity={insights.popularity}
+                          onNavigate={() => handleNavigateToArtist(artist)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               
               {/* Discover More Artists Button - shown when roster is not full */}
-              {artists.length < 3 && (
+              {sortedArtists.length < 3 && (
                 <div className="mt-3 text-center">
                   <Button
                     onClick={() => setShowDiscoveryModal(true)}
@@ -142,6 +325,16 @@ export function ArtistRoster() {
           gameState={gameState}
           signedArtists={artists as any[]}
           onSignArtist={handleSignArtist}
+        />
+      )}
+
+      {isDialogueModalOpen && selectedArtistForDialogue && gameState?.id && (
+        <ArtistDialogueModal
+          artist={toGameArtist(selectedArtistForDialogue)}
+          gameId={gameState.id}
+          open={isDialogueModalOpen}
+          onOpenChange={handleDialogueModalChange}
+          onComplete={handleDialogueComplete}
         />
       )}
     </Card>

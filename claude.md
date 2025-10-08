@@ -13,6 +13,14 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 - GameEngine processes weekly actions and financial systems (shared client/server)
 - Shared Zod contracts keep API schemas in sync
 
+## UI Components
+
+- Using shadcn/ui (New York style) with TypeScript
+- Components location: `client/src/components/ui/`
+- To add new components: `npx shadcn@latest add [component-name]` from project root
+- CSS variables enabled for theming (neutral base color)
+- Import alias: `@/components/ui/[component]`
+
 ## 🚨 Railway Deployment Environment
 **Critical for Railway PostgreSQL sessions:**
 - **Database**: Railway PostgreSQL with standard `pg` driver (migrated from Neon serverless)

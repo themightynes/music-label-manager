@@ -72,11 +72,11 @@ const SideEventSchema = z.object({
 
 const DialogueSceneSchema = z.object({
   id: z.string(),
-  speaker: z.string(),
-  archetype: z.string(),
+  speaker: z.string().optional(),
+  archetype: z.string().optional(),
   prompt: z.string(),
   choices: z.array(DialogueChoiceSchema)
-});
+}).passthrough();
 
 // Data loading and validation functions
 export class GameDataLoader {
@@ -391,13 +391,13 @@ export class GameDataLoader {
 
   async loadDialogueData() {
     const data = await this.loadJSON('dialogue.json');
-    
+
     const schema = z.object({
       version: z.string(),
       generated: z.string(),
       description: z.string(),
       additional_scenes: z.array(DialogueSceneSchema)
-    });
+    }).passthrough();
 
     const parsed = schema.parse(data);
 

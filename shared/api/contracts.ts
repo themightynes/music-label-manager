@@ -265,6 +265,30 @@ export type BugReportStatus = z.infer<typeof bugStatusEnum>;
 export type BugReportStatusUpdateRequest = z.infer<typeof BugReportStatusUpdateRequestSchema>;
 export type BugReportStatusUpdateResponse = z.infer<typeof BugReportStatusUpdateResponseSchema>;
 
+// ========================================
+// Artist Dialogue Schemas
+// ========================================
+
+export const ArtistDialogueRequestSchema = z.object({
+  artistId: z.string().uuid("Artist ID must be a valid UUID"),
+  sceneId: z.string().min(1, "Scene ID is required"),
+  choiceId: z.string().min(1, "Choice ID is required")
+});
+
+export const ArtistDialogueResponseSchema = z.object({
+  success: z.boolean(),
+  artistId: z.string().uuid(),
+  artistName: z.string(),
+  sceneId: z.string(),
+  choiceId: z.string(),
+  effects: z.record(z.number()),
+  delayedEffects: z.record(z.number()),
+  message: z.string()
+});
+
+export type ArtistDialogueRequest = z.infer<typeof ArtistDialogueRequestSchema>;
+export type ArtistDialogueResponse = z.infer<typeof ArtistDialogueResponseSchema>;
+
 // Backward compatibility - keep existing routes for now
 export const API_ROUTES = {
   GAME_STATE: '/api/game-state',
