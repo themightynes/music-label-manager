@@ -16,6 +16,7 @@
 - `package.json` - Add `test` script to run Vitest
 - `tests/task-0001/schema-and-types.test.ts` - Vitest tests for schema and types related to tier unlock history
 - `tests/task-0001/game-engine-tier-unlock-history.test.ts` - Vitest tests for GameEngine tier unlock history (Task 2.1)
+- `tests/task-0001/access-tier-badges-unlock-weeks.test.tsx` - Vitest tests for AccessTierBadges unlock week display (Task 3.1)
 
 ### Notes
 
@@ -34,7 +35,7 @@
   - [x] 1.4 Add `tierUnlockHistory?: TierUnlockHistory` field to `GameState` interface in `shared/types/gameTypes.ts`
   - [x] 1.5 Run `npm run db:push` to apply schema changes to database
 
-- [ ] 2.0 Implement tier unlock tracking in GameEngine
+- [x] 2.0 Implement tier unlock tracking in GameEngine
   - [x] 2.1 Write unit tests for GameEngine tier unlock tracking (if feasible): tests for `checkAccessTierProgression()` updating `tierUnlockHistory` appropriately. If not feasible, mark this as (not testable) and proceed.
   - [x] 2.2 Locate `checkAccessTierProgression()` function in `shared/engine/game-engine.ts` (around lines 3120-3142)
   - [x] 2.3 Initialize `tierUnlockHistory` if it doesn't exist at start of function: `if (!gameState.tierUnlockHistory) gameState.tierUnlockHistory = {};`
@@ -44,12 +45,12 @@
   - [x] 2.7 Verify tier unlock history is included in API response by checking return value includes updated `gameState`
 
 - [ ] 3.0 Display unlock history in AccessTierBadges component
-  - [ ] 3.1 Write unit tests for AccessTierBadges unlock week display (render with mocked gameState and verify week chip appears for unlocked tiers)
-  - [ ] 3.2 Open `client/src/components/AccessTierBadges.tsx` and locate the expanded tier view (lines 272-313)
-  - [ ] 3.3 Add helper function to map UI tier names to database tier names: `const getTierKey = (tierName: string) => tierName.toLowerCase().replace('-', '_');` (e.g., "Mid-Tier" → "mid_tier")
-  - [ ] 3.4 In the tier mapping section (lines 277-309), after the tier name display (line 283), add unlock week display
-  - [ ] 3.5 Add conditional rendering: `{tier.name !== 'None' && gameState.tierUnlockHistory?.[tierType]?.[getTierKey(tier.name)] && (<span className=\"text-xs text-white/50 ml-2\">• Unlocked Week {gameState.tierUnlockHistory[tierType][getTierKey(tier.name)]}</span>)}`
-  - [ ] 3.6 Verify the unlock week appears next to unlocked tier names in the expanded view
+  - [x] 3.1 Write unit tests for AccessTierBadges unlock week display (render with mocked gameState and verify week chip appears for unlocked tiers)
+  - [x] 3.2 Open `client/src/components/AccessTierBadges.tsx` and locate the expanded tier view (lines 272-313)
+  - [x] 3.2 Add helper function to map UI tier names to database tier names: `const getTierKey = (tierName: string) => tierName.toLowerCase().replace('-', '_');` (e.g., "Mid-Tier" → "mid_tier")
+  - [x] 3.3 In the tier mapping section (lines 277-309), after the tier name display (line 283), add unlock week display
+  - [x] 3.5 Add conditional rendering: `{tier.name !== 'None' && gameState.tierUnlockHistory?.[tierType]?.[getTierKey(tier.name)] && (<span className=\"text-xs text-white/50 ml-2\">• Unlocked Week {gameState.tierUnlockHistory[tierType][getTierKey(tier.name)]}</span>)}`
+  - [x] 3.6 Verify the unlock week appears next to unlocked tier names in the expanded view
 
 - [ ] 4.0 Add toast notifications for tier unlocks
   - [ ] 4.1 Write unit tests for toast notifications (mock `toast` and assert it is called for unlock changes with correct messages/icons)
