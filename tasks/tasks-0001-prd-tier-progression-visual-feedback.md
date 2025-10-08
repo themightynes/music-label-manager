@@ -26,7 +26,7 @@
 
 ## Tasks
 
-- [ ] 1.0 Add tier unlock history to database schema and types
+- [x] 1.0 Add tier unlock history to database schema and types
   - [x] 1.1 Add `tierUnlockHistory` JSONB column to `gameStates` table in `shared/schema.ts` (after line 263, before `createdAt`)
   - [x] 1.2 Create SQL migration file `migrations/0001_add_tier_unlock_history.sql` with `ALTER TABLE game_states ADD COLUMN tier_unlock_history JSONB DEFAULT '{}'::jsonb;`
   - [x] 1.3 Add TypeScript type definition for `TierUnlockHistory` in `shared/types/gameTypes.ts` with structure: `{ playlist?: { niche?: number, mid?: number, flagship?: number }, press?: { blogs?: number, mid_tier?: number, national?: number }, venue?: { clubs?: number, theaters?: number, arenas?: number } }`
