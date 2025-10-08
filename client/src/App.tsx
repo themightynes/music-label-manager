@@ -26,6 +26,8 @@ import LandingPage from "@/pages/LandingPage";
 import RecordingSessionPage from "@/pages/RecordingSessionPage";
 import LivePerformancePage from "@/pages/LivePerformancePage";
 import BugReportsPage from '@/pages/BugReportsPage';
+import UXPrototypesPage from '@/pages/UXPrototypesPage';
+import MoodSystemPrototypePage from '@/pages/prototypes/MoodSystemPrototypePage';
 import AdminHome from "@/admin/AdminLayout";
 import { withAdmin } from "@/admin/withAdmin";
 
@@ -52,6 +54,10 @@ function Router() {
       <Route path="/admin/test-data" component={withAdmin(TestDataPage)} />
       <Route path="/admin/tours-test" component={withAdmin(ToursTest)} />
       <Route path="/admin/bug-reports" component={withAdmin(BugReportsPage)} />
+
+      {/* Prototype routes */}
+      <Route path="/prototypes" component={withAdmin(UXPrototypesPage)} />
+      <Route path="/prototypes/mood-system" component={withAdmin(MoodSystemPrototypePage)} />
 
       {/* Legacy dev routes gated */}
       <Route path="/quality-tester" component={withAdmin(QualityTester)} />

@@ -111,40 +111,48 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private db: typeof db;
+
+  constructor(database?: typeof db) {
+    // Allow injecting a database connection for testing
+    // If not provided, use the default production db
+    this.db = database || db;
+  }
+
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByClerkId(clerkId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.clerkId, clerkId));
+    const [user] = await this.db.select().from(users).where(eq(users.clerkId, clerkId));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await this.db.insert(users).values(insertUser).returning();
     return user;
   }
 
   // Game saves
   async getGameSaves(userId: string): Promise<GameSave[]> {
-    return await db.select().from(gameSaves)
+    return await this.db.select().from(gameSaves)
       .where(eq(gameSaves.userId, userId))
       .orderBy(desc(gameSaves.updatedAt));
   }
 
   async getGameSave(id: string): Promise<GameSave | undefined> {
-    const [save] = await db.select().from(gameSaves).where(eq(gameSaves.id, id));
+    const [save] = await this.db.select().from(gameSaves).where(eq(gameSaves.id, id));
     return save || undefined;
   }
 
   async createGameSave(gameSave: InsertGameSave & { userId: string }): Promise<GameSave> {
-    const [save] = await db.insert(gameSaves).values(gameSave).returning();
+    const [save] = await this.db.insert(gameSaves).values(gameSave).returning();
     return save;
   }
 
   async updateGameSave(id: string, gameSave: Partial<InsertGameSave>): Promise<GameSave> {
-    const [save] = await db.update(gameSaves)
+    const [save] = await this.db.update(gameSaves)
       .set({ ...gameSave, updatedAt: new Date() })
       .where(eq(gameSaves.id, id))
       .returning();
@@ -152,17 +160,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteGameSave(id: string): Promise<void> {
-    await db.delete(gameSaves).where(eq(gameSaves.id, id));
+    await this.db.delete(gameSaves).where(eq(gameSaves.id, id));
   }
 
   // Game state
   async getGameState(id: string): Promise<GameState | undefined> {
-    const [state] = await db.select().from(gameStates).where(eq(gameStates.id, id));
+    const [state] = await this.db.select().from(gameStates).where(eq(gameStates.id, id));
     return state || undefined;
   }
 
   async createGameState(gameState: InsertGameState, dbTransaction?: any): Promise<GameState> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     const [state] = await dbContext.insert(gameStates).values(gameState).returning();
     return state;
   }
@@ -171,7 +179,7 @@ export class DatabaseStorage implements IStorage {
     console.log('[Storage.updateGameState] Updating game:', id);
     console.log('[Storage.updateGameState] Updates:', gameState);
     
-    const result = await db.update(gameStates)
+    const result = await this.db.update(gameStates)
       .set({ ...gameState, updatedAt: new Date() })
       .where(eq(gameStates.id, id))
       .returning();
@@ -182,7 +190,7 @@ export class DatabaseStorage implements IStorage {
     if (!result || result.length === 0) {
       console.error('[Storage.updateGameState] No rows updated for game ID:', id);
       // Try to fetch the game to see if it exists
-      const [existingGame] = await db.select().from(gameStates).where(eq(gameStates.id, id));
+      const [existingGame] = await this.db.select().from(gameStates).where(eq(gameStates.id, id));
       if (!existingGame) {
         console.error('[Storage.updateGameState] Game does not exist in database:', id);
       }
@@ -195,21 +203,21 @@ export class DatabaseStorage implements IStorage {
 
   // Artists
   async getArtistsByGame(gameId: string): Promise<Artist[]> {
-    return await db.select().from(artists).where(eq(artists.gameId, gameId));
+    return await this.db.select().from(artists).where(eq(artists.gameId, gameId));
   }
 
   async getArtist(id: string): Promise<Artist | undefined> {
-    const [artist] = await db.select().from(artists).where(eq(artists.id, id));
+    const [artist] = await this.db.select().from(artists).where(eq(artists.id, id));
     return artist || undefined;
   }
 
   async createArtist(artist: InsertArtist): Promise<Artist> {
-    const [newArtist] = await db.insert(artists).values(artist).returning();
+    const [newArtist] = await this.db.insert(artists).values(artist).returning();
     return newArtist;
   }
 
   async updateArtist(id: string, artist: Partial<InsertArtist>): Promise<Artist> {
-    const [updatedArtist] = await db.update(artists)
+    const [updatedArtist] = await this.db.update(artists)
       .set(artist)
       .where(eq(artists.id, id))
       .returning();
@@ -218,21 +226,21 @@ export class DatabaseStorage implements IStorage {
 
   // Projects
   async getProjectsByGame(gameId: string): Promise<Project[]> {
-    return await db.select().from(projects).where(eq(projects.gameId, gameId));
+    return await this.db.select().from(projects).where(eq(projects.gameId, gameId));
   }
 
   async getProject(id: string): Promise<Project | undefined> {
-    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    const [project] = await this.db.select().from(projects).where(eq(projects.id, id));
     return project || undefined;
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    const [newProject] = await db.insert(projects).values(project).returning();
+    const [newProject] = await this.db.insert(projects).values(project).returning();
     return newProject;
   }
 
   async updateProject(id: string, project: Partial<InsertProject>): Promise<Project> {
-    const [updatedProject] = await db.update(projects)
+    const [updatedProject] = await this.db.update(projects)
       .set(project)
       .where(eq(projects.id, id))
       .returning();
@@ -240,7 +248,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProject(id: string): Promise<void> {
-    await db.delete(projects).where(eq(projects.id, id));
+    await this.db.delete(projects).where(eq(projects.id, id));
   }
 
   async getActiveRecordingProjects(gameId: string): Promise<Project[]> {
@@ -251,7 +259,7 @@ export class DatabaseStorage implements IStorage {
     });
     
     // First, let's check what projects exist at all for this game
-    const allProjects = await db.select().from(projects)
+    const allProjects = await this.db.select().from(projects)
       .where(eq(projects.gameId, gameId));
     
     console.log('[DEBUG] All projects for game:', allProjects.length);
@@ -264,7 +272,7 @@ export class DatabaseStorage implements IStorage {
       });
     });
     
-    const result = await db.select().from(projects)
+    const result = await this.db.select().from(projects)
       .where(and(
         eq(projects.gameId, gameId),
         eq(projects.stage, 'production'),
@@ -292,12 +300,12 @@ export class DatabaseStorage implements IStorage {
 
   // Songs
   async getSongsByGame(gameId: string): Promise<Song[]> {
-    return await db.select().from(songs).where(eq(songs.gameId, gameId));
+    return await this.db.select().from(songs).where(eq(songs.gameId, gameId));
   }
 
   async getSongsByArtist(artistId: string, gameId: string): Promise<Song[]> {
     console.log('[DatabaseStorage] getSongsByArtist query:', { artistId, gameId });
-    const result = await db.select().from(songs)
+    const result = await this.db.select().from(songs)
       .where(and(eq(songs.artistId, artistId), eq(songs.gameId, gameId)))
       .orderBy(desc(songs.createdAt));
     console.log('[DatabaseStorage] getSongsByArtist found:', result.length, 'songs');
@@ -305,7 +313,7 @@ export class DatabaseStorage implements IStorage {
     // Also try a simpler query to debug
     if (result.length === 0) {
       console.log('[DatabaseStorage] DEBUG: Checking all songs for this game...');
-      const allGameSongs = await db.select().from(songs)
+      const allGameSongs = await this.db.select().from(songs)
         .where(eq(songs.gameId, gameId));
       console.log('[DatabaseStorage] DEBUG: Total songs in game:', allGameSongs.length);
       if (allGameSongs.length > 0) {
@@ -322,7 +330,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSong(id: string): Promise<Song | undefined> {
-    const [song] = await db.select().from(songs).where(eq(songs.id, id));
+    const [song] = await this.db.select().from(songs).where(eq(songs.id, id));
     return song || undefined;
   }
 
@@ -333,7 +341,7 @@ export class DatabaseStorage implements IStorage {
       gameId: song.gameId,
       quality: song.quality
     });
-    const [newSong] = await db.insert(songs).values(song).returning();
+    const [newSong] = await this.db.insert(songs).values(song).returning();
     console.log('[DatabaseStorage] Song created in DB:', {
       id: newSong.id,
       title: newSong.title,
@@ -344,7 +352,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateSong(id: string, song: Partial<InsertSong>, dbTransaction?: any): Promise<Song> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     const [updatedSong] = await dbContext.update(songs)
       .set(song)
       .where(eq(songs.id, id))
@@ -353,7 +361,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getReleasedSongs(gameId: string): Promise<Song[]> {
-    return await db.select().from(songs)
+    return await this.db.select().from(songs)
       .where(and(
         eq(songs.gameId, gameId),
         eq(songs.isReleased, true)
@@ -362,13 +370,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSongsByProject(projectId: string): Promise<Song[]> {
-    return await db.select().from(songs)
+    return await this.db.select().from(songs)
       .where(eq(songs.projectId, projectId))
       .orderBy(songs.createdAt);
   }
 
   async updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: any): Promise<void> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] 💾💾💾 === UPDATING SONGS === 💾💾💾`);
     console.log(`[STORAGE] 📦 Total songs to update: ${songUpdates.length}`);
     console.log(`[STORAGE] 📌 Using transaction: ${!!dbTransaction}`);
@@ -409,28 +417,28 @@ export class DatabaseStorage implements IStorage {
 
   // Releases
   async getReleasesByGame(gameId: string, dbTransaction?: any): Promise<Release[]> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     return await dbContext.select().from(releases).where(eq(releases.gameId, gameId));
   }
 
   async getReleasesByArtist(artistId: string, gameId: string): Promise<Release[]> {
-    return await db.select().from(releases)
+    return await this.db.select().from(releases)
       .where(and(eq(releases.artistId, artistId), eq(releases.gameId, gameId)))
       .orderBy(desc(releases.createdAt));
   }
 
   async getRelease(id: string): Promise<Release | undefined> {
-    const [release] = await db.select().from(releases).where(eq(releases.id, id));
+    const [release] = await this.db.select().from(releases).where(eq(releases.id, id));
     return release || undefined;
   }
 
   async createRelease(release: InsertRelease): Promise<Release> {
-    const [newRelease] = await db.insert(releases).values(release).returning();
+    const [newRelease] = await this.db.insert(releases).values(release).returning();
     return newRelease;
   }
 
   async updateRelease(id: string, release: Partial<InsertRelease>): Promise<Release> {
-    const [updatedRelease] = await db.update(releases)
+    const [updatedRelease] = await this.db.update(releases)
       .set(release)
       .where(eq(releases.id, id))
       .returning();
@@ -438,7 +446,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlannedReleases(gameId: string, week: number, dbTransaction?: any): Promise<Release[]> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] getPlannedReleases: gameId=${gameId}, week=${week}, usingTransaction=${!!dbTransaction}`);
     
     const result = await dbContext.select().from(releases)
@@ -459,7 +467,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSongsByRelease(releaseId: string, dbTransaction?: any): Promise<Song[]> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] getSongsByRelease: releaseId=${releaseId}, usingTransaction=${!!dbTransaction}`);
     
     // First, try to get songs from the junction table (proper releases)
@@ -489,7 +497,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any): Promise<Release> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] updateReleaseStatus: releaseId=${releaseId}, status=${status}, usingTransaction=${!!dbTransaction}`);
     
     // First, get the existing release to preserve its metadata
@@ -521,18 +529,18 @@ export class DatabaseStorage implements IStorage {
 
   // Release Songs (junction)
   async getReleaseSongs(releaseId: string): Promise<ReleaseSong[]> {
-    return await db.select().from(releaseSongs)
+    return await this.db.select().from(releaseSongs)
       .where(eq(releaseSongs.releaseId, releaseId))
       .orderBy(releaseSongs.trackNumber);
   }
 
   async createReleaseSong(releaseSong: InsertReleaseSong): Promise<ReleaseSong> {
-    const [newReleaseSong] = await db.insert(releaseSongs).values(releaseSong).returning();
+    const [newReleaseSong] = await this.db.insert(releaseSongs).values(releaseSong).returning();
     return newReleaseSong;
   }
 
   async deleteReleaseSong(releaseId: string, songId: string): Promise<void> {
-    await db.delete(releaseSongs)
+    await this.db.delete(releaseSongs)
       .where(and(
         eq(releaseSongs.releaseId, releaseId),
         eq(releaseSongs.songId, songId)
@@ -541,16 +549,16 @@ export class DatabaseStorage implements IStorage {
 
   // Roles
   async getRolesByGame(gameId: string): Promise<Role[]> {
-    return await db.select().from(roles).where(eq(roles.gameId, gameId));
+    return await this.db.select().from(roles).where(eq(roles.gameId, gameId));
   }
 
   async getRole(id: string): Promise<Role | undefined> {
-    const [role] = await db.select().from(roles).where(eq(roles.id, id));
+    const [role] = await this.db.select().from(roles).where(eq(roles.id, id));
     return role || undefined;
   }
 
   async updateRole(id: string, role: Partial<Role>): Promise<Role> {
-    const [updatedRole] = await db.update(roles)
+    const [updatedRole] = await this.db.update(roles)
       .set(role)
       .where(eq(roles.id, id))
       .returning();
@@ -563,11 +571,11 @@ export class DatabaseStorage implements IStorage {
       ? and(eq(dialogueChoices.roleType, roleType), eq(dialogueChoices.sceneId, sceneId))
       : eq(dialogueChoices.roleType, roleType);
     
-    return await db.select().from(dialogueChoices).where(conditions);
+    return await this.db.select().from(dialogueChoices).where(conditions);
   }
 
   async getGameEvents(): Promise<GameEvent[]> {
-    return await db.select().from(gameEvents);
+    return await this.db.select().from(gameEvents);
   }
 
   // Weekly actions
@@ -576,18 +584,18 @@ export class DatabaseStorage implements IStorage {
       ? and(eq(weeklyActions.gameId, gameId), eq(weeklyActions.week, week))
       : eq(weeklyActions.gameId, gameId);
     
-    return await db.select().from(weeklyActions).where(conditions);
+    return await this.db.select().from(weeklyActions).where(conditions);
   }
 
   async createWeeklyAction(action: InsertWeeklyAction): Promise<WeeklyAction> {
-    const [newAction] = await db.insert(weeklyActions).values(action).returning();
+    const [newAction] = await this.db.insert(weeklyActions).values(action).returning();
     return newAction;
   }
 
   // Executives
   async getExecutivesByGame(gameId: string): Promise<any[]> {
     console.log('[STORAGE] getExecutivesByGame called with gameId:', gameId);
-    const result = await db.select().from(executives).where(eq(executives.gameId, gameId));
+    const result = await this.db.select().from(executives).where(eq(executives.gameId, gameId));
     console.log('[STORAGE] Executives found:', result);
     console.log('[STORAGE] Number of executives:', result ? result.length : 0);
     return result;
@@ -595,7 +603,7 @@ export class DatabaseStorage implements IStorage {
 
   async getExecutive(execId: string): Promise<any | null> {
     console.log('[STORAGE] getExecutive called with execId:', execId);
-    const result = await db.select().from(executives)
+    const result = await this.db.select().from(executives)
       .where(eq(executives.id, execId))
       .limit(1);
     console.log('[STORAGE] Executive found:', result[0] || null);
@@ -617,7 +625,7 @@ export class DatabaseStorage implements IStorage {
 
   // Chart operations implementation
   async getReleasedSongsByGame(gameId: string, dbTransaction?: any): Promise<ReleasedSongData[]> {
-    const dbToUse = dbTransaction || db;
+    const dbToUse = dbTransaction || this.db;
     const releasedSongs = await dbToUse
       .select({
         id: songs.id,
@@ -647,7 +655,7 @@ export class DatabaseStorage implements IStorage {
   async createChartEntries(entries: InsertChartEntry[], dbTransaction?: any): Promise<void> {
     if (entries.length === 0) return;
 
-    const dbToUse = dbTransaction || db;
+    const dbToUse = dbTransaction || this.db;
 
     // Split entries by type to use different conflict targets
     const playerEntries = entries.filter((e: any) => !e.isCompetitorSong);
@@ -674,7 +682,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
-    const dbToUse = dbTransaction || db;
+    const dbToUse = dbTransaction || this.db;
     return await dbToUse
       .select()
       .from(chartEntries)
@@ -688,7 +696,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
-    const dbToUse = dbTransaction || db;
+    const dbToUse = dbTransaction || this.db;
     // Convert Date to ISO string format (YYYY-MM-DD) for database comparison
     const chartWeekString = chartWeek.toISOString().split('T')[0];
     return await dbToUse
@@ -709,7 +717,7 @@ export class DatabaseStorage implements IStorage {
   async getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
     if (songIds.length === 0) return [];
 
-    const dbToUse = dbTransaction || db;
+    const dbToUse = dbTransaction || this.db;
     return await dbToUse
       .select()
       .from(chartEntries)
@@ -778,7 +786,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEmailById(gameId: string, emailId: string): Promise<Email | undefined> {
-    const [email] = await db.select()
+    const [email] = await this.db.select()
       .from(emails)
       .where(and(eq(emails.gameId, gameId), eq(emails.id, emailId)))
       .limit(1);
@@ -787,7 +795,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEmail(emailInput: InsertEmail, dbTransaction?: any): Promise<Email> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     const [created] = await dbContext.insert(emails).values(emailInput).returning();
     return created;
   }
@@ -795,12 +803,12 @@ export class DatabaseStorage implements IStorage {
   async createEmails(emailInputs: InsertEmail[], dbTransaction?: any): Promise<Email[]> {
     if (emailInputs.length === 0) return [];
 
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     return await dbContext.insert(emails).values(emailInputs).returning();
   }
 
   async markEmailRead(gameId: string, emailId: string, isRead: boolean): Promise<Email> {
-    const [updated] = await db.update(emails)
+    const [updated] = await this.db.update(emails)
       .set({
         isRead,
         updatedAt: new Date(),
@@ -816,13 +824,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEmail(gameId: string, emailId: string): Promise<void> {
-    await db.delete(emails)
+    await this.db.delete(emails)
       .where(and(eq(emails.gameId, gameId), eq(emails.id, emailId)));
   }
 
   // Music Labels implementation
   async getMusicLabel(gameId: string): Promise<MusicLabel | undefined> {
-    const [label] = await db
+    const [label] = await this.db
       .select()
       .from(musicLabels)
       .where(eq(musicLabels.gameId, gameId));
@@ -830,7 +838,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMusicLabel(label: InsertMusicLabel, dbTransaction?: any): Promise<MusicLabel> {
-    const dbContext = dbTransaction || db;
+    const dbContext = dbTransaction || this.db;
     const [created] = await dbContext
       .insert(musicLabels)
       .values(label)
@@ -839,7 +847,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMusicLabel(gameId: string, label: Partial<InsertMusicLabel>): Promise<MusicLabel | undefined> {
-    const [updated] = await db
+    const [updated] = await this.db
       .update(musicLabels)
       .set(label)
       .where(eq(musicLabels.gameId, gameId))

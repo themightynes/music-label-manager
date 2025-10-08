@@ -4,6 +4,7 @@ import type { Artist, Project, Role, WeeklyAction, MusicLabel } from '@shared/sc
 import type { GameState, LabelData, SourcingTypeString } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { toast } from '@/hooks/use-toast';
 
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
@@ -528,6 +529,16 @@ export const useGameStore = create<GameStore>()(
             selectedActions: [],
             isAdvancingWeek: false
           });
+
+          // Trigger tier unlock toasts based on weekly summary changes
+          try {
+            const { triggerUnlockToasts } = await import('@/utils/unlockToasts')
+            if (result?.summary) {
+              triggerUnlockToasts(result.summary, toast)
+            }
+          } catch (toastErr) {
+            console.warn('[UNLOCK TOASTS] Skipped due to error:', toastErr)
+          }
 
           // Always attempt to load discovered artists after week advancement if there was an active A&R operation
           const hadActiveAROperation = result?.summary?.arOffice?.completed;

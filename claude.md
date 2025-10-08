@@ -42,7 +42,17 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 ## ✅ Validation Commands
 - `npm run check` - Run TypeScript compilation check
 - `npm run dev` - Starts both client and server with hot reload
+- `npm test` - Run tests in watch mode
+- `npm run test:run` - Run tests once (CI mode)
 - `pkill -f "tsx server"` - Clean up any lingering server processes
+
+## 🧪 Testing Framework
+- **Framework**: Vitest (native Vite integration, Jest-compatible API)
+- **React Testing**: `@testing-library/react` with `@testing-library/jest-dom` matchers
+- **Test Files**: Use `*.test.ts` or `*.spec.ts` naming convention
+- **Setup**: Global test configuration in `tests/setup.ts`
+- **Structure**: Wrap tests in `describe()` blocks, use `it()` or `test()` for assertions
+- **Commands**: `npm test` (watch), `npm run test:ui` (interactive UI), `npm run test:coverage` (coverage report)
 
 ## XState & Stately Runtime Notes
 - `xstate` drives multi-step decision flows; prefer typed machine definitions and actor logic over ad-hoc reducer state.
@@ -56,6 +66,12 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 - **One Decision**: Each iteration adds exactly ONE decision point for players
 - **Annotate Everything**: Mark all hardcoded values, stubs, and missing features with clear TODO/STUB/HARDCODED comments for easy identification later
 - Commit incomplete working code > complete non-working code
+
+# AI Dev Tasks
+Use these files when I request structured feature development using PRDs:
+/docs/ai-dev-tasks/create-prd.md
+/docs/ai-dev-tasks/generate-tasks.md
+/docs/ai-dev-tasks/process-task-list.md
 
 **Annotation Standards:**
 ```javascript

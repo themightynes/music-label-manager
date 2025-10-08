@@ -46,4 +46,24 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
+  test: {
+    globals: true,
+    environment: "happy-dom",
+    setupFiles: [path.resolve(import.meta.dirname, "tests/setup.ts")],
+    include: [
+      path.resolve(import.meta.dirname, "tests/**/*.{test,spec}.{ts,tsx}"),
+      path.resolve(import.meta.dirname, "client/**/*.{test,spec}.{ts,tsx}"),
+    ],
+    exclude: ["**/node_modules/**", "**/dist/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      exclude: [
+        "node_modules/**",
+        "dist/**",
+        "**/*.config.{ts,js}",
+        "**/types/**",
+      ],
+    },
+  },
 });

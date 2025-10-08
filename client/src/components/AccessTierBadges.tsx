@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import type { GameState } from '@shared/types/gameTypes';
 import { Key, Music, Megaphone, Building, Info, ArrowRight, Lock } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface AccessTierBadgesProps {
   gameState: GameState;
@@ -162,6 +162,17 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
     'arenas': 'Arenas'
   };
 
+  // Map UI tier names to database keys per tier type
+  const uiToDbKey: Record<'playlist'|'press'|'venue', Record<string, string>> = {
+    playlist: { Niche: 'niche', Mid: 'mid', Flagship: 'flagship' },
+    press: { Blogs: 'blogs', 'Mid-Tier': 'mid_tier', Major: 'national' },
+    venue: { Clubs: 'clubs', Theaters: 'theaters', Arenas: 'arenas' },
+  };
+
+  // Get the DB key for a given UI tier name, with safe fallback
+  const getTierKey = (tierType: 'playlist'|'press'|'venue', tierName: string) =>
+    uiToDbKey[tierType]?.[tierName] ?? tierName.toLowerCase().replace('-', '_');
+
   const getCurrentTier = (tierType: keyof typeof accessTiers) => {
     const currentTierName = tierType === 'playlist' ? gameState.playlistAccess :
                            tierType === 'press' ? gameState.pressAccess :
@@ -281,6 +292,12 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center space-x-2">
                               <Badge className={`text-xs ${tier.color}`}>{tier.name}</Badge>
+                              {/* Unlock week display when available */}
+                              {tier.name !== 'None' && (gameState as any).tierUnlockHistory?.[tierType as any]?.[getTierKey(tierType as any, tier.name)] && (
+                                <span className="text-xs text-white/50 ml-2">
+                                  • Unlocked Week {(gameState as any).tierUnlockHistory[tierType as any][getTierKey(tierType as any, tier.name)]}
+                                </span>
+                              )}
                               {tier.name === currentTier.name && (
                                 <span className="text-xs text-brand-burgundy font-medium">Current</span>
                               )}
