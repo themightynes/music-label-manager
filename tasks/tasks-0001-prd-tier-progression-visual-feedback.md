@@ -64,19 +64,19 @@
   - [x] 4.7 Add helper function to get tier icon: `const getTierIcon = (desc: string) => desc.includes('playlist') ? Music : desc.includes('press') ? Megaphone : Building;`
   - [x] 4.9 Enhance toast to include icon component in title or description for better visual feedback
 
-- [ ] 5.0 Test and verify tier unlock system
-  - [ ] 5.1 Start dev server with `npm run dev` and load an existing game save
-  - [ ] 5.2 Verify database migration applied successfully: check `game_states` table has `tier_unlock_history` column
-  - [ ] 5.3 Test tier unlock by increasing reputation to trigger a tier threshold (e.g., 10 reputation for Playlist Niche)
-  - [ ] 5.4 Verify toast notification appears immediately when tier unlocks
-  - [ ] 5.5 Verify email notification still sent to inbox (existing functionality should not break)
-  - [ ] 5.6 Verify weekly summary shows tier unlock in achievements section (existing functionality should not break)
-  - [ ] 5.7 Navigate to Dashboard and open `AccessTierBadges` component
-  - [ ] 5.8 Expand a tier card and verify "Unlocked: Week X" appears next to unlocked tiers
-  - [ ] 5.9 Test save/load game to verify `tierUnlockHistory` persists correctly
-  - [ ] 5.10 Test with a new game to verify empty `tierUnlockHistory` initializes correctly
-  - [ ] 5.11 Test all three tier types: Playlist, Press, and Venue Access unlocks
-  - [ ] 5.12 Verify multiple tier unlocks in one week show separate toasts (or queue properly)
+- [x] 5.0 Test and verify tier unlock system
+- [x] 5.1 Start dev server with `npm run dev` and load an existing game save
+  - [x] 5.2 Verify database migration applied successfully: check `game_states` table has `tier_unlock_history` column
+  - [x] 5.3 Test tier unlock by increasing reputation to trigger a tier threshold (e.g., 10 reputation for Playlist Niche)
+  - [x] 5.4 Verify toast notification appears immediately when tier unlocks
+  - [x] 5.5 Verify email notification still sent to inbox (existing functionality should not break)
+  - [x] 5.6 Verify weekly summary shows tier unlock in achievements section (existing functionality should not break)
+  - [x] 5.7 Navigate to Dashboard and open `AccessTierBadges` component
+  - [x] 5.8 Expand a tier card and verify "Unlocked: Week X" appears next to unlocked tiers
+  - [x] 5.9 Test save/load game to verify `tierUnlockHistory` persists correctly
+  - [x] 5.10 Test with a new game to verify empty `tierUnlockHistory` initializes correctly
+  - [x] 5.11 Test all three tier types: Playlist, Press, and Venue Access unlocks
+  - [x] 5.12 Verify multiple tier unlocks in one week show separate toasts (or queue properly)
 
 ---
 

@@ -2064,19 +2064,19 @@ const musicLabelData = {
       // Get all artists for this game with their song counts
       const artistsResult = await db
         .select({
-          id: sql`${artists.id}`.as('id'),
-          name: sql`${artists.name}`.as('name'),
-          mood: sql`${artists.mood}`.as('mood'),
-          loyalty: sql`${artists.loyalty}`.as('loyalty'),
-          archetype: sql`${artists.archetype}`.as('archetype'),
-          signedWeek: sql`${artists.signedWeek}`.as('signedWeek'),
-          readySongsCount: sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false AND ${songs.releaseId} IS NULL THEN 1 END)`.as('readySongsCount'),
-          totalSongsCount: sql`COUNT(${songs.id})`.as('totalSongsCount')
+          id: artists.id,
+          name: artists.name,
+          mood: artists.mood,
+          energy: artists.energy,
+          archetype: artists.archetype,
+          signedWeek: artists.signedWeek,
+          readySongsCount: sql<string>`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false AND ${songs.releaseId} IS NULL THEN 1 END)`,
+          totalSongsCount: sql<string>`COUNT(${songs.id})`
         })
         .from(artists)
         .leftJoin(songs, eq(songs.artistId, artists.id))
         .where(eq(artists.gameId, gameId))
-        .groupBy(artists.id, artists.name, artists.mood, artists.loyalty, artists.archetype, artists.signedWeek)
+        .groupBy(artists.id, artists.name, artists.mood, artists.energy, artists.archetype, artists.signedWeek)
         .having(sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false AND ${songs.releaseId} IS NULL THEN 1 END) >= ${minSongs}`);
 
       const totalReadySongs = artistsResult.reduce((sum: number, artist: any) => sum + parseInt(artist.readySongsCount as string), 0);
@@ -2095,7 +2095,7 @@ const musicLabelData = {
           name: artist.name,
           genre: 'Pop', // Default genre since not stored in artists table
           mood: artist.mood || 50,
-          loyalty: artist.loyalty || 50,
+          energy: artist.energy || 50,
           readySongsCount: parseInt(artist.readySongsCount as string),
           totalSongsCount: parseInt(artist.totalSongsCount as string),
           lastProjectWeek: artist.signedWeek,
@@ -3297,6 +3297,8 @@ const musicLabelData = {
             playlistAccess: weekResult.gameState.playlistAccess,
             pressAccess: weekResult.gameState.pressAccess,
             venueAccess: weekResult.gameState.venueAccess,
+            // Persist tier unlock history for UI display in AccessTierBadges
+            tierUnlockHistory: (weekResult.gameState as any).tierUnlockHistory ?? {},
             campaignCompleted: weekResult.gameState.campaignCompleted,
             // Persist A&R Office state from GameEngine (columns must exist in schema)
             // If your schema does not have these columns yet, consider storing them under flags instead.

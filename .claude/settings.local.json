@@ -66,7 +66,9 @@
       "Bash(npx motion-primitives@latest add:*)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(printf \"N\\nN\\nN\\n\")",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": [],

@@ -139,6 +139,9 @@ export async function seedArtist(
     massAppeal: 55,
     status: 'signed',
     weeksSinceLastRelease: 0,
+    archetype: 'workhorse', // Default archetype - required field
+    signedWeek: 1, // Default signed week
+    loyalty: 50, // Default loyalty
     createdAt: new Date(),
     ...overrides,
   };
@@ -157,6 +160,9 @@ export async function seedArtist(
     massAppeal: artist.massAppeal,
     status: artist.status,
     weeksSinceLastRelease: artist.weeksSinceLastRelease,
+    archetype: artist.archetype,
+    signedWeek: artist.signedWeek,
+    loyalty: artist.loyalty,
     createdAt: artist.createdAt,
   });
 
