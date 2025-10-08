@@ -15,10 +15,11 @@
 - `client/src/components/WeekSummary.tsx` - Reference for existing achievements display (no changes needed, reference only)
 - `package.json` - Add `test` script to run Vitest
 - `tests/task-0001/schema-and-types.test.ts` - Vitest tests for schema and types related to tier unlock history
+- `tests/task-0001/game-engine-tier-unlock-history.test.ts` - Vitest tests for GameEngine tier unlock history (Task 2.1)
 
 ### Notes
 
-- No unit tests required per project conventions (game logic testing done manually via gameplay)
+- For each main task, sub‑task `.1` should be "Write unit tests (if feasible)". If a task is not reasonably unit‑testable, mark it as "(not testable)" and skip it.
 - Database migration will be a raw SQL file to alter the existing `game_states` table
 - Migration should be run with `npm run db:push` after creation
 - Toast system already exists via shadcn/ui and just needs integration with tier unlock events
@@ -34,29 +35,32 @@
   - [x] 1.5 Run `npm run db:push` to apply schema changes to database
 
 - [ ] 2.0 Implement tier unlock tracking in GameEngine
-  - [ ] 2.1 Locate `checkAccessTierProgression()` function in `shared/engine/game-engine.ts` (around lines 3120-3142)
-  - [ ] 2.2 Initialize `tierUnlockHistory` if it doesn't exist at start of function: `if (!gameState.tierUnlockHistory) gameState.tierUnlockHistory = {};`
-  - [ ] 2.3 For playlist tier unlocks: after creating unlock notification (line ~3120), add `if (!gameState.tierUnlockHistory.playlist) gameState.tierUnlockHistory.playlist = {}; gameState.tierUnlockHistory.playlist[newTierName] = gameState.week;`
-  - [ ] 2.4 For press tier unlocks: after creating unlock notification (line ~3131), add `if (!gameState.tierUnlockHistory.press) gameState.tierUnlockHistory.press = {}; gameState.tierUnlockHistory.press[newTierName] = gameState.week;`
-  - [ ] 2.5 For venue tier unlocks: after creating unlock notification (line ~3142), add `if (!gameState.tierUnlockHistory.venue) gameState.tierUnlockHistory.venue = {}; gameState.tierUnlockHistory.venue[newTierName] = gameState.week;`
-  - [ ] 2.6 Verify tier unlock history is included in API response by checking return value includes updated `gameState`
+  - [x] 2.1 Write unit tests for GameEngine tier unlock tracking (if feasible): tests for `checkAccessTierProgression()` updating `tierUnlockHistory` appropriately. If not feasible, mark this as (not testable) and proceed.
+  - [x] 2.2 Locate `checkAccessTierProgression()` function in `shared/engine/game-engine.ts` (around lines 3120-3142)
+  - [x] 2.3 Initialize `tierUnlockHistory` if it doesn't exist at start of function: `if (!gameState.tierUnlockHistory) gameState.tierUnlockHistory = {};`
+  - [x] 2.4 For playlist tier unlocks: after creating unlock notification (line ~3120), add `if (!gameState.tierUnlockHistory.playlist) gameState.tierUnlockHistory.playlist = {}; gameState.tierUnlockHistory.playlist[newTierName] = gameState.week;`
+  - [x] 2.5 For press tier unlocks: after creating unlock notification (line ~3131), add `if (!gameState.tierUnlockHistory.press) gameState.tierUnlockHistory.press = {}; gameState.tierUnlockHistory.press[newTierName] = gameState.week;`
+  - [x] 2.6 For venue tier unlocks: after creating unlock notification (line ~3142), add `if (!gameState.tierUnlockHistory.venue) gameState.tierUnlockHistory.venue = {}; gameState.tierUnlockHistory.venue[newTierName] = gameState.week;`
+  - [x] 2.7 Verify tier unlock history is included in API response by checking return value includes updated `gameState`
 
 - [ ] 3.0 Display unlock history in AccessTierBadges component
-  - [ ] 3.1 Open `client/src/components/AccessTierBadges.tsx` and locate the expanded tier view (lines 272-313)
-  - [ ] 3.2 Add helper function to map UI tier names to database tier names: `const getTierKey = (tierName: string) => tierName.toLowerCase().replace('-', '_');` (e.g., "Mid-Tier" → "mid_tier")
-  - [ ] 3.3 In the tier mapping section (lines 277-309), after the tier name display (line 283), add unlock week display
-  - [ ] 3.4 Add conditional rendering: `{tier.name !== 'None' && gameState.tierUnlockHistory?.[tierType]?.[getTierKey(tier.name)] && (<span className="text-xs text-white/50 ml-2">• Unlocked Week {gameState.tierUnlockHistory[tierType][getTierKey(tier.name)]}</span>)}`
-  - [ ] 3.5 Verify the unlock week appears next to unlocked tier names in the expanded view
+  - [ ] 3.1 Write unit tests for AccessTierBadges unlock week display (render with mocked gameState and verify week chip appears for unlocked tiers)
+  - [ ] 3.2 Open `client/src/components/AccessTierBadges.tsx` and locate the expanded tier view (lines 272-313)
+  - [ ] 3.3 Add helper function to map UI tier names to database tier names: `const getTierKey = (tierName: string) => tierName.toLowerCase().replace('-', '_');` (e.g., "Mid-Tier" → "mid_tier")
+  - [ ] 3.4 In the tier mapping section (lines 277-309), after the tier name display (line 283), add unlock week display
+  - [ ] 3.5 Add conditional rendering: `{tier.name !== 'None' && gameState.tierUnlockHistory?.[tierType]?.[getTierKey(tier.name)] && (<span className=\"text-xs text-white/50 ml-2\">• Unlocked Week {gameState.tierUnlockHistory[tierType][getTierKey(tier.name)]}</span>)}`
+  - [ ] 3.6 Verify the unlock week appears next to unlocked tier names in the expanded view
 
 - [ ] 4.0 Add toast notifications for tier unlocks
-  - [ ] 4.1 Determine best location for toast trigger: check if `GamePage.tsx` or `gameStore.ts` handles week advance responses
-  - [ ] 4.2 Import `toast` from `@/hooks/use-toast` at the top of the chosen file
-  - [ ] 4.3 Import icons from lucide-react: `import { Music, Megaphone, Building } from 'lucide-react';`
-  - [ ] 4.4 After receiving `WeekSummary` from week advance API response, add toast logic: iterate through `weekSummary.changes` array
-  - [ ] 4.5 For each change with `type === 'unlock'`, check if description includes 'playlist', 'press', or 'venue' keywords
-  - [ ] 4.6 Trigger toast with appropriate icon and message: `toast({ title: "🔓 New Access Unlocked", description: change.description });`
-  - [ ] 4.7 Add helper function to get tier icon: `const getTierIcon = (desc: string) => desc.includes('playlist') ? Music : desc.includes('press') ? Megaphone : Building;`
-  - [ ] 4.8 Enhance toast to include icon component in title or description for better visual feedback
+  - [ ] 4.1 Write unit tests for toast notifications (mock `toast` and assert it is called for unlock changes with correct messages/icons)
+  - [ ] 4.2 Determine best location for toast trigger: check if `GamePage.tsx` or `gameStore.ts` handles week advance responses
+  - [ ] 4.3 Import `toast` from `@/hooks/use-toast` at the top of the chosen file
+  - [ ] 4.4 Import icons from lucide-react: `import { Music, Megaphone, Building } from 'lucide-react';`
+  - [ ] 4.5 After receiving `WeekSummary` from week advance API response, add toast logic: iterate through `weekSummary.changes` array
+  - [ ] 4.6 For each change with `type === 'unlock'`, check if description includes 'playlist', 'press', or 'venue' keywords
+  - [ ] 4.7 Trigger toast with appropriate icon and message: `toast({ title: "🔓 New Access Unlocked", description: change.description });`
+  - [ ] 4.8 Add helper function to get tier icon: `const getTierIcon = (desc: string) => desc.includes('playlist') ? Music : desc.includes('press') ? Megaphone : Building;`
+  - [ ] 4.9 Enhance toast to include icon component in title or description for better visual feedback
 
 - [ ] 5.0 Test and verify tier unlock system
   - [ ] 5.1 Start dev server with `npm run dev` and load an existing game save

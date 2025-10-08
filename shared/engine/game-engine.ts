@@ -3065,6 +3065,12 @@ export class GameEngine {
     const tiers = this.gameData.getAccessTiersSync();
     const reputation = this.gameState.reputation || 0;
     const tierChanges: GameChange[] = [];
+
+    // Initialize tier unlock history if missing (Task 2.2)
+    const gs: any = this.gameState as any;
+    if (!gs.tierUnlockHistory) {
+      gs.tierUnlockHistory = {};
+    }
     
     // Store previous values to detect changes
     const previousPlaylist = this.gameState.playlistAccess;
@@ -3120,6 +3126,13 @@ export class GameEngine {
         description: `🎵 Playlist Access Upgraded: ${tierDisplay} playlists unlocked! Your releases can now reach wider audiences.`,
         amount: 0
       });
+
+      // Task 2.3: Track unlock week in tierUnlockHistory for playlist
+      if (!gs.tierUnlockHistory.playlist) gs.tierUnlockHistory.playlist = {};
+      const tierKey = this.gameState.playlistAccess;
+      if (!gs.tierUnlockHistory.playlist[tierKey]) {
+        gs.tierUnlockHistory.playlist[tierKey] = this.gameState.currentWeek || 0;
+      }
     }
     
     if (previousPress !== this.gameState.pressAccess && this.gameState.pressAccess !== 'none') {
@@ -3131,6 +3144,13 @@ export class GameEngine {
         description: `📰 Press Access Upgraded: ${tierDisplay} coverage unlocked! Your projects will get better media attention.`,
         amount: 0
       });
+
+      // Task 2.4: Track unlock week in tierUnlockHistory for press
+      if (!gs.tierUnlockHistory.press) gs.tierUnlockHistory.press = {};
+      const tierKey = this.gameState.pressAccess;
+      if (!gs.tierUnlockHistory.press[tierKey]) {
+        gs.tierUnlockHistory.press[tierKey] = this.gameState.currentWeek || 0;
+      }
     }
     
     if (previousVenue !== this.gameState.venueAccess && this.gameState.venueAccess !== 'none') {
@@ -3142,6 +3162,13 @@ export class GameEngine {
         description: `🎭 Venue Access Upgraded: ${tierDisplay} unlocked! Your artists can now perform at larger venues.`,
         amount: 0
       });
+
+      // Task 2.6: Track unlock week in tierUnlockHistory for venue
+      if (!gs.tierUnlockHistory.venue) gs.tierUnlockHistory.venue = {};
+      const tierKey = this.gameState.venueAccess;
+      if (!gs.tierUnlockHistory.venue[tierKey]) {
+        gs.tierUnlockHistory.venue[tierKey] = this.gameState.currentWeek || 0;
+      }
     }
     
     return tierChanges;
