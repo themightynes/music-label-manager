@@ -1,0 +1,1 @@
+export { ArtistDialogueModal } from './ArtistDialogueModal';

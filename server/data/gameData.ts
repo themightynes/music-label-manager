@@ -255,6 +255,31 @@ export class ServerGameData {
     return this.dataLoader.getArtistDialogue(archetype);
   }
 
+  // Get specific choice from a dialogue scene
+  async getDialogueChoiceById(sceneId: string, choiceId: string): Promise<any | undefined> {
+    await this.initialize();
+    try {
+      const data = await this.dataLoader.loadAllData();
+      const scene = data.dialogue.additional_scenes.find((scene: any) => scene.id === sceneId);
+
+      if (!scene || !scene.choices) {
+        console.error('Dialogue scene not found or has no choices:', sceneId);
+        return undefined;
+      }
+
+      const choice = scene.choices.find((choice: any) => choice.id === choiceId);
+      if (!choice) {
+        console.error('Dialogue choice not found:', choiceId, 'in scene:', sceneId);
+        return undefined;
+      }
+
+      return choice;
+    } catch (error) {
+      console.error('Failed to get dialogue choice by ID:', { sceneId, choiceId }, error);
+      return undefined;
+    }
+  }
+
   // PHASE 3 MIGRATION: Removed duplicate calculation methods
   // calculateProjectCost() - REMOVED (unused)
   // calculateStreamingOutcome() - REMOVED (GameEngine has correct implementation)

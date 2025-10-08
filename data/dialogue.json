@@ -1,252 +1,383 @@
 {
-  "version": "0.1.0",
-  "generated": "2025-08-14",
-  "description": "Additional 6 artist dialogue scenes (2 per archetype) to reach MVP requirement",
+  "version": "0.2.0",
+  "generated": "2025-10-07",
+  "description": "Mood/Energy-based artist dialogue system - 9 core scenarios covering all emotional states. Uses ONLY existing game attributes: money, reputation, creative_capital, artist_mood, artist_energy, artist_popularity",
+  "selection_logic": {
+    "mood_ranges": {
+      "low": { "min": 0, "max": 33 },
+      "middle": { "min": 34, "max": 66 },
+      "high": { "min": 67, "max": 100 }
+    },
+    "energy_ranges": {
+      "low": { "min": 0, "max": 33 },
+      "middle": { "min": 34, "max": 66 },
+      "high": { "min": 67, "max": 100 }
+    }
+  },
   "additional_scenes": [
     {
-      "id": "artist_visionary_pressure",
-      "speaker": "Nova",
-      "archetype": "Visionary", 
-      "prompt": "Everyone wants me to make radio-friendly hits. But my art needs to say something deeper.",
+      "id": "dialogue_low_mood_low_energy",
+      "mood_range": { "min": 0, "max": 33 },
+      "energy_range": { "min": 0, "max": 33 },
+      "emotional_state": "Burned out, depressed, exhausted",
+      "prompt": "I'm completely drained. I can't remember the last time I felt excited about making music. Maybe I'm just not cut out for this.",
       "choices": [
         {
-          "id": "support_vision",
-          "label": "Your art comes first - we'll find the audience",
+          "id": "offer_break",
+          "label": "Take a real break - no music, no pressure",
           "effects_immediate": {
+            "artist_mood": 2,
+            "money": -2000
+          },
+          "effects_delayed": {
             "artist_energy": 3
-          },
-          "effects_delayed": {
-            "creative_breakthrough": 2,
-            "commercial_risk": 1
           }
         },
         {
-          "id": "commercial_compromise",
-          "label": "One commercial hit first, then the art project",
+          "id": "push_through_burnout",
+          "label": "We have deadlines - you can rest later",
           "effects_immediate": {
-            "artist_mood": -2,
-            "money": -1000
+            "artist_mood": -3,
+            "artist_energy": -2
           },
-          "effects_delayed": {
-            "commercial_potential": 2,
-            "artistic_frustration": 1
-          }
+          "effects_delayed": {}
         },
         {
-          "id": "middle_ground",
-          "label": "Let's find art that connects commercially",
+          "id": "therapy_support",
+          "label": "Let's find you support and lighten the schedule",
           "effects_immediate": {
-            "creative_capital": -1
+            "artist_mood": 1,
+            "money": -1500
           },
           "effects_delayed": {
-            "artistic_growth": 1,
-            "mainstream_appeal": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "artist_visionary_collaboration",
-      "speaker": "Nova",
-      "archetype": "Visionary",
-      "prompt": "I want to work with that experimental producer from Berlin. Nobody knows their name here.",
-      "choices": [
-        {
-          "id": "fly_to_berlin",
-          "label": "Book Berlin sessions - whatever it takes",
-          "effects_immediate": {
-            "money": -8000
-          },
-          "effects_delayed": {
-            "innovation_bonus": 3,
             "artist_energy": 2
           }
-        },
-        {
-          "id": "bring_producer_here",
-          "label": "Bring the producer to our studio",
-          "effects_immediate": {
-            "money": -5000
-          },
-          "effects_delayed": {
-            "creative_synthesis": 2,
-            "local_buzz": 1
-          }
-        },
-        {
-          "id": "suggest_alternatives",
-          "label": "I know some innovative local producers",
-          "effects_immediate": {
-            "artist_mood": -1
-          },
-          "effects_delayed": {
-            "cost_efficiency": 1,
-            "compromise_tension": 1
-          }
         }
       ]
     },
     {
-      "id": "artist_workhorse_burnout",
-      "speaker": "Mason",
-      "archetype": "Workhorse",
-      "prompt": "I can push through another album cycle, but my band needs a break. What's the priority?",
+      "id": "dialogue_low_mood_middle_energy",
+      "mood_range": { "min": 0, "max": 33 },
+      "energy_range": { "min": 34, "max": 66 },
+      "emotional_state": "Frustrated, discouraged but functional",
+      "prompt": "I'm putting in the work, but nothing feels right. The songs aren't connecting, the process feels mechanical. What's the point?",
       "choices": [
         {
-          "id": "push_through",
-          "label": "Strike while the iron's hot - one more push",
+          "id": "creative_reset",
+          "label": "Let's try a completely different creative approach",
           "effects_immediate": {
-            "artist_mood": -3
-          },
-          "effects_delayed": {
-            "output_boost": 2,
-            "burnout_risk": 2
-          }
-        },
-        {
-          "id": "schedule_break",
-          "label": "Take the break - long-term thinking",
-          "effects_immediate": {
-            "money": -3000
-          },
-          "effects_delayed": {
-            "artist_energy": 2,
-            "refreshed_creativity": 1
-          }
-        },
-        {
-          "id": "working_vacation",
-          "label": "Compromise: working vacation sessions",
-          "effects_immediate": {
-            "money": -6000
-          },
-          "effects_delayed": {
-            "moderate_output": 1,
-            "team_bonding": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "artist_workhorse_perfectionism",
-      "speaker": "Mason", 
-      "archetype": "Workhorse",
-      "prompt": "Track 7 still isn't right. Give me another week in studio to nail it perfectly.",
-      "choices": [
-        {
-          "id": "extra_week",
-          "label": "Take the time you need",
-          "effects_immediate": {
-            "money": -3000
-          },
-          "effects_delayed": {
-            "quality_bonus": 2,
-            "timeline_delay": 1
-          }
-        },
-        {
-          "id": "deadline_pressure",
-          "label": "We need to hit our deadline",
-          "effects_immediate": {
-            "artist_mood": -2
-          },
-          "effects_delayed": {
-            "on_time_delivery": 1,
-            "perfectionist_frustration": 1
-          }
-        },
-        {
-          "id": "fresh_perspective",
-          "label": "Let's get fresh ears on it tomorrow",
-          "effects_immediate": {
-            "money": -500
-          },
-          "effects_delayed": {
-            "creative_breakthrough": 1,
-            "collaboration_bonus": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "artist_trendsetter_authenticity",
-      "speaker": "LunaVee",
-      "archetype": "Trendsetter",
-      "prompt": "This new sound is blowing up, but it feels like I'm chasing instead of leading. Should I pivot?",
-      "choices": [
-        {
-          "id": "lead_counter_trend",
-          "label": "Lead the counter-trend - be the alternative",
-          "effects_immediate": {
+            "artist_mood": 1,
             "creative_capital": -2
           },
           "effects_delayed": {
-            "trendsetter_credibility": 3,
-            "niche_risk": 1
+            "artist_mood": 2
           }
         },
         {
-          "id": "evolve_naturally",
-          "label": "Evolve your sound naturally with the times",
+          "id": "stay_the_course",
+          "label": "Trust the process - great art takes time",
           "effects_immediate": {
             "artist_mood": -1
           },
           "effects_delayed": {
-            "market_relevance": 2,
-            "authentic_growth": 1
+            "artist_mood": 1
           }
         },
         {
-          "id": "double_down_uniqueness",
-          "label": "Double down on what makes you unique",
+          "id": "bring_collaborators",
+          "label": "Bring in fresh collaborators to shake things up",
           "effects_immediate": {
-            "artist_energy": 2
+            "artist_mood": 2,
+            "money": -3000
           },
           "effects_delayed": {
-            "brand_strength": 2,
-            "trend_resistance": 1
+            "artist_energy": 1
           }
         }
       ]
     },
     {
-      "id": "artist_trendsetter_crossover",
-      "speaker": "LunaVee",
-      "archetype": "Trendsetter",
-      "prompt": "I want to try a completely different genre. My fans might hate it, but it could be huge.",
+      "id": "dialogue_low_mood_high_energy",
+      "mood_range": { "min": 0, "max": 33 },
+      "energy_range": { "min": 67, "max": 100 },
+      "emotional_state": "Anxious, stressed, manic energy",
+      "prompt": "I can't sleep. Every idea feels urgent but wrong. I'm working 16-hour days and the output is garbage. I'm spiraling.",
       "choices": [
         {
-          "id": "full_genre_switch",
-          "label": "Go all-in on the genre experiment",
+          "id": "force_rest",
+          "label": "Step away from the studio for a week - mandatory",
           "effects_immediate": {
+            "artist_mood": -2,
+            "artist_energy": -4
+          },
+          "effects_delayed": {
+            "artist_mood": 3
+          }
+        },
+        {
+          "id": "channel_energy",
+          "label": "Let's channel that energy into one focused project",
+          "effects_immediate": {
+            "artist_mood": 1
+          },
+          "effects_delayed": {
+            "artist_energy": -2
+          }
+        },
+        {
+          "id": "structure_routine",
+          "label": "Create strict work hours and routines",
+          "effects_immediate": {
+            "artist_mood": -1,
+            "artist_energy": -1
+          },
+          "effects_delayed": {
+            "artist_mood": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "dialogue_middle_mood_low_energy",
+      "mood_range": { "min": 34, "max": 66 },
+      "energy_range": { "min": 0, "max": 33 },
+      "emotional_state": "Tired, worn down, need rest",
+      "prompt": "I'm okay, just... tired. Everything takes twice as long as it should. I need to recharge somehow.",
+      "choices": [
+        {
+          "id": "working_vacation",
+          "label": "Take a working vacation - light creative sessions",
+          "effects_immediate": {
+            "artist_mood": 2,
             "money": -4000
           },
           "effects_delayed": {
-            "crossover_potential": 3,
-            "fan_confusion": 2
+            "artist_energy": 3
           }
         },
         {
-          "id": "side_project_test",
-          "label": "Test it as a side project first",
+          "id": "delegate_tasks",
+          "label": "Hire assistants to handle non-creative work",
           "effects_immediate": {
-            "money": -2000,
-            "creative_capital": -1
+            "artist_energy": 1,
+            "money": -2500
           },
           "effects_delayed": {
-            "market_test": 1,
-            "brand_protection": 1
+            "artist_energy": 2
           }
         },
         {
-          "id": "genre_fusion",
-          "label": "Blend genres - keep your core sound",
+          "id": "power_through_tired",
+          "label": "Coffee and deadlines - let's push through",
+          "effects_immediate": {
+            "artist_mood": -2,
+            "artist_energy": -1
+          },
+          "effects_delayed": {}
+        }
+      ]
+    },
+    {
+      "id": "dialogue_middle_mood_middle_energy",
+      "mood_range": { "min": 34, "max": 66 },
+      "energy_range": { "min": 34, "max": 66 },
+      "emotional_state": "Baseline neutral state",
+      "prompt": "Things are fine. Not amazing, not terrible. Just... steady. Should we shake things up or keep building?",
+      "choices": [
+        {
+          "id": "maintain_momentum",
+          "label": "Consistency wins - keep the current pace",
+          "effects_immediate": {
+            "artist_mood": 1
+          },
+          "effects_delayed": {}
+        },
+        {
+          "id": "ambitious_project",
+          "label": "Time to take a bigger creative risk",
+          "effects_immediate": {
+            "artist_mood": 2,
+            "money": -3500
+          },
+          "effects_delayed": {
+            "artist_energy": 2
+          }
+        },
+        {
+          "id": "invest_skills",
+          "label": "Invest in training and skill development",
+          "effects_immediate": {
+            "money": -2000
+          },
+          "effects_delayed": {
+            "artist_mood": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dialogue_middle_mood_high_energy",
+      "mood_range": { "min": 34, "max": 66 },
+      "energy_range": { "min": 67, "max": 100 },
+      "emotional_state": "Motivated, ready to work",
+      "prompt": "I'm feeling good, energized. Let's make the most of this momentum. What's our next move?",
+      "choices": [
+        {
+          "id": "double_sessions",
+          "label": "Double studio sessions while you're hot",
+          "effects_immediate": {
+            "artist_mood": 1,
+            "money": -2000
+          },
+          "effects_delayed": {
+            "artist_energy": -2
+          }
+        },
+        {
+          "id": "creative_experiment",
+          "label": "Experiment with a new genre or style",
+          "effects_immediate": {
+            "artist_mood": 2,
+            "creative_capital": -1
+          },
+          "effects_delayed": {}
+        },
+        {
+          "id": "strategic_planning",
+          "label": "Focus this energy on career strategy",
+          "effects_immediate": {
+            "artist_mood": -1
+          },
+          "effects_delayed": {
+            "artist_mood": 2,
+            "reputation": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dialogue_high_mood_low_energy",
+      "mood_range": { "min": 67, "max": 100 },
+      "energy_range": { "min": 0, "max": 33 },
+      "emotional_state": "Content but tired, satisfied but depleted",
+      "prompt": "I'm happy with where we are, but I'm running on fumes. I want to keep this good feeling without crashing.",
+      "choices": [
+        {
+          "id": "consolidate_wins",
+          "label": "Consolidate recent wins, take it easy for a bit",
+          "effects_immediate": {
+            "artist_mood": 1
+          },
+          "effects_delayed": {
+            "artist_energy": 3
+          }
+        },
+        {
+          "id": "capitalize_momentum",
+          "label": "Strike while the iron's hot - maximize output",
+          "effects_immediate": {
+            "artist_energy": -2
+          },
+          "effects_delayed": {
+            "artist_mood": -2,
+            "artist_energy": -2
+          }
+        },
+        {
+          "id": "passive_income",
+          "label": "Set up merchandise and licensing deals",
           "effects_immediate": {
             "money": -1500
           },
           "effects_delayed": {
-            "innovation_bonus": 1,
-            "fan_retention": 1
+            "artist_energy": 2,
+            "money": 3000
+          }
+        }
+      ]
+    },
+    {
+      "id": "dialogue_high_mood_middle_energy",
+      "mood_range": { "min": 67, "max": 100 },
+      "energy_range": { "min": 34, "max": 66 },
+      "emotional_state": "Happy, balanced",
+      "prompt": "Everything feels right. The music, the team, the direction. Let's make sure we keep this going.",
+      "choices": [
+        {
+          "id": "ride_the_wave",
+          "label": "Ride this wave - stay the course",
+          "effects_immediate": {
+            "artist_mood": 1
+          },
+          "effects_delayed": {
+            "artist_popularity": 1
+          }
+        },
+        {
+          "id": "level_up",
+          "label": "Time to level up - bigger venues, bigger projects",
+          "effects_immediate": {
+            "artist_mood": 2,
+            "money": -5000
+          },
+          "effects_delayed": {
+            "artist_energy": -1,
+            "artist_popularity": 2
+          }
+        },
+        {
+          "id": "give_back",
+          "label": "Give back - mentor emerging artists",
+          "effects_immediate": {
+            "artist_mood": 2,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dialogue_high_mood_high_energy",
+      "mood_range": { "min": 67, "max": 100 },
+      "energy_range": { "min": 67, "max": 100 },
+      "emotional_state": "Thriving, peak performance, inspired",
+      "prompt": "I've never felt more alive, more creative. This is what I was born to do. Let's do something legendary.",
+      "choices": [
+        {
+          "id": "ambitious_album",
+          "label": "Create your magnum opus - spare no expense",
+          "effects_immediate": {
+            "artist_mood": 3,
+            "money": -10000
+          },
+          "effects_delayed": {
+            "artist_energy": -3
+          }
+        },
+        {
+          "id": "tour_blitz",
+          "label": "Launch a major tour while you're at peak energy",
+          "effects_immediate": {
+            "artist_mood": 2,
+            "money": -8000
+          },
+          "effects_delayed": {
+            "artist_energy": -2,
+            "artist_popularity": 3
+          }
+        },
+        {
+          "id": "creative_freedom",
+          "label": "Total creative freedom - experiment wildly",
+          "effects_immediate": {
+            "artist_mood": 3,
+            "creative_capital": -3
+          },
+          "effects_delayed": {
+            "artist_energy": -1,
+            "reputation": 2
           }
         }
       ]

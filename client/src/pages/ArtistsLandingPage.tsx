@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Users, TrendingUp, Star, DollarSign, Music, Eye, UserPlus, CalendarDays, Mic, Disc3, Rocket } from 'lucide-react';
 import { useLocation } from 'wouter';
 import type { Artist } from '@shared/schema';
+import type { GameArtist } from '@shared/types/gameTypes';
 import GameLayout from '../layouts/GameLayout';
 import { ArtistDiscoveryModal } from '../components/ArtistDiscoveryModal';
+import { ArtistDialogueModal } from '../components/artist-dialogue/ArtistDialogueModal';
 import { ArtistCard as RichArtistCard, getArchetypeInfo, getRelationshipStatus } from '../components/ArtistCard';
 import { useGameStore } from '../store/gameStore';
 import { usePortfolioROI, useArtistROI } from '../hooks/useAnalytics';
@@ -17,11 +19,37 @@ import {
   MenubarTrigger,
 } from '../components/ui/menubar';
 
+/**
+ * Converts an Artist from the database schema to a GameArtist interface
+ * Provides safe defaults for mood and energy to avoid undefined labels
+ */
+const toGameArtist = (artist: Artist): GameArtist => {
+  return {
+    id: artist.id,
+    name: artist.name,
+    archetype: artist.archetype as 'Visionary' | 'Workhorse' | 'Trendsetter',
+    talent: artist.talent,
+    workEthic: artist.workEthic,
+    popularity: artist.popularity,
+    temperament: artist.temperament,
+    energy: artist.energy ?? 50,
+    mood: artist.mood ?? 50,
+    signed: true, // Artists on this page are always signed
+    signingCost: artist.signingCost ?? undefined,
+    weeklyCost: artist.weeklyCost ?? undefined,
+    bio: artist.bio ?? undefined,
+    genre: artist.genre ?? undefined,
+    age: artist.age ?? undefined,
+  };
+};
+
 const ArtistsLandingPage: React.FC = () => {
   const [, setLocation] = useLocation();
   const [isDiscoveryModalOpen, setIsDiscoveryModalOpen] = useState(false);
   const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
-  const { gameState, artists, signArtist, projects } = useGameStore();
+  const [isDialogueModalOpen, setIsDialogueModalOpen] = useState(false);
+  const [selectedArtistForDialogue, setSelectedArtistForDialogue] = useState<Artist | null>(null);
+  const { gameState, artists, signArtist, projects, loadGame } = useGameStore();
   const { data: portfolioROI, isLoading: portfolioLoading, error: portfolioError } = usePortfolioROI();
 
   const signedArtists = artists || [];
@@ -97,9 +125,29 @@ const ArtistsLandingPage: React.FC = () => {
 
   // Artist action handlers
   const handleMeetArtist = (artist: Artist) => {
-    console.info(`[ArtistsLandingPage] Arranging meeting with ${artist.name}...`);
-    // TODO: Implement meeting functionality - could navigate to /executives or open meeting modal
-    setLocation('/executives');
+    console.info(`[ArtistsLandingPage] Opening dialogue with ${artist.name}...`);
+    setSelectedArtistForDialogue(artist);
+    setIsDialogueModalOpen(true);
+  };
+
+  const handleDialogueComplete = async () => {
+    console.info('[ArtistsLandingPage] Dialogue completed, refreshing game state...');
+    if (gameState?.id) {
+      try {
+        await loadGame(gameState.id);
+        console.info('[ArtistsLandingPage] Game state refreshed successfully');
+      } catch (error) {
+        console.error('[ArtistsLandingPage] Failed to refresh game state:', error);
+      }
+    }
+  };
+
+  const handleDialogueModalChange = (open: boolean) => {
+    setIsDialogueModalOpen(open);
+    // Clear selected artist when modal closes to prevent stale data
+    if (!open) {
+      setSelectedArtistForDialogue(null);
+    }
   };
 
   const handlePlanTour = (artist: Artist) => {
@@ -348,6 +396,17 @@ const ArtistsLandingPage: React.FC = () => {
             gameState={gameState}
             signedArtists={artists}
             onSignArtist={signArtist}
+          />
+        )}
+
+        {/* Artist Dialogue Modal */}
+        {isDialogueModalOpen && selectedArtistForDialogue && gameState?.id && (
+          <ArtistDialogueModal
+            gameId={gameState.id}
+            artist={toGameArtist(selectedArtistForDialogue)}
+            open={isDialogueModalOpen}
+            onOpenChange={handleDialogueModalChange}
+            onComplete={handleDialogueComplete}
           />
         )}
         </div>
