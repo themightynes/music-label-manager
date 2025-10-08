@@ -13,6 +13,8 @@
 - `client/src/store/gameStore.ts` - Alternative location for toast trigger if using Zustand state updates
 - `client/src/hooks/use-toast.ts` - Existing toast hook (no changes needed, reference only)
 - `client/src/components/WeekSummary.tsx` - Reference for existing achievements display (no changes needed, reference only)
+- `package.json` - Add `test` script to run Vitest
+- `tests/task-0001/schema-and-types.test.ts` - Vitest tests for schema and types related to tier unlock history
 
 ### Notes
 
@@ -25,11 +27,11 @@
 ## Tasks
 
 - [ ] 1.0 Add tier unlock history to database schema and types
-  - [ ] 1.1 Add `tierUnlockHistory` JSONB column to `gameStates` table in `shared/schema.ts` (after line 263, before `createdAt`)
-  - [ ] 1.2 Create SQL migration file `migrations/0001_add_tier_unlock_history.sql` with `ALTER TABLE game_states ADD COLUMN tier_unlock_history JSONB DEFAULT '{}'::jsonb;`
-  - [ ] 1.3 Add TypeScript type definition for `TierUnlockHistory` in `shared/types/gameTypes.ts` with structure: `{ playlist?: { niche?: number, mid?: number, flagship?: number }, press?: { blogs?: number, mid_tier?: number, national?: number }, venue?: { clubs?: number, theaters?: number, arenas?: number } }`
-  - [ ] 1.4 Add `tierUnlockHistory?: TierUnlockHistory` field to `GameState` interface in `shared/types/gameTypes.ts`
-  - [ ] 1.5 Run `npm run db:push` to apply schema changes to database
+  - [x] 1.1 Add `tierUnlockHistory` JSONB column to `gameStates` table in `shared/schema.ts` (after line 263, before `createdAt`)
+  - [x] 1.2 Create SQL migration file `migrations/0001_add_tier_unlock_history.sql` with `ALTER TABLE game_states ADD COLUMN tier_unlock_history JSONB DEFAULT '{}'::jsonb;`
+  - [x] 1.3 Add TypeScript type definition for `TierUnlockHistory` in `shared/types/gameTypes.ts` with structure: `{ playlist?: { niche?: number, mid?: number, flagship?: number }, press?: { blogs?: number, mid_tier?: number, national?: number }, venue?: { clubs?: number, theaters?: number, arenas?: number } }`
+  - [x] 1.4 Add `tierUnlockHistory?: TierUnlockHistory` field to `GameState` interface in `shared/types/gameTypes.ts`
+  - [x] 1.5 Run `npm run db:push` to apply schema changes to database
 
 - [ ] 2.0 Implement tier unlock tracking in GameEngine
   - [ ] 2.1 Locate `checkAccessTierProgression()` function in `shared/engine/game-engine.ts` (around lines 3120-3142)
