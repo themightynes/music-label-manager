@@ -108,36 +108,46 @@
 ### 2.0 Integrate mood changes with dialogue system (Phase 6 - Backend)
 **Goal**: Process artist_mood effects from dialogue choices and track mood history
 
-- [ ] 2.1 Review existing dialogue processing in GameEngine
-  - Read `shared/engine/game-engine.ts` - find `processArtistDialogue()` or similar method
-  - Understand how `effects_immediate` and `effects_delayed` are currently processed
-  - Identify where to inject mood change logic
+- [x] 2.1 Review existing dialogue processing in GameEngine
+  - ✅ Read `shared/engine/game-engine.ts` - found `processArtistDialogue()` at line 3577
+  - ✅ Understand how `effects_immediate` and `effects_delayed` are currently processed - uses `applyEffects()` method
+  - ✅ Identified two patterns: global `summary.artistChanges.mood` (all artists) and per-artist `summary.artistChanges[artistId]` (specific artist)
+  - ✅ Current `processArtistDialogue` uses STUB random values instead of loading from dialogue.json
+  - ✅ `applyEffects()` already handles `artist_mood` effects (line 1045-1065)
 
-- [ ] 2.2 Extend dialogue processing to handle artist_mood effects
-  - Update dialogue processing method in `game-engine.ts`
-  - Extract `artist_mood` from choice `effects_immediate`
-  - Apply mood changes to artist's mood field
-  - Ensure mood stays within 0-100 bounds
-  - Follow existing pattern for `artist_energy` effects
+- [x] 2.2 Load dialogue choice data from dialogue.json
+  - ✅ Created `getDialogueChoiceById(sceneId, choiceId)` method in `server/data/gameData.ts` (line 259)
+  - ✅ Updated `processArtistDialogue()` to load actual choice data instead of using random values (line 3577)
+  - ✅ Extract sceneId and choiceId from action.metadata (matching role_meeting pattern)
+  - ✅ Apply effects_immediate using existing `applyEffects()` method
+  - ✅ Queue effects_delayed for next week trigger
+  - ✅ Added fallback handling for missing dialogue choices
+  - ⚠️ **ISSUE IDENTIFIED**: Current implementation applies mood globally to all artists via `applyEffects()` - needs per-artist targeting
 
-- [ ] 2.3 Add mood event logging for dialogue choices
+- [ ] 2.3 Fix dialogue mood to apply per-artist (not global)
+  - Current: `applyEffects()` uses global `summary.artistChanges.mood` (affects ALL artists)
+  - Required: Use per-artist pattern `summary.artistChanges[artistId]` (affects specific artist)
+  - Options: Either modify applyEffects to support per-artist context OR handle artist_mood separately in processArtistDialogue
+  - Follow existing pattern from project completions (line 3456-3459 in game-engine.ts)
+
+- [ ] 2.4 Add mood event logging for dialogue choices
   - Insert mood change records into `mood_events` table (from Phase 5)
   - Store event_type as 'dialogue_choice'
   - Include choice_id and dialogue_id in metadata
   - Record mood_change amount and description
 
-- [ ] 2.4 Update dialogue.json with mood effects
+- [ ] 2.5 Update dialogue.json with mood effects
   - Add `artist_mood` field to existing dialogue choices
   - Start with 3-5 dialogue scenes for testing
   - Use balanced values: -5 to +5 for most choices
   - Document mood effect rationale in comments
 
-- [ ] 2.5 Update ChoiceEffect type if needed
+- [ ] 2.6 Update ChoiceEffect type if needed
   - Verify `artist_mood` is properly typed in `shared/types/gameTypes.ts`
   - Ensure TypeScript compilation passes
   - Update JSDoc comments to document mood effects
 
-- [ ] 2.6 Write tests for dialogue mood integration
+- [ ] 2.7 Write tests for dialogue mood integration
   - Create `tests/features/mood-dialogue-integration.test.ts`
   - Test: Dialogue choice with +5 mood increases artist mood by 5
   - Test: Dialogue choice with -5 mood decreases artist mood by 5

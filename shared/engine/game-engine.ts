@@ -3575,29 +3575,76 @@ export class GameEngine {
    * Processes artist dialogue interactions
    */
   private async processArtistDialogue(action: GameEngineAction, summary: WeekSummary): Promise<void> {
-    if (!action.targetId || !action.details?.choiceId) return;
-    
-    // Get artist archetype for dialogue content
+    if (!action.targetId) return;
+
     const artistId = action.targetId;
-    
-    // For now, simulate artist dialogue effects
-    // In full implementation, this would load from dialogue.json additional_scenes
-    const dialogueEffects = {
-      mood: this.getRandom(-2, 3),
-      energy: this.getRandom(-1, 2),
-      creativity: this.getRandom(0, 2)
-    };
-    
-    // Apply artist-specific effects
-    if (!summary.artistChanges) summary.artistChanges = {};
-    summary.artistChanges.mood = (summary.artistChanges.mood || 0) + dialogueEffects.mood;
-    summary.artistChanges.energy = (summary.artistChanges.energy || 0) + dialogueEffects.energy;
-    
-    // Some dialogue choices might affect creative capital
-    if (dialogueEffects.creativity > 0) {
-      this.gameState.creativeCapital = Math.min(100, (this.gameState.creativeCapital || 0) + dialogueEffects.creativity);
+
+    // Extract scene and choice IDs from metadata
+    const { sceneId, choiceId } = action.metadata || {};
+
+    if (!sceneId || !choiceId) {
+      console.log(`[GAME-ENGINE] Missing required IDs for dialogue - sceneId: ${sceneId}, choiceId: ${choiceId}`);
+      return;
     }
-    
+
+    console.log(`[GAME-ENGINE] Processing artist dialogue - Artist: ${artistId}, Scene: ${sceneId}, Choice: ${choiceId}`);
+
+    // Load the actual dialogue choice from dialogue.json
+    const choice = await this.gameData.getDialogueChoiceById(sceneId, choiceId);
+
+    if (!choice) {
+      console.error(`[GAME-ENGINE] Dialogue choice not found for sceneId: ${sceneId}, choiceId: ${choiceId}`);
+      // Fallback to minimal stub to prevent crashes
+      const fallbackChoice = {
+        effects_immediate: { artist_mood: -1 },
+        effects_delayed: {}
+      };
+      console.log(`[GAME-ENGINE] Using fallback dialogue choice data`);
+
+      // Apply fallback effects and return
+      if (fallbackChoice.effects_immediate) {
+        const effects: Record<string, number> = {};
+        for (const [key, value] of Object.entries(fallbackChoice.effects_immediate)) {
+          if (typeof value === 'number') {
+            effects[key] = value;
+          }
+        }
+        this.applyEffects(effects, summary);
+      }
+      return;
+    }
+
+    console.log(`[GAME-ENGINE] Loaded dialogue choice data:`, {
+      sceneId,
+      choiceId,
+      immediateEffects: choice.effects_immediate,
+      delayedEffects: choice.effects_delayed
+    });
+
+    // Apply immediate effects using the standard applyEffects method
+    // This handles artist_mood, artist_energy, creative_capital, etc.
+    if (choice.effects_immediate) {
+      const effects: Record<string, number> = {};
+      for (const [key, value] of Object.entries(choice.effects_immediate)) {
+        if (typeof value === 'number') {
+          effects[key] = value;
+        }
+      }
+      this.applyEffects(effects, summary);
+    }
+
+    // Queue delayed effects for next week
+    if (choice.effects_delayed) {
+      const flags = this.gameState.flags || {};
+      const delayedKey = `${artistId}-${sceneId}-${choiceId}-delayed`;
+      (flags as any)[delayedKey] = {
+        triggerWeek: (this.gameState.currentWeek || 0) + 1,
+        effects: choice.effects_delayed
+      };
+      this.gameState.flags = flags;
+    }
+
+    // Add dialogue completion to summary
     summary.changes.push({
       type: 'meeting',
       description: `Artist conversation completed`,

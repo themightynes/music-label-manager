@@ -1,7 +1,7 @@
 {
-  "version": "2.0.0",
-  "generated": "2025-09-06",
-  "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration.",
+  "version": "2.1.0",
+  "generated": "2025-10-07",
+  "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting.",
   "weekly_actions": [
     {
       "id": "ceo_priorities",
@@ -12,25 +12,41 @@
       "role_id": "ceo",
       "meeting_id": "mgr_priorities",
       "category": "business",
+      "target_scope": "global",
       "prompt": "We can only push two tracks next week—what's the focus?",
       "choices": [
         {
           "id": "studio_first",
           "label": "Studio-first to polish the single",
-          "effects_immediate": { "money": -2000 },
-          "effects_delayed": { "quality_bonus": 5, "artist_mood": 2 }
+          "effects_immediate": {
+            "money": -2000
+          },
+          "effects_delayed": {
+            "quality_bonus": 5,
+            "artist_mood": 2
+          }
         },
         {
           "id": "content_first",
           "label": "Content-first to grow socials",
-          "effects_immediate": { "money": -1500, "reputation": 1 },
-          "effects_delayed": { "press_story_flag": 1 }
+          "effects_immediate": {
+            "money": -1500,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "press_story_flag": 1
+          }
         },
         {
           "id": "tour_first",
           "label": "Mini-tour to test markets",
-          "effects_immediate": { "money": -4000 },
-          "effects_delayed": { "sellthrough_hint": 1, "artist_mood": -1 }
+          "effects_immediate": {
+            "money": -4000
+          },
+          "effects_delayed": {
+            "sellthrough_hint": 1,
+            "artist_mood": -1
+          }
         }
       ]
     },
@@ -43,25 +59,41 @@
       "role_id": "ceo",
       "meeting_id": "mgr_crisis",
       "category": "business",
+      "target_scope": "predetermined",
       "prompt": "Your biggest artist just fired their last three backup dancers. The tour starts in two weeks.",
       "choices": [
         {
           "id": "emergency_auditions",
           "label": "Emergency auditions - whatever it costs",
-          "effects_immediate": { "money": -8000, "reputation": 1 },
-          "effects_delayed": { "artist_mood": 3 }
+          "effects_immediate": {
+            "money": -8000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 3
+          }
         },
         {
           "id": "local_talent",
           "label": "Hire local dancers in each city",
-          "effects_immediate": { "money": -3000 },
-          "effects_delayed": { "venue_relationships": 1, "quality_risk": 1 }
+          "effects_immediate": {
+            "money": -3000
+          },
+          "effects_delayed": {
+            "venue_relationships": 1,
+            "quality_risk": 1
+          }
         },
         {
           "id": "acoustic_pivot",
           "label": "Pivot to stripped-down acoustic shows",
-          "effects_immediate": { "creative_capital": -1 },
-          "effects_delayed": { "artist_mood": -2, "press_story_flag": 1 }
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "artist_mood": -2,
+            "press_story_flag": 1
+          }
         }
       ]
     },
@@ -74,25 +106,39 @@
       "role_id": "ceo",
       "meeting_id": "mgr_expansion",
       "category": "business",
+      "target_scope": "predetermined",
       "prompt": "Three major festivals want your act for next summer. We can only do one without burning out.",
       "choices": [
         {
           "id": "coachella_prestige",
           "label": "Coachella - maximum prestige play",
-          "effects_immediate": { "creative_capital": -2, "artist_popularity": 2, "reputation": 3 },
+          "effects_immediate": {
+            "creative_capital": -2,
+            "artist_popularity": 2,
+            "reputation": 3
+          },
           "effects_delayed": {}
         },
         {
           "id": "euro_circuit",
           "label": "European circuit - build international",
-          "effects_immediate": { "money": -12000 },
-          "effects_delayed": { "international_rep": 2 }
+          "effects_immediate": {
+            "money": -12000
+          },
+          "effects_delayed": {
+            "international_rep": 2
+          }
         },
         {
           "id": "profitable_path",
           "label": "Take the highest paying gig",
-          "effects_immediate": { "money": 25000, "reputation": -1 },
-          "effects_delayed": { "artist_mood": -1 }
+          "effects_immediate": {
+            "money": 25000,
+            "reputation": -1
+          },
+          "effects_delayed": {
+            "artist_mood": -1
+          }
         }
       ]
     },
@@ -105,25 +151,41 @@
       "role_id": "head_ar",
       "meeting_id": "anr_single_choice",
       "category": "talent",
+      "target_scope": "user_selected",
       "prompt": "Pick the lead single approach.",
       "choices": [
         {
           "id": "lean_commercial",
           "label": "Lean commercial",
-          "effects_immediate": { "artist_mood": -2 },
-          "effects_delayed": { "playlist_bias": 2, "adds_bonus": 5 }
+          "effects_immediate": {
+            "artist_mood": -2
+          },
+          "effects_delayed": {
+            "playlist_bias": 2,
+            "adds_bonus": 5
+          }
         },
         {
           "id": "split_test",
           "label": "A/B campaign (two contenders)",
-          "effects_immediate": { "money": -1000 },
-          "effects_delayed": { "learning_bonus": 1, "delay_risk": 1 }
+          "effects_immediate": {
+            "money": -1000
+          },
+          "effects_delayed": {
+            "learning_bonus": 1,
+            "delay_risk": 1
+          }
         },
         {
           "id": "greenlight_weird",
           "label": "Greenlight the weird one",
-          "effects_immediate": { "creative_capital": -2 },
-          "effects_delayed": { "variance_up": 1, "quality_potential": 4 }
+          "effects_immediate": {
+            "creative_capital": -2
+          },
+          "effects_delayed": {
+            "variance_up": 1,
+            "quality_potential": 4
+          }
         }
       ]
     },
@@ -136,25 +198,41 @@
       "role_id": "head_ar",
       "meeting_id": "anr_discovery",
       "category": "talent",
+      "target_scope": "global",
       "prompt": "I found our next superstar - she's 16, brilliant, but her parents want creative control.",
       "choices": [
         {
           "id": "accept_terms",
           "label": "Accept their terms - worth the risk",
-          "effects_immediate": { "money": -15000, "creative_capital": -3 },
-          "effects_delayed": { "talent_potential": 4, "control_issues": 1 }
+          "effects_immediate": {
+            "money": -15000,
+            "creative_capital": -3
+          },
+          "effects_delayed": {
+            "talent_potential": 4,
+            "control_issues": 1
+          }
         },
         {
           "id": "negotiate_compromise",
           "label": "Negotiate a compromise deal",
-          "effects_immediate": { "money": -8000 },
-          "effects_delayed": { "talent_potential": 2, "relationship_stability": 1 }
+          "effects_immediate": {
+            "money": -8000
+          },
+          "effects_delayed": {
+            "talent_potential": 2,
+            "relationship_stability": 1
+          }
         },
         {
           "id": "pass_on_talent",
           "label": "Pass - too many red flags",
-          "effects_immediate": { "reputation": -1 },
-          "effects_delayed": { "competitor_gain": 1 }
+          "effects_immediate": {
+            "reputation": -1
+          },
+          "effects_delayed": {
+            "competitor_gain": 1
+          }
         }
       ]
     },
@@ -167,25 +245,41 @@
       "role_id": "head_ar",
       "meeting_id": "anr_genre_shift",
       "category": "talent",
+      "target_scope": "global",
       "prompt": "Rock is dying in the charts. Should we push our guitar bands toward pop-rock crossover?",
       "choices": [
         {
           "id": "chase_trends",
           "label": "Follow the money - pivot to pop",
-          "effects_immediate": { "artist_mood": -3 },
-          "effects_delayed": { "commercial_potential": 2, "authenticity_loss": 1 }
+          "effects_immediate": {
+            "artist_mood": -3
+          },
+          "effects_delayed": {
+            "commercial_potential": 2,
+            "authenticity_loss": 1
+          }
         },
         {
           "id": "double_down_rock",
           "label": "Double down - rock will come back",
-          "effects_immediate": { "creative_capital": -2, "money": -5000 },
-          "effects_delayed": { "niche_dominance": 1 }
+          "effects_immediate": {
+            "creative_capital": -2,
+            "money": -5000
+          },
+          "effects_delayed": {
+            "niche_dominance": 1
+          }
         },
         {
           "id": "gradual_evolution",
           "label": "Gradual evolution - keep the rock soul",
-          "effects_immediate": { "money": -2000 },
-          "effects_delayed": { "artistic_growth": 1, "chart_stability": 1 }
+          "effects_immediate": {
+            "money": -2000
+          },
+          "effects_delayed": {
+            "artistic_growth": 1,
+            "chart_stability": 1
+          }
         }
       ]
     },
@@ -198,13 +292,19 @@
       "role_id": "cco",
       "meeting_id": "prod_timeline",
       "category": "production",
+      "target_scope": "global",
       "prompt": "Timeline is tight—what's the call?",
       "choices": [
         {
           "id": "rush",
           "label": "Rush to hit date",
-          "effects_immediate": { "money": 1000 },
-          "effects_delayed": { "quality_bonus": -5, "on_time": 1 }
+          "effects_immediate": {
+            "money": 1000
+          },
+          "effects_delayed": {
+            "quality_bonus": -5,
+            "on_time": 1
+          }
         },
         {
           "id": "standard",
@@ -215,8 +315,13 @@
         {
           "id": "add_revision",
           "label": "Add a revision pass",
-          "effects_immediate": { "money": -1500 },
-          "effects_delayed": { "quality_bonus": 6, "delay_risk": 1 }
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "quality_bonus": 6,
+            "delay_risk": 1
+          }
         }
       ]
     },
@@ -229,25 +334,40 @@
       "role_id": "cco",
       "meeting_id": "prod_creative_clash",
       "category": "production",
+      "target_scope": "user_selected",
       "prompt": "The artist wants to record everything live in one take. I think we need overdubs to compete.",
       "choices": [
         {
           "id": "artist_vision",
           "label": "Trust the artist's instincts",
           "effects_immediate": {},
-          "effects_delayed": { "authenticity_bonus": 2, "commercial_risk": 1 }
+          "effects_delayed": {
+            "authenticity_bonus": 2,
+            "commercial_risk": 1
+          }
         },
         {
           "id": "producer_expertise",
           "label": "Insist on professional overdubs",
-          "effects_immediate": { "money": -3000, "artist_mood": -2 },
-          "effects_delayed": { "quality_bonus": 3, "radio_ready": 1 }
+          "effects_immediate": {
+            "money": -3000,
+            "artist_mood": -2
+          },
+          "effects_delayed": {
+            "quality_bonus": 3,
+            "radio_ready": 1
+          }
         },
         {
           "id": "hybrid_approach",
           "label": "Compromise - live basics, key overdubs",
-          "effects_immediate": { "money": -1500 },
-          "effects_delayed": { "quality_bonus": 1, "artist_mood": 1 }
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "quality_bonus": 1,
+            "artist_mood": 1
+          }
         }
       ]
     },
@@ -260,25 +380,41 @@
       "role_id": "cco",
       "meeting_id": "prod_budget_crisis",
       "category": "production",
+      "target_scope": "global",
       "prompt": "We're over budget and the vocals still aren't right. The label is breathing down my neck.",
       "choices": [
         {
           "id": "demand_more_money",
           "label": "Demand the budget we need to finish",
-          "effects_immediate": { "money": -10000, "reputation": 1 },
-          "effects_delayed": { "quality_bonus": 4 }
+          "effects_immediate": {
+            "money": -10000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "quality_bonus": 4
+          }
         },
         {
           "id": "creative_solution",
           "label": "Find a creative workaround",
-          "effects_immediate": { "creative_capital": -1 },
-          "effects_delayed": { "innovation_bonus": 2, "producer_rep": 1 }
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "innovation_bonus": 2,
+            "producer_rep": 1
+          }
         },
         {
           "id": "release_as_is",
           "label": "Call it done - character over perfection",
-          "effects_immediate": { "money": 2000 },
-          "effects_delayed": { "authenticity_bonus": 1, "quality_penalty": -2 }
+          "effects_immediate": {
+            "money": 2000
+          },
+          "effects_delayed": {
+            "authenticity_bonus": 1,
+            "quality_penalty": -2
+          }
         }
       ]
     },
@@ -291,25 +427,40 @@
       "role_id": "cmo",
       "meeting_id": "pr_angle",
       "category": "marketing",
+      "target_scope": "global",
       "prompt": "Choose the story angle for this cycle.",
       "choices": [
         {
           "id": "safe",
           "label": "Safe: craft-focused rise",
-          "effects_immediate": { "money": -1000 },
-          "effects_delayed": { "press_bias": 1 }
+          "effects_immediate": {
+            "money": -1000
+          },
+          "effects_delayed": {
+            "press_bias": 1
+          }
         },
         {
           "id": "spicy",
           "label": "Spicy: provocative narrative",
-          "effects_immediate": { "money": -1500 },
-          "effects_delayed": { "variance_up": 1, "rep_swing": 1 }
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "variance_up": 1,
+            "rep_swing": 1
+          }
         },
         {
           "id": "community",
           "label": "Community: local hero",
-          "effects_immediate": { "money": -800 },
-          "effects_delayed": { "local_favor": 1, "ticket_bias": 1 }
+          "effects_immediate": {
+            "money": -800
+          },
+          "effects_delayed": {
+            "local_favor": 1,
+            "ticket_bias": 1
+          }
         }
       ]
     },
@@ -322,27 +473,43 @@
       "role_id": "cmo",
       "meeting_id": "pr_scandal_brewing",
       "category": "marketing",
+      "target_scope": "global",
       "prompt": "Paparazzi caught your artist leaving a rival's studio at 3am. The rumors are flying.",
       "choices": [
         {
           "id": "damage_control",
           "label": "Full damage control - deny everything",
-          "effects_immediate": { "money": -5000, "reputation": -1 },
-          "effects_delayed": { "media_skepticism": 1 }
+          "effects_immediate": {
+            "money": -5000,
+            "reputation": -1
+          },
+          "effects_delayed": {
+            "media_skepticism": 1
+          }
         },
         {
           "id": "spin_collaboration",
           "label": "Spin it as a surprise collaboration",
-          "effects_immediate": { "creative_capital": -1 },
-          "effects_delayed": { "press_pickups": 2, "collab_pressure": 1 }
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "press_pickups": 2,
+            "collab_pressure": 1
+          }
         },
         {
           "id": "ignore_let_fade",
           "label": "Ignore it - let it fade naturally",
-          "effects_immediate": { "reputation": -2 },
-          "effects_delayed": { "authenticity_bonus": 1 }
+          "effects_immediate": {
+            "reputation": -2
+          },
+          "effects_delayed": {
+            "authenticity_bonus": 1
+          }
         }
       ]
+
     },
     {
       "id": "cmo_awards",
@@ -353,25 +520,42 @@
       "role_id": "cmo",
       "meeting_id": "pr_award_campaign",
       "category": "marketing",
+      "target_scope": "global",
       "prompt": "Award season is coming. Do we launch a campaign for the album or save money?",
       "choices": [
         {
           "id": "full_campaign",
           "label": "Full campaign - hire the best consultants",
-          "effects_immediate": { "money": -20000 },
-          "effects_delayed": { "award_chances": 3, "industry_respect": 2 }
+          "effects_immediate": {
+            "money": -20000
+          },
+          "effects_delayed": {
+            "award_chances": 3,
+            "industry_respect": 2
+          }
         },
         {
           "id": "grassroots_push",
           "label": "Grassroots push - work our contacts",
-          "effects_immediate": { "money": -5000, "creative_capital": -1 },
-          "effects_delayed": { "award_chances": 1, "relationship_building": 2 }
+          "effects_immediate": {
+            "money": -5000,
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "award_chances": 1,
+            "relationship_building": 2
+          }
         },
         {
           "id": "skip_awards",
           "label": "Skip it - focus on commercial success",
-          "effects_immediate": { "money": 3000 },
-          "effects_delayed": { "commercial_focus": 1, "prestige_loss": -1 }
+          "effects_immediate": {
+            "money": 3000
+          },
+          "effects_delayed": {
+            "commercial_focus": 1,
+            "prestige_loss": -1
+          }
         }
       ]
     },
@@ -384,25 +568,39 @@
       "role_id": "cmo",
       "meeting_id": "digital_viral_moment",
       "category": "marketing",
+      "target_scope": "global",
       "prompt": "A fan remix of your single is going viral on TikTok. Do we embrace it or shut it down?",
       "choices": [
         {
           "id": "embrace_remix",
           "label": "Embrace it - invite the fan to collaborate",
-          "effects_immediate": { "money": -2000 },
-          "effects_delayed": { "viral_boost": 3, "fan_loyalty": 2 }
+          "effects_immediate": {
+            "money": -2000
+          },
+          "effects_delayed": {
+            "viral_boost": 3,
+            "fan_loyalty": 2
+          }
         },
         {
           "id": "official_version",
           "label": "Release our own official remix",
-          "effects_immediate": { "money": -8000 },
-          "effects_delayed": { "streaming_boost": 2, "remix_competition": 1 }
+          "effects_immediate": {
+            "money": -8000
+          },
+          "effects_delayed": {
+            "streaming_boost": 2,
+            "remix_competition": 1
+          }
         },
         {
           "id": "copyright_strike",
           "label": "Copyright strike - protect the original",
           "effects_immediate": {},
-          "effects_delayed": { "viral_kill": -2, "fan_backlash": -1 }
+          "effects_delayed": {
+            "viral_kill": -2,
+            "fan_backlash": -1
+          }
         }
       ]
     },
@@ -415,25 +613,39 @@
       "role_id": "cmo",
       "meeting_id": "digital_platform_exclusive",
       "category": "marketing",
+      "target_scope": "global",
       "prompt": "Spotify wants an exclusive window for the new album. Apple Music will match the offer.",
       "choices": [
         {
           "id": "spotify_exclusive",
           "label": "Take Spotify's deal - biggest reach",
-          "effects_immediate": { "money": 15000 },
-          "effects_delayed": { "streaming_boost": 2, "apple_relationship": -1 }
+          "effects_immediate": {
+            "money": 15000
+          },
+          "effects_delayed": {
+            "streaming_boost": 2,
+            "apple_relationship": -1
+          }
         },
         {
           "id": "apple_exclusive",
           "label": "Apple Music - higher revenue per stream",
-          "effects_immediate": { "money": 18000 },
-          "effects_delayed": { "premium_positioning": 1, "reach_limitation": -1 }
+          "effects_immediate": {
+            "money": 18000
+          },
+          "effects_delayed": {
+            "premium_positioning": 1,
+            "reach_limitation": -1
+          }
         },
         {
           "id": "simultaneous_release",
           "label": "Decline both - simultaneous release",
           "effects_immediate": {},
-          "effects_delayed": { "platform_neutrality": 1, "discovery_challenge": 1 }
+          "effects_delayed": {
+            "platform_neutrality": 1,
+            "discovery_challenge": 1
+          }
         }
       ]
     },
@@ -446,25 +658,35 @@
       "role_id": "head_distribution",
       "meeting_id": "pitch_strategy",
       "category": "distribution",
+      "target_scope": "global",
       "prompt": "Which track and context for editorial pitch?",
       "choices": [
         {
           "id": "obvious_single",
           "label": "Obvious single + clean assets",
           "effects_immediate": {},
-          "effects_delayed": { "playlist_bias": 2 }
+          "effects_delayed": {
+            "playlist_bias": 2
+          }
         },
         {
           "id": "unexpected_cut",
           "label": "Unexpected cut with a story",
-          "effects_immediate": { "creative_capital": -1 },
-          "effects_delayed": { "variance_up": 1, "press_story_flag": 1 }
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "variance_up": 1,
+            "press_story_flag": 1
+          }
         },
         {
           "id": "hold",
           "label": "Hold this week; build proof points",
           "effects_immediate": {},
-          "effects_delayed": { "playlist_bias_next": 1 }
+          "effects_delayed": {
+            "playlist_bias_next": 1
+          }
         }
       ]
     },
@@ -477,25 +699,40 @@
       "role_id": "head_distribution",
       "meeting_id": "streaming_playlist_politics",
       "category": "distribution",
+      "target_scope": "global",
       "prompt": "The Today's Top Hits curator wants a 'favor' before considering our track. Wink, wink.",
       "choices": [
         {
           "id": "play_the_game",
           "label": "Play the game - arrange the 'favor'",
-          "effects_immediate": { "money": -10000, "reputation": -1 },
-          "effects_delayed": { "playlist_guaranteed": 1, "industry_compromise": 1 }
+          "effects_immediate": {
+            "money": -10000,
+            "reputation": -1
+          },
+          "effects_delayed": {
+            "playlist_guaranteed": 1,
+            "industry_compromise": 1
+          }
         },
         {
           "id": "alternative_playlists",
           "label": "Focus on alternative playlists instead",
-          "effects_immediate": { "creative_capital": -1 },
-          "effects_delayed": { "niche_success": 2, "mainstream_miss": -1 }
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "niche_success": 2,
+            "mainstream_miss": -1
+          }
         },
         {
           "id": "report_behavior",
           "label": "Report the behavior to Spotify",
           "effects_immediate": {},
-          "effects_delayed": { "industry_respect": 2, "blacklist_risk": -2 }
+          "effects_delayed": {
+            "industry_respect": 2,
+            "blacklist_risk": -2
+          }
         }
       ]
     },
@@ -508,25 +745,39 @@
       "role_id": "head_distribution",
       "meeting_id": "streaming_algorithm_hack",
       "category": "distribution",
+      "target_scope": "global",
       "prompt": "I found a loophole in the algorithm. We could game 10M streams, but it's ethically gray.",
       "choices": [
         {
           "id": "exploit_loophole",
           "label": "Exploit it before they patch it",
-          "effects_immediate": { "money": -5000 },
-          "effects_delayed": { "artificial_boost": 3, "detection_risk": 2 }
+          "effects_immediate": {
+            "money": -5000
+          },
+          "effects_delayed": {
+            "artificial_boost": 3,
+            "detection_risk": 2
+          }
         },
         {
           "id": "modified_approach",
           "label": "Use a modified, cleaner approach",
-          "effects_immediate": { "money": -2000 },
-          "effects_delayed": { "moderate_boost": 1, "sustainable_growth": 1 }
+          "effects_immediate": {
+            "money": -2000
+          },
+          "effects_delayed": {
+            "moderate_boost": 1,
+            "sustainable_growth": 1
+          }
         },
         {
           "id": "organic_only",
           "label": "Stick to organic growth only",
           "effects_immediate": {},
-          "effects_delayed": { "authentic_growth": 1, "slow_building": 1 }
+          "effects_delayed": {
+            "authentic_growth": 1,
+            "slow_building": 1
+          }
         }
       ]
     },
@@ -539,27 +790,43 @@
       "role_id": "head_distribution",
       "meeting_id": "tour_scale",
       "category": "live",
+      "target_scope": "global",
       "prompt": "Mini-tour scale choice?",
       "choices": [
         {
           "id": "small_rooms",
           "label": "Small rooms, aim for sell-outs",
-          "effects_immediate": { "money": -5000 },
-          "effects_delayed": { "venue_stability": 1 }
+          "effects_immediate": {
+            "money": -5000
+          },
+          "effects_delayed": {
+            "venue_stability": 1
+          }
         },
         {
           "id": "mid_rooms",
           "label": "Mid rooms, stretch a bit",
-          "effects_immediate": { "money": -8000 },
-          "effects_delayed": { "prestige": 1, "sellthrough_risk": 1 }
+          "effects_immediate": {
+            "money": -8000
+          },
+          "effects_delayed": {
+            "prestige": 1,
+            "sellthrough_risk": 1
+          }
         },
         {
           "id": "big_bet",
           "label": "Big bet showcase night",
-          "effects_immediate": { "money": -12000 },
-          "effects_delayed": { "prestige": 2, "rep_swing": 1 }
+          "effects_immediate": {
+            "money": -12000
+          },
+          "effects_delayed": {
+            "prestige": 2,
+            "rep_swing": 1
+          }
         }
       ]
+
     },
     {
       "id": "distribution_supply",
@@ -570,27 +837,42 @@
       "role_id": "head_distribution",
       "meeting_id": "ops_supply_chain",
       "category": "distribution",
+      "target_scope": "global",
       "prompt": "Vinyl shortage is hitting everyone. We can get our allocation by paying 3x normal cost.",
       "choices": [
         {
           "id": "pay_premium",
           "label": "Pay the premium - vinyl collectors matter",
-          "effects_immediate": { "money": -12000 },
-          "effects_delayed": { "collector_loyalty": 2, "premium_positioning": 1 }
+          "effects_immediate": {
+            "money": -12000
+          },
+          "effects_delayed": {
+            "collector_loyalty": 2,
+            "premium_positioning": 1
+          }
         },
         {
           "id": "digital_focus",
           "label": "Go all-digital for this release",
-          "effects_immediate": { "money": 3000 },
-          "effects_delayed": { "cost_savings": 1, "collector_disappointment": -2 }
+          "effects_immediate": {
+            "money": 3000
+          },
+          "effects_delayed": {
+            "cost_savings": 1,
+            "collector_disappointment": -2
+          }
         },
         {
           "id": "delayed_vinyl",
           "label": "Delay vinyl, release digital first",
           "effects_immediate": {},
-          "effects_delayed": { "staggered_release": 1, "timeline_disruption": 1 }
+          "effects_delayed": {
+            "staggered_release": 1,
+            "timeline_disruption": 1
+          }
         }
       ]
+
     }
   ],
   "action_categories": [
