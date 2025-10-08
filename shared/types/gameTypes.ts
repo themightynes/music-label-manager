@@ -105,12 +105,31 @@ export interface GameState {
   rngSeed: string;
   flags: Record<string, any>;
   weeklyStats: Record<string, any>;
+  tierUnlockHistory?: TierUnlockHistory;
   musicLabel?: MusicLabel;
   // Optional database fields (from Drizzle schema)
   userId?: string | null;
   createdAt?: Date | string | null;
   updatedAt?: Date | string | null;
   campaignCompleted?: boolean | null;
+}
+
+export interface TierUnlockHistory {
+  playlist?: {
+    niche?: number;
+    mid?: number;
+    flagship?: number;
+  };
+  press?: {
+    blogs?: number;
+    mid_tier?: number;
+    national?: number;
+  };
+  venue?: {
+    clubs?: number;
+    theaters?: number;
+    arenas?: number;
+  };
 }
 
 export interface MusicLabel {
