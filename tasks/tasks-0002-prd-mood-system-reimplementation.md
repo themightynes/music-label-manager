@@ -80,20 +80,20 @@ Based on the PRD analysis and current codebase state, here are the main implemen
 
 **Goal**: Finalize production-ready implementation of mood targeting logic with comprehensive validation and error handling.
 
-- [ ] 2.1 Add strict validation to `applyEffects()` method
+- [x] 2.1 Add strict validation to `applyEffects()` method
   - If `target_scope` is `"global"` but `artistId` provided → Log warning, apply globally, ignore artistId
   - If `target_scope` is `"predetermined"` or `"user_selected"` but `artistId` missing → Throw error with meeting ID, scope, and artistId in message
-- [ ] 2.2 Update mood effect logging to include artist targeting information
+- [x] 2.2 Update mood effect logging to include artist targeting information
   - Log format: `[EFFECT PROCESSING] Artist mood effect: +2 (target: Nova, scope: predetermined, meeting: ceo_crisis)`
   - For global effects: `[EFFECT PROCESSING] Artist mood effect: +1 (target: all artists, scope: global, meeting: ceo_priorities)`
-- [ ] 2.3 Add comprehensive console logging for debugging mood changes
+- [x] 2.3 Add comprehensive console logging for debugging mood changes
   - Log which artist(s) received mood changes
   - Log meeting name, scope, and choice ID
   - Log accumulated mood changes in summary
-- [ ] 2.4 Update `summary.changes` entries to distinguish between global and per-artist mood changes
+- [x] 2.4 Update `summary.changes` entries to distinguish between global and per-artist mood changes
   - Global: `"Artist morale improved from meeting decision (all artists, +2)"`
   - Per-artist: `"Nova's morale improved from meeting decision (+3)"`
-- [ ] 2.5 Implement delayed effects support for artist targeting (per FR-19)
+- [x] 2.5 Implement delayed effects support for artist targeting (per FR-19)
   - Update delayed effect queue structure to include `artistId?: string` field
   - When queueing delayed effects, preserve artistId from immediate effect context
   - When triggering delayed effects, pass artistId to `applyEffects()` if present

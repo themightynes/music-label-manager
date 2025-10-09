@@ -840,6 +840,7 @@ export class GameEngine {
     // Load the full action data to get target_scope (FR-18)
     const actionData = await this.gameData.getActionById(actionId);
     const targetScope = actionData?.target_scope || 'global'; // Default to global if missing
+    const meetingName = actionData?.id || actionId; // Use meeting ID as name for logging
 
     // Load the actual choice from actions.json
     const choice = await this.gameData.getChoiceById(actionId, choiceId);
@@ -861,7 +862,7 @@ export class GameEngine {
             effects[key] = value;
           }
         }
-        this.applyEffects(effects, summary); // Global targeting (no artistId)
+        this.applyEffects(effects, summary, undefined, 'global'); // Global targeting (safe fallback default)
       }
       return;
     }
@@ -908,16 +909,20 @@ export class GameEngine {
           effects[key] = value;
         }
       }
-      this.applyEffects(effects, summary, targetArtistId); // Pass artistId based on scope
+      this.applyEffects(effects, summary, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
     }
 
-    // Queue delayed effects  
+    // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
     if (choice.effects_delayed) {
       const flags = this.gameState.flags || {};
       const delayedKey = `${action.targetId}-${action.details?.choiceId}-delayed`;
       (flags as any)[delayedKey] = {
         triggerWeek: (this.gameState.currentWeek || 0) + 1,
-        effects: choice.effects_delayed
+        effects: choice.effects_delayed,
+        artistId: targetArtistId, // Preserve artist targeting for delayed effects
+        targetScope: targetScope, // Preserve scope for validation
+        meetingName: meetingName, // Preserve context for logging
+        choiceId: choiceId
       };
       this.gameState.flags = flags;
     }
@@ -1073,8 +1078,14 @@ export class GameEngine {
 
   /**
    * Applies immediate effects to game state
+   * @param effects - Effects to apply
+   * @param summary - Week summary to update
+   * @param artistId - Optional artist ID for targeted effects
+   * @param targetScope - Optional scope for validation ('global' | 'predetermined' | 'user_selected' | 'dialogue')
+   * @param meetingName - Optional meeting name for logging
+   * @param choiceId - Optional choice ID for logging
    */
-  private applyEffects(effects: Record<string, number>, summary: WeekSummary, artistId?: string): void {
+  private applyEffects(effects: Record<string, number>, summary: WeekSummary, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): void {
     for (const [key, value] of Object.entries(effects)) {
       switch (key) {
         case 'money':
@@ -1111,8 +1122,17 @@ export class GameEngine {
           this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + value);
           break;
         case 'artist_mood':
-          // Per-artist mood targeting (FR-14, FR-15)
+          // Per-artist mood targeting (FR-14, FR-15) with strict validation (Task 2.1)
           if (!summary.artistChanges) summary.artistChanges = {};
+
+          // Strict validation based on target_scope
+          if (targetScope === 'global' && artistId) {
+            console.warn(`[EFFECT VALIDATION] Global scope meeting provided artistId (${artistId}). Ignoring artistId and applying globally.`);
+            // Force global application by clearing artistId
+            artistId = undefined;
+          } else if ((targetScope === 'predetermined' || targetScope === 'user_selected') && !artistId) {
+            throw new Error(`[EFFECT ERROR] ${targetScope} meeting requires artistId but none provided. Scope: ${targetScope}`);
+          }
 
           if (artistId) {
             // Per-artist targeting: Apply mood change to specific artist
@@ -1132,8 +1152,14 @@ export class GameEngine {
               break;
             }
 
-            // Add comprehensive logging with artist name
-            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (target: ${artist.name}, accumulated: ${(summary.artistChanges[artistId] as any).mood})`);
+            // Add comprehensive logging with all debugging context (Task 2.2 & 2.3)
+            const logParts = [`target: ${artist.name}`];
+            if (targetScope) logParts.push(`scope: ${targetScope}`);
+            if (meetingName) logParts.push(`meeting: ${meetingName}`);
+            if (choiceId) logParts.push(`choice: ${choiceId}`);
+            const accumulated = (summary.artistChanges[artistId] as any).mood;
+            logParts.push(`accumulated: ${accumulated > 0 ? '+' : ''}${accumulated}`);
+            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
 
             // Add to summary changes for UI display
             summary.changes.push({
@@ -1167,8 +1193,12 @@ export class GameEngine {
               (summary.artistChanges[artist.id] as any).mood = previousMoodChange + value;
             });
 
-            // Add comprehensive logging for global effect
-            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (target: all artists, scope: global, count: ${signedArtists.length})`);
+            // Add comprehensive logging for global effect (Task 2.2 & 2.3)
+            const logParts = ['target: all artists', 'scope: global'];
+            if (meetingName) logParts.push(`meeting: ${meetingName}`);
+            if (choiceId) logParts.push(`choice: ${choiceId}`);
+            logParts.push(`count: ${signedArtists.length}`);
+            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
 
             // Add to summary changes for UI display (roster-wide)
             summary.changes.push({
@@ -2803,52 +2833,42 @@ export class GameEngine {
           (value as any).triggerWeek === (this.gameState.currentWeek || 0)
         ) {
           try {
-            // Check if this is a dialogue delayed effect (has artistId)
-            if (key.startsWith('dialogue-') && (value as any).artistId) {
+            // Check if this delayed effect has artist targeting (Task 2.5, FR-19)
+            if ((value as any).artistId) {
               const artistId = (value as any).artistId;
               const effects = (value as any).effects || {};
+              const targetScope = (value as any).targetScope;
+              const meetingName = (value as any).meetingName;
+              const choiceId = (value as any).choiceId;
 
-              console.log(`[DELAYED EFFECTS] Processing dialogue delayed effects for artist ${artistId}:`, effects);
+              // Validate artist still exists before applying (FR-19 edge case)
+              const artist = this.gameState.artists?.find(a => a.id === artistId);
+              if (!artist) {
+                console.warn(`[DELAYED EFFECTS] Delayed effect cancelled: artist ${artistId} no longer on roster (effects: ${JSON.stringify(effects)})`);
+                triggeredKeys.push(key);
+                continue;
+              }
 
-              // Apply artist-specific delayed effects
+              console.log(`[DELAYED EFFECTS] Processing artist-targeted delayed effects for ${artist.name}:`, effects);
+
+              // Use applyEffects() with artist targeting for delayed effects (Task 2.5)
+              const delayedEffectsRecord: Record<string, number> = {};
               for (const [effectKey, effectValue] of Object.entries(effects)) {
-                try {
-                  if (effectKey === 'artist_mood' || effectKey === 'artist_energy' || effectKey === 'artist_popularity') {
-                    // Apply to specific artist
-                    const artist = await this.storage.getArtist(artistId);
-                    if (artist) {
-                      const field = effectKey.replace('artist_', '') as 'mood' | 'energy' | 'popularity';
-                      const currentValue = artist[field];
-                      const newValue = clamp(currentValue + (effectValue as number), 0, 100);
-
-                      await this.storage.updateArtist(artistId, { [field]: newValue });
-                      console.log(`[DELAYED EFFECTS] Applied ${effectKey} to artist ${artistId}: ${currentValue} + ${effectValue} = ${newValue}`);
-
-                      summary.changes.push({
-                        type: 'delayed_effect',
-                        description: `${artist.name}'s ${field} changed by ${effectValue > 0 ? '+' : ''}${effectValue}`
-                      });
-                    } else {
-                      console.warn(`[DELAYED EFFECTS] Artist ${artistId} not found for delayed effect`);
-                    }
-                  } else if (effectKey === 'money' || effectKey === 'reputation' || effectKey === 'creative_capital') {
-                    // Apply to game state
-                    const gameStateEffect: Record<string, number> = {};
-                    gameStateEffect[effectKey] = effectValue as number;
-                    this.applyEffects(gameStateEffect, summary);
-                  }
-                } catch (effectError) {
-                  console.error(`[DELAYED EFFECTS] Error applying delayed effect ${effectKey}:`, effectError);
+                if (typeof effectValue === 'number') {
+                  delayedEffectsRecord[effectKey] = effectValue;
                 }
               }
 
+              // Apply delayed effects with artist targeting and context
+              this.applyEffects(delayedEffectsRecord, summary, artistId, targetScope, meetingName, choiceId);
+
               summary.changes.push({
                 type: 'delayed_effect',
-                description: 'Artist dialogue delayed effect triggered'
+                description: `Delayed effect triggered for ${artist.name}`
               });
             } else {
-              // Old-style delayed effect (global)
-              this.applyEffects((value as any).effects || {}, summary);
+              // Old-style delayed effect (global, no scope validation)
+              this.applyEffects((value as any).effects || {}, summary, undefined, undefined);
               summary.changes.push({
                 type: 'delayed_effect',
                 description: 'Delayed effect triggered'
@@ -3783,7 +3803,7 @@ export class GameEngine {
             effects[key] = value;
           }
         }
-        this.applyEffects(effects, summary, artistId); // Pass artistId for per-artist targeting (FR-17)
+        this.applyEffects(effects, summary, artistId, 'dialogue', sceneId, choiceId); // Pass all context for logging (Task 2.2)
       }
       return;
     }
@@ -3804,16 +3824,20 @@ export class GameEngine {
           effects[key] = value;
         }
       }
-      this.applyEffects(effects, summary, artistId); // Pass artistId for per-artist targeting (FR-17)
+      this.applyEffects(effects, summary, artistId, 'dialogue', sceneId, choiceId); // Pass all context for logging (Task 2.2)
     }
 
-    // Queue delayed effects for next week
+    // Queue delayed effects for next week with artist targeting (Task 2.5)
     if (choice.effects_delayed) {
       const flags = this.gameState.flags || {};
       const delayedKey = `${artistId}-${sceneId}-${choiceId}-delayed`;
       (flags as any)[delayedKey] = {
         triggerWeek: (this.gameState.currentWeek || 0) + 1,
-        effects: choice.effects_delayed
+        effects: choice.effects_delayed,
+        artistId: artistId, // Preserve artist targeting
+        targetScope: 'dialogue', // Dialogue is always per-artist
+        meetingName: sceneId, // Scene ID as meeting name for logging
+        choiceId: choiceId
       };
       this.gameState.flags = flags;
     }
