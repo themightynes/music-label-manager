@@ -80,7 +80,7 @@ export const artistDialogueMachine = setup({
     hasSelectedDialogue: ({ context }) => context.selectedDialogue !== null,
     hasDialogues: ({ event }) => {
       if (event.type.startsWith('xstate.done.actor.')) {
-        const dialogues = event.output as DialogueScene[];
+        const dialogues = (event as any).output as DialogueScene[];
         return Array.isArray(dialogues) && dialogues.length > 0;
       }
       return false;
@@ -96,10 +96,10 @@ export const artistDialogueMachine = setup({
       return {};
     }),
     setAllDialogues: assign(({ event }) => {
-      if (!event.type.startsWith('xstate.done.actor.') || !Array.isArray(event.output)) {
+      if (!event.type.startsWith('xstate.done.actor.') || !Array.isArray((event as any).output)) {
         return {};
       }
-      const dialogues = event.output as DialogueScene[];
+      const dialogues = (event as any).output as DialogueScene[];
       return { allDialogues: dialogues, error: null };
     }),
     selectChoice: assign(({ event }) => {
@@ -108,7 +108,7 @@ export const artistDialogueMachine = setup({
     }),
     setSubmissionResult: assign(({ event }) => {
       if (!event.type.startsWith('xstate.done.actor.')) return {};
-      const result = event.output as ArtistDialogueResponse;
+      const result = (event as any).output as ArtistDialogueResponse;
       // Only process if output has the expected structure (not an array)
       if (!result || Array.isArray(result) || !('effects' in result)) return {};
       return {

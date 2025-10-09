@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GameEngine } from '@shared/engine/game-engine';
 import type { GameState, GameArtist, WeekSummary } from '@shared/types/gameTypes';
 import type { IStorage } from '../../server/storage';
+import { createTestArtist } from '../helpers/test-factories';
 
 /**
  * Mood Application Verification Tests
@@ -27,7 +28,7 @@ describe('Mood Application Verification', () => {
 
     // Create mock artists with known initial moods
     mockArtists = [
-      {
+      createTestArtist({
         id: 'artist_nova',
         name: 'Nova Sterling',
         archetype: 'Visionary',
@@ -37,11 +38,8 @@ describe('Mood Application Verification', () => {
         temperament: 60,
         energy: 75,
         mood: 70,  // Known starting mood
-        signed: true,
-        isSigned: true,
-        loyalty: 50,
-      },
-      {
+      }),
+      createTestArtist({
         id: 'artist_diego',
         name: 'Diego Rivers',
         archetype: 'Workhorse',
@@ -51,25 +49,19 @@ describe('Mood Application Verification', () => {
         temperament: 80,
         energy: 80,
         mood: 65,  // Known starting mood
-        signed: true,
-        isSigned: true,
-        loyalty: 50,
-      },
-      {
+      }),
+      createTestArtist({
         id: 'artist_luna',
         name: 'Luna Park',
         archetype: 'Trendsetter',
         talent: 70,
-        workEthric: 65,
+        workEthic: 65,
         popularity: 50,
         temperament: 55,
         energy: 70,
         mood: 60,  // Known starting mood
-        signed: true,
-        isSigned: true,
-        loyalty: 50,
-      },
-    ] as GameArtist[];
+      }),
+    ];
 
     // Mock storage
     mockStorage = {

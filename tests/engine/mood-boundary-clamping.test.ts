@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { WeekSummary, GameArtist } from '../../shared/types/gameTypes';
+import { createTestArtist } from '../helpers/test-factories';
 
 /**
  * Edge Case 3: Mood Boundary Clamping Tests
@@ -40,9 +41,9 @@ describe('Edge Case 3: Mood Boundary Clamping', () => {
 
     it('should clamp mood at 100 for multiple artists with high mood', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', name: 'Nova', mood: 98, isSigned: true } as GameArtist,
-        { id: 'artist_diego', name: 'Diego', mood: 95, isSigned: true } as GameArtist,
-        { id: 'artist_luna', name: 'Luna', mood: 92, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', name: 'Nova', mood: 98 }),
+        createTestArtist({ id: 'artist_diego', name: 'Diego', mood: 95 }),
+        createTestArtist({ id: 'artist_luna', name: 'Luna', mood: 92 }),
       ];
 
       const moodEffect = 10;
@@ -132,9 +133,9 @@ describe('Edge Case 3: Mood Boundary Clamping', () => {
 
     it('should clamp mood at 0 for multiple artists with low mood', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', name: 'Nova', mood: 3, isSigned: true } as GameArtist,
-        { id: 'artist_diego', name: 'Diego', mood: 5, isSigned: true } as GameArtist,
-        { id: 'artist_luna', name: 'Luna', mood: 8, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', name: 'Nova', mood: 3 }),
+        createTestArtist({ id: 'artist_diego', name: 'Diego', mood: 5 }),
+        createTestArtist({ id: 'artist_luna', name: 'Luna', mood: 8 }),
       ];
 
       const moodEffect = -10;

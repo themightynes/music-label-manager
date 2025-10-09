@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadAllDialogues, selectRandomDialogue, submitArtistDialogueChoice } from '../artistDialogueService';
 import type { DialogueScene } from '@shared/types/gameTypes';
 import type { ArtistDialogueResponse } from '@shared/api/contracts';
+import { createTestDialogueScene } from '../../../../tests/helpers/test-factories';
 
 // Mock the apiRequest function
 vi.mock('@/lib/queryClient', () => ({
@@ -42,7 +43,7 @@ describe('artistDialogueService', () => {
   describe('loadAllDialogues', () => {
     it('should successfully load all dialogue scenes', async () => {
       const mockScenes: DialogueScene[] = [
-        {
+        createTestDialogueScene({
           id: 'dialogue_test_1',
           prompt: 'Test prompt 1',
           choices: [
@@ -50,8 +51,8 @@ describe('artistDialogueService', () => {
             { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
             { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
           ],
-        },
-        {
+        }),
+        createTestDialogueScene({
           id: 'dialogue_test_2',
           prompt: 'Test prompt 2',
           choices: [
@@ -59,7 +60,7 @@ describe('artistDialogueService', () => {
             { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
             { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
           ],
-        },
+        }),
       ];
 
       const response = createMockResponse({
@@ -77,7 +78,7 @@ describe('artistDialogueService', () => {
 
     it('should return array with correct structure (id, prompt, choices)', async () => {
       const mockScenes: DialogueScene[] = [
-        {
+        createTestDialogueScene({
           id: 'dialogue_test_1',
           prompt: 'Test prompt',
           choices: [
@@ -85,7 +86,7 @@ describe('artistDialogueService', () => {
             { id: 'choice_2', label: 'Choice 2', effects_immediate: { money: -1000 }, effects_delayed: {} },
             { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: { artist_energy: 3 } },
           ],
-        },
+        }),
       ];
 
       const response = createMockResponse({
@@ -128,33 +129,18 @@ describe('artistDialogueService', () => {
 
   describe('selectRandomDialogue', () => {
     const mockScenes: DialogueScene[] = [
-      {
+      createTestDialogueScene({
         id: 'dialogue_1',
         prompt: 'Prompt 1',
-        choices: [
-          { id: 'choice_1', label: 'Choice 1', effects_immediate: {}, effects_delayed: {} },
-          { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
-          { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
-        ],
-      },
-      {
+      }),
+      createTestDialogueScene({
         id: 'dialogue_2',
         prompt: 'Prompt 2',
-        choices: [
-          { id: 'choice_1', label: 'Choice 1', effects_immediate: {}, effects_delayed: {} },
-          { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
-          { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
-        ],
-      },
-      {
+      }),
+      createTestDialogueScene({
         id: 'dialogue_3',
         prompt: 'Prompt 3',
-        choices: [
-          { id: 'choice_1', label: 'Choice 1', effects_immediate: {}, effects_delayed: {} },
-          { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
-          { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
-        ],
-      },
+      }),
     ];
 
     it('should return one dialogue from the provided array', () => {

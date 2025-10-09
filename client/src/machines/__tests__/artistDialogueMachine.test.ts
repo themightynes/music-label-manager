@@ -21,6 +21,8 @@ describe('artistDialogueMachine', () => {
   const mockDialogueScenes: DialogueScene[] = [
     {
       id: 'dialogue_test_1',
+      speaker: 'Test Artist',
+      archetype: 'Visionary',
       prompt: 'Test dialogue prompt 1',
       choices: [
         { id: 'choice_1', label: 'Choice 1', effects_immediate: { artist_mood: 2 }, effects_delayed: {} },
@@ -30,6 +32,8 @@ describe('artistDialogueMachine', () => {
     },
     {
       id: 'dialogue_test_2',
+      speaker: 'Test Artist',
+      archetype: 'Visionary',
       prompt: 'Test dialogue prompt 2',
       choices: [
         { id: 'choice_1', label: 'Choice 1', effects_immediate: { artist_energy: -2 }, effects_delayed: {} },

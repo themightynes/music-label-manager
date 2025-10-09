@@ -260,7 +260,7 @@ describe('ArtistSelector', () => {
         {
           id: 'artist-null',
           name: 'Null Artist',
-          archetype: 'Mystery',
+          archetype: 'Visionary',
           mood: 50, // Will use default in component
           energy: 75, // Will use default in component
           popularity: 0,

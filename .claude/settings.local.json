@@ -68,7 +68,8 @@
       "Bash(printf \"N\\nN\\nN\\n\")",
       "Bash(npm test:*)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(cut:*)"
     ],
     "deny": [],
     "ask": [],

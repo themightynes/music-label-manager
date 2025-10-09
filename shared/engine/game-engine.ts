@@ -1191,6 +1191,9 @@ export class GameEngine {
 
             // Iterate through all signed artists and apply mood change to each
             signedArtists.forEach(artist => {
+              // Initialize artistChanges if missing
+              if (!summary.artistChanges) summary.artistChanges = {};
+
               // Initialize artist-specific changes if missing
               if (!summary.artistChanges[artist.id]) {
                 summary.artistChanges[artist.id] = {};
@@ -1219,6 +1222,7 @@ export class GameEngine {
 
             // Validation: Warn if accumulated changes are extreme for any artist
             signedArtists.forEach(artist => {
+              if (!summary.artistChanges) return;
               const artistMoodChange = (summary.artistChanges[artist.id] as any).mood || 0;
               if (Math.abs(artistMoodChange) > 10) {
                 console.warn(`[EFFECT VALIDATION] Large accumulated mood change for ${artist.name}: ${artistMoodChange}`);

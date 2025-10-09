@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { WeekSummary, GameArtist } from '@shared/types/gameTypes';
+import { createTestArtist, createTestWeekSummary } from '../helpers/test-factories';
 
 /**
  * Simple Unit Tests for Mood Targeting System
@@ -111,9 +112,9 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
   describe('Global Mood Effect Logic', () => {
     it('should apply same mood change to all artists in global effect', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', isSigned: true } as GameArtist,
-        { id: 'artist_diego', isSigned: true } as GameArtist,
-        { id: 'artist_luna', isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova' }),
+        createTestArtist({ id: 'artist_diego' }),
+        createTestArtist({ id: 'artist_luna' }),
       ];
 
       const summary: WeekSummary = {
@@ -129,7 +130,7 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
       const moodChange = 2;
 
       // Simulate global effect logic
-      const signedArtists = artists.filter(a => a.isSigned);
+      const signedArtists = artists.filter(a => a.signed);
       signedArtists.forEach(artist => {
         if (!summary.artistChanges![artist.id]) {
           summary.artistChanges![artist.id] = {};
@@ -146,9 +147,9 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
 
     it('should skip unsigned artists in global effect', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', isSigned: true } as GameArtist,
-        { id: 'artist_diego', isSigned: false } as GameArtist, // Not signed
-        { id: 'artist_luna', isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', signed: true }),
+        createTestArtist({ id: 'artist_diego', signed: false }), // Not signed
+        createTestArtist({ id: 'artist_luna', signed: true }),
       ];
 
       const summary: WeekSummary = {
@@ -164,7 +165,7 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
       const moodChange = 3;
 
       // Only apply to signed artists
-      const signedArtists = artists.filter(a => a.isSigned);
+      const signedArtists = artists.filter(a => a.signed);
       signedArtists.forEach(artist => {
         if (!summary.artistChanges![artist.id]) {
           summary.artistChanges![artist.id] = {};
@@ -231,12 +232,12 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
   describe('Artist Selection Logic (Predetermined)', () => {
     it('should select artist with highest popularity', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', name: 'Nova', popularity: 85, isSigned: true } as GameArtist,
-        { id: 'artist_diego', name: 'Diego', popularity: 60, isSigned: true } as GameArtist,
-        { id: 'artist_luna', name: 'Luna', popularity: 50, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', name: 'Nova', popularity: 85 }),
+        createTestArtist({ id: 'artist_diego', name: 'Diego', popularity: 60 }),
+        createTestArtist({ id: 'artist_luna', name: 'Luna', popularity: 50 }),
       ];
 
-      const signedArtists = artists.filter(a => a.isSigned);
+      const signedArtists = artists.filter(a => a.signed);
       const maxPopularity = Math.max(...signedArtists.map(a => a.popularity || 0));
       const selectedArtist = signedArtists.find(a => a.popularity === maxPopularity);
 
@@ -246,12 +247,12 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
 
     it('should identify tied artists correctly', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', popularity: 75, isSigned: true } as GameArtist,
-        { id: 'artist_diego', popularity: 75, isSigned: true } as GameArtist,
-        { id: 'artist_luna', popularity: 50, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', popularity: 75 }),
+        createTestArtist({ id: 'artist_diego', popularity: 75 }),
+        createTestArtist({ id: 'artist_luna', popularity: 50 }),
       ];
 
-      const signedArtists = artists.filter(a => a.isSigned);
+      const signedArtists = artists.filter(a => a.signed);
       const maxPopularity = Math.max(...signedArtists.map(a => a.popularity || 0));
       const tiedArtists = signedArtists.filter(a => a.popularity === maxPopularity);
 
@@ -262,7 +263,7 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
     it('should handle 0 artists case', () => {
       const artists: GameArtist[] = [];
 
-      const signedArtists = artists.filter(a => a.isSigned);
+      const signedArtists = artists.filter(a => a.signed);
 
       expect(signedArtists).toHaveLength(0);
 
@@ -273,10 +274,10 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
 
     it('should handle 1 artist case (auto-select)', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', popularity: 85, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', popularity: 85 }),
       ];
 
-      const signedArtists = artists.filter(a => a.isSigned);
+      const signedArtists = artists.filter(a => a.signed);
 
       expect(signedArtists).toHaveLength(1);
       expect(signedArtists[0].id).toBe('artist_nova');
@@ -450,13 +451,10 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
       // BUG: applyArtistChangesToDatabase() was called BEFORE processDelayedEffects()
       // FIX: Call applyArtistChangesToDatabase() AFTER processDelayedEffects()
 
-      const summary: WeekSummary = {
+      const summary: WeekSummary = createTestWeekSummary({
         week: 11,
-        changes: [],
-        revenue: 0,
-        expenses: 0,
         artistChanges: {},
-      };
+      });
 
       // Step 1: processDelayedEffects adds to summary.artistChanges
       summary.artistChanges!['artist_nova'] = { mood: 2 };
@@ -471,13 +469,10 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
 
     it('should handle delayed effects for global meetings correctly', () => {
       // CEO Priorities is a global meeting with delayed artist_mood
-      const summary: WeekSummary = {
+      const summary: WeekSummary = createTestWeekSummary({
         week: 11,
-        changes: [],
-        revenue: 0,
-        expenses: 0,
         artistChanges: {},
-      };
+      });
 
       const artists = [
         { id: 'artist_nova', isSigned: true },

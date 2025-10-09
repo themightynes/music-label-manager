@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GameEngine } from '../../shared/engine/game-engine';
 import type { GameArtist, GameState, WeekSummary } from '../../shared/types/gameTypes';
 import type { IStorage } from '../../server/storage';
+import { createTestArtist } from '../helpers/test-factories';
 
 /**
  * Integration test to verify immediate artist_mood effects from executive meetings
@@ -107,20 +108,11 @@ describe('Immediate Mood Effect Integration Test', () => {
 
   it('should apply immediate artist_mood effect from TEST meeting before depreciation', async () => {
     artists = [
-      {
+      createTestArtist({
         id: 'artist_test',
         name: 'Test Artist',
-        archetype: 'Visionary',
-        talent: 70,
-        workEthic: 60,
-        popularity: 50,
-        temperament: 50,
-        energy: 50,
         mood: 67,
-        signed: true,
-        isSigned: true,
-        loyalty: 50
-      } as GameArtist
+      })
     ];
 
     const gameState: GameState = {

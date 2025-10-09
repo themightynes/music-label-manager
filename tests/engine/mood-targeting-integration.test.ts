@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { WeekSummary, GameArtist } from '@shared/types/gameTypes';
+import { createTestArtist } from '../helpers/test-factories';
 
 /**
  * Mood Targeting Integration Tests (Task 7.1)
@@ -68,9 +69,9 @@ describe('Mood Targeting Integration Tests', () => {
   describe('Global Mood Accumulation', () => {
     it('should accumulate mood changes for all signed artists', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', name: 'Nova', mood: 70, isSigned: true } as GameArtist,
-        { id: 'artist_diego', name: 'Diego', mood: 65, isSigned: true } as GameArtist,
-        { id: 'artist_luna', name: 'Luna', mood: 60, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', name: 'Nova', mood: 70 }),
+        createTestArtist({ id: 'artist_diego', name: 'Diego', mood: 65 }),
+        createTestArtist({ id: 'artist_luna', name: 'Luna', mood: 60 }),
       ];
 
       const summary: WeekSummary = {
@@ -104,9 +105,9 @@ describe('Mood Targeting Integration Tests', () => {
   describe('Artist Selection Logic', () => {
     it('should select artist with highest popularity', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', name: 'Nova', popularity: 85, isSigned: true } as GameArtist,
-        { id: 'artist_diego', name: 'Diego', popularity: 60, isSigned: true } as GameArtist,
-        { id: 'artist_luna', name: 'Luna', popularity: 50, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', name: 'Nova', popularity: 85 }),
+        createTestArtist({ id: 'artist_diego', name: 'Diego', popularity: 60 }),
+        createTestArtist({ id: 'artist_luna', name: 'Luna', popularity: 50 }),
       ];
 
       const maxPopularity = Math.max(...artists.map(a => a.popularity || 0));
@@ -118,9 +119,9 @@ describe('Mood Targeting Integration Tests', () => {
 
     it('should handle tie in popularity (multiple artists with same value)', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', name: 'Nova', popularity: 75, isSigned: true } as GameArtist,
-        { id: 'artist_diego', name: 'Diego', popularity: 75, isSigned: true } as GameArtist,
-        { id: 'artist_luna', name: 'Luna', popularity: 50, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', name: 'Nova', popularity: 75 }),
+        createTestArtist({ id: 'artist_diego', name: 'Diego', popularity: 75 }),
+        createTestArtist({ id: 'artist_luna', name: 'Luna', popularity: 50 }),
       ];
 
       const maxPopularity = Math.max(...artists.map(a => a.popularity || 0));
@@ -133,7 +134,7 @@ describe('Mood Targeting Integration Tests', () => {
 
     it('should handle single artist (auto-select)', () => {
       const artists: GameArtist[] = [
-        { id: 'artist_nova', name: 'Nova', popularity: 85, isSigned: true } as GameArtist,
+        createTestArtist({ id: 'artist_nova', name: 'Nova', popularity: 85 }),
       ];
 
       expect(artists).toHaveLength(1);
