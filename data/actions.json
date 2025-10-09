@@ -152,7 +152,8 @@
       "meeting_id": "anr_single_choice",
       "category": "talent",
       "target_scope": "user_selected",
-      "prompt": "Pick the lead single approach.",
+      "prompt_before_selection": "Which artist are you working with on single strategy?",
+      "prompt": "Pick the lead single approach for {artistName}.",
       "choices": [
         {
           "id": "lean_commercial",
@@ -335,7 +336,8 @@
       "meeting_id": "prod_creative_clash",
       "category": "production",
       "target_scope": "user_selected",
-      "prompt": "The artist wants to record everything live in one take. I think we need overdubs to compete.",
+      "prompt_before_selection": "Which artist is having creative differences?",
+      "prompt": "{artistName} wants to record everything live in one take. I think we need overdubs to compete.",
       "choices": [
         {
           "id": "artist_vision",

@@ -34,6 +34,7 @@ export interface ExecutiveMeetingContext {
   selectedExecutive: Executive | null;
   availableMeetings: RoleMeeting[];
   selectedMeeting: RoleMeeting | null;
+  selectedArtistId: string | null;
   currentDialogue: DialogueData | null;
   focusSlotsUsed: number;
   focusSlotsTotal: number;
@@ -56,7 +57,7 @@ export interface ExecutiveMeetingContext {
 
 export type ExecutiveMeetingEvent =
   | { type: 'SELECT_EXECUTIVE'; executive: Executive }
-  | { type: 'SELECT_MEETING'; meeting: RoleMeeting }
+  | { type: 'SELECT_MEETING'; meeting: RoleMeeting; selectedArtistId?: string }
   | { type: 'SELECT_CHOICE'; choice: DialogueChoice }
   | { type: 'BACK_TO_EXECUTIVES' }
   | { type: 'BACK_TO_MEETINGS' }
@@ -75,11 +76,12 @@ interface ExecutiveMeetingInput {
   fetchMeetingDialogue?: ExecutiveServices['fetchMeetingDialogue'];
 }
 
-const createAutoActionData = (executive: Executive, meeting: RoleMeeting, choice: DialogueChoice) => ({
+const createAutoActionData = (executive: Executive, meeting: RoleMeeting, choice: DialogueChoice, selectedArtistId?: string | null) => ({
   roleId: executive.role,
   actionId: meeting.id,
   choiceId: choice.id,
   ...(executive.role !== 'ceo' && { executiveId: executive.id }),
+  ...(selectedArtistId && { metadata: { selectedArtistId } }),
 });
 
 export const executiveMeetingMachine = setup({
@@ -197,6 +199,7 @@ export const executiveMeetingMachine = setup({
       if (!dialogue) return {};
       return {
         selectedMeeting: event.meeting,
+        selectedArtistId: event.selectedArtistId || null,
         currentDialogue: dialogue,
         error: null,
       } satisfies Partial<ExecutiveMeetingContext>;
@@ -204,6 +207,7 @@ export const executiveMeetingMachine = setup({
     clearSelection: assign({
       selectedExecutive: () => null,
       selectedMeeting: () => null,
+      selectedArtistId: () => null,
       availableMeetings: () => [],
       currentDialogue: () => null,
       autoOptions: () => [],
@@ -211,9 +215,9 @@ export const executiveMeetingMachine = setup({
     }),
     queueChoiceAction: ({ context, event }) => {
       if (event.type !== 'SELECT_CHOICE') return;
-      const { selectedExecutive, selectedMeeting, onActionSelected } = context;
+      const { selectedExecutive, selectedMeeting, selectedArtistId, onActionSelected } = context;
       if (!selectedExecutive || !selectedMeeting) return;
-      const data = createAutoActionData(selectedExecutive, selectedMeeting, event.choice);
+      const data = createAutoActionData(selectedExecutive, selectedMeeting, event.choice, selectedArtistId);
       onActionSelected(JSON.stringify(data));
     },
     storeAutoOptions: assign(({ context, event }) => {
@@ -395,6 +399,7 @@ export const executiveMeetingMachine = setup({
     selectedExecutive: null,
     availableMeetings: [],
     selectedMeeting: null,
+    selectedArtistId: null,
     currentDialogue: null,
     focusSlotsUsed: 0,
     focusSlotsTotal: input.focusSlotsTotal,

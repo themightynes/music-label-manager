@@ -136,27 +136,27 @@ Based on the PRD analysis and current codebase state, here are the main implemen
 
 **Goal**: Implement UI components for player artist selection in user-selected meetings.
 
-- [ ] 4.1 Update `data/actions.json` for the two user-selected meetings (`ar_single_choice`, `cco_creative_clash`)
+- [x] 4.1 Update `data/actions.json` for the two user-selected meetings (`ar_single_choice`, `cco_creative_clash`)
   - **For `ar_single_choice`**:
     - Add `"prompt_before_selection": "Which artist are you working with on single strategy?"`
     - Update `"prompt"` to: `"Pick the lead single approach for {artistName}."`
   - **For `cco_creative_clash`**:
     - Add `"prompt_before_selection": "Which artist is having creative differences?"`
     - Update `"prompt"` to include `{artistName}` placeholder in the narrative text (e.g., `"{artistName} wants to record everything live in one take. I think we need overdubs to compete."`)
-- [ ] 4.2 Create artist selection component in `client/src/components/executive-meetings/ArtistSelector.tsx`
+- [x] 4.2 Create artist selection component in `client/src/components/executive-meetings/ArtistSelector.tsx`
   - Display all signed artists with name, archetype, mood, energy, active projects
   - Allow player to select one artist
   - Show clear visual indication of selected artist
   - Use inline dropdown/selector pattern (Option B from PRD)
-- [ ] 4.3 Update `MeetingSelector.tsx` to integrate artist selection UI
+- [x] 4.3 Update `MeetingSelector.tsx` to integrate artist selection UI
   - Check if meeting has `target_scope: "user_selected"`
   - If yes, show `prompt_before_selection` text and artist selector
   - After artist selected, replace `{artistName}` placeholder in `prompt` with selected artist's name
   - Store `selectedArtistId` in queued action metadata
-- [ ] 4.4 Add edge case handling for artist selection UI
+- [x] 4.4 Add edge case handling for artist selection UI
   - If 0 artists signed: hide user-selected meetings entirely
   - If 1 artist signed: still show artist selection UI for consistency (per FR-13)
-- [ ] 4.5 Add visual indicators to meeting cards to distinguish global vs predetermined vs user-selected meetings
+- [x] 4.5 Add visual indicators to meeting cards to distinguish global vs predetermined vs user-selected meetings
   - Global: 🌍 icon badge
   - Predetermined: ⭐ icon badge
   - User-selected: 👤 icon badge
