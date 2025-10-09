@@ -41,7 +41,71 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       case 'expense': return '💸';
       case 'unlock': return '🔓';
       case 'artist': return '🎤';
+      case 'mood': return '💭'; // Mood changes
       default: return '📊';
+    }
+  };
+
+  // NEW: Determine the scope of a mood change
+  type MoodScope = 'global' | 'predetermined' | 'user_selected' | 'dialogue';
+  const determineMoodScope = (change: GameChange): MoodScope => {
+    // Dialogue always has specific artist and source starting with 'dialogue' or contains 'conversation'
+    if (change.source && (change.source.includes('dialogue') || change.source.includes('conversation'))) {
+      return 'dialogue';
+    }
+
+    // If has artistId but no clear source, could be user_selected or predetermined
+    // For now, we'll use heuristics based on the source field
+    if (change.artistId) {
+      if (change.source && change.source.includes('user_selected')) {
+        return 'user_selected';
+      }
+      if (change.source && change.source.includes('predetermined')) {
+        return 'predetermined';
+      }
+      // Default to predetermined for per-artist meeting effects
+      return 'predetermined';
+    }
+
+    // No artistId means global effect
+    return 'global';
+  };
+
+  // NEW: Get scope icon based on mood scope
+  const getScopeIcon = (scope: MoodScope): string => {
+    switch (scope) {
+      case 'global': return '🌍';
+      case 'predetermined': return '⭐';
+      case 'user_selected': return '👤';
+      case 'dialogue': return '💬';
+      default: return '💭';
+    }
+  };
+
+  // NEW: Format mood change description with scope-specific formatting
+  const formatMoodChange = (change: GameChange): string => {
+    const scope = determineMoodScope(change);
+
+    // Extract artist name from description if present, or use artistId
+    // Most mood changes should have the artist name in the description already
+    const description = change.description || 'Mood Change';
+
+    // Format based on scope (no icon in text - it's displayed separately)
+    switch (scope) {
+      case 'global':
+        return `${description} (All Artists)`;
+
+      case 'predetermined':
+        return `${description} (Most Popular)`;
+
+      case 'user_selected':
+        return `${description} (Your Choice)`;
+
+      case 'dialogue':
+        return `${description}`;
+
+      default:
+        return `${description}`;
     }
   };
 
@@ -50,6 +114,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       revenue: [] as GameChange[],
       expenses: [] as GameChange[],
       achievements: [] as GameChange[],
+      mood: [] as GameChange[],
       other: [] as GameChange[]
     };
 
@@ -60,6 +125,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
         categories.expenses.push(change);
       } else if (change.type === 'unlock') {
         categories.achievements.push(change);
+      } else if (change.type === 'mood') {
+        categories.mood.push(change);
       } else if (change.type === 'project_complete') {
         // Projects go to other category, will be shown in Projects tab
         categories.other.push(change);
@@ -303,6 +370,73 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                           <span className="text-sm font-medium text-brand-burgundy">{change.description}</span>
                         </div>
                       ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Mood Changes - NEW */}
+                {categorizedChanges.mood.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-purple-700 text-sm">
+                        <span className="text-base">💭</span>
+                        <span>Mood Changes</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {categorizedChanges.mood.map((change: GameChange, index: number) => {
+                        const scope = determineMoodScope(change);
+                        const scopeIcon = getScopeIcon(scope);
+                        const moodDelta = change.moodChange || 0;
+                        const isPositive = moodDelta >= 0;
+
+                        // Determine scope-specific styling
+                        const scopeColors = {
+                          global: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                          predetermined: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                          user_selected: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                          dialogue: 'bg-green-500/20 text-green-400 border-green-500/30',
+                        };
+
+                        return (
+                          <div
+                            key={index}
+                            className={`p-3 rounded-lg border ${
+                              isPositive
+                                ? 'bg-purple-500/10 border-purple-500/20'
+                                : 'bg-orange-500/10 border-orange-500/20'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Scope Icon with visual styling */}
+                              <div
+                                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-lg border ${
+                                  scopeColors[scope]
+                                }`}
+                              >
+                                {scopeIcon}
+                              </div>
+
+                              {/* Content */}
+                              <div className="flex-1 flex items-start justify-between gap-2">
+                                <span className="text-sm font-medium text-white/90">
+                                  {formatMoodChange(change)}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs font-semibold flex-shrink-0 ${
+                                    isPositive
+                                      ? 'text-purple-700 border-purple-300'
+                                      : 'text-orange-700 border-orange-300'
+                                  }`}
+                                >
+                                  {isPositive ? '+' : ''}{moodDelta}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </CardContent>
                   </Card>
                 )}

@@ -258,6 +258,12 @@ export function ExecutiveMeetings({
               dialogue={context.currentDialogue}
               onSelectChoice={(choice) => send({ type: 'SELECT_CHOICE', choice })}
               onBack={() => send({ type: 'BACK_TO_MEETINGS' })}
+              targetScope={context.selectedMeeting?.target_scope}
+              selectedArtistName={
+                context.selectedArtistId
+                  ? artists.find(a => a.id === context.selectedArtistId)?.name
+                  : undefined
+              }
             />
           )}
         </div>
