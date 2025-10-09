@@ -230,7 +230,7 @@ Based on the PRD analysis and current codebase state, here are the main implemen
 
 **Goal**: Comprehensive testing across all scenarios to ensure correct behavior and performance.
 
-- [ ] 7.1 Create comprehensive integration test suite in `shared/engine/__tests__/mood-targeting-integration.test.ts`
+- [x] 7.1 Create comprehensive integration test suite in `tests/engine/mood-targeting-integration.test.ts`
   - Test dialogue with artist Nova → only Nova's mood changes
   - Test CEO meeting (global) → all artists' moods change
   - Test A&R meeting (user_selected) → selected artist's mood changes
@@ -240,6 +240,8 @@ Based on the PRD analysis and current codebase state, here are the main implemen
   - Test edge case: tied popularity (predetermined random selection)
   - Test delayed effects with artist targeting
   - Test delayed effect for dropped artist (effect cancelled)
+  - **Completed**: Created 14 integration tests covering all scenarios
+  - **Result**: All 386 tests passing (added 14 new tests)
 - [ ] 7.2 Manual testing full playthrough with multiple artists
   - Sign 3+ artists with different popularity levels
   - Execute all four scope types in same playthrough
