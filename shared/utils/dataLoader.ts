@@ -329,6 +329,8 @@ export class GameDataLoader {
         project_type: z.string().optional(),
         campaign_type: z.string().optional(),
         prompt: z.string().optional(),
+        prompt_before_selection: z.string().optional(),
+        target_scope: z.enum(['global', 'predetermined', 'user_selected']).optional(),
         choices: z.array(z.any()).optional(),
         details: z.object({
           cost: z.string(),
@@ -342,7 +344,7 @@ export class GameDataLoader {
           recommended_when: z.record(z.any()).optional(),
           reasons: z.record(z.string()).optional()
         }).optional()
-      })),
+      }).passthrough()),
       action_categories: z.array(z.object({
         id: z.string(),
         name: z.string(),
@@ -350,7 +352,7 @@ export class GameDataLoader {
         description: z.string(),
         color: z.string()
       })).optional()
-    });
+    }).passthrough();
 
     try {
       return schema.parse(data);

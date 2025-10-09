@@ -358,6 +358,12 @@ export const useGameStore = create<GameStore>()(
           !selectedActions.includes(actionId)
         ) {
           const newSelectedActions = [...selectedActions, actionId];
+          try {
+            const parsed = JSON.parse(actionId);
+            console.log('[GAME STORE] Queued action payload:', parsed);
+          } catch (err) {
+            console.warn('[GAME STORE] Failed to parse queued action payload', err);
+          }
           const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
           const newUsedSlots = newSelectedActions.length + arUsed;
           
@@ -446,16 +452,14 @@ export const useGameStore = create<GameStore>()(
               
               const { roleId, actionId, choiceId, executiveId } = actionData;
 
-              // Build complete metadata
-              const metadata: any = {
+              // Build complete metadata, preserving any additional fields like selectedArtistId
+              const metadata: Record<string, any> = {
                 roleId,
                 actionId,
-                choiceId
+                choiceId,
+                ...(executiveId ? { executiveId } : {}),
+                ...(actionData.metadata ?? {})
               };
-
-              if (executiveId) {
-                metadata.executiveId = executiveId;
-              }
 
               const result = {
                 actionType: 'role_meeting' as const,

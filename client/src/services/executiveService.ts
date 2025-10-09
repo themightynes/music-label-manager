@@ -67,6 +67,8 @@ export async function fetchRoleMeetings(roleId: string): Promise<RoleMeeting[]> 
     const meetings = (roleData.meetings || []).map((action: any) => ({
       id: action.id,
       prompt: action.prompt,
+      prompt_before_selection: action.prompt_before_selection,
+      target_scope: action.target_scope || 'global', // Default to 'global' if missing
       choices: action.choices || []
     }));
 

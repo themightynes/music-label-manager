@@ -3251,6 +3251,12 @@ const musicLabelData = {
         if (!gameState) {
           throw new Error('Game not found');
         }
+
+        // Load current artists for mood calculations
+        const gameArtists = await tx
+          .select()
+          .from(artists)
+          .where(eq(artists.gameId, gameId));
         
         // Get starting values from balance configuration
         const startingValues = await serverGameData.getStartingValues();
@@ -3258,6 +3264,7 @@ const musicLabelData = {
         // Convert database gameState to proper GameState type
         const gameStateForEngine = {
           ...gameState,
+          artists: gameArtists,
           currentWeek: gameState.currentWeek || 1,
           money: gameState.money ?? startingValues.money,
           reputation: gameState.reputation ?? startingValues.reputation,

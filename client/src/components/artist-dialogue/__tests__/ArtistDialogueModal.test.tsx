@@ -30,6 +30,8 @@ describe('ArtistDialogueModal', () => {
   const mockDialogueScenes = [
     {
       id: 'dialogue_test_1',
+      speaker: 'Test Artist',
+      archetype: 'Visionary',
       prompt: 'Test dialogue prompt - How are you feeling today?',
       choices: [
         { id: 'choice_1', label: 'Let me help you', effects_immediate: { artist_mood: 2 }, effects_delayed: {} },

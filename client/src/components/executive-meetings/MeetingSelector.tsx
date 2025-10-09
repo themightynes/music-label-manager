@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
-import { Clock, DollarSign, TrendingUp, TrendingDown, Zap } from 'lucide-react';
-import type { RoleMeeting, ChoiceEffect } from '../../../../shared/types/gameTypes';
+import { Clock, DollarSign, TrendingUp, TrendingDown, Zap, Globe, Star, User } from 'lucide-react';
+import type { RoleMeeting, GameArtist } from '../../../../shared/types/gameTypes';
+import { ArtistSelector } from './ArtistSelector';
 
 interface MeetingSelectorProps {
   meetings: RoleMeeting[];
-  onSelectMeeting: (meeting: RoleMeeting) => void;
+  signedArtists: GameArtist[];
+  onSelectMeeting: (meeting: RoleMeeting, selectedArtistId?: string) => void;
   onBack: () => void;
 }
 
@@ -92,8 +94,46 @@ function MeetingCostEstimate({ choices }: { choices: RoleMeeting['choices'] }) {
   );
 }
 
-export function MeetingSelector({ meetings, onSelectMeeting, onBack }: MeetingSelectorProps) {
-  if (meetings.length === 0) {
+function ScopeBadge({ scope }: { scope: string }) {
+  const scopeConfig = {
+    global: {
+      icon: Globe,
+      label: 'All Artists',
+      color: 'text-blue-400 bg-blue-500/20 border-blue-500/30',
+    },
+    predetermined: {
+      icon: Star,
+      label: 'Top Artist',
+      color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30',
+    },
+    user_selected: {
+      icon: User,
+      label: 'Your Choice',
+      color: 'text-purple-400 bg-purple-500/20 border-purple-500/30',
+    },
+  };
+
+  const config = scopeConfig[scope as keyof typeof scopeConfig] || scopeConfig.global;
+  const Icon = config.icon;
+
+  return (
+    <Badge variant="outline" className={`text-xs ${config.color} flex items-center gap-1`}>
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </Badge>
+  );
+}
+
+export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBack }: MeetingSelectorProps) {
+  const [selectedMeetingIndex, setSelectedMeetingIndex] = useState<number | null>(null);
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+
+  // Filter out user_selected meetings if no artists are signed (FR-12)
+  const filteredMeetings = signedArtists.length === 0
+    ? meetings.filter(m => m.target_scope !== 'user_selected')
+    : meetings;
+
+  if (filteredMeetings.length === 0) {
     return (
       <div className="text-center p-8">
         <div className="text-white/70">
@@ -107,6 +147,89 @@ export function MeetingSelector({ meetings, onSelectMeeting, onBack }: MeetingSe
     );
   }
 
+  const handleSelectMeeting = (meeting: RoleMeeting, index: number) => {
+    // If user_selected and no artist selected yet, show artist selector
+    if (meeting.target_scope === 'user_selected' && signedArtists.length > 0) {
+      setSelectedMeetingIndex(index);
+      setSelectedArtistId(null);
+    } else {
+      // For global or predetermined meetings, proceed immediately
+      onSelectMeeting(meeting);
+    }
+  };
+
+  const handleArtistSelected = (artistId: string) => {
+    setSelectedArtistId(artistId);
+  };
+
+  const handleConfirmMeeting = () => {
+    if (selectedMeetingIndex !== null && selectedArtistId) {
+      const meeting = meetings[selectedMeetingIndex];
+      onSelectMeeting(meeting, selectedArtistId);
+    }
+  };
+
+  const handleBackFromArtistSelection = () => {
+    setSelectedMeetingIndex(null);
+    setSelectedArtistId(null);
+  };
+
+  // If showing artist selection
+  if (selectedMeetingIndex !== null) {
+    const meeting = filteredMeetings[selectedMeetingIndex];
+    const selectedArtist = signedArtists.find(a => a.id === selectedArtistId);
+    const displayPrompt = selectedArtist
+      ? meeting.prompt.replace('{artistName}', selectedArtist.name)
+      : meeting.prompt;
+
+    return (
+      <div className="w-full max-w-md mx-auto space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">{meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+              <ScopeBadge scope={meeting.target_scope} />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ArtistSelector
+              artists={signedArtists}
+              selectedArtistId={selectedArtistId}
+              onSelectArtist={handleArtistSelected}
+              prompt={meeting.prompt_before_selection}
+            />
+
+            {selectedArtistId && (
+              <div className="p-3 bg-brand-burgundy/20 border border-brand-rose/30 rounded-md">
+                <p className="text-sm text-white/70 italic">
+                  "{displayPrompt}"
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                onClick={handleBackFromArtistSelection}
+                variant="outline"
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button
+                onClick={handleConfirmMeeting}
+                disabled={!selectedArtistId}
+                className="flex-1"
+              >
+                Start Meeting
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Default carousel view
   return (
     <Carousel
       className="w-full max-w-md mx-auto"
@@ -115,22 +238,27 @@ export function MeetingSelector({ meetings, onSelectMeeting, onBack }: MeetingSe
       }}
     >
       <CarouselContent>
-        {meetings.map((meeting) => (
+        {filteredMeetings.map((meeting, index) => (
           <CarouselItem key={meeting.id}>
             <Card className="hover:shadow-md transition-all duration-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+                  <ScopeBadge scope={meeting.target_scope} />
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-white/70 italic">
-                  "{meeting.prompt}"
+                  "{meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
+                    ? meeting.prompt_before_selection
+                    : meeting.prompt}"
                 </p>
                 <Button
-                  onClick={() => onSelectMeeting(meeting)}
+                  onClick={() => handleSelectMeeting(meeting, index)}
                   size="sm"
                   className="w-full"
                 >
-                  Start Meeting
+                  {meeting.target_scope === 'user_selected' ? 'Select Artist' : 'Start Meeting'}
                 </Button>
               </CardContent>
             </Card>

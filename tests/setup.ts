@@ -6,14 +6,13 @@
  * common test helpers for the Music Label Manager test suite.
  */
 
-import { expect, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
+import '@testing-library/jest-dom/vitest';
 import { setupDatabase, clearDatabase, createTestDatabase, closeDatabaseConnection } from './helpers/test-db';
 
 // Extend Vitest's expect with jest-dom matchers
-// This adds custom matchers like toBeInTheDocument, toHaveClass, etc.
-expect.extend(matchers);
+// The import above automatically adds custom matchers like toBeInTheDocument, toHaveClass, etc.
 
 // Set up database before all tests
 beforeAll(async () => {

@@ -34,6 +34,7 @@ export interface ExecutiveMeetingContext {
   selectedExecutive: Executive | null;
   availableMeetings: RoleMeeting[];
   selectedMeeting: RoleMeeting | null;
+  selectedArtistId: string | null;
   currentDialogue: DialogueData | null;
   focusSlotsUsed: number;
   focusSlotsTotal: number;
@@ -56,7 +57,7 @@ export interface ExecutiveMeetingContext {
 
 export type ExecutiveMeetingEvent =
   | { type: 'SELECT_EXECUTIVE'; executive: Executive }
-  | { type: 'SELECT_MEETING'; meeting: RoleMeeting }
+  | { type: 'SELECT_MEETING'; meeting: RoleMeeting; selectedArtistId?: string }
   | { type: 'SELECT_CHOICE'; choice: DialogueChoice }
   | { type: 'BACK_TO_EXECUTIVES' }
   | { type: 'BACK_TO_MEETINGS' }
@@ -75,11 +76,13 @@ interface ExecutiveMeetingInput {
   fetchMeetingDialogue?: ExecutiveServices['fetchMeetingDialogue'];
 }
 
-const createAutoActionData = (executive: Executive, meeting: RoleMeeting, choice: DialogueChoice) => ({
+const createAutoActionData = (executive: Executive, meeting: RoleMeeting, choice: DialogueChoice, selectedArtistId?: string | null) => ({
   roleId: executive.role,
   actionId: meeting.id,
   choiceId: choice.id,
   ...(executive.role !== 'ceo' && { executiveId: executive.id }),
+  ...(selectedArtistId && { metadata: { selectedArtistId, targetScope: meeting.target_scope } }),
+  ...(!selectedArtistId && meeting.target_scope && { metadata: { targetScope: meeting.target_scope } }),
 });
 
 export const executiveMeetingMachine = setup({
@@ -169,6 +172,7 @@ export const executiveMeetingMachine = setup({
       event.type === 'SELECT_MEETING'
         ? {
             selectedMeeting: event.meeting,
+            selectedArtistId: event.selectedArtistId ?? null,
             error: null,
           }
         : {}
@@ -197,6 +201,7 @@ export const executiveMeetingMachine = setup({
       if (!dialogue) return {};
       return {
         selectedMeeting: event.meeting,
+        selectedArtistId: event.selectedArtistId || null,
         currentDialogue: dialogue,
         error: null,
       } satisfies Partial<ExecutiveMeetingContext>;
@@ -204,6 +209,7 @@ export const executiveMeetingMachine = setup({
     clearSelection: assign({
       selectedExecutive: () => null,
       selectedMeeting: () => null,
+      selectedArtistId: () => null,
       availableMeetings: () => [],
       currentDialogue: () => null,
       autoOptions: () => [],
@@ -211,9 +217,9 @@ export const executiveMeetingMachine = setup({
     }),
     queueChoiceAction: ({ context, event }) => {
       if (event.type !== 'SELECT_CHOICE') return;
-      const { selectedExecutive, selectedMeeting, onActionSelected } = context;
+      const { selectedExecutive, selectedMeeting, selectedArtistId, onActionSelected } = context;
       if (!selectedExecutive || !selectedMeeting) return;
-      const data = createAutoActionData(selectedExecutive, selectedMeeting, event.choice);
+      const data = createAutoActionData(selectedExecutive, selectedMeeting, event.choice, selectedArtistId);
       onActionSelected(JSON.stringify(data));
     },
     storeAutoOptions: assign(({ context, event }) => {
@@ -291,7 +297,15 @@ export const executiveMeetingMachine = setup({
       for (const executive of context.executives) {
         const meetings = await ensureMeetings(executive.role);
         if (!meetings.length) continue;
-        const meeting = meetings[0];
+        const meeting = meetings.find((m) => {
+          const scope = m.target_scope ?? 'global';
+          return scope !== 'user_selected' && (m.choices?.length ?? 0) > 0;
+        });
+        if (!meeting) {
+          console.warn(`[AUTO SELECT] Skipping ${executive.role} - no eligible meetings (user_selected requires manual artist choice)`);
+          continue;
+        }
+
         const choice = meeting.choices?.[0];
         if (!choice) continue;
         const roleScores: Record<string, number> = {
@@ -395,6 +409,7 @@ export const executiveMeetingMachine = setup({
     selectedExecutive: null,
     availableMeetings: [],
     selectedMeeting: null,
+    selectedArtistId: null,
     currentDialogue: null,
     focusSlotsUsed: 0,
     focusSlotsTotal: input.focusSlotsTotal,

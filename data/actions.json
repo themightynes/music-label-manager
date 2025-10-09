@@ -4,6 +4,34 @@
   "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting.",
   "weekly_actions": [
     {
+      "id": "TEST_mood_boost_immediate",
+      "name": "TEST: Mood Boost (Immediate)",
+      "type": "role_meeting",
+      "icon": "fas fa-flask",
+      "description": "TEST MEETING - Immediate mood boost for testing",
+      "role_id": "ceo",
+      "meeting_id": "test_mood",
+      "category": "business",
+      "target_scope": "global",
+      "prompt": "TEST: Give everyone an immediate mood boost?",
+      "choices": [
+        {
+          "id": "yes_boost",
+          "label": "Yes - Boost mood by +5 immediately",
+          "effects_immediate": {
+            "artist_mood": 5
+          },
+          "effects_delayed": {}
+        },
+        {
+          "id": "no_boost",
+          "label": "No boost",
+          "effects_immediate": {},
+          "effects_delayed": {}
+        }
+      ]
+    },
+    {
       "id": "ceo_priorities",
       "name": "CEO: Strategic Priorities",
       "type": "role_meeting",
@@ -152,7 +180,8 @@
       "meeting_id": "anr_single_choice",
       "category": "talent",
       "target_scope": "user_selected",
-      "prompt": "Pick the lead single approach.",
+      "prompt_before_selection": "Which artist are you working with on single strategy?",
+      "prompt": "Pick the lead single approach for {artistName}.",
       "choices": [
         {
           "id": "lean_commercial",
@@ -335,7 +364,8 @@
       "meeting_id": "prod_creative_clash",
       "category": "production",
       "target_scope": "user_selected",
-      "prompt": "The artist wants to record everything live in one take. I think we need overdubs to compete.",
+      "prompt_before_selection": "Which artist is having creative differences?",
+      "prompt": "{artistName} wants to record everything live in one take. I think we need overdubs to compete.",
       "choices": [
         {
           "id": "artist_vision",

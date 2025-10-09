@@ -15,9 +15,23 @@ interface DialogueInterfaceProps {
   };
   onSelectChoice: (choice: DialogueChoice) => void;
   onBack: () => void;
+  targetScope?: 'global' | 'predetermined' | 'user_selected';
+  selectedArtistName?: string;
 }
 
-function EffectBadge({ effect, value, isDelayed = false }: { effect: string; value: number; isDelayed?: boolean }) {
+function EffectBadge({
+  effect,
+  value,
+  isDelayed = false,
+  targetScope,
+  selectedArtistName
+}: {
+  effect: string;
+  value: number;
+  isDelayed?: boolean;
+  targetScope?: 'global' | 'predetermined' | 'user_selected';
+  selectedArtistName?: string;
+}) {
   const isPositive = value > 0;
   const Icon = isDelayed ? Clock : (isPositive ? TrendingUp : TrendingDown);
   const colorClass = isPositive ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200';
@@ -32,11 +46,19 @@ function EffectBadge({ effect, value, isDelayed = false }: { effect: string; val
       case 'creative_capital':
         return `${val > 0 ? '+' : ''}${val} Creative`;
       case 'artist_mood':
+        // Add scope-specific context for mood changes
+        if (targetScope === 'global') {
+          return `${val > 0 ? '+' : ''}${val} Mood (All Artists)`;
+        } else if (targetScope === 'user_selected' && selectedArtistName) {
+          return `${val > 0 ? '+' : ''}${val} Mood (${selectedArtistName})`;
+        } else if (targetScope === 'predetermined') {
+          return `${val > 0 ? '+' : ''}${val} Mood (Most Popular)`;
+        }
         return `${val > 0 ? '+' : ''}${val} Mood`;
     case 'artist_energy':
       return `${val > 0 ? '+' : ''}${val} Energy`;
     case 'artist_loyalty':
-      return `${val > 0 ? '+' : ''}${val} Energy`;
+      return `${val > 0 ? '+' : ''}${val} Loyalty`;
       case 'quality_bonus':
         return `${val > 0 ? '+' : ''}${val} Quality`;
       case 'press_story_flag':
@@ -67,9 +89,17 @@ function EffectBadge({ effect, value, isDelayed = false }: { effect: string; val
   );
 }
 
-function ChoiceEffects({ choice }: { choice: DialogueChoice }) {
-  const hasImmediate = Object.keys(choice.effects_immediate).length > 0;
-  const hasDelayed = Object.keys(choice.effects_delayed).length > 0;
+function ChoiceEffects({
+  choice,
+  targetScope,
+  selectedArtistName
+}: {
+  choice: DialogueChoice;
+  targetScope?: 'global' | 'predetermined' | 'user_selected';
+  selectedArtistName?: string;
+}) {
+  const hasImmediate = choice.effects_immediate && Object.keys(choice.effects_immediate).length > 0;
+  const hasDelayed = choice.effects_delayed && Object.keys(choice.effects_delayed).length > 0;
 
   if (!hasImmediate && !hasDelayed) {
     return (
@@ -90,7 +120,13 @@ function ChoiceEffects({ choice }: { choice: DialogueChoice }) {
           <div className="flex flex-wrap gap-1">
             {Object.entries(choice.effects_immediate).map(([effect, value]) =>
               value !== undefined ? (
-                <EffectBadge key={effect} effect={effect} value={value} />
+                <EffectBadge
+                  key={effect}
+                  effect={effect}
+                  value={value}
+                  targetScope={targetScope}
+                  selectedArtistName={selectedArtistName}
+                />
               ) : null
             )}
           </div>
@@ -106,7 +142,14 @@ function ChoiceEffects({ choice }: { choice: DialogueChoice }) {
           <div className="flex flex-wrap gap-1">
             {Object.entries(choice.effects_delayed).map(([effect, value]) =>
               value !== undefined ? (
-                <EffectBadge key={effect} effect={effect} value={value} isDelayed={true} />
+                <EffectBadge
+                  key={effect}
+                  effect={effect}
+                  value={value}
+                  isDelayed={true}
+                  targetScope={targetScope}
+                  selectedArtistName={selectedArtistName}
+                />
               ) : null
             )}
           </div>
@@ -116,7 +159,18 @@ function ChoiceEffects({ choice }: { choice: DialogueChoice }) {
   );
 }
 
-export function DialogueInterface({ dialogue, onSelectChoice, onBack }: DialogueInterfaceProps) {
+export function DialogueInterface({
+  dialogue,
+  onSelectChoice,
+  onBack,
+  targetScope,
+  selectedArtistName
+}: DialogueInterfaceProps) {
+  // Replace {artistName} placeholder with actual artist name
+  const displayPrompt = selectedArtistName
+    ? dialogue.prompt.replace(/{artistName}/g, selectedArtistName)
+    : dialogue.prompt;
+
   return (
     <div className="space-y-6">
       <Card className="relative overflow-hidden w-full max-w-md mx-auto">
@@ -127,7 +181,7 @@ export function DialogueInterface({ dialogue, onSelectChoice, onBack }: Dialogue
         />
         <CardContent className="p-4 relative z-10">
           <p className="text-base italic leading-relaxed text-white">
-            "{dialogue.prompt}"
+            "{displayPrompt}"
           </p>
         </CardContent>
       </Card>
@@ -159,7 +213,11 @@ export function DialogueInterface({ dialogue, onSelectChoice, onBack }: Dialogue
                         {choice.label}
                       </div>
 
-                      <ChoiceEffects choice={choice} />
+                      <ChoiceEffects
+                        choice={choice}
+                        targetScope={targetScope}
+                        selectedArtistName={selectedArtistName}
+                      />
 
                       <Button
                         onClick={() => onSelectChoice(choice)}

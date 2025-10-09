@@ -47,7 +47,7 @@ export function ExecutiveMeetings({
 }: ExecutiveMeetingsProps) {
   const [roleSalaries, setRoleSalaries] = useState<Record<string, number>>({});
 
-  const { getAROfficeStatus, selectedActions } = useGameStore();
+  const { getAROfficeStatus, selectedActions, artists } = useGameStore();
 
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
@@ -204,7 +204,8 @@ export function ExecutiveMeetings({
           </div>
           <MeetingSelector
             meetings={context.availableMeetings}
-            onSelectMeeting={(meeting) => send({ type: 'SELECT_MEETING', meeting })}
+            signedArtists={artists.filter(a => a.isSigned) as any}
+            onSelectMeeting={(meeting, selectedArtistId) => send({ type: 'SELECT_MEETING', meeting, selectedArtistId })}
             onBack={() => send({ type: 'BACK_TO_EXECUTIVES' })}
           />
         </div>
@@ -257,6 +258,12 @@ export function ExecutiveMeetings({
               dialogue={context.currentDialogue}
               onSelectChoice={(choice) => send({ type: 'SELECT_CHOICE', choice })}
               onBack={() => send({ type: 'BACK_TO_MEETINGS' })}
+              targetScope={context.selectedMeeting?.target_scope}
+              selectedArtistName={
+                context.selectedArtistId
+                  ? artists.find(a => a.id === context.selectedArtistId)?.name
+                  : undefined
+              }
             />
           )}
         </div>
