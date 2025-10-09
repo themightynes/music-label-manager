@@ -132,7 +132,7 @@ Based on the PRD analysis and current codebase state, here are the main implemen
   - Test missing `target_scope` field throws error
   - Test `{artistName}` placeholder validation for user-selected meetings
 
-### 4.0 Build Artist Selection UI for User-Selected Meetings
+### 4.0 Build Artist Selection UI for User-Selected Meetings ✅
 
 **Goal**: Implement UI components for player artist selection in user-selected meetings.
 
@@ -160,7 +160,7 @@ Based on the PRD analysis and current codebase state, here are the main implemen
   - Global: 🌍 icon badge
   - Predetermined: ⭐ icon badge
   - User-selected: 👤 icon badge
-- [ ] 4.6 Add unit tests for artist selection component
+- [x] 4.6 Add unit tests for artist selection component
   - Test artist list renders correctly
   - Test artist selection updates state
   - Test `{artistName}` placeholder replacement
