@@ -832,12 +832,16 @@ export class GameEngine {
     }
     
     console.log(`[GAME-ENGINE] Processing meeting - Role: ${roleId}, Action: ${actionId}, Choice: ${choiceId}`);
-    
+
     // Get the role data for the name
     const role = await this.gameData.getRoleById(roleId);
     const roleName = role?.name || roleId;
-    
-    // Load the actual action and choice from actions.json
+
+    // Load the full action data to get target_scope (FR-18)
+    const actionData = await this.gameData.getActionById(actionId);
+    const targetScope = actionData?.target_scope || 'global'; // Default to global if missing
+
+    // Load the actual choice from actions.json
     const choice = await this.gameData.getChoiceById(actionId, choiceId);
     
     if (!choice) {
@@ -849,7 +853,7 @@ export class GameEngine {
       };
       console.log(`[GAME-ENGINE] Using fallback choice data`);
       
-      // Apply fallback effects and return
+      // Apply fallback effects and return (use global targeting as safe default)
       if (fallbackChoice.effects_immediate) {
         const effects: Record<string, number> = {};
         for (const [key, value] of Object.entries(fallbackChoice.effects_immediate)) {
@@ -857,7 +861,7 @@ export class GameEngine {
             effects[key] = value;
           }
         }
-        this.applyEffects(effects, summary);
+        this.applyEffects(effects, summary); // Global targeting (no artistId)
       }
       return;
     }
@@ -869,6 +873,32 @@ export class GameEngine {
       delayedEffects: choice.effects_delayed
     });
 
+    // Determine artistId based on target_scope (FR-18)
+    let targetArtistId: string | undefined = undefined;
+
+    if (targetScope === 'predetermined') {
+      // Predetermined: Select artist with highest popularity
+      const selectedArtist = this.selectHighestPopularityArtist();
+      if (selectedArtist) {
+        targetArtistId = selectedArtist.id;
+        console.log(`[GAME-ENGINE] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity})`);
+      } else {
+        console.warn(`[GAME-ENGINE] Predetermined targeting failed: No signed artists available`);
+      }
+    } else if (targetScope === 'user_selected') {
+      // User-selected: Extract from action metadata
+      targetArtistId = action.metadata?.selectedArtistId;
+      if (targetArtistId) {
+        const artist = this.gameState.artists?.find(a => a.id === targetArtistId);
+        console.log(`[GAME-ENGINE] User-selected targeting: Player selected ${artist?.name || targetArtistId}`);
+      } else {
+        console.warn(`[GAME-ENGINE] User-selected targeting failed: No selectedArtistId in metadata`);
+      }
+    } else {
+      // Global: No artistId (applies to all artists)
+      console.log(`[GAME-ENGINE] Global targeting: Effects will apply to all signed artists`);
+    }
+
     // Apply immediate effects
     if (choice.effects_immediate) {
       // Convert to Record<string, number> for applyEffects
@@ -878,7 +908,7 @@ export class GameEngine {
           effects[key] = value;
         }
       }
-      this.applyEffects(effects, summary);
+      this.applyEffects(effects, summary, targetArtistId); // Pass artistId based on scope
     }
 
     // Queue delayed effects  
@@ -1004,9 +1034,47 @@ export class GameEngine {
   }
 
   /**
+   * Select artist with highest popularity for predetermined meetings
+   * Handles edge cases: 0 artists (null), 1 artist (auto-select), ties (random)
+   * Per FR-10 (Predetermined meeting logic)
+   */
+  private selectHighestPopularityArtist(): Artist | null {
+    const signedArtists = this.gameState.artists?.filter(a => a.isSigned) || [];
+
+    // Edge case: No signed artists
+    if (signedArtists.length === 0) {
+      console.log('[ARTIST SELECTION] No signed artists available for predetermined meeting');
+      return null;
+    }
+
+    // Edge case: Only 1 artist signed (auto-select)
+    if (signedArtists.length === 1) {
+      console.log(`[ARTIST SELECTION] Auto-selected only artist: ${signedArtists[0].name}`);
+      return signedArtists[0];
+    }
+
+    // Find highest popularity
+    const maxPopularity = Math.max(...signedArtists.map(a => a.popularity || 0));
+    const topArtists = signedArtists.filter(a => (a.popularity || 0) === maxPopularity);
+
+    // Handle tie-breaking with random selection
+    if (topArtists.length > 1) {
+      const selectedIndex = Math.floor(this.rng() * topArtists.length);
+      const selectedArtist = topArtists[selectedIndex];
+      console.log(`[ARTIST SELECTION] Predetermined selection: ${topArtists.length} artists tied at popularity ${maxPopularity}, selected ${selectedArtist.name} randomly`);
+      return selectedArtist;
+    }
+
+    // Single artist with highest popularity
+    const selectedArtist = topArtists[0];
+    console.log(`[ARTIST SELECTION] Predetermined selection: ${selectedArtist.name} (highest popularity: ${maxPopularity})`);
+    return selectedArtist;
+  }
+
+  /**
    * Applies immediate effects to game state
    */
-  private applyEffects(effects: Record<string, number>, summary: WeekSummary): void {
+  private applyEffects(effects: Record<string, number>, summary: WeekSummary, artistId?: string): void {
     for (const [key, value] of Object.entries(effects)) {
       switch (key) {
         case 'money':
@@ -1043,24 +1111,79 @@ export class GameEngine {
           this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + value);
           break;
         case 'artist_mood':
-          // Enhanced effect processing with validation and logging
+          // Per-artist mood targeting (FR-14, FR-15)
           if (!summary.artistChanges) summary.artistChanges = {};
-          const previousMoodChange = summary.artistChanges.mood || 0;
-          summary.artistChanges.mood = previousMoodChange + value;
-          
-          // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.mood})`);
-          
-          // Add to summary changes for UI display
-          summary.changes.push({
-            type: 'mood',
-            description: `Artist morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
-            amount: value
-          });
-          
-          // Validation: Warn if accumulated changes are extreme
-          if (Math.abs(summary.artistChanges.mood) > 10) {
-            console.warn(`[EFFECT VALIDATION] Large accumulated mood change: ${summary.artistChanges.mood}`);
+
+          if (artistId) {
+            // Per-artist targeting: Apply mood change to specific artist
+            // Initialize artist-specific changes if missing
+            if (!summary.artistChanges[artistId]) {
+              summary.artistChanges[artistId] = {};
+            }
+
+            // Apply mood change to specific artist
+            const previousMoodChange = (summary.artistChanges[artistId] as any).mood || 0;
+            (summary.artistChanges[artistId] as any).mood = previousMoodChange + value;
+
+            // Validate artist exists in game state
+            const artist = this.gameState.artists?.find(a => a.id === artistId);
+            if (!artist) {
+              console.error(`[EFFECT ERROR] Artist not found: ${artistId}. Mood effect skipped.`);
+              break;
+            }
+
+            // Add comprehensive logging with artist name
+            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (target: ${artist.name}, accumulated: ${(summary.artistChanges[artistId] as any).mood})`);
+
+            // Add to summary changes for UI display
+            summary.changes.push({
+              type: 'mood',
+              description: `${artist.name}'s morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+              amount: value
+            });
+
+            // Validation: Warn if accumulated changes are extreme
+            if (Math.abs((summary.artistChanges[artistId] as any).mood) > 10) {
+              console.warn(`[EFFECT VALIDATION] Large accumulated mood change for ${artist.name}: ${(summary.artistChanges[artistId] as any).mood}`);
+            }
+          } else {
+            // Global targeting: Apply mood change to all signed artists (FR-15)
+            const signedArtists = this.gameState.artists?.filter(a => a.isSigned) || [];
+
+            if (signedArtists.length === 0) {
+              console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+              break;
+            }
+
+            // Iterate through all signed artists and apply mood change to each
+            signedArtists.forEach(artist => {
+              // Initialize artist-specific changes if missing
+              if (!summary.artistChanges[artist.id]) {
+                summary.artistChanges[artist.id] = {};
+              }
+
+              // Apply mood change to each artist
+              const previousMoodChange = (summary.artistChanges[artist.id] as any).mood || 0;
+              (summary.artistChanges[artist.id] as any).mood = previousMoodChange + value;
+            });
+
+            // Add comprehensive logging for global effect
+            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (target: all artists, scope: global, count: ${signedArtists.length})`);
+
+            // Add to summary changes for UI display (roster-wide)
+            summary.changes.push({
+              type: 'mood',
+              description: `Artist morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (all artists, ${value > 0 ? '+' : ''}${value})`,
+              amount: value
+            });
+
+            // Validation: Warn if accumulated changes are extreme for any artist
+            signedArtists.forEach(artist => {
+              const artistMoodChange = (summary.artistChanges[artist.id] as any).mood || 0;
+              if (Math.abs(artistMoodChange) > 10) {
+                console.warn(`[EFFECT VALIDATION] Large accumulated mood change for ${artist.name}: ${artistMoodChange}`);
+              }
+            });
           }
           break;
           
@@ -3660,7 +3783,7 @@ export class GameEngine {
             effects[key] = value;
           }
         }
-        this.applyEffects(effects, summary);
+        this.applyEffects(effects, summary, artistId); // Pass artistId for per-artist targeting (FR-17)
       }
       return;
     }
@@ -3681,7 +3804,7 @@ export class GameEngine {
           effects[key] = value;
         }
       }
-      this.applyEffects(effects, summary);
+      this.applyEffects(effects, summary, artistId); // Pass artistId for per-artist targeting (FR-17)
     }
 
     // Queue delayed effects for next week
