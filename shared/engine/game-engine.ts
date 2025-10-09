@@ -2852,7 +2852,7 @@ export class GameEngine {
               const choiceId = (value as any).choiceId;
 
               // Validate artist still exists before applying (FR-19 edge case)
-              const artist = this.gameState.artists?.find(a => a.id === artistId);
+              const artist = this.gameState.artists?.find((a: GameArtist) => a.id === artistId);
               if (!artist) {
                 console.warn(`[DELAYED EFFECTS] Delayed effect cancelled: artist ${artistId} no longer on roster (effects: ${JSON.stringify(effects)})`);
                 triggeredKeys.push(key);
@@ -2941,7 +2941,7 @@ export class GameEngine {
         continue;
       }
 
-      const artist = artists.find(a => a.id === artistId);
+      const artist = artists.find((a: GameArtist) => a.id === artistId);
       if (!artist) {
         console.warn(`[ARTIST CHANGES] Artist ${artistId} not found in database, skipping`);
         continue;
@@ -3127,7 +3127,8 @@ export class GameEngine {
       const currentPopularity = artist.popularity || 0;
 
       // Apply any popularity changes accumulated in summary (tours, streaming, etc.)
-      const popularityBoost = summary.artistChanges?.[`${artist.id}_popularity`] || 0;
+      const popularityBoostValue = summary.artistChanges?.[`${artist.id}_popularity`];
+      const popularityBoost = typeof popularityBoostValue === 'number' ? popularityBoostValue : 0;
       if (popularityBoost > 0) {
         popularityChange += popularityBoost;
       }
@@ -3367,7 +3368,7 @@ export class GameEngine {
       // Task 2.3: Track unlock week in tierUnlockHistory for playlist
       if (!gs.tierUnlockHistory.playlist) gs.tierUnlockHistory.playlist = {};
       const tierKey = this.gameState.playlistAccess;
-      if (!gs.tierUnlockHistory.playlist[tierKey]) {
+      if (tierKey && !gs.tierUnlockHistory.playlist[tierKey]) {
         gs.tierUnlockHistory.playlist[tierKey] = this.gameState.currentWeek || 0;
       }
     }
