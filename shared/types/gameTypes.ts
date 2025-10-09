@@ -358,7 +358,8 @@ export interface WeekSummary {
   streams?: number;
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
-  artistChanges?: Record<string, number>;
+  // Per-artist mood/energy/loyalty changes from meetings (Task 6.2)
+  artistChanges?: Record<string, number | { mood?: number; energy?: number; loyalty?: number }>;
   expenseBreakdown?: {
     weeklyOperations: number;
     artistSalaries: number;

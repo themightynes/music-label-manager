@@ -1,13 +1,14 @@
 import {
   users, gameSaves, artists, roles, projects, dialogueChoices,
-  gameEvents, gameStates, weeklyActions, songs, releases, releaseSongs, executives, chartEntries, musicLabels, emails,
+  gameEvents, gameStates, weeklyActions, songs, releases, releaseSongs, executives, chartEntries, musicLabels, emails, moodEvents,
   type User, type InsertUser, type GameSave, type InsertGameSave,
   type Artist, type InsertArtist, type Project, type InsertProject,
   type GameState, type InsertGameState, type WeeklyAction, type InsertWeeklyAction,
   type DialogueChoice, type GameEvent, type Role,
   type Song, type InsertSong, type Release, type InsertRelease,
   type ReleaseSong, type InsertReleaseSong, type ChartEntry as DbChartEntry, type InsertChartEntry,
-  type MusicLabel, type InsertMusicLabel, type Email, type InsertEmail
+  type MusicLabel, type InsertMusicLabel, type Email, type InsertEmail,
+  type MoodEvent, type InsertMoodEvent
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
@@ -108,6 +109,13 @@ export interface IStorage {
   createEmails(emails: InsertEmail[], dbTransaction?: any): Promise<Email[]>;
   markEmailRead(gameId: string, emailId: string, isRead: boolean): Promise<Email>;
   deleteEmail(gameId: string, emailId: string): Promise<void>;
+
+  // Mood Events
+  createMoodEvent(moodEvent: InsertMoodEvent, dbTransaction?: any): Promise<MoodEvent>;
+  getMoodEventsByGame(gameId: string): Promise<MoodEvent[]>;
+  getMoodEventsByArtist(artistId: string, gameId: string): Promise<MoodEvent[]>;
+  getGlobalMoodEvents(gameId: string): Promise<MoodEvent[]>;
+  getMoodEventsByWeekRange(gameId: string, startWeek: number, endWeek: number): Promise<MoodEvent[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -853,6 +861,64 @@ export class DatabaseStorage implements IStorage {
       .where(eq(musicLabels.gameId, gameId))
       .returning();
     return updated || undefined;
+  }
+
+  // Mood Events
+  async createMoodEvent(moodEvent: InsertMoodEvent, dbTransaction?: any): Promise<MoodEvent> {
+    const dbContext = dbTransaction || this.db;
+    const [created] = await dbContext
+      .insert(moodEvents)
+      .values(moodEvent)
+      .returning();
+    return created;
+  }
+
+  async getMoodEventsByGame(gameId: string): Promise<MoodEvent[]> {
+    return await this.db
+      .select()
+      .from(moodEvents)
+      .where(eq(moodEvents.gameId, gameId))
+      .orderBy(desc(moodEvents.weekOccurred));
+  }
+
+  async getMoodEventsByArtist(artistId: string, gameId: string): Promise<MoodEvent[]> {
+    return await this.db
+      .select()
+      .from(moodEvents)
+      .where(
+        and(
+          eq(moodEvents.artistId, artistId),
+          eq(moodEvents.gameId, gameId)
+        )
+      )
+      .orderBy(desc(moodEvents.weekOccurred));
+  }
+
+  async getGlobalMoodEvents(gameId: string): Promise<MoodEvent[]> {
+    return await this.db
+      .select()
+      .from(moodEvents)
+      .where(
+        and(
+          eq(moodEvents.gameId, gameId),
+          sql`${moodEvents.artistId} IS NULL`
+        )
+      )
+      .orderBy(desc(moodEvents.weekOccurred));
+  }
+
+  async getMoodEventsByWeekRange(gameId: string, startWeek: number, endWeek: number): Promise<MoodEvent[]> {
+    return await this.db
+      .select()
+      .from(moodEvents)
+      .where(
+        and(
+          eq(moodEvents.gameId, gameId),
+          sql`${moodEvents.weekOccurred} >= ${startWeek}`,
+          sql`${moodEvents.weekOccurred} <= ${endWeek}`
+        )
+      )
+      .orderBy(desc(moodEvents.weekOccurred));
   }
 }
 

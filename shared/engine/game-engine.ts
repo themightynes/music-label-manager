@@ -2892,105 +2892,122 @@ export class GameEngine {
   }
 
   /**
-   * Apply global artist mood/energy changes from executive meetings to database
-   * This processes changes accumulated in summary.artistChanges.mood/energy
-   * and applies them to ALL artists immediately
+   * Apply per-artist mood/energy/loyalty changes from meetings to database
+   * Task 6.2: Updated to support per-artist mood targeting with database logging
+   * Processes changes accumulated in summary.artistChanges[artistId].mood/energy/loyalty
    */
   private async applyArtistChangesToDatabase(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     // Check if there are any artist changes to apply
-    if (!summary.artistChanges || (!summary.artistChanges.mood && !summary.artistChanges.energy && !summary.artistChanges.popularity)) {
+    if (!summary.artistChanges || Object.keys(summary.artistChanges).length === 0) {
       return;
     }
 
-    // Get artists from storage
-    if (!this.storage || !this.storage.getArtistsByGame) {
+    // Get storage methods
+    if (!this.storage || !this.storage.getArtistsByGame || !this.storage.updateArtist) {
       console.warn('[ARTIST CHANGES] Storage not available for artist updates');
       return;
     }
-    
+
+    // Check if createMoodEvent method exists for logging
+    const canLogMoodEvents = typeof this.storage.createMoodEvent === 'function';
+
     const artists = await this.storage.getArtistsByGame(this.gameState.id);
     if (!artists || artists.length === 0) {
       console.log('[ARTIST CHANGES] No artists found for mood/energy updates');
       return;
     }
 
-    const moodChange = summary.artistChanges.mood || 0;
-    const energyChange = summary.artistChanges.energy || 0;
-    const popularityChange = summary.artistChanges.popularity || 0;
+    // Iterate through each artist with accumulated changes
+    for (const artistId of Object.keys(summary.artistChanges)) {
+      const changes = summary.artistChanges[artistId];
 
-    console.log(`[ARTIST CHANGES] Applying global changes: mood ${moodChange}, energy ${energyChange}, popularity ${popularityChange} to ${artists.length} artists`);
+      // Skip if this is not a per-artist object (it's a global number like energy/popularity)
+      if (typeof changes !== 'object' || changes === null || Array.isArray(changes)) {
+        continue;
+      }
 
-    // Apply changes to all artists
-    for (const artist of artists) {
+      // Skip if no mood/energy/loyalty changes for this artist
+      if (!changes.mood && !changes.energy && !changes.loyalty) {
+        continue;
+      }
+
+      const artist = artists.find(a => a.id === artistId);
+      if (!artist) {
+        console.warn(`[ARTIST CHANGES] Artist ${artistId} not found in database, skipping`);
+        continue;
+      }
+
       const updates: any = {};
       let hasUpdates = false;
 
       // Apply mood change
-      if (moodChange !== 0) {
+      if (changes.mood && changes.mood !== 0) {
         const currentMood = artist.mood || 50;
-        const newMood = Math.max(0, Math.min(100, currentMood + moodChange));
+        const newMood = Math.max(0, Math.min(100, currentMood + changes.mood));
         updates.mood = newMood;
         hasUpdates = true;
-        
-        console.log(`[ARTIST CHANGES] ${artist.name}: mood ${currentMood} → ${newMood} (${moodChange > 0 ? '+' : ''}${moodChange})`);
+
+        console.log(`[ARTIST CHANGES] ${artist.name}: mood ${currentMood} → ${newMood} (${changes.mood > 0 ? '+' : ''}${changes.mood})`);
+
+        // Task 6.2: Log mood event to database with artist targeting
+        if (canLogMoodEvents) {
+          try {
+            await this.storage.createMoodEvent({
+              artistId: artistId,
+              gameId: this.gameState.id,
+              eventType: 'executive_meeting',
+              moodChange: changes.mood,
+              moodBefore: currentMood,
+              moodAfter: newMood,
+              description: `Mood ${changes.mood > 0 ? 'improved' : 'decreased'} from executive meeting decision`,
+              weekOccurred: this.gameState.currentWeek,
+              metadata: {
+                source: 'meeting_choice',
+                week: this.gameState.currentWeek
+              }
+            }, dbTransaction);
+            console.log(`[MOOD EVENT] Logged mood event for ${artist.name}: ${changes.mood > 0 ? '+' : ''}${changes.mood}`);
+          } catch (error) {
+            console.error(`[MOOD EVENT] Failed to log mood event for ${artist.name}:`, error);
+          }
+        }
       }
 
       // Apply energy change
-      if (energyChange !== 0) {
+      if (changes.energy && changes.energy !== 0) {
         const currentEnergy = artist.energy || 50;
-        const newEnergy = Math.max(0, Math.min(100, currentEnergy + energyChange));
+        const newEnergy = Math.max(0, Math.min(100, currentEnergy + changes.energy));
         updates.energy = newEnergy;
         hasUpdates = true;
-        
-        console.log(`[ARTIST CHANGES] ${artist.name}: energy ${currentEnergy} → ${newEnergy} (${energyChange > 0 ? '+' : ''}${energyChange})`);
+
+        console.log(`[ARTIST CHANGES] ${artist.name}: energy ${currentEnergy} → ${newEnergy} (${changes.energy > 0 ? '+' : ''}${changes.energy})`);
       }
 
-      // Apply popularity change
-      if (popularityChange !== 0) {
-        const currentPopularity = artist.popularity || 0;
-        const newPopularity = Math.max(0, Math.min(100, currentPopularity + popularityChange));
-        updates.popularity = newPopularity;
+      // Apply loyalty change
+      if (changes.loyalty && changes.loyalty !== 0) {
+        const currentLoyalty = artist.loyalty || 50;
+        const newLoyalty = Math.max(0, Math.min(100, currentLoyalty + changes.loyalty));
+        updates.loyalty = newLoyalty;
         hasUpdates = true;
-        
-        console.log(`[ARTIST CHANGES] ${artist.name}: popularity ${currentPopularity} → ${newPopularity} (${popularityChange > 0 ? '+' : ''}${popularityChange})`);
+
+        console.log(`[ARTIST CHANGES] ${artist.name}: loyalty ${currentLoyalty} → ${newLoyalty} (${changes.loyalty > 0 ? '+' : ''}${changes.loyalty})`);
       }
 
       // Update the artist in database
-      if (hasUpdates && this.storage.updateArtist) {
+      if (hasUpdates) {
         await this.storage.updateArtist(artist.id, updates);
       }
     }
 
-    // Add summary entries for the changes
-    if (moodChange !== 0) {
-      summary.changes.push({
-        type: 'mood',
-        description: `Executive meeting ${moodChange > 0 ? 'boosted' : 'lowered'} all artists' mood (${moodChange > 0 ? '+' : ''}${moodChange})`,
-        amount: moodChange
-      });
+    // Clear all per-artist changes since they've been applied
+    for (const artistId of Object.keys(summary.artistChanges)) {
+      const changes = summary.artistChanges[artistId];
+      if (typeof changes === 'object') {
+        changes.mood = 0;
+        changes.energy = 0;
+        changes.loyalty = 0;
+      }
     }
-
-    if (energyChange !== 0) {
-      summary.changes.push({
-        type: 'mood',
-        description: `Executive meeting ${energyChange > 0 ? 'boosted' : 'lowered'} all artists' energy (${energyChange > 0 ? '+' : ''}${energyChange})`,
-        energyBoost: energyChange,
-        amount: energyChange
-      });
-    }
-
-    if (popularityChange !== 0) {
-      summary.changes.push({
-        type: 'popularity',
-        description: `Executive meeting ${popularityChange > 0 ? 'boosted' : 'lowered'} all artists' popularity (${popularityChange > 0 ? '+' : ''}${popularityChange})`,
-        amount: popularityChange
-      });
-    }
-
-    // Clear the global changes since they've been applied
-    summary.artistChanges.mood = 0;
-    summary.artistChanges.energy = 0;
-    summary.artistChanges.popularity = 0;
   }
 
   /**
@@ -3342,7 +3359,7 @@ export class GameEngine {
       // Task 2.4: Track unlock week in tierUnlockHistory for press
       if (!gs.tierUnlockHistory.press) gs.tierUnlockHistory.press = {};
       const tierKey = this.gameState.pressAccess;
-      if (!gs.tierUnlockHistory.press[tierKey]) {
+      if (tierKey && !gs.tierUnlockHistory.press[tierKey]) {
         gs.tierUnlockHistory.press[tierKey] = this.gameState.currentWeek || 0;
       }
     }
@@ -3360,7 +3377,7 @@ export class GameEngine {
       // Task 2.6: Track unlock week in tierUnlockHistory for venue
       if (!gs.tierUnlockHistory.venue) gs.tierUnlockHistory.venue = {};
       const tierKey = this.gameState.venueAccess;
-      if (!gs.tierUnlockHistory.venue[tierKey]) {
+      if (tierKey && !gs.tierUnlockHistory.venue[tierKey]) {
         gs.tierUnlockHistory.venue[tierKey] = this.gameState.currentWeek || 0;
       }
     }
@@ -3640,25 +3657,26 @@ export class GameEngine {
         }
       }
 
-      // FIXED: Accumulate changes in summary using established pattern
+      // FIXED: Accumulate changes in summary using per-artist object pattern
       // This prevents processWeeklyMoodChanges from overwriting our changes
       if (!summary.artistChanges) {
         summary.artistChanges = {};
       }
 
-      // Store per-artist mood changes for later processing by processWeeklyMoodChanges
-      if (!summary.artistChanges[artistId]) {
-        summary.artistChanges[artistId] = 0;
+      // Store per-artist mood changes using new object format
+      if (!summary.artistChanges[artistId] || typeof summary.artistChanges[artistId] !== 'object') {
+        summary.artistChanges[artistId] = {};
       }
-      summary.artistChanges[artistId] += moodChange;
+      const artistChange = summary.artistChanges[artistId] as { mood?: number; energy?: number; loyalty?: number };
+      artistChange.mood = (artistChange.mood || 0) + moodChange;
 
-      // Store per-artist popularity changes for later processing by processWeeklyPopularityChanges
+      // Store per-artist popularity changes using popularity key (old format, kept for compatibility)
       if (popularityChange > 0) {
         const popularityKey = `${artistId}_popularity`;
-        if (!summary.artistChanges[popularityKey]) {
+        if (typeof summary.artistChanges[popularityKey] !== 'number') {
           summary.artistChanges[popularityKey] = 0;
         }
-        summary.artistChanges[popularityKey] += popularityChange;
+        (summary.artistChanges[popularityKey] as number) += popularityChange;
       }
 
       // Add changes to summary for player visibility

@@ -192,27 +192,39 @@ Based on the PRD analysis and current codebase state, here are the main implemen
 
 **Goal**: Update mood event database logging to store artist targeting information.
 
-- [ ] 6.1 Verify/update `mood_events` table schema supports `artist_id` column
+- [x] 6.1 Verify/update `mood_events` table schema supports `artist_id` column
   - Check if `artist_id` column exists in `mood_events` table
   - Verify column type allows NULL values (for global mood events)
   - Verify column type matches artist ID type (likely UUID or VARCHAR)
   - If missing or incorrect type: create database migration to add/update column
   - Recommended: Add index on `artist_id` for query performance (`CREATE INDEX idx_mood_events_artist_id ON mood_events(artist_id)`)
-- [ ] 6.2 Update mood event logging in `game-engine.ts` to include artist targeting
+  - **Result**: Schema already supports artist_id (UUID, nullable), no migration needed
+- [x] 6.2 Update mood event logging in `game-engine.ts` to include artist targeting
   - For per-artist effects: store specific `artist_id`
   - For global effects: store NULL in `artist_id` column
   - Include event type, mood change amount, source (sceneId/choiceId or actionId/choiceId), meeting name, scope
-- [ ] 6.3 Add logging for predetermined meetings with tie-breaking information
+  - **Completed**: Updated `applyArtistChangesToDatabase()` with mood event logging
+  - **Fixed**: Rewrote function to handle per-artist object format (was using obsolete global format)
+  - **Fixed**: Updated `applyTourPerformanceImpacts()` to use per-artist object format
+  - **Added**: Storage methods `createMoodEvent()`, `getMoodEventsByGame()`, `getMoodEventsByArtist()`
+- [x] 6.3 Add logging for predetermined meetings with tie-breaking information
   - Log format: `"Predetermined selection: 2 artists tied at popularity 75, selected Nova randomly"`
-- [ ] 6.4 Add database queries to filter mood events by artist
+  - **Result**: Already implemented in Task 1.6 (`selectHighestPopularityArtist()` line 1069)
+- [x] 6.4 Add database queries to filter mood events by artist
   - Query all mood events for specific artist
   - Query global mood events (artist_id IS NULL)
   - Query all mood events in date range
-- [ ] 6.5 Test mood event logging for all four scope types
+  - **Completed**: Added storage methods:
+    - `getMoodEventsByArtist(artistId, gameId)` - Filter by specific artist
+    - `getGlobalMoodEvents(gameId)` - Filter for global events (artist_id IS NULL)
+    - `getMoodEventsByWeekRange(gameId, startWeek, endWeek)` - Filter by week range
+- [x] 6.5 Test mood event logging for all four scope types
   - Dialogue (per-artist)
   - Global meeting (NULL artist_id)
   - User-selected meeting (specific artist_id)
   - Predetermined meeting (specific artist_id with tie-breaking log)
+  - **Completed**: Created comprehensive test suite in `tests/engine/mood-event-logging.test.ts`
+  - **Result**: All 10 tests passing, covering all scope types and edge cases
 
 ### 7.0 Testing and QA
 
