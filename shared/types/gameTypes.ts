@@ -36,9 +36,14 @@ export interface DialogueChoice {
   effects_delayed: ChoiceEffect;
 }
 
+// Mood targeting scope for executive meetings (Task 3.1)
+export type TargetScope = 'global' | 'predetermined' | 'user_selected';
+
 export interface RoleMeeting {
   id: string;
   prompt: string;
+  prompt_before_selection?: string; // For user_selected meetings (Task 3.2)
+  target_scope: TargetScope; // Determines how mood effects are targeted (Task 3.2)
   choices: DialogueChoice[];
 }
 

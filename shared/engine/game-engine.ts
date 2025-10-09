@@ -40,7 +40,7 @@ export type SongUpdatePatch = {
 interface GameEngineAction {
   actionType: 'role_meeting' | 'start_project' | 'marketing' | 'artist_dialogue';
   targetId: string | null;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, any>; // Includes selectedArtistId for user_selected meetings (Task 3.3)
   details?: {
     meetingId?: string;
     choiceId?: string;

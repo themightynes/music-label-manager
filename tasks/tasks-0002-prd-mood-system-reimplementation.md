@@ -99,15 +99,15 @@ Based on the PRD analysis and current codebase state, here are the main implemen
   - When triggering delayed effects, pass artistId to `applyEffects()` if present
   - Handle edge case: Query if artist still exists in roster before applying delayed effect. If artist not found, cancel effect and log warning: `"Delayed effect cancelled: artist {artistId} no longer on roster (effect: {effectName}, value: {value})"`
 
-### 3.0 Implement Target Scope Validation and Data Loading
+### 3.0 Implement Target Scope Validation and Data Loading ✅
 
 **Goal**: Add validation to ensure all meeting data has valid `target_scope` values and correct prompt structure.
 
-- [ ] 3.1 Define `TargetScope` type in `shared/types/gameTypes.ts`
+- [x] 3.1 Define `TargetScope` type in `shared/types/gameTypes.ts`
   ```typescript
   export type TargetScope = 'global' | 'predetermined' | 'user_selected';
   ```
-- [ ] 3.2 Update `RoleMeeting` interface to include `target_scope` and `prompt_before_selection` fields
+- [x] 3.2 Update `RoleMeeting` interface to include `target_scope` and `prompt_before_selection` fields
   ```typescript
   interface RoleMeeting {
     id: string;
@@ -117,21 +117,16 @@ Based on the PRD analysis and current codebase state, here are the main implemen
     choices: DialogueChoice[];
   }
   ```
-- [ ] 3.3 Update `QueuedAction` interface to include `selectedArtistId` field for user-selected meetings
+- [x] 3.3 Update `GameEngineAction` interface to document `selectedArtistId` in metadata for user-selected meetings
   ```typescript
-  interface QueuedAction {
-    actionId: string;
-    choiceId: string;
-    selectedArtistId?: string; // For user_selected meetings
-    metadata?: Record<string, any>;
-  }
+  metadata?: Record<string, any>; // Includes selectedArtistId for user_selected meetings
   ```
-- [ ] 3.4 Add validation in `server/data/gameData.ts` on actions load
+- [x] 3.4 Add validation in `server/data/gameData.ts` on actions load
   - Verify all meetings have `target_scope` field (error if missing)
   - Verify `target_scope` value is one of `'global' | 'predetermined' | 'user_selected'` (error if invalid)
   - For user-selected meetings: validate `prompt` contains `{artistName}` placeholder (warn if missing, allow execution)
   - For user-selected meetings: recommend `prompt_before_selection` field (log info message if missing, use default text)
-- [ ] 3.5 Add unit tests for data validation logic
+- [x] 3.5 Add unit tests for data validation logic
   - Test valid `target_scope` values pass validation
   - Test invalid `target_scope` values throw errors
   - Test missing `target_scope` field throws error

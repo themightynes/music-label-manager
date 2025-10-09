@@ -48,7 +48,10 @@ export class ServerGameData {
       
       const loadTime = Date.now() - startTime;
       console.log(`Game data loaded successfully in ${loadTime}ms`);
-      
+
+      // Validate action data for mood targeting (Task 3.4)
+      await this.validateActionData();
+
       this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize game data:', error);
@@ -703,6 +706,43 @@ export class ServerGameData {
   // calculateEnhancedProjectCost() - MOVED to GameEngine
   // calculatePerSongProjectCost() - MOVED to GameEngine  
   // calculateEconomiesOfScale() - MOVED to GameEngine
+
+  // Validate action data for mood targeting (Task 3.4)
+  private async validateActionData(): Promise<void> {
+    try {
+      const actions = await this.getWeeklyActions();
+      const validScopes = ['global', 'predetermined', 'user_selected'];
+
+      for (const action of actions) {
+        // Verify target_scope exists
+        if (!action.target_scope) {
+          throw new Error(`[DATA VALIDATION] Action "${action.id}" is missing required field: target_scope`);
+        }
+
+        // Verify target_scope is valid
+        if (!validScopes.includes(action.target_scope)) {
+          throw new Error(`[DATA VALIDATION] Action "${action.id}" has invalid target_scope: "${action.target_scope}". Must be one of: ${validScopes.join(', ')}`);
+        }
+
+        // For user_selected: validate prompt contains {artistName} placeholder
+        if (action.target_scope === 'user_selected') {
+          if (!action.prompt || !action.prompt.includes('{artistName}')) {
+            console.warn(`[DATA VALIDATION] Action "${action.id}" is user_selected but prompt does not contain {artistName} placeholder. Player selection may not display correctly.`);
+          }
+
+          // Recommend prompt_before_selection for user-selected meetings
+          if (!action.prompt_before_selection) {
+            console.info(`[DATA VALIDATION] Action "${action.id}" is user_selected but missing prompt_before_selection field. Consider adding contextual text for better UX.`);
+          }
+        }
+      }
+
+      console.log(`[DATA VALIDATION] All ${actions.length} actions validated successfully`);
+    } catch (error) {
+      console.error('[DATA VALIDATION] Action validation failed:', error);
+      throw error;
+    }
+  }
 
   // Events access
   getEvents() {
