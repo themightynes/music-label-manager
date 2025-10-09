@@ -84,6 +84,83 @@
 }
 ```
 
+### **👔 Executive Meetings (Mood Targeting)**
+**File**: `data/actions.json`
+
+**Understanding Mood Targeting Scopes:**
+
+Executive meetings can affect artist moods in four different ways based on the `target_scope` field:
+
+1. **Global Meetings** (`"target_scope": "global"`)
+   - Affects ALL signed artists equally
+   - Example: CEO Strategic Priorities
+   ```json
+   {
+     "id": "ceo_priorities",
+     "prompt": "Set strategic priorities for the quarter.",
+     "target_scope": "global",
+     "choices": [{
+       "effects_immediate": {
+         "artist_mood": 2  // All artists get +2 mood
+       }
+     }]
+   }
+   ```
+
+2. **Predetermined Meetings** (`"target_scope": "predetermined"`)
+   - Automatically targets the artist with highest popularity
+   - Example: CEO Crisis Management (high-profile artist handles media)
+   ```json
+   {
+     "id": "ceo_crisis",
+     "prompt": "A PR crisis needs immediate attention.",
+     "target_scope": "predetermined",
+     "choices": [{
+       "effects_immediate": {
+         "artist_mood": 3  // Most popular artist gets +3 mood
+       }
+     }]
+   }
+   ```
+
+3. **User-Selected Meetings** (`"target_scope": "user_selected"`)
+   - Player chooses which artist is affected
+   - **Requires** `prompt_before_selection` field
+   - **Requires** `{artistName}` placeholder in prompt
+   ```json
+   {
+     "id": "ar_single_choice",
+     "prompt_before_selection": "Which artist are you working with on single strategy?",
+     "prompt": "Pick the lead single approach for {artistName}.",
+     "target_scope": "user_selected",
+     "choices": [{
+       "effects_immediate": {
+         "artist_mood": -2  // Selected artist gets -2 mood
+       }
+     }]
+   }
+   ```
+
+4. **Dialogue Meetings** (implicit)
+   - Direct artist conversations automatically target that artist
+   - No `target_scope` needed for dialogue system
+
+**Common Mood Effects:**
+```json
+"effects_immediate": {
+  "artist_mood": 5,      // Positive: +1 to +10
+  "artist_mood": -3,     // Negative: -1 to -10
+  "money": -5000,        // Can combine with other effects
+  "reputation": 2
+}
+```
+
+**Important Notes:**
+- `artist_mood` values are clamped to 0-100 range
+- Global effects create separate mood event logs for each artist
+- User-selected meetings show artist selector UI before making choice
+- Missing `target_scope` defaults to global behavior
+
 ---
 
 ## ⚠️ Important Rules

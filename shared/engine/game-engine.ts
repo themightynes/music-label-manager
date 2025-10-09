@@ -207,6 +207,9 @@ export class GameEngine {
     // Apply delayed effects from previous weeks
     await this.processDelayedEffects(summary);
 
+    // Apply delayed artist changes to database (delayed effects add to summary.artistChanges)
+    await this.applyArtistChangesToDatabase(summary, dbTransaction);
+
     // Process weekly mood changes
     await this.processWeeklyMoodChanges(summary);
 
@@ -888,7 +891,9 @@ export class GameEngine {
       }
     } else if (targetScope === 'user_selected') {
       // User-selected: Extract from action metadata
-      targetArtistId = action.metadata?.selectedArtistId;
+      targetArtistId = action.metadata?.selectedArtistId
+        ?? (action.details as Record<string, any> | undefined)?.selectedArtistId
+        ?? (action.metadata as Record<string, any> | undefined)?.metadata?.selectedArtistId;
       if (targetArtistId) {
         const artist = this.gameState.artists?.find(a => a.id === targetArtistId);
         console.log(`[GAME-ENGINE] User-selected targeting: Player selected ${artist?.name || targetArtistId}`);
@@ -1165,7 +1170,10 @@ export class GameEngine {
             summary.changes.push({
               type: 'mood',
               description: `${artist.name}'s morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
-              amount: value
+              amount: value,
+              moodChange: value,
+              artistId: artistId,
+              source: targetScope || 'predetermined' // Include scope for UI formatting
             });
 
             // Validation: Warn if accumulated changes are extreme
@@ -1204,7 +1212,9 @@ export class GameEngine {
             summary.changes.push({
               type: 'mood',
               description: `Artist morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (all artists, ${value > 0 ? '+' : ''}${value})`,
-              amount: value
+              amount: value,
+              moodChange: value,
+              source: 'global' // Include scope for UI formatting
             });
 
             // Validation: Warn if accumulated changes are extreme for any artist
@@ -3031,13 +3041,23 @@ export class GameEngine {
       const currentMood = artist.mood || 50;
       
       // Apply any release-based mood changes (from processPlannedReleases)
-      const releaseMoodBoost = summary.artistChanges?.[artist.id] || 0;
+      // Handle both object format (new) and number format (legacy)
+      const artistChange = summary.artistChanges?.[artist.id];
+      let releaseMoodBoost = 0;
+      if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
+        releaseMoodBoost = (artistChange as any).mood || 0;
+      } else if (typeof artistChange === 'number') {
+        releaseMoodBoost = artistChange;
+      }
+
       if (releaseMoodBoost !== 0) {
         moodChange += releaseMoodBoost;
         summary.changes.push({
           type: 'mood',
           description: `${artist.name}'s mood ${releaseMoodBoost > 0 ? 'improved from successful release' : 'decreased from poor tour performance'} (${releaseMoodBoost > 0 ? '+' : ''}${releaseMoodBoost})`,
-          amount: releaseMoodBoost
+          amount: releaseMoodBoost,
+          moodChange: releaseMoodBoost,
+          artistId: artist.id
         });
       }
       
@@ -3049,11 +3069,14 @@ export class GameEngine {
       
       // Workload stress: -5 mood per project beyond 2
       if (activeProjects > 2) {
-        moodChange -= (activeProjects - 2) * 5;
+        const workloadPenalty = (activeProjects - 2) * -5;
+        moodChange += workloadPenalty;
         summary.changes.push({
           type: 'mood',
           description: `${artist.name} is stressed from workload (${activeProjects} active projects)`,
-          amount: moodChange
+          amount: workloadPenalty,
+          moodChange: workloadPenalty,
+          artistId: artist.id
         });
       }
       
@@ -3077,7 +3100,10 @@ export class GameEngine {
         summary.changes.push({
           type: 'mood',
           description: `${artist.name}'s mood ${moodChange > 0 ? 'improved' : 'decreased'}`,
-          amount: moodChange
+          amount: moodChange,
+          moodChange: moodChange, // UI expects moodChange field
+          artistId: artist.id,
+          source: 'weekly_routine' // Distinguish from meeting effects
         });
       }
     }
@@ -3685,6 +3711,7 @@ export class GameEngine {
           type: 'mood',
           description: `${artist.name}: ${moodChange > 0 ? '+' : ''}${moodChange} mood from ${attendanceRate}% attendance performance`,
           amount: moodChange,
+          moodChange: moodChange,
           artistId: artistId
         });
       }

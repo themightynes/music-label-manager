@@ -47,7 +47,7 @@ The Music Label Manager is a **strategic simulation game** built as a full-stack
 - Streaming and revenue calculations
 - Economic formulas and cost calculations
 - Individual song revenue decay processing
-- Artist relationship management
+- **Artist relationship management** (including mood targeting system)
 - Access tier progression
 - Random event generation
 - Campaign completion and scoring

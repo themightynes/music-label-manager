@@ -40,19 +40,19 @@ export class ServerGameData {
 
       // Clear any cached data to ensure fresh load
       this.dataLoader.clearCache();
-      await this.dataLoader.loadAllData();
-      
-      // Cache balance data for sync methods
       const fullData = await this.dataLoader.loadAllData();
+
+      // Cache balance data for sync methods
       this.balanceData = fullData.balance;
       
       const loadTime = Date.now() - startTime;
       console.log(`Game data loaded successfully in ${loadTime}ms`);
 
+      // Mark as initialized BEFORE validation to prevent infinite loop
+      this.initialized = true;
+
       // Validate action data for mood targeting (Task 3.4)
       await this.validateActionData();
-
-      this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize game data:', error);
       throw new Error('Game data initialization failed');

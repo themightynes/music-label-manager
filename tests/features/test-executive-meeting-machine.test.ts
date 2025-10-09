@@ -12,11 +12,12 @@ describe('Executive Meeting State Machine', () => {
     { id: 'head_ar', role: 'head_ar', mood: 30, loyalty: 40 },
   ];
 
-  const meetings: Record<string, RoleMeeting[]> = {
+  const defaultMeetings: Record<string, RoleMeeting[]> = {
     head_ar: [
       {
         id: 'artist_support',
         prompt: 'Discuss scouting opportunities',
+        target_scope: 'global',
         choices: [
           {
             id: 'invest_budget',
@@ -31,6 +32,7 @@ describe('Executive Meeting State Machine', () => {
       {
         id: 'vision_review',
         prompt: 'Set company vision',
+        target_scope: 'global',
         choices: [
           {
             id: 'double_down',
@@ -41,10 +43,18 @@ describe('Executive Meeting State Machine', () => {
         ],
       },
     ],
-  } as Record<string, RoleMeeting[]>;
+  };
+
+  const meetings: Record<string, RoleMeeting[]> = {
+    head_ar: [],
+    ceo: [],
+  };
 
   beforeEach(() => {
     actionQueue = [];
+
+    meetings.head_ar = JSON.parse(JSON.stringify(defaultMeetings.head_ar)) as RoleMeeting[];
+    meetings.ceo = JSON.parse(JSON.stringify(defaultMeetings.ceo)) as RoleMeeting[];
 
     actor = createActor(executiveMeetingMachine, {
       input: {
@@ -186,5 +196,152 @@ describe('Executive Meeting State Machine', () => {
       const preview = actor.getSnapshot().context.impactPreview;
       expect(preview.selectedChoices.length).toBe(1);
     });
+  });
+
+  it('should skip AUTO selection when only user-selected meetings are available', async () => {
+    actor.stop();
+
+    meetings.head_ar = [
+      {
+        id: 'user_choice_head_ar',
+        prompt: 'Pick the lead single approach for {artistName}.',
+        prompt_before_selection: 'Which artist are you supporting?',
+        target_scope: 'user_selected',
+        choices: [
+          {
+            id: 'option_a',
+            label: 'Focus on streaming',
+            effects_immediate: { reputation: 1 },
+            effects_delayed: {},
+          } as DialogueChoice,
+        ],
+      },
+    ];
+
+    meetings.ceo = [
+      {
+        id: 'user_choice_ceo',
+        prompt: 'Which artist should we prioritize, {artistName}?',
+        prompt_before_selection: 'Choose the artist to spotlight',
+        target_scope: 'user_selected',
+        choices: [
+          {
+            id: 'prioritize_artist',
+            label: 'Prioritize their rollout',
+            effects_immediate: { reputation: 2 },
+            effects_delayed: {},
+          } as DialogueChoice,
+        ],
+      },
+    ];
+
+    actionQueue = [];
+    actor = createActor(executiveMeetingMachine, {
+      input: {
+        gameId: 'test-game',
+        focusSlotsTotal: 2,
+        onActionSelected: (action) => actionQueue.push(action),
+        fetchExecutives: async () => executives,
+        fetchRoleMeetings: async (roleId) => meetings[roleId] ?? [],
+        fetchMeetingDialogue: async (roleId, meetingId) => {
+          const meeting = meetings[roleId]?.find((m) => m.id === meetingId);
+          if (!meeting) {
+            throw new Error('Meeting not found');
+          }
+          return {
+            prompt: meeting.prompt,
+            choices: meeting.choices ?? [],
+          };
+        },
+      },
+    });
+
+    actor.start();
+
+    await vi.waitFor(() => {
+      expect(actor.getSnapshot().matches('idle')).toBe(true);
+    });
+
+    actor.send({ type: 'AUTO_SELECT' });
+
+    await vi.waitFor(() => {
+      expect(actor.getSnapshot().matches('idle')).toBe(true);
+    });
+
+    expect(actionQueue.length).toBe(0);
+  });
+
+  it('should select a non user-selected meeting when AUTO is used', async () => {
+    actor.stop();
+
+    meetings.head_ar = [
+      {
+        id: 'user_choice_head_ar',
+        prompt: 'Pick the lead single approach for {artistName}.',
+        prompt_before_selection: 'Which artist are you supporting?',
+        target_scope: 'user_selected',
+        choices: [
+          {
+            id: 'option_a',
+            label: 'Focus on streaming',
+            effects_immediate: { reputation: 1 },
+            effects_delayed: {},
+          } as DialogueChoice,
+        ],
+      },
+      {
+        id: 'global_followup',
+        prompt: 'Discuss scouting pipeline upgrades',
+        target_scope: 'global',
+        choices: [
+          {
+            id: 'invest_pipeline',
+            label: 'Invest in scouting pipeline',
+            effects_immediate: { money: -2000 },
+            effects_delayed: { scouting: 2 },
+          } as DialogueChoice,
+        ],
+      },
+    ];
+
+    meetings.ceo = [];
+
+    actionQueue = [];
+    actor = createActor(executiveMeetingMachine, {
+      input: {
+        gameId: 'test-game',
+        focusSlotsTotal: 1,
+        onActionSelected: (action) => actionQueue.push(action),
+        fetchExecutives: async () => executives,
+        fetchRoleMeetings: async (roleId) => meetings[roleId] ?? [],
+        fetchMeetingDialogue: async (roleId, meetingId) => {
+          const meeting = meetings[roleId]?.find((m) => m.id === meetingId);
+          if (!meeting) {
+            throw new Error('Meeting not found');
+          }
+          return {
+            prompt: meeting.prompt,
+            choices: meeting.choices ?? [],
+          };
+        },
+      },
+    });
+
+    actor.start();
+
+    await vi.waitFor(() => {
+      expect(actor.getSnapshot().matches('idle')).toBe(true);
+    });
+
+    actor.send({ type: 'AUTO_SELECT' });
+
+    await vi.waitFor(() => {
+      expect(actionQueue.length).toBe(1);
+    });
+
+    const autoAction = JSON.parse(actionQueue[0]);
+    expect(autoAction.actionId).toBe('global_followup');
+    expect(autoAction.metadata?.targetScope).toBe('global');
+    expect(autoAction.metadata?.selectedArtistId).toBeUndefined();
   });
 });

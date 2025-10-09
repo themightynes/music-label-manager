@@ -81,7 +81,8 @@ const createAutoActionData = (executive: Executive, meeting: RoleMeeting, choice
   actionId: meeting.id,
   choiceId: choice.id,
   ...(executive.role !== 'ceo' && { executiveId: executive.id }),
-  ...(selectedArtistId && { metadata: { selectedArtistId } }),
+  ...(selectedArtistId && { metadata: { selectedArtistId, targetScope: meeting.target_scope } }),
+  ...(!selectedArtistId && meeting.target_scope && { metadata: { targetScope: meeting.target_scope } }),
 });
 
 export const executiveMeetingMachine = setup({
@@ -171,6 +172,7 @@ export const executiveMeetingMachine = setup({
       event.type === 'SELECT_MEETING'
         ? {
             selectedMeeting: event.meeting,
+            selectedArtistId: event.selectedArtistId ?? null,
             error: null,
           }
         : {}
@@ -295,7 +297,15 @@ export const executiveMeetingMachine = setup({
       for (const executive of context.executives) {
         const meetings = await ensureMeetings(executive.role);
         if (!meetings.length) continue;
-        const meeting = meetings[0];
+        const meeting = meetings.find((m) => {
+          const scope = m.target_scope ?? 'global';
+          return scope !== 'user_selected' && (m.choices?.length ?? 0) > 0;
+        });
+        if (!meeting) {
+          console.warn(`[AUTO SELECT] Skipping ${executive.role} - no eligible meetings (user_selected requires manual artist choice)`);
+          continue;
+        }
+
         const choice = meeting.choices?.[0];
         if (!choice) continue;
         const roleScores: Record<string, number> = {

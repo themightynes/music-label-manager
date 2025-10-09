@@ -98,8 +98,8 @@ function ChoiceEffects({
   targetScope?: 'global' | 'predetermined' | 'user_selected';
   selectedArtistName?: string;
 }) {
-  const hasImmediate = Object.keys(choice.effects_immediate).length > 0;
-  const hasDelayed = Object.keys(choice.effects_delayed).length > 0;
+  const hasImmediate = choice.effects_immediate && Object.keys(choice.effects_immediate).length > 0;
+  const hasDelayed = choice.effects_delayed && Object.keys(choice.effects_delayed).length > 0;
 
   if (!hasImmediate && !hasDelayed) {
     return (
@@ -166,6 +166,11 @@ export function DialogueInterface({
   targetScope,
   selectedArtistName
 }: DialogueInterfaceProps) {
+  // Replace {artistName} placeholder with actual artist name
+  const displayPrompt = selectedArtistName
+    ? dialogue.prompt.replace(/{artistName}/g, selectedArtistName)
+    : dialogue.prompt;
+
   return (
     <div className="space-y-6">
       <Card className="relative overflow-hidden w-full max-w-md mx-auto">
@@ -176,7 +181,7 @@ export function DialogueInterface({
         />
         <CardContent className="p-4 relative z-10">
           <p className="text-base italic leading-relaxed text-white">
-            "{dialogue.prompt}"
+            "{displayPrompt}"
           </p>
         </CardContent>
       </Card>

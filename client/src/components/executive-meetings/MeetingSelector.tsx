@@ -128,7 +128,12 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
   const [selectedMeetingIndex, setSelectedMeetingIndex] = useState<number | null>(null);
   const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
 
-  if (meetings.length === 0) {
+  // Filter out user_selected meetings if no artists are signed (FR-12)
+  const filteredMeetings = signedArtists.length === 0
+    ? meetings.filter(m => m.target_scope !== 'user_selected')
+    : meetings;
+
+  if (filteredMeetings.length === 0) {
     return (
       <div className="text-center p-8">
         <div className="text-white/70">
@@ -171,7 +176,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
 
   // If showing artist selection
   if (selectedMeetingIndex !== null) {
-    const meeting = meetings[selectedMeetingIndex];
+    const meeting = filteredMeetings[selectedMeetingIndex];
     const selectedArtist = signedArtists.find(a => a.id === selectedArtistId);
     const displayPrompt = selectedArtist
       ? meeting.prompt.replace('{artistName}', selectedArtist.name)
@@ -233,7 +238,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
       }}
     >
       <CarouselContent>
-        {meetings.map((meeting, index) => (
+        {filteredMeetings.map((meeting, index) => (
           <CarouselItem key={meeting.id}>
             <Card className="hover:shadow-md transition-all duration-200">
               <CardHeader className="pb-3">

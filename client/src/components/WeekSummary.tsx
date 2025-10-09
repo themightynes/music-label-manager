@@ -47,23 +47,27 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   };
 
   // NEW: Determine the scope of a mood change
-  type MoodScope = 'global' | 'predetermined' | 'user_selected' | 'dialogue';
+  type MoodScope = 'global' | 'predetermined' | 'user_selected' | 'routine';
   const determineMoodScope = (change: GameChange): MoodScope => {
-    // Dialogue always has specific artist and source starting with 'dialogue' or contains 'conversation'
-    if (change.source && (change.source.includes('dialogue') || change.source.includes('conversation'))) {
-      return 'dialogue';
-    }
-
-    // If has artistId but no clear source, could be user_selected or predetermined
-    // For now, we'll use heuristics based on the source field
-    if (change.artistId) {
-      if (change.source && change.source.includes('user_selected')) {
+    // Check source field directly for scope value
+    if (change.source) {
+      if (change.source === 'user_selected') {
         return 'user_selected';
       }
-      if (change.source && change.source.includes('predetermined')) {
+      if (change.source === 'predetermined') {
         return 'predetermined';
       }
-      // Default to predetermined for per-artist meeting effects
+      if (change.source === 'global') {
+        return 'global';
+      }
+      if (change.source === 'weekly_routine') {
+        return 'routine';
+      }
+    }
+
+    // Fallback: If has artistId but no clear source, could be user_selected or predetermined
+    if (change.artistId) {
+      // Default to predetermined for per-artist meeting effects without explicit source
       return 'predetermined';
     }
 
@@ -77,7 +81,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       case 'global': return '🌍';
       case 'predetermined': return '⭐';
       case 'user_selected': return '👤';
-      case 'dialogue': return '💬';
+      case 'routine': return '🔄';
       default: return '💭';
     }
   };
@@ -101,8 +105,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       case 'user_selected':
         return `${description} (Your Choice)`;
 
-      case 'dialogue':
-        return `${description}`;
+      case 'routine':
+        return `${description}`; // Routine changes already have descriptive text
 
       default:
         return `${description}`;
