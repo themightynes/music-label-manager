@@ -176,9 +176,7 @@ describe('Immediate Mood Effect Integration Test', () => {
         temperament: 50,
         energy: 50,
         mood: 40,
-        signed: true,
-        isSigned: true,
-        loyalty: 50
+        signed: true
       },
       {
         id: 'artist_2',
@@ -190,9 +188,7 @@ describe('Immediate Mood Effect Integration Test', () => {
         temperament: 55,
         energy: 50,
         mood: 50,
-        signed: true,
-        isSigned: true,
-        loyalty: 50
+        signed: true
       },
       {
         id: 'artist_3',
@@ -204,9 +200,7 @@ describe('Immediate Mood Effect Integration Test', () => {
         temperament: 60,
         energy: 50,
         mood: 70,
-        signed: true,
-        isSigned: true,
-        loyalty: 50
+        signed: true
       }
     ] as GameArtist[];
 

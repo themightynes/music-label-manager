@@ -996,7 +996,7 @@ const musicLabelData = {
           console.warn('[A&R DEBUG] Backend: Artist ID not found in current data, generating fallback');
 
           // Select a new random artist as fallback
-          const unsignedArtists = (allArtists || []).filter((a: any) => !a.isSigned);
+          const unsignedArtists = (allArtists || []).filter((a: any) => !a.signed);
           if (unsignedArtists.length > 0) {
             const fallbackArtist = unsignedArtists[Math.floor(Math.random() * unsignedArtists.length)];
 
@@ -1498,7 +1498,7 @@ const musicLabelData = {
       const validatedData = insertArtistSchema.parse({
         ...req.body,
         gameId: gameId,
-        weeklyFee: req.body.weeklyCost || req.body.weeklyFee || 1200 // Store weekly cost from JSON data
+        weeklyCost: req.body.weeklyCost || 1200 // Store weekly cost from JSON data
       });
       
       // Create artist and deduct money in a transaction-like operation
@@ -1563,7 +1563,7 @@ const musicLabelData = {
           talent: artist.talent ?? 0,
           genre: artist.genre ?? null,
           signingCost: signingCost,
-          weeklyCost: artist.weeklyFee ?? null,
+          weeklyCost: artist.weeklyCost ?? null,
         };
 
         await storage.createEmail({
@@ -2365,7 +2365,7 @@ const musicLabelData = {
           name: artist.name,
           genre: 'Pop', // Default genre since not available in schema
           mood: artist.mood || 50,
-          loyalty: artist.loyalty || 50
+          energy: artist.energy || 50
         },
         songs: songsWithMetrics,
         totalRevenuePotential,

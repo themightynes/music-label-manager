@@ -35,7 +35,7 @@ const toGameArtist = (artist: DbArtist | (DbArtist & { loyalty?: number | null }
     mood: artist.mood ?? 50,
     signed: true,
     signingCost: source.signingCost ?? undefined,
-    weeklyCost: source.weeklyCost ?? source.weeklyFee ?? undefined,
+    weeklyCost: source.weeklyCost ?? source.weeklyCost ?? undefined,
     bio: source.bio ?? undefined,
     genre: artist.genre ?? undefined,
     age: source.age ?? undefined,

@@ -340,6 +340,8 @@ export interface GameChange {
   newMood?: number;
   energyBoost?: number;
   newEnergy?: number;
+  loyaltyBoost?: number; // For executive loyalty tracking
+  newLoyalty?: number; // For executive loyalty tracking
   source?: string;
   artistId?: string;
 }
@@ -358,8 +360,8 @@ export interface WeekSummary {
   streams?: number;
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
-  // Per-artist mood/energy/loyalty changes from meetings (Task 6.2)
-  artistChanges?: Record<string, number | { mood?: number; energy?: number; loyalty?: number }>;
+  // Per-artist mood/energy changes from meetings (Task 6.2)
+  artistChanges?: Record<string, number | { mood?: number; energy?: number }>;
   expenseBreakdown?: {
     weeklyOperations: number;
     artistSalaries: number;

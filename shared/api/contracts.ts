@@ -209,12 +209,12 @@ export const SignArtistResponse = z.object({
     energy: true,
     popularity: true,
     signedWeek: true,
-    isSigned: true,
+    signed: true,
     gameId: true
   }).extend({
     id: z.string().uuid(),
     signedWeek: z.number().nullable(),
-    isSigned: z.boolean(),
+    signed: z.boolean(),
     gameId: z.string().nullable()
   }),
   updatedGameState: z.custom<GameState>()

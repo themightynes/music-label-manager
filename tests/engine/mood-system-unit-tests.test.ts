@@ -475,9 +475,9 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
       });
 
       const artists = [
-        { id: 'artist_nova', isSigned: true },
-        { id: 'artist_diego', isSigned: true },
-        { id: 'artist_luna', isSigned: true },
+        { id: 'artist_nova', signed: true },
+        { id: 'artist_diego', signed: true },
+        { id: 'artist_luna', signed: true },
       ];
 
       const delayedMoodChange = 2;

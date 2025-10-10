@@ -204,7 +204,7 @@ export function ExecutiveMeetings({
           </div>
           <MeetingSelector
             meetings={context.availableMeetings}
-            signedArtists={artists.filter(a => a.isSigned) as any}
+            signedArtists={artists.filter(a => a.signed) as any}
             onSelectMeeting={(meeting, selectedArtistId) => send({ type: 'SELECT_MEETING', meeting, selectedArtistId })}
             onBack={() => send({ type: 'BACK_TO_EXECUTIVES' })}
           />
