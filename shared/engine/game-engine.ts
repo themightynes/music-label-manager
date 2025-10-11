@@ -1248,48 +1248,88 @@ export class GameEngine {
           break;
           
         case 'artist_energy':
-          // Enhanced effect processing with validation and logging
+          // UNIFIED FORMAT: Apply energy change to all signed artists using per-artist objects
+          // This matches the artist_mood global targeting pattern for consistency
           if (!summary.artistChanges) summary.artistChanges = {};
-          const previousEnergyChange = (summary.artistChanges.energy as number) || 0;
-          (summary.artistChanges as any).energy = previousEnergyChange + value;
+
+          // Load all signed artists to apply energy change globally
+          const signedArtistsForEnergy = await this.loadSignedArtists();
+
+          if (signedArtistsForEnergy.length === 0) {
+            console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+            break;
+          }
+
+          // Apply energy change to each signed artist (per-artist object format)
+          signedArtistsForEnergy.forEach(artist => {
+            if (!summary.artistChanges![artist.id]) {
+              summary.artistChanges![artist.id] = {};
+            }
+            const artistChange = summary.artistChanges![artist.id] as { mood?: number; energy?: number };
+            artistChange.energy = (artistChange.energy || 0) + value;
+          });
 
           // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${(summary.artistChanges as any).energy})`);
+          console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForEnergy.length} signed artists`);
 
           // Add to summary changes for UI display (using mood type with energyBoost field)
           summary.changes.push({
             type: 'mood',
-            description: `Artist energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            description: `All artists' energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
             energyBoost: value,
             amount: value
           });
 
           // Validation: Warn if accumulated changes are extreme
-          if (Math.abs((summary.artistChanges as any).energy) > 10) {
-            console.warn(`[EFFECT VALIDATION] Large accumulated energy change: ${(summary.artistChanges as any).energy}`);
-          }
+          signedArtistsForEnergy.forEach(artist => {
+            if (!summary.artistChanges) return;
+            const artistEnergyChange = (summary.artistChanges[artist.id] as any).energy || 0;
+            if (Math.abs(artistEnergyChange) > 10) {
+              console.warn(`[EFFECT VALIDATION] Large accumulated energy change for ${artist.name}: ${artistEnergyChange}`);
+            }
+          });
           break;
 
         case 'artist_popularity':
-          // Enhanced effect processing with validation and logging
+          // UNIFIED FORMAT: Apply popularity change to all signed artists using per-artist objects
+          // This matches the artist_mood global targeting pattern for consistency
           if (!summary.artistChanges) summary.artistChanges = {};
-          const previousPopularityChange = (summary.artistChanges.popularity as number) || 0;
-          (summary.artistChanges as any).popularity = previousPopularityChange + value;
+
+          // Load all signed artists to apply popularity change globally
+          const signedArtistsForPopularity = await this.loadSignedArtists();
+
+          if (signedArtistsForPopularity.length === 0) {
+            console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+            break;
+          }
+
+          // Apply popularity change to each signed artist (per-artist object format)
+          signedArtistsForPopularity.forEach(artist => {
+            if (!summary.artistChanges![artist.id]) {
+              summary.artistChanges![artist.id] = {};
+            }
+            const artistChange = summary.artistChanges![artist.id] as { mood?: number; energy?: number; popularity?: number };
+            artistChange.popularity = (artistChange.popularity || 0) + value;
+          });
 
           // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${(summary.artistChanges as any).popularity})`);
+          console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForPopularity.length} signed artists`);
 
           // Add to summary changes for UI display
           summary.changes.push({
             type: 'popularity',
-            description: `Artist popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            description: `All artists' popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
             amount: value
           });
 
           // Validation: Warn if accumulated changes are extreme
-          if (Math.abs((summary.artistChanges as any).popularity) > 10) {
-            console.warn(`[EFFECT VALIDATION] Large accumulated popularity change: ${(summary.artistChanges as any).popularity}`);
-          }
+          signedArtistsForPopularity.forEach(artist => {
+            if (!summary.artistChanges) return;
+            const artistPopularityChange = (summary.artistChanges[artist.id] as any).popularity || 0;
+            if (Math.abs(artistPopularityChange) > 10) {
+              console.warn(`[EFFECT VALIDATION] Large accumulated popularity change for ${artist.name}: ${artistPopularityChange}`);
+            }
+          });
           break;
       }
     }
@@ -3138,6 +3178,7 @@ export class GameEngine {
 
   /**
    * Process weekly popularity changes for all artists
+   * UNIFIED FORMAT: Now reads from per-artist objects (artistChanges[artistId].popularity)
    * Mirrors processWeeklyMoodChanges pattern for consistency
    */
   private async processWeeklyPopularityChanges(summary: WeekSummary): Promise<void> {
@@ -3153,9 +3194,17 @@ export class GameEngine {
       let popularityChange = 0;
       const currentPopularity = artist.popularity || 0;
 
-      // Apply any popularity changes accumulated in summary (tours, streaming, etc.)
-      const popularityBoostValue = summary.artistChanges?.[`${artist.id}_popularity`];
-      const popularityBoost = typeof popularityBoostValue === 'number' ? popularityBoostValue : 0;
+      // UNIFIED FORMAT: Read from per-artist object (matches mood/energy pattern)
+      const artistChange = summary.artistChanges?.[artist.id];
+      let popularityBoost = 0;
+      if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
+        popularityBoost = (artistChange as any).popularity || 0;
+      } else if (typeof artistChange === 'number') {
+        // LEGACY: Support old `artistId_popularity` key format during transition
+        const legacyPopularityValue = summary.artistChanges?.[`${artist.id}_popularity`];
+        popularityBoost = typeof legacyPopularityValue === 'number' ? legacyPopularityValue : 0;
+      }
+
       if (popularityBoost > 0) {
         popularityChange += popularityBoost;
       }
@@ -3717,20 +3766,17 @@ export class GameEngine {
         summary.artistChanges = {};
       }
 
-      // Store per-artist mood changes using new object format
+      // Store per-artist mood changes using unified object format
       if (!summary.artistChanges[artistId] || typeof summary.artistChanges[artistId] !== 'object') {
         summary.artistChanges[artistId] = {};
       }
-      const artistChange = summary.artistChanges[artistId] as { mood?: number; energy?: number; loyalty?: number };
+      const artistChange = summary.artistChanges[artistId] as { mood?: number; energy?: number; popularity?: number };
       artistChange.mood = (artistChange.mood || 0) + moodChange;
 
-      // Store per-artist popularity changes using popularity key (old format, kept for compatibility)
+      // UNIFIED FORMAT: Store per-artist popularity changes using consistent object format
+      // This matches the mood and energy pattern for consistency
       if (popularityChange > 0) {
-        const popularityKey = `${artistId}_popularity`;
-        if (typeof summary.artistChanges[popularityKey] !== 'number') {
-          summary.artistChanges[popularityKey] = 0;
-        }
-        (summary.artistChanges[popularityKey] as number) += popularityChange;
+        artistChange.popularity = (artistChange.popularity || 0) + popularityChange;
       }
 
       // Add changes to summary for player visibility

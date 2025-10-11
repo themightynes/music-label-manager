@@ -497,18 +497,20 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
     });
   });
 
-  describe('BUG FIX: processWeeklyMoodChanges Type Mismatch', () => {
-    it('should extract mood from object format (new) correctly', () => {
-      // BUG: Line 3037 expected number, got object { mood?: number }
-      // FIX: Check if object and extract .mood property
+  describe('UNIFIED FORMAT: processWeeklyMoodChanges Object Handling', () => {
+    it('should extract mood from unified object format correctly', () => {
+      // UNIFIED FORMAT: All artistChanges now use object format { mood, energy, popularity }
+      // This test verifies correct extraction from the new unified format
 
       const summary: WeekSummary = {
         week: 10,
         changes: [],
         revenue: 0,
         expenses: 0,
+        reputationChanges: {},
+        events: [],
         artistChanges: {
-          'artist_nova': { mood: 5 } // Object format
+          'artist_nova': { mood: 5 } // Unified object format
         },
       };
 
@@ -518,35 +520,33 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
       let releaseMoodBoost = 0;
       if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
         releaseMoodBoost = (artistChange as any).mood || 0;
-      } else if (typeof artistChange === 'number') {
-        releaseMoodBoost = artistChange;
       }
 
       expect(releaseMoodBoost).toBe(5);
     });
 
-    it('should extract mood from legacy number format correctly', () => {
+    it('should extract energy from unified object format correctly', () => {
       const summary: WeekSummary = {
         week: 10,
         changes: [],
         revenue: 0,
         expenses: 0,
+        reputationChanges: {},
+        events: [],
         artistChanges: {
-          'artist_nova': 5 // Legacy number format
+          'artist_nova': { energy: 3 } // Unified object format
         },
       };
 
       const artistId = 'artist_nova';
       const artistChange = summary.artistChanges![artistId];
 
-      let releaseMoodBoost = 0;
+      let energyBoost = 0;
       if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
-        releaseMoodBoost = (artistChange as any).mood || 0;
-      } else if (typeof artistChange === 'number') {
-        releaseMoodBoost = artistChange;
+        energyBoost = (artistChange as any).energy || 0;
       }
 
-      expect(releaseMoodBoost).toBe(5);
+      expect(energyBoost).toBe(3);
     });
 
     it('should handle missing mood property in object format', () => {

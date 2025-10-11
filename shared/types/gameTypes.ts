@@ -360,8 +360,9 @@ export interface WeekSummary {
   streams?: number;
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
-  // Per-artist mood/energy changes from meetings (Task 6.2)
-  artistChanges?: Record<string, number | { mood?: number; energy?: number }>;
+  // Per-artist stat changes (mood/energy/popularity) - UNIFIED FORMAT
+  // All artist changes now use consistent per-artist object format (Tech Debt #1 completed)
+  artistChanges?: Record<string, { mood?: number; energy?: number; popularity?: number }>;
   expenseBreakdown?: {
     weeklyOperations: number;
     artistSalaries: number;
