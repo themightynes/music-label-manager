@@ -3046,7 +3046,7 @@ export class GameEngine {
     for (const artist of artists) {
       let moodChange = 0;
       const currentMood = artist.mood || 50;
-      
+
       // Apply any release-based mood changes (from processPlannedReleases)
       // Handle both object format (new) and number format (legacy)
       const artistChange = summary.artistChanges?.[artist.id];
@@ -3067,13 +3067,13 @@ export class GameEngine {
           artistId: artist.id
         });
       }
-      
+
       // Count active projects for this artist
       const activeProjects = projects.filter(
-        (p: any) => p.artistId === artist.id && 
+        (p: any) => p.artistId === artist.id &&
         ['recording', 'mixing', 'mastering'].includes(p.stage)
       ).length;
-      
+
       // Workload stress: -5 mood per project beyond 2
       if (activeProjects > 2) {
         const workloadPenalty = (activeProjects - 2) * -5;
@@ -3086,32 +3086,52 @@ export class GameEngine {
           artistId: artist.id
         });
       }
-      
+
       // Natural drift toward 50 (by 3 points max)
-      if (currentMood > 55) {
+      // BUGFIX: Calculate drift based on mood AFTER immediate changes, not before
+      const moodAfterImmediate = currentMood + moodChange;
+      let driftAmount = 0;
+      if (moodAfterImmediate > 55) {
+        driftAmount = -3;
         moodChange -= 3;
-      } else if (currentMood < 45) {
+      } else if (moodAfterImmediate < 45) {
+        driftAmount = 3;
         moodChange += 3;
       }
-      
+
+      // Log drift as a separate change entry if it occurred
+      if (driftAmount !== 0) {
+        summary.changes.push({
+          type: 'mood',
+          description: `${artist.name}'s mood ${driftAmount > 0 ? 'naturally improved' : 'naturally decreased'} (drift toward 50)`,
+          amount: driftAmount,
+          moodChange: driftAmount,
+          artistId: artist.id,
+          source: 'weekly_drift'
+        });
+      }
+
       // Apply mood change
       if (moodChange !== 0) {
         const newMood = Math.max(0, Math.min(100, currentMood + moodChange));
-        
+
         // Update artist mood in storage
         if (this.storage.updateArtist) {
           await this.storage.updateArtist(artist.id, { mood: newMood });
         }
-        
-        // Track change - always show the total mood change
-        summary.changes.push({
-          type: 'mood',
-          description: `${artist.name}'s mood ${moodChange > 0 ? 'improved' : 'decreased'}`,
-          amount: moodChange,
-          moodChange: moodChange, // UI expects moodChange field
-          artistId: artist.id,
-          source: 'weekly_routine' // Distinguish from meeting effects
-        });
+
+        // Track change - only log if there were non-drift changes
+        // (drift is already logged separately above)
+        if (moodChange !== driftAmount) {
+          summary.changes.push({
+            type: 'mood',
+            description: `${artist.name}'s mood ${moodChange > 0 ? 'improved' : 'decreased'}`,
+            amount: moodChange,
+            moodChange: moodChange, // UI expects moodChange field
+            artistId: artist.id,
+            source: 'weekly_routine' // Distinguish from meeting effects
+          });
+        }
       }
     }
   }

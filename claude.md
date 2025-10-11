@@ -61,6 +61,7 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 - **Setup**: Global test configuration in `tests/setup.ts`
 - **Structure**: Wrap tests in `describe()` blocks, use `it()` or `test()` for assertions
 - **Commands**: `npm test` (watch), `npm run test:ui` (interactive UI), `npm run test:coverage` (coverage report)
+- **Database**: **NEVER** import `server/db` in tests - always use `createTestDatabase()` from `tests/helpers/test-db` to avoid polluting production database
 
 ## XState & Stately Runtime Notes
 - `xstate` drives multi-step decision flows; prefer typed machine definitions and actor logic over ad-hoc reducer state.

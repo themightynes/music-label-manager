@@ -132,14 +132,29 @@ describe('artistDialogueService', () => {
       createTestDialogueScene({
         id: 'dialogue_1',
         prompt: 'Prompt 1',
+        choices: [
+          { id: 'choice_1', label: 'Choice 1', effects_immediate: {}, effects_delayed: {} },
+          { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
+          { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
+        ],
       }),
       createTestDialogueScene({
         id: 'dialogue_2',
         prompt: 'Prompt 2',
+        choices: [
+          { id: 'choice_1', label: 'Choice 1', effects_immediate: {}, effects_delayed: {} },
+          { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
+          { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
+        ],
       }),
       createTestDialogueScene({
         id: 'dialogue_3',
         prompt: 'Prompt 3',
+        choices: [
+          { id: 'choice_1', label: 'Choice 1', effects_immediate: {}, effects_delayed: {} },
+          { id: 'choice_2', label: 'Choice 2', effects_immediate: {}, effects_delayed: {} },
+          { id: 'choice_3', label: 'Choice 3', effects_immediate: {}, effects_delayed: {} },
+        ],
       }),
     ];
 
