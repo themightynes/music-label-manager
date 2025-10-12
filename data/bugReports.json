@@ -6,11 +6,20 @@
     "severity": "low",
     "area": "ui",
     "frequency": "always",
-    "status": "new",
+    "status": "completed",
     "whatHappened": "The mood changes summary under the weekly results is off. Below is what it shows. One shows +2 (then 0) and the other is a normal mood drift that says \"MOST POPULAR\"\n\n💭\nMood Changes\n🌍\nAll artists' energy increased from meeting decision (+2) (All Artists)\n+0\n⭐\nDiego Morales's mood naturally decreased (drift toward 50) (Most Popular)",
     "stepsToReproduce": null,
     "expectedResult": null,
     "additionalContext": "This is happening in the Weekly Results after advancing a week.",
+    "resolution": {
+      "resolvedAt": "2025-10-12T16:00:00.000Z",
+      "resolvedBy": "Claude Code",
+      "fixDescription": "Fixed two issues: 1) Natural mood drift now classified as 'routine' instead of 'predetermined', removing incorrect '(Most Popular)' label. 2) Added moodChange field to energy boost events so badge displays correct value instead of +0.",
+      "filesModified": [
+        "client/src/components/WeekSummary.tsx",
+        "shared/engine/game-engine.ts"
+      ]
+    },
     "reporter": {
       "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
       "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
@@ -38,11 +47,21 @@
     "severity": "medium",
     "area": "gameplay",
     "frequency": "intermittent",
-    "status": "new",
+    "status": "completed",
     "whatHappened": "=== ADVANCE WEEK ERROR ===\nError type: object\nError instance: Error\nError message: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\nError stack: Error: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\n    at <anonymous> (C:\\Users\\ulyan\\music-label-manager\\server\\routes.ts:3444:17)\n    at async NodePgSession.transaction (C:\\Users\\ulyan\\music-label-manager\\node_modules\\src\\node-postgres\\session.ts:193:19)\n    at async <anonymous> (C:\\Users\\ulyan\\music-label-manager\\server\\routes.ts:3244:22)\nError object: {\"stack\":\"Error: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\\n    at <anonymous> (C:\\\\Users\\\\ulyan\\\\music-label-manager\\\\server\\\\routes.ts:3444:17)\\n    at async NodePgSession.transaction (C:\\\\Users\\\\ulyan\\\\music-label-manager\\\\node_modules\\\\src\\\\node-postgres\\\\session.ts:193:19)\\n    at async <anonymous> (C:\\\\Users\\\\ulyan\\\\music-label-manager\\\\server\\\\routes.ts:3244:22)\",\"message\":\"Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\"}\n========================\nSending error response: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\n10:46:55 PM [express] POST /api/advance-week 500 in 437ms :: {\"error\":\"ADVANCE_WEEK_ERROR\",\"message\":…",
     "stepsToReproduce": null,
     "expectedResult": null,
     "additionalContext": null,
+    "resolution": {
+      "resolvedAt": "2025-10-12T16:00:00.000Z",
+      "resolvedBy": "Claude Code",
+      "fixDescription": "Fixed auto-select in GameSidebar to filter out user_selected meetings that require manual artist selection. Auto-select now only chooses meetings with target_scope of 'global' or 'predetermined'. Also improved error message in GameEngine to provide clearer feedback when user_selected meetings are missing artistId.",
+      "filesModified": [
+        "client/src/components/GameSidebar.tsx",
+        "shared/engine/game-engine.ts",
+        "client/src/machines/executiveMeetingMachine.ts"
+      ]
+    },
     "reporter": {
       "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
       "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",

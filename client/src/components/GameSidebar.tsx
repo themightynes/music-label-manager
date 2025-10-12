@@ -97,7 +97,17 @@ export function GameSidebar({
       executives.forEach(executive => {
         const meetings = allMeetings[executive.role as keyof typeof allMeetings] || [];
         if (meetings.length > 0) {
-          const meeting = meetings[0];
+          // BUGFIX: Filter out user_selected meetings (they require manual artist selection)
+          const meeting = meetings.find((m: any) => {
+            const scope = m.target_scope ?? 'global';
+            return scope !== 'user_selected' && (m.choices?.length ?? 0) > 0;
+          });
+
+          if (!meeting) {
+            console.warn(`[SIDEBAR AUTO] Skipping ${executive.role} - no eligible meetings (user_selected requires manual artist choice)`);
+            return;
+          }
+
           if (meeting.choices && meeting.choices.length > 0) {
             const choice = meeting.choices[0];
 

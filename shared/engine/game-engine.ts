@@ -900,7 +900,9 @@ export class GameEngine {
         // Artist name will be logged in applyArtistChangesToDatabase()
         console.log(`[GAME-ENGINE] User-selected targeting: Player selected artist ${targetArtistId}`);
       } else {
-        console.warn(`[GAME-ENGINE] User-selected targeting failed: No selectedArtistId in metadata`);
+        // BUGFIX: Throw error early instead of continuing with undefined artistId
+        // This prevents the error from occurring later in applyEffects validation
+        throw new Error(`[GAME-ENGINE ERROR] user_selected meeting '${actionId}' requires an artist selection but none was provided. Please select an artist before processing this meeting.`);
       }
     } else {
       // Global: No artistId (applies to all artists)
@@ -1273,11 +1275,13 @@ export class GameEngine {
           console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForEnergy.length} signed artists`);
 
           // Add to summary changes for UI display (using mood type with energyBoost field)
+          // BUGFIX: Set moodChange for UI badge display (WeekSummary uses moodChange || 0)
           summary.changes.push({
             type: 'mood',
             description: `All artists' energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
             energyBoost: value,
-            amount: value
+            amount: value,
+            moodChange: value // Add moodChange so UI badge shows correct value
           });
 
           // Validation: Warn if accumulated changes are extreme
