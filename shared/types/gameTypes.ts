@@ -81,8 +81,8 @@ export interface SideEvent {
 
 export interface DialogueScene {
   id: string;
-  speaker: string;
-  archetype: string;
+  speaker?: string; // Optional: not used in mood/energy-based dialogue system
+  archetype?: string; // Optional: not used in mood/energy-based dialogue system
   prompt: string;
   choices: DialogueChoice[];
 }

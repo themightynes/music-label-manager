@@ -76,8 +76,8 @@ const SideEventSchema = z.object({
 
 const DialogueSceneSchema = z.object({
   id: z.string(),
-  speaker: z.string(),
-  archetype: z.string(),
+  speaker: z.string().optional(), // Optional: not used in mood/energy-based dialogue system
+  archetype: z.string().optional(), // Optional: not used in mood/energy-based dialogue system
   prompt: z.string(),
   choices: z.array(DialogueChoiceSchema)
 }).passthrough();
