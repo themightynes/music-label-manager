@@ -499,11 +499,57 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
 });
 
-export const insertGameSaveSchema = createInsertSchema(gameSaves).omit({
+export const gameSaveSnapshotSchema = z.object({
+  gameState: z.object({
+    id: z.string(),
+    currentWeek: z.number(),
+    money: z.number(),
+    reputation: z.number(),
+    creativeCapital: z.number(),
+    focusSlots: z.number().optional(),
+    usedFocusSlots: z.number().optional(),
+    arOfficeSlotUsed: z.boolean().optional(),
+    arOfficeSourcingType: z.string().nullable().optional(),
+    arOfficePrimaryGenre: z.string().nullable().optional(),
+    arOfficeSecondaryGenre: z.string().nullable().optional(),
+    arOfficeOperationStart: z.number().nullable().optional(),
+    playlistAccess: z.string().optional(),
+    pressAccess: z.string().optional(),
+    venueAccess: z.string().optional(),
+    campaignType: z.string().optional(),
+    campaignCompleted: z.boolean().optional(),
+    rngSeed: z.string().nullable().optional(),
+    flags: z.record(z.any()).optional(),
+    weeklyStats: z.record(z.any()).optional(),
+    tierUnlockHistory: z.record(z.any()).optional(),
+  }).passthrough(),
+  musicLabel: z.record(z.any()).nullable().optional(),
+  artists: z.array(z.record(z.any())).optional(),
+  projects: z.array(z.record(z.any())).optional(),
+  roles: z.array(z.record(z.any())).optional(),
+  songs: z.array(z.record(z.any())).optional(),
+  releases: z.array(z.record(z.any())).optional(),
+  weeklyActions: z.array(z.record(z.any())).optional(),
+}).passthrough();
+
+const baseInsertGameSaveSchema = createInsertSchema(gameSaves).omit({
   id: true,
   userId: true, // Will be set by middleware
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertGameSaveSchema = baseInsertGameSaveSchema.extend({
+  gameState: gameSaveSnapshotSchema,
+}).superRefine((data, ctx) => {
+  const snapshotWeek = data.gameState?.gameState?.currentWeek;
+  if (typeof snapshotWeek === 'number' && data.week !== snapshotWeek) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['week'],
+      message: 'Week must match snapshot currentWeek',
+    });
+  }
 });
 
 export const insertArtistSchema = createInsertSchema(artists).omit({
@@ -576,6 +622,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type GameSave = typeof gameSaves.$inferSelect;
 export type InsertGameSave = z.infer<typeof insertGameSaveSchema>;
+export type GameSaveSnapshot = z.infer<typeof gameSaveSnapshotSchema>;
 
 export type Artist = typeof artists.$inferSelect;
 export type InsertArtist = z.infer<typeof insertArtistSchema>;

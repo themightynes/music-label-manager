@@ -2,10 +2,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGameStore } from '@/store/gameStore';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
 import { apiRequest } from '@/lib/queryClient';
+import type { GameSaveSnapshot } from '@shared/schema';
+import { gameSaveSnapshotSchema } from '@shared/schema';
+
+type SaveSummary = {
+  id: string;
+  name: string;
+  week: number;
+  isAutosave: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 interface SaveGameModalProps {
   open: boolean;
@@ -19,8 +30,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [saveDetails, setSaveDetails] = useState<Record<string, GameSaveSnapshot>>({});
 
-  const { data: saves = [], refetch: refetchSaves } = useQuery({
+  const { data: saves = [], refetch: refetchSaves } = useQuery<SaveSummary[]>({
     queryKey: ['api', 'saves'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/saves');
@@ -28,6 +40,16 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     },
     enabled: open
   });
+
+  const manualSaves = useMemo(
+    () => (saves || []).filter(save => !save.isAutosave),
+    [saves]
+  );
+
+  const autosaveSaves = useMemo(
+    () => (saves || []).filter(save => save.isAutosave),
+    [saves]
+  );
 
   const handleSave = async () => {
     if (!newSaveName.trim() || !gameState) return;
@@ -54,18 +76,28 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     }
   };
 
-  const handleLoad = async (saveId: string) => {
+  const handleLoad = async (saveId: string, mode: 'overwrite' | 'fork' = 'overwrite') => {
     setLoading(true);
     try {
-      await loadGameFromSave(saveId);
-      
+      let snapshot = saveDetails[saveId];
+
+      if (!snapshot) {
+        const response = await apiRequest('GET', `/api/saves/${saveId}`);
+        const save = await response.json();
+        snapshot = gameSaveSnapshotSchema.parse(save.gameState);
+        setSaveDetails(prev => ({ ...prev, [saveId]: snapshot }));
+      }
+
+      const restoredGameId = await loadGameFromSave(saveId, snapshot, mode);
+
       // Update the game context with the loaded game's ID
       // We need to get the game ID from the loaded state
       const { gameState: loadedState } = useGameStore.getState();
-      if (loadedState?.id) {
-        setGameId(loadedState.id);
+      const activeGameId = restoredGameId || loadedState?.id;
+      if (activeGameId) {
+        setGameId(activeGameId);
       }
-      
+
       onOpenChange(false);
       alert('Game loaded successfully!');
     } catch (error) {
@@ -85,15 +117,17 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       return;
     }
 
-    console.log('=== CLIENT DELETE DEBUG ===');
-    console.log('Deleting save:', saveId, saveName);
-
     setDeleting(saveId);
     try {
       const response = await apiRequest('DELETE', `/api/saves/${saveId}`);
       const result = await response.json();
-      console.log('Delete success response:', result);
-      
+
+      setSaveDetails(prev => {
+        const next = { ...prev };
+        delete next[saveId];
+        return next;
+      });
+
       refetchSaves(); // Refresh saves list
       alert(`Save "${saveName}" deleted successfully!`);
     } catch (error) {
@@ -139,12 +173,32 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       try {
         const text = await file.text();
         const importData = JSON.parse(text);
-        
-        if (importData.gameState) {
-          // TODO: Implement import to game store
-          console.log('Import data:', importData);
-          alert('Import functionality coming soon!');
+
+        if (!importData?.gameState) {
+          throw new Error('Missing gameState payload');
         }
+
+        const parsedSnapshot = gameSaveSnapshotSchema.parse(importData.gameState);
+        const importName = importData?.name || `Imported Save ${new Date().toLocaleString()}`;
+
+        const createResponse = await apiRequest('POST', '/api/saves', {
+          name: importName,
+          gameState: parsedSnapshot,
+          week: parsedSnapshot.gameState.currentWeek,
+          isAutosave: false
+        });
+
+        const createdSave = await createResponse.json();
+        setSaveDetails(prev => ({ ...prev, [createdSave.id]: parsedSnapshot }));
+
+        const importedGameId = await loadGameFromSave(createdSave.id, parsedSnapshot, 'fork');
+        if (importedGameId) {
+          setGameId(importedGameId);
+        }
+
+        refetchSaves();
+        onOpenChange(false);
+        alert('Save imported successfully!');
       } catch (error) {
         console.error('Failed to import save:', error);
         alert('Invalid save file format');
@@ -170,45 +224,102 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         </DialogHeader>
 
         <div className="p-6 space-y-4">
-          {/* Existing saves */}
-          {(saves as any[]).map((save: any) => (
-            <div key={save.id} className="border border-brand-purple rounded-lg p-4 hover:bg-brand-burgundy/10">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="font-medium text-white">{save.name}</div>
-                  <div className="text-xs text-white/70">
-                    Week {save.week} • ${gameState?.money?.toLocaleString() || '0'}
+          {/* Manual saves */}
+          {manualSaves.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs uppercase tracking-wide text-white/60">Manual Saves</h3>
+              {manualSaves.map(save => {
+                const detail = saveDetails[save.id];
+                const money = detail?.gameState?.money;
+                const reputation = detail?.gameState?.reputation;
+                return (
+                  <div key={save.id} className="border border-brand-purple rounded-lg p-4 hover:bg-brand-burgundy/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium text-white">{save.name}</div>
+                        <div className="text-xs text-white/70">
+                          Week {save.week} • ${money?.toLocaleString?.() ?? '—'} • Rep {reputation ?? '—'}
+                        </div>
+                        <div className="text-xs text-white/50">
+                          Saved {formatDate(save.updatedAt)}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleLoad(save.id)}
+                          disabled={loading || deleting === save.id}
+                          className="text-xs"
+                        >
+                          {loading ? 'Loading...' : 'Load'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(save.id, save.name)}
+                          disabled={loading || deleting === save.id}
+                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          {deleting === save.id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-white/50">
-                    Saved {formatDate(save.updatedAt)}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleLoad(save.id)}
-                    disabled={loading || deleting === save.id}
-                    className="text-xs"
-                  >
-                    {loading ? 'Loading...' : 'Load'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDelete(save.id, save.name)}
-                    disabled={loading || deleting === save.id}
-                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    {deleting === save.id ? 'Deleting...' : 'Delete'}
-                  </Button>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          ))}
+          )}
+
+          {/* Autosaves */}
+          {autosaveSaves.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs uppercase tracking-wide text-white/60">Autosaves</h3>
+              {autosaveSaves.map(save => {
+                const detail = saveDetails[save.id];
+                const money = detail?.gameState?.money;
+                const reputation = detail?.gameState?.reputation;
+                return (
+                  <div key={save.id} className="border border-brand-purple/60 rounded-lg p-4 hover:bg-brand-burgundy/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium text-white">{save.name}</div>
+                        <div className="text-xs text-white/70">
+                          Week {save.week} • ${money?.toLocaleString?.() ?? '—'} • Rep {reputation ?? '—'}
+                        </div>
+                        <div className="text-xs text-white/50">
+                          Saved {formatDate(save.updatedAt)}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleLoad(save.id)}
+                          disabled={loading || deleting === save.id}
+                          className="text-xs"
+                        >
+                          {loading ? 'Loading...' : 'Load'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(save.id, save.name)}
+                          disabled={loading || deleting === save.id}
+                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          {deleting === save.id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Empty slots */}
-          {Array.from({ length: Math.max(0, 3 - (saves as any[]).length) }).map((_, index) => (
+          {Array.from({ length: Math.max(0, 3 - manualSaves.length) }).map((_, index) => (
             <div key={`empty-${index}`} className="border-2 border-dashed border-brand-purple rounded-lg p-4 text-center">
               <i className="fas fa-plus text-white/50 text-xl mb-2"></i>
               <p className="text-sm text-white/50">Empty Slot</p>

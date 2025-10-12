@@ -1,9 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, type GameSaveSnapshot } from "@shared/schema";
 import { z } from "zod";
 import type { EmailCategory } from "@shared/types/emailTypes";
 import { serverGameData } from "./data/gameData";
@@ -1815,36 +1816,54 @@ const musicLabelData = {
   app.get("/api/saves", requireClerkUser, async (req, res) => {
     try {
       const saves = await storage.getGameSaves(req.userId!);
-
-      // DEBUG: Log save data to investigate corruption
-      console.log('[SAVE DEBUG] Found saves for user:', req.userId);
-      saves.forEach(save => {
-        const gameState = (save.gameState as any)?.gameState;
-        console.log(`[SAVE DEBUG] Save "${save.name}":`, {
-          id: save.id,
-          week: save.week,
-          actualGameWeek: gameState?.currentWeek,
-          campaignCompleted: gameState?.campaignCompleted,
-          money: gameState?.money,
-          reputation: gameState?.reputation
-        });
-      });
-
       res.json(saves);
     } catch (error) {
+      console.error('[API] Failed to fetch save summaries:', error);
       res.status(500).json({ message: "Failed to fetch saves" });
+    }
+  });
+
+  app.get("/api/saves/:saveId", requireClerkUser, async (req, res) => {
+    try {
+      const save = await storage.getGameSaveForUser(req.params.saveId, req.userId!);
+      if (!save) {
+        return res.status(404).json({
+          error: 'SAVE_NOT_FOUND',
+          message: 'Save file not found or does not belong to this user'
+        });
+      }
+
+      const { userId: _userId, ...rest } = save as any;
+      res.json(rest);
+    } catch (error) {
+      console.error('[API] Failed to fetch save snapshot:', error);
+      res.status(500).json({ message: "Failed to fetch save snapshot" });
     }
   });
 
   app.post("/api/saves", requireClerkUser, async (req, res) => {
     try {
       const validatedData = insertGameSaveSchema.parse(req.body);
-      // Add userId from middleware
-      const saveDataWithUserId = {
+      const snapshot = validatedData.gameState;
+      const snapshotGameId = snapshot?.gameState?.id;
+
+      if (!snapshotGameId) {
+        return res.status(400).json({
+          error: 'INVALID_SNAPSHOT',
+          message: 'Save snapshot is missing game identifier'
+        });
+      }
+
+      const save = await storage.createGameSave({
         ...validatedData,
-        userId: req.userId!
-      };
-      const save = await storage.createGameSave(saveDataWithUserId);
+        week: snapshot.gameState.currentWeek,
+        userId: req.userId!,
+      });
+
+      if (validatedData.isAutosave) {
+        await storage.purgeOldAutosaves(req.userId!, snapshotGameId, 3);
+      }
+
       res.json(save);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1856,42 +1875,314 @@ const musicLabelData = {
     }
   });
 
-  app.delete("/api/saves/:saveId", requireClerkUser, async (req, res) => {
+  app.post("/api/saves/:saveId/restore", requireClerkUser, async (req, res) => {
+    const restoreRequestSchema = z.object({
+      mode: z.enum(['overwrite', 'fork']).default('overwrite'),
+    });
+
     try {
-      const saveId = req.params.saveId;
-      const userId = req.userId!;
-      
-      console.log('=== DELETE SAVE DEBUG ===');
-      console.log('Attempting to delete save:', saveId);
-      console.log('For user:', userId);
-      
-      // Verify the save belongs to the user before deleting
-      const saves = await storage.getGameSaves(userId);
-      console.log('User has saves:', saves.map(s => ({ id: s.id, name: s.name })));
-      
-      const saveToDelete = saves.find(save => save.id === saveId);
-      
-      if (!saveToDelete) {
-        console.log('Save not found or does not belong to user');
-        return res.status(404).json({ 
+      const { mode } = restoreRequestSchema.parse(req.body ?? {});
+
+      const save = await storage.getGameSaveForUser(req.params.saveId, req.userId!);
+      if (!save) {
+        return res.status(404).json({
           error: 'SAVE_NOT_FOUND',
-          message: 'Save file not found or does not belong to this user' 
+          message: 'Save file not found or does not belong to this user',
         });
       }
-      
-      console.log('Found save to delete:', saveToDelete.name);
-      await storage.deleteGameSave(saveId);
-      console.log('Save deleted successfully');
-      
-      res.json({ 
-        message: `Deleted save "${saveToDelete.name}"`,
-        deletedSaveId: saveId
+
+      const snapshot = gameSaveSnapshotSchema.parse(save.gameState) as GameSaveSnapshot;
+      const targetGameState = snapshot.gameState;
+      const sourceGameId = targetGameState?.id;
+
+      if (!sourceGameId) {
+        return res.status(400).json({
+          error: 'INVALID_SNAPSHOT',
+          message: 'Save snapshot is missing game identifier',
+        });
+      }
+
+      if (mode === 'overwrite') {
+        const existingGame = await storage.getGameState(sourceGameId);
+        if (!existingGame || existingGame.userId !== req.userId) {
+          return res.status(403).json({
+            error: 'UNAUTHORIZED',
+            message: 'You do not have permission to restore this game',
+          });
+        }
+
+        await db.transaction(async (tx) => {
+          await tx.update(gameStates)
+            .set({
+              currentWeek: targetGameState.currentWeek,
+              money: targetGameState.money,
+              reputation: targetGameState.reputation,
+              creativeCapital: targetGameState.creativeCapital,
+              focusSlots: targetGameState.focusSlots ?? existingGame.focusSlots,
+              usedFocusSlots: targetGameState.usedFocusSlots ?? 0,
+              arOfficeSlotUsed: targetGameState.arOfficeSlotUsed ?? false,
+              arOfficeSourcingType: targetGameState.arOfficeSourcingType ?? null,
+              arOfficePrimaryGenre: targetGameState.arOfficePrimaryGenre ?? null,
+              arOfficeSecondaryGenre: targetGameState.arOfficeSecondaryGenre ?? null,
+              arOfficeOperationStart: targetGameState.arOfficeOperationStart ?? null,
+              playlistAccess: targetGameState.playlistAccess ?? existingGame.playlistAccess,
+              pressAccess: targetGameState.pressAccess ?? existingGame.pressAccess,
+              venueAccess: targetGameState.venueAccess ?? existingGame.venueAccess,
+              campaignType: targetGameState.campaignType ?? existingGame.campaignType,
+              campaignCompleted: targetGameState.campaignCompleted ?? existingGame.campaignCompleted,
+              rngSeed: targetGameState.rngSeed ?? existingGame.rngSeed,
+              flags: targetGameState.flags ?? existingGame.flags ?? {},
+              weeklyStats: targetGameState.weeklyStats ?? existingGame.weeklyStats ?? {},
+              tierUnlockHistory: targetGameState.tierUnlockHistory ?? existingGame.tierUnlockHistory ?? {},
+              userId: req.userId!,
+              updatedAt: new Date(),
+            })
+            .where(eq(gameStates.id, sourceGameId));
+
+          await tx.delete(musicLabels).where(eq(musicLabels.gameId, sourceGameId));
+          if (snapshot.musicLabel) {
+            await tx.insert(musicLabels).values({
+              ...snapshot.musicLabel,
+              gameId: sourceGameId,
+            } as any);
+          }
+
+          await tx.delete(weeklyActions).where(eq(weeklyActions.gameId, sourceGameId));
+          if (Array.isArray(snapshot.weeklyActions) && snapshot.weeklyActions.length > 0) {
+            await tx.insert(weeklyActions).values(
+              snapshot.weeklyActions.map((action) => ({
+                ...action,
+                gameId: sourceGameId,
+              })) as any,
+            );
+          }
+
+          await tx.delete(artists).where(eq(artists.gameId, sourceGameId));
+          if (Array.isArray(snapshot.artists) && snapshot.artists.length > 0) {
+            await tx.insert(artists).values(
+              snapshot.artists.map((artist) => ({
+                ...artist,
+                gameId: sourceGameId,
+              })) as any,
+            );
+          }
+
+          await tx.delete(projects).where(eq(projects.gameId, sourceGameId));
+          if (Array.isArray(snapshot.projects) && snapshot.projects.length > 0) {
+            await tx.insert(projects).values(
+              snapshot.projects.map((project) => ({
+                ...project,
+                gameId: sourceGameId,
+              })) as any,
+            );
+          }
+
+          await tx.delete(roles).where(eq(roles.gameId, sourceGameId));
+          if (Array.isArray(snapshot.roles) && snapshot.roles.length > 0) {
+            await tx.insert(roles).values(
+              snapshot.roles.map((role) => ({
+                ...role,
+                gameId: sourceGameId,
+              })) as any,
+            );
+          }
+
+          await tx.execute(sql`DELETE FROM release_songs WHERE release_id IN (SELECT id FROM releases WHERE game_id = ${sourceGameId})`);
+
+          await tx.delete(songs).where(eq(songs.gameId, sourceGameId));
+          if (Array.isArray(snapshot.songs) && snapshot.songs.length > 0) {
+            await tx.insert(songs).values(
+              snapshot.songs.map((song) => ({
+                ...song,
+                gameId: sourceGameId,
+              })) as any,
+            );
+          }
+
+          await tx.delete(releases).where(eq(releases.gameId, sourceGameId));
+          if (Array.isArray(snapshot.releases) && snapshot.releases.length > 0) {
+            await tx.insert(releases).values(
+              snapshot.releases.map((release) => ({
+                ...release,
+                gameId: sourceGameId,
+              })) as any,
+            );
+          }
+        });
+
+        return res.json({ gameId: sourceGameId });
+      }
+
+      const idMap = new Map<string, string>();
+      const mapId = (value?: string | null, create = true) => {
+        if (!value) return value;
+        if (!idMap.has(value)) {
+          if (!create) {
+            return value;
+          }
+          idMap.set(value, randomUUID());
+        }
+        return idMap.get(value)!;
+      };
+
+      const mapReference = (value?: string | null) => mapId(value, false);
+
+      const newGameId = mapId(sourceGameId)!;
+
+      if (snapshot.musicLabel) {
+        mapId((snapshot.musicLabel as any).id ?? undefined);
+      }
+      if (Array.isArray(snapshot.weeklyActions)) {
+        snapshot.weeklyActions.forEach((action) => mapId(action.id));
+      }
+      if (Array.isArray(snapshot.artists)) {
+        snapshot.artists.forEach((artist) => mapId(artist.id));
+      }
+      if (Array.isArray(snapshot.projects)) {
+        snapshot.projects.forEach((project) => mapId(project.id));
+      }
+      if (Array.isArray(snapshot.roles)) {
+        snapshot.roles.forEach((role) => mapId(role.id));
+      }
+      if (Array.isArray(snapshot.releases)) {
+        snapshot.releases.forEach((release) => mapId(release.id));
+      }
+      if (Array.isArray(snapshot.songs)) {
+        snapshot.songs.forEach((song) => mapId(song.id));
+      }
+
+      await db.transaction(async (tx) => {
+        await tx.insert(gameStates).values({
+          id: newGameId,
+          userId: req.userId!,
+          currentWeek: targetGameState.currentWeek,
+          money: targetGameState.money,
+          reputation: targetGameState.reputation,
+          creativeCapital: targetGameState.creativeCapital,
+          focusSlots: targetGameState.focusSlots ?? 3,
+          usedFocusSlots: targetGameState.usedFocusSlots ?? 0,
+          arOfficeSlotUsed: targetGameState.arOfficeSlotUsed ?? false,
+          arOfficeSourcingType: targetGameState.arOfficeSourcingType ?? null,
+          arOfficePrimaryGenre: targetGameState.arOfficePrimaryGenre ?? null,
+          arOfficeSecondaryGenre: targetGameState.arOfficeSecondaryGenre ?? null,
+          arOfficeOperationStart: targetGameState.arOfficeOperationStart ?? null,
+          playlistAccess: targetGameState.playlistAccess ?? 'none',
+          pressAccess: targetGameState.pressAccess ?? 'none',
+          venueAccess: targetGameState.venueAccess ?? 'none',
+          campaignType: targetGameState.campaignType ?? 'Balanced',
+          campaignCompleted: targetGameState.campaignCompleted ?? false,
+          rngSeed: targetGameState.rngSeed ?? null,
+          flags: targetGameState.flags ?? {},
+          weeklyStats: targetGameState.weeklyStats ?? {},
+          tierUnlockHistory: targetGameState.tierUnlockHistory ?? {},
+        });
+
+        if (snapshot.musicLabel) {
+          await tx.insert(musicLabels).values({
+            ...snapshot.musicLabel,
+            id: mapId((snapshot.musicLabel as any).id ?? undefined),
+            gameId: newGameId,
+          } as any);
+        }
+
+        if (Array.isArray(snapshot.weeklyActions) && snapshot.weeklyActions.length > 0) {
+          await tx.insert(weeklyActions).values(
+            snapshot.weeklyActions.map((action) => ({
+              ...action,
+              id: mapId(action.id),
+              gameId: newGameId,
+              targetId: mapReference(action.targetId as string | undefined),
+              choiceId: mapReference(action.choiceId as string | undefined),
+            })) as any,
+          );
+        }
+
+        if (Array.isArray(snapshot.artists) && snapshot.artists.length > 0) {
+          await tx.insert(artists).values(
+            snapshot.artists.map((artist) => ({
+              ...artist,
+              id: mapId(artist.id),
+              gameId: newGameId,
+            })) as any,
+          );
+        }
+
+        if (Array.isArray(snapshot.projects) && snapshot.projects.length > 0) {
+          await tx.insert(projects).values(
+            snapshot.projects.map((project) => ({
+              ...project,
+              id: mapId(project.id),
+              gameId: newGameId,
+              artistId: mapReference(project.artistId),
+            })) as any,
+          );
+        }
+
+        if (Array.isArray(snapshot.roles) && snapshot.roles.length > 0) {
+          await tx.insert(roles).values(
+            snapshot.roles.map((role) => ({
+              ...role,
+              id: mapId(role.id),
+              gameId: newGameId,
+            })) as any,
+          );
+        }
+
+        if (Array.isArray(snapshot.releases) && snapshot.releases.length > 0) {
+          await tx.insert(releases).values(
+            snapshot.releases.map((release) => ({
+              ...release,
+              id: mapId(release.id),
+              gameId: newGameId,
+              artistId: mapReference(release.artistId),
+            })) as any,
+          );
+        }
+
+        if (Array.isArray(snapshot.songs) && snapshot.songs.length > 0) {
+          await tx.insert(songs).values(
+            snapshot.songs.map((song) => ({
+              ...song,
+              id: mapId(song.id),
+              gameId: newGameId,
+              artistId: mapReference(song.artistId),
+              projectId: mapReference(song.projectId),
+              releaseId: mapReference(song.releaseId),
+            })) as any,
+          );
+        }
+      });
+
+      res.json({ gameId: newGameId });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid restore request", errors: error.errors });
+      }
+
+      console.error('[API] Failed to restore save:', error);
+      res.status(500).json({ message: "Failed to restore save" });
+    }
+  });
+
+  app.delete("/api/saves/:saveId", requireClerkUser, async (req, res) => {
+    try {
+      const deleted = await storage.deleteGameSave(req.params.saveId, req.userId!);
+      if (deleted === 0) {
+        return res.status(404).json({
+          error: 'SAVE_NOT_FOUND',
+          message: 'Save file not found or does not belong to this user',
+        });
+      }
+
+      res.json({
+        message: 'Save deleted successfully',
+        deletedSaveId: req.params.saveId,
       });
     } catch (error) {
       console.error("Failed to delete save:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'DELETE_SAVE_ERROR',
-        message: "Failed to delete save file" 
+        message: "Failed to delete save file",
       });
     }
   });

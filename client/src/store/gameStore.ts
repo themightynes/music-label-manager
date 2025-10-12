@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Artist, Project, Role, WeeklyAction, MusicLabel } from '@shared/schema';
+import type { Artist, Project, Role, WeeklyAction, MusicLabel, GameSaveSnapshot } from '@shared/schema';
 import type { GameState, LabelData, SourcingTypeString } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -44,7 +44,7 @@ interface GameStore {
   
   // Actions
   loadGame: (gameId: string) => Promise<void>;
-  loadGameFromSave: (saveId: string) => Promise<void>;
+  loadGameFromSave: (saveId: string, snapshot: GameSaveSnapshot, mode?: 'overwrite' | 'fork') => Promise<string>;
   createNewGame: (campaignType: string, labelData?: LabelData) => Promise<GameState>;
   updateGameState: (updates: Partial<GameState>) => Promise<void>;
   
@@ -84,7 +84,7 @@ interface GameStore {
   planRelease: (releaseData: any) => Promise<void>;
   
   // Save management
-  saveGame: (name: string) => Promise<void>;
+  saveGame: (name: string, options?: { isAutosave?: boolean }) => Promise<void>;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -164,50 +164,96 @@ export const useGameStore = create<GameStore>()(
       },
 
       // Load game from save
-      loadGameFromSave: async (saveId: string) => {
+      loadGameFromSave: async (saveId: string, snapshot: GameSaveSnapshot, mode: 'overwrite' | 'fork' = 'overwrite') => {
         try {
-          // First, get the specific save data
-          const response = await apiRequest('GET', `/api/saves`);
-          const saves = await response.json();
-          
-          // Find the save by ID
-          const save = saves.find((s: any) => s.id === saveId);
-          if (!save) {
-            throw new Error('Save not found');
-          }
-          
-          // Extract the game state from the save
-          const savedGameData = save.gameState;
-          
-          if (!savedGameData || !savedGameData.gameState) {
+          if (!snapshot?.gameState?.id) {
             throw new Error('Invalid save data format');
           }
-          
-          // Preserve A&R status and include musicLabel
-          const arOfficeSlotUsed = !!(savedGameData.gameState?.arOfficeSlotUsed);
-          const arOfficeSourcingType = (savedGameData.gameState?.arOfficeSourcingType ?? null);
-          const gameStateWithLabel = {
-            ...savedGameData.gameState,
+
+          const baseGameState = snapshot.gameState;
+          const arOfficeSlotUsed = !!baseGameState.arOfficeSlotUsed;
+          const arOfficeSourcingType = (baseGameState.arOfficeSourcingType ?? null) as SourcingTypeString | null;
+          const interimGameState: GameState = {
+            ...baseGameState,
             arOfficeSlotUsed,
             arOfficeSourcingType,
-            musicLabel: savedGameData.musicLabel || null,
-            // selectedActions will be reset to [], so usedFocusSlots is A&R-only here
-            usedFocusSlots: (arOfficeSlotUsed ? 1 : 0)
+            usedFocusSlots: baseGameState.usedFocusSlots ?? (arOfficeSlotUsed ? 1 : 0),
+            focusSlots: baseGameState.focusSlots ?? 0,
+            playlistAccess: baseGameState.playlistAccess ?? 'none',
+            pressAccess: baseGameState.pressAccess ?? 'none',
+            venueAccess: baseGameState.venueAccess ?? 'none',
+            campaignType: baseGameState.campaignType ?? 'Balanced',
+            campaignCompleted: baseGameState.campaignCompleted ?? false,
+            flags: baseGameState.flags ?? {},
+            weeklyStats: baseGameState.weeklyStats ?? {},
+            tierUnlockHistory: baseGameState.tierUnlockHistory ?? {},
+            arOfficePrimaryGenre: baseGameState.arOfficePrimaryGenre ?? null,
+            arOfficeSecondaryGenre: baseGameState.arOfficeSecondaryGenre ?? null,
+            arOfficeOperationStart: baseGameState.arOfficeOperationStart ?? null,
+            rngSeed: baseGameState.rngSeed ?? null,
+            userId: (baseGameState.userId ?? null) as string | null,
+            createdAt: null,
+            updatedAt: null,
           };
 
           set({
-            gameState: gameStateWithLabel,
-            artists: savedGameData.artists || [],
-            projects: savedGameData.projects || [],
-            roles: savedGameData.roles || [],
-            weeklyActions: [], // Reset weekly actions
+            gameState: interimGameState,
+            artists: (snapshot.artists || []) as unknown as Artist[],
+            projects: (snapshot.projects || []) as unknown as Project[],
+            roles: (snapshot.roles || []) as unknown as Role[],
+            songs: snapshot.songs || [],
+            releases: snapshot.releases || [],
+            weeklyActions: (snapshot.weeklyActions || []) as unknown as WeeklyAction[],
             selectedActions: [],
             campaignResults: null,
-            weeklyOutcome: null
+            weeklyOutcome: null,
           });
-          
-          // Update the game context with the loaded game's ID
-          // Note: This might need to be done from the component using GameContext
+
+          if (mode !== 'fork') {
+            localStorage.setItem('currentGameId', baseGameState.id);
+          }
+
+          const restoreResponse = await apiRequest('POST', `/api/saves/${saveId}/restore`, { mode });
+          const restoreResult = await restoreResponse.json();
+          const restoredGameId = restoreResult.gameId || baseGameState.id;
+
+          localStorage.setItem('currentGameId', restoredGameId);
+
+          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+            apiRequest('GET', `/api/game/${restoredGameId}`),
+            apiRequest('GET', `/api/game/${restoredGameId}/songs`),
+            apiRequest('GET', `/api/game/${restoredGameId}/releases`),
+          ]);
+
+          const gameData = await gameResponse.json();
+          const songsData = await songsResponse.json();
+          const releasesData = await releasesResponse.json();
+
+          const syncedGameState = {
+            ...gameData.gameState,
+            musicLabel: gameData.musicLabel || null,
+            arOfficeSlotUsed: !!gameData.gameState?.arOfficeSlotUsed,
+            arOfficeSourcingType: gameData.gameState?.arOfficeSourcingType ?? null,
+          };
+
+          set({
+            gameState: syncedGameState,
+            artists: gameData.artists || [],
+            projects: gameData.projects || [],
+            roles: gameData.roles || [],
+            weeklyActions: gameData.weeklyActions || [],
+            songs: songsData || [],
+            releases: releasesData || [],
+            selectedActions: [],
+            campaignResults: null,
+            weeklyOutcome: null,
+          });
+
+          if (!syncedGameState.arOfficeSlotUsed) {
+            await get().loadDiscoveredArtists();
+          }
+
+          return restoredGameId;
         } catch (error) {
           console.error('Failed to load game from save:', error);
           throw error;
@@ -533,6 +579,13 @@ export const useGameStore = create<GameStore>()(
             selectedActions: [],
             isAdvancingWeek: false
           });
+
+          try {
+            const autosaveLabel = `Autosave - Week ${syncedGameState.currentWeek}`;
+            await get().saveGame(autosaveLabel, { isAutosave: true });
+          } catch (autosaveError) {
+            console.warn('[Autosave] Failed to create autosave:', autosaveError);
+          }
 
           // Trigger tier unlock toasts based on weekly summary changes
           try {
@@ -969,26 +1022,32 @@ export const useGameStore = create<GameStore>()(
         set({ discoveredArtists: discoveredArtists.filter((a: any) => a.id !== artistId) });
       },
 
-      saveGame: async (name: string) => {
-        const { gameState, artists, projects, roles } = get();
+      saveGame: async (name: string, options?: { isAutosave?: boolean }) => {
+        const { gameState, artists, projects, roles, songs, releases, weeklyActions } = get();
         if (!gameState) return;
 
         try {
+          const { musicLabel, ...gameStateWithoutLabel } = gameState;
+          const isAutosave = options?.isAutosave ?? false;
           const saveData = {
             // userId will be set by the server from authentication
             name,
             gameState: {
-              gameState,
-              musicLabel: gameState.musicLabel,
+              gameState: gameStateWithoutLabel,
+              musicLabel: musicLabel || null,
               artists,
               projects,
-              roles
+              roles,
+              songs,
+              releases,
+              weeklyActions
             },
             week: gameState.currentWeek,
-            isAutosave: false
+            isAutosave
           };
 
           await apiRequest('POST', '/api/saves', saveData);
+          await queryClient.invalidateQueries({ queryKey: ['api', 'saves'] });
         } catch (error) {
           console.error('Failed to save game:', error);
           throw error;
@@ -998,14 +1057,9 @@ export const useGameStore = create<GameStore>()(
     {
       name: 'music-label-manager-game',
       partialize: (state) => ({
-        gameState: state.gameState,
-        artists: state.artists,
-        projects: state.projects,
-        roles: state.roles,
-        songs: state.songs,
-        releases: state.releases,
-        discoveredArtists: state.discoveredArtists,
-        selectedActions: state.selectedActions
+        gameState: state.gameState ? { id: state.gameState.id } : null,
+        selectedActions: state.selectedActions,
+        isAdvancingWeek: state.isAdvancingWeek
       })
     }
   )
