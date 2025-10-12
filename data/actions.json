@@ -1,6 +1,6 @@
 {
-  "version": "2.1.0",
-  "generated": "2025-10-12T18:10:47.381Z",
+  "version": "2.2.0",
+  "generated": "2025-10-12T18:30:00.000Z",
   "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting.",
   "weekly_actions": [
     {
