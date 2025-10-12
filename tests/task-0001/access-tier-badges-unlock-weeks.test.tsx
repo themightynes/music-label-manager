@@ -7,6 +7,7 @@ import type { GameState, TierUnlockHistory } from '@shared/types/gameTypes'
 function buildGameState(overrides: Partial<GameState> = {}, history?: TierUnlockHistory): GameState {
   const base: GameState = {
     id: 'test-game',
+    userId: null,
     currentWeek: 10,
     money: 100000,
     reputation: 35,
@@ -22,10 +23,13 @@ function buildGameState(overrides: Partial<GameState> = {}, history?: TierUnlock
     pressAccess: 'mid_tier',
     venueAccess: 'theaters',
     campaignType: 'Balanced',
+    campaignCompleted: false,
     rngSeed: 'seed',
     flags: {},
     weeklyStats: {},
-    tierUnlockHistory: history,
+    tierUnlockHistory: history || {},
+    createdAt: null,
+    updatedAt: null,
   }
   return { ...base, ...overrides }
 }

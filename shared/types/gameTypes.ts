@@ -90,33 +90,38 @@ export interface DialogueScene {
 export type SourcingTypeString = 'active' | 'passive' | 'specialized';
 
 export interface GameState {
+  // Primary key
   id: string;
+
+  // Required fields with defaults (NOT NULL in DB)
   currentWeek: number;
   money: number;
   reputation: number;
   creativeCapital: number;
   focusSlots: number;
   usedFocusSlots: number;
-  // A&R Office state
-  arOfficeSlotUsed?: boolean;
-  arOfficeSourcingType?: SourcingTypeString | null;
-  arOfficePrimaryGenre?: string | null;
-  arOfficeSecondaryGenre?: string | null;
-  arOfficeOperationStart?: number | null;
+  arOfficeSlotUsed: boolean;
   playlistAccess: string;
   pressAccess: string;
   venueAccess: string;
   campaignType: string;
-  rngSeed: string;
+  campaignCompleted: boolean;
   flags: Record<string, any>;
   weeklyStats: Record<string, any>;
-  tierUnlockHistory?: TierUnlockHistory;
+  tierUnlockHistory: Record<string, any>;
+
+  // Nullable fields (can be NULL in DB)
+  userId: string | null;
+  arOfficeSourcingType: SourcingTypeString | null;
+  arOfficePrimaryGenre: string | null;
+  arOfficeSecondaryGenre: string | null;
+  arOfficeOperationStart: number | null;
+  rngSeed: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+
+  // Optional fields (added by application logic, not in DB schema)
   musicLabel?: MusicLabel;
-  // Optional database fields (from Drizzle schema)
-  userId?: string | null;
-  createdAt?: Date | string | null;
-  updatedAt?: Date | string | null;
-  campaignCompleted?: boolean | null;
 }
 
 export interface TierUnlockHistory {

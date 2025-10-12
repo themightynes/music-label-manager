@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GameEngine } from '@shared/engine/game-engine';
-import type { GameState, GameArtist, WeekSummary } from '@shared/types/gameTypes';
+import type { GameState, WeekSummary } from '@shared/types/gameTypes';
 import type { IStorage } from '../../server/storage';
-import { createTestArtist } from '../helpers/test-factories';
+import type { Artist } from '@shared/schema';
+import { createTestDBArtist, createTestGameState } from '../helpers/test-factories';
 
 /**
  * Mood Application Verification Tests
@@ -18,7 +19,7 @@ describe('Mood Application Verification', () => {
   let mockStorage: Partial<IStorage>;
   let mockGameData: any;
   let gameState: GameState;
-  let mockArtists: GameArtist[];
+  let mockArtists: Artist[];
   let capturedMoodEvents: any[];
   let artistUpdates: Map<string, any>;
 
@@ -28,7 +29,7 @@ describe('Mood Application Verification', () => {
 
     // Create mock artists with known initial moods
     mockArtists = [
-      createTestArtist({
+      createTestDBArtist({
         id: 'artist_nova',
         name: 'Nova Sterling',
         archetype: 'Visionary',
@@ -39,7 +40,7 @@ describe('Mood Application Verification', () => {
         energy: 75,
         mood: 70,  // Known starting mood
       }),
-      createTestArtist({
+      createTestDBArtist({
         id: 'artist_diego',
         name: 'Diego Rivers',
         archetype: 'Workhorse',
@@ -50,7 +51,7 @@ describe('Mood Application Verification', () => {
         energy: 80,
         mood: 65,  // Known starting mood
       }),
-      createTestArtist({
+      createTestDBArtist({
         id: 'artist_luna',
         name: 'Luna Park',
         archetype: 'Trendsetter',
@@ -142,14 +143,13 @@ describe('Mood Application Verification', () => {
     mockGameData.getPressCoverageConfigSync = mockGameData.getPressConfigSync;
 
     // Create game state
-    gameState = {
+    gameState = createTestGameState({
       id: 'game_123',
       currentWeek: 10,
       money: 50000,
       reputation: 50,
-      artists: mockArtists,
       rngSeed: '12345',
-    } as any;
+    });
   });
 
   describe('Global Meeting - CEO Priorities (+2 Mood)', () => {

@@ -555,6 +555,8 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
         changes: [],
         revenue: 0,
         expenses: 0,
+        reputationChanges: {},
+        events: [],
         artistChanges: {
           'artist_nova': { energy: 3 } // Object but no mood
         },
@@ -579,6 +581,8 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
         changes: [],
         revenue: 0,
         expenses: 0,
+        reputationChanges: {},
+        events: [],
         artistChanges: {},
       };
 

@@ -1,5 +1,37 @@
 [
   {
+    "id": "2b9e6aa5-45d4-49bc-986d-27d6ca0e7ff8",
+    "submittedAt": "2025-10-12T05:52:52.457Z",
+    "summary": "Mood Changes verbiage seems off",
+    "severity": "low",
+    "area": "ui",
+    "frequency": "always",
+    "status": "new",
+    "whatHappened": "The mood changes summary under the weekly results is off. Below is what it shows. One shows +2 (then 0) and the other is a normal mood drift that says \"MOST POPULAR\"\n\n💭\nMood Changes\n🌍\nAll artists' energy increased from meeting decision (+2) (All Artists)\n+0\n⭐\nDiego Morales's mood naturally decreased (drift toward 50) (Most Popular)",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": "This is happening in the Weekly Results after advancing a week.",
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "15f22e3e-d155-4533-9c3f-8576825e2769",
+      "currentWeek": 3,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/",
+      "screen": {
+        "width": 1343,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
     "id": "7d836b9d-37ec-47a9-8468-404b46f134aa",
     "submittedAt": "2025-10-12T05:47:51.032Z",
     "summary": "Auto Advance Week doesn't work if it auto selects a meeting that requieres and artist.",

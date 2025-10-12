@@ -69,7 +69,8 @@
       "Bash(npm test:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(cut:*)"
+      "Bash(cut:*)",
+      "Bash(del .claudescriptsrun-status.bat)"
     ],
     "deny": [],
     "ask": [],

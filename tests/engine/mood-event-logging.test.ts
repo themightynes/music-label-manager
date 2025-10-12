@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { WeekSummary, GameArtist } from '@shared/types/gameTypes';
+import type { WeekSummary } from '@shared/types/gameTypes';
 import type { IStorage } from '../../server/storage';
-import type { InsertMoodEvent, MoodEvent } from '@shared/schema';
+import type { InsertMoodEvent, MoodEvent, Artist } from '@shared/schema';
 
 /**
  * Mood Event Logging Tests (Task 6.5)
@@ -17,7 +17,7 @@ import type { InsertMoodEvent, MoodEvent } from '@shared/schema';
 describe('Mood Event Logging', () => {
   let mockStorage: Partial<IStorage>;
   let capturedMoodEvents: InsertMoodEvent[];
-  let mockArtists: GameArtist[];
+  let mockArtists: Artist[];
 
   beforeEach(() => {
     capturedMoodEvents = [];
@@ -39,7 +39,7 @@ describe('Mood Event Logging', () => {
       }),
     };
 
-    // Create mock artists
+    // Create mock artists (complete database Artist type)
     mockArtists = [
       {
         id: 'artist_nova',
@@ -52,6 +52,21 @@ describe('Mood Event Logging', () => {
         energy: 75,
         mood: 70,
         signed: true,
+        genre: 'pop',
+        signedWeek: null,
+        weeklyCost: 1200,
+        gameId: null,
+        stress: 0,
+        creativity: 50,
+        massAppeal: 50,
+        lastAttentionWeek: 1,
+        experience: 0,
+        signingCost: null,
+        bio: null,
+        age: null,
+        moodHistory: [],
+        lastMoodEvent: null,
+        moodTrend: 0,
       },
       {
         id: 'artist_diego',
@@ -64,6 +79,21 @@ describe('Mood Event Logging', () => {
         energy: 80,
         mood: 65,
         signed: true,
+        genre: 'rock',
+        signedWeek: null,
+        weeklyCost: 1200,
+        gameId: null,
+        stress: 0,
+        creativity: 50,
+        massAppeal: 50,
+        lastAttentionWeek: 1,
+        experience: 0,
+        signingCost: null,
+        bio: null,
+        age: null,
+        moodHistory: [],
+        lastMoodEvent: null,
+        moodTrend: 0,
       },
     ];
   });
@@ -114,7 +144,7 @@ describe('Mood Event Logging', () => {
 
       // Log event for each artist (as done in applyArtistChangesToDatabase)
       mockArtists.forEach(artist => {
-        const moodBefore = artist.mood;
+        const moodBefore = artist.mood ?? 50; // Default to 50 if null
         const moodAfter = Math.min(100, moodBefore + moodChange);
 
         mockStorage.createMoodEvent!({
@@ -231,13 +261,14 @@ describe('Mood Event Logging', () => {
     it('should log global meeting mood event for all artists', () => {
       // Global effect creates multiple events, one per artist
       mockArtists.forEach(artist => {
+        const moodBefore = artist.mood ?? 50; // Default to 50 if null
         mockStorage.createMoodEvent!({
           artistId: artist.id,
           gameId: 'game_123',
           eventType: 'executive_meeting',
           moodChange: 1,
-          moodBefore: artist.mood,
-          moodAfter: artist.mood + 1,
+          moodBefore: moodBefore,
+          moodAfter: moodBefore + 1,
           description: 'Mood improved from executive meeting decision',
           weekOccurred: 14,
           metadata: { source: 'meeting_choice', targetScope: 'global' },
@@ -245,7 +276,10 @@ describe('Mood Event Logging', () => {
       });
 
       expect(capturedMoodEvents).toHaveLength(2);
-      expect(capturedMoodEvents.every(e => e.metadata.targetScope === 'global')).toBe(true);
+      expect(capturedMoodEvents.every(e => {
+        const metadata = e.metadata as { targetScope?: string };
+        return metadata?.targetScope === 'global';
+      })).toBe(true);
     });
   });
 

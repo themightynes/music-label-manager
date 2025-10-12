@@ -15,15 +15,18 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createTestDatabase, clearDatabase, seedMinimalGame, seedArtist } from '../helpers/test-db';
+import { createTestGameState } from '../helpers/test-factories';
 import { GameEngine } from '@shared/engine/game-engine';
 import { DatabaseStorage } from '../../server/storage';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { Artist, WeekSummary, GameState } from '@shared/types/gameTypes';
+import type { Pool } from 'pg';
+import type { WeekSummary, GameState } from '@shared/types/gameTypes';
+import type { Artist } from '@shared/schema';
 import * as schema from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 describe('Mood Persistence Integration Tests', () => {
-  let db: NodePgDatabase<typeof schema>;
+  let db: NodePgDatabase<typeof schema> & { $client: Pool };
   let storage: DatabaseStorage;
   let gameId: string;
   let artist1: Artist;
@@ -50,32 +53,32 @@ describe('Mood Persistence Integration Tests', () => {
     // Create three test artists with known initial stats
     artist1 = await seedArtist(db, gameId, {
       name: 'Artist Nova',
-      archetype: 'visionary',
+      archetype: 'Visionary',
       talent: 85,
       mood: 70,
       energy: 75,
       popularity: 60,
-      status: 'signed',
+      signed: true,
     });
 
     artist2 = await seedArtist(db, gameId, {
       name: 'Artist Diego',
-      archetype: 'workhorse',
+      archetype: 'Workhorse',
       talent: 75,
       mood: 65,
       energy: 80,
       popularity: 55,
-      status: 'signed',
+      signed: true,
     });
 
     artist3 = await seedArtist(db, gameId, {
       name: 'Artist Luna',
-      archetype: 'trendsetter',
+      archetype: 'Trendsetter',
       talent: 90,
       mood: 60,
       energy: 70,
       popularity: 80,
-      status: 'signed',
+      signed: true,
     });
 
     console.log('[Test Setup] Database ready!');
@@ -89,7 +92,12 @@ describe('Mood Persistence Integration Tests', () => {
 
   // Helper to create minimal game engine for tests
   function createTestEngine(): GameEngine {
-    const gameState: GameState = { id: gameId, currentWeek: 1 } as GameState;
+    const gameState = createTestGameState({
+      id: gameId,
+      currentWeek: 1,
+      money: 50000,
+      reputation: 50,
+    });
 
     // Mock gameData with required configuration for FinancialSystem validation
     const mockGameData = {

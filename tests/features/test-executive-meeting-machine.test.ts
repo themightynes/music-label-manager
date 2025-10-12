@@ -8,8 +8,8 @@ describe('Executive Meeting State Machine', () => {
   let actionQueue: string[];
 
   const executives: Executive[] = [
-    { id: 'ceo', role: 'ceo', mood: 50, loyalty: 50 },
-    { id: 'head_ar', role: 'head_ar', mood: 30, loyalty: 40 },
+    { id: 'ceo', role: 'ceo', level: 1, mood: 50, loyalty: 50 },
+    { id: 'head_ar', role: 'head_ar', level: 1, mood: 30, loyalty: 40 },
   ];
 
   const defaultMeetings: Record<string, RoleMeeting[]> = {

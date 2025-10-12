@@ -1,11 +1,7 @@
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from '@shared/schema';
-import { GameState, GameArtist, GameSong } from '@shared/types/gameTypes';
-
-// Type aliases for test compatibility
-type Artist = GameArtist;
-type Song = GameSong;
+import type { Song, Artist } from '@shared/schema';
 
 /**
  * Test database configuration
@@ -20,9 +16,9 @@ let testDb: NodePgDatabase<typeof schema> | null = null;
  * Creates a connection to the test PostgreSQL database
  * Uses the EXACT same setup as production (drizzle-orm/node-postgres + pg Pool)
  */
-export function createTestDatabase(): NodePgDatabase<typeof schema> {
+export function createTestDatabase(): NodePgDatabase<typeof schema> & { $client: Pool } {
   if (testDb) {
-    return testDb;
+    return testDb as NodePgDatabase<typeof schema> & { $client: Pool };
   }
 
   // Create connection pool (same as production)
@@ -36,7 +32,10 @@ export function createTestDatabase(): NodePgDatabase<typeof schema> {
   // Create Drizzle instance with our schema (same as production)
   testDb = drizzle(testPool, { schema });
 
-  return testDb;
+  // Attach the $client property for compatibility with code that expects it
+  (testDb as any).$client = testPool;
+
+  return testDb as NodePgDatabase<typeof schema> & { $client: Pool };
 }
 
 /**
@@ -125,55 +124,46 @@ export async function seedMinimalGame(
 export async function seedArtist(
   db: NodePgDatabase<typeof schema>,
   gameId: string,
-  overrides?: Partial<Omit<Artist, 'id' | 'gameId' | 'createdAt'>>
-): Promise<Artist> {
+  overrides?: Partial<schema.Artist>
+): Promise<schema.Artist> {
   const artistId = crypto.randomUUID();
 
-  const artist: Artist = {
+  const artist: Partial<schema.Artist> = {
     id: artistId,
-    gameId,
     name: 'Test Artist',
-    genre: 'pop',
-    mood: 50,
-    energy: 50,
-    popularity: 50, // Added popularity field
+    archetype: 'Workhorse', // Default archetype - required field (proper casing)
     talent: 60,
     workEthic: 70,
-    stress: 20,
-    creativity: 65,
-    massAppeal: 55,
-    status: 'signed',
-    weeksSinceLastRelease: 0,
-    archetype: 'workhorse', // Default archetype - required field
-    signedWeek: 1, // Default signed week
-    loyalty: 50, // Default loyalty
-    createdAt: new Date(),
+    popularity: 50,
+    temperament: 50,
+    energy: 50,
+    mood: 50,
+    signed: true,
+    genre: 'pop',
     ...overrides,
   };
 
-  await db.insert(schema.artists).values({
-    id: artist.id,
-    gameId: artist.gameId,
-    name: artist.name,
+  const inserted = await db.insert(schema.artists).values({
+    id: artist.id!,
+    gameId: gameId,
+    name: artist.name!,
+    archetype: artist.archetype!,
     genre: artist.genre,
     mood: artist.mood,
     energy: artist.energy,
-    popularity: artist.popularity, // Added popularity field
+    popularity: artist.popularity,
     talent: artist.talent,
     workEthic: artist.workEthic,
-    stress: artist.stress,
-    creativity: artist.creativity,
-    massAppeal: artist.massAppeal,
-    status: artist.status,
-    signed: artist.signed, // BUGFIX: Added missing signed field
-    weeksSinceLastRelease: artist.weeksSinceLastRelease,
-    archetype: artist.archetype,
+    temperament: artist.temperament,
+    signed: artist.signed,
     signedWeek: artist.signedWeek,
-    loyalty: artist.loyalty,
-    createdAt: artist.createdAt,
-  });
+    weeklyCost: artist.weeklyCost,
+    signingCost: artist.signingCost,
+    bio: artist.bio,
+    age: artist.age,
+  }).returning();
 
-  return artist;
+  return inserted[0];
 }
 
 /**
@@ -183,42 +173,29 @@ export async function seedSong(
   db: NodePgDatabase<typeof schema>,
   gameId: string,
   artistId: string,
-  overrides?: Partial<Omit<Song, 'id' | 'gameId' | 'artistId' | 'createdAt'>>
+  overrides?: Partial<Omit<Song, 'id' | 'gameId' | 'artistId'>>
 ): Promise<Song> {
   const songId = crypto.randomUUID();
 
-  const song: Song = {
+  const songData = {
     id: songId,
     gameId,
-    projectId: null,
     artistId,
     title: 'Test Song',
     genre: 'pop',
     quality: 75,
-    commercialAppeal: 70,
-    status: 'unreleased',
-    streams: 0,
-    peakChartPosition: null,
-    weeksOnChart: 0,
-    createdAt: new Date(),
+    isRecorded: false,
+    isReleased: false,
+    initialStreams: 0,
+    totalStreams: 0,
+    totalRevenue: 0,
+    weeklyStreams: 0,
+    lastWeekRevenue: 0,
     ...overrides,
   };
 
-  await db.insert(schema.songs).values({
-    id: song.id,
-    gameId: song.gameId,
-    projectId: song.projectId,
-    artistId: song.artistId,
-    title: song.title,
-    genre: song.genre,
-    quality: song.quality,
-    commercialAppeal: song.commercialAppeal,
-    status: song.status,
-    streams: song.streams || 0,
-    peakChartPosition: song.peakChartPosition,
-    weeksOnChart: song.weeksOnChart || 0,
-    createdAt: song.createdAt,
-  });
+  await db.insert(schema.songs).values(songData);
 
-  return song;
+  // Return song matching the schema type
+  return songData as Song;
 }

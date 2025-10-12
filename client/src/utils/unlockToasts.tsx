@@ -15,7 +15,7 @@ export function getTierIcon(desc: string) {
 // `toast` should be the function imported from '@/hooks/use-toast'
 export function triggerUnlockToasts(
   summary: WeekSummary,
-  toast: (args: { title: React.ReactNode; description?: React.ReactNode; duration?: number }) => unknown
+  toast: typeof import('@/hooks/use-toast').toast
 ) {
   if (!summary?.changes || !Array.isArray(summary.changes)) return
 

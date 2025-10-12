@@ -1227,7 +1227,8 @@ const musicLabelData = {
       await storage.updateGameState(gameId, {
         ...gameState,
         flags: gameState.flags as any, // Type assertion to handle unknown -> Json conversion
-        weeklyStats: gameState.weeklyStats as any // Type assertion to handle unknown -> Json conversion
+        weeklyStats: gameState.weeklyStats as any, // Type assertion to handle unknown -> Json conversion
+        tierUnlockHistory: gameState.tierUnlockHistory as any // Type assertion to handle unknown -> Json conversion
       });
 
       // Return success response with updated state
@@ -1340,13 +1341,13 @@ const musicLabelData = {
           await storage.updateArtist(artistId, { popularity: newPopularity });
           effectsApplied[effectKey] = Number(effectValue);
         } else if (effectKey === 'money') {
-          gamePatch.money = gameState.money + Number(effectValue);
+          gamePatch.money = (gameState.money ?? 0) + Number(effectValue);
           effectsApplied[effectKey] = Number(effectValue);
         } else if (effectKey === 'reputation') {
-          gamePatch.reputation = clamp(gameState.reputation + Number(effectValue), 0, 100);
+          gamePatch.reputation = clamp((gameState.reputation ?? 0) + Number(effectValue), 0, 100);
           effectsApplied[effectKey] = Number(effectValue);
         } else if (effectKey === 'creative_capital') {
-          gamePatch.creativeCapital = gameState.creativeCapital + Number(effectValue);
+          gamePatch.creativeCapital = (gameState.creativeCapital ?? 0) + Number(effectValue);
           effectsApplied[effectKey] = Number(effectValue);
         }
       }
@@ -1360,11 +1361,11 @@ const musicLabelData = {
       const effectsDelayed = choice.effects_delayed || {};
 
       if (Object.keys(effectsDelayed).length > 0) {
-        const flags = gameState.flags || {};
+        const flags = (gameState.flags || {}) as Record<string, any>;
         const delayedKey = `dialogue-${artistId}-${sceneId}-${choiceId}-${Date.now()}`;
 
         flags[delayedKey] = {
-          triggerWeek: gameState.currentWeek + 1,
+          triggerWeek: (gameState.currentWeek ?? 1) + 1,
           effects: effectsDelayed,
           artistId
         };

@@ -13,19 +13,22 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createTestDatabase, clearDatabase, seedMinimalGame, seedArtist } from '../helpers/test-db';
+import { createTestGameState } from '../helpers/test-factories';
 import { GameEngine } from '@shared/engine/game-engine';
 import { DatabaseStorage } from '../../server/storage';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { GameArtist, WeekSummary, GameState } from '@shared/types/gameTypes';
+import type { Pool } from 'pg';
+import type { WeekSummary, GameState } from '@shared/types/gameTypes';
+import type { Artist } from '@shared/schema';
 import * as schema from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 describe('Dialogue Mood Integration Tests', () => {
-  let db: NodePgDatabase<typeof schema>;
+  let db: NodePgDatabase<typeof schema> & { $client: Pool };
   let storage: DatabaseStorage;
   let gameId: string;
-  let artist1: GameArtist;
-  let artist2: GameArtist;
+  let artist1: Artist;
+  let artist2: Artist;
 
   beforeEach(async () => {
     console.log('[Test Setup] Initializing database...');
@@ -47,7 +50,7 @@ describe('Dialogue Mood Integration Tests', () => {
     // Create test artists with known initial mood values
     artist1 = await seedArtist(db, gameId, {
       name: 'Nova',
-      archetype: 'visionary',
+      archetype: 'Visionary',
       talent: 85,
       mood: 50, // Mid-range for testing both increases and decreases
       energy: 75,
@@ -57,7 +60,7 @@ describe('Dialogue Mood Integration Tests', () => {
 
     artist2 = await seedArtist(db, gameId, {
       name: 'Diego',
-      archetype: 'workhorse',
+      archetype: 'Workhorse',
       talent: 75,
       mood: 10, // Low mood for testing lower bound
       energy: 80,
@@ -76,7 +79,12 @@ describe('Dialogue Mood Integration Tests', () => {
 
   // Helper to create minimal game engine for tests
   function createTestEngine(): GameEngine {
-    const gameState: GameState = { id: gameId, currentWeek: 1 } as GameState;
+    const gameState = createTestGameState({
+      id: gameId,
+      currentWeek: 1,
+      money: 50000,
+      reputation: 50,
+    });
 
     // Mock gameData with required configuration
     const mockGameData = {
@@ -339,7 +347,7 @@ describe('Dialogue Mood Integration Tests', () => {
       // Create artist with high mood
       const highMoodArtist = await seedArtist(db, gameId, {
         name: 'Luna',
-        archetype: 'trendsetter',
+        archetype: 'Trendsetter',
         talent: 90,
         mood: 95,
         energy: 70,
