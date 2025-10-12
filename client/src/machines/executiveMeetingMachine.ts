@@ -296,15 +296,19 @@ export const executiveMeetingMachine = setup({
       const options: AutoOption[] = [];
       for (const executive of context.executives) {
         const meetings = await ensureMeetings(executive.role);
+        console.log(`[AUTO SELECT] ${executive.role} has ${meetings.length} meetings:`, meetings.map(m => ({ id: m.id, target_scope: m.target_scope })));
         if (!meetings.length) continue;
         const meeting = meetings.find((m) => {
           const scope = m.target_scope ?? 'global';
+          console.log(`[AUTO SELECT] Checking meeting ${m.id}: scope=${scope}, eligible=${scope !== 'user_selected' && (m.choices?.length ?? 0) > 0}`);
           return scope !== 'user_selected' && (m.choices?.length ?? 0) > 0;
         });
         if (!meeting) {
           console.warn(`[AUTO SELECT] Skipping ${executive.role} - no eligible meetings (user_selected requires manual artist choice)`);
           continue;
         }
+        console.log(`[AUTO SELECT] Selected meeting for ${executive.role}: ${meeting.id} (scope: ${meeting.target_scope})`);
+
 
         const choice = meeting.choices?.[0];
         if (!choice) continue;

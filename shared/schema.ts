@@ -34,8 +34,8 @@ export const artists = pgTable("artists", {
   energy: integer("energy").default(50),
   popularity: integer("popularity").default(0),
   signedWeek: integer("signed_week"),
-  isSigned: boolean("is_signed").default(false),
-  weeklyFee: integer("weekly_fee").default(1200), // Ongoing weekly cost for this artist
+  signed: boolean("signed").default(false), // Renamed from isSigned for consistency with GameArtist
+  weeklyCost: integer("weekly_cost").default(1200), // Renamed from weeklyFee - ongoing weekly cost for this artist
   gameId: uuid("game_id"),
   // Additional artist attributes
   talent: integer("talent").default(50), // 0-100
@@ -45,6 +45,11 @@ export const artists = pgTable("artists", {
   massAppeal: integer("mass_appeal").default(50), // 0-100
   lastAttentionWeek: integer("last_attention_week").default(1),
   experience: integer("experience").default(0),
+  // Properties from JSON data source (data/artists.json)
+  temperament: integer("temperament"), // Artist personality/temperament (0-100)
+  signingCost: integer("signing_cost"), // One-time cost to sign artist
+  bio: text("bio"), // Artist biography/description
+  age: integer("age"), // Artist age in years
   // Mood tracking
   moodHistory: jsonb("mood_history").default('[]'), // Array of mood change events
   lastMoodEvent: text("last_mood_event"), // Nullable - description of last mood event
@@ -58,6 +63,7 @@ export const artists = pgTable("artists", {
     stressCheck: sql`CHECK (${table.stress} >= 0 AND ${table.stress} <= 100)`,
     creativityCheck: sql`CHECK (${table.creativity} >= 0 AND ${table.creativity} <= 100)`,
     massAppealCheck: sql`CHECK (${table.massAppeal} >= 0 AND ${table.massAppeal} <= 100)`,
+    temperamentCheck: sql`CHECK (${table.temperament} >= 0 AND ${table.temperament} <= 100)`,
   };
 });
 
@@ -225,7 +231,6 @@ export const releaseSongs = pgTable("release_songs", {
   leadSinglesIdx: sql`CREATE INDEX IF NOT EXISTS "idx_release_songs_lead_singles" ON ${table} ("release_id") WHERE "is_single" = true`,
 }));
 
-// TODO: Remove or redesign legacy dialogue storage after rebuilding the executive system UI (removed 2025-09-19).
 // Dialogue choices and effects
 export const dialogueChoices = pgTable("dialogue_choices", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -301,7 +306,6 @@ export const emails = pgTable("emails", {
   weekIdx: sql`CREATE INDEX IF NOT EXISTS "idx_emails_game_week" ON ${table} ("game_id", "week")`,
 }));
 
-// TODO: Legacy executive state persisted for compatibility while the client UI is rebuilt (UI removed 2025-09-19).
 // Executives table
 export const executives = pgTable("executives", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -539,7 +543,6 @@ export const insertWeeklyActionSchema = createInsertSchema(weeklyActions).omit({
   createdAt: true,
 });
 
-// TODO: Remove once executive persistence is retired with the new systems rollout.
 export const insertExecutiveSchema = createInsertSchema(executives).omit({
   id: true,
 });
@@ -591,7 +594,6 @@ export type InsertRelease = z.infer<typeof insertReleaseSchema>;
 export type ReleaseSong = typeof releaseSongs.$inferSelect;
 export type InsertReleaseSong = z.infer<typeof insertReleaseSongSchema>;
 
-// TODO: Clean up once the dialogue schema is retired with the executive system overhaul.
 export type DialogueChoice = typeof dialogueChoices.$inferSelect;
 
 export type GameEvent = typeof gameEvents.$inferSelect;

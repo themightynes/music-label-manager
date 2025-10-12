@@ -60,7 +60,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       if (change.source === 'global') {
         return 'global';
       }
-      if (change.source === 'weekly_routine') {
+      // BUGFIX: Match both 'weekly_routine' and 'weekly_drift' for natural mood changes
+      if (change.source === 'weekly_routine' || change.source === 'weekly_drift') {
         return 'routine';
       }
     }

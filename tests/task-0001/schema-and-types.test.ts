@@ -26,7 +26,7 @@ describe('Tier Unlock History - Schema and Types', () => {
     expect(sample.venue?.arenas).toBe(9)
   })
 
-  it('types: GameState has optional tierUnlockHistory of type TierUnlockHistory', () => {
-    expectTypeOf<GameState>().toHaveProperty('tierUnlockHistory').toEqualTypeOf<TierUnlockHistory | undefined>()
+  it('types: GameState has tierUnlockHistory of type Record<string, any>', () => {
+    expectTypeOf<GameState>().toHaveProperty('tierUnlockHistory').toEqualTypeOf<Record<string, any>>()
   })
 })

@@ -8,6 +8,15 @@ import React from 'react';
 import { Music, Award, Star } from 'lucide-react';
 import { getSeasonalMultiplierValue } from './seasonalCalculations';
 
+/**
+ * Universal marketing budget constraints applied to all channels
+ * Design decision: All channels share same accessibility range
+ */
+export const MARKETING_BUDGET_LIMITS = {
+  MIN: 500,
+  MAX: 15000
+} as const;
+
 export interface MarketingChannel {
   id: string;
   name: string;
@@ -48,8 +57,8 @@ export function getMarketingChannelsFromBalance(balanceData?: any): MarketingCha
     id: channelId,
     name: getChannelDisplayName(channelId),
     description: config.description || '',
-    minBudget: 500, // TODO: Add to balance data
-    maxBudget: 15000, // TODO: Add to balance data
+    minBudget: MARKETING_BUDGET_LIMITS.MIN,
+    maxBudget: MARKETING_BUDGET_LIMITS.MAX,
     effectiveness: config.effectiveness || 0.85,
     icon: getChannelIcon(channelId),
     targetAudience: getChannelAudience(channelId),

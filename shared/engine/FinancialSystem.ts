@@ -1629,7 +1629,6 @@ export class FinancialSystem {
    * @param gameId The game ID to get executives for
    * @param storage The storage instance to fetch executives
    * @returns Total executive salaries and breakdown by role
-   * TODO: Executive meetings UI was removed on 2025-09-19; confirm salaries should still run without player control.
    */
   async calculateExecutiveSalaries(
     gameId: string,
@@ -1731,24 +1730,24 @@ export class FinancialSystem {
     total: number;
     baseBurn: number;
     artistCosts: number;
-    artistDetails: Array<{name: string, weeklyFee: number}>;
+    artistDetails: Array<{name: string, weeklyCost: number}>;
   }> {
     const [min, max] = this.gameData.getWeeklyBurnRangeSync();
     const baseBurn = Math.round(this.getRandom(min, max));
     
     // Add actual artist costs from signed artists
     let artistCosts = 0;
-    let artistDetails: Array<{name: string, weeklyFee: number}> = [];
+    let artistDetails: Array<{name: string, weeklyCost: number}> = [];
     
     // Check if we received artist data directly (preferred) or need to fetch from storage
     if (Array.isArray(storageOrArtistData)) {
       // Artist data was passed directly - use it
       artistDetails = storageOrArtistData.map((artist: any) => ({
         name: artist.name,
-        weeklyFee: artist.weeklyFee || 1200
+        weeklyCost: artist.weeklyCost || 1200
       }));
       
-      artistCosts = artistDetails.reduce((sum, artist) => sum + artist.weeklyFee, 0);
+      artistCosts = artistDetails.reduce((sum, artist) => sum + artist.weeklyCost, 0);
       
       // console.log(`[ARTIST COSTS BREAKDOWN] Base operations: $${baseBurn}`);
       // console.log(`[ARTIST COSTS BREAKDOWN] Artist details:`, artistDetails);
@@ -1761,10 +1760,10 @@ export class FinancialSystem {
           const signedArtists = await storageOrArtistData.getArtistsByGame(gameStateId);
           artistDetails = signedArtists.map((artist: any) => ({
             name: artist.name,
-            weeklyFee: artist.weeklyFee || this.CONSTANTS.DEFAULT_ARTIST_FEE
+            weeklyCost: artist.weeklyCost || this.CONSTANTS.DEFAULT_ARTIST_FEE
           }));
           
-          artistCosts = artistDetails.reduce((sum, artist) => sum + artist.weeklyFee, 0);
+          artistCosts = artistDetails.reduce((sum, artist) => sum + artist.weeklyCost, 0);
           
           // console.log(`[ARTIST COSTS BREAKDOWN] Base operations: $${baseBurn}`);
           // console.log(`[ARTIST COSTS BREAKDOWN] Artist details:`, artistDetails);
@@ -1775,14 +1774,14 @@ export class FinancialSystem {
           // console.warn('[ARTIST COSTS] No artist data or storage provided, using default estimation');
           const estimatedArtists = 1;
           artistCosts = estimatedArtists * this.CONSTANTS.DEFAULT_ARTIST_FEE; // Use average cost as fallback
-          artistDetails = [{name: 'Estimated Artists', weeklyFee: artistCosts}];
+          artistDetails = [{name: 'Estimated Artists', weeklyCost: artistCosts}];
         }
       } catch (error) {
         // console.error('[ARTIST COSTS] Error fetching signed artists, using fallback calculation:', error);
         // Fallback estimation if database query fails
         const estimatedArtists = 1;
         artistCosts = estimatedArtists * 1200; // Use average cost as fallback
-        artistDetails = [{name: 'Estimated Artists', weeklyFee: artistCosts}];
+        artistDetails = [{name: 'Estimated Artists', weeklyCost: artistCosts}];
       }
     }
     
@@ -1806,7 +1805,6 @@ export class FinancialSystem {
     
     // Use the already-calculated operations costs from the expense breakdown
     // This ensures we don't recalculate with a different random value
-    // TODO: Executive costs remain in the breakdown even though the client UI no longer surfaces executive actions.
     const operations = {
       base: summary.expenseBreakdown?.weeklyOperations || 0,
       artists: summary.expenseBreakdown?.artistSalaries || 0,
@@ -1869,7 +1867,6 @@ export class FinancialSystem {
       parts.push(`- $${f.operations.artists.toLocaleString()} (artists)`);
     }
     if (f.operations.executives > 0) {
-      // TODO: Revisit once the executive system redesign ships; this line still reports hidden salaries to players.
       parts.push(`- $${f.operations.executives.toLocaleString()} (executives)`);
     }
     if (f.operations.signingBonuses > 0) {

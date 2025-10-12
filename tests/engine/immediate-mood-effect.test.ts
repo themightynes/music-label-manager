@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GameEngine } from '../../shared/engine/game-engine';
 import type { GameArtist, GameState, WeekSummary } from '../../shared/types/gameTypes';
 import type { IStorage } from '../../server/storage';
-import { createTestArtist } from '../helpers/test-factories';
+import type { Artist } from '../../shared/schema';
+import { createTestDBArtist } from '../helpers/test-factories';
 
 /**
  * Integration test to verify immediate artist_mood effects from executive meetings
@@ -17,14 +18,14 @@ import { createTestArtist } from '../helpers/test-factories';
 describe('Immediate Mood Effect Integration Test', () => {
   let mockStorage: Partial<IStorage>;
   let mockGameData: any;
-  let artists: GameArtist[];
+  let artists: Artist[];
 
   beforeEach(() => {
     artists = [];
 
     mockStorage = {
       getArtistsByGame: vi.fn(async () => artists),
-      updateArtist: vi.fn(async (id: string, updates: Partial<GameArtist>) => {
+      updateArtist: vi.fn(async (id: string, updates: Partial<Artist>) => {
         const artist = artists.find(a => a.id === id);
         if (artist) {
           Object.assign(artist, updates);
@@ -108,7 +109,7 @@ describe('Immediate Mood Effect Integration Test', () => {
 
   it('should apply immediate artist_mood effect from TEST meeting before depreciation', async () => {
     artists = [
-      createTestArtist({
+      createTestDBArtist({
         id: 'artist_test',
         name: 'Test Artist',
         mood: 67,
@@ -118,26 +119,29 @@ describe('Immediate Mood Effect Integration Test', () => {
     const gameState: GameState = {
       id: 'test-game-immediate-mood',
       userId: 'test-user',
-      playerName: 'Test Player',
-      labelName: 'Test Label',
       money: 100000,
       reputation: 50,
       currentWeek: 10,
       creativeCapital: 0,
-      artists,
-      projects: [],
-      releases: [],
-      activeEvents: [],
-      unlockedFeatures: [],
-      weeklyActions: [],
+      focusSlots: 3,
+      usedFocusSlots: 0,
+      arOfficeSlotUsed: false,
+      playlistAccess: 'none',
+      pressAccess: 'none',
+      venueAccess: 'none',
+      campaignType: 'Balanced',
+      campaignCompleted: false,
+      rngSeed: 'test-seed',
+      arOfficeSourcingType: null,
+      arOfficePrimaryGenre: null,
+      arOfficeSecondaryGenre: null,
+      arOfficeOperationStart: null,
       flags: {},
-      tierUnlockHistory: {
-        artist: {},
-        venue: {},
-        market: {},
-        employee: {}
-      }
-    } as GameState;
+      weeklyStats: {},
+      tierUnlockHistory: {},
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
     const engine = new GameEngine(gameState, mockGameData, mockStorage as IStorage);
     const summary = createSummary(gameState.currentWeek);
@@ -166,7 +170,7 @@ describe('Immediate Mood Effect Integration Test', () => {
 
   it('should apply immediate artist_mood globally to all artists', async () => {
     artists = [
-      {
+      createTestDBArtist({
         id: 'artist_1',
         name: 'Artist One',
         archetype: 'Visionary',
@@ -176,11 +180,9 @@ describe('Immediate Mood Effect Integration Test', () => {
         temperament: 50,
         energy: 50,
         mood: 40,
-        signed: true,
-        isSigned: true,
-        loyalty: 50
-      },
-      {
+        signed: true
+      }),
+      createTestDBArtist({
         id: 'artist_2',
         name: 'Artist Two',
         archetype: 'Workhorse',
@@ -190,11 +192,9 @@ describe('Immediate Mood Effect Integration Test', () => {
         temperament: 55,
         energy: 50,
         mood: 50,
-        signed: true,
-        isSigned: true,
-        loyalty: 50
-      },
-      {
+        signed: true
+      }),
+      createTestDBArtist({
         id: 'artist_3',
         name: 'Artist Three',
         archetype: 'Trendsetter',
@@ -204,35 +204,36 @@ describe('Immediate Mood Effect Integration Test', () => {
         temperament: 60,
         energy: 50,
         mood: 70,
-        signed: true,
-        isSigned: true,
-        loyalty: 50
-      }
-    ] as GameArtist[];
+        signed: true
+      })
+    ];
 
     const gameState: GameState = {
       id: 'test-game-global-immediate',
       userId: 'test-user',
-      playerName: 'Test Player',
-      labelName: 'Test Label',
       money: 100000,
       reputation: 50,
       currentWeek: 10,
       creativeCapital: 0,
-      artists,
-      projects: [],
-      releases: [],
-      activeEvents: [],
-      unlockedFeatures: [],
-      weeklyActions: [],
+      focusSlots: 3,
+      usedFocusSlots: 0,
+      arOfficeSlotUsed: false,
+      playlistAccess: 'none',
+      pressAccess: 'none',
+      venueAccess: 'none',
+      campaignType: 'Balanced',
+      campaignCompleted: false,
+      rngSeed: 'test-seed',
+      arOfficeSourcingType: null,
+      arOfficePrimaryGenre: null,
+      arOfficeSecondaryGenre: null,
+      arOfficeOperationStart: null,
       flags: {},
-      tierUnlockHistory: {
-        artist: {},
-        venue: {},
-        market: {},
-        employee: {}
-      }
-    } as GameState;
+      weeklyStats: {},
+      tierUnlockHistory: {},
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
     const engine = new GameEngine(gameState, mockGameData, mockStorage as IStorage);
     const summary = createSummary(gameState.currentWeek);

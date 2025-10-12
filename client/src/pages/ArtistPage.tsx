@@ -55,10 +55,8 @@ interface Artist {
   energy: number | null;
   mood: number | null;
   signed?: boolean | null;
-  isSigned?: boolean | null;
   signingCost?: number | null;
   weeklyCost?: number | null;
-  weeklyFee?: number | null;
   bio?: string;
   genre?: string;
   age?: number | null;
@@ -411,7 +409,7 @@ export default function ArtistPage() {
                 <h1 className="text-3xl font-bold text-white">{artist.name}</h1>
                 <div className="flex items-center space-x-2 mt-2">
                   <Badge variant="outline" className="text-xs bg-white/10 text-white border-white/20">{artist.archetype}</Badge>
-                  {artist.isSigned && (
+                  {artist.signed && (
                     <Badge className="text-xs bg-green-500/20 text-green-400 border-0">Signed</Badge>
                   )}
                 </div>
@@ -1074,7 +1072,7 @@ export default function ArtistPage() {
                   <div className="pt-3 border-t border-brand-purple/50">
                     <div className="text-sm text-white/70 mb-2">Weekly Cost</div>
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold">${(artist.weeklyCost || artist.weeklyFee || 0).toLocaleString()}</span>
+                      <span className="text-lg font-semibold">${(artist.weeklyCost || artist.weeklyCost || 0).toLocaleString()}</span>
                       <Badge variant="outline" className="text-xs">
                         Per Week
                       </Badge>

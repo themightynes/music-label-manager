@@ -1,8 +1,53 @@
 # Tasks: Artist Mood System - Phases 6-10 Implementation
 
-**Source**: `docs/01-planning/implementation-specs/[IN-PROGRESS] artist-mood-plan.md`
-**Status**: Phases 1-5 completed, implementing Phases 6-10
+**Status**: ⏸️ **PAUSED** after Phase 5 (2025-10-12)
+**Reason**: Core system is functional (Phases 1-5 complete). Enhancements (Phases 6-10) deferred pending player feedback on base mechanics.
+**Source**: [`docs/01-planning/implementation-specs/[IN-PROGRESS] artist-mood-plan.md`](../docs/01-planning/implementation-specs/[IN-PROGRESS] artist-mood-plan.md)
 **Implementation**: Incremental, following existing patterns
+
+## 📊 What's Complete (Phases 1-5)
+✅ **Phase 1**: Database constraints and validation
+✅ **Phase 2**: Visual mood indicators in UI
+✅ **Phase 3**: Mood calculation engine with multipliers
+✅ **Phase 4**: Mood impact on project quality
+✅ **Phase 5**: Monthly mood processing with workload/drift
+
+## ⏸️ What's Paused (Phases 6-10)
+⏸️ **Phase 6**: Dialogue integration (Task 2.0 - mostly complete, Task 2.4 was in progress)
+⏸️ **Phase 7**: Mood-triggered events and warnings (Task 3.0)
+⏸️ **Phase 8**: Enhanced UI feedback and recommendations (Task 4.0)
+⏸️ **Phase 9**: Advanced mood factors - project performance, archetypes (Task 5.0)
+⏸️ **Phase 10**: Mood analytics and predictions (Task 6.0)
+
+## 🔄 Resume Criteria
+Resume this work when:
+1. Players have experienced base mood system (Phases 1-5) in production
+2. Feedback indicates desire for more depth/complexity
+3. Current priority features are complete
+4. Team capacity available for enhancement work
+
+---
+
+## 🎯 Current Status (Updated 2025-10-11)
+
+**Recently Completed**:
+- ✅ **0002 Technical Debt** - Resolved all 4 items (commits f4e9bf1, 7742695, 829e151, e3cc72e)
+  - Unified artist change format to per-artist objects
+  - Added integration tests for database persistence
+  - Refactored mood processing for clarity
+  - Added type-safe helpers (`ArtistChangeHelpers`)
+- ✅ **0003 PRD** - Basic Artist Dialogue UI implemented
+
+**Impact on This Plan**:
+- **Task 2.3** is effectively complete - per-artist mood infrastructure is ready
+- **Task 2.6** is complete - `ArtistStatChange` interface and helpers exist in `shared/types/gameTypes.ts`
+- **Task 2.7** has a template - see `tests/engine/mood-persistence-integration.test.ts` for testing pattern
+
+**Next Steps**: Resume with **Task 2.4** (mood event logging for dialogue choices). The infrastructure is ready:
+- ✅ Per-artist accumulation works via `ArtistChangeHelpers.addMood(summary.artistChanges, artistId, value)`
+- ✅ Type-safe with `ArtistStatChange` interface
+- ✅ Integration test pattern available
+- ⏳ Just needs mood_events logging integration (follow pattern from `applyArtistChangesToDatabase()` line 2987-3008)
 
 ## Relevant Files
 
@@ -105,8 +150,10 @@
 
 ---
 
-### 2.0 Integrate mood changes with dialogue system (Phase 6 - Backend)
+### ✅ 2.0 Integrate mood changes with dialogue system (Phase 6 - Backend) - COMPLETE
 **Goal**: Process artist_mood effects from dialogue choices and track mood history
+
+**Status**: All subtasks complete (2.1-2.7) ✅ | Committed: 628d610
 
 - [x] 2.1 Review existing dialogue processing in GameEngine
   - ✅ Read `shared/engine/game-engine.ts` - found `processArtistDialogue()` at line 3577
@@ -124,35 +171,40 @@
   - ✅ Added fallback handling for missing dialogue choices
   - ⚠️ **ISSUE IDENTIFIED**: Current implementation applies mood globally to all artists via `applyEffects()` - needs per-artist targeting
 
-- [ ] 2.3 Fix dialogue mood to apply per-artist (not global)
-  - Current: `applyEffects()` uses global `summary.artistChanges.mood` (affects ALL artists)
-  - Required: Use per-artist pattern `summary.artistChanges[artistId]` (affects specific artist)
-  - Options: Either modify applyEffects to support per-artist context OR handle artist_mood separately in processArtistDialogue
-  - Follow existing pattern from project completions (line 3456-3459 in game-engine.ts)
+- [x] 2.3 Fix dialogue mood to apply per-artist (not global)
+  - ✅ VERIFIED: `applyEffects()` already uses per-artist pattern when artistId is provided
+  - ✅ Line 1164: `ArtistChangeHelpers.addMood(summary.artistChanges, artistId, value)`
+  - ✅ `processArtistDialogue()` correctly passes artistId to `applyEffects()` (lines 3932, 3953)
+  - ✅ Per-artist infrastructure from 0002 technical debt work is fully integrated
 
-- [ ] 2.4 Add mood event logging for dialogue choices
-  - Insert mood change records into `mood_events` table (from Phase 5)
-  - Store event_type as 'dialogue_choice'
-  - Include choice_id and dialogue_id in metadata
-  - Record mood_change amount and description
+- [x] 2.4 Add mood event logging for dialogue choices
+  - ✅ Extended `ArtistStatChange` interface with `eventSource` metadata (gameTypes.ts:363-369)
+  - ✅ Updated `applyEffects()` to set eventSource when processing mood changes (game-engine.ts:1169-1188)
+  - ✅ Modified `applyArtistChangesToDatabase()` to use eventSource for mood_events logging (game-engine.ts:3008-3047)
+  - ✅ Dialogue choices now logged with eventType='dialogue_choice', sceneId, and choiceId in metadata
+  - ✅ Executive meetings continue to log with eventType='executive_meeting'
 
-- [ ] 2.5 Update dialogue.json with mood effects
-  - Add `artist_mood` field to existing dialogue choices
-  - Start with 3-5 dialogue scenes for testing
-  - Use balanced values: -5 to +5 for most choices
-  - Document mood effect rationale in comments
+- [x] 2.5 Update dialogue.json with mood effects
+  - ✅ ALREADY COMPLETE: dialogue.json contains 9 dialogue scenes with artist_mood effects
+  - ✅ All 31 choices across all scenes have artist_mood values
+  - ✅ Values are balanced within -3 to +3 range (conservative, within -5 to +5 spec)
+  - ✅ Effects rationale documented in scene descriptions (emotional_state field)
 
-- [ ] 2.6 Update ChoiceEffect type if needed
-  - Verify `artist_mood` is properly typed in `shared/types/gameTypes.ts`
-  - Ensure TypeScript compilation passes
-  - Update JSDoc comments to document mood effects
+- [x] 2.6 Update ChoiceEffect type if needed
+  - ✅ ALREADY COMPLETE: `artist_mood` field exists in ChoiceEffect interface (gameTypes.ts:26)
+  - ✅ TypeScript compilation verified (pre-existing codebase errors unrelated to this work)
+  - ✅ Interface properly typed: `artist_mood?: number;`
 
-- [ ] 2.7 Write tests for dialogue mood integration
-  - Create `tests/features/mood-dialogue-integration.test.ts`
-  - Test: Dialogue choice with +5 mood increases artist mood by 5
-  - Test: Dialogue choice with -5 mood decreases artist mood by 5
-  - Test: Mood changes are logged to mood_events table
-  - Test: Mood respects 0-100 bounds (can't go below 0 or above 100)
+- [x] 2.7 Write tests for dialogue mood integration
+  - ✅ Created `tests/features/mood-dialogue-integration.test.ts` with 8 comprehensive tests
+  - ✅ Test: Positive mood effects (+5, +10) increase artist mood correctly
+  - ✅ Test: Negative mood effects (-5, -15) decrease artist mood correctly
+  - ✅ Test: Only targeted artist affected (per-artist targeting)
+  - ✅ Test: Mood events logged to mood_events table with eventType='dialogue_choice'
+  - ✅ Test: sceneId and choiceId stored in metadata
+  - ✅ Test: Multiple dialogue events for different artists
+  - ✅ Test: Mood respects 0-100 bounds (clamping works correctly)
+  - ✅ All 8 tests passing (1.56s)
 
 **Implementation Notes**:
 - artist_mood field already exists in ChoiceEffect interface

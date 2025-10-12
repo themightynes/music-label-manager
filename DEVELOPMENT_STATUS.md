@@ -229,6 +229,14 @@
   - [x] **All 8 Acceptance Criteria Verified**: Per-artist dialogue, global meetings, user-selected UI, predetermined selection
   - [x] **Result**: Artist mood effects now properly target individual artists or entire roster based on context
 
+#### **October 11, 2025 - Technical Debt Cleanup (0002-debt Item #1)**
+- [x] **Unified Artist Change Accumulation Format** (**COMPLETED**) - Resolved mixed object/number formats in `summary.artistChanges`
+  - [x] All artist stat changes (mood/energy/popularity) now use consistent per-artist object format throughout codebase
+  - [x] Eliminated legacy global number format for energy/popularity effects - now applied per-artist like mood
+  - [x] Updated `WeekSummary.artistChanges` type definition to enforce consistency (removed `number` type)
+  - [x] Tour popularity accumulation unified with meeting-based changes (removed special keying pattern)
+  - [x] Backward compatibility maintained at runtime for old save games during transition period
+
 #### **October 9, 2025 - Dashboard Artist Roster Refresh**
 - [x] **Avatar & Actions Integration** - Dashboard roster entries now reuse the Artists Landing Page avatar portraits and shadcn menu-based action launcher (Meet/Tour/Record/Release) so every signed artist has consistent visual identity and interactions across the app.
 - [x] **Condensed Dashboard Artist Card** - Introduced `ArtistDashboardCard.tsx`, a compact roster card showing name, archetype, status, and mood/energy/popularity badges; wired into `ArtistRoster.tsx` with stable sorting so cards render side-by-side without reordering after dialogue stat changes.

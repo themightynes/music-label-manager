@@ -3,20 +3,29 @@
  * Validates that mood values are properly constrained between 0 and 100
  */
 
-import { describe, it, expect, afterAll } from 'vitest';
-import { db, pool } from '../../server/db';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createTestDatabase, clearDatabase } from '../helpers/test-db';
 import { artists } from '../../shared/schema';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as schema from '../../shared/schema';
 import { sql } from 'drizzle-orm';
 
 describe('Artist Mood Database Constraints', () => {
-  afterAll(async () => {
-    // Clean up test data
+  let db: NodePgDatabase<typeof schema>;
+
+  beforeEach(async () => {
+    // Use test database and clear it before each test
+    db = createTestDatabase();
+    await clearDatabase(db);
+  });
+
+  afterEach(async () => {
+    // Clean up any test artists that were successfully created
     try {
       await db.delete(artists).where(sql`${artists.name} LIKE 'Test Artist%'`);
     } catch {
       // Ignore cleanup errors
     }
-    await pool.end();
   });
 
   it('should reject mood values greater than 100', async () => {
@@ -27,7 +36,7 @@ describe('Artist Mood Database Constraints', () => {
         mood: 101,
         gameId: '00000000-0000-0000-0000-000000000000'
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/check constraint|mood/i);
   });
 
   it('should reject mood values less than 0', async () => {
@@ -38,7 +47,7 @@ describe('Artist Mood Database Constraints', () => {
         mood: -1,
         gameId: '00000000-0000-0000-0000-000000000000'
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/check constraint|mood/i);
   });
 
   it('should default mood to 50 when not provided', async () => {

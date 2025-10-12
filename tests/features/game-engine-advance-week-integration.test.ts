@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { Pool } from 'pg';
 import { GameEngine } from '@shared/engine/game-engine';
 import { createTestDatabase, seedMinimalGame, clearDatabase } from '../helpers/test-db';
 import { DatabaseStorage } from '../../server/storage';
@@ -69,7 +70,7 @@ function createMockGameData() {
 }
 
 describe('GameEngine.advanceWeek() - Integration Tests', () => {
-  let db: NodePgDatabase<typeof schema>;
+  let db: NodePgDatabase<typeof schema> & { $client: Pool };
   let gameData: any;
   let storage: DatabaseStorage;
   let gameEngine: GameEngine;

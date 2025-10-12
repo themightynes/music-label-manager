@@ -81,8 +81,8 @@ export interface SideEvent {
 
 export interface DialogueScene {
   id: string;
-  speaker: string;
-  archetype: string;
+  speaker?: string; // Optional: not used in mood/energy-based dialogue system
+  archetype?: string; // Optional: not used in mood/energy-based dialogue system
   prompt: string;
   choices: DialogueChoice[];
 }
@@ -90,33 +90,38 @@ export interface DialogueScene {
 export type SourcingTypeString = 'active' | 'passive' | 'specialized';
 
 export interface GameState {
+  // Primary key
   id: string;
+
+  // Required fields with defaults (NOT NULL in DB)
   currentWeek: number;
   money: number;
   reputation: number;
   creativeCapital: number;
   focusSlots: number;
   usedFocusSlots: number;
-  // A&R Office state
-  arOfficeSlotUsed?: boolean;
-  arOfficeSourcingType?: SourcingTypeString | null;
-  arOfficePrimaryGenre?: string | null;
-  arOfficeSecondaryGenre?: string | null;
-  arOfficeOperationStart?: number | null;
+  arOfficeSlotUsed: boolean;
   playlistAccess: string;
   pressAccess: string;
   venueAccess: string;
   campaignType: string;
-  rngSeed: string;
+  campaignCompleted: boolean;
   flags: Record<string, any>;
   weeklyStats: Record<string, any>;
-  tierUnlockHistory?: TierUnlockHistory;
+  tierUnlockHistory: Record<string, any>;
+
+  // Nullable fields (can be NULL in DB)
+  userId: string | null;
+  arOfficeSourcingType: SourcingTypeString | null;
+  arOfficePrimaryGenre: string | null;
+  arOfficeSecondaryGenre: string | null;
+  arOfficeOperationStart: number | null;
+  rngSeed: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+
+  // Optional fields (added by application logic, not in DB schema)
   musicLabel?: MusicLabel;
-  // Optional database fields (from Drizzle schema)
-  userId?: string | null;
-  createdAt?: Date | string | null;
-  updatedAt?: Date | string | null;
-  campaignCompleted?: boolean | null;
 }
 
 export interface TierUnlockHistory {
@@ -340,6 +345,8 @@ export interface GameChange {
   newMood?: number;
   energyBoost?: number;
   newEnergy?: number;
+  loyaltyBoost?: number; // For executive loyalty tracking
+  newLoyalty?: number; // For executive loyalty tracking
   source?: string;
   artistId?: string;
 }
@@ -350,6 +357,120 @@ export interface EventOccurrence {
   occurred: boolean;
 }
 
+/**
+ * Type-safe artist stat changes (Tech Debt Item #4)
+ * Represents changes to mood, energy, and popularity for a single artist
+ */
+export interface ArtistStatChange {
+  mood?: number;
+  energy?: number;
+  popularity?: number;
+  // Task 2.4: Track event source for mood_events logging
+  eventSource?: {
+    type: 'executive_meeting' | 'dialogue_choice' | 'project_completion' | 'other';
+    sceneId?: string; // For dialogue choices
+    choiceId?: string; // For dialogue choices
+    meetingName?: string; // For executive meetings
+  };
+}
+
+/**
+ * Helper functions for type-safe artist stat accumulation
+ */
+export const ArtistChangeHelpers = {
+  /**
+   * Safely get an artist's stat changes, initializing if needed
+   */
+  getOrCreate(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): ArtistStatChange {
+    if (!artistChanges) return {};
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    return artistChanges[artistId];
+  },
+
+  /**
+   * Accumulate mood change for an artist
+   */
+  addMood(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string,
+    value: number
+  ): void {
+    if (!artistChanges) return;
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    const current = artistChanges[artistId].mood || 0;
+    artistChanges[artistId].mood = current + value;
+  },
+
+  /**
+   * Accumulate energy change for an artist
+   */
+  addEnergy(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string,
+    value: number
+  ): void {
+    if (!artistChanges) return;
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    const current = artistChanges[artistId].energy || 0;
+    artistChanges[artistId].energy = current + value;
+  },
+
+  /**
+   * Accumulate popularity change for an artist
+   */
+  addPopularity(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string,
+    value: number
+  ): void {
+    if (!artistChanges) return;
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    const current = artistChanges[artistId].popularity || 0;
+    artistChanges[artistId].popularity = current + value;
+  },
+
+  /**
+   * Get mood change for an artist (returns 0 if not set)
+   */
+  getMood(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): number {
+    return artistChanges?.[artistId]?.mood || 0;
+  },
+
+  /**
+   * Get energy change for an artist (returns 0 if not set)
+   */
+  getEnergy(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): number {
+    return artistChanges?.[artistId]?.energy || 0;
+  },
+
+  /**
+   * Get popularity change for an artist (returns 0 if not set)
+   */
+  getPopularity(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): number {
+    return artistChanges?.[artistId]?.popularity || 0;
+  },
+};
+
 export interface WeekSummary {
   week: number;
   changes: GameChange[];
@@ -358,8 +479,10 @@ export interface WeekSummary {
   streams?: number;
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
-  // Per-artist mood/energy/loyalty changes from meetings (Task 6.2)
-  artistChanges?: Record<string, number | { mood?: number; energy?: number; loyalty?: number }>;
+  // Per-artist stat changes (mood/energy/popularity) - UNIFIED FORMAT
+  // All artist changes now use consistent per-artist object format (Tech Debt #1 completed)
+  // Type-safe with ArtistStatChange interface (Tech Debt #4 completed)
+  artistChanges?: Record<string, ArtistStatChange>;
   expenseBreakdown?: {
     weeklyOperations: number;
     artistSalaries: number;

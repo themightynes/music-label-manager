@@ -640,7 +640,7 @@ export const useGameStore = create<GameStore>()(
           const response = await apiRequest('POST', `/api/game/${gameState.id}/artists`, {
             ...artistData,
             signedWeek: gameState.currentWeek,
-            isSigned: true
+            signed: true
           });
           const newArtist = await response.json();
           
@@ -931,7 +931,7 @@ export const useGameStore = create<GameStore>()(
                 talent: info.talent ?? 0,
                 popularity: info.popularity ?? 0,
                 genre: info.genre ?? null,
-                isSigned: false,
+                signed: false,
               } as any;
               artists = [synthesized];
             }

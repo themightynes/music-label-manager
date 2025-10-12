@@ -13,13 +13,13 @@ import type {
 } from '../types/gameTypes';
 
 // Zod validation schemas
-const ChoiceEffectSchema = z.record(z.number()).optional().default({});
+const ChoiceEffectSchema = z.record(z.number()).default({});
 
 const DialogueChoiceSchema = z.object({
   id: z.string(),
   label: z.string(),
-  effects_immediate: ChoiceEffectSchema,
-  effects_delayed: ChoiceEffectSchema
+  effects_immediate: ChoiceEffectSchema.default({}),
+  effects_delayed: ChoiceEffectSchema.default({})
 });
 
 const RoleMeetingSchema = z.object({
@@ -47,10 +47,14 @@ const TransitionalArtistSchema = ArtistSchema.extend({
   loyalty: z.number().optional(),
   signed: z.boolean().optional()
 }).transform(artist => {
-  const { loyalty, energy, ...rest } = artist;
+  const { loyalty, energy, signed, ...rest } = artist;
   return {
     ...rest,
-    energy: energy ?? loyalty ?? 50
+    energy: energy ?? loyalty ?? 50,
+    talent: artist.talent ?? 50, // Ensure talent is always a number
+    workEthic: artist.workEthic ?? 50,
+    temperament: artist.temperament ?? 50,
+    signed: signed ?? false // Ensure signed is always a boolean
   };
 });
 
@@ -72,8 +76,8 @@ const SideEventSchema = z.object({
 
 const DialogueSceneSchema = z.object({
   id: z.string(),
-  speaker: z.string().optional(),
-  archetype: z.string().optional(),
+  speaker: z.string().optional(), // Optional: not used in mood/energy-based dialogue system
+  archetype: z.string().optional(), // Optional: not used in mood/energy-based dialogue system
   prompt: z.string(),
   choices: z.array(DialogueChoiceSchema)
 }).passthrough();
@@ -403,8 +407,8 @@ export class GameDataLoader {
 
     const parsed = schema.parse(data);
 
-    const normalizeEffectKeys = (effects: Record<string, number> | undefined) => {
-      if (!effects) return effects;
+    const normalizeEffectKeys = (effects: Record<string, number> | undefined): ChoiceEffect => {
+      if (!effects) return {};
       if ('artist_loyalty' in effects && !('artist_energy' in effects)) {
         const { artist_loyalty, ...rest } = effects;
         return {

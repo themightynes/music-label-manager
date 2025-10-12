@@ -1,0 +1,2179 @@
+
+> rest-express@1.0.0 test:run
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mc:/Users/ulyan/music-label-manager[39m
+
+[90mstdout[2m | tests/features/artist-mood-constraints.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/endpoints/plan-release-ready-artists.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/features/artist-mood-constraints.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/endpoints/plan-release-ready-artists.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/features/artist-mood-constraints.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/endpoints/plan-release-ready-artists.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/unit/financial-system-venue-capacity.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/unit/financial-system-venue-capacity.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-targeting-integration.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/unit/financial-system-venue-capacity.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/unit/financial-system-venue-capacity.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/unit/financial-system-venue-capacity.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/unit/financial-system-venue-capacity.test.ts [2m([22m[2m57 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+[90mstdout[2m | tests/unit/chart-utils.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/engine/mood-targeting-integration.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | client/src/services/__tests__/artistDialogueService.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/unit/chart-utils.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-targeting-integration.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/unit/chart-utils.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/mood-targeting-integration.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | client/src/services/__tests__/artistDialogueService.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-targeting-integration.test.ts
+[22m[39m[Test Cleanup] Done!
+
+[90mstdout[2m | client/src/services/__tests__/artistDialogueService.test.ts
+[22m[39m[Test Setup] Database ready!
+
+ [32m✓[39m tests/engine/mood-targeting-integration.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+[90mstdout[2m | tests/unit/chart-utils.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/unit/chart-utils.test.ts
+[22m[39m[Test Cleanup] Done!
+
+[90mstdout[2m | client/src/services/__tests__/artistDialogueService.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | client/src/services/__tests__/artistDialogueService.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/unit/chart-utils.test.ts [2m([22m[2m50 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+[90mstdout[2m | tests/unit/chart-service-pure-functions.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+ [32m✓[39m client/src/services/__tests__/artistDialogueService.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+[90mstdout[2m | tests/unit/chart-service-pure-functions.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/unit/chart-service-pure-functions.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/unit/chart-service-pure-functions.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/unit/chart-service-pure-functions.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/unit/chart-service-pure-functions.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | client/src/components/executive-meetings/__tests__/ArtistSelector.test.tsx
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould accumulate +2 mood for all artists in summary.artistChanges
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +2 (target: all artists, scope: global, meeting: global, count: 3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould apply +2 mood to database for all artists
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +2 (target: all artists, scope: global, meeting: global, count: 3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould apply +2 mood to database for all artists
+[22m[39m[ARTIST CHANGES] Nova Sterling: mood 70 → 72 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould apply +2 mood to database for all artists
+[22m[39m[MOOD EVENT] Logged mood event for Nova Sterling: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould apply +2 mood to database for all artists
+[22m[39m[ARTIST CHANGES] Diego Rivers: mood 65 → 67 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould apply +2 mood to database for all artists
+[22m[39m[MOOD EVENT] Logged mood event for Diego Rivers: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould apply +2 mood to database for all artists
+[22m[39m[ARTIST CHANGES] Luna Park: mood 60 → 62 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould apply +2 mood to database for all artists
+[22m[39m[MOOD EVENT] Logged mood event for Luna Park: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould create mood events for all 3 artists
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +2 (target: all artists, scope: global, meeting: global, count: 3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould create mood events for all 3 artists
+[22m[39m[ARTIST CHANGES] Nova Sterling: mood 70 → 72 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould create mood events for all 3 artists
+[22m[39m[MOOD EVENT] Logged mood event for Nova Sterling: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould create mood events for all 3 artists
+[22m[39m[ARTIST CHANGES] Diego Rivers: mood 65 → 67 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould create mood events for all 3 artists
+[22m[39m[MOOD EVENT] Logged mood event for Diego Rivers: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould create mood events for all 3 artists
+[22m[39m[ARTIST CHANGES] Luna Park: mood 60 → 62 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould create mood events for all 3 artists
+[22m[39m[MOOD EVENT] Logged mood event for Luna Park: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mGlobal Meeting - CEO Priorities (+2 Mood)[2m > [22m[2mshould add summary change entry for global mood
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +2 (target: all artists, scope: global, meeting: global, count: 3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould preserve mood changes when processWeeklyMoodChanges runs
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +2 (target: all artists, scope: global, meeting: global, count: 3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould preserve mood changes when processWeeklyMoodChanges runs
+[22m[39m[ARTIST CHANGES] Nova Sterling: mood 70 → 72 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould preserve mood changes when processWeeklyMoodChanges runs
+[22m[39m[MOOD EVENT] Logged mood event for Nova Sterling: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould preserve mood changes when processWeeklyMoodChanges runs
+[22m[39m[ARTIST CHANGES] Diego Rivers: mood 65 → 67 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould preserve mood changes when processWeeklyMoodChanges runs
+[22m[39m[MOOD EVENT] Logged mood event for Diego Rivers: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould preserve mood changes when processWeeklyMoodChanges runs
+[22m[39m[ARTIST CHANGES] Luna Park: mood 60 → 62 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould preserve mood changes when processWeeklyMoodChanges runs
+[22m[39m[MOOD EVENT] Logged mood event for Luna Park: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould accumulate multiple mood effects in same week
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +2 (target: artist_nova, meeting: predetermined, accumulated: +2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mMood Not Being Overwritten[2m > [22m[2mshould accumulate multiple mood effects in same week
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +3 (target: artist_nova, meeting: dialogue, accumulated: +5)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mNegative Mood Changes[2m > [22m[2mshould apply negative mood correctly
+[22m[39m[EFFECT PROCESSING] Artist mood effect: -3 (target: all artists, scope: global, meeting: global, count: 3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mNegative Mood Changes[2m > [22m[2mshould apply negative mood correctly
+[22m[39m[ARTIST CHANGES] Nova Sterling: mood 70 → 67 (-3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mNegative Mood Changes[2m > [22m[2mshould apply negative mood correctly
+[22m[39m[MOOD EVENT] Logged mood event for Nova Sterling: -3
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mNegative Mood Changes[2m > [22m[2mshould apply negative mood correctly
+[22m[39m[ARTIST CHANGES] Diego Rivers: mood 65 → 62 (-3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mNegative Mood Changes[2m > [22m[2mshould apply negative mood correctly
+[22m[39m[MOOD EVENT] Logged mood event for Diego Rivers: -3
+
+[90mstdout[2m | client/src/machines/__tests__/artistDialogueMachine.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mNegative Mood Changes[2m > [22m[2mshould apply negative mood correctly
+[22m[39m[ARTIST CHANGES] Luna Park: mood 60 → 57 (-3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mNegative Mood Changes[2m > [22m[2mshould apply negative mood correctly
+[22m[39m[MOOD EVENT] Logged mood event for Luna Park: -3
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m=== STEP 1: Initial State ===
+Nova mood (before): [33m70[39m
+
+=== STEP 2: Apply Effects ===
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +2 (target: all artists, scope: global, meeting: global, count: 3)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39msummary.artistChanges: {
+  "artist_nova": {
+    "mood": 2
+  },
+  "artist_diego": {
+    "mood": 2
+  },
+  "artist_luna": {
+    "mood": 2
+  }
+}
+
+=== STEP 3: Apply to Database ===
+
+[90mstdout[2m | client/src/components/executive-meetings/__tests__/ArtistSelector.test.tsx
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m[ARTIST CHANGES] Nova Sterling: mood 70 → 72 (+2)
+
+[90mstdout[2m | client/src/components/executive-meetings/__tests__/ArtistSelector.test.tsx
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m[MOOD EVENT] Logged mood event for Nova Sterling: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m[ARTIST CHANGES] Diego Rivers: mood 65 → 67 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m[MOOD EVENT] Logged mood event for Diego Rivers: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m[ARTIST CHANGES] Luna Park: mood 60 → 62 (+2)
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39m[MOOD EVENT] Logged mood event for Luna Park: +2
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts[2m > [22m[2mMood Application Verification[2m > [22m[2mDebugging: Check What Happens in Full Week Processing[2m > [22m[2mshould show where mood gets lost during week processing
+[22m[39mNova mood (after applyArtistChangesToDatabase): [33m72[39m
+artistUpdates: [
+  [ [32m'artist_nova'[39m, { mood: [33m72[39m } ],
+  [ [32m'artist_diego'[39m, { mood: [33m67[39m } ],
+  [ [32m'artist_luna'[39m, { mood: [33m62[39m } ]
+]
+
+=== STEP 4: Check Mood Events ===
+Mood events created: [33m3[39m
+Nova mood event: {
+  artistId: [32m'artist_nova'[39m,
+  gameId: [32m'game_123'[39m,
+  eventType: [32m'executive_meeting'[39m,
+  moodChange: [33m2[39m,
+  moodBefore: [33m70[39m,
+  moodAfter: [33m72[39m,
+  description: [32m'Mood improved from executive meeting decision'[39m,
+  weekOccurred: [33m10[39m,
+  metadata: { source: [32m'meeting_choice'[39m, week: [33m10[39m }
+}
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/engine/mood-application-verification.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/engine/mood-application-verification.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+[90mstdout[2m | client/src/machines/__tests__/artistDialogueMachine.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | client/src/machines/__tests__/artistDialogueMachine.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | client/src/machines/__tests__/artistDialogueMachine.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | client/src/machines/__tests__/artistDialogueMachine.test.ts
+[22m[39m[Test Cleanup] Done!
+
+[90mstdout[2m | tests/task-0001/access-tier-badges-unlock-weeks.test.tsx
+[22m[39m[Test Setup] Initializing database...
+
+ [32m✓[39m client/src/machines/__tests__/artistDialogueMachine.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+[90mstdout[2m | tests/features/test-executive-meeting-machine.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/task-0001/access-tier-badges-unlock-weeks.test.tsx
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/task-0001/access-tier-badges-unlock-weeks.test.tsx
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/features/test-executive-meeting-machine.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/features/test-executive-meeting-machine.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | client/src/components/executive-meetings/__tests__/ArtistSelector.test.tsx
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | client/src/components/executive-meetings/__tests__/ArtistSelector.test.tsx
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m client/src/components/executive-meetings/__tests__/ArtistSelector.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 305[2mms[22m[39m
+[90mstdout[2m | client/src/components/__tests__/ArtistRoster.test.tsx
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | client/src/components/artist-dialogue/__tests__/ArtistDialogueModal.test.tsx
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | client/src/components/__tests__/ArtistRoster.test.tsx
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | client/src/components/__tests__/ArtistRoster.test.tsx
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | client/src/components/artist-dialogue/__tests__/ArtistDialogueModal.test.tsx
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | client/src/components/artist-dialogue/__tests__/ArtistDialogueModal.test.tsx
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/task-0001/access-tier-badges-unlock-weeks.test.tsx
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/task-0001/access-tier-badges-unlock-weeks.test.tsx
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/task-0001/access-tier-badges-unlock-weeks.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 368[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'00b0ded4-0960-46d0-b4ce-6673552cc122'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/endpoints/plan-release-ready-artists.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/endpoints/plan-release-ready-artists.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [31m❯[39m tests/endpoints/plan-release-ready-artists.test.ts [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1022[2mms[22m[39m
+   [32m✓[39m GET /api/game/:gameId/artists/ready-for-release - Bug Fix Verification[2m > [22mshould return empty array when no artists have ready songs[32m 209[2mms[22m[39m
+[31m   [31m×[31m GET /api/game/:gameId/artists/ready-for-release - Bug Fix Verification[2m > [22mshould exclude artists with only released songs[39m[33m 766[2mms[22m[39m
+[31m     → insert or update on table "songs" violates foreign key constraint "songs_game_id_game_states_id_fk"[39m
+[90mstdout[2m | client/src/components/__tests__/ArtistRoster.test.tsx
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | client/src/components/__tests__/ArtistRoster.test.tsx
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m client/src/components/__tests__/ArtistRoster.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 278[2mms[22m[39m
+[90mstdout[2m | tests/features/artist-mood-constraints.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/features/artist-mood-constraints.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/features/artist-mood-constraints.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1209[2mms[22m[39m
+   [33m[2m✓[22m[39m Artist Mood Database Constraints[2m > [22mshould reject mood values less than 0 [33m 393[2mms[22m[39m
+   [33m[2m✓[22m[39m Artist Mood Database Constraints[2m > [22mshould default mood to 50 when not provided [33m 403[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 00b0ded4-0960-46d0-b4ce-6673552cc122
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 00b0ded4-0960-46d0-b4ce-6673552cc122
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $1,684 (operations) = $98,316
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould increment the current week by 1
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1684[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1684[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1684[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m98316[39m
+[FINAL MONEY] Game state money updated to: [33m98316[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $1684, Final: $98316
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/test-executive-meeting-machine.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/features/test-executive-meeting-machine.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/features/test-executive-meeting-machine.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 1010[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'd9084051-c404-43cc-8e22-c4b27c270e89'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: d9084051-c404-43cc-8e22-c4b27c270e89
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: d9084051-c404-43cc-8e22-c4b27c270e89
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $1,977 (operations) = $98,023
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould deduct weekly operational costs
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1977[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1977[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1977[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m98023[39m
+[FINAL MONEY] Game state money updated to: [33m98023[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $1977, Final: $98023
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'160995b0-e69f-4019-b3aa-039c1af52d93'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 160995b0-e69f-4019-b3aa-039c1af52d93
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 160995b0-e69f-4019-b3aa-039c1af52d93
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $1,691 (operations) = $98,309
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould return a valid week summary
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1691[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1691[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1691[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m98309[39m
+[FINAL MONEY] Game state money updated to: [33m98309[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $1691, Final: $98309
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/engine/mood-system-unit-tests.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mBasic Week Advancement[2m > [22m[2mshould throw error if campaign already completed
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mtrue[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[DEBUG] Campaign already completed - throwing error
+
+[90mstdout[2m | tests/engine/mood-system-unit-tests.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-system-unit-tests.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/mood-system-unit-tests.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/engine/mood-system-unit-tests.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/engine/mood-system-unit-tests.test.ts [2m([22m[2m38 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+[90mstdout[2m | tests/unit/financial-system-streaming.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/unit/financial-system-streaming.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/unit/financial-system-streaming.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/unit/financial-system-streaming.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/engine/mood-targeting-prototype.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/unit/financial-system-streaming.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/unit/financial-system-streaming.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+[90mstdout[2m | tests/engine/mood-targeting-prototype.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-targeting-prototype.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/mood-targeting-prototype.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/engine/mood-targeting-prototype.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/engine/mood-targeting-prototype.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+[90mstdout[2m | tests/features/ar-office-machine.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/features/ar-office-machine.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/features/ar-office-machine.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/features/ar-office-machine.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/features/ar-office-machine.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/features/ar-office-machine.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+[90mstdout[2m | tests/engine/mood-event-logging.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'3845c2f6-5ea5-48d5-bf3b-0ff159c78e0f'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/engine/mood-event-logging.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-event-logging.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/mood-event-logging.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/engine/mood-event-logging.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/engine/mood-event-logging.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 3845c2f6-5ea5-48d5-bf3b-0ff159c78e0f
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 3845c2f6-5ea5-48d5-bf3b-0ff159c78e0f
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,093 (operations) = $97,907
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould calculate money correctly: start + revenue - expenses
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2093[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2093[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2093[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97907[39m
+[FINAL MONEY] Game state money updated to: [33m97907[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2093, Final: $97907
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/unit/financial-system-tour-calculations.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/unit/financial-system-tour-calculations.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/unit/financial-system-tour-calculations.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'360d08d5-0d4c-43ee-a18f-d1fcb2a4de0a'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/unit/financial-system-tour-calculations.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/unit/financial-system-tour-calculations.test.ts
+[22m[39m[Test Cleanup] Done!
+
+[90mstdout[2m | tests/unit/action-validation.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+ [32m✓[39m tests/unit/financial-system-tour-calculations.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+[90mstdout[2m | tests/unit/action-validation.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/unit/action-validation.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/unit/action-validation.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/unit/action-validation.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/unit/action-validation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 360d08d5-0d4c-43ee-a18f-d1fcb2a4de0a
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 360d08d5-0d4c-43ee-a18f-d1fcb2a4de0a
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,098 (operations) = $97,902
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould track revenue and expenses separately in summary
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2098[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2098[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2098[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97902[39m
+[FINAL MONEY] Game state money updated to: [33m97902[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2098, Final: $97902
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'9a17e722-0890-4a08-b98d-88ffab013242'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/engine/immediate-mood-effect.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/engine/immediate-mood-effect.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/immediate-mood-effect.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/immediate-mood-effect.test.ts[2m > [22m[2mImmediate Mood Effect Integration Test[2m > [22m[2mshould apply immediate artist_mood effect from TEST meeting before depreciation
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +5 (target: all artists, scope: global, count: 1)
+
+[90mstdout[2m | tests/engine/immediate-mood-effect.test.ts[2m > [22m[2mImmediate Mood Effect Integration Test[2m > [22m[2mshould apply immediate artist_mood globally to all artists
+[22m[39m[EFFECT PROCESSING] Artist mood effect: +5 (target: all artists, scope: global, count: 3)
+
+[90mstdout[2m | tests/engine/immediate-mood-effect.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/engine/immediate-mood-effect.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/engine/immediate-mood-effect.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 9a17e722-0890-4a08-b98d-88ffab013242
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 9a17e722-0890-4a08-b98d-88ffab013242
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/task-0001/schema-and-types.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $1,718 (operations) = $98,282
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mFinancial Calculations[2m > [22m[2mshould include weekly operational costs in changes
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1718[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1718[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1718[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m98282[39m
+[FINAL MONEY] Game state money updated to: [33m98282[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $1718, Final: $98282
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/task-0001/schema-and-types.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/task-0001/schema-and-types.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/task-0001/schema-and-types.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/task-0001/schema-and-types.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/task-0001/schema-and-types.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+[90mstdout[2m | tests/engine/mood-boundary-clamping.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'c92acc3f-6a31-49b4-b746-40c3a57baa69'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/engine/mood-boundary-clamping.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/engine/mood-boundary-clamping.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/engine/mood-boundary-clamping.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/engine/mood-boundary-clamping.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/engine/mood-boundary-clamping.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: c92acc3f-6a31-49b4-b746-40c3a57baa69
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: c92acc3f-6a31-49b4-b746-40c3a57baa69
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,479 (operations) = $97,521
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould include all required summary fields
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2479[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2479[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2479[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97521[39m
+[FINAL MONEY] Game state money updated to: [33m97521[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2479, Final: $97521
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/task-0001/unlock-toasts.test.tsx
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/task-0001/unlock-toasts.test.tsx
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/task-0001/unlock-toasts.test.tsx
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'811f68f5-d9e0-4b12-820d-c4a8bebd0f14'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/task-0001/unlock-toasts.test.tsx
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/task-0001/unlock-toasts.test.tsx
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/task-0001/unlock-toasts.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+[90mstdout[2m | tests/task-0001/game-engine-tier-unlock-history.test.ts
+[22m[39m[Test Setup] Initializing database...
+
+[90mstdout[2m | tests/task-0001/game-engine-tier-unlock-history.test.ts
+[22m[39m[Test DB] Connection verified
+
+[90mstdout[2m | tests/task-0001/game-engine-tier-unlock-history.test.ts
+[22m[39m[Test Setup] Database ready!
+
+[90mstdout[2m | tests/task-0001/game-engine-tier-unlock-history.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/task-0001/game-engine-tier-unlock-history.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/task-0001/game-engine-tier-unlock-history.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 811f68f5-d9e0-4b12-820d-c4a8bebd0f14
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 811f68f5-d9e0-4b12-820d-c4a8bebd0f14
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,349 (operations) = $97,651
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould track changes in an array
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2349[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2349[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2349[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97651[39m
+[FINAL MONEY] Game state money updated to: [33m97651[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2349, Final: $97651
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'a93eb230-58e0-4780-ad54-07b2c94de6c9'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: a93eb230-58e0-4780-ad54-07b2c94de6c9
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: a93eb230-58e0-4780-ad54-07b2c94de6c9
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $1,639 (operations) = $98,361
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mWeek Summary Structure[2m > [22m[2mshould initialize expense breakdown with all categories
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1639[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1639[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1639[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m98361[39m
+[FINAL MONEY] Game state money updated to: [33m98361[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $1639, Final: $98361
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'2ea860fc-147b-45ab-b14a-dae28bbbd254'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 2ea860fc-147b-45ab-b14a-dae28bbbd254
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 2ea860fc-147b-45ab-b14a-dae28bbbd254
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $1,727 (operations) = $98,273
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mState Persistence[2m > [22m[2mshould update game state object in place
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1727[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1727[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1727[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m98273[39m
+[FINAL MONEY] Game state money updated to: [33m98273[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $1727, Final: $98273
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'd675bbbc-7455-4407-a352-aa5d00cc88d4'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: d675bbbc-7455-4407-a352-aa5d00cc88d4
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: d675bbbc-7455-4407-a352-aa5d00cc88d4
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,027 (operations) = $97,973
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2027[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2027[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2027[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97973[39m
+[FINAL MONEY] Game state money updated to: [33m97973[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2027, Final: $97973
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m2[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'd675bbbc-7455-4407-a352-aa5d00cc88d4'[39m,
+  currentWeek: [33m3[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-15 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: d675bbbc-7455-4407-a352-aa5d00cc88d4
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: d675bbbc-7455-4407-a352-aa5d00cc88d4
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m3[39m
+[DEBUG] Not a payment week (3). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[FINANCIAL BREAKDOWN] $97,973 - $2,366 (operations) = $95,607
+[EMAIL GENERATION] Starting email generation for week [33m3[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[WEEKLY STATS] Saved week 2 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2366[39m, weekKey: [32m'week2'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m97973[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2366[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2366[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m95607[39m
+[FINAL MONEY] Game state money updated to: [33m95607[39m
+[MONEY UPDATE] Starting: $97973, Revenue: $0, Expenses: $2366, Final: $95607
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m3[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m3[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'd675bbbc-7455-4407-a352-aa5d00cc88d4'[39m,
+  currentWeek: [33m4[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-22 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: d675bbbc-7455-4407-a352-aa5d00cc88d4
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: d675bbbc-7455-4407-a352-aa5d00cc88d4
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m4[39m
+[DEBUG] Storage has getExecutivesByGame: [33mtrue[39m
+[DEBUG] Calling storage.getExecutivesByGame...
+[STORAGE] getExecutivesByGame called with gameId: d675bbbc-7455-4407-a352-aa5d00cc88d4
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[DEBUG] Executives returned from database: []
+[DEBUG] Number of executives found: [33m0[39m
+[DEBUG] No executives found for game: d675bbbc-7455-4407-a352-aa5d00cc88d4
+[DEBUG] executives value: []
+[DEBUG] Returning result: { total: [33m0[39m, breakdown: [] }
+========== EXECUTIVE SALARY CALCULATION END ==========
+
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[FINANCIAL BREAKDOWN] $95,607 - $2,488 (operations) = $93,119
+[EMAIL GENERATION] Starting email generation for week [33m4[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould advance through multiple weeks correctly
+[22m[39m[WEEKLY STATS] Saved week 3 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2488[39m, weekKey: [32m'week3'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m95607[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2488[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2488[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m93119[39m
+[FINAL MONEY] Game state money updated to: [33m93119[39m
+[MONEY UPDATE] Starting: $95607, Revenue: $0, Expenses: $2488, Final: $93119
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m4[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'395bd55b-d209-42d6-82c1-11b096f695de'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 395bd55b-d209-42d6-82c1-11b096f695de
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 395bd55b-d209-42d6-82c1-11b096f695de
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,256 (operations) = $97,744
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2256[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2256[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2256[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97744[39m
+[FINAL MONEY] Game state money updated to: [33m97744[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2256, Final: $97744
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m2[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'395bd55b-d209-42d6-82c1-11b096f695de'[39m,
+  currentWeek: [33m3[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-15 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 395bd55b-d209-42d6-82c1-11b096f695de
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 395bd55b-d209-42d6-82c1-11b096f695de
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m3[39m
+[DEBUG] Not a payment week (3). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[FINANCIAL BREAKDOWN] $97,744 - $2,260 (operations) = $95,484
+[EMAIL GENERATION] Starting email generation for week [33m3[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mMultiple Week Progression[2m > [22m[2mshould accumulate money changes across weeks
+[22m[39m[WEEKLY STATS] Saved week 2 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2260[39m, weekKey: [32m'week2'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m97744[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2260[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2260[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m95484[39m
+[FINAL MONEY] Game state money updated to: [33m95484[39m
+[MONEY UPDATE] Starting: $97744, Revenue: $0, Expenses: $2260, Final: $95484
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m3[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m0[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'5aedce33-9d0b-48b7-90d5-eee45434ea94'[39m,
+  currentWeek: [33m1[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-01 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 5aedce33-9d0b-48b7-90d5-eee45434ea94
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 5aedce33-9d0b-48b7-90d5-eee45434ea94
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m1[39m
+[DEBUG] Not a payment week (1). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,377 (operations) = $97,623
+[EMAIL GENERATION] Starting email generation for week [33m1[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle advancing from week 0
+[22m[39m[WEEKLY STATS] Saved week 0 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2377[39m, weekKey: [32m'week0'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2377[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2377[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97623[39m
+[FINAL MONEY] Game state money updated to: [33m97623[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2377, Final: $97623
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m1[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'b26469cd-0db2-4685-8f34-40ed8e008a12'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: b26469cd-0db2-4685-8f34-40ed8e008a12
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: b26469cd-0db2-4685-8f34-40ed8e008a12
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[FINANCIAL BREAKDOWN] $0 - $1,669 (operations) = $-1,669
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle zero starting money
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1669[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m0[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1669[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1669[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m-1669[39m
+[FINAL MONEY] Game state money updated to: [33m-1669[39m
+[MONEY UPDATE] Starting: $0, Revenue: $0, Expenses: $1669, Final: $-1669
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'f937468b-c447-43e8-b976-f0276ffa0370'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: f937468b-c447-43e8-b976-f0276ffa0370
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: f937468b-c447-43e8-b976-f0276ffa0370
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[FINANCIAL BREAKDOWN] $-5,000 - $1,636 (operations) = $-6,636
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle negative starting money
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1636[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m-5000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1636[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1636[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m-6636[39m
+[FINAL MONEY] Game state money updated to: [33m-6636[39m
+[MONEY UPDATE] Starting: $-5000, Revenue: $0, Expenses: $1636, Final: $-6636
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'5c10ff8a-3067-4a94-b0ce-a7d6858f36cf'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: 5c10ff8a-3067-4a94-b0ce-a7d6858f36cf
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: 5c10ff8a-3067-4a94-b0ce-a7d6858f36cf
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $1,505 (operations) = $98,495
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould advance week with no actions provided
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m1505[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m1505[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m1505[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m98495[39m
+[FINAL MONEY] Game state money updated to: [33m98495[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $1505, Final: $98495
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[DEBUG] GameEngine.advanceWeek ENTRY - starting execution
+[DEBUG] GameEngine current week: [33m1[39m
+[DEBUG] GameEngine campaign completed: [33mfalse[39m
+[DEBUG] GameEngine storage available: [33mtrue[39m
+[DEBUG] GameEngine storage.createEmails available: [33mtrue[39m
+[A&R DEBUG] About to process A&R with game state: { arOfficeSlotUsed: [90mundefined[39m, arOfficeSourcingType: [90mundefined[39m }
+[A&R DEBUG] Processing A&R operation: {
+  slotUsed: [90mundefined[39m,
+  sourcingType: [90mundefined[39m,
+  primaryGenre: [90mundefined[39m,
+  secondaryGenre: [90mundefined[39m,
+  gameId: [32m'bebc1851-e2e5-492e-b732-db5ef078ea55'[39m,
+  currentWeek: [33m2[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[WEEKLY ADVANCE] Processing 0 meeting actions first, then 0 other actions
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[CHART PROCESSING] Generated chart for week 2024-01-08 with 98 player entries
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[STORAGE] getExecutivesByGame called with gameId: bebc1851-e2e5-492e-b732-db5ef078ea55
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[STORAGE] Executives found: []
+[STORAGE] Number of executives: [33m0[39m
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[GAME-ENGINE] No executives found for game, skipping decay
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m
+========== EXECUTIVE SALARY CALCULATION START ==========
+[DEBUG] calculateExecutiveSalaries called with gameId: bebc1851-e2e5-492e-b732-db5ef078ea55
+[DEBUG] Storage provided: [33mtrue[39m
+[DEBUG] Current week: [33m2[39m
+[DEBUG] Not a payment week (2). Executives paid every 4 weeks.
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[FINANCIAL BREAKDOWN] $100,000 - $2,262 (operations) = $97,738
+[EMAIL GENERATION] Starting email generation for week [33m2[39m
+[EMAIL GENERATION] Checking for discovered artist: [90mundefined[39m
+[EMAIL GENERATION] Generated [33m1[39m emails
+[EMAIL GENERATION] Email categories: financial
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[EMAIL GENERATION] Successfully persisted [33m1[39m emails to database
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts[2m > [22m[2mGameEngine.advanceWeek() - Integration Tests[2m > [22m[2mAction Processing[2m > [22m[2mshould handle empty actions array
+[22m[39m[WEEKLY STATS] Saved week 1 stats: { revenue: [33m0[39m, streams: [33m0[39m, expenses: [33m2262[39m, weekKey: [32m'week1'[39m }
+
+[FINAL MONEY CALCULATION]
+[FINAL MONEY] Week start money: [33m100000[39m
+[FINAL MONEY] Total revenue this week: [33m0[39m
+[FINAL MONEY] Total expenses this week: [33m2262[39m
+[FINAL MONEY] Expense breakdown: {
+  weeklyOperations: [33m2262[39m,
+  artistSalaries: [33m0[39m,
+  executiveSalaries: [33m0[39m,
+  signingBonuses: [33m0[39m,
+  projectCosts: [33m0[39m,
+  marketingCosts: [33m0[39m,
+  roleMeetingCosts: [33m0[39m
+}
+[FINAL MONEY] Calculated final money: [33m97738[39m
+[FINAL MONEY] Game state money updated to: [33m97738[39m
+[MONEY UPDATE] Starting: $100000, Revenue: $0, Expenses: $2262, Final: $97738
+[DEBUG] GameEngine.advanceWeek returning: {
+  hasGameState: [33mtrue[39m,
+  hasSummary: [33mtrue[39m,
+  hasCampaignResults: [33mfalse[39m,
+  week: [33m2[39m,
+  resultType: [32m'object'[39m
+}
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | tests/features/game-engine-advance-week-integration.test.ts
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m tests/features/game-engine-advance-week-integration.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 4792[2mms[22m[39m
+   [33m[2m✓[22m[39m GameEngine.advanceWeek() - Integration Tests[2m > [22mBasic Week Advancement[2m > [22mshould increment the current week by 1 [33m 764[2mms[22m[39m
+   [33m[2m✓[22m[39m GameEngine.advanceWeek() - Integration Tests[2m > [22mBasic Week Advancement[2m > [22mshould deduct weekly operational costs [33m 553[2mms[22m[39m
+   [33m[2m✓[22m[39m GameEngine.advanceWeek() - Integration Tests[2m > [22mBasic Week Advancement[2m > [22mshould return a valid week summary [33m 476[2mms[22m[39m
+   [33m[2m✓[22m[39m GameEngine.advanceWeek() - Integration Tests[2m > [22mFinancial Calculations[2m > [22mshould calculate money correctly: start + revenue - expenses [33m 330[2mms[22m[39m
+   [33m[2m✓[22m[39m GameEngine.advanceWeek() - Integration Tests[2m > [22mMultiple Week Progression[2m > [22mshould advance through multiple weeks correctly [33m 312[2mms[22m[39m
+[90mstdout[2m | client/src/components/artist-dialogue/__tests__/ArtistDialogueModal.test.tsx
+[22m[39m[Test Cleanup] Closing database connection...
+
+[90mstdout[2m | client/src/components/artist-dialogue/__tests__/ArtistDialogueModal.test.tsx
+[22m[39m[Test Cleanup] Done!
+
+ [32m✓[39m client/src/components/artist-dialogue/__tests__/ArtistDialogueModal.test.tsx [2m([22m[2m29 tests[22m[2m)[22m[33m 7224[2mms[22m[39m
+   [33m[2m✓[22m[39m ArtistDialogueModal[2m > [22mComplete State[2m > [22mshould call onComplete callback [33m 5100[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m26 passed[39m[22m[90m (27)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m461 passed[39m[22m[90m (462)[39m
+[2m   Start at [22m 09:54:45
+[2m   Duration [22m 11.17s[2m (transform 3.00s, setup 24.71s, collect 7.81s, tests 17.37s, environment 27.74s, prepare 10.95s)[22m
+

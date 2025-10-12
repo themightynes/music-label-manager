@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GameEngine } from '@shared/engine/game-engine';
-import type { GameState, GameArtist, WeekSummary } from '@shared/types/gameTypes';
+import type { GameState, WeekSummary } from '@shared/types/gameTypes';
 import type { IStorage } from '../../server/storage';
-import { createTestArtist } from '../helpers/test-factories';
+import type { Artist } from '@shared/schema';
+import { createTestDBArtist, createTestGameState } from '../helpers/test-factories';
 
 /**
  * Mood Application Verification Tests
@@ -18,7 +19,7 @@ describe('Mood Application Verification', () => {
   let mockStorage: Partial<IStorage>;
   let mockGameData: any;
   let gameState: GameState;
-  let mockArtists: GameArtist[];
+  let mockArtists: Artist[];
   let capturedMoodEvents: any[];
   let artistUpdates: Map<string, any>;
 
@@ -28,7 +29,7 @@ describe('Mood Application Verification', () => {
 
     // Create mock artists with known initial moods
     mockArtists = [
-      createTestArtist({
+      createTestDBArtist({
         id: 'artist_nova',
         name: 'Nova Sterling',
         archetype: 'Visionary',
@@ -39,7 +40,7 @@ describe('Mood Application Verification', () => {
         energy: 75,
         mood: 70,  // Known starting mood
       }),
-      createTestArtist({
+      createTestDBArtist({
         id: 'artist_diego',
         name: 'Diego Rivers',
         archetype: 'Workhorse',
@@ -50,7 +51,7 @@ describe('Mood Application Verification', () => {
         energy: 80,
         mood: 65,  // Known starting mood
       }),
-      createTestArtist({
+      createTestDBArtist({
         id: 'artist_luna',
         name: 'Luna Park',
         archetype: 'Trendsetter',
@@ -142,18 +143,17 @@ describe('Mood Application Verification', () => {
     mockGameData.getPressCoverageConfigSync = mockGameData.getPressConfigSync;
 
     // Create game state
-    gameState = {
+    gameState = createTestGameState({
       id: 'game_123',
       currentWeek: 10,
       money: 50000,
       reputation: 50,
-      artists: mockArtists,
       rngSeed: '12345',
-    } as any;
+    });
   });
 
   describe('Global Meeting - CEO Priorities (+2 Mood)', () => {
-    it('should accumulate +2 mood for all artists in summary.artistChanges', () => {
+    it('should accumulate +2 mood for all artists in summary.artistChanges', async () => {
       const gameEngine = new GameEngine(gameState, mockGameData, mockStorage as IStorage);
 
       const summary: WeekSummary = {
@@ -170,7 +170,7 @@ describe('Mood Application Verification', () => {
       const effects = { artist_mood: 2 };
 
       // Apply with global scope (no artistId)
-      (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
+      await (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
 
       // Verify summary.artistChanges has +2 for each artist
       expect(summary.artistChanges).toBeDefined();
@@ -206,7 +206,7 @@ describe('Mood Application Verification', () => {
 
       // Apply global +2 mood effect
       const effects = { artist_mood: 2 };
-      (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
+      await (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
 
       // Process to database
       await (gameEngine as any).applyArtistChangesToDatabase(summary);
@@ -242,7 +242,7 @@ describe('Mood Application Verification', () => {
 
       // Apply global +2 mood effect
       const effects = { artist_mood: 2 };
-      (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
+      await (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
 
       // Process to database
       await (gameEngine as any).applyArtistChangesToDatabase(summary);
@@ -272,7 +272,7 @@ describe('Mood Application Verification', () => {
       expect(lunaEvent.moodAfter).toBe(62);
     });
 
-    it('should add summary change entry for global mood', () => {
+    it('should add summary change entry for global mood', async () => {
       const gameEngine = new GameEngine(gameState, mockGameData, mockStorage as IStorage);
 
       const summary: WeekSummary = {
@@ -287,7 +287,7 @@ describe('Mood Application Verification', () => {
 
       // Apply global +2 mood effect
       const effects = { artist_mood: 2 };
-      (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
+      await (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
 
       // Check summary.changes has entry
       expect(summary.changes).toHaveLength(1);
@@ -313,7 +313,7 @@ describe('Mood Application Verification', () => {
 
       // Apply meeting effect: +2 mood
       const effects = { artist_mood: 2 };
-      (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
+      await (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
 
       // Verify mood is accumulated
       expect((summary.artistChanges!['artist_nova'] as any).mood).toBe(2);
@@ -329,7 +329,7 @@ describe('Mood Application Verification', () => {
       expect(mockArtists[0].mood).toBe(72); // Nova
     });
 
-    it('should accumulate multiple mood effects in same week', () => {
+    it('should accumulate multiple mood effects in same week', async () => {
       const gameEngine = new GameEngine(gameState, mockGameData, mockStorage as IStorage);
 
       const summary: WeekSummary = {
@@ -343,10 +343,10 @@ describe('Mood Application Verification', () => {
       };
 
       // Apply first effect: +2 mood
-      (gameEngine as any).applyEffects({ artist_mood: 2 }, summary, 'artist_nova', undefined, 'predetermined');
+      await (gameEngine as any).applyEffects({ artist_mood: 2 }, summary, 'artist_nova', undefined, 'predetermined');
 
       // Apply second effect: +3 mood (from dialogue)
-      (gameEngine as any).applyEffects({ artist_mood: 3 }, summary, 'artist_nova', undefined, 'dialogue');
+      await (gameEngine as any).applyEffects({ artist_mood: 3 }, summary, 'artist_nova', undefined, 'dialogue');
 
       // Should accumulate to +5 total
       expect((summary.artistChanges!['artist_nova'] as any).mood).toBe(5);
@@ -369,7 +369,7 @@ describe('Mood Application Verification', () => {
 
       // Apply -3 mood effect
       const effects = { artist_mood: -3 };
-      (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
+      await (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
 
       await (gameEngine as any).applyArtistChangesToDatabase(summary);
 
@@ -407,7 +407,7 @@ describe('Mood Application Verification', () => {
       // Apply CEO Priorities: +2 mood
       console.log('\n=== STEP 2: Apply Effects ===');
       const effects = { artist_mood: 2 };
-      (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
+      await (gameEngine as any).applyEffects(effects, summary, undefined, undefined, 'global');
 
       console.log('summary.artistChanges:', JSON.stringify(summary.artistChanges, null, 2));
       // Should show: { "artist_nova": { "mood": 2 }, ... }

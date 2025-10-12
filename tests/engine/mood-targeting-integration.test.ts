@@ -201,7 +201,7 @@ describe('Mood Targeting Integration Tests', () => {
       expect((diegoChanges as any).mood).toBe(-2);
     });
 
-    it('should support mixed format (object and number) in artistChanges', () => {
+    it('should support unified object format with multiple stats in artistChanges', () => {
       const summary: WeekSummary = {
         week: 16,
         changes: [],
@@ -210,17 +210,14 @@ describe('Mood Targeting Integration Tests', () => {
         reputationChanges: {},
         events: [],
         artistChanges: {
-          'artist_nova': { mood: 5 },
-          'energy': 10, // Legacy global format
+          'artist_nova': { mood: 5, energy: 10 }, // UNIFIED FORMAT: All stats in per-artist objects
         },
       };
 
       const novaChanges = summary.artistChanges!['artist_nova'];
       expect(typeof novaChanges).toBe('object');
-
-      const energyValue = summary.artistChanges!['energy'];
-      expect(typeof energyValue).toBe('number');
-      expect(energyValue).toBe(10);
+      expect(novaChanges.mood).toBe(5);
+      expect(novaChanges.energy).toBe(10);
     });
   });
 

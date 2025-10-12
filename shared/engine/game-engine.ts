@@ -16,7 +16,8 @@ import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
 import { AchievementsEngine } from './AchievementsEngine';
-import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence } from '../types/gameTypes';
+import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
+import { ArtistChangeHelpers } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 
 // Re-export WeekSummary for backward compatibility
@@ -865,7 +866,7 @@ export class GameEngine {
             effects[key] = value;
           }
         }
-        this.applyEffects(effects, summary, undefined, 'global'); // Global targeting (safe fallback default)
+        await this.applyEffects(effects, summary, undefined, 'global'); // Global targeting (safe fallback default)
       }
       return;
     }
@@ -882,7 +883,7 @@ export class GameEngine {
 
     if (targetScope === 'predetermined') {
       // Predetermined: Select artist with highest popularity
-      const selectedArtist = this.selectHighestPopularityArtist();
+      const selectedArtist = await this.selectHighestPopularityArtist();
       if (selectedArtist) {
         targetArtistId = selectedArtist.id;
         console.log(`[GAME-ENGINE] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity})`);
@@ -895,10 +896,13 @@ export class GameEngine {
         ?? (action.details as Record<string, any> | undefined)?.selectedArtistId
         ?? (action.metadata as Record<string, any> | undefined)?.metadata?.selectedArtistId;
       if (targetArtistId) {
-        const artist = this.gameState.artists?.find(a => a.id === targetArtistId);
-        console.log(`[GAME-ENGINE] User-selected targeting: Player selected ${artist?.name || targetArtistId}`);
+        // BUGFIX: Removed gameState.artists lookup (property doesn't exist)
+        // Artist name will be logged in applyArtistChangesToDatabase()
+        console.log(`[GAME-ENGINE] User-selected targeting: Player selected artist ${targetArtistId}`);
       } else {
-        console.warn(`[GAME-ENGINE] User-selected targeting failed: No selectedArtistId in metadata`);
+        // BUGFIX: Throw error early instead of continuing with undefined artistId
+        // This prevents the error from occurring later in applyEffects validation
+        throw new Error(`[GAME-ENGINE ERROR] user_selected meeting '${actionId}' requires an artist selection but none was provided. Please select an artist before processing this meeting.`);
       }
     } else {
       // Global: No artistId (applies to all artists)
@@ -914,7 +918,7 @@ export class GameEngine {
           effects[key] = value;
         }
       }
-      this.applyEffects(effects, summary, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+      await this.applyEffects(effects, summary, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
     }
 
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
@@ -1048,8 +1052,15 @@ export class GameEngine {
    * Handles edge cases: 0 artists (null), 1 artist (auto-select), ties (random)
    * Per FR-10 (Predetermined meeting logic)
    */
-  private selectHighestPopularityArtist(): Artist | null {
-    const signedArtists = this.gameState.artists?.filter(a => a.isSigned) || [];
+  private async selectHighestPopularityArtist(): Promise<Artist | null> {
+    // Load signed artists from storage (BUGFIX: was using non-existent gameState.artists)
+    if (!this.storage?.getArtistsByGame) {
+      console.warn('[ARTIST SELECTION] Storage not available for artist selection');
+      return null;
+    }
+
+    const allArtists = await this.storage.getArtistsByGame(this.gameState.id);
+    const signedArtists = allArtists.filter((a: Artist) => a.signed);
 
     // Edge case: No signed artists
     if (signedArtists.length === 0) {
@@ -1064,8 +1075,8 @@ export class GameEngine {
     }
 
     // Find highest popularity
-    const maxPopularity = Math.max(...signedArtists.map(a => a.popularity || 0));
-    const topArtists = signedArtists.filter(a => (a.popularity || 0) === maxPopularity);
+    const maxPopularity = Math.max(...signedArtists.map((a: Artist) => a.popularity || 0));
+    const topArtists = signedArtists.filter((a: Artist) => (a.popularity || 0) === maxPopularity);
 
     // Handle tie-breaking with random selection
     if (topArtists.length > 1) {
@@ -1082,6 +1093,17 @@ export class GameEngine {
   }
 
   /**
+   * Load signed artists from storage (helper method)
+   */
+  private async loadSignedArtists(): Promise<Artist[]> {
+    if (!this.storage?.getArtistsByGame) {
+      return [];
+    }
+    const allArtists = await this.storage.getArtistsByGame(this.gameState.id);
+    return allArtists.filter((a: Artist) => a.signed);
+  }
+
+  /**
    * Applies immediate effects to game state
    * @param effects - Effects to apply
    * @param summary - Week summary to update
@@ -1090,7 +1112,7 @@ export class GameEngine {
    * @param meetingName - Optional meeting name for logging
    * @param choiceId - Optional choice ID for logging
    */
-  private applyEffects(effects: Record<string, number>, summary: WeekSummary, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): void {
+  private async applyEffects(effects: Record<string, number>, summary: WeekSummary, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
     for (const [key, value] of Object.entries(effects)) {
       switch (key) {
         case 'money':
@@ -1141,35 +1163,45 @@ export class GameEngine {
 
           if (artistId) {
             // Per-artist targeting: Apply mood change to specific artist
-            // Initialize artist-specific changes if missing
-            if (!summary.artistChanges[artistId]) {
-              summary.artistChanges[artistId] = {};
-            }
+            ArtistChangeHelpers.addMood(summary.artistChanges, artistId, value);
 
-            // Apply mood change to specific artist
-            const previousMoodChange = (summary.artistChanges[artistId] as any).mood || 0;
-            (summary.artistChanges[artistId] as any).mood = previousMoodChange + value;
+            // BUGFIX: Removed gameState.artists validation (property doesn't exist)
+            // Artist existence will be validated in applyArtistChangesToDatabase()
 
-            // Validate artist exists in game state
-            const artist = this.gameState.artists?.find(a => a.id === artistId);
-            if (!artist) {
-              console.error(`[EFFECT ERROR] Artist not found: ${artistId}. Mood effect skipped.`);
-              break;
+            // Task 2.4: Set event source metadata for mood_events logging
+            if (!summary.artistChanges[artistId].eventSource) {
+              // Determine event type from targetScope and parameters
+              if (targetScope === 'dialogue' || choiceId) {
+                summary.artistChanges[artistId].eventSource = {
+                  type: 'dialogue_choice',
+                  sceneId: meetingName, // meetingName contains sceneId for dialogue
+                  choiceId: choiceId
+                };
+              } else if (targetScope && ['predetermined', 'user_selected', 'global'].includes(targetScope)) {
+                summary.artistChanges[artistId].eventSource = {
+                  type: 'executive_meeting',
+                  meetingName: meetingName
+                };
+              } else {
+                summary.artistChanges[artistId].eventSource = {
+                  type: 'other'
+                };
+              }
             }
 
             // Add comprehensive logging with all debugging context (Task 2.2 & 2.3)
-            const logParts = [`target: ${artist.name}`];
+            const logParts = [`target: ${artistId}`];
             if (targetScope) logParts.push(`scope: ${targetScope}`);
             if (meetingName) logParts.push(`meeting: ${meetingName}`);
             if (choiceId) logParts.push(`choice: ${choiceId}`);
-            const accumulated = (summary.artistChanges[artistId] as any).mood;
+            const accumulated = ArtistChangeHelpers.getMood(summary.artistChanges, artistId);
             logParts.push(`accumulated: ${accumulated > 0 ? '+' : ''}${accumulated}`);
             console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
 
-            // Add to summary changes for UI display
+            // Add to summary changes for UI display (will be enriched with artist name in applyArtistChangesToDatabase)
             summary.changes.push({
               type: 'mood',
-              description: `${artist.name}'s morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+              description: `Artist morale ${value > 0 ? 'improved' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
               amount: value,
               moodChange: value,
               artistId: artistId,
@@ -1177,12 +1209,13 @@ export class GameEngine {
             });
 
             // Validation: Warn if accumulated changes are extreme
-            if (Math.abs((summary.artistChanges[artistId] as any).mood) > 10) {
-              console.warn(`[EFFECT VALIDATION] Large accumulated mood change for ${artist.name}: ${(summary.artistChanges[artistId] as any).mood}`);
+            if (Math.abs(accumulated) > 10) {
+              console.warn(`[EFFECT VALIDATION] Large accumulated mood change for artist ${artistId}: ${accumulated}`);
             }
           } else {
             // Global targeting: Apply mood change to all signed artists (FR-15)
-            const signedArtists = this.gameState.artists?.filter(a => a.isSigned) || [];
+            // BUGFIX: Load from storage instead of non-existent gameState.artists
+            const signedArtists = await this.loadSignedArtists();
 
             if (signedArtists.length === 0) {
               console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
@@ -1191,17 +1224,7 @@ export class GameEngine {
 
             // Iterate through all signed artists and apply mood change to each
             signedArtists.forEach(artist => {
-              // Initialize artistChanges if missing
-              if (!summary.artistChanges) summary.artistChanges = {};
-
-              // Initialize artist-specific changes if missing
-              if (!summary.artistChanges[artist.id]) {
-                summary.artistChanges[artist.id] = {};
-              }
-
-              // Apply mood change to each artist
-              const previousMoodChange = (summary.artistChanges[artist.id] as any).mood || 0;
-              (summary.artistChanges[artist.id] as any).mood = previousMoodChange + value;
+              ArtistChangeHelpers.addMood(summary.artistChanges, artist.id, value);
             });
 
             // Add comprehensive logging for global effect (Task 2.2 & 2.3)
@@ -1222,8 +1245,7 @@ export class GameEngine {
 
             // Validation: Warn if accumulated changes are extreme for any artist
             signedArtists.forEach(artist => {
-              if (!summary.artistChanges) return;
-              const artistMoodChange = (summary.artistChanges[artist.id] as any).mood || 0;
+              const artistMoodChange = ArtistChangeHelpers.getMood(summary.artistChanges, artist.id);
               if (Math.abs(artistMoodChange) > 10) {
                 console.warn(`[EFFECT VALIDATION] Large accumulated mood change for ${artist.name}: ${artistMoodChange}`);
               }
@@ -1232,48 +1254,80 @@ export class GameEngine {
           break;
           
         case 'artist_energy':
-          // Enhanced effect processing with validation and logging
+          // UNIFIED FORMAT: Apply energy change to all signed artists using per-artist objects
+          // This matches the artist_mood global targeting pattern for consistency
           if (!summary.artistChanges) summary.artistChanges = {};
-          const previousEnergyChange = summary.artistChanges.energy || 0;
-          summary.artistChanges.energy = previousEnergyChange + value;
-          
+
+          // Load all signed artists to apply energy change globally
+          const signedArtistsForEnergy = await this.loadSignedArtists();
+
+          if (signedArtistsForEnergy.length === 0) {
+            console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+            break;
+          }
+
+          // Apply energy change to each signed artist (per-artist object format)
+          signedArtistsForEnergy.forEach(artist => {
+            ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, value);
+          });
+
           // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.energy})`);
-          
+          console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForEnergy.length} signed artists`);
+
           // Add to summary changes for UI display (using mood type with energyBoost field)
+          // BUGFIX: Set moodChange for UI badge display (WeekSummary uses moodChange || 0)
           summary.changes.push({
             type: 'mood',
-            description: `Artist energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            description: `All artists' energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
             energyBoost: value,
-            amount: value
+            amount: value,
+            moodChange: value // Add moodChange so UI badge shows correct value
           });
-          
+
           // Validation: Warn if accumulated changes are extreme
-          if (Math.abs(summary.artistChanges.energy) > 10) {
-            console.warn(`[EFFECT VALIDATION] Large accumulated energy change: ${summary.artistChanges.energy}`);
-          }
+          signedArtistsForEnergy.forEach(artist => {
+            const artistEnergyChange = ArtistChangeHelpers.getEnergy(summary.artistChanges, artist.id);
+            if (Math.abs(artistEnergyChange) > 10) {
+              console.warn(`[EFFECT VALIDATION] Large accumulated energy change for ${artist.name}: ${artistEnergyChange}`);
+            }
+          });
           break;
-          
+
         case 'artist_popularity':
-          // Enhanced effect processing with validation and logging
+          // UNIFIED FORMAT: Apply popularity change to all signed artists using per-artist objects
+          // This matches the artist_mood global targeting pattern for consistency
           if (!summary.artistChanges) summary.artistChanges = {};
-          const previousPopularityChange = summary.artistChanges.popularity || 0;
-          summary.artistChanges.popularity = previousPopularityChange + value;
-          
+
+          // Load all signed artists to apply popularity change globally
+          const signedArtistsForPopularity = await this.loadSignedArtists();
+
+          if (signedArtistsForPopularity.length === 0) {
+            console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+            break;
+          }
+
+          // Apply popularity change to each signed artist (per-artist object format)
+          signedArtistsForPopularity.forEach(artist => {
+            ArtistChangeHelpers.addPopularity(summary.artistChanges, artist.id, value);
+          });
+
           // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (accumulated: ${summary.artistChanges.popularity})`);
-          
+          console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForPopularity.length} signed artists`);
+
           // Add to summary changes for UI display
           summary.changes.push({
             type: 'popularity',
-            description: `Artist popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+            description: `All artists' popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
             amount: value
           });
-          
+
           // Validation: Warn if accumulated changes are extreme
-          if (Math.abs(summary.artistChanges.popularity) > 10) {
-            console.warn(`[EFFECT VALIDATION] Large accumulated popularity change: ${summary.artistChanges.popularity}`);
-          }
+          signedArtistsForPopularity.forEach(artist => {
+            const artistPopularityChange = ArtistChangeHelpers.getPopularity(summary.artistChanges, artist.id);
+            if (Math.abs(artistPopularityChange) > 10) {
+              console.warn(`[EFFECT VALIDATION] Large accumulated popularity change for ${artist.name}: ${artistPopularityChange}`);
+            }
+          });
           break;
       }
     }
@@ -1390,7 +1444,7 @@ export class GameEngine {
     total: number;
     baseBurn: number;
     artistCosts: number;
-    artistDetails: Array<{name: string, weeklyFee: number}>;
+    artistDetails: Array<{name: string, weeklyCost: number}>;
   }> {
     return this.financialSystem.calculateWeeklyBurnWithBreakdown(
       this.gameState.id || '',
@@ -1678,12 +1732,10 @@ export class GameEngine {
 
                 if (popularityBonus > 0) {
                   // Accumulate popularity bonus in summary.artistChanges for processing by processWeeklyPopularityChanges
-                  const popularityKey = `${song.artistId}_popularity`;
                   if (!summary.artistChanges) {
                     summary.artistChanges = {};
                   }
-                  summary.artistChanges[popularityKey] = (summary.artistChanges[popularityKey] || 0) + popularityBonus;
-
+                  ArtistChangeHelpers.addPopularity(summary.artistChanges, song.artistId, popularityBonus);
                 }
               }
             } catch (error) {
@@ -1984,14 +2036,13 @@ export class GameEngine {
         // Apply mood boost for successful release
         if (release.artistId) {
           const moodBoost = (release.type === 'album' || release.type === 'ep') ? 20 : 5;
-          
+
           // Track mood change for later application in processWeeklyMoodChanges
           if (!summary.artistChanges) {
             summary.artistChanges = {};
           }
-          summary.artistChanges[release.artistId] = 
-            (summary.artistChanges[release.artistId] || 0) + moodBoost;
-          
+          ArtistChangeHelpers.addMood(summary.artistChanges, release.artistId, moodBoost);
+
           console.log(`[PLANNED RELEASE] Artist mood boost +${moodBoost} for releasing "${release.title}" (${release.type})`);
         }
         
@@ -2855,15 +2906,9 @@ export class GameEngine {
               const meetingName = (value as any).meetingName;
               const choiceId = (value as any).choiceId;
 
-              // Validate artist still exists before applying (FR-19 edge case)
-              const artist = this.gameState.artists?.find((a: GameArtist) => a.id === artistId);
-              if (!artist) {
-                console.warn(`[DELAYED EFFECTS] Delayed effect cancelled: artist ${artistId} no longer on roster (effects: ${JSON.stringify(effects)})`);
-                triggeredKeys.push(key);
-                continue;
-              }
-
-              console.log(`[DELAYED EFFECTS] Processing artist-targeted delayed effects for ${artist.name}:`, effects);
+              // BUGFIX: Removed gameState.artists validation (property doesn't exist)
+              // Artist existence will be validated in applyArtistChangesToDatabase()
+              console.log(`[DELAYED EFFECTS] Processing artist-targeted delayed effects for artist ${artistId}:`, effects);
 
               // Use applyEffects() with artist targeting for delayed effects (Task 2.5)
               const delayedEffectsRecord: Record<string, number> = {};
@@ -2874,15 +2919,15 @@ export class GameEngine {
               }
 
               // Apply delayed effects with artist targeting and context
-              this.applyEffects(delayedEffectsRecord, summary, artistId, targetScope, meetingName, choiceId);
+              await this.applyEffects(delayedEffectsRecord, summary, artistId, targetScope, meetingName, choiceId);
 
               summary.changes.push({
                 type: 'delayed_effect',
-                description: `Delayed effect triggered for ${artist.name}`
+                description: `Delayed effect triggered for artist ${artistId}`
               });
             } else {
               // Old-style delayed effect (global, no scope validation)
-              this.applyEffects((value as any).effects || {}, summary, undefined, undefined);
+              await this.applyEffects((value as any).effects || {}, summary, undefined, undefined);
               summary.changes.push({
                 type: 'delayed_effect',
                 description: 'Delayed effect triggered'
@@ -2906,9 +2951,10 @@ export class GameEngine {
   }
 
   /**
-   * Apply per-artist mood/energy/loyalty changes from meetings to database
+   * Apply per-artist mood/energy changes from meetings to database
    * Task 6.2: Updated to support per-artist mood targeting with database logging
-   * Processes changes accumulated in summary.artistChanges[artistId].mood/energy/loyalty
+   * Processes changes accumulated in summary.artistChanges[artistId].mood/energy
+   * Note: Artist loyalty was refactored to energy
    */
   private async applyArtistChangesToDatabase(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     // Check if there are any artist changes to apply
@@ -2940,8 +2986,8 @@ export class GameEngine {
         continue;
       }
 
-      // Skip if no mood/energy/loyalty changes for this artist
-      if (!changes.mood && !changes.energy && !changes.loyalty) {
+      // Skip if no mood/energy changes for this artist
+      if (!changes.mood && !changes.energy) {
         continue;
       }
 
@@ -2963,24 +3009,42 @@ export class GameEngine {
 
         console.log(`[ARTIST CHANGES] ${artist.name}: mood ${currentMood} → ${newMood} (${changes.mood > 0 ? '+' : ''}${changes.mood})`);
 
-        // Task 6.2: Log mood event to database with artist targeting
+        // Task 2.4 & 6.2: Log mood event to database with event source detection
         if (canLogMoodEvents) {
           try {
+            // Determine event type and metadata from eventSource (Task 2.4)
+            const eventSource = changes.eventSource || { type: 'other' };
+            let eventType: string;
+            let description: string;
+            const metadata: Record<string, any> = { week: this.gameState.currentWeek };
+
+            if (eventSource.type === 'dialogue_choice') {
+              eventType = 'dialogue_choice';
+              description = `Mood ${changes.mood > 0 ? 'improved' : 'decreased'} from dialogue choice`;
+              if (eventSource.sceneId) metadata.sceneId = eventSource.sceneId;
+              if (eventSource.choiceId) metadata.choiceId = eventSource.choiceId;
+            } else if (eventSource.type === 'executive_meeting') {
+              eventType = 'executive_meeting';
+              description = `Mood ${changes.mood > 0 ? 'improved' : 'decreased'} from executive meeting decision`;
+              metadata.source = 'meeting_choice';
+              if (eventSource.meetingName) metadata.meetingName = eventSource.meetingName;
+            } else {
+              eventType = 'other';
+              description = `Mood ${changes.mood > 0 ? 'improved' : 'decreased'}`;
+            }
+
             await this.storage.createMoodEvent({
               artistId: artistId,
               gameId: this.gameState.id,
-              eventType: 'executive_meeting',
+              eventType,
               moodChange: changes.mood,
               moodBefore: currentMood,
               moodAfter: newMood,
-              description: `Mood ${changes.mood > 0 ? 'improved' : 'decreased'} from executive meeting decision`,
+              description,
               weekOccurred: this.gameState.currentWeek,
-              metadata: {
-                source: 'meeting_choice',
-                week: this.gameState.currentWeek
-              }
+              metadata
             }, dbTransaction);
-            console.log(`[MOOD EVENT] Logged mood event for ${artist.name}: ${changes.mood > 0 ? '+' : ''}${changes.mood}`);
+            console.log(`[MOOD EVENT] Logged ${eventType} mood event for ${artist.name}: ${changes.mood > 0 ? '+' : ''}${changes.mood}`);
           } catch (error) {
             console.error(`[MOOD EVENT] Failed to log mood event for ${artist.name}:`, error);
           }
@@ -2997,15 +3061,8 @@ export class GameEngine {
         console.log(`[ARTIST CHANGES] ${artist.name}: energy ${currentEnergy} → ${newEnergy} (${changes.energy > 0 ? '+' : ''}${changes.energy})`);
       }
 
-      // Apply loyalty change
-      if (changes.loyalty && changes.loyalty !== 0) {
-        const currentLoyalty = artist.loyalty || 50;
-        const newLoyalty = Math.max(0, Math.min(100, currentLoyalty + changes.loyalty));
-        updates.loyalty = newLoyalty;
-        hasUpdates = true;
-
-        console.log(`[ARTIST CHANGES] ${artist.name}: loyalty ${currentLoyalty} → ${newLoyalty} (${changes.loyalty > 0 ? '+' : ''}${changes.loyalty})`);
-      }
+      // Artist loyalty was refactored to energy - no longer tracking loyalty for artists
+      // (Executives still have loyalty tracking)
 
       // Update the artist in database
       if (hasUpdates) {
@@ -3019,102 +3076,167 @@ export class GameEngine {
       if (typeof changes === 'object') {
         changes.mood = 0;
         changes.energy = 0;
-        changes.loyalty = 0;
       }
     }
   }
 
   /**
    * Process weekly mood changes for all artists
+   * Orchestrates mood calculations from multiple sources:
+   * 1. Release-based changes (success/failure)
+   * 2. Workload stress (too many projects)
+   * 3. Natural drift toward neutral (50)
    */
   private async processWeeklyMoodChanges(summary: WeekSummary): Promise<void> {
-    // Get artists from storage if available
-    if (!this.storage || !this.storage.getArtistsByGame) {
-      return;
-    }
-    
+    // Get artists and projects from storage
+    if (!this.storage || !this.storage.getArtistsByGame) return;
     const artists = await this.storage.getArtistsByGame(this.gameState.id);
     if (!artists || artists.length === 0) return;
-    
-    // Get projects from storage if available
-    const projects = this.storage.getProjectsByGame ? 
+    const projects = this.storage.getProjectsByGame ?
       await this.storage.getProjectsByGame(this.gameState.id) : [];
-    
-    for (const artist of artists) {
-      let moodChange = 0;
-      const currentMood = artist.mood || 50;
-      
-      // Apply any release-based mood changes (from processPlannedReleases)
-      // Handle both object format (new) and number format (legacy)
-      const artistChange = summary.artistChanges?.[artist.id];
-      let releaseMoodBoost = 0;
-      if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
-        releaseMoodBoost = (artistChange as any).mood || 0;
-      } else if (typeof artistChange === 'number') {
-        releaseMoodBoost = artistChange;
-      }
 
-      if (releaseMoodBoost !== 0) {
-        moodChange += releaseMoodBoost;
-        summary.changes.push({
-          type: 'mood',
-          description: `${artist.name}'s mood ${releaseMoodBoost > 0 ? 'improved from successful release' : 'decreased from poor tour performance'} (${releaseMoodBoost > 0 ? '+' : ''}${releaseMoodBoost})`,
-          amount: releaseMoodBoost,
-          moodChange: releaseMoodBoost,
-          artistId: artist.id
-        });
-      }
-      
-      // Count active projects for this artist
-      const activeProjects = projects.filter(
-        (p: any) => p.artistId === artist.id && 
-        ['recording', 'mixing', 'mastering'].includes(p.stage)
-      ).length;
-      
-      // Workload stress: -5 mood per project beyond 2
-      if (activeProjects > 2) {
-        const workloadPenalty = (activeProjects - 2) * -5;
-        moodChange += workloadPenalty;
-        summary.changes.push({
-          type: 'mood',
-          description: `${artist.name} is stressed from workload (${activeProjects} active projects)`,
-          amount: workloadPenalty,
-          moodChange: workloadPenalty,
-          artistId: artist.id
-        });
-      }
-      
-      // Natural drift toward 50 (by 3 points max)
-      if (currentMood > 55) {
-        moodChange -= 3;
-      } else if (currentMood < 45) {
-        moodChange += 3;
-      }
-      
-      // Apply mood change
-      if (moodChange !== 0) {
-        const newMood = Math.max(0, Math.min(100, currentMood + moodChange));
-        
-        // Update artist mood in storage
-        if (this.storage.updateArtist) {
-          await this.storage.updateArtist(artist.id, { mood: newMood });
+    // Process each artist
+    for (const artist of artists) {
+      const currentMood = artist.mood || 50;
+
+      // Calculate mood changes from each source (order matters for drift calculation!)
+      const releaseMoodBoost = this.calculateReleaseMoodBoost(artist, summary);
+      const workloadPenalty = this.calculateWorkloadStressPenalty(artist, projects, summary);
+      const moodAfterImmediate = currentMood + releaseMoodBoost + workloadPenalty;
+      const naturalDrift = this.calculateNaturalMoodDrift(artist, moodAfterImmediate, summary);
+
+      // Calculate total mood change
+      const totalMoodChange = releaseMoodBoost + workloadPenalty + naturalDrift;
+
+      // Apply to database if changed
+      if (totalMoodChange !== 0) {
+        const newMood = Math.max(0, Math.min(100, currentMood + totalMoodChange));
+        await this.storage.updateArtist(artist.id, { mood: newMood });
+
+        // Log summary entry if non-drift changes occurred
+        if (totalMoodChange !== naturalDrift) {
+          summary.changes.push({
+            type: 'mood',
+            description: `${artist.name}'s mood ${totalMoodChange > 0 ? 'improved' : 'decreased'}`,
+            amount: totalMoodChange,
+            moodChange: totalMoodChange,
+            artistId: artist.id,
+            source: 'weekly_routine'
+          });
         }
-        
-        // Track change - always show the total mood change
-        summary.changes.push({
-          type: 'mood',
-          description: `${artist.name}'s mood ${moodChange > 0 ? 'improved' : 'decreased'}`,
-          amount: moodChange,
-          moodChange: moodChange, // UI expects moodChange field
-          artistId: artist.id,
-          source: 'weekly_routine' // Distinguish from meeting effects
-        });
       }
     }
   }
 
   /**
+   * Calculate mood boost/penalty from releases completed this week
+   * Reads from summary.artistChanges (unified format)
+   *
+   * @param artist - The artist to calculate mood boost for
+   * @param summary - Week summary containing artist changes
+   * @returns Numeric mood change from releases (positive or negative)
+   */
+  private calculateReleaseMoodBoost(
+    artist: any,
+    summary: WeekSummary
+  ): number {
+    // Get mood boost from releases (uses type-safe helper)
+    const releaseMoodBoost = ArtistChangeHelpers.getMood(summary.artistChanges, artist.id);
+
+    // Add UI feedback if boost occurred
+    if (releaseMoodBoost !== 0) {
+      summary.changes.push({
+        type: 'mood',
+        description: `${artist.name}'s mood ${releaseMoodBoost > 0 ? 'improved from successful release' : 'decreased from poor tour performance'} (${releaseMoodBoost > 0 ? '+' : ''}${releaseMoodBoost})`,
+        amount: releaseMoodBoost,
+        moodChange: releaseMoodBoost,
+        artistId: artist.id
+      });
+    }
+
+    return releaseMoodBoost;
+  }
+
+  /**
+   * Calculate mood penalty from artist workload
+   * Artists with >2 active projects get stressed: -5 mood per extra project
+   *
+   * @param artist - The artist to calculate workload penalty for
+   * @param projects - All projects in the game
+   * @param summary - Week summary to add change entries to
+   * @returns Numeric mood penalty from workload (0 or negative)
+   */
+  private calculateWorkloadStressPenalty(
+    artist: any,
+    projects: any[],
+    summary: WeekSummary
+  ): number {
+    // Count active projects for this artist
+    const activeProjects = projects.filter(
+      (p: any) => p.artistId === artist.id &&
+      ['recording', 'mixing', 'mastering'].includes(p.stage)
+    ).length;
+
+    // Apply stress penalty if overworked
+    if (activeProjects > 2) {
+      const workloadPenalty = (activeProjects - 2) * -5;
+
+      summary.changes.push({
+        type: 'mood',
+        description: `${artist.name} is stressed from workload (${activeProjects} active projects)`,
+        amount: workloadPenalty,
+        moodChange: workloadPenalty,
+        artistId: artist.id
+      });
+
+      return workloadPenalty;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Calculate natural mood drift toward neutral (50)
+   * IMPORTANT: Must be called AFTER calculating immediate mood changes
+   * to preserve bugfix logic (drift based on post-change mood, not pre-change)
+   *
+   * @param artist - The artist to calculate drift for
+   * @param moodAfterImmediate - Artist's mood after release and workload changes
+   * @param summary - Week summary to add change entries to
+   * @returns Numeric mood drift amount (+3, -3, or 0)
+   */
+  private calculateNaturalMoodDrift(
+    artist: any,
+    moodAfterImmediate: number,
+    summary: WeekSummary
+  ): number {
+    // Natural drift toward 50 (by 3 points max)
+    let driftAmount = 0;
+
+    if (moodAfterImmediate > 55) {
+      driftAmount = -3;
+    } else if (moodAfterImmediate < 45) {
+      driftAmount = 3;
+    }
+
+    // Log drift as separate change entry if it occurred
+    if (driftAmount !== 0) {
+      summary.changes.push({
+        type: 'mood',
+        description: `${artist.name}'s mood ${driftAmount > 0 ? 'naturally improved' : 'naturally decreased'} (drift toward 50)`,
+        amount: driftAmount,
+        moodChange: driftAmount,
+        artistId: artist.id,
+        source: 'weekly_drift'
+      });
+    }
+
+    return driftAmount;
+  }
+
+  /**
    * Process weekly popularity changes for all artists
+   * UNIFIED FORMAT: Now reads from per-artist objects (artistChanges[artistId].popularity)
    * Mirrors processWeeklyMoodChanges pattern for consistency
    */
   private async processWeeklyPopularityChanges(summary: WeekSummary): Promise<void> {
@@ -3130,9 +3252,9 @@ export class GameEngine {
       let popularityChange = 0;
       const currentPopularity = artist.popularity || 0;
 
-      // Apply any popularity changes accumulated in summary (tours, streaming, etc.)
-      const popularityBoostValue = summary.artistChanges?.[`${artist.id}_popularity`];
-      const popularityBoost = typeof popularityBoostValue === 'number' ? popularityBoostValue : 0;
+      // UNIFIED FORMAT: Read from per-artist object (uses type-safe helper)
+      const popularityBoost = ArtistChangeHelpers.getPopularity(summary.artistChanges, artist.id);
+
       if (popularityBoost > 0) {
         popularityChange += popularityBoost;
       }
@@ -3694,20 +3816,17 @@ export class GameEngine {
         summary.artistChanges = {};
       }
 
-      // Store per-artist mood changes using new object format
+      // Store per-artist mood changes using unified object format
       if (!summary.artistChanges[artistId] || typeof summary.artistChanges[artistId] !== 'object') {
         summary.artistChanges[artistId] = {};
       }
-      const artistChange = summary.artistChanges[artistId] as { mood?: number; energy?: number; loyalty?: number };
+      const artistChange = summary.artistChanges[artistId] as { mood?: number; energy?: number; popularity?: number };
       artistChange.mood = (artistChange.mood || 0) + moodChange;
 
-      // Store per-artist popularity changes using popularity key (old format, kept for compatibility)
+      // UNIFIED FORMAT: Store per-artist popularity changes using consistent object format
+      // This matches the mood and energy pattern for consistency
       if (popularityChange > 0) {
-        const popularityKey = `${artistId}_popularity`;
-        if (typeof summary.artistChanges[popularityKey] !== 'number') {
-          summary.artistChanges[popularityKey] = 0;
-        }
-        (summary.artistChanges[popularityKey] as number) += popularityChange;
+        artistChange.popularity = (artistChange.popularity || 0) + popularityChange;
       }
 
       // Add changes to summary for player visibility
@@ -3853,7 +3972,7 @@ export class GameEngine {
             effects[key] = value;
           }
         }
-        this.applyEffects(effects, summary, artistId, 'dialogue', sceneId, choiceId); // Pass all context for logging (Task 2.2)
+        await this.applyEffects(effects, summary, artistId, 'dialogue', sceneId, choiceId); // Pass all context for logging (Task 2.2)
       }
       return;
     }
@@ -3874,7 +3993,7 @@ export class GameEngine {
           effects[key] = value;
         }
       }
-      this.applyEffects(effects, summary, artistId, 'dialogue', sceneId, choiceId); // Pass all context for logging (Task 2.2)
+      await this.applyEffects(effects, summary, artistId, 'dialogue', sceneId, choiceId); // Pass all context for logging (Task 2.2)
     }
 
     // Queue delayed effects for next week with artist targeting (Task 2.5)
