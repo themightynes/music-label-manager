@@ -29,6 +29,7 @@ import BugReportsPage from '@/pages/BugReportsPage';
 import UXPrototypesPage from '@/pages/UXPrototypesPage';
 import MoodSystemPrototypePage from '@/pages/prototypes/MoodSystemPrototypePage';
 import AdminHome from "@/admin/AdminLayout";
+import ActionsViewer from "@/admin/ActionsViewer";
 import { withAdmin } from "@/admin/withAdmin";
 
 function Router() {
@@ -46,6 +47,7 @@ function Router() {
 
       {/* Admin routes */}
       <Route path="/admin" component={withAdmin(AdminHome)} />
+      <Route path="/admin/actions-viewer" component={withAdmin(ActionsViewer)} />
       <Route path="/admin/quality-tester" component={withAdmin(QualityTester)} />
       <Route path="/admin/tour-variance-tester" component={withAdmin(TourVarianceTesterPage)} />
       <Route path="/admin/popularity-tester" component={withAdmin(PopularityTester)} />

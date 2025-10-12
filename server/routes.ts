@@ -3928,6 +3928,112 @@ const musicLabelData = {
     }
   });
 
+  // Actions configuration endpoints (Admin only)
+  app.get('/api/admin/actions-config', requireClerkUser, requireAdmin, async (req, res) => {
+    try {
+      const actionsPath = path.join(process.cwd(), 'data', 'actions.json');
+      const configData = await fs.readFile(actionsPath, 'utf8');
+      const config = JSON.parse(configData);
+      res.json(config);
+    } catch (error) {
+      console.error('Failed to load actions config:', error);
+      res.status(500).json({ error: 'Failed to load actions configuration' });
+    }
+  });
+
+  app.post('/api/admin/actions-config', requireClerkUser, requireAdmin, async (req, res) => {
+    try {
+      const { config } = req.body;
+
+      if (!config) {
+        return res.status(400).json({ error: 'Configuration data is required' });
+      }
+
+      // Validate using the schema from gameDataLoader
+      const actionsSchema = z.object({
+        version: z.string(),
+        generated: z.string().optional(),
+        description: z.string().optional(),
+        weekly_actions: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          type: z.string(),
+          icon: z.string(),
+          description: z.string().optional(),
+          role_id: z.string().optional(),
+          meeting_id: z.string().optional(),
+          category: z.string(),
+          project_type: z.string().optional(),
+          campaign_type: z.string().optional(),
+          prompt: z.string().optional(),
+          prompt_before_selection: z.string().optional(),
+          target_scope: z.enum(['global', 'predetermined', 'user_selected']).optional(),
+          choices: z.array(z.any()).optional(),
+          details: z.object({
+            cost: z.string(),
+            duration: z.string(),
+            prerequisites: z.string(),
+            outcomes: z.array(z.string()),
+            benefits: z.array(z.string())
+          }).optional(),
+          recommendations: z.object({
+            urgent_when: z.record(z.any()).optional(),
+            recommended_when: z.record(z.any()).optional(),
+            reasons: z.record(z.string()).optional()
+          }).optional()
+        }).passthrough()),
+        action_categories: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          icon: z.string(),
+          description: z.string(),
+          color: z.string()
+        })).optional()
+      }).passthrough();
+
+      // Validate the configuration
+      try {
+        actionsSchema.parse(config);
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          return res.status(400).json({
+            error: 'Invalid actions configuration structure',
+            details: validationError.errors
+          });
+        }
+        throw validationError;
+      }
+
+      const actionsPath = path.join(process.cwd(), 'data', 'actions.json');
+
+      // Create backup before overwriting
+      const backupPath = path.join(process.cwd(), 'data', 'actions.json.backup');
+      try {
+        const existingData = await fs.readFile(actionsPath, 'utf8');
+        await fs.writeFile(backupPath, existingData, 'utf8');
+        console.log('Created backup at', backupPath);
+      } catch (backupError) {
+        console.warn('Failed to create backup, continuing with save:', backupError);
+      }
+
+      // Write the new configuration
+      const formattedConfig = JSON.stringify(config, null, 2);
+      await fs.writeFile(actionsPath, formattedConfig, 'utf8');
+
+      res.json({
+        success: true,
+        message: 'Actions configuration updated successfully',
+        backupCreated: true
+      });
+    } catch (error) {
+      console.error('Failed to save actions config:', error);
+      res.status(500).json({
+        error: 'Failed to save actions configuration',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Streaming decay testing endpoint
   app.post('/api/game/:gameId/test/streaming-decay', requireClerkUser, async (req, res) => {
     try {
