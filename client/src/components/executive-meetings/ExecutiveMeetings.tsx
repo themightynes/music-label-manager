@@ -353,6 +353,8 @@ export function ExecutiveMeetings({
                     arOfficeStatus={arOfficeStatus}
                     flipAvatar={true}
                     alignContent="left"
+                    isSelected={context.selectedExecutive?.role === executive.role}
+                    compactBadges={!!context.selectedExecutive}
                   />
                 ))}
               </div>
@@ -374,6 +376,8 @@ export function ExecutiveMeetings({
                     arOfficeStatus={arOfficeStatus}
                     badgesOnLeft={true}
                     alignContent="right"
+                    isSelected={context.selectedExecutive?.role === executive.role}
+                    compactBadges={!!context.selectedExecutive}
                   />
                 ))}
               </div>
@@ -388,6 +392,8 @@ export function ExecutiveMeetings({
                     onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive: ceoExecutive })}
                     weeklySalary={roleSalaries['ceo']}
                     arOfficeStatus={arOfficeStatus}
+                    isSelected={context.selectedExecutive?.role === ceoExecutive.role}
+                    compactBadges={!!context.selectedExecutive}
                   />
                 )}
               </div>

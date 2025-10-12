@@ -128,10 +128,13 @@ export default function ActionsViewer() {
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
   const [modifiedActions, setModifiedActions] = useState<Map<string, Action>>(new Map());
+  const [newActions, setNewActions] = useState<Action[]>([]);
+  const [deletedActionIds, setDeletedActionIds] = useState<Set<string>>(new Set());
   const [editingPrompt, setEditingPrompt] = useState<{actionId: string; field: 'prompt' | 'prompt_before_selection'} | null>(null);
   const [expandedChoices, setExpandedChoices] = useState<Map<string, Set<string>>>(new Map()); // actionId -> Set of choiceIds
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [deleteConfirmActionId, setDeleteConfirmActionId] = useState<string | null>(null);
   const { toast} = useToast();
 
   // Get unique roles from actions
@@ -164,9 +167,25 @@ export default function ActionsViewer() {
   // Get target scope options
   const getTargetScopeOptions = () => {
     return [
-      { value: 'global', label: 'Global', description: 'Affects all artists' },
-      { value: 'predetermined', label: 'Predetermined', description: 'Affects specific artists' },
-      { value: 'user_selected', label: 'User Selected', description: 'Player chooses artist' }
+      {
+        value: 'global',
+        label: 'Global (🌍)',
+        description: 'Affects ALL signed artists equally',
+        example: 'CEO sets quarterly goals that boost everyone\'s morale'
+      },
+      {
+        value: 'predetermined',
+        label: 'Predetermined (⭐)',
+        description: 'Automatically selects artist with highest popularity',
+        example: 'Crisis management where most popular artist handles media'
+      },
+      {
+        value: 'user_selected',
+        label: 'User Selected (👤)',
+        description: 'Player chooses which artist is affected',
+        example: 'Strategic decision where player picks artist for single strategy',
+        required: 'Requires prompt_before_selection field and {artistName} placeholder'
+      }
     ];
   };
 
@@ -193,7 +212,13 @@ export default function ActionsViewer() {
 
   // Filter actions based on search and filters
   const filteredActions = useMemo(() => {
-    return data.weekly_actions.filter(action => {
+    // Combine original actions (excluding deleted) and new actions
+    const allActions = [
+      ...data.weekly_actions.filter(a => !deletedActionIds.has(a.id)),
+      ...newActions
+    ];
+
+    return allActions.filter(action => {
       const matchesSearch = searchTerm === '' ||
         action.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         action.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -204,7 +229,7 @@ export default function ActionsViewer() {
 
       return matchesSearch && matchesScope && matchesRole;
     });
-  }, [searchTerm, selectedScope, selectedRole]);
+  }, [searchTerm, selectedScope, selectedRole, newActions, deletedActionIds]);
 
   const toggleAction = (actionId: string) => {
     setExpandedActions(prev => {
@@ -286,16 +311,33 @@ export default function ActionsViewer() {
     );
   };
 
-  // Get the current action (modified or original)
+  // Get the current action (modified, new, or original)
   const getCurrentAction = (actionId: string): Action => {
-    return modifiedActions.get(actionId) || data.weekly_actions.find(a => a.id === actionId)!;
+    // Check modified first
+    if (modifiedActions.has(actionId)) {
+      return modifiedActions.get(actionId)!;
+    }
+    // Check new actions
+    const newAction = newActions.find(a => a.id === actionId);
+    if (newAction) {
+      return newAction;
+    }
+    // Fallback to original
+    return data.weekly_actions.find(a => a.id === actionId)!;
   };
 
   // Update an action field
   const updateAction = (actionId: string, updates: Partial<Action>) => {
     const current = getCurrentAction(actionId);
     const updated = { ...current, ...updates };
-    setModifiedActions(new Map(modifiedActions).set(actionId, updated));
+
+    // Check if it's a new action
+    const isNew = newActions.some(a => a.id === actionId);
+    if (isNew) {
+      setNewActions(prev => prev.map(a => a.id === actionId ? updated : a));
+    } else {
+      setModifiedActions(new Map(modifiedActions).set(actionId, updated));
+    }
   };
 
   // Get all unique effect names from all actions
@@ -390,7 +432,13 @@ export default function ActionsViewer() {
   };
 
   // Update effect in choice
-  const updateEffect = (actionId: string, choiceId: string, effectType: 'immediate' | 'delayed', effectKey: string, value: number) => {
+  const updateEffect = (
+    actionId: string,
+    choiceId: string,
+    effectType: 'immediate' | 'delayed',
+    effectKey: string,
+    value: number
+  ) => {
     const current = getCurrentAction(actionId);
     const updatedChoices = current.choices.map(choice => {
       if (choice.id !== choiceId) return choice;
@@ -404,6 +452,38 @@ export default function ActionsViewer() {
         }
       };
     });
+    updateAction(actionId, { choices: updatedChoices });
+  };
+
+  const renameEffect = (
+    actionId: string,
+    choiceId: string,
+    effectType: 'immediate' | 'delayed',
+    oldKey: string,
+    newKey: string
+  ) => {
+    if (oldKey === newKey) return;
+
+    const current = getCurrentAction(actionId);
+    const updatedChoices = current.choices.map(choice => {
+      if (choice.id !== choiceId) return choice;
+
+      const effectsKey = effectType === 'immediate' ? 'effects_immediate' : 'effects_delayed';
+      const effectValue = choice[effectsKey][oldKey];
+      if (effectValue === undefined) {
+        return choice;
+      }
+
+      const { [oldKey]: _, ...remainingEffects } = choice[effectsKey];
+      return {
+        ...choice,
+        [effectsKey]: {
+          ...remainingEffects,
+          [newKey]: Number(effectValue),
+        },
+      };
+    });
+
     updateAction(actionId, { choices: updatedChoices });
   };
 
@@ -442,9 +522,61 @@ export default function ActionsViewer() {
     updateEffect(actionId, choiceId, effectType, newEffectKey, 0);
   };
 
+  // Add new action
+  const addAction = () => {
+    const newAction: Action = {
+      id: `action_${Date.now()}`,
+      name: 'New Action',
+      type: 'role_meeting',
+      icon: 'fas fa-circle',
+      description: '',
+      role_id: 'ceo',
+      meeting_id: `meeting_${Date.now()}`,
+      category: 'business',
+      target_scope: 'global',
+      prompt: '',
+      choices: [{
+        id: 'choice_1',
+        label: 'Choice 1',
+        effects_immediate: {},
+        effects_delayed: {}
+      }]
+    };
+    setNewActions(prev => [...prev, newAction]);
+    // Auto-expand the new action
+    setExpandedActions(prev => new Set([...Array.from(prev), newAction.id]));
+  };
+
+  // Delete action
+  const deleteAction = (actionId: string) => {
+    // Check if it's a new action
+    const isNew = newActions.some(a => a.id === actionId);
+    if (isNew) {
+      // Remove from newActions
+      setNewActions(prev => prev.filter(a => a.id !== actionId));
+    } else {
+      // Mark existing action as deleted
+      setDeletedActionIds(prev => new Set([...Array.from(prev), actionId]));
+    }
+    // Remove from modified if it was there
+    setModifiedActions(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(actionId);
+      return newMap;
+    });
+    // Collapse if expanded
+    setExpandedActions(prev => {
+      const next = new Set(prev);
+      next.delete(actionId);
+      return next;
+    });
+  };
+
   // Discard all changes
   const handleDiscardChanges = () => {
     setModifiedActions(new Map());
+    setNewActions([]);
+    setDeletedActionIds(new Set());
     toast({
       title: "Changes Discarded",
       description: "All unsaved changes have been discarded.",
@@ -453,11 +585,14 @@ export default function ActionsViewer() {
 
   // Toggle edit mode
   const toggleEditMode = () => {
-    if (editMode && modifiedActions.size > 0) {
+    const totalChanges = modifiedActions.size + newActions.length + deletedActionIds.size;
+    if (editMode && totalChanges > 0) {
       // Warn about unsaved changes
-      if (confirm(`You have ${modifiedActions.size} unsaved change(s). Discard them?`)) {
+      if (confirm(`You have ${totalChanges} unsaved change(s). Discard them?`)) {
         setEditMode(false);
         setModifiedActions(new Map());
+        setNewActions([]);
+        setDeletedActionIds(new Set());
       }
     } else {
       setEditMode(!editMode);
@@ -466,7 +601,8 @@ export default function ActionsViewer() {
 
   // Save all changes to the backend
   const handleSaveChanges = async () => {
-    if (modifiedActions.size === 0) {
+    const totalChanges = modifiedActions.size + newActions.length + deletedActionIds.size;
+    if (totalChanges === 0) {
       toast({
         title: "No Changes",
         description: "There are no modifications to save.",
@@ -478,11 +614,18 @@ export default function ActionsViewer() {
     setIsSaving(true);
 
     try {
-      // Create a new copy of the data with modified actions merged in
-      const updatedActions = data.weekly_actions.map(action => {
-        const modified = modifiedActions.get(action.id);
-        return modified || action;
-      });
+      // Create a new copy of the data with all changes applied
+      const updatedActions = [
+        // Original actions (excluding deleted, applying modifications)
+        ...data.weekly_actions
+          .filter(action => !deletedActionIds.has(action.id))
+          .map(action => {
+            const modified = modifiedActions.get(action.id);
+            return modified || action;
+          }),
+        // Add new actions
+        ...newActions
+      ];
 
       const updatedConfig = {
         ...data,
@@ -495,14 +638,22 @@ export default function ActionsViewer() {
 
       const result = await response.json();
 
+      const changesSummary = [
+        modifiedActions.size > 0 ? `${modifiedActions.size} modified` : '',
+        newActions.length > 0 ? `${newActions.length} added` : '',
+        deletedActionIds.size > 0 ? `${deletedActionIds.size} deleted` : ''
+      ].filter(Boolean).join(', ');
+
       toast({
         title: "✓ Changes Saved",
-        description: `Successfully saved ${modifiedActions.size} action(s) to actions.json. ${result.backupCreated ? 'Backup created.' : ''}`,
+        description: `Successfully saved changes (${changesSummary}) to actions.json. ${result.backupCreated ? 'Backup created.' : ''}`,
         variant: "default",
       });
 
-      // Clear modified actions and reload the page to reflect changes
+      // Clear all changes and reload the page to reflect changes
       setModifiedActions(new Map());
+      setNewActions([]);
+      setDeletedActionIds(new Set());
 
       // Reload the page after a short delay to let user see the success message
       setTimeout(() => {
@@ -560,19 +711,36 @@ export default function ActionsViewer() {
                     </Button>
                   </div>
 
-                  {/* Modified Counter */}
-                  {editMode && modifiedActions.size > 0 && (
+                  {/* Add New Action Button */}
+                  {editMode && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addAction}
+                      className="bg-green-600/10 hover:bg-green-600/20 border-green-500/30 text-green-300"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add New Action
+                    </Button>
+                  )}
+
+                  {/* Changes Counter */}
+                  {editMode && (modifiedActions.size > 0 || newActions.length > 0 || deletedActionIds.size > 0) && (
                     <div className="flex items-center gap-2 text-orange-400">
                       <AlertCircle className="h-4 w-4" />
                       <span className="text-sm font-medium">
-                        {modifiedActions.size} action{modifiedActions.size !== 1 ? 's' : ''} modified
+                        {modifiedActions.size > 0 && `${modifiedActions.size} modified`}
+                        {modifiedActions.size > 0 && (newActions.length > 0 || deletedActionIds.size > 0) && ', '}
+                        {newActions.length > 0 && `${newActions.length} new`}
+                        {newActions.length > 0 && deletedActionIds.size > 0 && ', '}
+                        {deletedActionIds.size > 0 && `${deletedActionIds.size} deleted`}
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Save/Discard Buttons */}
-                {editMode && modifiedActions.size > 0 && (
+                {editMode && (modifiedActions.size > 0 || newActions.length > 0 || deletedActionIds.size > 0) && (
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
@@ -705,8 +873,9 @@ export default function ActionsViewer() {
                 <CardHeader
                   className="cursor-pointer"
                   onClick={(e) => {
-                    // Don't toggle if clicking on editable content
+                    // Don't toggle if clicking on editable content or buttons
                     if ((e.target as HTMLElement).contentEditable === 'true') return;
+                    if ((e.target as HTMLElement).closest('button')) return;
                     toggleAction(action.id);
                   }}
                 >
@@ -742,6 +911,11 @@ export default function ActionsViewer() {
                             Modified
                           </Badge>
                         )}
+                        {newActions.some(a => a.id === action.id) && (
+                          <Badge variant="outline" className="text-xs bg-green-500/20 text-green-300 border-green-500/30">
+                            New
+                          </Badge>
+                        )}
                       </div>
                       <CardDescription
                         className={`${editMode ? 'hover:bg-white/5 px-2 -mx-2 rounded cursor-text' : ''}`}
@@ -770,15 +944,33 @@ export default function ActionsViewer() {
                             <Select
                               value={action.target_scope}
                               onValueChange={(value) => {
-                                updateAction(action.id, { target_scope: value as 'global' | 'predetermined' | 'user_selected' });
+                                const newScope = value as 'global' | 'predetermined' | 'user_selected';
+                                updateAction(action.id, { target_scope: newScope });
+
+                                // Auto-add prompt_before_selection field for user_selected
+                                if (newScope === 'user_selected' && !action.prompt_before_selection) {
+                                  updateAction(action.id, {
+                                    target_scope: newScope,
+                                    prompt_before_selection: 'Which artist should be affected by this decision?'
+                                  });
+                                }
+
+                                // Add {artistName} placeholder to prompt if missing for user_selected
+                                if (newScope === 'user_selected' && !action.prompt.includes('{artistName}')) {
+                                  toast({
+                                    title: "Action Required",
+                                    description: "Add {artistName} placeholder to main prompt for User Selected actions",
+                                    variant: "default",
+                                  });
+                                }
                               }}
                             >
-                              <SelectTrigger className="h-6 text-xs w-auto min-w-[120px] border-white/20">
+                              <SelectTrigger className="h-6 text-xs w-auto min-w-[150px] border-white/20">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {getTargetScopeOptions().map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value}>
+                                  <SelectItem key={opt.value} value={opt.value} title={opt.description}>
                                     {opt.label}
                                   </SelectItem>
                                 ))}
@@ -881,9 +1073,25 @@ export default function ActionsViewer() {
                         </div>
                       )}
                     </div>
-                    <Button size="sm" variant="ghost">
-                      {isExpanded ? '▼' : '▶'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {editMode && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmActionId(action.id);
+                          }}
+                          title="Delete action"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost">
+                        {isExpanded ? '▼' : '▶'}
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
 
@@ -891,11 +1099,17 @@ export default function ActionsViewer() {
                   <CardContent className="space-y-4 border-t border-white/10 pt-4">
                     {/* Prompts */}
                     <div>
-                      {action.prompt_before_selection && (
+                      {/* Show pre-selection prompt for user_selected OR if it already exists */}
+                      {(action.target_scope === 'user_selected' || action.prompt_before_selection) && (
                         <div className={`mb-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 ${editMode ? 'hover:bg-blue-500/20 cursor-pointer' : ''}`}>
                           <div className="flex items-center justify-between mb-1">
-                            <div className="text-xs font-semibold text-blue-300">
-                              Pre-Selection Prompt:
+                            <div className="text-xs font-semibold text-blue-300 flex items-center gap-2">
+                              Pre-Selection Prompt {action.target_scope === 'user_selected' && '(Required for User Selected)'}
+                              {action.target_scope === 'user_selected' && !action.prompt_before_selection && (
+                                <Badge variant="outline" className="bg-red-500/20 text-red-300 border-red-500/30 text-xs">
+                                  Missing
+                                </Badge>
+                              )}
                             </div>
                             {editMode && (
                               <Button
@@ -942,8 +1156,13 @@ export default function ActionsViewer() {
                       )}
                       <div className={`p-3 bg-brand-gold/10 rounded-lg border border-brand-gold/20 ${editMode ? 'hover:bg-brand-gold/20 cursor-pointer' : ''}`}>
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-xs font-semibold text-brand-gold">
+                          <div className="text-xs font-semibold text-brand-gold flex items-center gap-2">
                             Main Prompt:
+                            {action.target_scope === 'user_selected' && !action.prompt.includes('{artistName}') && (
+                              <Badge variant="outline" className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs">
+                                Missing {'{artistName}'} placeholder
+                              </Badge>
+                            )}
                           </div>
                           {editMode && (
                             <Button
@@ -988,6 +1207,29 @@ export default function ActionsViewer() {
                         )}
                       </div>
                     </div>
+
+                    {/* Target Scope Help */}
+                    {editMode && (
+                      <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                        <div className="text-sm font-semibold text-purple-300 mb-2">
+                          ℹ️ Target Scope Guide
+                        </div>
+                        <div className="text-xs text-white/70 space-y-2">
+                          <div>
+                            <strong className="text-blue-300">🌍 Global:</strong> Affects ALL signed artists equally.
+                            <div className="text-white/50 ml-4">Example: CEO quarterly goals boost everyone's morale</div>
+                          </div>
+                          <div>
+                            <strong className="text-yellow-300">⭐ Predetermined:</strong> Auto-selects artist with highest popularity.
+                            <div className="text-white/50 ml-4">Example: Crisis management where top artist handles media</div>
+                          </div>
+                          <div>
+                            <strong className="text-green-300">👤 User Selected:</strong> Player chooses which artist is affected.
+                            <div className="text-white/50 ml-4">Requires: <code className="text-orange-300">prompt_before_selection</code> and <code className="text-orange-300">{'{artistName}'}</code> placeholder</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Metadata Configuration */}
                     {editMode && (
@@ -1188,10 +1430,8 @@ export default function ActionsViewer() {
                                               <>
                                                 <Select
                                                   value={key}
-                                                  onValueChange={(newKey) => {
-                                                    // Delete old key, add new key with same value
-                                                    deleteEffect(action.id, choice.id, 'immediate', key);
-                                                    updateEffect(action.id, choice.id, 'immediate', newKey, Number(value));
+                                                  onValueChange={newKey => {
+                                                    renameEffect(action.id, choice.id, 'immediate', key, newKey);
                                                   }}
                                                 >
                                                   <SelectTrigger className="h-7 text-xs bg-black/30 border-white/10 flex-1">
@@ -1271,10 +1511,8 @@ export default function ActionsViewer() {
                                               <>
                                                 <Select
                                                   value={key}
-                                                  onValueChange={(newKey) => {
-                                                    // Delete old key, add new key with same value
-                                                    deleteEffect(action.id, choice.id, 'delayed', key);
-                                                    updateEffect(action.id, choice.id, 'delayed', newKey, Number(value));
+                                                  onValueChange={newKey => {
+                                                    renameEffect(action.id, choice.id, 'delayed', key, newKey);
                                                   }}
                                                 >
                                                   <SelectTrigger className="h-7 text-xs bg-black/30 border-white/10 flex-1">
@@ -1353,13 +1591,13 @@ export default function ActionsViewer() {
         )}
       </div>
 
-      {/* Confirmation Dialog */}
+      {/* Save Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save Changes to actions.json?</AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to save {modifiedActions.size} modified action{modifiedActions.size !== 1 ? 's' : ''} to the actions.json file.
+              You are about to save {modifiedActions.size + newActions.length + deletedActionIds.size} change{modifiedActions.size + newActions.length + deletedActionIds.size !== 1 ? 's' : ''} to the actions.json file.
               A backup will be created automatically before saving.
               <br /><br />
               <span className="text-orange-400 font-medium">
@@ -1377,6 +1615,55 @@ export default function ActionsViewer() {
               className="bg-green-600 hover:bg-green-700"
             >
               Confirm & Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Action Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmActionId !== null} onOpenChange={(open) => !open && setDeleteConfirmActionId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Action?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirmActionId && (() => {
+                const actionToDelete = getCurrentAction(deleteConfirmActionId);
+                const isNew = newActions.some(a => a.id === deleteConfirmActionId);
+                return (
+                  <>
+                    Are you sure you want to delete <strong className="text-white">{actionToDelete?.name}</strong>?
+                    <br /><br />
+                    {isNew ? (
+                      <span className="text-yellow-400">
+                        This action will be removed from the new actions list (not yet saved to file).
+                      </span>
+                    ) : (
+                      <span className="text-red-400 font-medium">
+                        This action will be marked for deletion and removed when you save changes.
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmActionId) {
+                  deleteAction(deleteConfirmActionId);
+                  setDeleteConfirmActionId(null);
+                  toast({
+                    title: "Action Deleted",
+                    description: "The action has been marked for deletion. Save changes to apply.",
+                    variant: "default",
+                  });
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Action
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

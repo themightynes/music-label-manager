@@ -70,7 +70,9 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(cut:*)",
-      "Bash(del .claudescriptsrun-status.bat)"
+      "Bash(del .claudescriptsrun-status.bat)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": [],
