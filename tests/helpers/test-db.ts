@@ -132,6 +132,7 @@ export async function seedArtist(
     genre: 'pop',
     mood: 50,
     energy: 50,
+    popularity: 50, // Added popularity field
     talent: 60,
     workEthic: 70,
     stress: 20,
@@ -153,6 +154,7 @@ export async function seedArtist(
     genre: artist.genre,
     mood: artist.mood,
     energy: artist.energy,
+    popularity: artist.popularity, // Added popularity field
     talent: artist.talent,
     workEthic: artist.workEthic,
     stress: artist.stress,
