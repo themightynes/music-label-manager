@@ -16,6 +16,8 @@ interface ExecutiveCardProps {
   flipAvatar?: boolean;
   badgesOnLeft?: boolean;
   alignContent?: 'left' | 'right' | 'center';
+  isSelected?: boolean;
+  compactBadges?: boolean;
 }
 
 const roleConfig = {
@@ -61,7 +63,7 @@ const roleConfig = {
   },
 } as const;
 
-export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySalary, arOfficeStatus, flipAvatar = false, badgesOnLeft = false, alignContent = 'center' }: ExecutiveCardProps) {
+export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySalary, arOfficeStatus, flipAvatar = false, badgesOnLeft = false, alignContent = 'center', isSelected = false, compactBadges = false }: ExecutiveCardProps) {
   const config = roleConfig[executive.role as keyof typeof roleConfig] || {
     icon: Users,
     color: 'bg-gray-500',
@@ -74,8 +76,51 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
   const isHeadAR = executive.role === 'head_ar';
   const isArBusy = !!(isHeadAR && arOfficeStatus?.arOfficeSlotUsed);
   const effectiveDisabled = disabled || isArBusy;
+  const shouldCompact = compactBadges && !isSelected;
+
+  const loyaltyValue = executive.loyalty ?? 50;
+  const moodValue = executive.mood ?? 50;
+  const levelValue = executive.level ?? 1;
+
+  const formatSalaryAbbrev = (value: number) => {
+    const thousands = value / 1000;
+    const rounded = Math.round(thousands * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}K`;
+  };
+
+  const salaryLabel = (value: number) => {
+    if (shouldCompact) {
+      return `$${formatSalaryAbbrev(value)}`;
+    }
+    return `Salary $${value.toLocaleString()}`;
+  };
 
   const alignmentClass = alignContent === 'left' ? 'items-start' : alignContent === 'right' ? 'items-end' : 'items-center';
+  const badgeOffsetDefault = badgesOnLeft ? '-left-20' : '-right-20';
+  const badgeOffsetCompact = badgesOnLeft ? '-left-8' : '-right-6';
+  const badgeStackSideClass = shouldCompact ? badgeOffsetCompact : badgeOffsetDefault;
+  const badgeStackAlignment = badgesOnLeft ? 'items-end' : 'items-start';
+  const badgeStackGapClass = shouldCompact ? 'gap-0.5' : 'gap-1';
+  const neutralBadgeClass = 'bg-brand-mauve/60 text-white border-brand-purple-light';
+
+  const loyaltyClass = shouldCompact
+    ? neutralBadgeClass
+    : loyaltyValue >= 70
+      ? 'bg-green-500/90 text-green-400 border-green-400/30'
+      : loyaltyValue >= 40
+        ? 'bg-yellow-500/90 text-yellow-400 border-yellow-400/30'
+        : 'bg-red-500/90 text-red-400 border-red-400/30';
+
+  const moodClass = shouldCompact
+    ? neutralBadgeClass
+    : moodValue >= 70
+      ? 'bg-green-500/90 text-green-400 border-green-400/30'
+      : moodValue >= 40
+        ? 'bg-yellow-500/90 text-yellow-400 border-yellow-400/30'
+        : 'bg-red-500/90 text-red-400 border-red-400/30';
+
+  const levelClass = shouldCompact ? neutralBadgeClass : 'bg-blue-500/90 text-blue-300 border-blue-300/30';
+  const salaryClass = shouldCompact ? neutralBadgeClass : 'bg-purple-500/90 text-purple-200 border-purple-300/30';
 
   // CEO only shows badge, no avatar
   if (isCEO) {
@@ -119,38 +164,26 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
         </div>
 
         {/* Metrics Badges - Stacked vertically, slightly overlapping avatar */}
-        <div className={`absolute ${badgesOnLeft ? '-left-20' : '-right-20'} top-1/2 -translate-y-1/2 flex flex-col gap-1`}>
+        <div className={`absolute ${badgeStackSideClass} top-1/2 -translate-y-1/2 flex flex-col ${badgeStackGapClass} ${badgeStackAlignment}`}>
           {/* Loyalty Badge */}
-          <Badge variant="secondary" className={`text-xs px-2 py-1 ${
-            (executive.loyalty || 50) >= 70
-              ? 'bg-green-500/90 text-green-400 border-green-400/30'
-              : (executive.loyalty || 50) >= 40
-                ? 'bg-yellow-500/90 text-yellow-400 border-yellow-400/30'
-                : 'bg-red-500/90 text-red-400 border-red-400/30'
-          }`}>
-            Loyalty: {executive.loyalty || 50}
+          <Badge variant="secondary" className={`text-xs px-2 py-1 ${loyaltyClass}`}>
+            {shouldCompact ? `L${loyaltyValue}` : `Loyalty: ${loyaltyValue}`}
           </Badge>
 
           {/* Mood Badge */}
-          <Badge variant="secondary" className={`text-xs px-2 py-1 ${
-            (executive.mood || 50) >= 70
-              ? 'bg-green-500/90 text-green-400 border-green-400/30'
-              : (executive.mood || 50) >= 40
-                ? 'bg-yellow-500/90 text-yellow-400 border-yellow-400/30'
-                : 'bg-red-500/90 text-red-400 border-red-400/30'
-          }`}>
-            Mood: {executive.mood || 50}
+          <Badge variant="secondary" className={`text-xs px-2 py-1 ${moodClass}`}>
+            {shouldCompact ? `M${moodValue}` : `Mood: ${moodValue}`}
           </Badge>
 
           {/* Level Badge */}
-          <Badge variant="secondary" className="text-xs px-2 py-1 bg-blue-500/90 text-blue-300 border-blue-300/30">
-            Level {executive.level || 1}
+          <Badge variant="secondary" className={`text-xs px-2 py-1 ${levelClass}`}>
+            {shouldCompact ? `Lvl${levelValue}` : `Level ${levelValue}`}
           </Badge>
 
           {/* Salary Badge */}
           {weeklySalary !== undefined && (
-            <Badge variant="secondary" className="text-xs px-2 py-1 bg-purple-500/90 text-purple-200 border-purple-300/30">
-              Salary ${weeklySalary.toLocaleString()}
+            <Badge variant="secondary" className={`text-xs px-2 py-1 ${salaryClass}`}>
+              {salaryLabel(weeklySalary)}
             </Badge>
           )}
         </div>
