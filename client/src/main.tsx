@@ -1,6 +1,8 @@
 import { createRoot } from "react-dom/client";
 import { ClerkProvider } from '@clerk/clerk-react';
+import '@fortawesome/fontawesome-svg-core/styles.css';
 import App from "./App";
+import "./lib/fontawesome";
 import "./index.css";
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
