@@ -1,19 +1,19 @@
 {
   "version": "2.1.0",
-  "generated": "2025-10-07",
+  "generated": "2025-10-12T18:10:47.381Z",
   "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting.",
   "weekly_actions": [
     {
       "id": "TEST_mood_boost_immediate",
-      "name": "TEST: Mood Boost (Immediate)",
+      "name": "CEO: Artist Roundtable",
       "type": "role_meeting",
       "icon": "fas fa-flask",
-      "description": "TEST MEETING - Immediate mood boost for testing",
+      "description": "Gather all Artist for a Meet & Greet with the CEO",
       "role_id": "ceo",
       "meeting_id": "test_mood",
       "category": "business",
       "target_scope": "global",
-      "prompt": "TEST: Give everyone an immediate mood boost?",
+      "prompt": "The general consensus is that it's tough out there. What should we do?",
       "choices": [
         {
           "id": "yes_boost",
@@ -539,7 +539,6 @@
           }
         }
       ]
-
     },
     {
       "id": "cmo_awards",
@@ -856,7 +855,6 @@
           }
         }
       ]
-
     },
     {
       "id": "distribution_supply",
@@ -902,7 +900,6 @@
           }
         }
       ]
-
     }
   ],
   "action_categories": [
