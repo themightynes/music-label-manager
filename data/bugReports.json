@@ -1,5 +1,37 @@
 [
   {
+    "id": "7d836b9d-37ec-47a9-8468-404b46f134aa",
+    "submittedAt": "2025-10-12T05:47:51.032Z",
+    "summary": "Auto Advance Week doesn't work if it auto selects a meeting that requieres and artist.",
+    "severity": "medium",
+    "area": "gameplay",
+    "frequency": "intermittent",
+    "status": "new",
+    "whatHappened": "=== ADVANCE WEEK ERROR ===\nError type: object\nError instance: Error\nError message: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\nError stack: Error: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\n    at <anonymous> (C:\\Users\\ulyan\\music-label-manager\\server\\routes.ts:3444:17)\n    at async NodePgSession.transaction (C:\\Users\\ulyan\\music-label-manager\\node_modules\\src\\node-postgres\\session.ts:193:19)\n    at async <anonymous> (C:\\Users\\ulyan\\music-label-manager\\server\\routes.ts:3244:22)\nError object: {\"stack\":\"Error: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\\n    at <anonymous> (C:\\\\Users\\\\ulyan\\\\music-label-manager\\\\server\\\\routes.ts:3444:17)\\n    at async NodePgSession.transaction (C:\\\\Users\\\\ulyan\\\\music-label-manager\\\\node_modules\\\\src\\\\node-postgres\\\\session.ts:193:19)\\n    at async <anonymous> (C:\\\\Users\\\\ulyan\\\\music-label-manager\\\\server\\\\routes.ts:3244:22)\",\"message\":\"Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\"}\n========================\nSending error response: Week advancement failed: [EFFECT ERROR] user_selected meeting requires artistId but none provided. Scope: user_selected\n10:46:55 PM [express] POST /api/advance-week 500 in 437ms :: {\"error\":\"ADVANCE_WEEK_ERROR\",\"message\":…",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": null,
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "15f22e3e-d155-4533-9c3f-8576825e2769",
+      "currentWeek": 3,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/executives",
+      "screen": {
+        "width": 1343,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
     "id": "2f3c368f-26cf-4fc2-a208-f6a4a48090ab",
     "submittedAt": "2025-10-04T23:42:09.146Z",
     "summary": "Plan-Release Calendar Issues",
