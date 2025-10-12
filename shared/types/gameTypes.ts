@@ -352,6 +352,113 @@ export interface EventOccurrence {
   occurred: boolean;
 }
 
+/**
+ * Type-safe artist stat changes (Tech Debt Item #4)
+ * Represents changes to mood, energy, and popularity for a single artist
+ */
+export interface ArtistStatChange {
+  mood?: number;
+  energy?: number;
+  popularity?: number;
+}
+
+/**
+ * Helper functions for type-safe artist stat accumulation
+ */
+export const ArtistChangeHelpers = {
+  /**
+   * Safely get an artist's stat changes, initializing if needed
+   */
+  getOrCreate(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): ArtistStatChange {
+    if (!artistChanges) return {};
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    return artistChanges[artistId];
+  },
+
+  /**
+   * Accumulate mood change for an artist
+   */
+  addMood(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string,
+    value: number
+  ): void {
+    if (!artistChanges) return;
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    const current = artistChanges[artistId].mood || 0;
+    artistChanges[artistId].mood = current + value;
+  },
+
+  /**
+   * Accumulate energy change for an artist
+   */
+  addEnergy(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string,
+    value: number
+  ): void {
+    if (!artistChanges) return;
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    const current = artistChanges[artistId].energy || 0;
+    artistChanges[artistId].energy = current + value;
+  },
+
+  /**
+   * Accumulate popularity change for an artist
+   */
+  addPopularity(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string,
+    value: number
+  ): void {
+    if (!artistChanges) return;
+    if (!artistChanges[artistId]) {
+      artistChanges[artistId] = {};
+    }
+    const current = artistChanges[artistId].popularity || 0;
+    artistChanges[artistId].popularity = current + value;
+  },
+
+  /**
+   * Get mood change for an artist (returns 0 if not set)
+   */
+  getMood(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): number {
+    return artistChanges?.[artistId]?.mood || 0;
+  },
+
+  /**
+   * Get energy change for an artist (returns 0 if not set)
+   */
+  getEnergy(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): number {
+    return artistChanges?.[artistId]?.energy || 0;
+  },
+
+  /**
+   * Get popularity change for an artist (returns 0 if not set)
+   */
+  getPopularity(
+    artistChanges: Record<string, ArtistStatChange> | undefined,
+    artistId: string
+  ): number {
+    return artistChanges?.[artistId]?.popularity || 0;
+  },
+};
+
 export interface WeekSummary {
   week: number;
   changes: GameChange[];
@@ -362,7 +469,8 @@ export interface WeekSummary {
   events: EventOccurrence[];
   // Per-artist stat changes (mood/energy/popularity) - UNIFIED FORMAT
   // All artist changes now use consistent per-artist object format (Tech Debt #1 completed)
-  artistChanges?: Record<string, { mood?: number; energy?: number; popularity?: number }>;
+  // Type-safe with ArtistStatChange interface (Tech Debt #4 completed)
+  artistChanges?: Record<string, ArtistStatChange>;
   expenseBreakdown?: {
     weeklyOperations: number;
     artistSalaries: number;

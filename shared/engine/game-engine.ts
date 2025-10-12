@@ -17,6 +17,7 @@ import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
 import { AchievementsEngine } from './AchievementsEngine';
 import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
+import { ArtistChangeHelpers } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 
 // Re-export WeekSummary for backward compatibility
@@ -1160,14 +1161,7 @@ export class GameEngine {
 
           if (artistId) {
             // Per-artist targeting: Apply mood change to specific artist
-            // Initialize artist-specific changes if missing
-            if (!summary.artistChanges[artistId]) {
-              summary.artistChanges[artistId] = {};
-            }
-
-            // Apply mood change to specific artist
-            const previousMoodChange = (summary.artistChanges[artistId] as any).mood || 0;
-            (summary.artistChanges[artistId] as any).mood = previousMoodChange + value;
+            ArtistChangeHelpers.addMood(summary.artistChanges, artistId, value);
 
             // BUGFIX: Removed gameState.artists validation (property doesn't exist)
             // Artist existence will be validated in applyArtistChangesToDatabase()
@@ -1177,7 +1171,7 @@ export class GameEngine {
             if (targetScope) logParts.push(`scope: ${targetScope}`);
             if (meetingName) logParts.push(`meeting: ${meetingName}`);
             if (choiceId) logParts.push(`choice: ${choiceId}`);
-            const accumulated = (summary.artistChanges[artistId] as any).mood;
+            const accumulated = ArtistChangeHelpers.getMood(summary.artistChanges, artistId);
             logParts.push(`accumulated: ${accumulated > 0 ? '+' : ''}${accumulated}`);
             console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
 
@@ -1192,8 +1186,8 @@ export class GameEngine {
             });
 
             // Validation: Warn if accumulated changes are extreme
-            if (Math.abs((summary.artistChanges[artistId] as any).mood) > 10) {
-              console.warn(`[EFFECT VALIDATION] Large accumulated mood change for artist ${artistId}: ${(summary.artistChanges[artistId] as any).mood}`);
+            if (Math.abs(accumulated) > 10) {
+              console.warn(`[EFFECT VALIDATION] Large accumulated mood change for artist ${artistId}: ${accumulated}`);
             }
           } else {
             // Global targeting: Apply mood change to all signed artists (FR-15)
@@ -1207,17 +1201,7 @@ export class GameEngine {
 
             // Iterate through all signed artists and apply mood change to each
             signedArtists.forEach(artist => {
-              // Initialize artistChanges if missing
-              if (!summary.artistChanges) summary.artistChanges = {};
-
-              // Initialize artist-specific changes if missing
-              if (!summary.artistChanges[artist.id]) {
-                summary.artistChanges[artist.id] = {};
-              }
-
-              // Apply mood change to each artist
-              const previousMoodChange = (summary.artistChanges[artist.id] as any).mood || 0;
-              (summary.artistChanges[artist.id] as any).mood = previousMoodChange + value;
+              ArtistChangeHelpers.addMood(summary.artistChanges, artist.id, value);
             });
 
             // Add comprehensive logging for global effect (Task 2.2 & 2.3)
@@ -1238,8 +1222,7 @@ export class GameEngine {
 
             // Validation: Warn if accumulated changes are extreme for any artist
             signedArtists.forEach(artist => {
-              if (!summary.artistChanges) return;
-              const artistMoodChange = (summary.artistChanges[artist.id] as any).mood || 0;
+              const artistMoodChange = ArtistChangeHelpers.getMood(summary.artistChanges, artist.id);
               if (Math.abs(artistMoodChange) > 10) {
                 console.warn(`[EFFECT VALIDATION] Large accumulated mood change for ${artist.name}: ${artistMoodChange}`);
               }
@@ -1262,11 +1245,7 @@ export class GameEngine {
 
           // Apply energy change to each signed artist (per-artist object format)
           signedArtistsForEnergy.forEach(artist => {
-            if (!summary.artistChanges![artist.id]) {
-              summary.artistChanges![artist.id] = {};
-            }
-            const artistChange = summary.artistChanges![artist.id] as { mood?: number; energy?: number };
-            artistChange.energy = (artistChange.energy || 0) + value;
+            ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, value);
           });
 
           // Add comprehensive logging
@@ -1282,8 +1261,7 @@ export class GameEngine {
 
           // Validation: Warn if accumulated changes are extreme
           signedArtistsForEnergy.forEach(artist => {
-            if (!summary.artistChanges) return;
-            const artistEnergyChange = (summary.artistChanges[artist.id] as any).energy || 0;
+            const artistEnergyChange = ArtistChangeHelpers.getEnergy(summary.artistChanges, artist.id);
             if (Math.abs(artistEnergyChange) > 10) {
               console.warn(`[EFFECT VALIDATION] Large accumulated energy change for ${artist.name}: ${artistEnergyChange}`);
             }
@@ -1305,11 +1283,7 @@ export class GameEngine {
 
           // Apply popularity change to each signed artist (per-artist object format)
           signedArtistsForPopularity.forEach(artist => {
-            if (!summary.artistChanges![artist.id]) {
-              summary.artistChanges![artist.id] = {};
-            }
-            const artistChange = summary.artistChanges![artist.id] as { mood?: number; energy?: number; popularity?: number };
-            artistChange.popularity = (artistChange.popularity || 0) + value;
+            ArtistChangeHelpers.addPopularity(summary.artistChanges, artist.id, value);
           });
 
           // Add comprehensive logging
@@ -1324,8 +1298,7 @@ export class GameEngine {
 
           // Validation: Warn if accumulated changes are extreme
           signedArtistsForPopularity.forEach(artist => {
-            if (!summary.artistChanges) return;
-            const artistPopularityChange = (summary.artistChanges[artist.id] as any).popularity || 0;
+            const artistPopularityChange = ArtistChangeHelpers.getPopularity(summary.artistChanges, artist.id);
             if (Math.abs(artistPopularityChange) > 10) {
               console.warn(`[EFFECT VALIDATION] Large accumulated popularity change for ${artist.name}: ${artistPopularityChange}`);
             }
@@ -1734,12 +1707,10 @@ export class GameEngine {
 
                 if (popularityBonus > 0) {
                   // Accumulate popularity bonus in summary.artistChanges for processing by processWeeklyPopularityChanges
-                  const popularityKey = `${song.artistId}_popularity`;
                   if (!summary.artistChanges) {
                     summary.artistChanges = {};
                   }
-                  (summary.artistChanges as any)[popularityKey] = ((summary.artistChanges as any)[popularityKey] || 0) + popularityBonus;
-
+                  ArtistChangeHelpers.addPopularity(summary.artistChanges, song.artistId, popularityBonus);
                 }
               }
             } catch (error) {
@@ -2040,14 +2011,13 @@ export class GameEngine {
         // Apply mood boost for successful release
         if (release.artistId) {
           const moodBoost = (release.type === 'album' || release.type === 'ep') ? 20 : 5;
-          
+
           // Track mood change for later application in processWeeklyMoodChanges
           if (!summary.artistChanges) {
             summary.artistChanges = {};
           }
-          (summary.artistChanges as any)[release.artistId] =
-            ((summary.artistChanges as any)[release.artistId] || 0) + moodBoost;
-          
+          ArtistChangeHelpers.addMood(summary.artistChanges, release.artistId, moodBoost);
+
           console.log(`[PLANNED RELEASE] Artist mood boost +${moodBoost} for releasing "${release.title}" (${release.type})`);
         }
         
@@ -3127,15 +3097,8 @@ export class GameEngine {
     artist: any,
     summary: WeekSummary
   ): number {
-    // Handle both object format (new) and number format (legacy)
-    const artistChange = summary.artistChanges?.[artist.id];
-    let releaseMoodBoost = 0;
-
-    if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
-      releaseMoodBoost = (artistChange as any).mood || 0;
-    } else if (typeof artistChange === 'number') {
-      releaseMoodBoost = artistChange;
-    }
+    // Get mood boost from releases (uses type-safe helper)
+    const releaseMoodBoost = ArtistChangeHelpers.getMood(summary.artistChanges, artist.id);
 
     // Add UI feedback if boost occurred
     if (releaseMoodBoost !== 0) {
@@ -3246,16 +3209,8 @@ export class GameEngine {
       let popularityChange = 0;
       const currentPopularity = artist.popularity || 0;
 
-      // UNIFIED FORMAT: Read from per-artist object (matches mood/energy pattern)
-      const artistChange = summary.artistChanges?.[artist.id];
-      let popularityBoost = 0;
-      if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
-        popularityBoost = (artistChange as any).popularity || 0;
-      } else if (typeof artistChange === 'number') {
-        // LEGACY: Support old `artistId_popularity` key format during transition
-        const legacyPopularityValue = summary.artistChanges?.[`${artist.id}_popularity`];
-        popularityBoost = typeof legacyPopularityValue === 'number' ? legacyPopularityValue : 0;
-      }
+      // UNIFIED FORMAT: Read from per-artist object (uses type-safe helper)
+      const popularityBoost = ArtistChangeHelpers.getPopularity(summary.artistChanges, artist.id);
 
       if (popularityBoost > 0) {
         popularityChange += popularityBoost;
