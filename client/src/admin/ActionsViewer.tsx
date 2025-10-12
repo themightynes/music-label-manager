@@ -432,7 +432,13 @@ export default function ActionsViewer() {
   };
 
   // Update effect in choice
-  const updateEffect = (actionId: string, choiceId: string, effectType: 'immediate' | 'delayed', effectKey: string, value: number) => {
+  const updateEffect = (
+    actionId: string,
+    choiceId: string,
+    effectType: 'immediate' | 'delayed',
+    effectKey: string,
+    value: number
+  ) => {
     const current = getCurrentAction(actionId);
     const updatedChoices = current.choices.map(choice => {
       if (choice.id !== choiceId) return choice;
@@ -446,6 +452,38 @@ export default function ActionsViewer() {
         }
       };
     });
+    updateAction(actionId, { choices: updatedChoices });
+  };
+
+  const renameEffect = (
+    actionId: string,
+    choiceId: string,
+    effectType: 'immediate' | 'delayed',
+    oldKey: string,
+    newKey: string
+  ) => {
+    if (oldKey === newKey) return;
+
+    const current = getCurrentAction(actionId);
+    const updatedChoices = current.choices.map(choice => {
+      if (choice.id !== choiceId) return choice;
+
+      const effectsKey = effectType === 'immediate' ? 'effects_immediate' : 'effects_delayed';
+      const effectValue = choice[effectsKey][oldKey];
+      if (effectValue === undefined) {
+        return choice;
+      }
+
+      const { [oldKey]: _, ...remainingEffects } = choice[effectsKey];
+      return {
+        ...choice,
+        [effectsKey]: {
+          ...remainingEffects,
+          [newKey]: Number(effectValue),
+        },
+      };
+    });
+
     updateAction(actionId, { choices: updatedChoices });
   };
 
@@ -1392,10 +1430,8 @@ export default function ActionsViewer() {
                                               <>
                                                 <Select
                                                   value={key}
-                                                  onValueChange={(newKey) => {
-                                                    // Delete old key, add new key with same value
-                                                    deleteEffect(action.id, choice.id, 'immediate', key);
-                                                    updateEffect(action.id, choice.id, 'immediate', newKey, Number(value));
+                                                  onValueChange={newKey => {
+                                                    renameEffect(action.id, choice.id, 'immediate', key, newKey);
                                                   }}
                                                 >
                                                   <SelectTrigger className="h-7 text-xs bg-black/30 border-white/10 flex-1">
@@ -1475,10 +1511,8 @@ export default function ActionsViewer() {
                                               <>
                                                 <Select
                                                   value={key}
-                                                  onValueChange={(newKey) => {
-                                                    // Delete old key, add new key with same value
-                                                    deleteEffect(action.id, choice.id, 'delayed', key);
-                                                    updateEffect(action.id, choice.id, 'delayed', newKey, Number(value));
+                                                  onValueChange={newKey => {
+                                                    renameEffect(action.id, choice.id, 'delayed', key, newKey);
                                                   }}
                                                 >
                                                   <SelectTrigger className="h-7 text-xs bg-black/30 border-white/10 flex-1">
