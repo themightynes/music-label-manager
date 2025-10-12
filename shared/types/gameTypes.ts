@@ -360,6 +360,13 @@ export interface ArtistStatChange {
   mood?: number;
   energy?: number;
   popularity?: number;
+  // Task 2.4: Track event source for mood_events logging
+  eventSource?: {
+    type: 'executive_meeting' | 'dialogue_choice' | 'project_completion' | 'other';
+    sceneId?: string; // For dialogue choices
+    choiceId?: string; // For dialogue choices
+    meetingName?: string; // For executive meetings
+  };
 }
 
 /**

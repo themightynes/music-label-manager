@@ -1,7 +1,11 @@
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from '@shared/schema';
-import { GameState, Artist, Song } from '@shared/types/gameTypes';
+import { GameState, GameArtist, GameSong } from '@shared/types/gameTypes';
+
+// Type aliases for test compatibility
+type Artist = GameArtist;
+type Song = GameSong;
 
 /**
  * Test database configuration
@@ -161,6 +165,7 @@ export async function seedArtist(
     creativity: artist.creativity,
     massAppeal: artist.massAppeal,
     status: artist.status,
+    signed: artist.signed, // BUGFIX: Added missing signed field
     weeksSinceLastRelease: artist.weeksSinceLastRelease,
     archetype: artist.archetype,
     signedWeek: artist.signedWeek,

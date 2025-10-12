@@ -1166,6 +1166,27 @@ export class GameEngine {
             // BUGFIX: Removed gameState.artists validation (property doesn't exist)
             // Artist existence will be validated in applyArtistChangesToDatabase()
 
+            // Task 2.4: Set event source metadata for mood_events logging
+            if (!summary.artistChanges[artistId].eventSource) {
+              // Determine event type from targetScope and parameters
+              if (targetScope === 'dialogue' || choiceId) {
+                summary.artistChanges[artistId].eventSource = {
+                  type: 'dialogue_choice',
+                  sceneId: meetingName, // meetingName contains sceneId for dialogue
+                  choiceId: choiceId
+                };
+              } else if (targetScope && ['predetermined', 'user_selected', 'global'].includes(targetScope)) {
+                summary.artistChanges[artistId].eventSource = {
+                  type: 'executive_meeting',
+                  meetingName: meetingName
+                };
+              } else {
+                summary.artistChanges[artistId].eventSource = {
+                  type: 'other'
+                };
+              }
+            }
+
             // Add comprehensive logging with all debugging context (Task 2.2 & 2.3)
             const logParts = [`target: ${artistId}`];
             if (targetScope) logParts.push(`scope: ${targetScope}`);
@@ -2984,24 +3005,42 @@ export class GameEngine {
 
         console.log(`[ARTIST CHANGES] ${artist.name}: mood ${currentMood} → ${newMood} (${changes.mood > 0 ? '+' : ''}${changes.mood})`);
 
-        // Task 6.2: Log mood event to database with artist targeting
+        // Task 2.4 & 6.2: Log mood event to database with event source detection
         if (canLogMoodEvents) {
           try {
+            // Determine event type and metadata from eventSource (Task 2.4)
+            const eventSource = changes.eventSource || { type: 'other' };
+            let eventType: string;
+            let description: string;
+            const metadata: Record<string, any> = { week: this.gameState.currentWeek };
+
+            if (eventSource.type === 'dialogue_choice') {
+              eventType = 'dialogue_choice';
+              description = `Mood ${changes.mood > 0 ? 'improved' : 'decreased'} from dialogue choice`;
+              if (eventSource.sceneId) metadata.sceneId = eventSource.sceneId;
+              if (eventSource.choiceId) metadata.choiceId = eventSource.choiceId;
+            } else if (eventSource.type === 'executive_meeting') {
+              eventType = 'executive_meeting';
+              description = `Mood ${changes.mood > 0 ? 'improved' : 'decreased'} from executive meeting decision`;
+              metadata.source = 'meeting_choice';
+              if (eventSource.meetingName) metadata.meetingName = eventSource.meetingName;
+            } else {
+              eventType = 'other';
+              description = `Mood ${changes.mood > 0 ? 'improved' : 'decreased'}`;
+            }
+
             await this.storage.createMoodEvent({
               artistId: artistId,
               gameId: this.gameState.id,
-              eventType: 'executive_meeting',
+              eventType,
               moodChange: changes.mood,
               moodBefore: currentMood,
               moodAfter: newMood,
-              description: `Mood ${changes.mood > 0 ? 'improved' : 'decreased'} from executive meeting decision`,
+              description,
               weekOccurred: this.gameState.currentWeek,
-              metadata: {
-                source: 'meeting_choice',
-                week: this.gameState.currentWeek
-              }
+              metadata
             }, dbTransaction);
-            console.log(`[MOOD EVENT] Logged mood event for ${artist.name}: ${changes.mood > 0 ? '+' : ''}${changes.mood}`);
+            console.log(`[MOOD EVENT] Logged ${eventType} mood event for ${artist.name}: ${changes.mood > 0 ? '+' : ''}${changes.mood}`);
           } catch (error) {
             console.error(`[MOOD EVENT] Failed to log mood event for ${artist.name}:`, error);
           }
