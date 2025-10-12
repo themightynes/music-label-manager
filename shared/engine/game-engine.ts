@@ -3069,111 +3069,163 @@ export class GameEngine {
 
   /**
    * Process weekly mood changes for all artists
+   * Orchestrates mood calculations from multiple sources:
+   * 1. Release-based changes (success/failure)
+   * 2. Workload stress (too many projects)
+   * 3. Natural drift toward neutral (50)
    */
   private async processWeeklyMoodChanges(summary: WeekSummary): Promise<void> {
-    // Get artists from storage if available
-    if (!this.storage || !this.storage.getArtistsByGame) {
-      return;
-    }
-    
+    // Get artists and projects from storage
+    if (!this.storage || !this.storage.getArtistsByGame) return;
     const artists = await this.storage.getArtistsByGame(this.gameState.id);
     if (!artists || artists.length === 0) return;
-    
-    // Get projects from storage if available
-    const projects = this.storage.getProjectsByGame ? 
+    const projects = this.storage.getProjectsByGame ?
       await this.storage.getProjectsByGame(this.gameState.id) : [];
-    
+
+    // Process each artist
     for (const artist of artists) {
-      let moodChange = 0;
       const currentMood = artist.mood || 50;
 
-      // Apply any release-based mood changes (from processPlannedReleases)
-      // Handle both object format (new) and number format (legacy)
-      const artistChange = summary.artistChanges?.[artist.id];
-      let releaseMoodBoost = 0;
-      if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
-        releaseMoodBoost = (artistChange as any).mood || 0;
-      } else if (typeof artistChange === 'number') {
-        releaseMoodBoost = artistChange;
-      }
+      // Calculate mood changes from each source (order matters for drift calculation!)
+      const releaseMoodBoost = this.calculateReleaseMoodBoost(artist, summary);
+      const workloadPenalty = this.calculateWorkloadStressPenalty(artist, projects, summary);
+      const moodAfterImmediate = currentMood + releaseMoodBoost + workloadPenalty;
+      const naturalDrift = this.calculateNaturalMoodDrift(artist, moodAfterImmediate, summary);
 
-      if (releaseMoodBoost !== 0) {
-        moodChange += releaseMoodBoost;
-        summary.changes.push({
-          type: 'mood',
-          description: `${artist.name}'s mood ${releaseMoodBoost > 0 ? 'improved from successful release' : 'decreased from poor tour performance'} (${releaseMoodBoost > 0 ? '+' : ''}${releaseMoodBoost})`,
-          amount: releaseMoodBoost,
-          moodChange: releaseMoodBoost,
-          artistId: artist.id
-        });
-      }
+      // Calculate total mood change
+      const totalMoodChange = releaseMoodBoost + workloadPenalty + naturalDrift;
 
-      // Count active projects for this artist
-      const activeProjects = projects.filter(
-        (p: any) => p.artistId === artist.id &&
-        ['recording', 'mixing', 'mastering'].includes(p.stage)
-      ).length;
+      // Apply to database if changed
+      if (totalMoodChange !== 0) {
+        const newMood = Math.max(0, Math.min(100, currentMood + totalMoodChange));
+        await this.storage.updateArtist(artist.id, { mood: newMood });
 
-      // Workload stress: -5 mood per project beyond 2
-      if (activeProjects > 2) {
-        const workloadPenalty = (activeProjects - 2) * -5;
-        moodChange += workloadPenalty;
-        summary.changes.push({
-          type: 'mood',
-          description: `${artist.name} is stressed from workload (${activeProjects} active projects)`,
-          amount: workloadPenalty,
-          moodChange: workloadPenalty,
-          artistId: artist.id
-        });
-      }
-
-      // Natural drift toward 50 (by 3 points max)
-      // BUGFIX: Calculate drift based on mood AFTER immediate changes, not before
-      const moodAfterImmediate = currentMood + moodChange;
-      let driftAmount = 0;
-      if (moodAfterImmediate > 55) {
-        driftAmount = -3;
-        moodChange -= 3;
-      } else if (moodAfterImmediate < 45) {
-        driftAmount = 3;
-        moodChange += 3;
-      }
-
-      // Log drift as a separate change entry if it occurred
-      if (driftAmount !== 0) {
-        summary.changes.push({
-          type: 'mood',
-          description: `${artist.name}'s mood ${driftAmount > 0 ? 'naturally improved' : 'naturally decreased'} (drift toward 50)`,
-          amount: driftAmount,
-          moodChange: driftAmount,
-          artistId: artist.id,
-          source: 'weekly_drift'
-        });
-      }
-
-      // Apply mood change
-      if (moodChange !== 0) {
-        const newMood = Math.max(0, Math.min(100, currentMood + moodChange));
-
-        // Update artist mood in storage
-        if (this.storage.updateArtist) {
-          await this.storage.updateArtist(artist.id, { mood: newMood });
-        }
-
-        // Track change - only log if there were non-drift changes
-        // (drift is already logged separately above)
-        if (moodChange !== driftAmount) {
+        // Log summary entry if non-drift changes occurred
+        if (totalMoodChange !== naturalDrift) {
           summary.changes.push({
             type: 'mood',
-            description: `${artist.name}'s mood ${moodChange > 0 ? 'improved' : 'decreased'}`,
-            amount: moodChange,
-            moodChange: moodChange, // UI expects moodChange field
+            description: `${artist.name}'s mood ${totalMoodChange > 0 ? 'improved' : 'decreased'}`,
+            amount: totalMoodChange,
+            moodChange: totalMoodChange,
             artistId: artist.id,
-            source: 'weekly_routine' // Distinguish from meeting effects
+            source: 'weekly_routine'
           });
         }
       }
     }
+  }
+
+  /**
+   * Calculate mood boost/penalty from releases completed this week
+   * Reads from summary.artistChanges (unified format)
+   *
+   * @param artist - The artist to calculate mood boost for
+   * @param summary - Week summary containing artist changes
+   * @returns Numeric mood change from releases (positive or negative)
+   */
+  private calculateReleaseMoodBoost(
+    artist: any,
+    summary: WeekSummary
+  ): number {
+    // Handle both object format (new) and number format (legacy)
+    const artistChange = summary.artistChanges?.[artist.id];
+    let releaseMoodBoost = 0;
+
+    if (typeof artistChange === 'object' && artistChange !== null && !Array.isArray(artistChange)) {
+      releaseMoodBoost = (artistChange as any).mood || 0;
+    } else if (typeof artistChange === 'number') {
+      releaseMoodBoost = artistChange;
+    }
+
+    // Add UI feedback if boost occurred
+    if (releaseMoodBoost !== 0) {
+      summary.changes.push({
+        type: 'mood',
+        description: `${artist.name}'s mood ${releaseMoodBoost > 0 ? 'improved from successful release' : 'decreased from poor tour performance'} (${releaseMoodBoost > 0 ? '+' : ''}${releaseMoodBoost})`,
+        amount: releaseMoodBoost,
+        moodChange: releaseMoodBoost,
+        artistId: artist.id
+      });
+    }
+
+    return releaseMoodBoost;
+  }
+
+  /**
+   * Calculate mood penalty from artist workload
+   * Artists with >2 active projects get stressed: -5 mood per extra project
+   *
+   * @param artist - The artist to calculate workload penalty for
+   * @param projects - All projects in the game
+   * @param summary - Week summary to add change entries to
+   * @returns Numeric mood penalty from workload (0 or negative)
+   */
+  private calculateWorkloadStressPenalty(
+    artist: any,
+    projects: any[],
+    summary: WeekSummary
+  ): number {
+    // Count active projects for this artist
+    const activeProjects = projects.filter(
+      (p: any) => p.artistId === artist.id &&
+      ['recording', 'mixing', 'mastering'].includes(p.stage)
+    ).length;
+
+    // Apply stress penalty if overworked
+    if (activeProjects > 2) {
+      const workloadPenalty = (activeProjects - 2) * -5;
+
+      summary.changes.push({
+        type: 'mood',
+        description: `${artist.name} is stressed from workload (${activeProjects} active projects)`,
+        amount: workloadPenalty,
+        moodChange: workloadPenalty,
+        artistId: artist.id
+      });
+
+      return workloadPenalty;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Calculate natural mood drift toward neutral (50)
+   * IMPORTANT: Must be called AFTER calculating immediate mood changes
+   * to preserve bugfix logic (drift based on post-change mood, not pre-change)
+   *
+   * @param artist - The artist to calculate drift for
+   * @param moodAfterImmediate - Artist's mood after release and workload changes
+   * @param summary - Week summary to add change entries to
+   * @returns Numeric mood drift amount (+3, -3, or 0)
+   */
+  private calculateNaturalMoodDrift(
+    artist: any,
+    moodAfterImmediate: number,
+    summary: WeekSummary
+  ): number {
+    // Natural drift toward 50 (by 3 points max)
+    let driftAmount = 0;
+
+    if (moodAfterImmediate > 55) {
+      driftAmount = -3;
+    } else if (moodAfterImmediate < 45) {
+      driftAmount = 3;
+    }
+
+    // Log drift as separate change entry if it occurred
+    if (driftAmount !== 0) {
+      summary.changes.push({
+        type: 'mood',
+        description: `${artist.name}'s mood ${driftAmount > 0 ? 'naturally improved' : 'naturally decreased'} (drift toward 50)`,
+        amount: driftAmount,
+        moodChange: driftAmount,
+        artistId: artist.id,
+        source: 'weekly_drift'
+      });
+    }
+
+    return driftAmount;
   }
 
   /**
