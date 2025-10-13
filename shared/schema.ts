@@ -64,6 +64,8 @@ export const artists = pgTable("artists", {
     creativityCheck: sql`CHECK (${table.creativity} >= 0 AND ${table.creativity} <= 100)`,
     massAppealCheck: sql`CHECK (${table.massAppeal} >= 0 AND ${table.massAppeal} <= 100)`,
     temperamentCheck: sql`CHECK (${table.temperament} >= 0 AND ${table.temperament} <= 100)`,
+    // Index for save/load performance
+    gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_artists_game_id" ON ${table} ("game_id")`,
   };
 });
 
@@ -91,7 +93,10 @@ export const roles = pgTable("roles", {
   relationship: integer("relationship").default(50),
   accessLevel: integer("access_level").default(0),
   gameId: uuid("game_id"),
-});
+}, (table) => ({
+  // Index for save/load performance
+  gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_roles_game_id" ON ${table} ("game_id")`,
+}));
 
 // Projects (Singles, EPs, Tours)
 export const projects = pgTable("projects", {
@@ -114,20 +119,23 @@ export const projects = pgTable("projects", {
   songCount: integer("song_count").default(1),
   songsCreated: integer("songs_created").default(0),
   // Project-level economic decision fields
-  producerTier: text("producer_tier").default("local"), // local, regional, national, legendary  
+  producerTier: text("producer_tier").default("local"), // local, regional, national, legendary
   timeInvestment: text("time_investment").default("standard"), // rushed, standard, extended, perfectionist
-  
+
   // Tour ROI tracking (mirrors song ROI system)
   totalRevenue: integer("total_revenue").default(0), // Aggregated revenue for tours
   roiPercentage: real("roi_percentage").generatedAlwaysAs(sql`
-    CASE 
-      WHEN total_cost > 0 THEN 
+    CASE
+      WHEN total_cost > 0 THEN
         ((total_revenue - total_cost)::REAL / total_cost::REAL * 100)
-      ELSE NULL 
+      ELSE NULL
     END
   `), // Auto-calculated ROI percentage
   completionStatus: text("completion_status").default("active"), // active, completed, cancelled
-});
+}, (table) => ({
+  // Index for save/load performance
+  gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_projects_game_id" ON ${table} ("game_id")`,
+}));
 
 // Songs (Individual tracks)
 export const songs = pgTable("songs", {
@@ -367,7 +375,10 @@ export const weeklyActions = pgTable("weekly_actions", {
   choiceId: uuid("choice_id"), // For dialogue choices
   results: jsonb("results"), // Outcome of the action
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Index for save/load performance
+  gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_weekly_actions_game_id" ON ${table} ("game_id")`,
+}));
 
 // Relations
 export const gameSavesRelations = relations(gameSaves, ({ one }) => ({
@@ -530,6 +541,7 @@ export const gameSaveSnapshotSchema = z.object({
   songs: z.array(z.record(z.any())).optional(),
   releases: z.array(z.record(z.any())).optional(),
   weeklyActions: z.array(z.record(z.any())).optional(),
+  emails: z.array(z.record(z.any())).optional(), // Email system support
 }).passthrough();
 
 const baseInsertGameSaveSchema = createInsertSchema(gameSaves).omit({

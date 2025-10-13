@@ -142,24 +142,48 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!gameState) return;
 
-    const exportData = {
-      gameState,
-      timestamp: new Date().toISOString(),
-      version: '1.0'
-    };
+    try {
+      // Fetch current emails from the server to ensure we capture all emails
+      const emailsResponse = await apiRequest('GET', `/api/game/${gameState.id}/emails`);
+      const emails = await emailsResponse.json();
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `music-label-manager-save-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      // Export in the same format as game saves (nested snapshot structure)
+      // This ensures imported saves can be validated by gameSaveSnapshotSchema
+      const { musicLabel, ...gameStateWithoutLabel } = gameState;
+      const { artists, projects, roles, songs, releases, weeklyActions } = useGameStore.getState();
+
+      const exportData = {
+        gameState: {
+          gameState: gameStateWithoutLabel,
+          musicLabel: musicLabel || null,
+          artists,
+          projects,
+          roles,
+          songs,
+          releases,
+          emails,
+          weeklyActions
+        },
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `music-label-manager-save-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export save:', error);
+      alert('Failed to export save. Please try again.');
+    }
   };
 
   const handleImport = () => {

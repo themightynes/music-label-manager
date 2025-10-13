@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, type GameSaveSnapshot } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, moodEvents, emails, type GameSaveSnapshot } from "@shared/schema";
 import { z } from "zod";
 import type { EmailCategory } from "@shared/types/emailTypes";
 import { serverGameData } from "./data/gameData";
@@ -1880,6 +1880,29 @@ const musicLabelData = {
       mode: z.enum(['overwrite', 'fork']).default('overwrite'),
     });
 
+    // Helper function to convert timestamp strings to Date objects
+    const convertTimestamps = (obj: any): any => {
+      if (!obj || typeof obj !== 'object') return obj;
+
+      if (Array.isArray(obj)) {
+        return obj.map(item => convertTimestamps(item));
+      }
+
+      const converted: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // Convert fields that end with 'At' or are known timestamp fields
+        if ((key.endsWith('At') || key === 'createdAt' || key === 'updatedAt') &&
+            typeof value === 'string' && value) {
+          converted[key] = new Date(value);
+        } else if (value && typeof value === 'object') {
+          converted[key] = convertTimestamps(value);
+        } else {
+          converted[key] = value;
+        }
+      }
+      return converted;
+    };
+
     try {
       const { mode } = restoreRequestSchema.parse(req.body ?? {});
 
@@ -1903,6 +1926,7 @@ const musicLabelData = {
       }
 
       if (mode === 'overwrite') {
+        console.log('[RESTORE] Starting overwrite mode for game:', sourceGameId);
         const existingGame = await storage.getGameState(sourceGameId);
         if (!existingGame || existingGame.userId !== req.userId) {
           return res.status(403).json({
@@ -1911,7 +1935,9 @@ const musicLabelData = {
           });
         }
 
+        console.log('[RESTORE] Beginning transaction...');
         await db.transaction(async (tx) => {
+          console.log('[RESTORE] Step 1: Updating game_states...');
           await tx.update(gameStates)
             .set({
               currentWeek: targetGameState.currentWeek,
@@ -1939,75 +1965,135 @@ const musicLabelData = {
             })
             .where(eq(gameStates.id, sourceGameId));
 
-          await tx.delete(musicLabels).where(eq(musicLabels.gameId, sourceGameId));
-          if (snapshot.musicLabel) {
-            await tx.insert(musicLabels).values({
-              ...snapshot.musicLabel,
-              gameId: sourceGameId,
-            } as any);
-          }
+          // IMPORTANT: Delete in order of foreign key dependencies (children first, parents last)
 
-          await tx.delete(weeklyActions).where(eq(weeklyActions.gameId, sourceGameId));
-          if (Array.isArray(snapshot.weeklyActions) && snapshot.weeklyActions.length > 0) {
-            await tx.insert(weeklyActions).values(
-              snapshot.weeklyActions.map((action) => ({
-                ...action,
-                gameId: sourceGameId,
-              })) as any,
-            );
-          }
-
-          await tx.delete(artists).where(eq(artists.gameId, sourceGameId));
-          if (Array.isArray(snapshot.artists) && snapshot.artists.length > 0) {
-            await tx.insert(artists).values(
-              snapshot.artists.map((artist) => ({
-                ...artist,
-                gameId: sourceGameId,
-              })) as any,
-            );
-          }
-
-          await tx.delete(projects).where(eq(projects.gameId, sourceGameId));
-          if (Array.isArray(snapshot.projects) && snapshot.projects.length > 0) {
-            await tx.insert(projects).values(
-              snapshot.projects.map((project) => ({
-                ...project,
-                gameId: sourceGameId,
-              })) as any,
-            );
-          }
-
-          await tx.delete(roles).where(eq(roles.gameId, sourceGameId));
-          if (Array.isArray(snapshot.roles) && snapshot.roles.length > 0) {
-            await tx.insert(roles).values(
-              snapshot.roles.map((role) => ({
-                ...role,
-                gameId: sourceGameId,
-              })) as any,
-            );
-          }
-
+          console.log('[RESTORE] Step 2: Deleting release_songs junction table...');
           await tx.execute(sql`DELETE FROM release_songs WHERE release_id IN (SELECT id FROM releases WHERE game_id = ${sourceGameId})`);
 
+          console.log('[RESTORE] Step 3: Deleting songs (depends on artists, projects, releases)...');
           await tx.delete(songs).where(eq(songs.gameId, sourceGameId));
-          if (Array.isArray(snapshot.songs) && snapshot.songs.length > 0) {
-            await tx.insert(songs).values(
-              snapshot.songs.map((song) => ({
-                ...song,
+
+          console.log('[RESTORE] Step 4: Deleting releases (depends on artists)...');
+          await tx.delete(releases).where(eq(releases.gameId, sourceGameId));
+
+          console.log('[RESTORE] Step 5: Deleting projects (depends on artists)...');
+          await tx.delete(projects).where(eq(projects.gameId, sourceGameId));
+
+          console.log('[RESTORE] Step 6: Deleting mood_events (depends on artists)...');
+          await tx.delete(moodEvents).where(eq(moodEvents.gameId, sourceGameId));
+
+          console.log('[RESTORE] Step 7: Deleting artists (no more dependencies)...');
+          await tx.delete(artists).where(eq(artists.gameId, sourceGameId));
+
+          console.log('[RESTORE] Step 8: Deleting roles...');
+          await tx.delete(roles).where(eq(roles.gameId, sourceGameId));
+
+          console.log('[RESTORE] Step 9: Deleting weekly_actions...');
+          await tx.delete(weeklyActions).where(eq(weeklyActions.gameId, sourceGameId));
+
+          console.log('[RESTORE] Step 10: Deleting music_labels...');
+          await tx.delete(musicLabels).where(eq(musicLabels.gameId, sourceGameId));
+
+          console.log('[RESTORE] Step 11: Deleting emails...');
+          await tx.delete(emails).where(eq(emails.gameId, sourceGameId));
+
+          // Now insert everything back in reverse order (parents first, children last)
+
+          console.log('[RESTORE] Step 12: Reinserting music_labels...');
+          if (snapshot.musicLabel) {
+            await tx.insert(musicLabels).values(
+              convertTimestamps({
+                ...snapshot.musicLabel,
                 gameId: sourceGameId,
-              })) as any,
+              }) as any
             );
           }
 
-          await tx.delete(releases).where(eq(releases.gameId, sourceGameId));
-          if (Array.isArray(snapshot.releases) && snapshot.releases.length > 0) {
-            await tx.insert(releases).values(
-              snapshot.releases.map((release) => ({
-                ...release,
-                gameId: sourceGameId,
-              })) as any,
+          console.log('[RESTORE] Step 13: Reinserting weekly_actions...');
+          if (Array.isArray(snapshot.weeklyActions) && snapshot.weeklyActions.length > 0) {
+            await tx.insert(weeklyActions).values(
+              snapshot.weeklyActions.map((action) =>
+                convertTimestamps({
+                  ...action,
+                  gameId: sourceGameId,
+                })
+              ) as any,
             );
           }
+
+          console.log('[RESTORE] Step 14: Reinserting roles...');
+          if (Array.isArray(snapshot.roles) && snapshot.roles.length > 0) {
+            await tx.insert(roles).values(
+              snapshot.roles.map((role) =>
+                convertTimestamps({
+                  ...role,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 15: Reinserting artists...');
+          if (Array.isArray(snapshot.artists) && snapshot.artists.length > 0) {
+            await tx.insert(artists).values(
+              snapshot.artists.map((artist) =>
+                convertTimestamps({
+                  ...artist,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 16: Reinserting projects...');
+          if (Array.isArray(snapshot.projects) && snapshot.projects.length > 0) {
+            await tx.insert(projects).values(
+              snapshot.projects.map((project) =>
+                convertTimestamps({
+                  ...project,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 17: Reinserting releases...');
+          if (Array.isArray(snapshot.releases) && snapshot.releases.length > 0) {
+            await tx.insert(releases).values(
+              snapshot.releases.map((release) =>
+                convertTimestamps({
+                  ...release,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 18: Reinserting songs...');
+          if (Array.isArray(snapshot.songs) && snapshot.songs.length > 0) {
+            await tx.insert(songs).values(
+              snapshot.songs.map((song) =>
+                convertTimestamps({
+                  ...song,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 19: Reinserting emails...');
+          if (Array.isArray(snapshot.emails) && snapshot.emails.length > 0) {
+            await tx.insert(emails).values(
+              snapshot.emails.map((email) =>
+                convertTimestamps({
+                  ...email,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Transaction complete!');
         });
 
         return res.json({ gameId: sourceGameId });
@@ -2050,6 +2136,9 @@ const musicLabelData = {
       if (Array.isArray(snapshot.songs)) {
         snapshot.songs.forEach((song) => mapId(song.id));
       }
+      if (Array.isArray(snapshot.emails)) {
+        snapshot.emails.forEach((email) => mapId((email as any).id));
+      }
 
       await db.transaction(async (tx) => {
         await tx.insert(gameStates).values({
@@ -2078,77 +2167,103 @@ const musicLabelData = {
         });
 
         if (snapshot.musicLabel) {
-          await tx.insert(musicLabels).values({
-            ...snapshot.musicLabel,
-            id: mapId((snapshot.musicLabel as any).id ?? undefined),
-            gameId: newGameId,
-          } as any);
+          await tx.insert(musicLabels).values(
+            convertTimestamps({
+              ...snapshot.musicLabel,
+              id: mapId((snapshot.musicLabel as any).id ?? undefined),
+              gameId: newGameId,
+            }) as any
+          );
         }
 
         if (Array.isArray(snapshot.weeklyActions) && snapshot.weeklyActions.length > 0) {
           await tx.insert(weeklyActions).values(
-            snapshot.weeklyActions.map((action) => ({
-              ...action,
-              id: mapId(action.id),
-              gameId: newGameId,
-              targetId: mapReference(action.targetId as string | undefined),
-              choiceId: mapReference(action.choiceId as string | undefined),
-            })) as any,
+            snapshot.weeklyActions.map((action) =>
+              convertTimestamps({
+                ...action,
+                id: mapId(action.id),
+                gameId: newGameId,
+                targetId: mapReference(action.targetId as string | undefined),
+                choiceId: mapReference(action.choiceId as string | undefined),
+              })
+            ) as any,
           );
         }
 
         if (Array.isArray(snapshot.artists) && snapshot.artists.length > 0) {
           await tx.insert(artists).values(
-            snapshot.artists.map((artist) => ({
-              ...artist,
-              id: mapId(artist.id),
-              gameId: newGameId,
-            })) as any,
+            snapshot.artists.map((artist) =>
+              convertTimestamps({
+                ...artist,
+                id: mapId(artist.id),
+                gameId: newGameId,
+              })
+            ) as any,
           );
         }
 
         if (Array.isArray(snapshot.projects) && snapshot.projects.length > 0) {
           await tx.insert(projects).values(
-            snapshot.projects.map((project) => ({
-              ...project,
-              id: mapId(project.id),
-              gameId: newGameId,
-              artistId: mapReference(project.artistId),
-            })) as any,
+            snapshot.projects.map((project) =>
+              convertTimestamps({
+                ...project,
+                id: mapId(project.id),
+                gameId: newGameId,
+                artistId: mapReference(project.artistId),
+              })
+            ) as any,
           );
         }
 
         if (Array.isArray(snapshot.roles) && snapshot.roles.length > 0) {
           await tx.insert(roles).values(
-            snapshot.roles.map((role) => ({
-              ...role,
-              id: mapId(role.id),
-              gameId: newGameId,
-            })) as any,
+            snapshot.roles.map((role) =>
+              convertTimestamps({
+                ...role,
+                id: mapId(role.id),
+                gameId: newGameId,
+              })
+            ) as any,
           );
         }
 
         if (Array.isArray(snapshot.releases) && snapshot.releases.length > 0) {
           await tx.insert(releases).values(
-            snapshot.releases.map((release) => ({
-              ...release,
-              id: mapId(release.id),
-              gameId: newGameId,
-              artistId: mapReference(release.artistId),
-            })) as any,
+            snapshot.releases.map((release) =>
+              convertTimestamps({
+                ...release,
+                id: mapId(release.id),
+                gameId: newGameId,
+                artistId: mapReference(release.artistId),
+              })
+            ) as any,
           );
         }
 
         if (Array.isArray(snapshot.songs) && snapshot.songs.length > 0) {
           await tx.insert(songs).values(
-            snapshot.songs.map((song) => ({
-              ...song,
-              id: mapId(song.id),
-              gameId: newGameId,
-              artistId: mapReference(song.artistId),
-              projectId: mapReference(song.projectId),
-              releaseId: mapReference(song.releaseId),
-            })) as any,
+            snapshot.songs.map((song) =>
+              convertTimestamps({
+                ...song,
+                id: mapId(song.id),
+                gameId: newGameId,
+                artistId: mapReference(song.artistId),
+                projectId: mapReference(song.projectId),
+                releaseId: mapReference(song.releaseId),
+              })
+            ) as any,
+          );
+        }
+
+        if (Array.isArray(snapshot.emails) && snapshot.emails.length > 0) {
+          await tx.insert(emails).values(
+            snapshot.emails.map((email) =>
+              convertTimestamps({
+                ...email,
+                id: mapId((email as any).id),
+                gameId: newGameId,
+              })
+            ) as any,
           );
         }
       });

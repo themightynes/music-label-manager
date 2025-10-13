@@ -31,6 +31,7 @@ interface GameStore {
   weeklyActions: WeeklyAction[];
   songs: any[];
   releases: any[];
+  emails: any[]; // Email system support
 
   // Discovered A&R artists (persisted client-side)
   discoveredArtists: Artist[];
@@ -98,6 +99,7 @@ export const useGameStore = create<GameStore>()(
       weeklyActions: [],
       songs: [],
       releases: [],
+      emails: [],
       discoveredArtists: [],
       selectedActions: [],
       isAdvancingWeek: false,
@@ -107,21 +109,24 @@ export const useGameStore = create<GameStore>()(
       // Load existing game
       loadGame: async (gameId: string) => {
         try {
-          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+          const [gameResponse, songsResponse, releasesResponse, emailsResponse] = await Promise.all([
             apiRequest('GET', `/api/game/${gameId}`),
             apiRequest('GET', `/api/game/${gameId}/songs`),
-            apiRequest('GET', `/api/game/${gameId}/releases`)
+            apiRequest('GET', `/api/game/${gameId}/releases`),
+            apiRequest('GET', `/api/game/${gameId}/emails`)
           ]);
 
           const data = await gameResponse.json();
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
+          const emails = await emailsResponse.json();
 
           console.log('GameStore loadGame debug:', {
             gameId,
             gameData: !!data,
             songsCount: songs?.length || 0,
             releasesCount: releases?.length || 0,
+            emailsCount: emails?.length || 0,
             releases: releases
           });
           
@@ -150,6 +155,7 @@ export const useGameStore = create<GameStore>()(
             weeklyActions: data.weeklyActions,
             songs,
             releases,
+            emails,
             selectedActions: []
           });
 
@@ -203,6 +209,7 @@ export const useGameStore = create<GameStore>()(
             roles: (snapshot.roles || []) as unknown as Role[],
             songs: snapshot.songs || [],
             releases: snapshot.releases || [],
+            emails: snapshot.emails || [],
             weeklyActions: (snapshot.weeklyActions || []) as unknown as WeeklyAction[],
             selectedActions: [],
             campaignResults: null,
@@ -219,15 +226,17 @@ export const useGameStore = create<GameStore>()(
 
           localStorage.setItem('currentGameId', restoredGameId);
 
-          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+          const [gameResponse, songsResponse, releasesResponse, emailsResponse] = await Promise.all([
             apiRequest('GET', `/api/game/${restoredGameId}`),
             apiRequest('GET', `/api/game/${restoredGameId}/songs`),
             apiRequest('GET', `/api/game/${restoredGameId}/releases`),
+            apiRequest('GET', `/api/game/${restoredGameId}/emails`),
           ]);
 
           const gameData = await gameResponse.json();
           const songsData = await songsResponse.json();
           const releasesData = await releasesResponse.json();
+          const emailsData = await emailsResponse.json();
 
           const syncedGameState = {
             ...gameData.gameState,
@@ -244,6 +253,7 @@ export const useGameStore = create<GameStore>()(
             weeklyActions: gameData.weeklyActions || [],
             songs: songsData || [],
             releases: releasesData || [],
+            emails: emailsData || [],
             selectedActions: [],
             campaignResults: null,
             weeklyOutcome: null,
@@ -316,6 +326,7 @@ export const useGameStore = create<GameStore>()(
             weeklyActions: [],
             songs: [],
             releases: [],
+            emails: [],
             selectedActions: [],
             campaignResults: null,
             weeklyOutcome: null
@@ -1027,6 +1038,10 @@ export const useGameStore = create<GameStore>()(
         if (!gameState) return;
 
         try {
+          // Fetch current emails from the server to ensure we capture all emails
+          const emailsResponse = await apiRequest('GET', `/api/game/${gameState.id}/emails`);
+          const emails = await emailsResponse.json();
+
           const { musicLabel, ...gameStateWithoutLabel } = gameState;
           const isAutosave = options?.isAutosave ?? false;
           const saveData = {
@@ -1040,6 +1055,7 @@ export const useGameStore = create<GameStore>()(
               roles,
               songs,
               releases,
+              emails,
               weeklyActions
             },
             week: gameState.currentWeek,
