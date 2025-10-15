@@ -36,13 +36,13 @@ Generated from: [0006-prd-database-maintenance-orphaned-games.md](./0006-prd-dat
 ### Phase 1: Prevent New Orphaned Data (High Priority)
 
 - [ ] 1.0 Implement Game Deletion Endpoint (FR-1)
-  - [ ] 1.1 Add `DELETE /api/game/:gameId` endpoint in `server/routes.ts` after existing game routes (~line 500)
-  - [ ] 1.2 Verify requesting user owns the game by comparing `req.userId` with game's `userId`
-  - [ ] 1.3 Delete game_states record using Drizzle ORM (CASCADE automatically deletes all related records)
-  - [ ] 1.4 Return 200 with success message on successful deletion
-  - [ ] 1.5 Return 404 if game not found or user doesn't own the game
-  - [ ] 1.6 Add error handling for database errors (return 500 with error message)
-  - [ ] 1.7 Write unit tests in `server/routes.test.ts` for DELETE endpoint (success, unauthorized, not found cases)
+  - [x] 1.1 Add `DELETE /api/game/:gameId` endpoint in `server/routes.ts` after existing game routes (~line 500)
+  - [x] 1.2 Verify requesting user owns the game by comparing `req.userId` with game's `userId`
+  - [x] 1.3 Delete game_states record using Drizzle ORM (CASCADE automatically deletes all related records)
+  - [x] 1.4 Return 200 with success message on successful deletion
+  - [x] 1.5 Return 404 if game not found or user doesn't own the game
+  - [x] 1.6 Add error handling for database errors (return 500 with error message)
+  - [x] 1.7 Write unit tests in `tests/features/game-deletion-endpoint.test.ts` for DELETE endpoint (success, unauthorized, not found cases)
 
 - [ ] 2.0 Implement Automatic Cleanup on New Game Creation (FR-2, FR-3, FR-4, FR-5)
   - [ ] 2.1 Update `createNewGame()` in `client/src/store/gameStore.ts` (lines 318-389) to check for existing unsaved game

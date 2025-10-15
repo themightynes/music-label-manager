@@ -622,20 +622,68 @@ const musicLabelData = {
     try {
       console.log('[PATCH /api/game/:id] Request params:', req.params.id);
       console.log('[PATCH /api/game/:id] Request body:', req.body);
-      
+
       const gameState = await storage.updateGameState(req.params.id, req.body);
-      
+
       console.log('[PATCH /api/game/:id] Updated game state:', gameState);
-      
+
       if (!gameState) {
         console.error('[PATCH /api/game/:id] No game state returned from storage.updateGameState');
         return res.status(404).json({ message: "Game not found or update failed" });
       }
-      
+
       res.json(gameState);
     } catch (error) {
       console.error('[PATCH /api/game/:id] Error:', error);
       res.status(500).json({ message: "Failed to update game state", error: (error as any).message });
+    }
+  });
+
+  // Delete game (orphaned game cleanup)
+  // CASCADE delete configured in schema.ts will automatically delete all related records:
+  // - artists, songs, projects, releases, emails, executives, mood events,
+  // - weekly actions, chart entries, and music label
+  app.delete("/api/game/:gameId", requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { gameId } = req.params;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      console.log('[DELETE /api/game/:gameId] User:', userId, 'attempting to delete game:', gameId);
+
+      // Verify user owns this game
+      const [gameOwnership] = await db
+        .select({ id: gameStates.id, userId: gameStates.userId, currentWeek: gameStates.currentWeek })
+        .from(gameStates)
+        .where(eq(gameStates.id, gameId))
+        .limit(1);
+
+      if (!gameOwnership) {
+        console.log('[DELETE /api/game/:gameId] Game not found:', gameId);
+        return res.status(404).json({ message: 'Game not found' });
+      }
+
+      if (gameOwnership.userId !== userId) {
+        console.log('[DELETE /api/game/:gameId] Unauthorized deletion attempt by user:', userId);
+        return res.status(404).json({ message: 'Game not found' });
+      }
+
+      // Delete the game (CASCADE will handle related records)
+      await db.delete(gameStates).where(eq(gameStates.id, gameId));
+
+      console.log('[DELETE /api/game/:gameId] Successfully deleted game:', gameId, '(Week', gameOwnership.currentWeek + ')');
+
+      res.json({
+        success: true,
+        message: 'Game deleted successfully',
+        gameId: gameId
+      });
+    } catch (error) {
+      console.error('[DELETE /api/game/:gameId] Error:', error);
+      res.status(500).json({ message: 'Failed to delete game', error: (error as any).message });
     }
   });
 
