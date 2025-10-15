@@ -130,12 +130,7 @@ describe('DELETE /api/game/:gameId endpoint', () => {
     // No deletion should occur (nothing to delete)
   });
 
-  it.skip('should CASCADE delete all related records when game is deleted (Schema issue: artists.gameId missing CASCADE)', async () => {
-    // NOTE: This test is skipped because artists.gameId in shared/schema.ts (line 39)
-    // does not have `.references(() => gameStates.id, { onDelete: "cascade" })` configured.
-    // This is a known schema issue that needs to be addressed separately.
-    // Songs, releases, emails, executives, mood events, chart entries, and music labels
-    // all have proper CASCADE delete configured.
+  it('should CASCADE delete all related records when game is deleted', async () => {
     // Create a game with related records
     const [game] = await db.insert(gameStates).values({
       userId: testUserId,
@@ -202,6 +197,11 @@ describe('DELETE /api/game/:gameId endpoint', () => {
     const artistsAfter = await db.select().from(artists).where(eq(artists.gameId, game.id));
     const songsAfter = await db.select().from(songs).where(eq(songs.gameId, game.id));
     const projectsAfter = await db.select().from(projects).where(eq(projects.gameId, game.id));
+
+    console.log('[CASCADE TEST] Games after deletion:', gamesAfter.length);
+    console.log('[CASCADE TEST] Artists after deletion:', artistsAfter.length, artistsAfter.map(a => ({ id: a.id, gameId: a.gameId })));
+    console.log('[CASCADE TEST] Songs after deletion:', songsAfter.length);
+    console.log('[CASCADE TEST] Projects after deletion:', projectsAfter.length);
 
     expect(gamesAfter).toHaveLength(0);
     expect(artistsAfter).toHaveLength(0);

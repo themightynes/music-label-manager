@@ -35,7 +35,7 @@ Generated from: [0006-prd-database-maintenance-orphaned-games.md](./0006-prd-dat
 
 ### Phase 1: Prevent New Orphaned Data (High Priority)
 
-- [ ] 1.0 Implement Game Deletion Endpoint (FR-1)
+- [x] 1.0 Implement Game Deletion Endpoint (FR-1)
   - [x] 1.1 Add `DELETE /api/game/:gameId` endpoint in `server/routes.ts` after existing game routes (~line 500)
   - [x] 1.2 Verify requesting user owns the game by comparing `req.userId` with game's `userId`
   - [x] 1.3 Delete game_states record using Drizzle ORM (CASCADE automatically deletes all related records)
