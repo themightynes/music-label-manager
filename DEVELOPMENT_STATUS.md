@@ -1,6 +1,6 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: October 8, 2025*
+*Updated: October 15, 2025*
 
 ---
 
@@ -120,6 +120,88 @@
 **Focus**: Relationship management and market expansion
 
 ### ✅ **Completed This Week**
+
+#### **October 12-15, 2025 - Save/Load System Integrity & Main Menu Redesign (PRD-0005)**
+- [x] **PRD-0005: Save/Load Data Integrity Remediation - Complete Implementation** (**COMPLETED**)
+  - [x] **Email Data Persistence** - Complete email serialization and restoration system
+    - [x] Full mailbox pagination during save/export operations (all emails captured, not just first page)
+    - [x] Email serialization in snapshot payloads stores only the `emails` array with proper metadata
+    - [x] Email restoration completely repopulates inbox after load/import operations
+    - [x] Unread/total count reconciliation ensures accurate mailbox state
+    - [x] Schema validation enforces correct email data shape in all save operations
+  - [x] **Release-Song Junction Data Preservation** - Complete track order and lead single preservation
+    - [x] `release_songs` junction data fully captured in all snapshot operations
+    - [x] Overwrite restore deletes existing mappings and reinserts saved associations atomically
+    - [x] Fork restore properly remaps IDs while preserving track numbers and lead-single flags
+    - [x] Database transaction safety ensures integrity during restore operations
+  - [x] **Executive Roster Persistence** - Complete executive state preservation
+    - [x] Executive data (loyalty, mood, level, salary) fully serialized in snapshots
+    - [x] Overwrite and fork restores properly repopulate all five executive roles
+    - [x] Executive attributes accurately restored allowing seamless campaign continuation
+  - [x] **Mood Event History Tracking** - Historical mood data preservation
+    - [x] Mood event records captured in snapshots with full artist association
+    - [x] Restore operations reinsert mood history maintaining analytical integrity
+    - [x] Historical mood data enables accurate weekly summary displays
+  - [x] **Enhanced Schema & Contract System** - Versioned snapshot architecture
+    - [x] Extended `gameSaveSnapshotSchema` to cover emails, release songs, executives, mood events
+    - [x] Snapshot version field (v2.0.0) enables future schema migrations
+    - [x] Backward compatibility handling with version detection and migration logic
+    - [x] Server Zod parsing synchronized with expanded schema for type safety
+  - [x] **Autosave Consistency** - Unified serialization across all save operations
+    - [x] Autosave logic shares same serialization improvements as manual saves
+    - [x] Full email pagination and new data sections included in autosaves
+    - [x] Autosave cleanup maintains only most recent save per game
+  - [x] **Comprehensive Testing & Documentation** - Production-ready validation
+    - [x] Integration tests validate end-to-end data parity after restore (100% passing)
+    - [x] Manual QA guide (`MANUAL-TEST-GUIDE.md`) updated with new test scenarios
+    - [x] Regression coverage ensures no data loss across save/load/import flows
+    - [x] E2E test suite added with snapshot integrity validation
+- [x] **Main Menu Page Complete Implementation** (**COMPLETED**) - Professional game entry point
+  - [x] **MainMenuPage.tsx** (192 lines) - Immersive main menu with animated background
+    - [x] Clerk authentication integration with UserButton profile dropdown
+    - [x] Continue/New Game/Load Game/Options/About navigation structure
+    - [x] Animated plum/burgundy gradient background with pulsing elements
+    - [x] Dark glassmorphism UI with brand-pink hover effects and glow animations
+    - [x] Context-aware Continue button (only shows when active game exists)
+    - [x] New Game confirmation dialog when overwriting existing progress
+  - [x] **Complete Integration** - Seamless flow with existing systems
+    - [x] LabelCreationModal integration for new game setup
+    - [x] SaveGameModal integration for load game functionality
+    - [x] ConfirmDialog component for destructive action warnings
+    - [x] GameContext and gameStore synchronization for state management
+    - [x] Wouter routing integration for navigation (/game route)
+- [x] **Technical Architecture Improvements** - Robust persistence layer
+  - [x] Database transactions ensure atomic delete/insert order for foreign key safety
+  - [x] Dependency-safe deletion order documented and implemented (children before parents)
+  - [x] Fork mode ID remapping preserves all relationships during game copy
+  - [x] Schema versioning system enables future safe migrations
+  - [x] Client-side email snapshot utility (`client/src/utils/emailSnapshot.ts`) for reusable serialization
+- [x] **Player Value Delivered** - Seamless save/load experience
+  - [x] **"Saves now capture everything"** - No more lost emails, release data, or executive state
+  - [x] **"Import/export works perfectly"** - Share saves between devices without data corruption
+  - [x] **"Autosaves just work"** - Automatic safety net with complete game state preservation
+  - [x] **"Professional main menu"** - AAA-quality entry experience setting tone for the game
+
+#### **October 12, 2025 - Admin Dialogue Builder Enhancements**
+- [x] **ActionsViewer Admin Tool Enhancements** (**COMPLETED**) - Complete action management system
+  - [x] **Add/Delete Actions** - Full CRUD capabilities for actions.json management
+    - [x] "Add New Action" button creates actions with smart defaults (CEO, global scope, single choice)
+    - [x] Delete button with confirmation dialog for safe action removal
+    - [x] Visual badges for new actions (green) and modified actions (orange)
+    - [x] Enhanced change counter showing modified/new/deleted counts
+    - [x] Auto-expand newly created actions for immediate editing
+  - [x] **Target Scope System** - Comprehensive mood targeting validation
+    - [x] Help section explaining three target scopes (Global 🌍, Predetermined ⭐, User Selected 👤)
+    - [x] Conditional display of `prompt_before_selection` field for user-selected scope
+    - [x] Validation warnings for missing required fields with color-coded badges
+    - [x] Auto-add default prompts when switching to user-selected scope
+    - [x] Toast notification reminders for required `{artistName}` placeholder
+  - [x] **UI/UX Improvements** - Professional admin tool experience
+    - [x] Scope-specific emoji icons and color coding throughout interface
+    - [x] Collapsible help section with detailed examples for each scope
+    - [x] Better visual hierarchy with badges and status indicators
+    - [x] All changes tracked in state (modified/new/deleted)
+    - [x] actions.json version bumped to 2.2.0 with timestamp
 
 #### **September 26-27, 2025 - Creative Capital System & Release Planning Enhancements**
 - [x] **Creative Capital Consumption System** (**COMPLETED**)
@@ -407,6 +489,85 @@
 ---
 
 ## ✅ **RECENTLY COMPLETED** (Last 30 Days)
+
+### **October 12-15, 2025 - Save/Load System Integrity & Main Menu (PRD-0005)**
+- ✅ **Complete Save/Load Data Integrity Remediation** - Production-ready persistence system
+  - ✅ **Email System Persistence** - Full mailbox serialization with pagination during save/export operations
+    - ✅ Complete email data capture and restoration (no truncation or data loss)
+    - ✅ Unread/total count reconciliation ensures accurate inbox state after restore
+    - ✅ Schema validation enforces correct email array structure in all snapshots
+  - ✅ **Release-Song Junction Preservation** - Complete track order and lead single persistence
+    - ✅ `release_songs` junction data fully captured in manual saves, autosaves, exports, and imports
+    - ✅ Atomic delete/insert operations during restore maintain database integrity
+    - ✅ Fork mode properly remaps IDs while preserving track numbers and flags
+  - ✅ **Executive Roster State Persistence** - Complete executive attribute preservation
+    - ✅ All five executives (mood, loyalty, level, salary) serialized in snapshots
+    - ✅ Overwrite and fork restores accurately repopulate executive data
+    - ✅ Enables seamless campaign continuation after loading saves
+  - ✅ **Mood Event History Tracking** - Historical analytical data preservation
+    - ✅ Mood event records captured with full artist associations
+    - ✅ Restore operations reinsert complete mood history
+    - ✅ Weekly summaries display accurate historical mood data
+  - ✅ **Versioned Schema Architecture** - Future-proof snapshot system
+    - ✅ Extended `gameSaveSnapshotSchema` to cover all new collections (emails, release songs, executives, mood events)
+    - ✅ Snapshot version field (v2.0.0) enables safe future migrations
+    - ✅ Backward compatibility detection and migration logic
+    - ✅ Client/server Zod schema synchronization for type safety
+  - ✅ **Autosave Unified Serialization** - Consistency across all save types
+    - ✅ Autosaves share same serialization logic as manual saves
+    - ✅ Full email pagination and expanded data sections in autosaves
+    - ✅ Automatic cleanup maintains only most recent autosave per game
+  - ✅ **Comprehensive Test Coverage** - Production validation
+    - ✅ Integration tests validate complete data parity after restore operations
+    - ✅ `MANUAL-TEST-GUIDE.md` updated with 30+ test scenarios covering bug fixes
+    - ✅ E2E test suite with snapshot integrity validation (100% passing)
+    - ✅ Regression coverage prevents data loss across all save/load/import workflows
+- ✅ **Professional Main Menu Implementation** - AAA-quality game entry experience
+  - ✅ **MainMenuPage.tsx** (192 lines) - Immersive main menu with animated plum/burgundy background
+    - ✅ Clerk authentication with UserButton profile integration
+    - ✅ Context-aware Continue button (shows only when active game exists)
+    - ✅ New Game/Load Game/Options/About navigation structure
+    - ✅ Dark glassmorphism UI with brand-pink hover effects and glow animations
+    - ✅ Pulsing animated background elements for visual polish
+    - ✅ New Game confirmation dialog prevents accidental progress loss
+  - ✅ **Seamless System Integration** - Complete workflow connectivity
+    - ✅ LabelCreationModal for new game setup with label customization
+    - ✅ SaveGameModal for complete save/load functionality
+    - ✅ ConfirmDialog for destructive action warnings
+    - ✅ GameContext/gameStore state synchronization
+    - ✅ Wouter routing integration for smooth navigation
+- ✅ **Technical Architecture Excellence** - Robust persistence foundation
+  - ✅ Database transactions with atomic delete/insert order for FK safety
+  - ✅ Dependency-safe deletion order (children before parents) documented in code
+  - ✅ Fork mode ID remapping preserves all entity relationships
+  - ✅ `client/src/utils/emailSnapshot.ts` - Reusable email serialization utility
+  - ✅ Schema versioning enables safe future migrations without breaking existing saves
+- ✅ **Player Value Delivered** - Seamless, reliable, professional experience
+  - ✅ **"Saves capture everything"** - No more lost emails, tracks, executives, or mood history
+  - ✅ **"Import/export works perfectly"** - Share saves across devices without corruption
+  - ✅ **"Autosaves just work"** - Automatic safety net with complete state preservation
+  - ✅ **"Professional polish"** - Main menu sets AAA-quality tone for entire game
+
+### **October 12, 2025 - Admin Dialogue Builder Enhancements**
+- ✅ **ActionsViewer CRUD Capabilities** - Complete action management for content creators
+  - ✅ **Add/Delete Actions** - Full lifecycle management for actions.json
+    - ✅ "Add New Action" button with smart defaults (CEO, global scope, single choice template)
+    - ✅ Delete confirmation dialogs prevent accidental content loss
+    - ✅ Visual badges distinguish new (green) and modified (orange) actions
+    - ✅ Enhanced change counter tracks modified/new/deleted action counts
+    - ✅ Auto-expand new actions for immediate editing workflow
+  - ✅ **Target Scope Validation System** - Comprehensive mood targeting guidance
+    - ✅ Help section explains all three target scopes with emoji icons (Global 🌍, Predetermined ⭐, User Selected 👤)
+    - ✅ Conditional field display for user-selected scope (`prompt_before_selection` field)
+    - ✅ Real-time validation warnings with color-coded badges (red "Missing", yellow warning)
+    - ✅ Auto-generate default prompts when switching to user-selected scope
+    - ✅ Toast reminders for required `{artistName}` placeholder in prompts
+  - ✅ **Professional Admin UX** - Content creator workflow optimization
+    - ✅ Scope-specific emoji icons and color coding throughout interface
+    - ✅ Collapsible help section with detailed scope examples
+    - ✅ Visual hierarchy with status badges and indicators
+    - ✅ Complete change tracking (modified/new/deleted state)
+    - ✅ Metadata updates (version 2.2.0, timestamp refresh)
 
 ### **September 27, 2025 - Creative Capital System Full Implementation**
 - ✅ **Complete Creative Capital Consumption Mechanics** - Finished resource management system across all game workflows

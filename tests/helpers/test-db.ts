@@ -7,7 +7,7 @@ import type { Song, Artist } from '@shared/schema';
  * Test database configuration
  * Uses real PostgreSQL running in Docker on port 5433
  */
-const TEST_DATABASE_URL = 'postgresql://testuser:testpassword@localhost:5433/music_label_test';
+const TEST_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5433/music_label_test';
 
 let testPool: Pool | null = null;
 let testDb: NodePgDatabase<typeof schema> | null = null;
@@ -65,16 +65,27 @@ export async function setupDatabase() {
  */
 export async function clearDatabase(db: NodePgDatabase<typeof schema>) {
   // Use TRUNCATE CASCADE to clear all tables and reset sequences
+  // Order matters: child tables first, then parent tables
   await testPool!.query(`
     TRUNCATE TABLE
       "chart_entries",
+      "release_songs",
+      "weekly_actions",
+      "mood_events",
+      "emails",
+      "executives",
+      "dialogue_choices",
+      "game_events",
+      "music_labels",
       "releases",
       "songs",
       "projects",
+      "roles",
       "artists",
+      "game_saves",
       "game_states",
       "users"
-    CASCADE;
+    RESTART IDENTITY CASCADE;
   `);
 }
 
