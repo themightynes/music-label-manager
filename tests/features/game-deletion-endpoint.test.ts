@@ -198,11 +198,6 @@ describe('DELETE /api/game/:gameId endpoint', () => {
     const songsAfter = await db.select().from(songs).where(eq(songs.gameId, game.id));
     const projectsAfter = await db.select().from(projects).where(eq(projects.gameId, game.id));
 
-    console.log('[CASCADE TEST] Games after deletion:', gamesAfter.length);
-    console.log('[CASCADE TEST] Artists after deletion:', artistsAfter.length, artistsAfter.map(a => ({ id: a.id, gameId: a.gameId })));
-    console.log('[CASCADE TEST] Songs after deletion:', songsAfter.length);
-    console.log('[CASCADE TEST] Projects after deletion:', projectsAfter.length);
-
     expect(gamesAfter).toHaveLength(0);
     expect(artistsAfter).toHaveLength(0);
     expect(songsAfter).toHaveLength(0);

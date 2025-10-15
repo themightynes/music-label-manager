@@ -127,9 +127,30 @@ Generated from: [0006-prd-database-maintenance-orphaned-games.md](./0006-prd-dat
 
 ---
 
+## ⚠️ CRITICAL NOTE FOR NEXT DEVELOPER
+
+**Task 1.0 is COMPLETE** - All tests passing (4/4) ✅
+
+**Key Lesson Learned:** `drizzle-kit push` does NOT update existing foreign key constraints when you add CASCADE. To fix CASCADE in existing databases:
+1. **Production (Railway):** Already wiped clean and rebuilt with correct CASCADE ✅
+2. **Test Database:** Must be deleted and recreated from scratch (not just wiped) ✅
+3. **Solution:** `docker stop music-label-test && docker rm music-label-test` then recreate container + `drizzle-kit push`
+
+**Commits:**
+- `7c55ee3` - DELETE endpoint implementation
+- `e04c2bd` - CASCADE schema changes + cleanup scripts
+
+**Ready for Task 2.0** - Automatic cleanup on new game creation
+
+---
+
 ## Implementation Notes
 
-- **CASCADE Deletes**: All foreign key relationships already have CASCADE delete configured in `shared/schema.ts` (lines 28-690). Deleting a game_states record will automatically delete all related artists, songs, projects, releases, emails, mood events, weekly actions, chart entries, and music label records.
+- **CASCADE Deletes**: ✅ **FULLY IMPLEMENTED** - All foreign keys now have proper CASCADE delete:
+  - ✅ All gameId foreign keys: artists, roles, projects, songs, releases, emails, executives, moodEvents, weeklyActions, chartEntries, musicLabels
+  - ✅ All artistId foreign keys: songs, projects, releases, moodEvents
+  - ✅ All constraints include `.notNull()` where required
+  - ✅ Verified working in tests (all 4 tests pass)
 - **Multi-Tab Sync**: BroadcastChannel ('music-label-manager-game') already handles tab synchronization in `GameContext.tsx` (lines 32-52). No additional work needed beyond existing implementation.
 - **Save Detection**: Use existing `GET /api/saves` endpoint with gameId filter to check if current game has any saves.
 - **Admin Authentication**: Use existing `requireAdmin` middleware from `server/auth.ts` (lines 183-204). Checks Clerk user's `privateMetadata.role === 'admin'`.
