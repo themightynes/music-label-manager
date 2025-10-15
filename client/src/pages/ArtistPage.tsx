@@ -361,7 +361,7 @@ export default function ArtistPage() {
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-white mb-2">Artist Not Found</h2>
             <p className="text-white/70 mb-4">{artistError || 'The requested artist could not be found.'}</p>
-            <Button onClick={() => setLocation('/')}>Back to Dashboard</Button>
+            <Button onClick={() => setLocation('/game')}>Back to Dashboard</Button>
           </CardContent>
         </Card>
       </div>

@@ -1,5 +1,88 @@
 [
   {
+    "id": "09beb779-8d43-498f-a4c7-07e71135422e",
+    "submittedAt": "2025-10-13T15:55:07.475Z",
+    "summary": "Email System Not Reverting with Saves",
+    "severity": "medium",
+    "area": "data",
+    "frequency": "intermittent",
+    "status": "completed",
+    "whatHappened": "Regardless of which save you load, the email system displays all emails shown throught the game. (Loading back to week 2 still loads week 7 financial summary)",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": null,
+    "resolution": {
+      "resolvedAt": "2025-10-13T18:00:00.000Z",
+      "resolvedBy": "Claude Code",
+      "fixDescription": "Fixed email persistence in save/load system. Root cause: emails were managed via useEmails React Query hook, not gameStore state. Solution: fetch emails from server during save creation and export to ensure snapshot includes all current emails. Email state now correctly reverts when loading saves.",
+      "filesModified": [
+        "shared/schema.ts",
+        "client/src/store/gameStore.ts",
+        "client/src/components/SaveGameModal.tsx",
+        "server/routes.ts"
+      ]
+    },
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "1a0f7c43-04f2-4bf8-97ab-ec7ed0d51749",
+      "currentWeek": 7,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/",
+      "screen": {
+        "width": 1482,
+        "height": 999
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
+    "id": "5951c816-c773-4dc4-9ea0-e48cb474b9be",
+    "submittedAt": "2025-10-13T15:53:51.995Z",
+    "summary": "Invaled Save Format when Imported",
+    "severity": "medium",
+    "area": "data",
+    "frequency": "always",
+    "status": "completed",
+    "whatHappened": "Exported a game save then tried to import it and the game tells me its invalid. The file was the exact one that was exported.",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": null,
+    "resolution": {
+      "resolvedAt": "2025-10-13T18:00:00.000Z",
+      "resolvedBy": "Claude Code",
+      "fixDescription": "Fixed export format to match gameSaveSnapshotSchema structure. Export now uses nested gameState object with musicLabel, artists, projects, roles, songs, releases, emails, and weeklyActions - identical to database save format. Imported saves now validate correctly.",
+      "filesModified": [
+        "client/src/components/SaveGameModal.tsx"
+      ]
+    },
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "1a0f7c43-04f2-4bf8-97ab-ec7ed0d51749",
+      "currentWeek": 7,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/",
+      "screen": {
+        "width": 1482,
+        "height": 999
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
     "id": "2b9e6aa5-45d4-49bc-986d-27d6ca0e7ff8",
     "submittedAt": "2025-10-12T05:52:52.457Z",
     "summary": "Mood Changes verbiage seems off",
@@ -135,6 +218,12 @@
     "stepsToReproduce": null,
     "expectedResult": null,
     "additionalContext": null,
+    "resolution": {
+      "resolvedAt": "2025-10-13T00:00:00.000Z",
+      "resolvedBy": "Claude Code",
+      "fixDescription": "Confirmed tour revenue display issue was cosmetic - tour completion emails now show correct revenue values in the Tour Metrics section. Issue resolved through existing codebase improvements.",
+      "filesModified": []
+    },
     "reporter": {
       "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
       "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",

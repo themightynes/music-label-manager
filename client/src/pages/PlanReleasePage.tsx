@@ -479,9 +479,9 @@ export default function PlanReleasePage() {
       
       // Offer to plan another release or go to dashboard
       const planAnother = confirm('Would you like to plan another release? Click OK to stay on this page, or Cancel to go to the dashboard.');
-      
+
       if (!planAnother) {
-        setLocation('/');
+        setLocation('/game');
       }
       
     } catch (error: any) {

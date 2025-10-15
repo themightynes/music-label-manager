@@ -64,6 +64,8 @@ export const artists = pgTable("artists", {
     creativityCheck: sql`CHECK (${table.creativity} >= 0 AND ${table.creativity} <= 100)`,
     massAppealCheck: sql`CHECK (${table.massAppeal} >= 0 AND ${table.massAppeal} <= 100)`,
     temperamentCheck: sql`CHECK (${table.temperament} >= 0 AND ${table.temperament} <= 100)`,
+    // Index for save/load performance
+    gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_artists_game_id" ON ${table} ("game_id")`,
   };
 });
 
@@ -91,7 +93,10 @@ export const roles = pgTable("roles", {
   relationship: integer("relationship").default(50),
   accessLevel: integer("access_level").default(0),
   gameId: uuid("game_id"),
-});
+}, (table) => ({
+  // Index for save/load performance
+  gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_roles_game_id" ON ${table} ("game_id")`,
+}));
 
 // Projects (Singles, EPs, Tours)
 export const projects = pgTable("projects", {
@@ -114,20 +119,23 @@ export const projects = pgTable("projects", {
   songCount: integer("song_count").default(1),
   songsCreated: integer("songs_created").default(0),
   // Project-level economic decision fields
-  producerTier: text("producer_tier").default("local"), // local, regional, national, legendary  
+  producerTier: text("producer_tier").default("local"), // local, regional, national, legendary
   timeInvestment: text("time_investment").default("standard"), // rushed, standard, extended, perfectionist
-  
+
   // Tour ROI tracking (mirrors song ROI system)
   totalRevenue: integer("total_revenue").default(0), // Aggregated revenue for tours
   roiPercentage: real("roi_percentage").generatedAlwaysAs(sql`
-    CASE 
-      WHEN total_cost > 0 THEN 
+    CASE
+      WHEN total_cost > 0 THEN
         ((total_revenue - total_cost)::REAL / total_cost::REAL * 100)
-      ELSE NULL 
+      ELSE NULL
     END
   `), // Auto-calculated ROI percentage
   completionStatus: text("completion_status").default("active"), // active, completed, cancelled
-});
+}, (table) => ({
+  // Index for save/load performance
+  gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_projects_game_id" ON ${table} ("game_id")`,
+}));
 
 // Songs (Individual tracks)
 export const songs = pgTable("songs", {
@@ -367,7 +375,10 @@ export const weeklyActions = pgTable("weekly_actions", {
   choiceId: uuid("choice_id"), // For dialogue choices
   results: jsonb("results"), // Outcome of the action
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Index for save/load performance
+  gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_weekly_actions_game_id" ON ${table} ("game_id")`,
+}));
 
 // Relations
 export const gameSavesRelations = relations(gameSaves, ({ one }) => ({
@@ -499,11 +510,71 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
 });
 
-export const insertGameSaveSchema = createInsertSchema(gameSaves).omit({
+// Increment this whenever the snapshot payload gains breaking changes.
+export const SNAPSHOT_VERSION = 2;
+export const supportedSnapshotVersions = [SNAPSHOT_VERSION] as const;
+
+export const gameSaveSnapshotSchema = z.object({
+  snapshotVersion: z.number().default(SNAPSHOT_VERSION),
+  gameState: z.object({
+    id: z.string(),
+    currentWeek: z.number(),
+    money: z.number(),
+    reputation: z.number(),
+    creativeCapital: z.number(),
+    focusSlots: z.number().optional(),
+    usedFocusSlots: z.number().optional(),
+    arOfficeSlotUsed: z.boolean().optional(),
+    arOfficeSourcingType: z.string().nullable().optional(),
+    arOfficePrimaryGenre: z.string().nullable().optional(),
+    arOfficeSecondaryGenre: z.string().nullable().optional(),
+    arOfficeOperationStart: z.number().nullable().optional(),
+    playlistAccess: z.string().optional(),
+    pressAccess: z.string().optional(),
+    venueAccess: z.string().optional(),
+    campaignType: z.string().optional(),
+    campaignCompleted: z.boolean().optional(),
+    rngSeed: z.string().nullable().optional(),
+    flags: z.record(z.any()).optional(),
+    weeklyStats: z.record(z.any()).optional(),
+    tierUnlockHistory: z.record(z.any()).optional(),
+  }).passthrough(),
+  musicLabel: z.record(z.any()).nullable().optional(),
+  artists: z.array(z.record(z.any())).optional(),
+  projects: z.array(z.record(z.any())).optional(),
+  roles: z.array(z.record(z.any())).optional(),
+  songs: z.array(z.record(z.any())).optional(),
+  releases: z.array(z.record(z.any())).optional(),
+  weeklyActions: z.array(z.record(z.any())).optional(),
+  emails: z.array(z.record(z.any())).optional(), // Email system support
+  emailMetadata: z.object({
+    total: z.number().optional(),
+    unreadCount: z.number().optional(),
+  }).optional(),
+  releaseSongs: z.array(z.record(z.any())).optional(),
+  executives: z.array(z.record(z.any())).optional(),
+  moodEvents: z.array(z.record(z.any())).optional(),
+  weeklyOutcome: z.any().optional(),
+}).passthrough();
+
+const baseInsertGameSaveSchema = createInsertSchema(gameSaves).omit({
   id: true,
   userId: true, // Will be set by middleware
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertGameSaveSchema = baseInsertGameSaveSchema.extend({
+  gameState: gameSaveSnapshotSchema,
+}).superRefine((data, ctx) => {
+  const snapshotWeek = data.gameState?.gameState?.currentWeek;
+  if (typeof snapshotWeek === 'number' && data.week !== snapshotWeek) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['week'],
+      message: 'Week must match snapshot currentWeek',
+    });
+  }
 });
 
 export const insertArtistSchema = createInsertSchema(artists).omit({
@@ -576,6 +647,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type GameSave = typeof gameSaves.$inferSelect;
 export type InsertGameSave = z.infer<typeof insertGameSaveSchema>;
+export type GameSaveSnapshot = z.infer<typeof gameSaveSnapshotSchema>;
 
 export type Artist = typeof artists.$inferSelect;
 export type InsertArtist = z.infer<typeof insertArtistSchema>;

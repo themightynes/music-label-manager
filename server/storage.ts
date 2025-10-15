@@ -14,6 +14,11 @@ import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
 import type { ReleasedSongData } from "@shared/engine/ChartService";
 
+export type GameSaveSummary = Pick<GameSave, "id" | "name" | "week" | "isAutosave" | "createdAt" | "updatedAt"> & {
+  money: number | null;
+  reputation: number | null;
+};
+
 export interface IStorage {
   // User management
   getUser(id: string): Promise<User | undefined>;
@@ -21,11 +26,13 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
 
   // Game saves
-  getGameSaves(userId: string): Promise<GameSave[]>;
+  getGameSaves(userId: string): Promise<GameSaveSummary[]>;
   getGameSave(id: string): Promise<GameSave | undefined>;
+  getGameSaveForUser(id: string, userId: string): Promise<GameSave | undefined>;
   createGameSave(gameSave: InsertGameSave & { userId: string }): Promise<GameSave>;
   updateGameSave(id: string, gameSave: Partial<InsertGameSave>): Promise<GameSave>;
-  deleteGameSave(id: string): Promise<void>;
+  deleteGameSave(id: string, userId: string): Promise<number>;
+  purgeOldAutosaves(userId: string, gameId: string, keep: number): Promise<void>;
 
   // Game state
   getGameState(id: string): Promise<GameState | undefined>;
@@ -68,6 +75,7 @@ export interface IStorage {
 
   // Release Songs (junction)
   getReleaseSongs(releaseId: string): Promise<ReleaseSong[]>;
+  getReleaseSongsByGame(gameId: string): Promise<ReleaseSong[]>;
   createReleaseSong(releaseSong: InsertReleaseSong): Promise<ReleaseSong>;
   deleteReleaseSong(releaseId: string, songId: string): Promise<void>;
 
@@ -143,14 +151,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Game saves
-  async getGameSaves(userId: string): Promise<GameSave[]> {
-    return await this.db.select().from(gameSaves)
+  async getGameSaves(userId: string): Promise<GameSaveSummary[]> {
+    return await this.db
+      .select({
+        id: gameSaves.id,
+        name: gameSaves.name,
+        week: gameSaves.week,
+        isAutosave: gameSaves.isAutosave,
+        createdAt: gameSaves.createdAt,
+        updatedAt: gameSaves.updatedAt,
+        money: sql<number | null>`(game_saves.game_state->'gameState'->>'money')::int`,
+        reputation: sql<number | null>`(game_saves.game_state->'gameState'->>'reputation')::int`,
+      })
+      .from(gameSaves)
       .where(eq(gameSaves.userId, userId))
       .orderBy(desc(gameSaves.updatedAt));
   }
 
   async getGameSave(id: string): Promise<GameSave | undefined> {
     const [save] = await this.db.select().from(gameSaves).where(eq(gameSaves.id, id));
+    return save || undefined;
+  }
+
+  async getGameSaveForUser(id: string, userId: string): Promise<GameSave | undefined> {
+    const [save] = await this.db
+      .select()
+      .from(gameSaves)
+      .where(and(eq(gameSaves.id, id), eq(gameSaves.userId, userId)))
+      .limit(1);
     return save || undefined;
   }
 
@@ -167,8 +195,45 @@ export class DatabaseStorage implements IStorage {
     return save;
   }
 
-  async deleteGameSave(id: string): Promise<void> {
-    await this.db.delete(gameSaves).where(eq(gameSaves.id, id));
+  async deleteGameSave(id: string, userId: string): Promise<number> {
+    const deleted = await this.db
+      .delete(gameSaves)
+      .where(and(eq(gameSaves.id, id), eq(gameSaves.userId, userId)))
+      .returning({ id: gameSaves.id });
+    return deleted.length;
+  }
+
+  async purgeOldAutosaves(userId: string, gameId: string, keep: number): Promise<void> {
+    if (keep <= 0) {
+      return;
+    }
+
+    const autosaves = await this.db
+      .select()
+      .from(gameSaves)
+      .where(and(eq(gameSaves.userId, userId), eq(gameSaves.isAutosave, true)))
+      .orderBy(desc(gameSaves.updatedAt));
+
+    const idsToDelete: string[] = [];
+    let seenForGame = 0;
+
+    for (const save of autosaves) {
+      const snapshotGameId = (save.gameState as any)?.gameState?.id;
+      if (snapshotGameId !== gameId) {
+        continue;
+      }
+
+      if (seenForGame < keep) {
+        seenForGame += 1;
+        continue;
+      }
+
+      idsToDelete.push(save.id);
+    }
+
+    if (idsToDelete.length > 0) {
+      await this.db.delete(gameSaves).where(inArray(gameSaves.id, idsToDelete));
+    }
   }
 
   // Game state
@@ -540,6 +605,27 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(releaseSongs)
       .where(eq(releaseSongs.releaseId, releaseId))
       .orderBy(releaseSongs.trackNumber);
+  }
+
+  async getReleaseSongsByGame(gameId: string): Promise<ReleaseSong[]> {
+    const rows = await this.db
+      .select({
+        releaseId: releaseSongs.releaseId,
+        songId: releaseSongs.songId,
+        trackNumber: releaseSongs.trackNumber,
+        isSingle: releaseSongs.isSingle
+      })
+      .from(releaseSongs)
+      .innerJoin(releases, eq(releaseSongs.releaseId, releases.id))
+      .where(eq(releases.gameId, gameId))
+      .orderBy(releaseSongs.releaseId, releaseSongs.trackNumber);
+
+    return rows.map(row => ({
+      releaseId: row.releaseId,
+      songId: row.songId,
+      trackNumber: row.trackNumber,
+      isSingle: row.isSingle
+    }));
   }
 
   async createReleaseSong(releaseSong: InsertReleaseSong): Promise<ReleaseSong> {

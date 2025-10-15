@@ -160,27 +160,36 @@ export default function GamePage() {
   };
 
   if (!gameState) {
-
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="text-primary text-xl">🎵 Music Label Manager</div>
-          <div className="text-white/70">Please create your music label to start playing.</div>
-          <Button onClick={() => setShowLabelModal(true)} disabled={isCreatingGameWithLabel}>
-            {isCreatingGameWithLabel ? 'Creating game…' : 'Create Your Label'}
-          </Button>
-          {creationError && (
-            <div className="text-sm text-red-400">
-              {creationError}
-            </div>
-          )}
-          {initializationError && !creationError && (
-            <div className="text-sm text-red-400">
-              {initializationError}
-            </div>
-          )}
+      <>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="text-primary text-xl">🎵 Music Label Manager</div>
+            <div className="text-white/70">Please create your music label to start playing.</div>
+            <Button onClick={() => setShowLabelModal(true)} disabled={isCreatingGameWithLabel}>
+              {isCreatingGameWithLabel ? 'Creating game…' : 'Create Your Label'}
+            </Button>
+            {creationError && (
+              <div className="text-sm text-red-400">
+                {creationError}
+              </div>
+            )}
+            {initializationError && !creationError && (
+              <div className="text-sm text-red-400">
+                {initializationError}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+
+        {/* Modal must be rendered even when no gameState */}
+        <LabelCreationModal
+          open={showLabelModal}
+          onOpenChange={handleLabelModalOpenChange}
+          onCreateLabel={handleCreateLabelFromEmpty}
+          isCreating={isCreatingGameWithLabel}
+        />
+      </>
     );
   }
 
