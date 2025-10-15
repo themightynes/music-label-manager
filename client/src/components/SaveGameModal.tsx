@@ -7,7 +7,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
 import { apiRequest } from '@/lib/queryClient';
 import type { GameSaveSnapshot } from '@shared/schema';
-import { gameSaveSnapshotSchema } from '@shared/schema';
+import { gameSaveSnapshotSchema, SNAPSHOT_VERSION } from '@shared/schema';
+import { fetchSnapshotCollections } from '@/utils/emailSnapshot';
+import { useToast } from '@/hooks/use-toast';
 
 type SaveSummary = {
   id: string;
@@ -31,6 +33,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [saveDetails, setSaveDetails] = useState<Record<string, GameSaveSnapshot>>({});
+  const { toast } = useToast();
 
   const { data: saves = [], refetch: refetchSaves } = useQuery<SaveSummary[]>({
     queryKey: ['api', 'saves'],
@@ -59,8 +62,10 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       await saveGame(newSaveName);
       setNewSaveName('');
       refetchSaves(); // Refresh saves list
-      // Show success feedback
-      alert('Game saved successfully!');
+      toast({
+        title: 'Game saved',
+        description: 'Your game snapshot has been saved.',
+      });
     } catch (error) {
       console.error('Failed to save game:', error);
       // Try to show more specific error message
@@ -70,7 +75,11 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       } else if (typeof error === 'object' && error !== null && 'message' in error) {
         errorMessage = `Save failed: ${(error as any).message}`;
       }
-      alert(errorMessage);
+      toast({
+        title: 'Save failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }
@@ -99,14 +108,21 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       }
 
       onOpenChange(false);
-      alert('Game loaded successfully!');
+      toast({
+        title: 'Game loaded',
+        description: mode === 'fork' ? 'Forked save created successfully.' : 'Save restored successfully.',
+      });
     } catch (error) {
       console.error('Failed to load game:', error);
       let errorMessage = 'Failed to load game. Please try again.';
       if (error instanceof Error) {
         errorMessage = `Load failed: ${error.message}`;
       }
-      alert(errorMessage);
+      toast({
+        title: 'Load failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -129,14 +145,21 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       });
 
       refetchSaves(); // Refresh saves list
-      alert(`Save "${saveName}" deleted successfully!`);
+      toast({
+        title: 'Save deleted',
+        description: `Removed "${saveName}" from your saves.`,
+      });
     } catch (error) {
       console.error('Failed to delete save:', error);
       let errorMessage = 'Failed to delete save. Please try again.';
       if (error instanceof Error) {
         errorMessage = `Delete failed: ${error.message}`;
       }
-      alert(errorMessage);
+      toast({
+        title: 'Delete failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setDeleting(null);
     }
@@ -146,16 +169,27 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     if (!gameState) return;
 
     try {
-      // Fetch current emails from the server to ensure we capture all emails
-      const emailsResponse = await apiRequest('GET', `/api/game/${gameState.id}/emails`);
-      const emails = await emailsResponse.json();
+      const { emailSnapshot, releaseSongs: releaseSongsSnapshot, executives: executivesSnapshot, moodEvents: moodEventsSnapshot } =
+        await fetchSnapshotCollections(gameState.id);
 
       // Export in the same format as game saves (nested snapshot structure)
       // This ensures imported saves can be validated by gameSaveSnapshotSchema
       const { musicLabel, ...gameStateWithoutLabel } = gameState;
-      const { artists, projects, roles, songs, releases, weeklyActions } = useGameStore.getState();
+      const {
+        artists,
+        projects,
+        roles,
+        songs,
+        releases,
+        releaseSongs,
+        executives,
+        moodEvents,
+        weeklyActions,
+        weeklyOutcome
+      } = useGameStore.getState();
 
       const exportData = {
+        snapshotVersion: SNAPSHOT_VERSION,
         gameState: {
           gameState: gameStateWithoutLabel,
           musicLabel: musicLabel || null,
@@ -164,8 +198,16 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           roles,
           songs,
           releases,
-          emails,
-          weeklyActions
+          emails: emailSnapshot.emails,
+          releaseSongs: releaseSongsSnapshot ?? releaseSongs,
+          executives: executivesSnapshot ?? executives,
+          moodEvents: moodEventsSnapshot ?? moodEvents,
+          emailMetadata: {
+            total: emailSnapshot.total,
+            unreadCount: emailSnapshot.unreadCount
+          },
+          weeklyActions,
+          weeklyOutcome: weeklyOutcome ?? null
         },
         timestamp: new Date().toISOString(),
         version: '1.0'
@@ -182,7 +224,11 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to export save:', error);
-      alert('Failed to export save. Please try again.');
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export save. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -202,8 +248,14 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           throw new Error('Missing gameState payload');
         }
 
-        const parsedSnapshot = gameSaveSnapshotSchema.parse(importData.gameState);
+        const parsedSnapshot = gameSaveSnapshotSchema.parse({
+          snapshotVersion: importData.snapshotVersion ?? SNAPSHOT_VERSION,
+          ...importData.gameState,
+        });
         const importName = importData?.name || `Imported Save ${new Date().toLocaleString()}`;
+
+        const forkChoice = confirm('Import as a forked copy? Click Cancel to overwrite the currently active game.');
+        const restoreMode: 'overwrite' | 'fork' = forkChoice ? 'fork' : 'overwrite';
 
         const createResponse = await apiRequest('POST', '/api/saves', {
           name: importName,
@@ -215,17 +267,24 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         const createdSave = await createResponse.json();
         setSaveDetails(prev => ({ ...prev, [createdSave.id]: parsedSnapshot }));
 
-        const importedGameId = await loadGameFromSave(createdSave.id, parsedSnapshot, 'fork');
+        const importedGameId = await loadGameFromSave(createdSave.id, parsedSnapshot, restoreMode);
         if (importedGameId) {
           setGameId(importedGameId);
         }
 
         refetchSaves();
         onOpenChange(false);
-        alert('Save imported successfully!');
+        toast({
+          title: 'Save imported',
+          description: restoreMode === 'fork' ? 'Forked save created successfully.' : 'Save restored successfully.',
+        });
       } catch (error) {
         console.error('Failed to import save:', error);
-        alert('Invalid save file format');
+        toast({
+          title: 'Import failed',
+          description: error instanceof Error ? error.message : 'Invalid save file format.',
+          variant: 'destructive',
+        });
       }
     };
     input.click();
@@ -281,6 +340,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleLoad(save.id, 'fork')}
+                          disabled={loading || deleting === save.id}
+                          className="text-xs"
+                        >
+                          Fork
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleDelete(save.id, save.name)}
                           disabled={loading || deleting === save.id}
                           className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -324,6 +392,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                           className="text-xs"
                         >
                           {loading ? 'Loading...' : 'Load'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleLoad(save.id, 'fork')}
+                          disabled={loading || deleting === save.id}
+                          className="text-xs"
+                        >
+                          Fork
                         </Button>
                         <Button
                           size="sm"

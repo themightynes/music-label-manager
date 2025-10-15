@@ -23,6 +23,7 @@ import ToursTest from "@/pages/ToursTest";
 import Top100ChartPage from "@/pages/Top100ChartPage";
 import MarketsEditor from "@/pages/MarketsEditor";
 import LandingPage from "@/pages/LandingPage";
+import MainMenuPage from "@/pages/MainMenuPage";
 import RecordingSessionPage from "@/pages/RecordingSessionPage";
 import LivePerformancePage from "@/pages/LivePerformancePage";
 import BugReportsPage from '@/pages/BugReportsPage';
@@ -35,7 +36,8 @@ import { withAdmin } from "@/admin/withAdmin";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={GamePage} />
+      <Route path="/" component={MainMenuPage} />
+      <Route path="/game" component={GamePage} />
       <Route path="/plan-release" component={PlanReleasePage} />
       <Route path="/artists" component={ArtistsLandingPage} />
       <Route path="/artist/:artistParam" component={ArtistPage} />

@@ -4,7 +4,9 @@ import type { Artist, Project, Role, WeeklyAction, MusicLabel, GameSaveSnapshot 
 import type { GameState, LabelData, SourcingTypeString } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { SNAPSHOT_VERSION } from '@shared/schema';
 import { toast } from '@/hooks/use-toast';
+import { fetchSnapshotCollections, fetchEmailSnapshot } from '@/utils/emailSnapshot';
 
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
@@ -32,6 +34,9 @@ interface GameStore {
   songs: any[];
   releases: any[];
   emails: any[]; // Email system support
+  releaseSongs: any[];
+  executives: any[];
+  moodEvents: any[];
 
   // Discovered A&R artists (persisted client-side)
   discoveredArtists: Artist[];
@@ -100,6 +105,9 @@ export const useGameStore = create<GameStore>()(
       songs: [],
       releases: [],
       emails: [],
+      releaseSongs: [],
+      executives: [],
+      moodEvents: [],
       discoveredArtists: [],
       selectedActions: [],
       isAdvancingWeek: false,
@@ -109,25 +117,39 @@ export const useGameStore = create<GameStore>()(
       // Load existing game
       loadGame: async (gameId: string) => {
         try {
-          const [gameResponse, songsResponse, releasesResponse, emailsResponse] = await Promise.all([
+          const [
+            gameResponse,
+            songsResponse,
+            releasesResponse,
+            releaseSongsResponse,
+            executivesResponse,
+            moodEventsResponse,
+            emailSnapshot
+          ] = await Promise.all([
             apiRequest('GET', `/api/game/${gameId}`),
             apiRequest('GET', `/api/game/${gameId}/songs`),
             apiRequest('GET', `/api/game/${gameId}/releases`),
-            apiRequest('GET', `/api/game/${gameId}/emails`)
+            apiRequest('GET', `/api/game/${gameId}/release-songs`),
+            apiRequest('GET', `/api/game/${gameId}/executives`),
+            apiRequest('GET', `/api/game/${gameId}/mood-events`),
+            fetchEmailSnapshot(gameId)
           ]);
 
           const data = await gameResponse.json();
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
-          const emails = await emailsResponse.json();
+          const emailList = emailSnapshot.emails;
+          const releaseSongs = await releaseSongsResponse.json();
+          const executives = await executivesResponse.json();
+          const moodEvents = await moodEventsResponse.json();
 
           console.log('GameStore loadGame debug:', {
             gameId,
             gameData: !!data,
             songsCount: songs?.length || 0,
             releasesCount: releases?.length || 0,
-            emailsCount: emails?.length || 0,
-            releases: releases
+            emailsCount: emailList?.length || 0,
+            releases
           });
           
           // Preserve A&R status and sync usedFocusSlots with selectedActions + A&R usage
@@ -155,7 +177,10 @@ export const useGameStore = create<GameStore>()(
             weeklyActions: data.weeklyActions,
             songs,
             releases,
-            emails,
+            emails: emailList,
+            releaseSongs: Array.isArray(releaseSongs) ? releaseSongs : [],
+            executives: Array.isArray(executives) ? executives : [],
+            moodEvents: Array.isArray(moodEvents) ? moodEvents : [],
             selectedActions: []
           });
 
@@ -210,10 +235,13 @@ export const useGameStore = create<GameStore>()(
             songs: snapshot.songs || [],
             releases: snapshot.releases || [],
             emails: snapshot.emails || [],
+            releaseSongs: snapshot.releaseSongs || [],
+            executives: snapshot.executives || [],
+            moodEvents: snapshot.moodEvents || [],
             weeklyActions: (snapshot.weeklyActions || []) as unknown as WeeklyAction[],
             selectedActions: [],
             campaignResults: null,
-            weeklyOutcome: null,
+            weeklyOutcome: snapshot.weeklyOutcome ?? null,
           });
 
           if (mode !== 'fork') {
@@ -226,17 +254,31 @@ export const useGameStore = create<GameStore>()(
 
           localStorage.setItem('currentGameId', restoredGameId);
 
-          const [gameResponse, songsResponse, releasesResponse, emailsResponse] = await Promise.all([
+          const [
+            gameResponse,
+            songsResponse,
+            releasesResponse,
+            releaseSongsResponse,
+            executivesResponse,
+            moodEventsResponse,
+            emailSnapshot
+          ] = await Promise.all([
             apiRequest('GET', `/api/game/${restoredGameId}`),
             apiRequest('GET', `/api/game/${restoredGameId}/songs`),
             apiRequest('GET', `/api/game/${restoredGameId}/releases`),
-            apiRequest('GET', `/api/game/${restoredGameId}/emails`),
+            apiRequest('GET', `/api/game/${restoredGameId}/release-songs`),
+            apiRequest('GET', `/api/game/${restoredGameId}/executives`),
+            apiRequest('GET', `/api/game/${restoredGameId}/mood-events`),
+            fetchEmailSnapshot(restoredGameId),
           ]);
 
           const gameData = await gameResponse.json();
           const songsData = await songsResponse.json();
           const releasesData = await releasesResponse.json();
-          const emailsData = await emailsResponse.json();
+          const emailList = emailSnapshot.emails;
+          const releaseSongsData = await releaseSongsResponse.json();
+          const executivesData = await executivesResponse.json();
+          const moodEventsData = await moodEventsResponse.json();
 
           const syncedGameState = {
             ...gameData.gameState,
@@ -253,10 +295,13 @@ export const useGameStore = create<GameStore>()(
             weeklyActions: gameData.weeklyActions || [],
             songs: songsData || [],
             releases: releasesData || [],
-            emails: emailsData || [],
+            emails: emailList || [],
+            releaseSongs: Array.isArray(releaseSongsData) ? releaseSongsData : [],
+            executives: Array.isArray(executivesData) ? executivesData : [],
+            moodEvents: Array.isArray(moodEventsData) ? moodEventsData : [],
             selectedActions: [],
             campaignResults: null,
-            weeklyOutcome: null,
+            weeklyOutcome: snapshot.weeklyOutcome ?? null,
           });
 
           if (!syncedGameState.arOfficeSlotUsed) {
@@ -327,6 +372,9 @@ export const useGameStore = create<GameStore>()(
             songs: [],
             releases: [],
             emails: [],
+            releaseSongs: [],
+            executives: [],
+            moodEvents: [],
             selectedActions: [],
             campaignResults: null,
             weeklyOutcome: null
@@ -553,14 +601,30 @@ export const useGameStore = create<GameStore>()(
           console.log('===============================');
           
           // Reload game data to get updated projects, songs, and releases after processing
-          const [gameResponse, songsResponse, releasesResponse] = await Promise.all([
+          const [
+            gameResponse,
+            songsResponse,
+            releasesResponse,
+            releaseSongsResponse,
+            executivesResponse,
+            moodEventsResponse,
+            emailSnapshot
+          ] = await Promise.all([
             apiRequest('GET', `/api/game/${gameState.id}`),
             apiRequest('GET', `/api/game/${gameState.id}/songs`),
-            apiRequest('GET', `/api/game/${gameState.id}/releases`) // Explicit releases fetch
+            apiRequest('GET', `/api/game/${gameState.id}/releases`),
+            apiRequest('GET', `/api/game/${gameState.id}/release-songs`),
+            apiRequest('GET', `/api/game/${gameState.id}/executives`),
+            apiRequest('GET', `/api/game/${gameState.id}/mood-events`),
+            fetchEmailSnapshot(gameState.id)
           ]);
           const gameData = await gameResponse.json();
           const songs = await songsResponse.json();
           const releases = await releasesResponse.json();
+          const emailList = emailSnapshot.emails;
+          const releaseSongsData = await releaseSongsResponse.json();
+          const executivesData = await executivesResponse.json();
+          const moodEventsData = await moodEventsResponse.json();
 
           console.log('=== POST-ADVANCE WEEK STATE SYNC ===');
           console.log('Game data releases count:', (gameData.releases || []).length);
@@ -568,16 +632,19 @@ export const useGameStore = create<GameStore>()(
           console.log('Release statuses:', releases.map((r: any) => ({ id: r.id, title: r.title, status: r.status })));
           console.log('=====================================');
 
-          // Preserve A&R fields and recompute usedFocusSlots based on A&R usage after advancing week
-          const arOfficeSlotUsed = !!(result.gameState?.arOfficeSlotUsed ?? gameState.arOfficeSlotUsed);
-          const arOfficeSourcingType = result.gameState?.arOfficeSourcingType ?? gameState.arOfficeSourcingType ?? null;
-          const syncedGameState = {
-            ...result.gameState,
+          const serverGameState = (gameData.gameState ?? {}) as Partial<GameState>;
+          const resultGameState = (result?.gameState ?? {}) as Partial<GameState>;
+          const arOfficeSlotUsed = !!(resultGameState.arOfficeSlotUsed ?? serverGameState.arOfficeSlotUsed);
+          const arOfficeSourcingType = (resultGameState.arOfficeSourcingType ?? serverGameState.arOfficeSourcingType) ?? null;
+
+          const syncedGameState: GameState = {
+            ...resultGameState,
+            ...serverGameState,
             arOfficeSlotUsed,
             arOfficeSourcingType,
             usedFocusSlots: arOfficeSlotUsed ? 1 : 0,
-            musicLabel: gameState.musicLabel  // Preserve existing music label
-          };
+            musicLabel: gameData.musicLabel || (resultGameState as any)?.musicLabel || null,
+          } as GameState;
 
           set({
             gameState: syncedGameState,
@@ -585,6 +652,10 @@ export const useGameStore = create<GameStore>()(
             projects: gameData.projects || [], // Update projects with current state
             songs: songs || [], // Update songs to include newly recorded ones
             releases: releases || [], // FIXED: Use explicit releases fetch for accurate status
+            emails: emailList || [],
+            releaseSongs: Array.isArray(releaseSongsData) ? releaseSongsData : [],
+            executives: Array.isArray(executivesData) ? executivesData : [],
+            moodEvents: Array.isArray(moodEventsData) ? moodEventsData : [],
             weeklyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],
@@ -1034,13 +1105,24 @@ export const useGameStore = create<GameStore>()(
       },
 
       saveGame: async (name: string, options?: { isAutosave?: boolean }) => {
-        const { gameState, artists, projects, roles, songs, releases, weeklyActions } = get();
+        const {
+          gameState,
+          artists,
+          projects,
+          roles,
+          songs,
+          releases,
+          releaseSongs,
+          executives,
+          moodEvents,
+          weeklyActions,
+          weeklyOutcome
+        } = get();
         if (!gameState) return;
 
         try {
-          // Fetch current emails from the server to ensure we capture all emails
-          const emailsResponse = await apiRequest('GET', `/api/game/${gameState.id}/emails`);
-          const emails = await emailsResponse.json();
+          const { emailSnapshot, releaseSongs: releaseSongsSnapshot, executives: executivesSnapshot, moodEvents: moodEventsSnapshot } =
+            await fetchSnapshotCollections(gameState.id);
 
           const { musicLabel, ...gameStateWithoutLabel } = gameState;
           const isAutosave = options?.isAutosave ?? false;
@@ -1048,6 +1130,7 @@ export const useGameStore = create<GameStore>()(
             // userId will be set by the server from authentication
             name,
             gameState: {
+              snapshotVersion: SNAPSHOT_VERSION,
               gameState: gameStateWithoutLabel,
               musicLabel: musicLabel || null,
               artists,
@@ -1055,8 +1138,16 @@ export const useGameStore = create<GameStore>()(
               roles,
               songs,
               releases,
-              emails,
-              weeklyActions
+              emails: emailSnapshot.emails,
+              emailMetadata: {
+                total: emailSnapshot.total,
+                unreadCount: emailSnapshot.unreadCount
+              },
+              releaseSongs: releaseSongsSnapshot ?? releaseSongs,
+              executives: executivesSnapshot ?? executives,
+              moodEvents: moodEventsSnapshot ?? moodEvents,
+              weeklyActions,
+              weeklyOutcome: weeklyOutcome ?? null
             },
             week: gameState.currentWeek,
             isAutosave

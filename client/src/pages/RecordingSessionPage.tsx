@@ -346,7 +346,7 @@ export default function RecordingSessionPage() {
     try {
       setIsCreating(true);
       await createProject(projectData);
-      setLocation('/');
+      setLocation('/game');
     } catch (error) {
       console.error('Failed to create project:', error);
     } finally {
@@ -749,7 +749,7 @@ export default function RecordingSessionPage() {
 
               {/* Submit Button */}
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setLocation('/')}>
+                <Button variant="outline" onClick={() => setLocation('/game')}>
                   Cancel
                 </Button>
                 <Button

@@ -597,7 +597,7 @@ export default function LivePerformancePage() {
 
       // Use existing createProject method from gameStore
       await createProject(projectData);
-      setLocation('/');
+      setLocation('/game');
     } catch (error) {
       console.error('Failed to create tour:', error);
     } finally {
@@ -949,7 +949,7 @@ export default function LivePerformancePage() {
 
               {/* Submit Button */}
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setLocation('/')}>
+                <Button variant="outline" onClick={() => setLocation('/game')}>
                   Cancel
                 </Button>
                 <Button

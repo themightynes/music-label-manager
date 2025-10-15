@@ -410,7 +410,7 @@ export default function MarketsEditor() {
                 )}
               </div>
             </div>
-            <Link href="/">
+            <Link href="/game">
               <button className="px-4 py-2 bg-burgundy-600 hover:bg-burgundy-700 rounded-lg transition-colors">
                 Back to Game
               </button>

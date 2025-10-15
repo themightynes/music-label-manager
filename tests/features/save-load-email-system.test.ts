@@ -82,6 +82,7 @@ describe('Save/Load Email System', () => {
 
       // Act: Create a save snapshot
       const snapshot: schema.GameSaveSnapshot = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: game.id,
           currentWeek: 3,
@@ -136,6 +137,7 @@ describe('Save/Load Email System', () => {
 
       // Act: Create snapshot with empty emails
       const snapshot: schema.GameSaveSnapshot = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: game.id,
           currentWeek: 1,
@@ -202,6 +204,7 @@ describe('Save/Load Email System', () => {
       // Create a save snapshot from Week 3 (only includes weeks 1-3)
       const week3Emails = allEmails.slice(0, 3);
       const snapshot: schema.GameSaveSnapshot = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: game.id,
           currentWeek: 3,
@@ -272,6 +275,7 @@ describe('Save/Load Email System', () => {
 
       // Create a save from Week 1 with no emails
       const snapshot: schema.GameSaveSnapshot = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: game.id,
           currentWeek: 1,
@@ -340,6 +344,7 @@ describe('Save/Load Email System', () => {
 
       // Create snapshot
       const snapshot: schema.GameSaveSnapshot = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: originalGame.id,
           currentWeek: 2,
@@ -418,6 +423,7 @@ describe('Save/Load Email System', () => {
 
       const exportData = {
         gameState: {
+          snapshotVersion: schema.SNAPSHOT_VERSION,
           gameState: {
             id: 'test-game-id',
             currentWeek: 1,
@@ -431,7 +437,7 @@ describe('Save/Load Email System', () => {
           roles: [],
           songs: [],
           releases: [],
-          emails, // Emails included in nested structure
+          emails,
           weeklyActions: [],
         },
         timestamp: new Date().toISOString(),
@@ -454,6 +460,7 @@ describe('Save/Load Email System', () => {
       // Arrange: Simulated imported JSON data
       const importedData = {
         gameState: {
+          snapshotVersion: schema.SNAPSHOT_VERSION,
           gameState: {
             id: 'imported-game-id',
             currentWeek: 3,
@@ -559,6 +566,7 @@ describe('Save/Load Email System', () => {
       ];
 
       const snapshot: schema.GameSaveSnapshot = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: game.id,
           currentWeek: 3,
@@ -595,6 +603,7 @@ describe('Save/Load Email System', () => {
     it('should validate gameSaveSnapshotSchema with emails field', () => {
       // Arrange: Valid snapshot data
       const validSnapshot = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: 'test-id',
           currentWeek: 1,
@@ -626,6 +635,7 @@ describe('Save/Load Email System', () => {
     it('should allow optional emails field in schema', () => {
       // Arrange: Snapshot without emails
       const snapshotWithoutEmails = {
+        snapshotVersion: schema.SNAPSHOT_VERSION,
         gameState: {
           id: 'test-id',
           currentWeek: 1,

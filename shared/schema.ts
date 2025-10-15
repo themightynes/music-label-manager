@@ -510,7 +510,12 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
 });
 
+// Increment this whenever the snapshot payload gains breaking changes.
+export const SNAPSHOT_VERSION = 2;
+export const supportedSnapshotVersions = [SNAPSHOT_VERSION] as const;
+
 export const gameSaveSnapshotSchema = z.object({
+  snapshotVersion: z.number().default(SNAPSHOT_VERSION),
   gameState: z.object({
     id: z.string(),
     currentWeek: z.number(),
@@ -542,6 +547,14 @@ export const gameSaveSnapshotSchema = z.object({
   releases: z.array(z.record(z.any())).optional(),
   weeklyActions: z.array(z.record(z.any())).optional(),
   emails: z.array(z.record(z.any())).optional(), // Email system support
+  emailMetadata: z.object({
+    total: z.number().optional(),
+    unreadCount: z.number().optional(),
+  }).optional(),
+  releaseSongs: z.array(z.record(z.any())).optional(),
+  executives: z.array(z.record(z.any())).optional(),
+  moodEvents: z.array(z.record(z.any())).optional(),
+  weeklyOutcome: z.any().optional(),
 }).passthrough();
 
 const baseInsertGameSaveSchema = createInsertSchema(gameSaves).omit({

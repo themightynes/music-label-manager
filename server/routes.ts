@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, moodEvents, emails, type GameSaveSnapshot } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, moodEvents, emails, type GameSaveSnapshot, SNAPSHOT_VERSION } from "@shared/schema";
 import { z } from "zod";
 import type { EmailCategory } from "@shared/types/emailTypes";
 import { serverGameData } from "./data/gameData";
@@ -65,6 +65,58 @@ const markEmailReadSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  const validateSnapshotCollections = (snapshot: GameSaveSnapshot) => {
+    const errors: string[] = [];
+
+    const ensureArray = (value: unknown, name: string): value is unknown[] => {
+      if (value === undefined || value === null) return false;
+      if (!Array.isArray(value)) {
+        errors.push(`${name} must be an array`);
+        return false;
+      }
+      return true;
+    };
+
+    if (ensureArray(snapshot.releaseSongs, 'releaseSongs')) {
+      snapshot.releaseSongs.forEach((entry, index) => {
+        if (!entry || typeof entry.releaseId !== 'string' || typeof entry.songId !== 'string') {
+          errors.push(`releaseSongs[${index}] is missing required releaseId/songId`);
+        }
+      });
+    }
+
+    if (ensureArray(snapshot.executives, 'executives')) {
+      snapshot.executives.forEach((exec: any, index) => {
+        if (!exec || typeof exec.id !== 'string' || typeof exec.role !== 'string') {
+          errors.push(`executives[${index}] is missing required id/role`);
+        }
+      });
+    }
+
+    if (ensureArray(snapshot.moodEvents, 'moodEvents')) {
+      snapshot.moodEvents.forEach((event: any, index) => {
+        if (!event || typeof event.id !== 'string' || typeof event.artistId !== 'string') {
+          errors.push(`moodEvents[${index}] is missing required id/artistId`);
+        }
+      });
+    }
+
+    if (ensureArray(snapshot.emails, 'emails')) {
+      snapshot.emails.forEach((email: any, index) => {
+        if (!email || typeof (email as any).id !== 'string' || typeof email.subject !== 'string') {
+          errors.push(`emails[${index}] is missing required id/subject`);
+        }
+      });
+    }
+
+    if (errors.length > 0) {
+      const error = new Error('Invalid snapshot collections');
+      (error as any).code = 'INVALID_SNAPSHOT_COLLECTIONS';
+      (error as any).details = errors;
+      throw error;
+    }
+  };
 
   // Clerk webhooks
   app.post('/api/webhooks/clerk', handleClerkWebhook);
@@ -1915,8 +1967,16 @@ const musicLabelData = {
       }
 
       const snapshot = gameSaveSnapshotSchema.parse(save.gameState) as GameSaveSnapshot;
+      if ((snapshot.snapshotVersion ?? 1) !== SNAPSHOT_VERSION) {
+        return res.status(400).json({
+          error: 'UNSUPPORTED_SNAPSHOT_VERSION',
+          message: `Snapshot version ${snapshot.snapshotVersion ?? 1} is not supported. Expected version ${SNAPSHOT_VERSION}.`,
+        });
+      }
       const targetGameState = snapshot.gameState;
       const sourceGameId = targetGameState?.id;
+
+      validateSnapshotCollections(snapshot);
 
       if (!sourceGameId) {
         return res.status(400).json({
@@ -1966,26 +2026,52 @@ const musicLabelData = {
             .where(eq(gameStates.id, sourceGameId));
 
           // IMPORTANT: Delete in order of foreign key dependencies (children first, parents last)
+          // Deletion ordering summary:
+          // 1. release_songs → depends on releases & songs (junction table must be cleared first)
+          // 2. songs → depends on artists, projects, releases (remove track rows before their parents)
+          // 3. releases → depends on artists (planned releases point back to artist roster)
+          // 4. projects → depends on artists (projects reference artist owners)
+          // 5. mood_events → depends on artists (events track artist history)
+          // 6. artists → depends only on game state once children are gone
+          // 7. roles / weekly_actions / music_labels / emails / executives → all hang directly off game_state
+          // The inserts later run in the exact reverse order so parents exist before their dependent rows.
 
           console.log('[RESTORE] Step 2: Deleting release_songs junction table...');
-          await tx.execute(sql`DELETE FROM release_songs WHERE release_id IN (SELECT id FROM releases WHERE game_id = ${sourceGameId})`);
+          // Clear junction table first so dependent release/song deletions don't hit FK constraints
+          const releaseRows = await tx
+            .select({ id: releases.id })
+            .from(releases)
+            .where(eq(releases.gameId, sourceGameId));
+
+          if (releaseRows.length > 0) {
+            const releaseIds = releaseRows.map(({ id }) => id);
+            await tx
+              .delete(releaseSongs)
+              .where(inArray(releaseSongs.releaseId, releaseIds));
+          }
 
           console.log('[RESTORE] Step 3: Deleting songs (depends on artists, projects, releases)...');
+          // Remove songs before their parent releases/projects/artists to keep FK chain intact
           await tx.delete(songs).where(eq(songs.gameId, sourceGameId));
 
           console.log('[RESTORE] Step 4: Deleting releases (depends on artists)...');
+          // Releases reference artists; with tracks gone we can safely drop the release rows
           await tx.delete(releases).where(eq(releases.gameId, sourceGameId));
 
           console.log('[RESTORE] Step 5: Deleting projects (depends on artists)...');
+          // Projects still point at artists, so they must disappear before we remove the roster
           await tx.delete(projects).where(eq(projects.gameId, sourceGameId));
 
           console.log('[RESTORE] Step 6: Deleting mood_events (depends on artists)...');
+          // Mood history also references artists; delete events prior to artist removal
           await tx.delete(moodEvents).where(eq(moodEvents.gameId, sourceGameId));
 
           console.log('[RESTORE] Step 7: Deleting artists (no more dependencies)...');
+          // With all child tables cleared we can drop artist rows
           await tx.delete(artists).where(eq(artists.gameId, sourceGameId));
 
           console.log('[RESTORE] Step 8: Deleting roles...');
+          // Remaining tables (roles/weekly_actions/label/emails/executives) hang directly off game_state
           await tx.delete(roles).where(eq(roles.gameId, sourceGameId));
 
           console.log('[RESTORE] Step 9: Deleting weekly_actions...');
@@ -1997,9 +2083,13 @@ const musicLabelData = {
           console.log('[RESTORE] Step 11: Deleting emails...');
           await tx.delete(emails).where(eq(emails.gameId, sourceGameId));
 
+          console.log('[RESTORE] Step 12: Deleting executives...');
+          await tx.delete(executives).where(eq(executives.gameId, sourceGameId));
+
           // Now insert everything back in reverse order (parents first, children last)
 
-          console.log('[RESTORE] Step 12: Reinserting music_labels...');
+          console.log('[RESTORE] Step 13: Reinserting music_labels...');
+          // Rebuild parents first so dependent collections have targets
           if (snapshot.musicLabel) {
             await tx.insert(musicLabels).values(
               convertTimestamps({
@@ -2009,7 +2099,8 @@ const musicLabelData = {
             );
           }
 
-          console.log('[RESTORE] Step 13: Reinserting weekly_actions...');
+          console.log('[RESTORE] Step 14: Reinserting weekly_actions...');
+          // Weekly history depends only on game state, insert early for clarity
           if (Array.isArray(snapshot.weeklyActions) && snapshot.weeklyActions.length > 0) {
             await tx.insert(weeklyActions).values(
               snapshot.weeklyActions.map((action) =>
@@ -2021,7 +2112,8 @@ const musicLabelData = {
             );
           }
 
-          console.log('[RESTORE] Step 14: Reinserting roles...');
+          console.log('[RESTORE] Step 15: Reinserting roles...');
+          // Roles also hang off the game directly
           if (Array.isArray(snapshot.roles) && snapshot.roles.length > 0) {
             await tx.insert(roles).values(
               snapshot.roles.map((role) =>
@@ -2033,7 +2125,8 @@ const musicLabelData = {
             );
           }
 
-          console.log('[RESTORE] Step 15: Reinserting artists...');
+          console.log('[RESTORE] Step 16: Reinserting artists...');
+          // Restore roster before any collection that references artist IDs
           if (Array.isArray(snapshot.artists) && snapshot.artists.length > 0) {
             await tx.insert(artists).values(
               snapshot.artists.map((artist) =>
@@ -2045,7 +2138,21 @@ const musicLabelData = {
             );
           }
 
-          console.log('[RESTORE] Step 16: Reinserting projects...');
+          console.log('[RESTORE] Step 17: Reinserting mood_events...');
+          // Mood events can now target their owning artists
+          if (Array.isArray(snapshot.moodEvents) && snapshot.moodEvents.length > 0) {
+            await tx.insert(moodEvents).values(
+              snapshot.moodEvents.map((event: any) =>
+                convertTimestamps({
+                  ...event,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 18: Reinserting projects...');
+          // Projects require artist IDs but must exist before songs referencing project_id
           if (Array.isArray(snapshot.projects) && snapshot.projects.length > 0) {
             await tx.insert(projects).values(
               snapshot.projects.map((project) =>
@@ -2057,7 +2164,8 @@ const musicLabelData = {
             );
           }
 
-          console.log('[RESTORE] Step 17: Reinserting releases...');
+          console.log('[RESTORE] Step 19: Reinserting releases...');
+          // Releases depend on artists and are parents for songs/release_songs
           if (Array.isArray(snapshot.releases) && snapshot.releases.length > 0) {
             await tx.insert(releases).values(
               snapshot.releases.map((release) =>
@@ -2069,7 +2177,8 @@ const musicLabelData = {
             );
           }
 
-          console.log('[RESTORE] Step 18: Reinserting songs...');
+          console.log('[RESTORE] Step 20: Reinserting songs...');
+          // Songs can now safely reference artists/projects/releases
           if (Array.isArray(snapshot.songs) && snapshot.songs.length > 0) {
             await tx.insert(songs).values(
               snapshot.songs.map((song) =>
@@ -2081,7 +2190,34 @@ const musicLabelData = {
             );
           }
 
-          console.log('[RESTORE] Step 19: Reinserting emails...');
+          console.log('[RESTORE] Step 21: Reinserting release_songs...');
+          // Junction requires both song and release rows to exist first
+          if (Array.isArray(snapshot.releaseSongs) && snapshot.releaseSongs.length > 0) {
+            await tx.insert(releaseSongs).values(
+              snapshot.releaseSongs.map((entry: any) => ({
+                releaseId: entry.releaseId,
+                songId: entry.songId,
+                trackNumber: entry.trackNumber ?? 0,
+                isSingle: entry.isSingle ?? false,
+              })) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 22: Reinserting executives...');
+          // Executives and emails only reference the game so they can go near the end
+          if (Array.isArray(snapshot.executives) && snapshot.executives.length > 0) {
+            await tx.insert(executives).values(
+              snapshot.executives.map((exec: any) =>
+                convertTimestamps({
+                  ...exec,
+                  gameId: sourceGameId,
+                })
+              ) as any,
+            );
+          }
+
+          console.log('[RESTORE] Step 23: Reinserting emails...');
+          // Final pass restores inbox entries tied to the game
           if (Array.isArray(snapshot.emails) && snapshot.emails.length > 0) {
             await tx.insert(emails).values(
               snapshot.emails.map((email) =>
@@ -2135,6 +2271,12 @@ const musicLabelData = {
       }
       if (Array.isArray(snapshot.songs)) {
         snapshot.songs.forEach((song) => mapId(song.id));
+      }
+      if (Array.isArray(snapshot.executives)) {
+        snapshot.executives.forEach((exec) => mapId(exec.id));
+      }
+      if (Array.isArray(snapshot.moodEvents)) {
+        snapshot.moodEvents.forEach((event) => mapId(event.id));
       }
       if (Array.isArray(snapshot.emails)) {
         snapshot.emails.forEach((email) => mapId((email as any).id));
@@ -2227,6 +2369,18 @@ const musicLabelData = {
           );
         }
 
+        if (Array.isArray(snapshot.executives) && snapshot.executives.length > 0) {
+          await tx.insert(executives).values(
+            snapshot.executives.map((exec) =>
+              convertTimestamps({
+                ...exec,
+                id: mapId(exec.id),
+                gameId: newGameId,
+              })
+            ) as any,
+          );
+        }
+
         if (Array.isArray(snapshot.releases) && snapshot.releases.length > 0) {
           await tx.insert(releases).values(
             snapshot.releases.map((release) =>
@@ -2255,6 +2409,30 @@ const musicLabelData = {
           );
         }
 
+        if (Array.isArray(snapshot.releaseSongs) && snapshot.releaseSongs.length > 0) {
+          await tx.insert(releaseSongs).values(
+            snapshot.releaseSongs.map((entry: any) => ({
+              releaseId: mapReference(entry.releaseId) ?? entry.releaseId,
+              songId: mapReference(entry.songId) ?? entry.songId,
+              trackNumber: entry.trackNumber ?? 0,
+              isSingle: entry.isSingle ?? false,
+            })) as any,
+          );
+        }
+
+        if (Array.isArray(snapshot.moodEvents) && snapshot.moodEvents.length > 0) {
+          await tx.insert(moodEvents).values(
+            snapshot.moodEvents.map((event) =>
+              convertTimestamps({
+                ...event,
+                id: mapId(event.id),
+                gameId: newGameId,
+                artistId: mapReference(event.artistId) ?? event.artistId,
+              })
+            ) as any,
+          );
+        }
+
         if (Array.isArray(snapshot.emails) && snapshot.emails.length > 0) {
           await tx.insert(emails).values(
             snapshot.emails.map((email) =>
@@ -2270,6 +2448,13 @@ const musicLabelData = {
 
       res.json({ gameId: newGameId });
     } catch (error) {
+      if ((error as any)?.code === 'INVALID_SNAPSHOT_COLLECTIONS') {
+        return res.status(400).json({
+          error: 'INVALID_SNAPSHOT_COLLECTIONS',
+          message: 'Snapshot collections are missing required fields or are malformed',
+          details: (error as any)?.details ?? [],
+        });
+      }
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid restore request", errors: error.errors });
       }
@@ -2596,6 +2781,44 @@ const musicLabelData = {
       res.json(releases);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch releases" });
+    }
+  });
+
+  app.get("/api/game/:gameId/release-songs", requireClerkUser, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState || gameState.userId !== req.userId) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      const releaseSongsRows = await storage.getReleaseSongsByGame(gameId);
+      res.json(releaseSongsRows);
+    } catch (error) {
+      console.error('[API] Failed to fetch release songs:', error);
+      res.status(500).json({ message: 'Failed to fetch release songs' });
+    }
+  });
+
+  app.get("/api/game/:gameId/mood-events", requireClerkUser, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const gameState = await storage.getGameState(gameId);
+      if (!gameState || gameState.userId !== req.userId) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this game'
+        });
+      }
+
+      const events = await storage.getMoodEventsByGame(gameId);
+      res.json(events);
+    } catch (error) {
+      console.error('[API] Failed to fetch mood events:', error);
+      res.status(500).json({ message: 'Failed to fetch mood events' });
     }
   });
 

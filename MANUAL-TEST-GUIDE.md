@@ -85,6 +85,23 @@ This branch implements a hardened save system with:
 
 ---
 
+### Bug Fix #4: Release/Executive/Mood Data Restoration
+**Issue**: Release track lists, executive mood/loyalty, and mood events were missing after restore.
+
+**Test Steps**:
+1. Queue a release with at least one song (set lead single) and advance until release data is stored.
+2. Adjust an executive’s mood via weekly action or dialogue so values differ from default.
+3. Trigger a mood event (e.g., release success) and confirm it appears in the artist’s history.
+4. Create a manual save, then advance a week and change the data (remove release track order, alter executive mood via admin tools, clear mood history).
+5. Load the manual save you created in step 4.
+6. **Expected**: ✅ Release plan shows restored track order and lead single.
+7. **Expected**: ✅ Executive mood and loyalty match pre-save values.
+8. **Expected**: ✅ Mood history list includes the previously logged event.
+
+**Pass/Fail**: ____
+
+---
+
 ## 10-Minute Quick Test
 
 ### Test 1: Basic Save & Load

@@ -72,7 +72,9 @@
       "Bash(cut:*)",
       "Bash(del .claudescriptsrun-status.bat)",
       "Bash(git checkout:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git stash push:*)",
+      "Bash(npx playwright:*)"
     ],
     "deny": [],
     "ask": [],

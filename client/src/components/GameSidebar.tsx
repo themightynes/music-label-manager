@@ -172,7 +172,7 @@ export function GameSidebar({
       setGameId(newGame.id);
       setShowLabelModal(false);
       setShowNewGameConfirm(false);
-      setLocation('/');
+      setLocation('/game');
     } catch (error) {
       console.error('Failed to start new game:', error);
     } finally {
@@ -241,8 +241,8 @@ export function GameSidebar({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => setLocation('/')}
-                    isActive={currentPath === '/'}
+                    onClick={() => setLocation('/game')}
+                    isActive={currentPath === '/game'}
                     tooltip="Dashboard"
                   >
                     <Home />
@@ -434,27 +434,27 @@ export function GameSidebar({
 
           <SidebarSeparator />
 
-          {/* Group 5: Start New Game, Save Game */}
+          {/* Group 5: Main Menu, Save/Load Game */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={handleNewGame}
-                    tooltip="Start New Game"
+                    onClick={() => setLocation('/')}
+                    tooltip="Main Menu"
                   >
                     <Play />
-                    <span>Start New Game</span>
+                    <span>Main Menu</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() => onShowSaveModal ? onShowSaveModal() : setLocation('/?open=save')}
-                    tooltip="Save Game"
+                    tooltip="Save/Load Game"
                   >
                     <Save />
-                    <span>Save Game</span>
+                    <span>Save/Load Game</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 

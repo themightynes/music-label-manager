@@ -72,6 +72,7 @@ export interface IStorage {
 
   // Release Songs (junction)
   getReleaseSongs(releaseId: string): Promise<ReleaseSong[]>;
+  getReleaseSongsByGame(gameId: string): Promise<ReleaseSong[]>;
   createReleaseSong(releaseSong: InsertReleaseSong): Promise<ReleaseSong>;
   deleteReleaseSong(releaseId: string, songId: string): Promise<void>;
 
@@ -599,6 +600,27 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(releaseSongs)
       .where(eq(releaseSongs.releaseId, releaseId))
       .orderBy(releaseSongs.trackNumber);
+  }
+
+  async getReleaseSongsByGame(gameId: string): Promise<ReleaseSong[]> {
+    const rows = await this.db
+      .select({
+        releaseId: releaseSongs.releaseId,
+        songId: releaseSongs.songId,
+        trackNumber: releaseSongs.trackNumber,
+        isSingle: releaseSongs.isSingle
+      })
+      .from(releaseSongs)
+      .innerJoin(releases, eq(releaseSongs.releaseId, releases.id))
+      .where(eq(releases.gameId, gameId))
+      .orderBy(releaseSongs.releaseId, releaseSongs.trackNumber);
+
+    return rows.map(row => ({
+      releaseId: row.releaseId,
+      songId: row.songId,
+      trackNumber: row.trackNumber,
+      isSingle: row.isSingle
+    }));
   }
 
   async createReleaseSong(releaseSong: InsertReleaseSong): Promise<ReleaseSong> {
