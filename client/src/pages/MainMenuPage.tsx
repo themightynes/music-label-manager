@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
@@ -8,19 +8,32 @@ import { LabelCreationModal } from '@/components/LabelCreationModal';
 import { SaveGameModal } from '@/components/SaveGameModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import type { LabelData } from '@shared/types/gameTypes';
-import { Play, FolderOpen, Settings, Info } from 'lucide-react';
+import { useIsAdmin } from '@/auth/useCurrentUser';
+import { Play, FolderOpen, Settings, Info, Loader2, Shield } from 'lucide-react';
 
 export default function MainMenuPage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { gameId, setGameId } = useGameContext();
-  const { gameState, createNewGame } = useGameStore();
+  const { gameState, createNewGame, artists } = useGameStore();
+  const { isAdmin } = useIsAdmin();
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [showLoadGameModal, setShowLoadGameModal] = useState(false);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [isCreatingGame, setIsCreatingGame] = useState(false);
+  const [isCheckingForGame, setIsCheckingForGame] = useState(true);
 
   const displayName = user?.username || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Player';
+
+  // Track when game check is complete
+  useEffect(() => {
+    // Give a small delay to check for existing game
+    const timer = setTimeout(() => {
+      setIsCheckingForGame(false);
+    }, 800); // 800ms should be enough for GameContext to load
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleNewGame = () => {
     // If there's an active game, show confirmation
@@ -34,6 +47,11 @@ export default function MainMenuPage() {
   const confirmNewGame = () => {
     setShowNewGameConfirm(false);
     setShowLabelModal(true);
+  };
+
+  const handleSaveFirstClick = () => {
+    setShowNewGameConfirm(false);
+    setShowLoadGameModal(true); // Open Save/Load modal so user can save
   };
 
   const handleCreateLabel = async (labelData: LabelData) => {
@@ -106,15 +124,32 @@ export default function MainMenuPage() {
 
           {/* Menu Buttons */}
           <nav className="space-y-4">
-            {/* Continue Button (only if active game) */}
-            {gameId && gameState?.currentWeek && (
-              <Button
-                onClick={handleContinue}
-                className="group w-full h-14 bg-black/40 border border-brand-pink hover:bg-black/60 hover:border-brand-pink hover:shadow-[0_0_20px_5px_rgba(233,30,140,0.3)] text-white backdrop-blur-sm transition-all duration-300 transform hover:scale-105"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                <span className="text-lg font-semibold tracking-wider">CONTINUE</span>
-              </Button>
+            {/* Continue Button - Show loading state or actual button */}
+            {isCheckingForGame ? (
+              <div className="w-full h-14 bg-black/40 border border-brand-pink/30 backdrop-blur-sm rounded-md flex items-center justify-center">
+                <Loader2 className="h-5 w-5 text-brand-pink/70 animate-spin mr-2" />
+                <span className="text-sm text-white/60 tracking-wider">CHECKING FOR SAVED GAME...</span>
+              </div>
+            ) : (
+              gameId && gameState?.currentWeek && (
+                <Button
+                  onClick={handleContinue}
+                  className="group w-full h-auto py-3 px-4 bg-black/40 border border-brand-pink hover:bg-black/60 hover:border-brand-pink hover:shadow-[0_0_20px_5px_rgba(233,30,140,0.3)] text-white backdrop-blur-sm transition-all duration-300 transform hover:scale-105 animate-in fade-in slide-in-from-top-2 duration-500"
+                >
+                  <div className="flex flex-col items-center w-full">
+                    <div className="flex items-center justify-center">
+                      <Play className="mr-2 h-5 w-5" />
+                      <span className="text-lg font-semibold tracking-wider">CONTINUE</span>
+                    </div>
+                    <span className="text-sm text-white/80 font-normal mt-1.5">
+                      {(gameState as any).musicLabel?.name || 'Your Label'} · Week {gameState.currentWeek}/52
+                    </span>
+                    <span className="text-xs text-white/60 font-normal mt-0.5">
+                      ${(gameState.money || 0).toLocaleString()} · {artists?.length || 0} {artists?.length === 1 ? 'Artist' : 'Artists'} · Rep: {gameState.reputation || 0}
+                    </span>
+                  </div>
+                </Button>
+              )
             )}
 
             <Button
@@ -152,6 +187,16 @@ export default function MainMenuPage() {
               <span className="text-lg font-semibold tracking-wider">ABOUT</span>
               <span className="ml-2 text-xs text-white/40">(Coming Soon)</span>
             </Button>
+
+            {isAdmin && (
+              <Button
+                onClick={() => setLocation('/admin')}
+                className="group w-full h-14 bg-black/40 border border-brand-pink/60 hover:bg-black/60 hover:border-brand-pink hover:shadow-[0_0_20px_5px_rgba(233,30,140,0.3)] text-white backdrop-blur-sm transition-all duration-300 transform hover:scale-105"
+              >
+                <Shield className="mr-2 h-5 w-5" />
+                <span className="text-lg font-semibold tracking-wider">ADMIN</span>
+              </Button>
+            )}
           </nav>
         </div>
       </main>
@@ -178,11 +223,12 @@ export default function MainMenuPage() {
       <ConfirmDialog
         isOpen={showNewGameConfirm}
         onClose={() => setShowNewGameConfirm(false)}
+        onCancel={handleSaveFirstClick}
         onConfirm={confirmNewGame}
         title="Start New Game?"
-        description="This will permanently delete your current progress. Are you sure you want to continue?"
+        description={`Your current game "${(gameState as any)?.musicLabel?.name || 'Your Label'}" (Week ${gameState?.currentWeek ?? 1}) will be replaced. To keep this game, save it first.`}
         confirmText="Start New Game"
-        cancelText="Cancel"
+        cancelText="Save First (Recommended)"
         variant="destructive"
         emoji="⚠️"
         currentWeek={gameState?.currentWeek ?? 1}

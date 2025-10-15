@@ -18,6 +18,8 @@ type SaveSummary = {
   isAutosave: boolean | null;
   createdAt: string;
   updatedAt: string;
+  money: number | null;
+  reputation: number | null;
 };
 
 interface SaveGameModalProps {
@@ -110,7 +112,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       onOpenChange(false);
       toast({
         title: 'Game loaded',
-        description: mode === 'fork' ? 'Forked save created successfully.' : 'Save restored successfully.',
+        description: mode === 'fork' ? 'Copied save created successfully.' : 'Save restored successfully.',
       });
     } catch (error) {
       console.error('Failed to load game:', error);
@@ -254,8 +256,8 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         });
         const importName = importData?.name || `Imported Save ${new Date().toLocaleString()}`;
 
-        const forkChoice = confirm('Import as a forked copy? Click Cancel to overwrite the currently active game.');
-        const restoreMode: 'overwrite' | 'fork' = forkChoice ? 'fork' : 'overwrite';
+        const copyChoice = confirm('Import as a new copy? Click Cancel to overwrite the currently active game.');
+        const restoreMode: 'overwrite' | 'fork' = copyChoice ? 'fork' : 'overwrite';
 
         const createResponse = await apiRequest('POST', '/api/saves', {
           name: importName,
@@ -276,7 +278,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         onOpenChange(false);
         toast({
           title: 'Save imported',
-          description: restoreMode === 'fork' ? 'Forked save created successfully.' : 'Save restored successfully.',
+          description: restoreMode === 'fork' ? 'Copied save created successfully.' : 'Save restored successfully.',
         });
       } catch (error) {
         console.error('Failed to import save:', error);
@@ -301,7 +303,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-full max-w-2xl">
         <DialogHeader className="border-b border-brand-purple pb-4">
           <DialogTitle className="text-lg font-semibold text-white">Save & Load Game</DialogTitle>
         </DialogHeader>
@@ -313,15 +315,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
               <h3 className="text-xs uppercase tracking-wide text-white/60">Manual Saves</h3>
               {manualSaves.map(save => {
                 const detail = saveDetails[save.id];
-                const money = detail?.gameState?.money;
-                const reputation = detail?.gameState?.reputation;
+                const money = save.money ?? detail?.gameState?.money ?? null;
+                const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
                 return (
                   <div key={save.id} className="border border-brand-purple rounded-lg p-4 hover:bg-brand-burgundy/10">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="font-medium text-white">{save.name}</div>
                         <div className="text-xs text-white/70">
-                          Week {save.week} • ${money?.toLocaleString?.() ?? '—'} • Rep {reputation ?? '—'}
+                          Week {save.week} • ${typeof money === 'number' ? money.toLocaleString() : '—'} • Rep {typeof reputation === 'number' ? reputation : '—'}
                         </div>
                         <div className="text-xs text-white/50">
                           Saved {formatDate(save.updatedAt)}
@@ -344,7 +346,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                           disabled={loading || deleting === save.id}
                           className="text-xs"
                         >
-                          Fork
+                          Copy
                         </Button>
                         <Button
                           size="sm"
@@ -369,15 +371,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
               <h3 className="text-xs uppercase tracking-wide text-white/60">Autosaves</h3>
               {autosaveSaves.map(save => {
                 const detail = saveDetails[save.id];
-                const money = detail?.gameState?.money;
-                const reputation = detail?.gameState?.reputation;
+                const money = save.money ?? detail?.gameState?.money ?? null;
+                const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
                 return (
                   <div key={save.id} className="border border-brand-purple/60 rounded-lg p-4 hover:bg-brand-burgundy/10">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="font-medium text-white">{save.name}</div>
                         <div className="text-xs text-white/70">
-                          Week {save.week} • ${money?.toLocaleString?.() ?? '—'} • Rep {reputation ?? '—'}
+                          Week {save.week} • ${typeof money === 'number' ? money.toLocaleString() : '—'} • Rep {typeof reputation === 'number' ? reputation : '—'}
                         </div>
                         <div className="text-xs text-white/50">
                           Saved {formatDate(save.updatedAt)}
@@ -400,7 +402,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                           disabled={loading || deleting === save.id}
                           className="text-xs"
                         >
-                          Fork
+                          Copy
                         </Button>
                         <Button
                           size="sm"

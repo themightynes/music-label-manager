@@ -14,7 +14,10 @@ import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
 import type { ReleasedSongData } from "@shared/engine/ChartService";
 
-export type GameSaveSummary = Pick<GameSave, "id" | "name" | "week" | "isAutosave" | "createdAt" | "updatedAt">;
+export type GameSaveSummary = Pick<GameSave, "id" | "name" | "week" | "isAutosave" | "createdAt" | "updatedAt"> & {
+  money: number | null;
+  reputation: number | null;
+};
 
 export interface IStorage {
   // User management
@@ -157,6 +160,8 @@ export class DatabaseStorage implements IStorage {
         isAutosave: gameSaves.isAutosave,
         createdAt: gameSaves.createdAt,
         updatedAt: gameSaves.updatedAt,
+        money: sql<number | null>`(game_saves.game_state->'gameState'->>'money')::int`,
+        reputation: sql<number | null>`(game_saves.game_state->'gameState'->>'reputation')::int`,
       })
       .from(gameSaves)
       .where(eq(gameSaves.userId, userId))
