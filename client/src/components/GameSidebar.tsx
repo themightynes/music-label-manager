@@ -83,10 +83,12 @@ export function GameSidebar({
       const executives = await fetchExecutives(gameId);
       const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
       const allMeetings: Record<string, any[]> = {};
+      const currentWeek = gameState?.currentWeek || 1;
 
       for (const role of roles) {
         try {
-          allMeetings[role] = await fetchRoleMeetings(role);
+          // Pass gameId and currentWeek for weekly meeting randomization
+          allMeetings[role] = await fetchRoleMeetings(role, gameId, currentWeek);
         } catch (error) {
           allMeetings[role] = [];
         }

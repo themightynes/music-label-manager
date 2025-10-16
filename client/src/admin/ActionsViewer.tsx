@@ -679,6 +679,26 @@ export default function ActionsViewer() {
             <p className="text-sm text-white/50">{data.description}</p>
           </div>
 
+          {/* Production Warning Banner */}
+          {import.meta.env.PROD && (
+            <Card className="bg-yellow-900/20 border-yellow-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-yellow-300 mb-1">
+                      Production Environment Warning
+                    </div>
+                    <p className="text-sm text-yellow-200/80">
+                      You are editing the actions.json file in production. Any changes saved here will be <strong>lost on next deployment</strong>.
+                      All permanent edits should be made in your local development environment, committed to git, and deployed.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Edit Mode Controls */}
           <Card className="bg-gray-900/50 border-white/10">
             <CardContent className="p-4">

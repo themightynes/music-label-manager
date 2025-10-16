@@ -45,6 +45,7 @@ import {
   readArchive,
   getBugReportStats
 } from './utils/bugReportArchival';
+import { seededRandomPick, generateMeetingSeed } from '@shared/utils/seededRandom';
 
 const EMAIL_CATEGORY_VALUES = [
   "chart",
@@ -1265,33 +1266,55 @@ const musicLabelData = {
 
   // Get role/executive data with all their meetings
   // Following the rule: JSON = Content & Config, Database = State & Saves
+  // Query params: gameId, week (optional) - for weekly meeting randomization
   app.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
     try {
       // Use serverGameData to load data properly
       await serverGameData.initialize();
       const rolesData = await serverGameData.getAllRoles();
       const role = rolesData.find((r: any) => r.id === req.params.roleId);
-      
+
       if (!role) {
         return res.status(404).json({ error: `Role ${req.params.roleId} not found` });
       }
-      
+
       // Load actions using serverGameData
       const actionsData = await serverGameData.getWeeklyActionsWithCategories();
-      const roleMeetings = actionsData.actions.filter((action: any) => 
-        action.type === 'role_meeting' && 
+      let roleMeetings = actionsData.actions.filter((action: any) =>
+        action.type === 'role_meeting' &&
         action.role_id === req.params.roleId
       );
-      
+
+      // Filter out test meetings from production randomization
+      roleMeetings = roleMeetings.filter((meeting: any) =>
+        !meeting.id.startsWith('TEST_')
+      );
+
       console.log(`Found ${roleMeetings.length} meetings for role ${req.params.roleId}`);
-      
+
+      // Weekly meeting randomization: if gameId and week provided, select one meeting
+      const { gameId, week } = req.query;
+      console.log(`[MEETING API] Request for ${req.params.roleId} - gameId: ${gameId}, week: ${week}`);
+
+      if (gameId && week && roleMeetings.length > 0) {
+        const weekNum = parseInt(week as string);
+        if (!isNaN(weekNum)) {
+          const seed = generateMeetingSeed(gameId as string, weekNum, req.params.roleId);
+          const selectedMeeting = seededRandomPick(roleMeetings, seed);
+          console.log(`[MEETING API] ✅ Randomized to 1 meeting for ${req.params.roleId} week ${weekNum}:`, selectedMeeting?.id);
+          roleMeetings = selectedMeeting ? [selectedMeeting] : roleMeetings;
+        }
+      } else {
+        console.log(`[MEETING API] ❌ NO RANDOMIZATION - returning all ${roleMeetings.length} meetings for ${req.params.roleId}`);
+      }
+
       res.json({
         ...role,
         meetings: roleMeetings
       });
     } catch (error: any) {
       console.error('Failed to load role:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to load role data',
         details: error.message || 'Unknown error',
         roleId: req.params.roleId

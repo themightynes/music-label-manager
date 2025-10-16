@@ -52,6 +52,7 @@ export function ExecutiveMeetings({
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
       gameId,
+      currentWeek,
       focusSlotsTotal: focusSlots.total,
       onActionSelected,
       fetchExecutives,
@@ -116,6 +117,14 @@ export function ExecutiveMeetings({
       total: focusSlots.total
     });
   }, [focusSlots.used, focusSlots.total, send]);
+
+  // Sync current week with the machine (clears cache when week changes)
+  useEffect(() => {
+    send({
+      type: 'SYNC_WEEK',
+      currentWeek
+    });
+  }, [currentWeek, send]);
 
   // Calculate impact preview when selectedActions change
   const isPreviewBlocked =

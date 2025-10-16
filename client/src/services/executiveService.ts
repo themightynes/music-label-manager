@@ -56,13 +56,29 @@ export async function fetchExecutives(gameId: string): Promise<Executive[]> {
   }
 }
 
-export async function fetchRoleMeetings(roleId: string): Promise<RoleMeeting[]> {
+export async function fetchRoleMeetings(
+  roleId: string,
+  gameId?: string,
+  currentWeek?: number
+): Promise<RoleMeeting[]> {
   try {
+    // Build query params for weekly meeting randomization
+    const params = new URLSearchParams();
+    if (gameId) params.append('gameId', gameId);
+    if (currentWeek !== undefined) params.append('week', currentWeek.toString());
+
+    const queryString = params.toString();
+    const url = `/api/roles/${roleId}${queryString ? `?${queryString}` : ''}`;
+
+    console.log(`[CLIENT] Fetching meetings for ${roleId} - gameId: ${gameId}, week: ${currentWeek}`);
+    console.log(`[CLIENT] URL: ${url}`);
+
     // Use the proper API endpoint that loads from roles.json and actions.json
-    const response = await apiRequest('GET', `/api/roles/${roleId}`);
+    const response = await apiRequest('GET', url);
     const roleData = await response.json();
 
     // The API should return meetings from actions.json filtered by role_id
+    // With gameId and week, backend returns only one randomized meeting
     // Transform the action data to our RoleMeeting format
     const meetings = (roleData.meetings || []).map((action: any) => ({
       id: action.id,
