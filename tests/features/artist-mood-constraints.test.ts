@@ -5,18 +5,42 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createTestDatabase, clearDatabase } from '../helpers/test-db';
-import { artists } from '../../shared/schema';
+import { artists, gameStates, users } from '../../shared/schema';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../../shared/schema';
 import { sql } from 'drizzle-orm';
 
 describe('Artist Mood Database Constraints', () => {
   let db: NodePgDatabase<typeof schema>;
+  let testGameId: string;
 
   beforeEach(async () => {
     // Use test database and clear it before each test
     db = createTestDatabase();
     await clearDatabase(db);
+
+    // Create a test user and game_states record for foreign key constraint
+    const [user] = await db.insert(users).values({
+      clerkId: 'test-clerk-id-mood',
+      email: 'mood-test@example.com',
+      username: 'moodtester',
+    }).returning();
+
+    const [game] = await db.insert(gameStates).values({
+      userId: user.id,
+      currentWeek: 1,
+      money: 50000,
+      reputation: 0,
+      focusSlots: 3,
+      usedFocusSlots: 0,
+      playlistAccess: 'none',
+      pressAccess: 'none',
+      venueAccess: 'none',
+      campaignType: 'standard',
+      rngSeed: 'test-seed-mood',
+    }).returning();
+
+    testGameId = game.id;
   });
 
   afterEach(async () => {
@@ -34,7 +58,7 @@ describe('Artist Mood Database Constraints', () => {
         name: 'Test Artist Over 100',
         archetype: 'pop',
         mood: 101,
-        gameId: '00000000-0000-0000-0000-000000000000'
+        gameId: testGameId
       })
     ).rejects.toThrow(/check constraint|mood/i);
   });
@@ -45,7 +69,7 @@ describe('Artist Mood Database Constraints', () => {
         name: 'Test Artist Under 0',
         archetype: 'rock',
         mood: -1,
-        gameId: '00000000-0000-0000-0000-000000000000'
+        gameId: testGameId
       })
     ).rejects.toThrow(/check constraint|mood/i);
   });
@@ -54,7 +78,7 @@ describe('Artist Mood Database Constraints', () => {
     const [artist] = await db.insert(artists).values({
       name: 'Test Artist Default Mood',
       archetype: 'indie',
-      gameId: '00000000-0000-0000-0000-000000000000'
+      gameId: testGameId
     }).returning();
 
     expect(artist.mood).toBe(50);
@@ -65,7 +89,7 @@ describe('Artist Mood Database Constraints', () => {
       name: 'Test Artist Valid Mood',
       archetype: 'pop',
       mood: 75,
-      gameId: '00000000-0000-0000-0000-000000000000'
+      gameId: testGameId
     }).returning();
 
     expect(artist.mood).toBe(75);

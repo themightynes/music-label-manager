@@ -17,6 +17,7 @@
     "test:db:stop": "node tests/stop-test-db.js",
     "test:db:reset": "node tests/reset-test-db.js",
     "db:push": "drizzle-kit push",
+    "db:cleanup-orphaned": "tsx scripts/cleanup-orphaned-games.ts",
     "compile-balance": "tsx scripts/compile-balance.ts"
   },
   "dependencies": {

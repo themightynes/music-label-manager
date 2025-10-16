@@ -76,7 +76,8 @@
       "Bash(git stash push:*)",
       "Bash(npx playwright:*)",
       "Bash(docker-compose up -d)",
-      "Bash(set DATABASE_URL=postgresql://postgres:postgres@localhost:5433/music_label_test)"
+      "Bash(set DATABASE_URL=postgresql://postgres:postgres@localhost:5433/music_label_test)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": [],

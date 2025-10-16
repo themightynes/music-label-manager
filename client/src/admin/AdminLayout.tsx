@@ -19,6 +19,7 @@ function AdminHome() {
           <Link href="/admin/test-data" className="text-brand-rose hover:underline">Test Data</Link>
           <Link href="/admin/tours-test" className="text-brand-rose hover:underline">Tours Test</Link>
           <Link href="/admin/bug-reports" className="text-brand-rose hover:underline">Bug Reports</Link>
+          <Link href="/admin/database-health" className="text-brand-rose hover:underline">💾 Database Health</Link>
         </div>
       </div>
     </GameLayout>

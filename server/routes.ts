@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, moodEvents, emails, type GameSaveSnapshot, SNAPSHOT_VERSION } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, gameSaves, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, moodEvents, emails, type GameSaveSnapshot, SNAPSHOT_VERSION } from "@shared/schema";
 import { z } from "zod";
 import type { EmailCategory } from "@shared/types/emailTypes";
 import { serverGameData } from "./data/gameData";
@@ -622,20 +622,136 @@ const musicLabelData = {
     try {
       console.log('[PATCH /api/game/:id] Request params:', req.params.id);
       console.log('[PATCH /api/game/:id] Request body:', req.body);
-      
+
       const gameState = await storage.updateGameState(req.params.id, req.body);
-      
+
       console.log('[PATCH /api/game/:id] Updated game state:', gameState);
-      
+
       if (!gameState) {
         console.error('[PATCH /api/game/:id] No game state returned from storage.updateGameState');
         return res.status(404).json({ message: "Game not found or update failed" });
       }
-      
+
       res.json(gameState);
     } catch (error) {
       console.error('[PATCH /api/game/:id] Error:', error);
       res.status(500).json({ message: "Failed to update game state", error: (error as any).message });
+    }
+  });
+
+  // List all games for the current user (FR-5: Server State Recovery)
+  app.get("/api/games", requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Get all games for this user, sorted by created date (newest first)
+      const games = await db
+        .select()
+        .from(gameStates)
+        .where(eq(gameStates.userId, userId))
+        .orderBy(desc(gameStates.createdAt));
+
+      console.log(`[GET /api/games] Found ${games.length} game(s) for user ${userId}`);
+
+      res.json(games);
+    } catch (error) {
+      console.error('[GET /api/games] Error:', error);
+      res.status(500).json({ message: 'Failed to fetch games', error: (error as any).message });
+    }
+  });
+
+  // ============================================================================
+  // DELETE /api/game/:gameId - Delete Game and All Related Data
+  // ============================================================================
+  // Purpose: Delete a game and all its related records (orphaned game cleanup)
+  // PRD Reference: tasks/0006-prd-database-maintenance-orphaned-games.md (FR-1)
+  //
+  // CASCADE DELETE BEHAVIOR (Configured in shared/schema.ts):
+  // When a game_state is deleted, ALL related records are automatically deleted
+  // via foreign key constraints with ON DELETE CASCADE:
+  //
+  // Tables with CASCADE delete:
+  // - artists (all artists signed to this game)
+  // - songs (all songs created in this game, even unreleased)
+  // - projects (all projects: singles, EPs, tours)
+  // - releases (all planned and active releases)
+  // - release_songs (all release-song mappings)
+  // - emails (all inbox emails)
+  // - executives (all hired executives)
+  // - mood_events (all artist mood change events)
+  // - weekly_actions (all queued and completed actions)
+  // - charts (all chart position records)
+  // - music_labels (the game's music label configuration)
+  //
+  // This ensures NO orphaned data remains in the database after deletion.
+  //
+  // Security Model:
+  // - Authentication required (requireClerkUser middleware)
+  // - Ownership verification (only game owner can delete)
+  // - No information leakage (returns 404 for both non-existent and unauthorized)
+  // ============================================================================
+  app.delete("/api/game/:gameId", requireClerkUser, async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { gameId } = req.params;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      console.log('[DELETE /api/game/:gameId] User:', userId, 'attempting to delete game:', gameId);
+
+      // Step 1: Verify game exists and check ownership
+      // We fetch both id and userId to perform ownership check in a single query
+      const [gameOwnership] = await db
+        .select({ id: gameStates.id, userId: gameStates.userId, currentWeek: gameStates.currentWeek })
+        .from(gameStates)
+        .where(eq(gameStates.id, gameId))
+        .limit(1);
+
+      // Step 2: Return 404 if game doesn't exist
+      if (!gameOwnership) {
+        console.log('[DELETE /api/game/:gameId] Game not found:', gameId);
+        return res.status(404).json({ message: 'Game not found' });
+      }
+
+      // Step 3: Return 404 if user doesn't own the game
+      // Security: We return 404 (not 403) to avoid leaking game existence
+      // An attacker shouldn't be able to determine if a gameId exists
+      if (gameOwnership.userId !== userId) {
+        console.log('[DELETE /api/game/:gameId] Unauthorized deletion attempt by user:', userId);
+        return res.status(404).json({ message: 'Game not found' });
+      }
+
+      // Step 4: Delete orphaned game_saves records
+      // game_saves stores gameId inside JSON (game_state->'gameState'->>'id')
+      // No FK constraint exists, so we must manually delete to prevent orphaned saves
+      // that would cause 403 errors when users try to restore them
+      await db.delete(gameSaves).where(sql`game_state->'gameState'->>'id' = ${gameId}`);
+
+      console.log('[DELETE /api/game/:gameId] Deleted orphaned game_saves for game:', gameId);
+
+      // Step 5: Delete the game_state record
+      // CASCADE configuration in schema.ts automatically deletes ALL related records
+      // This is a SINGLE query - Drizzle ORM handles the deletion, PostgreSQL handles CASCADE
+      // No need to manually delete artists, songs, projects, etc. - CASCADE does it automatically!
+      await db.delete(gameStates).where(eq(gameStates.id, gameId));
+
+      console.log('[DELETE /api/game/:gameId] Successfully deleted game:', gameId, '(Week', gameOwnership.currentWeek + ')');
+
+      // Step 6: Return success response with deletion confirmation
+      res.json({
+        success: true,
+        message: 'Game deleted successfully',
+        gameId: gameId
+      });
+    } catch (error) {
+      console.error('[DELETE /api/game/:gameId] Error:', error);
+      res.status(500).json({ message: 'Failed to delete game', error: (error as any).message });
     }
   });
 
@@ -4658,6 +4774,209 @@ const musicLabelData = {
       console.error('Failed to save actions config:', error);
       res.status(500).json({
         error: 'Failed to save actions configuration',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Database health monitoring endpoints (Admin only) - PRD-0006
+  app.get('/api/admin/database-stats', requireClerkUser, requireAdmin, async (req, res) => {
+    try {
+      // Get total games count
+      const totalGamesResult = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(gameStates);
+      const totalGamesCount = totalGamesResult[0]?.count || 0;
+
+      // Get orphaned games using LEFT JOIN query from cleanup script (FR-6)
+      const orphanedGamesQuery = sql`
+        SELECT
+          gs.id,
+          gs.user_id,
+          gs.current_week,
+          gs.created_at
+        FROM game_states gs
+        LEFT JOIN game_saves gsaves ON gs.id = (gsaves.game_state->'gameState'->>'id')::uuid
+        WHERE gsaves.id IS NULL
+        ORDER BY gs.created_at DESC
+      `;
+
+      const orphanedGamesResult = await db.execute(orphanedGamesQuery);
+      const orphanedGames = orphanedGamesResult.rows as Array<{
+        id: string;
+        user_id: string;
+        current_week: number;
+        created_at: Date;
+      }>;
+
+      const orphanedGamesCount = orphanedGames.length;
+      const orphanedPercentage = totalGamesCount > 0
+        ? (orphanedGamesCount / totalGamesCount) * 100
+        : 0;
+
+      // Get database size (PostgreSQL specific)
+      const dbSizeQuery = sql`
+        SELECT pg_database_size(current_database())::bigint as size
+      `;
+      const dbSizeResult = await db.execute(dbSizeQuery);
+      const dbSizeBytes = Number(dbSizeResult.rows[0]?.size || 0);
+      const databaseSizeMB = Number((dbSizeBytes / (1024 * 1024)).toFixed(2));
+
+      // Get top users by orphaned games count (with hashed user IDs for privacy)
+      const topUsersQuery = sql`
+        SELECT
+          gs.user_id,
+          COUNT(*) as orphaned_count
+        FROM game_states gs
+        LEFT JOIN game_saves gsaves ON gs.id = (gsaves.game_state->'gameState'->>'id')::uuid
+        WHERE gsaves.id IS NULL
+        GROUP BY gs.user_id
+        ORDER BY orphaned_count DESC
+        LIMIT 10
+      `;
+
+      const topUsersResult = await db.execute(topUsersQuery);
+      const topUsersOrphanedGames = (topUsersResult.rows as Array<{
+        user_id: string;
+        orphaned_count: string;
+      }>).map(row => ({
+        userId: `hash_${row.user_id.substring(0, 8)}`, // Hash user ID for privacy
+        orphanedCount: parseInt(row.orphaned_count, 10)
+      }));
+
+      // TODO: Implement deletion event logging (FR-10) and return recent deletions
+      // For now, return empty array as placeholder
+      const recentDeletions: Array<{
+        timestamp: string;
+        gameId: string;
+        gameWeek: number;
+        reason: string;
+        totalRecords: number;
+      }> = [];
+
+      // Return stats in format per PRD Appendix B
+      res.json({
+        orphanedGamesCount,
+        totalGamesCount,
+        orphanedPercentage: Number(orphanedPercentage.toFixed(2)),
+        databaseSizeMB,
+        recentDeletions,
+        topUsersOrphanedGames
+      });
+
+    } catch (error) {
+      console.error('Failed to fetch database stats:', error);
+      res.status(500).json({
+        error: 'Failed to fetch database statistics',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Manual cleanup endpoint for orphaned games (Admin only) - PRD-0006 FR-11
+  app.post('/api/admin/cleanup-orphaned-games', requireClerkUser, requireAdmin, async (req, res) => {
+    try {
+      const startTime = new Date();
+      const BATCH_SIZE = 100;
+
+      // Capture "before" metrics
+      const totalGamesBeforeResult = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(gameStates);
+      const totalGamesBefore = totalGamesBeforeResult[0]?.count || 0;
+
+      // Identify orphaned games using same query as stats endpoint (FR-6)
+      const orphanedGamesQuery = sql`
+        SELECT
+          gs.id,
+          gs.user_id,
+          gs.current_week,
+          gs.created_at
+        FROM game_states gs
+        LEFT JOIN game_saves gsaves ON gs.id = (gsaves.game_state->'gameState'->>'id')::uuid
+        WHERE gsaves.id IS NULL
+        ORDER BY gs.created_at ASC
+      `;
+
+      const orphanedGamesResult = await db.execute(orphanedGamesQuery);
+      const orphanedGames = orphanedGamesResult.rows as Array<{
+        id: string;
+        user_id: string;
+        current_week: number;
+        created_at: Date;
+      }>;
+
+      const orphanedCount = orphanedGames.length;
+
+      if (orphanedCount === 0) {
+        return res.json({
+          success: true,
+          message: 'No orphaned games found. Database is healthy!',
+          beforeMetrics: {
+            totalGames: totalGamesBefore,
+            orphanedGames: 0
+          },
+          afterMetrics: {
+            totalGames: totalGamesBefore,
+            deletedCount: 0
+          },
+          durationMs: new Date().getTime() - startTime.getTime()
+        });
+      }
+
+      // Batch delete orphaned games (reuse logic from cleanup script)
+      let deletedCount = 0;
+
+      for (let i = 0; i < orphanedGames.length; i += BATCH_SIZE) {
+        const batch = orphanedGames.slice(i, i + BATCH_SIZE);
+        const batchIds = batch.map(g => g.id);
+
+        // Delete batch using inArray for safety
+        await db
+          .delete(gameStates)
+          .where(inArray(gameStates.id, batchIds));
+
+        deletedCount += batch.length;
+        console.log(`[ADMIN CLEANUP] Batch ${Math.floor(i / BATCH_SIZE) + 1}: Deleted ${batch.length} games (Total: ${deletedCount})`);
+      }
+
+      // Capture "after" metrics
+      const totalGamesAfterResult = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(gameStates);
+      const totalGamesAfter = totalGamesAfterResult[0]?.count || 0;
+
+      const endTime = new Date();
+      const durationMs = endTime.getTime() - startTime.getTime();
+
+      // Log deletion event for monitoring
+      console.log('[ADMIN CLEANUP] Orphaned game cleanup executed', {
+        timestamp: endTime.toISOString(),
+        deletedCount,
+        durationMs,
+        beforeTotal: totalGamesBefore,
+        afterTotal: totalGamesAfter,
+        reason: 'admin_action'
+      });
+
+      res.json({
+        success: true,
+        message: `Successfully deleted ${deletedCount} orphaned games`,
+        beforeMetrics: {
+          totalGames: totalGamesBefore,
+          orphanedGames: orphanedCount
+        },
+        afterMetrics: {
+          totalGames: totalGamesAfter,
+          deletedCount
+        },
+        durationMs
+      });
+
+    } catch (error) {
+      console.error('Failed to cleanup orphaned games:', error);
+      res.status(500).json({
+        error: 'Failed to cleanup orphaned games',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

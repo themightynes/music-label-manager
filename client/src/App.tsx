@@ -27,6 +27,7 @@ import MainMenuPage from "@/pages/MainMenuPage";
 import RecordingSessionPage from "@/pages/RecordingSessionPage";
 import LivePerformancePage from "@/pages/LivePerformancePage";
 import BugReportsPage from '@/pages/BugReportsPage';
+import AdminDatabaseHealthPage from '@/pages/AdminDatabaseHealthPage';
 import UXPrototypesPage from '@/pages/UXPrototypesPage';
 import MoodSystemPrototypePage from '@/pages/prototypes/MoodSystemPrototypePage';
 import AdminHome from "@/admin/AdminLayout";
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/admin/test-data" component={withAdmin(TestDataPage)} />
       <Route path="/admin/tours-test" component={withAdmin(ToursTest)} />
       <Route path="/admin/bug-reports" component={withAdmin(BugReportsPage)} />
+      <Route path="/admin/database-health" component={withAdmin(AdminDatabaseHealthPage)} />
 
       {/* Prototype routes */}
       <Route path="/prototypes" component={withAdmin(UXPrototypesPage)} />

@@ -36,7 +36,7 @@ export const artists = pgTable("artists", {
   signedWeek: integer("signed_week"),
   signed: boolean("signed").default(false), // Renamed from isSigned for consistency with GameArtist
   weeklyCost: integer("weekly_cost").default(1200), // Renamed from weeklyFee - ongoing weekly cost for this artist
-  gameId: uuid("game_id"),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
   // Additional artist attributes
   talent: integer("talent").default(50), // 0-100
   workEthic: integer("work_ethic").default(50), // 0-100
@@ -72,8 +72,8 @@ export const artists = pgTable("artists", {
 // Mood Events - Track artist mood changes over time
 export const moodEvents = pgTable("mood_events", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  artistId: uuid("artist_id").references(() => artists.id),
-  gameId: uuid("game_id").references(() => gameStates.id),
+  artistId: uuid("artist_id").references(() => artists.id, { onDelete: "cascade" }),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
   eventType: text("event_type").notNull(), // e.g., "release_success", "neglected", "creative_breakthrough"
   moodChange: integer("mood_change").notNull(), // Amount of mood change (+/-)
   moodBefore: integer("mood_before").notNull(), // Mood value before the event
@@ -92,7 +92,7 @@ export const roles = pgTable("roles", {
   type: text("type").notNull(), // Manager, A&R, Producer, etc.
   relationship: integer("relationship").default(50),
   accessLevel: integer("access_level").default(0),
-  gameId: uuid("game_id"),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
 }, (table) => ({
   // Index for save/load performance
   gameIdIdx: sql`CREATE INDEX IF NOT EXISTS "idx_roles_game_id" ON ${table} ("game_id")`,
@@ -103,7 +103,7 @@ export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   type: text("type").notNull(), // Single, EP, Mini-Tour
-  artistId: uuid("artist_id").references(() => artists.id),
+  artistId: uuid("artist_id").references(() => artists.id, { onDelete: "cascade" }),
   stage: text("stage").default("planning"), // planning, production, released
   quality: integer("quality").default(0),
   budget: integer("budget").default(0), // Total budget allocated for the project
@@ -113,7 +113,7 @@ export const projects = pgTable("projects", {
   costUsed: integer("cost_used").default(0),
   dueWeek: integer("due_week"),
   startWeek: integer("start_week"),
-  gameId: uuid("game_id"),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
   metadata: jsonb("metadata"), // Additional project-specific data
   // NEW FIELDS for multi-song support
   songCount: integer("song_count").default(1),
@@ -317,7 +317,7 @@ export const emails = pgTable("emails", {
 // Executives table
 export const executives = pgTable("executives", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  gameId: uuid("game_id").references(() => gameStates.id),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
   role: text("role"), // 'head_of_ar', 'cmo', 'cco', 'head_distribution'
   level: integer("level").default(1),
   mood: integer("mood").default(50), // 0-100
@@ -368,7 +368,7 @@ export const musicLabels = pgTable("music_labels", {
 // Weekly actions (for tracking player choices)
 export const weeklyActions = pgTable("weekly_actions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  gameId: uuid("game_id").references(() => gameStates.id),
+  gameId: uuid("game_id").references(() => gameStates.id, { onDelete: "cascade" }).notNull(),
   week: integer("week").notNull(),
   actionType: text("action_type").notNull(),
   targetId: uuid("target_id"), // Role ID, Project ID, etc.
