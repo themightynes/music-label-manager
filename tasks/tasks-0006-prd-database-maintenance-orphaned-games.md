@@ -72,9 +72,9 @@ Generated from: [0006-prd-database-maintenance-orphaned-games.md](./0006-prd-dat
   - [x] 2.12 Write unit tests in `tests/features/gameStore-orphaned-cleanup.test.ts` for cleanup logic
   - [x] 2.13 Write unit tests for edge cases: no current game, game with saves, multiple tabs scenario
 
-### Phase 2: Maintenance Tool for Future Orphaned Data
+### Phase 2: Maintenance Tool for Future Orphaned Data ✅ COMPLETE
 
-- [ ] 3.0 Create Orphaned Game Cleanup Script (FR-6, FR-7, FR-8) - Reframed as DevOps Maintenance Tool
+- [x] 3.0 Create Orphaned Game Cleanup Script (FR-6, FR-7, FR-8) - Reframed as DevOps Maintenance Tool
   - [x] 3.1 Create new file `scripts/cleanup-orphaned-games.ts` (moved from server/migrations to scripts/)
   - [x] 3.2 Add script header comments explaining: "This script finds 0 orphaned games post-wipe - expected behavior. Use for future maintenance."
   - [x] 3.3 Implement SQL query to identify orphaned games using LEFT JOIN with game_saves (PRD Section 4, FR-6)
