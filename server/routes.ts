@@ -27,7 +27,10 @@ import {
   validateRequest,
   createErrorResponse,
   ArtistDialogueRequestSchema,
-  ArtistDialogueResponse
+  ArtistDialogueResponse,
+  ActionsConfigSchema,
+  SaveActionsConfigRequestSchema,
+  SaveActionsConfigResponseSchema
 } from "@shared/api/contracts";
 import { db } from "./db";
 import { eq, desc, and, sql, inArray, ne } from "drizzle-orm";
@@ -4694,51 +4697,9 @@ const musicLabelData = {
         return res.status(400).json({ error: 'Configuration data is required' });
       }
 
-      // Validate using the schema from gameDataLoader
-      const actionsSchema = z.object({
-        version: z.string(),
-        generated: z.string().optional(),
-        description: z.string().optional(),
-        weekly_actions: z.array(z.object({
-          id: z.string(),
-          name: z.string(),
-          type: z.string(),
-          icon: z.string(),
-          description: z.string().optional(),
-          role_id: z.string().optional(),
-          meeting_id: z.string().optional(),
-          category: z.string(),
-          project_type: z.string().optional(),
-          campaign_type: z.string().optional(),
-          prompt: z.string().optional(),
-          prompt_before_selection: z.string().optional(),
-          target_scope: z.enum(['global', 'predetermined', 'user_selected']).optional(),
-          choices: z.array(z.any()).optional(),
-          details: z.object({
-            cost: z.string(),
-            duration: z.string(),
-            prerequisites: z.string(),
-            outcomes: z.array(z.string()),
-            benefits: z.array(z.string())
-          }).optional(),
-          recommendations: z.object({
-            urgent_when: z.record(z.any()).optional(),
-            recommended_when: z.record(z.any()).optional(),
-            reasons: z.record(z.string()).optional()
-          }).optional()
-        }).passthrough()),
-        action_categories: z.array(z.object({
-          id: z.string(),
-          name: z.string(),
-          icon: z.string(),
-          description: z.string(),
-          color: z.string()
-        })).optional()
-      }).passthrough();
-
-      // Validate the configuration
+      // Validate using shared schema from contracts
       try {
-        actionsSchema.parse(config);
+        ActionsConfigSchema.parse(config);
       } catch (validationError) {
         if (validationError instanceof z.ZodError) {
           return res.status(400).json({

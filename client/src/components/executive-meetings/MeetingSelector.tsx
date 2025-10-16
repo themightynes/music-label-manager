@@ -187,7 +187,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+              <CardTitle className="text-lg">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
               <ScopeBadge scope={meeting.target_scope} />
             </div>
           </CardHeader>
@@ -243,7 +243,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
             <Card className="hover:shadow-md transition-all duration-200">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+                  <CardTitle className="text-lg">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
                   <ScopeBadge scope={meeting.target_scope} />
                 </div>
               </CardHeader>

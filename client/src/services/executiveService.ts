@@ -66,6 +66,7 @@ export async function fetchRoleMeetings(roleId: string): Promise<RoleMeeting[]> 
     // Transform the action data to our RoleMeeting format
     const meetings = (roleData.meetings || []).map((action: any) => ({
       id: action.id,
+      name: action.name, // Display name from actions.json (e.g., "CEO: Artist Roundtable")
       prompt: action.prompt,
       prompt_before_selection: action.prompt_before_selection,
       target_scope: action.target_scope || 'global', // Default to 'global' if missing
