@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { storage } from "./storage";
-import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, moodEvents, emails, type GameSaveSnapshot, SNAPSHOT_VERSION } from "@shared/schema";
+import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, insertArtistSchema, insertProjectSchema, insertWeeklyActionSchema, insertMusicLabelSchema, labelRequestSchema, gameStates, gameSaves, weeklyActions, projects, songs, artists, releases, releaseSongs, roles, executives, musicLabels, moodEvents, emails, type GameSaveSnapshot, SNAPSHOT_VERSION } from "@shared/schema";
 import { z } from "zod";
 import type { EmailCategory } from "@shared/types/emailTypes";
 import { serverGameData } from "./data/gameData";
@@ -727,7 +727,15 @@ const musicLabelData = {
         return res.status(404).json({ message: 'Game not found' });
       }
 
-      // Step 4: Delete the game_state record
+      // Step 4: Delete orphaned game_saves records
+      // game_saves stores gameId inside JSON (game_state->'gameState'->>'id')
+      // No FK constraint exists, so we must manually delete to prevent orphaned saves
+      // that would cause 403 errors when users try to restore them
+      await db.delete(gameSaves).where(sql`game_state->'gameState'->>'id' = ${gameId}`);
+
+      console.log('[DELETE /api/game/:gameId] Deleted orphaned game_saves for game:', gameId);
+
+      // Step 5: Delete the game_state record
       // CASCADE configuration in schema.ts automatically deletes ALL related records
       // This is a SINGLE query - Drizzle ORM handles the deletion, PostgreSQL handles CASCADE
       // No need to manually delete artists, songs, projects, etc. - CASCADE does it automatically!
@@ -735,7 +743,7 @@ const musicLabelData = {
 
       console.log('[DELETE /api/game/:gameId] Successfully deleted game:', gameId, '(Week', gameOwnership.currentWeek + ')');
 
-      // Step 5: Return success response with deletion confirmation
+      // Step 6: Return success response with deletion confirmation
       res.json({
         success: true,
         message: 'Game deleted successfully',

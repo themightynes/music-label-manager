@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { createTestDatabase, clearDatabase, closeDatabaseConnection } from '../helpers/test-db';
-import { users, gameStates, artists, songs, projects } from '@shared/schema';
+import { users, gameStates, gameSaves, artists, songs, projects } from '@shared/schema';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 /**
@@ -202,5 +202,82 @@ describe('DELETE /api/game/:gameId endpoint', () => {
     expect(artistsAfter).toHaveLength(0);
     expect(songsAfter).toHaveLength(0);
     expect(projectsAfter).toHaveLength(0);
+  });
+
+  it('should delete orphaned game_saves when game is deleted', async () => {
+    // Create a game for the test user
+    const [game] = await db.insert(gameStates).values({
+      userId: testUserId,
+      currentWeek: 8,
+      money: 60000,
+      reputation: 15,
+      focusSlots: 3,
+      usedFocusSlots: 1,
+      playlistAccess: 'none',
+      pressAccess: 'none',
+      venueAccess: 'none',
+      campaignType: 'standard',
+      rngSeed: 'save-cleanup-test',
+    }).returning();
+
+    // Create multiple game_saves for this game
+    // game_saves stores gameId inside JSON (game_state->'gameState'->>'id')
+    const saveSnapshot = {
+      snapshotVersion: 2,
+      gameState: {
+        id: game.id,
+        currentWeek: 8,
+        money: 60000,
+        reputation: 15,
+        creativeCapital: 0,
+      },
+      artists: [],
+      projects: [],
+      roles: [],
+    };
+
+    await db.insert(gameSaves).values([
+      {
+        userId: testUserId,
+        name: 'Manual Save - Week 8',
+        gameState: saveSnapshot,
+        week: 8,
+        isAutosave: false,
+      },
+      {
+        userId: testUserId,
+        name: 'Autosave - Week 8',
+        gameState: saveSnapshot,
+        week: 8,
+        isAutosave: true,
+      },
+    ]);
+
+    // Verify saves exist before deletion
+    const savesBeforeDeletion = await db
+      .select()
+      .from(gameSaves)
+      .where(sql`game_state->'gameState'->>'id' = ${game.id}`);
+
+    expect(savesBeforeDeletion).toHaveLength(2);
+
+    // Simulate DELETE endpoint behavior:
+    // 1. Delete orphaned game_saves first
+    await db.delete(gameSaves).where(sql`game_state->'gameState'->>'id' = ${game.id}`);
+
+    // 2. Delete the game_state (CASCADE will handle related records)
+    await db.delete(gameStates).where(eq(gameStates.id, game.id));
+
+    // Verify game_saves are deleted (preventing orphaned saves and 403 errors)
+    const savesAfterDeletion = await db
+      .select()
+      .from(gameSaves)
+      .where(sql`game_state->'gameState'->>'id' = ${game.id}`);
+
+    expect(savesAfterDeletion).toHaveLength(0);
+
+    // Verify game is also deleted
+    const gamesAfter = await db.select().from(gameStates).where(eq(gameStates.id, game.id));
+    expect(gamesAfter).toHaveLength(0);
   });
 });
