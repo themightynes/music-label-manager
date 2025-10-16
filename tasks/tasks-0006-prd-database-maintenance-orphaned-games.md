@@ -75,20 +75,20 @@ Generated from: [0006-prd-database-maintenance-orphaned-games.md](./0006-prd-dat
 ### Phase 2: Maintenance Tool for Future Orphaned Data
 
 - [ ] 3.0 Create Orphaned Game Cleanup Script (FR-6, FR-7, FR-8) - Reframed as DevOps Maintenance Tool
-  - [ ] 3.1 Create new file `scripts/cleanup-orphaned-games.ts` (moved from server/migrations to scripts/)
-  - [ ] 3.2 Add script header comments explaining: "This script finds 0 orphaned games post-wipe - expected behavior. Use for future maintenance."
-  - [ ] 3.3 Implement SQL query to identify orphaned games using LEFT JOIN with game_saves (PRD Section 4, FR-6)
-  - [ ] 3.4 Add `--dry-run` flag to preview deletions without executing them (default: true for safety)
-  - [ ] 3.5 Capture "before" metrics: total games, orphaned count, sample orphaned game IDs
-  - [ ] 3.6 Batch delete orphaned games in chunks of 100 (to avoid long transactions)
-  - [ ] 3.7 Use database transaction to ensure atomic deletion per batch
-  - [ ] 3.8 Capture "after" metrics: total games remaining, records deleted
-  - [ ] 3.9 Log results to console with summary: "Deleted {count} orphaned games | Expected: 0 on first run after database wipe"
-  - [ ] 3.10 Make script idempotent (safe to run multiple times - re-query orphaned games on each run)
-  - [ ] 3.11 Add CLI command to run script: `npm run db:cleanup-orphaned` (use `--execute` flag to actually delete)
-  - [ ] 3.12 Write tests in `scripts/cleanup-orphaned-games.test.ts` that create artificial orphaned data, then verify cleanup
-  - [ ] 3.13 Test dry-run mode returns accurate preview without deleting data
-  - [ ] 3.14 Test idempotency: running script twice should be safe and report 0 deletions on second run
+  - [x] 3.1 Create new file `scripts/cleanup-orphaned-games.ts` (moved from server/migrations to scripts/)
+  - [x] 3.2 Add script header comments explaining: "This script finds 0 orphaned games post-wipe - expected behavior. Use for future maintenance."
+  - [x] 3.3 Implement SQL query to identify orphaned games using LEFT JOIN with game_saves (PRD Section 4, FR-6)
+  - [x] 3.4 Add `--dry-run` flag to preview deletions without executing them (default: true for safety)
+  - [x] 3.5 Capture "before" metrics: total games, orphaned count, sample orphaned game IDs
+  - [x] 3.6 Batch delete orphaned games in chunks of 100 (to avoid long transactions)
+  - [x] 3.7 Use database transaction to ensure atomic deletion per batch
+  - [x] 3.8 Capture "after" metrics: total games remaining, records deleted
+  - [x] 3.9 Log results to console with summary: "Deleted {count} orphaned games | Expected: 0 on first run after database wipe"
+  - [x] 3.10 Make script idempotent (safe to run multiple times - re-query orphaned games on each run)
+  - [x] 3.11 Add CLI command to run script: `npm run db:cleanup-orphaned` (use `--execute` flag to actually delete)
+  - [x] 3.12 Write tests in `tests/features/cleanup-orphaned-games.test.ts` that create artificial orphaned data, then verify cleanup
+  - [x] 3.13 Test dry-run mode returns accurate preview without deleting data
+  - [x] 3.14 Test idempotency: running script twice should be safe and report 0 deletions on second run
 
 ### Phase 3: Long-Term Monitoring (Admin Dashboard)
 
