@@ -316,8 +316,74 @@ export const useGameStore = create<GameStore>()(
       },
 
       // Create new game
+      // Implements FR-2: Automatic Cleanup on New Game Creation (PRD-0006)
+      // Purpose: Prevent orphaned games by cleaning up unsaved games before creating new ones
       createNewGame: async (campaignType: string, labelData?: LabelData) => {
         try {
+          // ============================================================================
+          // ORPHANED GAME CLEANUP LOGIC (PRD-0006 FR-2)
+          // ============================================================================
+          // Before creating a new game, check if the current game session has any saves.
+          // If no saves exist, delete the current game to prevent orphaned data accumulation.
+          // This is the PRIMARY prevention mechanism for orphaned games.
+          // ============================================================================
+
+          const currentGame = get().gameState;
+          if (currentGame?.id) {
+            console.log(`[ORPHANED GAME CLEANUP] Checking if current game ${currentGame.id} (Week ${currentGame.currentWeek}) has saves...`);
+
+            try {
+              // Step 1: Fetch all save files for the current user
+              // Note: We fetch ALL saves and filter client-side (server doesn't have gameId filter)
+              const savesResponse = await apiRequest('GET', '/api/saves');
+              const allSaves = await savesResponse.json();
+
+              // Step 2: Filter saves to find those belonging to the current game
+              // The GameSaveSummary type includes gameId field extracted from save snapshot
+              const currentGameSaves = allSaves.filter((save: any) => save.gameId === currentGame.id);
+
+              if (!currentGameSaves || currentGameSaves.length === 0) {
+                // Step 3: No saves found - this game is orphaned!
+                // Delete it via the DELETE /api/game/:gameId endpoint
+                // CASCADE foreign keys will automatically delete all related records:
+                // artists, songs, projects, releases, emails, executives, mood events, etc.
+                console.log(`[ORPHANED GAME CLEANUP] No saves found for game ${currentGame.id}. Deleting unsaved game...`);
+
+                try {
+                  await apiRequest('DELETE', `/api/game/${currentGame.id}`);
+
+                  // Step 4: Log deletion event for DevOps monitoring (FR-10)
+                  console.log(`[ORPHANED GAME CLEANUP] ✅ Cleaned up unsaved game: ${currentGame.id} (Week ${currentGame.currentWeek})`);
+
+                  // Step 5: Show neutral toast notification to user (FR-2 requirement)
+                  // Note: Neutral tone - not an error, just housekeeping
+                  toast({
+                    title: "Previous unsaved game cleaned up",
+                    description: "Your new game is starting fresh.",
+                    duration: 3000,
+                  });
+                } catch (deleteError) {
+                  // Deletion failure is non-critical - log warning but continue
+                  // User can still create new game even if cleanup fails
+                  console.warn(`[ORPHANED GAME CLEANUP] Failed to delete unsaved game ${currentGame.id}:`, deleteError);
+                  // Continue with new game creation even if deletion fails
+                }
+              } else {
+                // Game has saves - don't delete it! User might want to load it later
+                console.log(`[ORPHANED GAME CLEANUP] Current game ${currentGame.id} has ${currentGameSaves.length} save(s). Keeping it.`);
+              }
+            } catch (savesError) {
+              // Save check failure is non-critical - log warning but continue
+              console.warn(`[ORPHANED GAME CLEANUP] Failed to check saves for game ${currentGame.id}:`, savesError);
+              // Continue with new game creation even if save check fails
+            }
+          }
+
+          // ============================================================================
+          // END ORPHANED GAME CLEANUP - Proceed with normal new game creation flow
+          // ============================================================================
+
+          // FR-2: Proceed with new game creation (existing flow)
           const newGameData = {
             // userId will be set by the server from authentication
             currentWeek: 1,

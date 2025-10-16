@@ -14,19 +14,51 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const channelRef = useRef<BroadcastChannel | null>(null);
 
   useEffect(() => {
-    // Get gameId from URL or localStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    const idFromUrl = urlParams.get('gameId');
-    const idFromStorage = localStorage.getItem('currentGameId');
+    // FR-5: Enhanced game loading with server fallback for localStorage sync
+    const initializeGame = async () => {
+      // Get gameId from URL or localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      const idFromUrl = urlParams.get('gameId');
+      const idFromStorage = localStorage.getItem('currentGameId');
 
-    const id = idFromUrl || idFromStorage;
-    if (id) {
-      setGameId(id);
-      loadGame(id).catch(error => {
-        console.error('Failed to rehydrate game from server:', error);
-      });
-    }
-    // Remove hardcoded fallback - let the app handle missing game gracefully
+      const id = idFromUrl || idFromStorage;
+
+      if (id) {
+        // Have a gameId - load it normally
+        setGameId(id);
+        loadGame(id).catch(error => {
+          console.error('Failed to rehydrate game from server:', error);
+        });
+      } else {
+        // FR-5: No gameId in localStorage - try to fetch user's most recent game from server
+        console.log('[GAME CONTEXT] No gameId in localStorage, checking for recent game on server...');
+
+        try {
+          const { apiRequest } = await import('@/lib/queryClient');
+          const response = await apiRequest('GET', '/api/games');
+          const games = await response.json();
+
+          if (games && games.length > 0) {
+            const mostRecentGame = games[0]; // Already sorted by createdAt desc
+            console.log(`[GAME CONTEXT] Found most recent game ${mostRecentGame.id} (Week ${mostRecentGame.currentWeek}). Restoring...`);
+
+            // Update localStorage and state with the recovered game
+            localStorage.setItem('currentGameId', mostRecentGame.id);
+            setGameId(mostRecentGame.id);
+            loadGame(mostRecentGame.id).catch(error => {
+              console.error('Failed to load recovered game from server:', error);
+            });
+          } else {
+            console.log('[GAME CONTEXT] No existing games found on server. User can start a new game.');
+          }
+        } catch (error) {
+          console.warn('[GAME CONTEXT] Failed to fetch most recent game from server:', error);
+          // Not critical - user can still start a new game
+        }
+      }
+    };
+
+    initializeGame();
   }, [loadGame]);
 
   useEffect(() => {

@@ -287,15 +287,13 @@ describe('gameStore orphaned game cleanup logic', () => {
     });
 
     // If no current game exists, skip cleanup logic entirely
-    if (!currentGame?.id) {
-      // Jump directly to new game creation
-      const newGameResponse = await mockApiRequest('POST', '/api/game');
-      const newGame = await newGameResponse.json();
+    // Jump directly to new game creation
+    const newGameResponse = await mockApiRequest('POST', '/api/game');
+    const newGame: any = await newGameResponse.json();
 
-      expect(newGame.id).toBe('new-game-id');
-      expect(savesCheckCalled).toBe(false);
-      expect(deleteCallReceived).toBe(false);
-    }
+    expect(newGame.id).toBe('new-game-id');
+    expect(savesCheckCalled).toBe(false);
+    expect(deleteCallReceived).toBe(false);
   });
 
   it('should correctly filter saves by gameId using client-side logic', async () => {
@@ -423,15 +421,13 @@ describe('gameStore cleanup logic - edge cases', () => {
       });
 
       // When no current game exists (currentGame?.id check fails)
-      if (!currentGame?.id) {
-        // Should jump directly to new game creation
-        const response = await mockApiRequest('POST', '/api/game');
-        const newGame = await response.json();
+      // Should jump directly to new game creation
+      const response = await mockApiRequest('POST', '/api/game');
+      const newGame: any = await response.json();
 
-        expect(newGame.id).toBe('first-game-id');
-        expect(newGame.currentWeek).toBe(1);
-        expect(newGameCreated).toBe(true);
-      }
+      expect(newGame.id).toBe('first-game-id');
+      expect(newGame.currentWeek).toBe(1);
+      expect(newGameCreated).toBe(true);
 
       // Verify cleanup logic was SKIPPED
       expect(savesCheckCalled).toBe(false);

@@ -57,6 +57,8 @@ RESTful API implementation with middleware integration:
 GET    /api/game/:id              // Get complete game state
 POST   /api/game                  // Create new game session
 PATCH  /api/game/:id              // Update specific fields
+DELETE /api/game/:gameId          // Delete game (orphaned cleanup)
+GET    /api/games                 // List all user's games (newest first)
 POST   /api/advance-month         // Process monthly turn
 
 // Entity management
@@ -67,6 +69,10 @@ POST   /api/game/:gameId/actions  // Record player action
 // Save system
 GET    /api/saves                 // List user's saves
 POST   /api/saves                 // Create new save
+
+// Admin endpoints (require admin role)
+GET    /api/admin/database-stats         // Database health metrics
+POST   /api/admin/cleanup-orphaned-games // Manual orphaned game cleanup
 
 // Authentication
 POST   /api/auth/register         // User registration
@@ -132,6 +138,219 @@ export class ServerGameData {
   }
 }
 ```
+
+---
+
+## 🧹 Orphaned Game Cleanup System
+
+### **Overview**
+Orphaned games are game_states records that have no corresponding save files. These accumulate when users start games but never save them, navigate away, or experience browser crashes. The cleanup system provides both automatic prevention and manual maintenance tools.
+
+**Implementation Date**: October 2025
+**PRD Reference**: tasks/0006-prd-database-maintenance-orphaned-games.md
+
+### **1. Game Deletion Endpoint**
+```typescript
+// DELETE /api/game/:gameId - Delete a game and all related data
+app.delete("/api/game/:gameId", requireClerkUser, async (req, res) => {
+  const userId = req.userId;
+  const { gameId } = req.params;
+
+  // Verify user owns this game
+  const [gameOwnership] = await db
+    .select({ id: gameStates.id, userId: gameStates.userId })
+    .from(gameStates)
+    .where(eq(gameStates.id, gameId))
+    .limit(1);
+
+  if (!gameOwnership) {
+    return res.status(404).json({ message: 'Game not found' });
+  }
+
+  if (gameOwnership.userId !== userId) {
+    // Don't leak game existence - return 404 for unauthorized access
+    return res.status(404).json({ message: 'Game not found' });
+  }
+
+  // Delete the game - CASCADE configuration in schema handles all related records
+  // Automatically deletes: artists, songs, projects, releases, emails, executives,
+  // mood events, weekly actions, chart entries, and music label
+  await db.delete(gameStates).where(eq(gameStates.id, gameId));
+
+  res.json({
+    success: true,
+    message: 'Game deleted successfully',
+    gameId: gameId
+  });
+});
+```
+
+**Security Features**:
+- **Authentication required**: Uses `requireClerkUser` middleware
+- **Ownership verification**: Only the game owner can delete their game
+- **No information leakage**: Returns 404 for both non-existent and unauthorized access
+- **CASCADE deletes**: All related records are automatically deleted via foreign key constraints
+
+### **2. List Games Endpoint**
+```typescript
+// GET /api/games - List all games for current user (for server state recovery)
+app.get("/api/games", requireClerkUser, async (req, res) => {
+  const userId = req.userId;
+
+  // Get all games for this user, sorted by created date (newest first)
+  const games = await db
+    .select()
+    .from(gameStates)
+    .where(eq(gameStates.userId, userId))
+    .orderBy(desc(gameStates.createdAt));
+
+  res.json(games);
+});
+```
+
+**Use Cases**:
+- **Server state recovery**: Load most recent game when localStorage is empty
+- **Orphaned game detection**: Check if a game has corresponding save files
+- **Multi-device sync**: Restore session state across devices
+
+### **3. Automatic Cleanup on New Game Creation**
+The client implements automatic cleanup when users create a new game:
+
+**Flow**:
+1. User clicks "New Game" in the UI
+2. Client checks if a current game exists in Zustand store
+3. If current game exists:
+   - Query `GET /api/saves` to fetch all save files
+   - Filter saves by `gameId` to check if current game has saves
+   - If no saves exist: Call `DELETE /api/game/:gameId` to delete unsaved game
+   - Show neutral toast: "Previous unsaved game cleaned up"
+   - Log deletion event: `[ORPHANED GAME CLEANUP] Cleaned up unsaved game: {id} (Week {week})`
+4. Proceed with new game creation
+
+**Client Implementation**: `client/src/store/gameStore.ts` (lines 320-362)
+
+**Error Handling**: Cleanup failures are logged but don't block new game creation
+
+### **4. Admin Dashboard Endpoints**
+
+#### **Database Stats Endpoint**
+```typescript
+// GET /api/admin/database-stats - Fetch database health metrics
+app.get('/api/admin/database-stats', requireClerkUser, requireAdmin, async (req, res) => {
+  // Identify orphaned games using LEFT JOIN
+  const orphanedGamesQuery = sql`
+    SELECT gs.id, gs.user_id, gs.current_week, gs.created_at
+    FROM game_states gs
+    LEFT JOIN game_saves gsaves ON gs.id = (gsaves.game_state->'gameState'->>'id')::uuid
+    WHERE gsaves.id IS NULL
+    ORDER BY gs.created_at DESC
+  `;
+
+  const orphanedGames = await db.execute(orphanedGamesQuery);
+  const totalGames = await db.select({ count: sql`count(*)::int` }).from(gameStates);
+
+  res.json({
+    orphanedGamesCount: orphanedGames.rows.length,
+    totalGamesCount: totalGames[0].count,
+    orphanedPercentage: (orphanedGames.rows.length / totalGames[0].count) * 100,
+    databaseSizeMB: /* PostgreSQL database size query */,
+    topUsersOrphanedGames: /* Top 10 users by orphaned game count */
+  });
+});
+```
+
+**Access Control**: Requires both authentication (`requireClerkUser`) and admin role (`requireAdmin`)
+
+**Metrics Returned**:
+- Orphaned games count and percentage
+- Total games count
+- Database size in MB
+- Top users by orphaned games (with hashed user IDs for privacy)
+
+#### **Manual Cleanup Endpoint**
+```typescript
+// POST /api/admin/cleanup-orphaned-games - Trigger manual cleanup
+app.post('/api/admin/cleanup-orphaned-games', requireClerkUser, requireAdmin, async (req, res) => {
+  // Same orphaned game detection query as stats endpoint
+  const orphanedGames = await db.execute(orphanedGamesQuery);
+
+  // Batch delete in chunks of 100 for safety
+  for (let i = 0; i < orphanedGames.length; i += BATCH_SIZE) {
+    const batch = orphanedGames.slice(i, i + BATCH_SIZE);
+    const batchIds = batch.map(g => g.id);
+
+    // Use transaction for atomic deletion
+    await db.transaction(async (tx) => {
+      await tx.delete(gameStates).where(sql`${gameStates.id} = ANY(${batchIds})`);
+    });
+  }
+
+  res.json({
+    deletedCount: orphanedGames.length,
+    totalGamesBefore: /* count before cleanup */,
+    totalGamesAfter: /* count after cleanup */
+  });
+});
+```
+
+**Safety Features**:
+- **Batch processing**: Deletes 100 games at a time to avoid long transactions
+- **Transactional**: Each batch is deleted atomically
+- **Idempotent**: Safe to run multiple times
+
+### **5. CLI Cleanup Script**
+**Location**: `scripts/cleanup-orphaned-games.ts`
+
+**Usage**:
+```bash
+# Dry-run mode (default) - preview orphaned games without deleting
+npm run db:cleanup-orphaned
+
+# Execute mode - actually delete orphaned games
+npm run db:cleanup-orphaned -- --execute
+```
+
+**Features**:
+- **Dry-run by default**: Must explicitly use `--execute` flag to delete
+- **Detailed metrics**: Shows total games, orphaned count, sample IDs, duration
+- **Batch processing**: Deletes 100 games at a time
+- **Idempotent**: Safe to run multiple times
+- **Expected behavior post-wipe**: Reports 0 orphaned games after database rebuild (2025-10-15)
+
+**Output Example**:
+```
+=== ORPHANED GAME CLEANUP ===
+Mode: DRY RUN
+[BEFORE] Total games: 0
+[FOUND] Orphaned games: 0
+✅ No orphaned games found. Database is healthy!
+📝 Note: This is expected immediately after the database wipe (2025-10-15).
+```
+
+### **6. CASCADE Delete Configuration**
+All foreign keys in the schema are configured with `CASCADE` delete behavior:
+
+```typescript
+// Example: artists table foreign key
+artistId: uuid('artist_id')
+  .references(() => artists.id, { onDelete: 'cascade' })
+  .notNull()
+```
+
+**Automatically Deleted Records** when a game_state is deleted:
+- Artists (`artists` table)
+- Songs (`songs` table)
+- Projects (`projects` table)
+- Releases (`releases` table)
+- Release-Song mappings (`release_songs` table)
+- Emails (`emails` table)
+- Executives (`executives` table)
+- Mood events (`mood_events` table)
+- Weekly actions (`weekly_actions` table)
+- Chart entries (`charts` table)
+- Music label (`music_labels` table)
+
+**Migration History**: Foreign keys were added and database was rebuilt on 2025-10-15 to ensure proper CASCADE configuration.
 
 ---
 

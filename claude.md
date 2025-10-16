@@ -30,6 +30,32 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 - **Local Development**: Default port 5000 for main application
 - **Alternative ports**: Use ports like 3000, 8000, or 8080 for testing servers
 
+## 🗄️ Database & Migrations (Drizzle Kit + Railway PostgreSQL)
+**Quick Reference**: See `/docs/06-development/database-practices.md` for comprehensive guidelines.
+
+**Core Rules**:
+- ✅ Generate migrations with `npm run db:generate`, then **review the SQL before applying**
+- ✅ For complex schema changes (type changes, foreign keys), **write SQL manually**
+- ✅ Apply migrations with `npm run db:push`
+- ✅ Verify with `npm run db:studio` after changes
+- ✅ Make schema changes **one table at a time**
+- ❌ Never modify 3+ tables in a single `db:generate` run
+- ❌ Don't trust auto-generated migrations without review
+
+**Emergency Recovery**:
+```bash
+# If migrations are stuck:
+psql $DATABASE_URL < drizzle/migrations/XXXX.sql
+npm run check          # Validate TypeScript
+npm run db:studio     # Verify in database
+```
+
+**Key Commands**:
+- `npm run db:generate` - Create migrations from schema.ts
+- `npm run db:push` - Apply migrations to database
+- `npm run db:studio` - Visual database browser
+- `npm run db:introspect` - Sync schema.ts with actual database
+
 ## 📋 Special Implementation Notes
 - Must preserve `/data/` JSON files - these are the game's content source
 - All JSON data must validate with Zod schemas
