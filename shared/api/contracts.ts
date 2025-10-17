@@ -311,3 +311,109 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): T {
 export function createErrorResponse(error: string, message: string, details?: any[]): ErrorResponse {
   return { error, message, details };
 }
+
+// ========================================
+// Admin Actions Config Schemas
+// ========================================
+
+// Choice effect schema - flexible object with number properties (defaults to empty object)
+export const ChoiceEffectSchema = z.record(z.number()).default({});
+
+// Dialogue choice schema
+export const DialogueChoiceSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  effects_immediate: ChoiceEffectSchema,
+  effects_delayed: ChoiceEffectSchema,
+});
+
+// Action details schema (for non-meeting actions)
+export const ActionDetailsSchema = z.object({
+  cost: z.string(),
+  duration: z.string(),
+  prerequisites: z.string(),
+  outcomes: z.array(z.string()),
+  benefits: z.array(z.string()),
+}).optional();
+
+// Action recommendations schema
+export const ActionRecommendationsSchema = z.object({
+  urgent_when: z.record(z.any()).optional(),
+  recommended_when: z.record(z.any()).optional(),
+  reasons: z.record(z.string()).optional(),
+}).optional();
+
+// Target scope enum
+export const TargetScopeSchema = z.enum(['global', 'predetermined', 'user_selected']);
+
+// Weekly action schema (role meetings and other actions)
+export const WeeklyActionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  icon: z.string(),
+  description: z.string().default(''),
+  role_id: z.string().default(''),
+  meeting_id: z.string().default(''),
+  category: z.string(),
+  project_type: z.string().optional(),
+  campaign_type: z.string().optional(),
+  prompt: z.string().default(''),
+  prompt_before_selection: z.string().optional(),
+  target_scope: TargetScopeSchema.default('global'),
+  choices: z.array(DialogueChoiceSchema).default([]),
+  details: ActionDetailsSchema,
+  recommendations: ActionRecommendationsSchema,
+}).passthrough();
+
+// Action category schema
+export const ActionCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  icon: z.string(),
+  description: z.string(),
+  color: z.string(),
+});
+
+// Full actions configuration schema
+export const ActionsConfigSchema = z.object({
+  version: z.string(),
+  generated: z.string().optional(),
+  description: z.string().optional(),
+  weekly_actions: z.array(WeeklyActionSchema),
+  action_categories: z.array(ActionCategorySchema).default([]),
+}).passthrough();
+
+// Admin endpoints for actions config
+export const adminActionsEndpoints = {
+  getConfig: '/api/admin/actions-config',
+  saveConfig: '/api/admin/actions-config',
+} as const;
+
+// Request schema for saving actions config
+export const SaveActionsConfigRequestSchema = z.object({
+  config: ActionsConfigSchema,
+});
+
+// Response schema for saving actions config
+export const SaveActionsConfigResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  backupCreated: z.boolean().optional(),
+});
+
+// Response schema for getting actions config
+export const GetActionsConfigResponseSchema = ActionsConfigSchema;
+
+// Export TypeScript types
+export type ChoiceEffect = z.infer<typeof ChoiceEffectSchema>;
+export type DialogueChoiceContract = z.infer<typeof DialogueChoiceSchema>;
+export type ActionDetails = z.infer<typeof ActionDetailsSchema>;
+export type ActionRecommendations = z.infer<typeof ActionRecommendationsSchema>;
+export type TargetScope = z.infer<typeof TargetScopeSchema>;
+export type WeeklyAction = z.infer<typeof WeeklyActionSchema>;
+export type ActionCategory = z.infer<typeof ActionCategorySchema>;
+export type ActionsConfig = z.infer<typeof ActionsConfigSchema>;
+export type SaveActionsConfigRequest = z.infer<typeof SaveActionsConfigRequestSchema>;
+export type SaveActionsConfigResponse = z.infer<typeof SaveActionsConfigResponseSchema>;
+export type GetActionsConfigResponse = z.infer<typeof GetActionsConfigResponseSchema>;

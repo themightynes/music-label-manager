@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { fetchExecutives, fetchRoleMeetings } from '@/services/executiveService';
+import { prepareAutoSelectOptions, selectTopOptions, optionToActionData } from '@/services/executiveAutoSelect';
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,8 @@ import { BugReportModal } from './BugReportModal';
 import type { LabelData } from '@shared/types/gameTypes';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { useIsAdmin } from '@/auth/useCurrentUser';
+import { toast } from '@/hooks/use-toast';
+import logger from '@/lib/logger';
 import {
   Home,
   Rocket,
@@ -71,76 +74,65 @@ export function GameSidebar({
   const [showBugReportModal, setShowBugReportModal] = useState(false);
   const { isAdmin } = useIsAdmin();
 
-  // Simple AUTO function for sidebar
+  // Simple AUTO function for sidebar (using shared service)
   const handleAutoSelect = async () => {
     if (!gameId || isAutoSelecting) return;
 
     setIsAutoSelecting(true);
     try {
-      console.log('[SIDEBAR AUTO] Starting auto-selection...');
+      logger.debug('[SIDEBAR AUTO] Starting auto-selection...');
 
       // Fetch executives and meetings
       const executives = await fetchExecutives(gameId);
       const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
-      const allMeetings: Record<string, any[]> = {};
+      const meetingsByRole: Record<string, any[]> = {};
+      const currentWeek = gameState?.currentWeek || 1;
 
       for (const role of roles) {
         try {
-          allMeetings[role] = await fetchRoleMeetings(role);
+          // Pass gameId and currentWeek for weekly meeting randomization
+          meetingsByRole[role] = await fetchRoleMeetings(role, gameId, currentWeek);
         } catch (error) {
-          allMeetings[role] = [];
+          meetingsByRole[role] = [];
         }
       }
 
-      // Score and select top options
-      const options: any[] = [];
-      executives.forEach(executive => {
-        const meetings = allMeetings[executive.role as keyof typeof allMeetings] || [];
-        if (meetings.length > 0) {
-          // BUGFIX: Filter out user_selected meetings (they require manual artist selection)
-          const meeting = meetings.find((m: any) => {
-            const scope = m.target_scope ?? 'global';
-            return scope !== 'user_selected' && (m.choices?.length ?? 0) > 0;
-          });
-
-          if (!meeting) {
-            console.warn(`[SIDEBAR AUTO] Skipping ${executive.role} - no eligible meetings (user_selected requires manual artist choice)`);
-            return;
-          }
-
-          if (meeting.choices && meeting.choices.length > 0) {
-            const choice = meeting.choices[0];
-
-            const roleScores = {
-              'ceo': 50, 'head_ar': 40, 'cmo': 30, 'cco': 20, 'head_distribution': 10
-            };
-
-            const score = (100 - (executive.mood || 50)) + (100 - (executive.loyalty || 50)) + (roleScores[executive.role as keyof typeof roleScores] || 0);
-
-            const actionData = {
-              roleId: executive.role,
-              actionId: meeting.id,
-              choiceId: choice.id,
-              ...(executive.role !== 'ceo' && { executiveId: executive.id })
-            };
-
-            options.push({ score, actionData });
-          }
-        }
-      });
-
-      // Select top options for remaining slots
-      const remainingSlots = (gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0);
-      const topOptions = options.sort((a, b) => b.score - a.score).slice(0, remainingSlots);
+      // Use shared auto-select logic
+      const options = prepareAutoSelectOptions(executives, meetingsByRole);
+      const availableSlots = (gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0);
+      const topOptions = selectTopOptions(options, availableSlots);
 
       // Apply selections
       for (const option of topOptions) {
-        await selectAction(JSON.stringify(option.actionData));
+        const actionData = optionToActionData(option);
+        await selectAction(JSON.stringify(actionData));
       }
 
-      console.log(`[SIDEBAR AUTO] Selected ${topOptions.length} actions`);
+      logger.debug(`[SIDEBAR AUTO] Selected ${topOptions.length} actions`);
+
+      // Success toast
+      if (topOptions.length > 0) {
+        toast({
+          title: "Auto-select complete",
+          description: `Selected ${topOptions.length} meeting${topOptions.length !== 1 ? 's' : ''} for executives who need attention.`,
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "No meetings available",
+          description: "All eligible executives have been assigned or no meetings are available.",
+          variant: "default",
+          duration: 3000,
+        });
+      }
     } catch (error) {
-      console.error('[SIDEBAR AUTO] Error:', error);
+      logger.error('[SIDEBAR AUTO] Error:', error);
+      toast({
+        title: "Auto-select failed",
+        description: error instanceof Error ? error.message : "Failed to auto-select executive meetings. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
     } finally {
       setIsAutoSelecting(false);
     }
@@ -153,7 +145,13 @@ export function GameSidebar({
     try {
       await advanceWeek();
     } catch (error) {
-      console.error('Failed to advance week:', error);
+      logger.error('Failed to advance week:', error);
+      toast({
+        title: "Failed to advance week",
+        description: error instanceof Error ? error.message : "An error occurred while advancing the week. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   };
 
@@ -174,7 +172,13 @@ export function GameSidebar({
       setShowNewGameConfirm(false);
       setLocation('/game');
     } catch (error) {
-      console.error('Failed to start new game:', error);
+      logger.error('Failed to start new game:', error);
+      toast({
+        title: "Failed to create new game",
+        description: error instanceof Error ? error.message : "An error occurred while creating your new game. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
     } finally {
       setIsCreatingGame(false);
     }

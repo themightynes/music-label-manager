@@ -59,6 +59,7 @@ describe('Executive Meeting State Machine', () => {
     actor = createActor(executiveMeetingMachine, {
       input: {
         gameId: 'test-game',
+        currentWeek: 1,
         focusSlotsTotal: 2,
         onActionSelected: (action) => actionQueue.push(action),
         fetchExecutives: async () => executives,
@@ -239,6 +240,7 @@ describe('Executive Meeting State Machine', () => {
     actor = createActor(executiveMeetingMachine, {
       input: {
         gameId: 'test-game',
+        currentWeek: 1,
         focusSlotsTotal: 2,
         onActionSelected: (action) => actionQueue.push(action),
         fetchExecutives: async () => executives,
@@ -310,6 +312,7 @@ describe('Executive Meeting State Machine', () => {
     actor = createActor(executiveMeetingMachine, {
       input: {
         gameId: 'test-game',
+        currentWeek: 1,
         focusSlotsTotal: 1,
         onActionSelected: (action) => actionQueue.push(action),
         fetchExecutives: async () => executives,

@@ -28,46 +28,19 @@ import { Zap, Clock, Edit, Save, X, AlertCircle, Pencil, Trash2, Plus, ChevronDo
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import actionsData from '@/../../data/actions.json';
+import {
+  ActionsConfigSchema,
+  type WeeklyAction,
+  type ActionCategory,
+  type ActionsConfig,
+  type DialogueChoiceContract,
+} from '@shared/api/contracts';
 
-type Effect = {
-  [key: string]: number | string;
-};
-
-type Choice = {
-  id: string;
-  label: string;
-  effects_immediate: Effect;
-  effects_delayed: Effect;
-};
-
-type Action = {
-  id: string;
-  name: string;
-  type: string;
-  icon: string;
-  description: string;
-  role_id: string;
-  meeting_id: string;
-  category: string;
-  target_scope: 'global' | 'predetermined' | 'user_selected';
-  prompt_before_selection?: string;
-  prompt: string;
-  choices: Choice[];
-};
-
-type ActionsData = {
-  version: string;
-  generated: string;
-  description: string;
-  weekly_actions: Action[];
-  action_categories: {
-    id: string;
-    name: string;
-    icon: string;
-    description: string;
-    color: string;
-  }[];
-};
+// Use shared types from contracts
+type Effect = Record<string, number>;
+type Choice = DialogueChoiceContract;
+type Action = WeeklyAction;
+type ActionsData = ActionsConfig;
 
 const data = actionsData as ActionsData;
 
@@ -118,6 +91,10 @@ const formatIconLabel = (iconClass: string) => {
   }
   return iconName.replace('fa-', '').replace(/-/g, ' ');
 };
+
+// Effects that are actually implemented in GameEngine.applyEffects()
+const CONNECTED_EFFECTS = ['money', 'reputation', 'creative_capital', 'artist_mood', 'artist_energy', 'artist_popularity'];
+const isEffectConnected = (effectKey: string) => CONNECTED_EFFECTS.includes(effectKey);
 
 export default function ActionsViewer() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -633,6 +610,23 @@ export default function ActionsViewer() {
         generated: new Date().toISOString()
       };
 
+      // Validate using shared schema BEFORE sending to backend
+      try {
+        ActionsConfigSchema.parse(updatedConfig);
+      } catch (validationError: any) {
+        const errorMessage = validationError.errors
+          ? validationError.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`).join(', ')
+          : 'Invalid configuration structure';
+
+        toast({
+          title: "Validation Failed",
+          description: `Please fix the following errors before saving: ${errorMessage}`,
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
       // Call the backend API
       const response = await apiRequest('POST', '/api/admin/actions-config', { config: updatedConfig });
 
@@ -684,6 +678,26 @@ export default function ActionsViewer() {
             </p>
             <p className="text-sm text-white/50">{data.description}</p>
           </div>
+
+          {/* Production Warning Banner */}
+          {import.meta.env.PROD && (
+            <Card className="bg-yellow-900/20 border-yellow-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-yellow-300 mb-1">
+                      Production Environment Warning
+                    </div>
+                    <p className="text-sm text-yellow-200/80">
+                      You are editing the actions.json file in production. Any changes saved here will be <strong>lost on next deployment</strong>.
+                      All permanent edits should be made in your local development environment, committed to git, and deployed.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Edit Mode Controls */}
           <Card className="bg-gray-900/50 border-white/10">
@@ -1026,19 +1040,23 @@ export default function ActionsViewer() {
                                   const valuesArray = Array.from(values);
                                   const hasPositive = valuesArray.some(v => v > 0);
                                   const hasNegative = valuesArray.some(v => v < 0);
+                                  const isOrphaned = !isEffectConnected(effect);
                                   return (
                                     <Badge
                                       key={effect}
                                       variant="outline"
                                       className={`text-xs ${
-                                        hasPositive && hasNegative
+                                        isOrphaned
+                                          ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 opacity-50'
+                                          : hasPositive && hasNegative
                                           ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30'
                                           : hasPositive
                                           ? 'bg-green-500/10 text-green-400 border-green-500/30'
                                           : 'bg-red-500/10 text-red-400 border-red-500/30'
                                       }`}
+                                      title={isOrphaned ? 'Not implemented in game logic' : undefined}
                                     >
-                                      {effect.replace(/_/g, ' ')}
+                                      {effect.replace(/_/g, ' ')} {isOrphaned && '○'}
                                     </Badge>
                                   );
                                 })
@@ -1056,15 +1074,23 @@ export default function ActionsViewer() {
                             </div>
                             <div className="flex flex-wrap gap-1">
                               {Object.entries(allDelayed).length > 0 ? (
-                                Object.entries(allDelayed).map(([effect, values]) => (
-                                  <Badge
-                                    key={effect}
-                                    variant="outline"
-                                    className="text-xs bg-blue-500/10 text-blue-300 border-blue-500/30"
-                                  >
-                                    {effect.replace(/_/g, ' ')}
-                                  </Badge>
-                                ))
+                                Object.entries(allDelayed).map(([effect, values]) => {
+                                  const isOrphaned = !isEffectConnected(effect);
+                                  return (
+                                    <Badge
+                                      key={effect}
+                                      variant="outline"
+                                      className={`text-xs ${
+                                        isOrphaned
+                                          ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 opacity-50'
+                                          : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+                                      }`}
+                                      title={isOrphaned ? 'Not implemented in game logic' : undefined}
+                                    >
+                                      {effect.replace(/_/g, ' ')} {isOrphaned && '○'}
+                                    </Badge>
+                                  );
+                                })
                               ) : (
                                 <span className="text-xs text-white/30">None</span>
                               )}
@@ -1440,7 +1466,9 @@ export default function ActionsViewer() {
                                                   <SelectContent>
                                                     {getAllEffectNames.map(effectName => (
                                                       <SelectItem key={effectName} value={effectName}>
-                                                        {effectName.replace(/_/g, ' ')}
+                                                        <span className={!isEffectConnected(effectName) ? 'text-gray-500' : undefined}>
+                                                          {effectName.replace(/_/g, ' ')} {!isEffectConnected(effectName) && '○'}
+                                                        </span>
                                                       </SelectItem>
                                                     ))}
                                                   </SelectContent>
@@ -1466,14 +1494,17 @@ export default function ActionsViewer() {
                                               <Badge
                                                 variant="outline"
                                                 className={`text-xs ${
-                                                  typeof value === 'number' && value > 0
+                                                  !isEffectConnected(key)
+                                                    ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 opacity-50'
+                                                    : typeof value === 'number' && value > 0
                                                     ? 'bg-green-500/10 text-green-400 border-green-500/30'
                                                     : typeof value === 'number' && value < 0
                                                     ? 'bg-red-500/10 text-red-400 border-red-500/30'
                                                     : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                                                 }`}
+                                                title={!isEffectConnected(key) ? 'Not implemented in game logic' : undefined}
                                               >
-                                                {key}: {value}
+                                                {key}: {value} {!isEffectConnected(key) && '○'}
                                               </Badge>
                                             )}
                                           </div>
@@ -1521,7 +1552,9 @@ export default function ActionsViewer() {
                                                   <SelectContent>
                                                     {getAllEffectNames.map(effectName => (
                                                       <SelectItem key={effectName} value={effectName}>
-                                                        {effectName.replace(/_/g, ' ')}
+                                                        <span className={!isEffectConnected(effectName) ? 'text-gray-500' : undefined}>
+                                                          {effectName.replace(/_/g, ' ')} {!isEffectConnected(effectName) && '○'}
+                                                        </span>
                                                       </SelectItem>
                                                     ))}
                                                   </SelectContent>
@@ -1546,9 +1579,14 @@ export default function ActionsViewer() {
                                             ) : (
                                               <Badge
                                                 variant="outline"
-                                                className="text-xs bg-blue-500/10 text-blue-300 border-blue-500/30"
+                                                className={`text-xs ${
+                                                  !isEffectConnected(key)
+                                                    ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 opacity-50'
+                                                    : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+                                                }`}
+                                                title={!isEffectConnected(key) ? 'Not implemented in game logic' : undefined}
                                               >
-                                                {key}: {value}
+                                                {key}: {value} {!isEffectConnected(key) && '○'}
                                               </Badge>
                                             )}
                                           </div>

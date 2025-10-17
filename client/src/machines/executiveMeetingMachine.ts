@@ -1,6 +1,7 @@
 import { assign, fromPromise, setup } from 'xstate';
 import type { RoleMeeting, DialogueChoice, Executive } from '../../../shared/types/gameTypes';
 import { fetchExecutives, fetchRoleMeetings, fetchMeetingDialogue } from '../services/executiveService';
+import { prepareAutoSelectOptions, selectTopOptions, optionToActionData, type AutoSelectOption } from '../services/executiveAutoSelect';
 
 type DialogueData = {
   prompt: string;
@@ -22,12 +23,13 @@ type AutoOption = {
 
 interface ExecutiveServices {
   fetchExecutives: (gameId: string) => Promise<Executive[]>;
-  fetchRoleMeetings: (roleId: string) => Promise<RoleMeeting[]>;
+  fetchRoleMeetings: (roleId: string, gameId?: string, currentWeek?: number) => Promise<RoleMeeting[]>;
   fetchMeetingDialogue: (roleId: string, meetingId: string) => Promise<DialogueData>;
 }
 
 export interface ExecutiveMeetingContext {
   gameId: string;
+  currentWeek: number;
   executives: Executive[];
   meetingsCache: Record<string, RoleMeeting[]>;
   dialogueCache: Record<string, DialogueData>;
@@ -63,12 +65,14 @@ export type ExecutiveMeetingEvent =
   | { type: 'BACK_TO_MEETINGS' }
   | { type: 'RESET' }
   | { type: 'SYNC_SLOTS'; used: number; total: number }
+  | { type: 'SYNC_WEEK'; currentWeek: number }
   | { type: 'AUTO_SELECT' }
   | { type: 'CALCULATE_IMPACT_PREVIEW'; selectedActions: string[] }
   | { type: 'REFRESH_EXECUTIVES' };
 
 interface ExecutiveMeetingInput {
   gameId: string;
+  currentWeek: number;
   focusSlotsTotal: number;
   onActionSelected: (action: string) => void;
   fetchExecutives?: ExecutiveServices['fetchExecutives'];
@@ -93,12 +97,16 @@ export const executiveMeetingMachine = setup({
   },
   guards: {
     hasFocusSlots: ({ context }) => context.focusSlotsUsed < context.focusSlotsTotal,
-    hasCachedMeetings: ({ context, event }) =>
-      event.type === 'SELECT_EXECUTIVE' && Boolean(context.meetingsCache[event.executive.role]?.length),
-    hasFocusSlotsAndCachedMeetings: ({ context, event }) =>
-      event.type === 'SELECT_EXECUTIVE' &&
-      context.focusSlotsUsed < context.focusSlotsTotal &&
-      Boolean(context.meetingsCache[event.executive.role]?.length),
+    hasCachedMeetings: ({ context, event }) => {
+      if (event.type !== 'SELECT_EXECUTIVE') return false;
+      const cacheKey = `${event.executive.role}-week${context.currentWeek}`;
+      return Boolean(context.meetingsCache[cacheKey]?.length);
+    },
+    hasFocusSlotsAndCachedMeetings: ({ context, event }) => {
+      if (event.type !== 'SELECT_EXECUTIVE') return false;
+      const cacheKey = `${event.executive.role}-week${context.currentWeek}`;
+      return context.focusSlotsUsed < context.focusSlotsTotal && Boolean(context.meetingsCache[cacheKey]?.length);
+    },
     hasValidMeeting: ({ event }) => event.type === 'SELECT_MEETING' && Boolean(event.meeting?.id),
     hasDialogueCached: ({ context, event }) =>
       event.type === 'SELECT_MEETING' &&
@@ -111,6 +119,14 @@ export const executiveMeetingMachine = setup({
         ? {
             focusSlotsUsed: event.used,
             focusSlotsTotal: event.total,
+          }
+        : {}
+    ),
+    syncWeek: assign(({ event }) =>
+      event.type === 'SYNC_WEEK'
+        ? {
+            currentWeek: event.currentWeek,
+            meetingsCache: {}, // Clear cache when week changes
           }
         : {}
     ),
@@ -145,7 +161,8 @@ export const executiveMeetingMachine = setup({
     ),
     useCachedMeetings: assign(({ context, event }) => {
       if (event.type !== 'SELECT_EXECUTIVE') return {};
-      const meetings = context.meetingsCache[event.executive.role] ?? [];
+      const cacheKey = `${event.executive.role}-week${context.currentWeek}`;
+      const meetings = context.meetingsCache[cacheKey] ?? [];
       return {
         selectedExecutive: event.executive,
         availableMeetings: meetings,
@@ -158,11 +175,11 @@ export const executiveMeetingMachine = setup({
       if (!context.selectedExecutive) return {};
       const output = (event as any)?.output as RoleMeeting[] | undefined;
       if (!output) return {};
-      const role = context.selectedExecutive.role;
+      const cacheKey = `${context.selectedExecutive.role}-week${context.currentWeek}`;
       return {
         meetingsCache: {
           ...context.meetingsCache,
-          [role]: output,
+          [cacheKey]: output,
         },
         availableMeetings: output,
         error: null,
@@ -267,7 +284,7 @@ export const executiveMeetingMachine = setup({
     fetchMeetings: fromPromise(({ input }) => {
       const { context } = input as { context: ExecutiveMeetingContext };
       if (!context.selectedExecutive) throw new Error('No executive selected');
-      return context.services.fetchRoleMeetings(context.selectedExecutive.role);
+      return context.services.fetchRoleMeetings(context.selectedExecutive.role, context.gameId, context.currentWeek);
     }),
     fetchDialogue: fromPromise(({ input }) => {
       const { context } = input as { context: ExecutiveMeetingContext };
@@ -280,11 +297,12 @@ export const executiveMeetingMachine = setup({
       const { context } = input as { context: ExecutiveMeetingContext };
       const meetingsUpdates: Record<string, RoleMeeting[]> = {};
       const ensureMeetings = async (role: string) => {
-        if (context.meetingsCache[role]?.length) {
-          return context.meetingsCache[role];
+        const cacheKey = `${role}-week${context.currentWeek}`;
+        if (context.meetingsCache[cacheKey]?.length) {
+          return context.meetingsCache[cacheKey];
         }
-        const fetched = await context.services.fetchRoleMeetings(role);
-        meetingsUpdates[role] = fetched;
+        const fetched = await context.services.fetchRoleMeetings(role, context.gameId, context.currentWeek);
+        meetingsUpdates[cacheKey] = fetched;
         return fetched;
       };
 
@@ -293,48 +311,27 @@ export const executiveMeetingMachine = setup({
         return { options: [], meetings: meetingsUpdates };
       }
 
-      const options: AutoOption[] = [];
+      // Build meetings by role map
+      const meetingsByRole: Record<string, RoleMeeting[]> = {};
       for (const executive of context.executives) {
-        const meetings = await ensureMeetings(executive.role);
-        console.log(`[AUTO SELECT] ${executive.role} has ${meetings.length} meetings:`, meetings.map(m => ({ id: m.id, target_scope: m.target_scope })));
-        if (!meetings.length) continue;
-        const meeting = meetings.find((m) => {
-          const scope = m.target_scope ?? 'global';
-          console.log(`[AUTO SELECT] Checking meeting ${m.id}: scope=${scope}, eligible=${scope !== 'user_selected' && (m.choices?.length ?? 0) > 0}`);
-          return scope !== 'user_selected' && (m.choices?.length ?? 0) > 0;
-        });
-        if (!meeting) {
-          console.warn(`[AUTO SELECT] Skipping ${executive.role} - no eligible meetings (user_selected requires manual artist choice)`);
-          continue;
-        }
-        console.log(`[AUTO SELECT] Selected meeting for ${executive.role}: ${meeting.id} (scope: ${meeting.target_scope})`);
-
-
-        const choice = meeting.choices?.[0];
-        if (!choice) continue;
-        const roleScores: Record<string, number> = {
-          ceo: 50,
-          head_ar: 40,
-          cmo: 30,
-          cco: 20,
-          head_distribution: 10,
-        };
-        const score =
-          (100 - (executive.mood ?? 50)) +
-          (100 - (executive.loyalty ?? 50)) +
-          (roleScores[executive.role] ?? 0);
-        options.push({
-          executive,
-          meeting,
-          choice,
-          score,
-          actionData: createAutoActionData(executive, meeting, choice),
-        });
+        meetingsByRole[executive.role] = await ensureMeetings(executive.role);
       }
 
-      options.sort((a, b) => b.score - a.score);
+      // Use shared auto-select logic
+      const allOptions = prepareAutoSelectOptions(context.executives, meetingsByRole);
+      const topOptions = selectTopOptions(allOptions, slotsRemaining);
+
+      // Convert to AutoOption format expected by machine
+      const machineOptions: AutoOption[] = topOptions.map(option => ({
+        executive: option.executive,
+        meeting: option.meeting,
+        choice: option.choice,
+        score: option.score,
+        actionData: createAutoActionData(option.executive, option.meeting, option.choice),
+      }));
+
       return {
-        options: options.slice(0, slotsRemaining),
+        options: machineOptions,
         meetings: meetingsUpdates,
       };
     }),
@@ -407,6 +404,7 @@ export const executiveMeetingMachine = setup({
   initial: 'loadingExecutives',
   context: ({ input }) => ({
     gameId: input.gameId,
+    currentWeek: input.currentWeek,
     executives: [],
     meetingsCache: {},
     dialogueCache: {},
@@ -429,6 +427,7 @@ export const executiveMeetingMachine = setup({
   }),
   on: {
     SYNC_SLOTS: { actions: 'syncSlots' },
+    SYNC_WEEK: { actions: 'syncWeek' },
     CALCULATE_IMPACT_PREVIEW: [
       {
         guard: 'hasSelectedActions' as const,

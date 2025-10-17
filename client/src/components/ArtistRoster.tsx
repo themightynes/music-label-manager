@@ -19,6 +19,8 @@ import { useLocation } from 'wouter';
 import { generateArtistSlug } from '@/utils/artistSlug';
 import type { GameArtist } from '@shared/types/gameTypes';
 import type { Artist as DbArtist } from '@shared/schema';
+import { toast } from '@/hooks/use-toast';
+import logger from '@/lib/logger';
 
 const toGameArtist = (artist: DbArtist | (DbArtist & { loyalty?: number | null })): GameArtist => {
   const source = artist as Record<string, any>;
@@ -85,8 +87,19 @@ export function ArtistRoster() {
   const handleSignArtist = async (artistData: any) => {
     try {
       await signArtist(artistData);
+      toast({
+        title: "Artist signed successfully",
+        description: `${artistData.name} has been added to your roster.`,
+        duration: 3000,
+      });
     } catch (error) {
-      console.error('Failed to sign artist:', error);
+      logger.error('Failed to sign artist:', error);
+      toast({
+        title: "Failed to sign artist",
+        description: error instanceof Error ? error.message : "An error occurred while signing the artist. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
       throw error; // Re-throw so modal can handle it
     }
   };
@@ -114,7 +127,13 @@ export function ArtistRoster() {
     try {
       await loadGame(gameState.id);
     } catch (error) {
-      console.error('[ArtistRoster] Failed to refresh game state after dialogue', error);
+      logger.error('[ArtistRoster] Failed to refresh game state after dialogue', error);
+      toast({
+        title: "Failed to refresh game state",
+        description: error instanceof Error ? error.message : "An error occurred while refreshing the game. Please reload the page.",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   };
 
