@@ -611,6 +611,28 @@ export class GameEngine {
 
             let picked: any | null = null;
             let genreUsed: string | null = null;
+            const selectBestArtist = (artists: typeof unsigned) => {
+              let bestArtist: (typeof unsigned)[number] | undefined;
+              let bestScore = Number.NEGATIVE_INFINITY;
+
+              for (const artist of artists) {
+                if (!artist) {
+                  continue;
+                }
+
+                const talent = artist.talent ?? 0;
+                const popularity = artist.popularity ?? 0;
+                const score = talent + popularity;
+
+                if (score > bestScore) {
+                  bestArtist = artist;
+                  bestScore = score;
+                }
+              }
+
+              return bestArtist;
+            };
+
             if (unsigned.length > 0) {
               // SPECIALIZED mode: Apply genre filtering with fallback logic
               if (sourcingType === 'specialized') {
@@ -644,21 +666,11 @@ export class GameEngine {
                 }
 
                 // Pick best artist from filtered pool
-                const sorted = [...pool].sort((a, b) => {
-                  const scoreA = (a.talent || 0) + (a.popularity || 0);
-                  const scoreB = (b.talent || 0) + (b.popularity || 0);
-                  return scoreB - scoreA;
-                });
-                picked = sorted[0];
+                picked = selectBestArtist(pool);
 
               } else if (sourcingType === 'active') {
                 // ACTIVE mode: Pick best artist overall (no genre filtering)
-                const sorted = [...unsigned].sort((a, b) => {
-                  const scoreA = (a.talent || 0) + (a.popularity || 0);
-                  const scoreB = (b.talent || 0) + (b.popularity || 0);
-                  return scoreB - scoreA;
-                });
-                picked = sorted[0];
+                picked = selectBestArtist(unsigned);
               } else {
                 // PASSIVE mode: Random selection
                 const idx = Math.floor(this.getRandom(0, unsigned.length));
