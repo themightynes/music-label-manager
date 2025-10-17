@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 export type MeResponse = {
   isAuthenticated: boolean;
@@ -15,8 +16,8 @@ export function useCurrentUser() {
   return useQuery<MeResponse>({
     queryKey: ['me'],
     queryFn: async () => {
-      const res = await fetch('/api/me', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch /api/me');
+      // Use apiRequest for consistent auth with Clerk bearer token
+      const res = await apiRequest('GET', '/api/me', undefined, { silent401: true });
       return res.json();
     },
     staleTime: 60_000,

@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useGameStore } from '@/store/gameStore';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3, X } from 'lucide-react';
+import logger from '@/lib/logger';
 
 interface ExecutiveAction {
   id: string;
@@ -81,29 +82,31 @@ export function SelectionSummary({
   const totalSlots = gameState?.focusSlots || 3;
   const usedSlots = gameState?.usedFocusSlots || 0;
   const availableSlots = totalSlots - usedSlots;
-  
-  console.log('SelectionSummary - selectedActions:', selectedActions);
-  console.log('SelectionSummary - usedSlots:', usedSlots);
+
+  logger.debug('SelectionSummary - selectedActions:', selectedActions);
+  logger.debug('SelectionSummary - usedSlots:', usedSlots);
 
   const arOfficeActive = !!gameState?.arOfficeSlotUsed;
   const arOfficeSourcingType = (gameState?.arOfficeSourcingType as string | null) || null;
 
-  // Unit tests via console.assert for both formats
-  console.assert(
-    parseSelectedAction('{"roleId":"ceo","actionId":"mgr_priorities","choiceId":"studio_first"}').format === 'json',
-    'JSON format should be detected correctly'
-  );
-  console.assert(
-    parseSelectedAction('ceo_mgr_priorities_studio_first').format === 'legacy',
-    'Legacy format should be detected correctly'
-  );
-  console.assert(
-    (() => {
-      const parsed = parseSelectedAction('{"roleId":"head_ar","actionId":"ar_single_choice","choiceId":"accept_terms"}');
-      return parsed.format === 'json' && parsed.roleId === 'head_ar';
-    })(),
-    'JSON format should parse roleId correctly'
-  );
+  // Unit tests via console.assert for both formats (dev only)
+  if (logger.isDev()) {
+    console.assert(
+      parseSelectedAction('{"roleId":"ceo","actionId":"mgr_priorities","choiceId":"studio_first"}').format === 'json',
+      'JSON format should be detected correctly'
+    );
+    console.assert(
+      parseSelectedAction('ceo_mgr_priorities_studio_first').format === 'legacy',
+      'Legacy format should be detected correctly'
+    );
+    console.assert(
+      (() => {
+        const parsed = parseSelectedAction('{"roleId":"head_ar","actionId":"ar_single_choice","choiceId":"accept_terms"}');
+        return parsed.format === 'json' && parsed.roleId === 'head_ar';
+      })(),
+      'JSON format should parse roleId correctly'
+    );
+  }
   
   // Parse executive actions from composite IDs
   const selectedActionObjects = selectedActions.map(id => {

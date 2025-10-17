@@ -12,6 +12,8 @@ import { SourcingModeSelector } from './SourcingModeSelector';
 import { ArtistDiscoveryTable, type UIArtist } from './ArtistDiscoveryTable';
 import { FocusSlotStatus } from './FocusSlotStatus';
 import { GenreSelectionModal } from './GenreSelectionModal';
+import { toast } from '@/hooks/use-toast';
+import logger from '@/lib/logger';
 
 interface AROfficeProps {
   gameId: string;
@@ -78,7 +80,7 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
     }
 
     if (prev === true && curr === false) {
-      console.log('[A&R] Operation completed, loading discovered artists');
+      logger.debug('[A&R] Operation completed, loading discovered artists');
       setLoading(true);
       setError(null); // Clear error state before starting retry sequence
       retryAttemptRef.current = 0;
@@ -86,20 +88,27 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
       const loadWithRetry = async (attempt = 1): Promise<void> => {
         try {
           await loadDiscoveredArtists();
-          console.log('[A&R] Successfully loaded discovered artists');
+          logger.debug('[A&R] Successfully loaded discovered artists');
           setError(null); // Clear error state on successful load
           setLoading(false); // Clear loading state on successful load
         } catch (error) {
-          console.error(`[A&R] Failed to load discovered artists (attempt ${attempt}):`, error);
+          logger.error(`[A&R] Failed to load discovered artists (attempt ${attempt}):`, error);
 
           if (attempt < 3) {
             const delay = 500 * attempt; // Exponential backoff: 500ms, 1000ms, 1500ms
-            console.log(`[A&R] Retrying in ${delay}ms...`);
+            logger.debug(`[A&R] Retrying in ${delay}ms...`);
             setTimeout(() => loadWithRetry(attempt + 1), delay);
           } else {
-            console.error('[A&R] All retry attempts failed');
-            setError('Failed to load discovered artists after multiple attempts');
+            logger.error('[A&R] All retry attempts failed');
+            const errorMessage = 'Failed to load discovered artists after multiple attempts';
+            setError(errorMessage);
             setLoading(false); // Clear loading state after final retry
+            toast({
+              title: "Failed to load artists",
+              description: "Unable to load discovered artists after multiple attempts. Please try again.",
+              variant: "destructive",
+              duration: 5000,
+            });
           }
         }
       };
@@ -131,8 +140,15 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
           setError(null); // Clear error state on successful load
         })
         .catch((error) => {
-          console.error('[A&R] Failed to load discovered artists on mount:', error);
-          setError(error instanceof Error ? error.message : String(error));
+          logger.error('[A&R] Failed to load discovered artists on mount:', error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          setError(errorMessage);
+          toast({
+            title: "Failed to load artists",
+            description: "Unable to load discovered artists. Please try again.",
+            variant: "destructive",
+            duration: 5000,
+          });
         })
         .finally(() => setLoading(false));
     }
@@ -159,10 +175,17 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
 
         await startAROfficeOperation(mode as SourcingTypeString);
         send({ type: 'START_SOURCING', sourcingType: mode });
-        console.log(`[A&R] Successfully started ${mode} operation`);
+        logger.debug(`[A&R] Successfully started ${mode} operation`);
       } catch (e) {
-        console.error('[A&R] Failed to start sourcing operation', e);
-        setError(e instanceof Error ? e.message : 'Failed to start sourcing operation');
+        logger.error('[A&R] Failed to start sourcing operation', e);
+        const errorMessage = e instanceof Error ? e.message : 'Failed to start sourcing operation';
+        setError(errorMessage);
+        toast({
+          title: "Failed to start sourcing",
+          description: errorMessage,
+          variant: "destructive",
+          duration: 5000,
+        });
         // Reset the mode selection since the operation failed
         setSourcingMode(null);
       }
@@ -185,10 +208,17 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
         // TODO: Update startAROfficeOperation to accept genre parameters
         await startAROfficeOperation('specialized' as SourcingTypeString, primaryGenre, secondaryGenre);
         send({ type: 'START_SOURCING', sourcingType: 'specialized' });
-        console.log(`[A&R] Successfully started specialized operation with genres`);
+        logger.debug(`[A&R] Successfully started specialized operation with genres`);
       } catch (e) {
-        console.error('[A&R] Failed to start specialized sourcing operation', e);
-        setError(e instanceof Error ? e.message : 'Failed to start sourcing operation');
+        logger.error('[A&R] Failed to start specialized sourcing operation', e);
+        const errorMessage = e instanceof Error ? e.message : 'Failed to start sourcing operation';
+        setError(errorMessage);
+        toast({
+          title: "Failed to start specialized search",
+          description: errorMessage,
+          variant: "destructive",
+          duration: 5000,
+        });
         // Reset the mode selection since the operation failed
         setSourcingMode(null);
         setSelectedPrimaryGenre(null);
@@ -201,7 +231,13 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
     try {
       await cancelAROfficeOperation();
     } catch (e) {
-      console.error('[A&R] Cancel operation failed', e);
+      logger.error('[A&R] Cancel operation failed', e);
+      toast({
+        title: "Failed to cancel operation",
+        description: e instanceof Error ? e.message : "An error occurred while cancelling the operation.",
+        variant: "destructive",
+        duration: 5000,
+      });
     } finally {
       send({ type: 'CANCEL_SOURCING' });
     }
@@ -227,8 +263,19 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
       // Optimistically remove from local discovered list and refresh from server
       try { useGameStore.getState().removeDiscoveredArtist(artist.id as string); } catch {}
       loadDiscoveredArtists();
+      toast({
+        title: "Artist signed successfully",
+        description: `${artist.name} has been added to your roster.`,
+        duration: 3000,
+      });
     } catch (e) {
-      console.error('[A&R] Sign artist failed', e);
+      logger.error('[A&R] Sign artist failed', e);
+      toast({
+        title: "Failed to sign artist",
+        description: e instanceof Error ? e.message : "An error occurred while signing the artist. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
     } finally {
       setSigningArtist(null);
     }

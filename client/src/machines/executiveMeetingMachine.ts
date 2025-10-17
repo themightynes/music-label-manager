@@ -1,6 +1,7 @@
 import { assign, fromPromise, setup } from 'xstate';
 import type { RoleMeeting, DialogueChoice, Executive } from '../../../shared/types/gameTypes';
 import { fetchExecutives, fetchRoleMeetings, fetchMeetingDialogue } from '../services/executiveService';
+import { prepareAutoSelectOptions, selectTopOptions, optionToActionData, type AutoSelectOption } from '../services/executiveAutoSelect';
 
 type DialogueData = {
   prompt: string;
@@ -310,48 +311,27 @@ export const executiveMeetingMachine = setup({
         return { options: [], meetings: meetingsUpdates };
       }
 
-      const options: AutoOption[] = [];
+      // Build meetings by role map
+      const meetingsByRole: Record<string, RoleMeeting[]> = {};
       for (const executive of context.executives) {
-        const meetings = await ensureMeetings(executive.role);
-        console.log(`[AUTO SELECT] ${executive.role} has ${meetings.length} meetings:`, meetings.map(m => ({ id: m.id, target_scope: m.target_scope })));
-        if (!meetings.length) continue;
-        const meeting = meetings.find((m) => {
-          const scope = m.target_scope ?? 'global';
-          console.log(`[AUTO SELECT] Checking meeting ${m.id}: scope=${scope}, eligible=${scope !== 'user_selected' && (m.choices?.length ?? 0) > 0}`);
-          return scope !== 'user_selected' && (m.choices?.length ?? 0) > 0;
-        });
-        if (!meeting) {
-          console.warn(`[AUTO SELECT] Skipping ${executive.role} - no eligible meetings (user_selected requires manual artist choice)`);
-          continue;
-        }
-        console.log(`[AUTO SELECT] Selected meeting for ${executive.role}: ${meeting.id} (scope: ${meeting.target_scope})`);
-
-
-        const choice = meeting.choices?.[0];
-        if (!choice) continue;
-        const roleScores: Record<string, number> = {
-          ceo: 50,
-          head_ar: 40,
-          cmo: 30,
-          cco: 20,
-          head_distribution: 10,
-        };
-        const score =
-          (100 - (executive.mood ?? 50)) +
-          (100 - (executive.loyalty ?? 50)) +
-          (roleScores[executive.role] ?? 0);
-        options.push({
-          executive,
-          meeting,
-          choice,
-          score,
-          actionData: createAutoActionData(executive, meeting, choice),
-        });
+        meetingsByRole[executive.role] = await ensureMeetings(executive.role);
       }
 
-      options.sort((a, b) => b.score - a.score);
+      // Use shared auto-select logic
+      const allOptions = prepareAutoSelectOptions(context.executives, meetingsByRole);
+      const topOptions = selectTopOptions(allOptions, slotsRemaining);
+
+      // Convert to AutoOption format expected by machine
+      const machineOptions: AutoOption[] = topOptions.map(option => ({
+        executive: option.executive,
+        meeting: option.meeting,
+        choice: option.choice,
+        score: option.score,
+        actionData: createAutoActionData(option.executive, option.meeting, option.choice),
+      }));
+
       return {
-        options: options.slice(0, slotsRemaining),
+        options: machineOptions,
         meetings: meetingsUpdates,
       };
     }),

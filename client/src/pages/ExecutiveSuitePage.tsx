@@ -9,6 +9,8 @@ import { ExecutiveMeetings } from '../components/executive-meetings/ExecutiveMee
 import { useGameContext } from '@/contexts/GameContext';
 import GameLayout from '@/layouts/GameLayout';
 import { useState } from 'react';
+import { toast } from '@/hooks/use-toast';
+import logger from '@/lib/logger';
 
 interface SelectedChoice {
   executiveName: string;
@@ -76,7 +78,13 @@ export default function ExecutiveSuitePage(props: any = {}) {
     try {
       await advanceWeek();
     } catch (error) {
-      console.error('Advance week failed from ExecutiveSuitePage:', error);
+      logger.error('Advance week failed from ExecutiveSuitePage:', error);
+      toast({
+        title: "Failed to advance week",
+        description: error instanceof Error ? error.message : "An error occurred while advancing the week. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   });
 
