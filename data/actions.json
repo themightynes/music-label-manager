@@ -1,6 +1,6 @@
 {
   "version": "2.3.0",
-  "generated": "2025-10-16T04:20:51.708Z",
+  "generated": "2025-10-18T17:14:48.037Z",
   "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting. v2.3.0: Migrated to shared Zod schema contracts for type-safe validation across frontend/backend.",
   "weekly_actions": [
     {
@@ -908,6 +908,44 @@
           }
         }
       ]
+    },
+    {
+      "id": "action_1760807005433",
+      "name": "Employee Effectiveness",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "",
+      "role_id": "cco",
+      "meeting_id": "creative_recording",
+      "category": "production",
+      "target_scope": "user_selected",
+      "prompt": "Perfect, I'll get started. {artistName} is going to love this! How much do they have? Honestly, we're going to be able to use this strategy going forward.",
+      "choices": [
+        {
+          "id": "quick_one",
+          "label": "They are on a deadline, but catch them quick!",
+          "effects_immediate": {
+            "artist_mood": 10,
+            "money": -3500
+          },
+          "effects_delayed": {
+            "creative_capital": 3
+          }
+        },
+        {
+          "id": "take_time",
+          "label": "They aren't going to the studio for a while. I think they have time for you. Plus - the more time you spend, the more you learn!",
+          "effects_immediate": {
+            "artist_mood": 10,
+            "money": -10000
+          },
+          "effects_delayed": {
+            "artist_mood": 10,
+            "creative_capital": 6
+          }
+        }
+      ],
+      "prompt_before_selection": "Hi Boss! Got a good one for you - any artist on your mind that needs a little creative boost for their next recording session? Someone on my team just came up with the BEST idea!"
     }
   ],
   "action_categories": [

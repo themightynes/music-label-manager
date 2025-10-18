@@ -1,7 +1,7 @@
 {
-  "version": "2.2.0",
-  "generated": "2025-10-12T18:30:00.000Z",
-  "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting.",
+  "version": "2.3.0",
+  "generated": "2025-10-16T04:20:51.708Z",
+  "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting. v2.3.0: Migrated to shared Zod schema contracts for type-safe validation across frontend/backend.",
   "weekly_actions": [
     {
       "id": "TEST_mood_boost_immediate",
@@ -27,6 +27,14 @@
           "id": "no_boost",
           "label": "No boost",
           "effects_immediate": {},
+          "effects_delayed": {}
+        },
+        {
+          "id": "small_boost",
+          "label": "Small Pep Talk +3",
+          "effects_immediate": {
+            "artist_mood": 3
+          },
           "effects_delayed": {}
         }
       ]

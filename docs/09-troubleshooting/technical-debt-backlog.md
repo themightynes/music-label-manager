@@ -1,4 +1,4 @@
-# Technical Debt Backlog
+﻿# Technical Debt Backlog
 
 **Music Label Manager - Code Quality Improvements**
 *Document Purpose: Track technical debt and quality improvements identified during codebase reviews*
@@ -10,9 +10,9 @@
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: October 19, 2025
 - **Total Items**: 28
-- **Completed**: 22
+- **Completed**: 26
 - **In Progress**: 0
-- **Pending**: 6
+- **Pending**: 2
 
 ---
 
@@ -355,64 +355,79 @@ Audited remaining direct API fetches and migrated the developer markets editor o
 
 ---
 
-## 🟢 **Medium Priority Items**
+### ~~Comment 5: getQueryFn URL building risky~~ (Completed)
+**Status**: Completed (October 19, 2025)
 
-### [ ] Comment 5: getQueryFn URL building risky
-**Priority**: 🟢 Medium
-**Impact**: Robustness
-**Effort**: Medium
+Standardised the shared query helper so the first element of every query key is the fully qualified request URL, eliminating brittle join('/') behaviour.
 
-getQueryFn builds URL via queryKey.join('/'); risky if keys contain leading slashes or absolute URLs.
-
-**Action**: Refactor `getQueryFn` in `lib/queryClient.ts` to accept a `queryKey: [string, ...unknown[]]` where the first element is the full request URL. Use it directly instead of `join('/')`.
+**Resolution**:
+- Updated getQueryFn to require a [string, ...unknown[]] key and feed the leading URL directly into apiRequest.
+- Documented the contract and added runtime validation so misconfigured keys fail fast.
+- Audited analytics hooks to adopt the new pattern, ensuring cache keys stay stable and URLs are serialized by apiPaths.
 
 **Relevant Files**:
 - [client/src/lib/queryClient.ts](client/src/lib/queryClient.ts)
+- [client/src/hooks/useAnalytics.ts](client/src/hooks/useAnalytics.ts)
 
 ---
 
-### [ ] Comment 13: SaveGameModal uses window.alert
-**Priority**: 🟢 Medium
-**Impact**: UX consistency
-**Effort**: Low
+### ~~Comment 13: SaveGameModal uses window.alert~~ (Completed)
+**Status**: Completed (October 19, 2025)
 
-SaveGameModal uses window.alert for UX; replace with in-app toasts/modals for consistency.
+Replaced native browser alerts with in-app confirmation flows so save management matches the rest of the UI system.
 
-**Action**: Update `components/SaveGameModal.tsx` to replace `alert()` with `useToast()` notifications and modal close actions.
+**Resolution**:
+- Introduced shadcn AlertDialog confirmations for delete and import decisions, eliminating window.confirm.
+- Wired success and failure paths through useToast() to deliver consistent feedback.
+- Added import preview state to let players choose between copy or overwrite without leaving the modal.
 
 **Relevant Files**:
 - [client/src/components/SaveGameModal.tsx](client/src/components/SaveGameModal.tsx)
-- [client/src/hooks/use-toast.ts](client/src/hooks/use-toast.ts)
 
 ---
 
-### [ ] Comment 16: useAnalytics has empty API_BASE placeholder
-**Priority**: 🟢 Medium
-**Impact**: Production deployment
-**Effort**: Low
+### ~~Comment 16: useAnalytics has empty API_BASE placeholder~~ (Completed)
+**Status**: Completed (October 19, 2025)
 
-useAnalytics has API_BASE = '' placeholder; if base URL differs in prod, hooks may break.
+Analytics hooks now derive their URLs from the shared apiPaths helper, so they automatically honour VITE_API_BASE_URL overrides and fall back to the active origin during development.
 
-**Action**: Introduce `VITE_API_BASE_URL` and set `API_BASE = import.meta.env.VITE_API_BASE_URL || ''` or centralize in `lib/apiPaths.ts`.
+**Resolution**:
+- Reworked every analytics hook to build query keys whose first element is the fully qualified API URL, allowing the shared getQueryFn to drive requests through apiRequest.
+- Removed the bespoke fetch helper and rely on the common client for consistent headers, retries, and logging.
 
 **Relevant Files**:
 - [client/src/hooks/useAnalytics.ts](client/src/hooks/useAnalytics.ts)
 
 ---
 
-### [ ] Comment 24: Analytics hooks embed query params inline
-**Priority**: 🟢 Medium
-**Impact**: Code quality
-**Effort**: Low
+### ~~Comment 24: Analytics hooks embed query params inline~~ (Completed)
+**Status**: Completed (October 19, 2025)
 
-Analytics hooks embed query params inline; consider using URLSearchParams for safety.
+All analytics requests now use apiPaths.analytics.*, which encapsulates URL/URLSearchParams handling for gameId and other parameters.
 
-**Action**: Refactor to use `new URL()` and URLSearchParams for gameId and other params.
+**Resolution**:
+- Centralised URL construction for the analytics hooks through apiPaths to eliminate ad-hoc string concatenation.
+- Ensured cache keys include the final request URL plus contextual metadata for precise invalidation.
 
 **Relevant Files**:
 - [client/src/hooks/useAnalytics.ts](client/src/hooks/useAnalytics.ts)
 
 ---
+
+### ~~Comment 28: withAdmin returns null for unauthorized~~ (Completed)
+**Status**: Completed (October 19, 2025)
+
+Unauthorized visitors now see a friendly explanation with a live countdown before being redirected back home.
+
+**Resolution**:
+- Added a three-second countdown banner that updates every second before triggering the redirect.
+- Reset countdown state when admin status changes so authorized users never see the warning.
+
+**Relevant Files**:
+- [client/src/admin/withAdmin.tsx](client/src/admin/withAdmin.tsx)
+
+---
+## 🟢 **Medium Priority Items**
 
 ### [ ] Comment 25: ClerkProvider appearance cast to any
 **Priority**: 🟢 Medium
@@ -425,20 +440,6 @@ ClerkProvider appearance is cast to any; tighten typing to avoid runtime mismatc
 
 **Relevant Files**:
 - [client/src/main.tsx](client/src/main.tsx)
-
----
-
-### [ ] Comment 28: withAdmin returns null for unauthorized
-**Priority**: 🟢 Medium
-**Impact**: UX
-**Effort**: Low
-
-withAdmin returns null for unauthorized users; consider rendering a friendly unauthorized message.
-
-**Action**: Render unauthorized message and navigate home after short delay.
-
-**Relevant Files**:
-- [client/src/admin/withAdmin.tsx](client/src/admin/withAdmin.tsx)
 
 ---
 
@@ -463,13 +464,13 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (down from 3)
-- 🟢 Medium: 6 items (down from 17)
-- 🔵 Low: 0 items (down from 1)
+- 🟢 Medium: 1 item (down from 17)
+- ?? Low: 1 item (down from 1)
 
 ### By Status
-- ✅ Completed: 22 items (78.6%)
+- ✅ Completed: 26 items (92.9%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 6 items (21.4%)
+- 📋 Pending: 2 items (7.1%)
 
 ---
 
@@ -502,12 +503,20 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 - ✅ Comment 20: ExecutiveSuitePage component alignment
 - ✅ Comment 22: EmailCategory forward compatibility
 - ✅ Comment 23: Shared week date utility
-- 📋 Remaining: Comments 5, 13, 16, 24, 25, 28 (6 items)
+- 📋 Remaining: Comments 25, 26 (2 items)
 
 ### Phase 4: Final Polish & API Consistency (Current Sprint Priority)
-- 🟡 Comment 27: Migrate remaining fetch calls to apiRequest
-- 🟢 Comments 5, 13, 16, 24, 25, 28: Final UX polish and type safety improvements
+- 🟢 Comments 25 & 26: Final polish and refactor follow-ups
 
 ---
 
 *This document is maintained as part of the project's technical debt tracking. Update status checkboxes and completion dates as items are addressed.*
+
+
+
+
+
+
+
+
+

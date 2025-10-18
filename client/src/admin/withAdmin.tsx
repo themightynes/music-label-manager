@@ -6,18 +6,37 @@ export function withAdmin<P extends Record<string, any>>(Wrapped: ComponentType<
   const AdminOnly: React.FC<P> = (props: P) => {
     const { isAdmin, loading } = useIsAdmin();
     const [, setLocation] = useLocation();
-    const [showUnauthorized, setShowUnauthorized] = useState(false);
+    const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
 
     useEffect(() => {
-      if (!loading && !isAdmin) {
-        // Show unauthorized message briefly before redirecting
-        setShowUnauthorized(true);
-        const timer = setTimeout(() => {
-          setLocation('/');
-        }, 2000);
-        return () => clearTimeout(timer);
+      if (loading) {
+        return;
       }
-    }, [loading, isAdmin, setLocation]);
+
+      if (isAdmin) {
+        setRedirectCountdown(null);
+        return;
+      }
+
+      setRedirectCountdown((current) => (current === null ? 3 : current));
+    }, [loading, isAdmin]);
+
+    useEffect(() => {
+      if (redirectCountdown === null) {
+        return;
+      }
+
+      if (redirectCountdown === 0) {
+        setLocation('/');
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        setRedirectCountdown((current) => (current ? current - 1 : 0));
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }, [redirectCountdown, setLocation]);
 
     if (loading) {
       return <div className="p-4 text-white">Checking access...</div>;
@@ -32,7 +51,7 @@ export function withAdmin<P extends Record<string, any>>(Wrapped: ComponentType<
               You do not have permission to access this admin page.
             </p>
             <p className="text-sm text-muted-foreground">
-              Redirecting to home page...
+              Redirecting to home page{redirectCountdown !== null ? ` in ${redirectCountdown}s` : '...'}
             </p>
           </div>
         </div>

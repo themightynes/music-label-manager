@@ -308,7 +308,7 @@ function extractUrlFromQueryKey(queryKey: readonly unknown[]): string {
   return url;
 }
 
-export function getQueryFn<T>({ on401: unauthorizedBehavior }: { on401: UnauthorizedBehavior }): QueryFunction<T> {
+export function getQueryFn<T>({ on401: unauthorizedBehavior }: { on401: UnauthorizedBehavior }): QueryFunction<T, QueryKeyWithUrl> {
   return async ({ queryKey }) => {
     const url = extractUrlFromQueryKey(queryKey);
     const shouldReturnNull = unauthorizedBehavior === "returnNull";

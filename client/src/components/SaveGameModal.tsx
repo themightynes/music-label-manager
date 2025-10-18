@@ -1,8 +1,17 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGameStore } from '@/store/gameStore';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
 import { apiRequest } from '@/lib/queryClient';
@@ -22,6 +31,12 @@ type SaveSummary = {
   reputation: number | null;
 };
 
+type PendingImportState = {
+  name: string;
+  snapshot: GameSaveSnapshot;
+  fileName: string;
+};
+
 interface SaveGameModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,7 +50,19 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [saveDetails, setSaveDetails] = useState<Record<string, GameSaveSnapshot>>({});
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [pendingImport, setPendingImport] = useState<PendingImportState | null>(null);
+  const [importing, setImporting] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!open) {
+      setPendingDelete(null);
+      setPendingImport(null);
+      setImporting(false);
+      setDeleting(null);
+    }
+  }, [open]);
 
   const { data: saves = [], refetch: refetchSaves } = useQuery<SaveSummary[]>({
     queryKey: ['api', 'saves'],
@@ -130,15 +157,20 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     }
   };
 
-  const handleDelete = async (saveId: string, saveName: string) => {
-    if (!confirm(`Are you sure you want to delete the save "${saveName}"? This action cannot be undone.`)) {
+  const requestDelete = (saveId: string, saveName: string) => {
+    setPendingDelete({ id: saveId, name: saveName });
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) {
       return;
     }
 
+    const { id: saveId, name: saveName } = pendingDelete;
     setDeleting(saveId);
     try {
       const response = await apiRequest('DELETE', `/api/saves/${saveId}`);
-      const result = await response.json();
+      await response.json();
 
       setSaveDetails(prev => {
         const next = { ...prev };
@@ -151,6 +183,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         title: 'Save deleted',
         description: `Removed "${saveName}" from your saves.`,
       });
+      setPendingDelete(null);
     } catch (error) {
       console.error('Failed to delete save:', error);
       let errorMessage = 'Failed to delete save. Please try again.';
@@ -256,29 +289,10 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         });
         const importName = importData?.name || `Imported Save ${new Date().toLocaleString()}`;
 
-        const copyChoice = confirm('Import as a new copy? Click Cancel to overwrite the currently active game.');
-        const restoreMode: 'overwrite' | 'fork' = copyChoice ? 'fork' : 'overwrite';
-
-        const createResponse = await apiRequest('POST', '/api/saves', {
+        setPendingImport({
           name: importName,
-          gameState: parsedSnapshot,
-          week: parsedSnapshot.gameState.currentWeek,
-          isAutosave: false
-        });
-
-        const createdSave = await createResponse.json();
-        setSaveDetails(prev => ({ ...prev, [createdSave.id]: parsedSnapshot }));
-
-        const importedGameId = await loadGameFromSave(createdSave.id, parsedSnapshot, restoreMode);
-        if (importedGameId) {
-          setGameId(importedGameId);
-        }
-
-        refetchSaves();
-        onOpenChange(false);
-        toast({
-          title: 'Save imported',
-          description: restoreMode === 'fork' ? 'Copied save created successfully.' : 'Save restored successfully.',
+          snapshot: parsedSnapshot,
+          fileName: file.name,
         });
       } catch (error) {
         console.error('Failed to import save:', error);
@@ -288,8 +302,50 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           variant: 'destructive',
         });
       }
-    };
-    input.click();
+  };
+  input.click();
+};
+
+  const finalizeImport = async (mode: 'overwrite' | 'fork') => {
+    if (!pendingImport) {
+      return;
+    }
+
+    const { name, snapshot } = pendingImport;
+    setImporting(true);
+    try {
+      const createResponse = await apiRequest('POST', '/api/saves', {
+        name,
+        gameState: snapshot,
+        week: snapshot.gameState.currentWeek,
+        isAutosave: false,
+      });
+
+      const createdSave = await createResponse.json();
+      setSaveDetails(prev => ({ ...prev, [createdSave.id]: snapshot }));
+
+      const importedGameId = await loadGameFromSave(createdSave.id, snapshot, mode);
+      if (importedGameId) {
+        setGameId(importedGameId);
+      }
+
+      refetchSaves();
+      setPendingImport(null);
+      onOpenChange(false);
+      toast({
+        title: 'Save imported',
+        description: mode === 'fork' ? 'Copied save created successfully.' : 'Save restored successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to import save:', error);
+      toast({
+        title: 'Import failed',
+        description: error instanceof Error ? error.message : 'Invalid save file format.',
+        variant: 'destructive',
+      });
+    } finally {
+      setImporting(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -302,179 +358,276 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-2xl">
-        <DialogHeader className="border-b border-brand-purple pb-4">
-          <DialogTitle className="text-lg font-semibold text-white">Save & Load Game</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-full max-w-2xl">
+          <DialogHeader className="border-b border-brand-purple pb-4">
+            <DialogTitle className="text-lg font-semibold text-white">Save & Load Game</DialogTitle>
+          </DialogHeader>
 
-        <div className="p-6 space-y-4">
-          {/* Manual saves */}
-          {manualSaves.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-wide text-white/60">Manual Saves</h3>
-              {manualSaves.map(save => {
-                const detail = saveDetails[save.id];
-                const money = save.money ?? detail?.gameState?.money ?? null;
-                const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
-                return (
-                  <div key={save.id} className="border border-brand-purple rounded-lg p-4 hover:bg-brand-burgundy/10">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium text-white">{save.name}</div>
-                        <div className="text-xs text-white/70">
-                          Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
+          <div className="p-6 space-y-4">
+            {/* Manual saves */}
+            {manualSaves.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs uppercase tracking-wide text-white/60">Manual Saves</h3>
+                {manualSaves.map(save => {
+                  const detail = saveDetails[save.id];
+                  const money = save.money ?? detail?.gameState?.money ?? null;
+                  const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
+                  return (
+                    <div key={save.id} className="border border-brand-purple rounded-lg p-4 hover:bg-brand-burgundy/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-white">{save.name}</div>
+                          <div className="text-xs text-white/70">
+                            Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
+                          </div>
+                          <div className="text-xs text-white/50">
+                            Saved {formatDate(save.updatedAt)}
+                          </div>
                         </div>
-                        <div className="text-xs text-white/50">
-                          Saved {formatDate(save.updatedAt)}
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleLoad(save.id)}
+                            disabled={loading || deleting === save.id}
+                            className="text-xs"
+                          >
+                            {loading ? 'Loading...' : 'Load'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleLoad(save.id, 'fork')}
+                            disabled={loading || deleting === save.id}
+                            className="text-xs"
+                          >
+                            Copy
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => requestDelete(save.id, save.name)}
+                            disabled={loading || deleting === save.id}
+                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {deleting === save.id ? 'Deleting...' : 'Delete'}
+                          </Button>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleLoad(save.id)}
-                          disabled={loading || deleting === save.id}
-                          className="text-xs"
-                        >
-                          {loading ? 'Loading...' : 'Load'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleLoad(save.id, 'fork')}
-                          disabled={loading || deleting === save.id}
-                          className="text-xs"
-                        >
-                          Copy
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(save.id, save.name)}
-                          disabled={loading || deleting === save.id}
-                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          {deleting === save.id ? 'Deleting...' : 'Delete'}
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
 
-          {/* Autosaves */}
-          {autosaveSaves.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-wide text-white/60">Autosaves</h3>
-              {autosaveSaves.map(save => {
-                const detail = saveDetails[save.id];
-                const money = save.money ?? detail?.gameState?.money ?? null;
-                const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
-                return (
-                  <div key={save.id} className="border border-brand-purple/60 rounded-lg p-4 hover:bg-brand-burgundy/10">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium text-white">{save.name}</div>
-                        <div className="text-xs text-white/70">
-                          Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
+            {/* Autosaves */}
+            {autosaveSaves.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs uppercase tracking-wide text-white/60">Autosaves</h3>
+                {autosaveSaves.map(save => {
+                  const detail = saveDetails[save.id];
+                  const money = save.money ?? detail?.gameState?.money ?? null;
+                  const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
+                  return (
+                    <div key={save.id} className="border border-brand-purple/60 rounded-lg p-4 hover:bg-brand-burgundy/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-white">{save.name}</div>
+                          <div className="text-xs text-white/70">
+                            Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
+                          </div>
+                          <div className="text-xs text-white/50">
+                            Saved {formatDate(save.updatedAt)}
+                          </div>
                         </div>
-                        <div className="text-xs text-white/50">
-                          Saved {formatDate(save.updatedAt)}
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleLoad(save.id)}
+                            disabled={loading || deleting === save.id}
+                            className="text-xs"
+                          >
+                            {loading ? 'Loading...' : 'Load'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleLoad(save.id, 'fork')}
+                            disabled={loading || deleting === save.id}
+                            className="text-xs"
+                          >
+                            Copy
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => requestDelete(save.id, save.name)}
+                            disabled={loading || deleting === save.id}
+                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {deleting === save.id ? 'Deleting...' : 'Delete'}
+                          </Button>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleLoad(save.id)}
-                          disabled={loading || deleting === save.id}
-                          className="text-xs"
-                        >
-                          {loading ? 'Loading...' : 'Load'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleLoad(save.id, 'fork')}
-                          disabled={loading || deleting === save.id}
-                          className="text-xs"
-                        >
-                          Copy
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(save.id, save.name)}
-                          disabled={loading || deleting === save.id}
-                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          {deleting === save.id ? 'Deleting...' : 'Delete'}
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Empty slots */}
+            {Array.from({ length: Math.max(0, 3 - manualSaves.length) }).map((_, index) => (
+              <div key={`empty-${index}`} className="border-2 border-dashed border-brand-purple rounded-lg p-4 text-center">
+                <i className="fas fa-plus text-white/50 text-xl mb-2"></i>
+                <p className="text-sm text-white/50">Empty Slot</p>
+              </div>
+            ))}
+
+            {/* New save input */}
+            <div className="space-y-2">
+              <Input
+                placeholder="Enter save name..."
+                value={newSaveName}
+                onChange={(e) => setNewSaveName(e.target.value)}
+                className="w-full"
+              />
+              <Button
+                onClick={handleSave}
+                disabled={!newSaveName.trim() || saving}
+                className="w-full bg-brand-burgundy text-white hover:bg-brand-burgundy"
+              >
+                {saving ? 'Saving...' : 'Save Game'}
+              </Button>
             </div>
-          )}
+          </div>
 
-          {/* Empty slots */}
-          {Array.from({ length: Math.max(0, 3 - manualSaves.length) }).map((_, index) => (
-            <div key={`empty-${index}`} className="border-2 border-dashed border-brand-purple rounded-lg p-4 text-center">
-              <i className="fas fa-plus text-white/50 text-xl mb-2"></i>
-              <p className="text-sm text-white/50">Empty Slot</p>
+          <div className="p-6 border-t border-brand-purple flex justify-between">
+            <div className="flex space-x-3">
+              <Button
+                variant="ghost"
+                onClick={handleExport}
+                className="text-brand-burgundy hover:text-brand-burgundy font-medium"
+              >
+                Export JSON
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleImport}
+                disabled={importing}
+                className="text-white/70 hover:text-white font-medium"
+              >
+                {importing ? 'Processing...' : 'Import JSON'}
+              </Button>
             </div>
-          ))}
-
-          {/* New save input */}
-          <div className="space-y-2">
-            <Input
-              placeholder="Enter save name..."
-              value={newSaveName}
-              onChange={(e) => setNewSaveName(e.target.value)}
-              className="w-full"
-            />
-            <Button
-              onClick={handleSave}
-              disabled={!newSaveName.trim() || saving}
-              className="w-full bg-brand-burgundy text-white hover:bg-brand-burgundy"
-            >
-              {saving ? 'Saving...' : 'Save Game'}
-            </Button>
+            <div className="space-x-3">
+              <Button
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="text-white/70 hover:text-white"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-        </div>
+        </DialogContent>
+      </Dialog>
 
-        <div className="p-6 border-t border-brand-purple flex justify-between">
-          <div className="flex space-x-3">
-            <Button
-              variant="ghost"
-              onClick={handleExport}
-              className="text-brand-burgundy hover:text-brand-burgundy font-medium"
-            >
-              Export JSON
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleImport}
-              className="text-white/70 hover:text-white font-medium"
-            >
-              Import JSON
-            </Button>
-          </div>
-          <div className="space-x-3">
-            <Button
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              className="text-white/70 hover:text-white"
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !deleting) {
+            setPendingDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="border-brand-purple bg-brand-dark text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete this save?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/70">
+              {pendingDelete
+                ? `This will permanently remove "${pendingDelete.name}" from your save slots.`
+                : 'This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleting !== null}
+              className="border-brand-purple text-white hover:bg-white/10"
             >
               Cancel
+            </AlertDialogCancel>
+            <Button
+              onClick={() => confirmDelete()}
+              disabled={deleting !== null}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleting !== null && pendingDelete && deleting === pendingDelete.id ? 'Deleting...' : 'Delete'}
             </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingImport}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !importing) {
+            setPendingImport(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="border-brand-purple bg-brand-dark text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Import save file</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/70">
+              Choose how you want to apply the imported snapshot.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {pendingImport && (
+            <div className="space-y-2 rounded-lg border border-brand-purple/40 bg-black/30 p-4 text-sm text-white/80">
+              <div>
+                <span className="font-semibold text-white/90">File:</span> {pendingImport.fileName}
+              </div>
+              <div>
+                <span className="font-semibold text-white/90">Save name:</span> {pendingImport.name}
+              </div>
+              <div>
+                <span className="font-semibold text-white/90">Week:</span>{' '}
+                {pendingImport.snapshot.gameState?.currentWeek ?? 'Unknown'}
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+            <AlertDialogCancel
+              disabled={importing}
+              className="border-brand-purple text-white hover:bg-white/10"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <Button
+                variant="outline"
+                className="border-brand-purple text-white hover:border-brand-burgundy hover:text-white"
+                disabled={importing}
+                onClick={() => finalizeImport('fork')}
+              >
+                {importing ? 'Importing...' : 'Import as copy'}
+              </Button>
+              <Button
+                className="bg-brand-burgundy text-white hover:bg-brand-burgundy-light"
+                disabled={importing}
+                onClick={() => finalizeImport('overwrite')}
+              >
+                {importing ? 'Importing...' : 'Overwrite current game'}
+              </Button>
+            </div>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -1,5 +1,133 @@
 [
   {
+    "id": "fe903e6b-8611-4bd9-b5e8-2631b0f71b13",
+    "submittedAt": "2025-10-18T16:40:24.560Z",
+    "summary": "UI Improvement in Save/Load Modal",
+    "severity": "low",
+    "area": "gameplay",
+    "frequency": "always",
+    "status": "new",
+    "whatHappened": "The \"Save/Load\" game modal doesn't show the name of the game for the autosaves. So when there are multiple autosaves for multiple games, it can be confusing to the user to which game they belong.",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": null,
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "a12c05b9-8d71-4da3-8bee-80b5517aa880",
+      "currentWeek": 8,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/game",
+      "screen": {
+        "width": 1670,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
+    "id": "eb730368-93bf-42f2-bd13-e36834f9bd53",
+    "submittedAt": "2025-10-18T16:31:01.153Z",
+    "summary": "Reputation Achievement in Weekly Results",
+    "severity": "low",
+    "area": "ui",
+    "frequency": "always",
+    "status": "new",
+    "whatHappened": "This type of achievement is really confusing. I want to discuss how to communicate to the user what is happening.",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": "\"Strategic efficiency: $803 per reputation point this week\"",
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "a12c05b9-8d71-4da3-8bee-80b5517aa880",
+      "currentWeek": 7,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/game",
+      "screen": {
+        "width": 1670,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
+    "id": "e9980ba5-f584-47c3-8304-6bb5fb11b789",
+    "submittedAt": "2025-10-18T16:29:46.529Z",
+    "summary": "Email Sorting",
+    "severity": "low",
+    "area": "ui",
+    "frequency": "always",
+    "status": "new",
+    "whatHappened": "When I am in the inbox looking at my emails, every time I hit \"Mark as Read,\" the list of emails re-sorts, which is really confusing and shouldn't be happening.",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": null,
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "a12c05b9-8d71-4da3-8bee-80b5517aa880",
+      "currentWeek": 7,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/game",
+      "screen": {
+        "width": 1670,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
+    "id": "e418f182-5aff-4b95-a4f9-567e7feb5272",
+    "submittedAt": "2025-10-18T16:28:31.357Z",
+    "summary": "Reputation Gain",
+    "severity": "low",
+    "area": "gameplay",
+    "frequency": "always",
+    "status": "new",
+    "whatHappened": "I want to review and evaluate the reputation gain from different releases, and just in general review how reputation is gained in the game. I'm feeling like it is too easy to gain reputation.",
+    "stepsToReproduce": null,
+    "expectedResult": null,
+    "additionalContext": null,
+    "reporter": {
+      "userId": "86048881-50e8-4107-beb3-44ff2eaea979",
+      "clerkUserId": "user_32rVLZK0QpynVq9xrcK3bL2iWJD",
+      "contactEmail": "ernesto.chapa@gmail.com"
+    },
+    "metadata": {
+      "gameId": "a12c05b9-8d71-4da3-8bee-80b5517aa880",
+      "currentWeek": 7,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      "platform": "Win32",
+      "language": "en-US",
+      "timeZone": "America/Los_Angeles",
+      "url": "http://localhost:5000/game",
+      "screen": {
+        "width": 1670,
+        "height": 1276
+      },
+      "ip": "127.0.0.1"
+    }
+  },
+  {
     "id": "09beb779-8d43-498f-a4c7-07e71135422e",
     "submittedAt": "2025-10-13T15:55:07.475Z",
     "summary": "Email System Not Reverting with Saves",

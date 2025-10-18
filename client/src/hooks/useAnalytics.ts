@@ -7,38 +7,23 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '@/store/gameStore';
-import { apiRequest } from '@/lib/queryClient';
 import { apiPaths } from '@/lib/apiPaths';
-
-/**
- * Helper function to make API requests with error handling
- */
-async function fetchAnalytics(url: string) {
-  const response = await apiRequest('GET', url, undefined, { retry: true });
-  return response.json();
-}
 
 /**
  * Hook to fetch ROI metrics for a specific artist
  */
 export function useArtistROI(artistId: string | undefined) {
-  const gameState = useGameStore((state: any) => state.gameState);
+  const gameState = useGameStore((state) => state.gameState);
+  const gameId = gameState?.id ?? null;
+  const url = gameId && artistId
+    ? apiPaths.analytics.artistRoi(gameId, artistId)
+    : null;
 
-  const queryKey = [
-    'analytics:artist-roi',
-    gameState?.id ?? null,
-    artistId ?? null,
-  ] as const;
-  
-  return useQuery({
-    queryKey,
-    queryFn: () => {
-      if (!artistId || !gameState?.id) {
-        throw new Error('Missing artist ID or game ID');
-      }
-      return fetchAnalytics(apiPaths.analytics.artistRoi(gameState.id, artistId));
-    },
-    enabled: !!artistId && !!gameState?.id,
+  return useQuery<ArtistROIMetrics>({
+    queryKey: url
+      ? [url, 'analytics:artist-roi', { gameId, artistId }] as const
+      : ['analytics:artist-roi', 'disabled', { gameId, artistId }] as const,
+    enabled: !!url,
     staleTime: 60000, // 1 minute
     gcTime: 300000, // 5 minutes (formerly cacheTime)
     retry: 1,
@@ -49,23 +34,17 @@ export function useArtistROI(artistId: string | undefined) {
  * Hook to fetch ROI metrics for a specific project
  */
 export function useProjectROI(projectId: string | undefined) {
-  const gameState = useGameStore((state: any) => state.gameState);
+  const gameState = useGameStore((state) => state.gameState);
+  const gameId = gameState?.id ?? null;
+  const url = gameId && projectId
+    ? apiPaths.analytics.projectRoi(gameId, projectId)
+    : null;
 
-  const queryKey = [
-    'analytics:project-roi',
-    gameState?.id ?? null,
-    projectId ?? null,
-  ] as const;
-  
-  return useQuery({
-    queryKey,
-    queryFn: () => {
-      if (!projectId || !gameState?.id) {
-        throw new Error('Missing project ID or game ID');
-      }
-      return fetchAnalytics(apiPaths.analytics.projectRoi(gameState.id, projectId));
-    },
-    enabled: !!projectId && !!gameState?.id,
+  return useQuery<ProjectROIMetrics>({
+    queryKey: url
+      ? [url, 'analytics:project-roi', { gameId, projectId }] as const
+      : ['analytics:project-roi', 'disabled', { gameId, projectId }] as const,
+    enabled: !!url,
     staleTime: 60000, // 1 minute
     gcTime: 300000, // 5 minutes
     retry: 1,
@@ -76,23 +55,17 @@ export function useProjectROI(projectId: string | undefined) {
  * Hook to fetch ROI metrics for a specific release
  */
 export function useReleaseROI(releaseId: string | undefined) {
-  const gameState = useGameStore((state: any) => state.gameState);
+  const gameState = useGameStore((state) => state.gameState);
+  const gameId = gameState?.id ?? null;
+  const url = gameId && releaseId
+    ? apiPaths.analytics.releaseRoi(gameId, releaseId)
+    : null;
 
-  const queryKey = [
-    'analytics:release-roi',
-    gameState?.id ?? null,
-    releaseId ?? null,
-  ] as const;
-  
-  return useQuery({
-    queryKey,
-    queryFn: () => {
-      if (!releaseId || !gameState?.id) {
-        throw new Error('Missing release ID or game ID');
-      }
-      return fetchAnalytics(apiPaths.analytics.releaseRoi(gameState.id, releaseId));
-    },
-    enabled: !!releaseId && !!gameState?.id,
+  return useQuery<ReleaseROIMetrics>({
+    queryKey: url
+      ? [url, 'analytics:release-roi', { gameId, releaseId }] as const
+      : ['analytics:release-roi', 'disabled', { gameId, releaseId }] as const,
+    enabled: !!url,
     staleTime: 120000, // 2 minutes
     gcTime: 300000, // 5 minutes
     retry: 1,
@@ -103,19 +76,15 @@ export function useReleaseROI(releaseId: string | undefined) {
  * Hook to fetch portfolio-wide ROI metrics
  */
 export function usePortfolioROI() {
-  const gameState = useGameStore((state: any) => state.gameState);
+  const gameState = useGameStore((state) => state.gameState);
+  const gameId = gameState?.id ?? null;
+  const url = gameId ? apiPaths.analytics.portfolioRoi(gameId) : null;
 
-  const queryKey = ['analytics:portfolio-roi', gameState?.id ?? null] as const;
-  
-  return useQuery({
-    queryKey,
-    queryFn: () => {
-      if (!gameState?.id) {
-        throw new Error('Missing game ID');
-      }
-      return fetchAnalytics(apiPaths.analytics.portfolioRoi(gameState.id));
-    },
-    enabled: !!gameState?.id,
+  return useQuery<PortfolioROIMetrics>({
+    queryKey: url
+      ? [url, 'analytics:portfolio-roi', { gameId }] as const
+      : ['analytics:portfolio-roi', 'disabled', { gameId }] as const,
+    enabled: !!url,
     staleTime: 30000, // 30 seconds for dashboard
     gcTime: 180000, // 3 minutes
     retry: 2,
