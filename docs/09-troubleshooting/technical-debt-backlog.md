@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: October 18, 2025
+- **Last Updated**: October 19, 2025
 - **Total Items**: 28
-- **Completed**: 20
+- **Completed**: 21
 - **In Progress**: 0
-- **Pending**: 8
+- **Pending**: 7
 
 ---
 
@@ -303,6 +303,40 @@ Week end date calculation in GameSidebar assumes Sunday-week; ensure alignment w
 
 ---
 
+### ~~Comment 12: Missing ARIA labels and focus management~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+Some interactive elements lack clear focus management and aria attributes (InboxWidget card clickable, complex modals).
+
+**Resolution**: Comprehensive accessibility improvements across inbox and modal components:
+
+**InboxWidget enhancements** ([client/src/components/InboxWidget.tsx](client/src/components/InboxWidget.tsx)):
+- **Dialog semantics**: Added `aria-haspopup="dialog"`, `aria-expanded`, `aria-controls="inbox-modal"`
+- **Live region**: Polite announcement for unread count changes (`aria-live="polite" aria-atomic="true"`)
+- **Keyboard support**: Enter and Space key handlers for card activation
+- **Visual badge**: Hidden from screen readers (`aria-hidden="true"`) while sr-only live region provides accessible count
+- **Stable contentId**: Passes `contentId="inbox-modal"` for proper modal association
+
+**InboxModal enhancements** ([client/src/components/InboxModal.tsx](client/src/components/InboxModal.tsx)):
+- **Description wiring**: Added `aria-describedby` linking to description element
+- **Live status region**: Polite announcements for email state changes
+- **Keyboard navigation**: Arrow keys (Up/Down), Home, End for message list traversal
+- **ARIA listbox**: Email list uses `role="listbox"` with `aria-label="Inbox messages"`
+- **ARIA options**: Each email has `role="option"` with `aria-selected` state
+- **Active descendant**: `aria-activedescendant` tracks focused email for screen readers
+- **Refresh button**: Clear `aria-label="Refresh inbox"` for assistive tech
+
+**SaveGameModal ASCII improvements** ([client/src/components/SaveGameModal.tsx](client/src/components/SaveGameModal.tsx)):
+- **ASCII replacements**: Changed Unicode bullet/ellipsis to `|` / `--` for clean screen reader output
+- **Status rows**: Money and reputation display as "Week X | $X,XXX | Rep X" with ASCII separators
+
+**withAdmin ASCII fix** ([client/src/admin/withAdmin.tsx](client/src/admin/withAdmin.tsx)):
+- **Loading text**: Changed Unicode ellipsis to ASCII "..." to prevent "unknown glyph" announcements
+
+**Impact**: Full keyboard navigation, proper screen reader announcements, clean ASCII rendering in assistive tech
+
+---
+
 ## 🟡 **High Priority Items**
 
 ### [ ] Comment 27: Components bypass apiRequest
@@ -335,22 +369,6 @@ getQueryFn builds URL via queryKey.join('/'); risky if keys contain leading slas
 
 **Relevant Files**:
 - [client/src/lib/queryClient.ts](client/src/lib/queryClient.ts)
-
----
-
-### [ ] Comment 12: Missing ARIA labels and focus management
-**Priority**: 🟢 Medium
-**Impact**: Accessibility
-**Effort**: Medium
-
-Some interactive elements lack clear focus management and aria attributes (InboxWidget card clickable, complex modals).
-
-**Action**: Audit components for `aria-label`s and visible focus styles. Use shadcn/ui accessible primitives.
-
-**Relevant Files**:
-- [client/src/components/InboxWidget.tsx](client/src/components/InboxWidget.tsx)
-- [client/src/components/InboxModal.tsx](client/src/components/InboxModal.tsx)
-- [client/src/components/ExecutiveMeetings.tsx](client/src/components/ExecutiveMeetings.tsx)
 
 ---
 
@@ -446,13 +464,13 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (down from 3)
-- 🟢 Medium: 7 items (down from 17)
+- 🟢 Medium: 6 items (down from 17)
 - 🔵 Low: 0 items (down from 1)
 
 ### By Status
-- ✅ Completed: 20 items (71.4%)
+- ✅ Completed: 21 items (75.0%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 8 items (28.6%)
+- 📋 Pending: 7 items (25.0%)
 
 ---
 
@@ -476,6 +494,7 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 ### ~~Phase 3: Medium Priority UX & Refinements~~ ✅ **MOSTLY COMPLETED** (October 18, 2025)
 ~~Tackle medium-priority items.~~
 - ✅ Comment 4: GamePage explicit label confirmation
+- ✅ Comment 12: ARIA labels and keyboard navigation
 - ✅ Comment 14: Email category defaults to 'other'
 - ✅ Comment 15: useEmails primitive dependencies
 - ✅ Comment 17: ExecutiveSuitePage proper typing
@@ -484,11 +503,11 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 - ✅ Comment 20: ExecutiveSuitePage component alignment
 - ✅ Comment 22: EmailCategory forward compatibility
 - ✅ Comment 23: Shared week date utility
-- 📋 Remaining: Comments 5, 12, 13, 16, 24, 25, 28 (7 items)
+- 📋 Remaining: Comments 5, 13, 16, 24, 25, 28 (6 items)
 
 ### Phase 4: Final Polish & API Consistency (Current Sprint Priority)
 - 🟡 Comment 27: Migrate remaining fetch calls to apiRequest
-- 🟢 Comments 5, 12, 13, 16, 24, 25, 28: Final UX polish and type safety improvements
+- 🟢 Comments 5, 13, 16, 24, 25, 28: Final UX polish and type safety improvements
 
 ---
 
