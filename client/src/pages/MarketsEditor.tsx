@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 interface MarketConfig {
   market_formulas: {
@@ -94,6 +95,126 @@ interface MarketConfig {
   };
 }
 
+const DEFAULT_MARKET_CONFIG: MarketConfig = {
+  market_formulas: {
+    streaming_calculation: {
+      base_formula: "quality * playlist_access * reputation * ad_spend * rng",
+      quality_weight: 0.35,
+      playlist_weight: 0.25,
+      reputation_weight: 0.2,
+      marketing_weight: 0.2,
+      first_week_multiplier: 2.5,
+      longevity_decay: 0.85,
+      ongoing_streams: {
+        weekly_decay_rate: 0.85,
+        revenue_per_stream: 0.05,
+        ongoing_factor: 0.8,
+        reputation_bonus_factor: 0.002,
+        access_tier_bonus_factor: 0.1,
+        minimum_revenue_threshold: 1,
+        max_decay_weeks: 24,
+      },
+    },
+    press_coverage: {
+      base_chance: 0.15,
+      pr_spend_modifier: 0.001,
+      story_flag_bonus: 0.3,
+      reputation_modifier: 0.008,
+      max_pickups_per_release: 8,
+    },
+    tour_revenue: {
+      base_formula: "venue_capacity * sell_through * ticket_price * artist_popularity",
+      sell_through_base: 0.15,
+      reputation_modifier: 0.05,
+      local_popularity_weight: 0.6,
+      merch_percentage: 0.15,
+      ticket_price_base: 25,
+      ticket_price_per_capacity: 0.03,
+    },
+    release_planning: {
+      marketing_channels: {
+        radio: {
+          effectiveness: 0.85,
+          description: "High reach, mainstream appeal",
+          synergies: ["digital"],
+        },
+        digital: {
+          effectiveness: 0.92,
+          description: "Targeted, cost-effective",
+          synergies: ["radio", "influencer"],
+        },
+        pr: {
+          effectiveness: 0.78,
+          description: "Industry credibility, slower build",
+          synergies: ["influencer"],
+        },
+        influencer: {
+          effectiveness: 0.88,
+          description: "Social engagement, younger demographics",
+          synergies: ["pr", "digital"],
+        },
+      },
+      seasonal_cost_multipliers: {
+        q1: 0.85,
+        q2: 0.95,
+        q3: 1.1,
+        q4: 1.4,
+      },
+      channel_synergy_bonuses: {
+        radio_digital: 0.15,
+        pr_influencer: 0.12,
+        full_spectrum: 0.1,
+      },
+      diversity_bonus: {
+        base: 1,
+        per_additional_channel: 0.08,
+        maximum: 1.4,
+      },
+      lead_single_strategy: {
+        optimal_timing_weeks_before: [1, 2],
+        optimal_timing_bonus: 1.25,
+        good_timing_bonus: 1.15,
+        default_bonus: 1.05,
+        marketing_effectiveness_factor: 0.3,
+        budget_scaling_factor: 2000,
+      },
+      release_type_bonuses: {
+        single: {
+          revenue_multiplier: 1.2,
+          marketing_efficiency: 1.1,
+        },
+        ep: {
+          revenue_multiplier: 1.15,
+          marketing_efficiency: 1.05,
+        },
+        album: {
+          revenue_multiplier: 1.25,
+          marketing_efficiency: 0.95,
+        },
+      },
+    },
+    chart_system: {
+      competitor_variance_range: [0.8, 1.2],
+      chart_generation_timing: "post_releases",
+      top_chart_positions: 100,
+      bubbling_under_positions: 200,
+      chart_exit: {
+        max_chart_position: 100,
+        long_tenure_weeks: 30,
+        long_tenure_position_threshold: 80,
+        low_streams_threshold: 1000,
+        low_streams_position_threshold: 90,
+      },
+    },
+  },
+  seasonal_modifiers: {
+    q1: 0.85,
+    q2: 0.95,
+    q3: 0.9,
+    q4: 1.25,
+  },
+};
+
 export default function MarketsEditor() {
   const [configText, setConfigText] = useState<string>('');
   const [originalConfig, setOriginalConfig] = useState<string>('');
@@ -118,142 +239,16 @@ export default function MarketsEditor() {
   const loadMarketsConfig = async () => {
     setIsLoading(true);
     try {
-      // In a real implementation, you'd fetch from your backend
-      // For now, we'll simulate loading the current config
-      const response = await fetch('/api/dev/markets-config');
-      if (!response.ok) {
-        // Fallback: load from the data we know exists
-        const fallbackConfig = {
-          "market_formulas": {
-            "streaming_calculation": {
-              "base_formula": "quality * playlist_access * reputation * ad_spend * rng",
-              "quality_weight": 0.35,
-              "playlist_weight": 0.25,
-              "reputation_weight": 0.20,
-              "marketing_weight": 0.20,
-              "first_week_multiplier": 2.5,
-              "longevity_decay": 0.85,
-              "ongoing_streams": {
-                "weekly_decay_rate": 0.85,
-                "revenue_per_stream": 0.05,
-                "ongoing_factor": 0.8,
-                "reputation_bonus_factor": 0.002,
-                "access_tier_bonus_factor": 0.1,
-                "minimum_revenue_threshold": 1,
-                "max_decay_weeks": 24
-              }
-            },
-            "press_coverage": {
-              "base_chance": 0.15,
-              "pr_spend_modifier": 0.001,
-              "story_flag_bonus": 0.30,
-              "reputation_modifier": 0.008,
-              "max_pickups_per_release": 8
-            },
-            "tour_revenue": {
-              "base_formula": "venue_capacity * sell_through * ticket_price * artist_popularity",
-              "sell_through_base": 0.15,
-              "reputation_modifier": 0.05,
-              "local_popularity_weight": 0.6,
-              "merch_percentage": 0.15,
-              "ticket_price_base": 25,
-              "ticket_price_per_capacity": 0.03
-            },
-            "release_planning": {
-              "marketing_channels": {
-                "radio": {
-                  "effectiveness": 0.85,
-                  "description": "High reach, mainstream appeal",
-                  "synergies": ["digital"]
-                },
-                "digital": {
-                  "effectiveness": 0.92,
-                  "description": "Targeted, cost-effective",
-                  "synergies": ["radio", "influencer"]
-                },
-                "pr": {
-                  "effectiveness": 0.78,
-                  "description": "Industry credibility, slower build",
-                  "synergies": ["influencer"]
-                },
-                "influencer": {
-                  "effectiveness": 0.88,
-                  "description": "Social engagement, younger demographics",
-                  "synergies": ["pr", "digital"]
-                }
-              },
-              "seasonal_cost_multipliers": {
-                "q1": 0.85,
-                "q2": 0.95,
-                "q3": 1.1,
-                "q4": 1.4
-              },
-              "channel_synergy_bonuses": {
-                "radio_digital": 0.15,
-                "pr_influencer": 0.12,
-                "full_spectrum": 0.10
-              },
-              "diversity_bonus": {
-                "base": 1.0,
-                "per_additional_channel": 0.08,
-                "maximum": 1.4
-              },
-              "lead_single_strategy": {
-                "optimal_timing_weeks_before": [1, 2],
-                "optimal_timing_bonus": 1.25,
-                "good_timing_bonus": 1.15,
-                "default_bonus": 1.05,
-                "marketing_effectiveness_factor": 0.3,
-                "budget_scaling_factor": 2000
-              },
-              "release_type_bonuses": {
-                "single": {
-                  "revenue_multiplier": 1.2,
-                  "marketing_efficiency": 1.1
-                },
-                "ep": {
-                  "revenue_multiplier": 1.15,
-                  "marketing_efficiency": 1.05
-                },
-                "album": {
-                  "revenue_multiplier": 1.25,
-                  "marketing_efficiency": 0.95
-                }
-              }
-            },
-            "chart_system": {
-              "competitor_variance_range": [0.8, 1.2],
-              "chart_generation_timing": "post_releases",
-              "top_chart_positions": 100,
-              "bubbling_under_positions": 200,
-              "chart_exit": {
-                "max_chart_position": 100,
-                "long_tenure_weeks": 30,
-                "long_tenure_position_threshold": 80,
-                "low_streams_threshold": 1000,
-                "low_streams_position_threshold": 90
-              }
-            }
-          },
-          "seasonal_modifiers": {
-            "q1": 0.85,
-            "q2": 0.95,
-            "q3": 0.90,
-            "q4": 1.25
-          }
-        };
-
-        const formattedConfig = JSON.stringify(fallbackConfig, null, 2);
-        setConfigText(formattedConfig);
-        setOriginalConfig(formattedConfig);
-      } else {
-        const config = await response.json();
-        const formattedConfig = JSON.stringify(config, null, 2);
-        setConfigText(formattedConfig);
-        setOriginalConfig(formattedConfig);
-      }
+      const response = await apiRequest('GET', '/api/dev/markets-config', undefined, { retry: true });
+      const config = await response.json();
+      const formattedConfig = JSON.stringify(config, null, 2);
+      setConfigText(formattedConfig);
+      setOriginalConfig(formattedConfig);
     } catch (error) {
       console.error('Failed to load markets config:', error);
+      const formattedConfig = JSON.stringify(DEFAULT_MARKET_CONFIG, null, 2);
+      setConfigText(formattedConfig);
+      setOriginalConfig(formattedConfig);
       toast({
         title: "Load Error",
         description: "Failed to load markets configuration. Using fallback data.",
@@ -315,19 +310,9 @@ export default function MarketsEditor() {
 
     setIsSaving(true);
     try {
-      const response = await fetch('/api/dev/markets-config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          config: JSON.parse(configText)
-        }),
+      await apiRequest('POST', '/api/dev/markets-config', {
+        config: JSON.parse(configText)
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save configuration');
-      }
 
       setOriginalConfig(configText);
       setSavedSuccessfully(true);

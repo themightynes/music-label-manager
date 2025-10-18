@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,13 +101,17 @@ interface InboxModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialEmailId?: string | null;
+  contentId?: string;
 }
 
-export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalProps) {
+export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: InboxModalProps) {
   const [category, setCategory] = useState<'all' | EmailCategory>(() => readStoredCategory());
   const [showUnreadOnly, setShowUnreadOnly] = useState(() => readStoredUnread());
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const emailListRef = useRef<HTMLDivElement | null>(null);
+  const descriptionId = contentId ? `${contentId}-description` : 'inbox-modal-description';
 
   const queryParams = useMemo(
     () => ({
@@ -124,6 +129,14 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
 
   const emails = data?.emails ?? [];
   const unreadCount = unreadData?.count ?? data?.unreadCount ?? 0;
+
+  const liveRegionMessage = deleteEmail.isPending
+    ? 'Deleting email'
+    : markEmailRead.isPending
+      ? 'Updating email status'
+      : isFetching
+        ? 'Refreshing inbox'
+        : '';
 
   useEffect(() => {
     if (!open) {
@@ -167,9 +180,66 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
 
   const selectedEmail = emails.find((email) => email.id === selectedEmailId) ?? null;
 
+  const activeOptionId = selectedEmailId ? `inbox-option-${selectedEmailId}` : undefined;
+
   const TemplateComponent = selectedEmail
     ? TEMPLATE_MAP[selectedEmail.category] ?? DefaultEmailTemplate
     : null;
+
+  const focusEmailByIndex = useCallback((index: number) => {
+    const focus = () => {
+      const target = emailListRef.current?.querySelector<HTMLButtonElement>(`[data-email-index="${index}"]`);
+      target?.focus();
+    };
+
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(focus);
+    } else {
+      focus();
+    }
+  }, []);
+
+  const handleEmailKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!emails.length) {
+      return;
+    }
+
+    let nextIndex: number | null = null;
+
+    switch (event.key) {
+      case 'ArrowDown':
+        nextIndex = index === emails.length - 1 ? 0 : index + 1;
+        break;
+      case 'ArrowUp':
+        nextIndex = index === 0 ? emails.length - 1 : index - 1;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = emails.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    const nextEmail = emails[nextIndex];
+    if (nextEmail) {
+      setSelectedEmailId(nextEmail.id);
+      focusEmailByIndex(nextIndex);
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !selectedEmailId) {
+      return;
+    }
+    const index = emails.findIndex((email) => email.id === selectedEmailId);
+    if (index >= 0) {
+      focusEmailByIndex(index);
+    }
+  }, [open, selectedEmailId, emails, focusEmailByIndex]);
 
   const handleToggleRead = () => {
     if (!selectedEmail) return;
@@ -192,7 +262,14 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl border border-brand-purple bg-brand-dark/90 text-white backdrop-blur-sm">
+      <DialogContent
+        id={contentId}
+        aria-describedby={descriptionId}
+        className="max-w-5xl border border-brand-purple bg-brand-dark/90 text-white backdrop-blur-sm"
+      >
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {liveRegionMessage}
+        </div>
         <DialogHeader className="border-b border-brand-purple pb-4">
           <DialogTitle className="flex items-center justify-between text-lg font-semibold text-white">
             <span>Inbox</span>
@@ -200,6 +277,9 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
               {unreadCount} unread
             </Badge>
           </DialogTitle>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Review inbox messages and manage read status.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="mt-4 flex h-[70vh] flex-col gap-4 lg:flex-row">
@@ -251,7 +331,13 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
               </div>
 
               <ScrollArea className="flex-1">
-                <div className="space-y-2 p-3" role="listbox" aria-label="Inbox messages">
+                <div
+                  ref={emailListRef}
+                  className="space-y-2 p-3"
+                  role="listbox"
+                  aria-label="Inbox messages"
+                  aria-activedescendant={activeOptionId ?? undefined}
+                >
                   {isLoading ? (
                     <LoadingList />
                   ) : emails.length === 0 ? (
@@ -259,12 +345,15 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                       No emails yet. Advance the week to generate updates.
                     </div>
                   ) : (
-                    emails.map((email) => (
+                    emails.map((email, index) => (
                       <button
                         key={email.id}
                         type="button"
+                        id={`inbox-option-${email.id}`}
+                        data-email-index={index}
                         role="option"
                         aria-selected={selectedEmailId === email.id}
+                        onKeyDown={(event) => handleEmailKeyDown(event, index)}
                         className={cn(
                           'w-full rounded-lg border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-brand-burgundy',
                           selectedEmailId === email.id

@@ -20,7 +20,7 @@ export function withAdmin<P extends Record<string, any>>(Wrapped: ComponentType<
     }, [loading, isAdmin, setLocation]);
 
     if (loading) {
-      return <div className="p-4 text-white">Checking access…</div>;
+      return <div className="p-4 text-white">Checking access...</div>;
     }
 
     if (!isAdmin) {

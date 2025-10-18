@@ -21,6 +21,9 @@ export function InboxWidget() {
         role="button"
         tabIndex={0}
         aria-label="Open inbox"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls="inbox-modal"
         onClick={() => setOpen(true)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -35,9 +38,12 @@ export function InboxWidget() {
             <Inbox className="h-5 w-5 text-brand-pink" />
             Inbox
           </CardTitle>
-          <Badge className="bg-brand-burgundy text-white">
-            {unreadLoading ? '—' : `${unreadCount} unread`}
+          <Badge className="bg-brand-burgundy text-white" aria-hidden="true">
+            {unreadLoading ? "..." : `${unreadCount} unread`}
           </Badge>
+          <span className="sr-only" aria-live="polite" aria-atomic="true">
+            {unreadLoading ? "Loading unread messages" : `${unreadCount} unread messages`}
+          </span>
         </CardHeader>
         <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
           {isLoading ? (
@@ -86,7 +92,12 @@ export function InboxWidget() {
         </CardContent>
       </Card>
 
-      <InboxModal open={open} onOpenChange={setOpen} initialEmailId={emails[0]?.id ?? null} />
+      <InboxModal
+        open={open}
+        onOpenChange={setOpen}
+        initialEmailId={emails[0]?.id ?? null}
+        contentId="inbox-modal"
+      />
     </>
   );
 }

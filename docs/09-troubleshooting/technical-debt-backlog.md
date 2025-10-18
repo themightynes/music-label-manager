@@ -10,9 +10,9 @@
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: October 19, 2025
 - **Total Items**: 28
-- **Completed**: 21
+- **Completed**: 22
 - **In Progress**: 0
-- **Pending**: 7
+- **Pending**: 6
 
 ---
 
@@ -339,20 +339,19 @@ Some interactive elements lack clear focus management and aria attributes (Inbox
 
 ## 🟡 **High Priority Items**
 
-### [ ] Comment 27: Components bypass apiRequest
-**Priority**: 🟡 High
-**Impact**: API consistency, error handling
-**Effort**: Low
+### ~~Comment 27: Components bypass apiRequest~~ 🟠.
+**Status**: 🟠. **COMPLETED** (October 19, 2025)
 
-Some hooks/components bypass apiRequest and use fetch directly; use unified client for headers, errors.
+Audited remaining direct API fetches and migrated the developer markets editor onto the shared `apiRequest` helper for consistent headers, logging, and retry behaviour.
 
-**Action**: Replace direct fetch calls in `client/src/auth/useCurrentUser.ts` (and any others) with `apiRequest`. Audit components for fetch usage and migrate to the shared client.
+**Resolution**:
+- Swapped the `/api/dev/markets-config` GET/POST calls to `apiRequest`, applying Clerk auth tokens and request timeouts automatically.
+- Centralised the fallback JSON payload as `DEFAULT_MARKET_CONFIG` so the editor still works offline.
+- Verified other `/api` consumers already rely on `apiRequest`, leaving only static `/data` fetches in the client.
 
 **Relevant Files**:
-- [client/src/auth/useCurrentUser.ts](client/src/auth/useCurrentUser.ts)
-- [client/src/components/ArtistDiscoveryModal.tsx](client/src/components/ArtistDiscoveryModal.tsx)
-- [client/src/components/ProjectCreationModal.tsx](client/src/components/ProjectCreationModal.tsx)
-- [client/src/pages/RecordingSessionPage.tsx](client/src/pages/RecordingSessionPage.tsx)
+- [client/src/pages/MarketsEditor.tsx](client/src/pages/MarketsEditor.tsx)
+
 
 ---
 
@@ -463,14 +462,14 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 1 item (down from 3)
+- 🟡 High: 0 items (down from 3)
 - 🟢 Medium: 6 items (down from 17)
 - 🔵 Low: 0 items (down from 1)
 
 ### By Status
-- ✅ Completed: 21 items (75.0%)
+- ✅ Completed: 22 items (78.6%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 7 items (25.0%)
+- 📋 Pending: 6 items (21.4%)
 
 ---
 

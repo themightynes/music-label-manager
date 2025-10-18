@@ -323,7 +323,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                       <div className="flex-1">
                         <div className="font-medium text-white">{save.name}</div>
                         <div className="text-xs text-white/70">
-                          Week {save.week} • ${typeof money === 'number' ? money.toLocaleString() : '—'} • Rep {typeof reputation === 'number' ? reputation : '—'}
+                          Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
                         </div>
                         <div className="text-xs text-white/50">
                           Saved {formatDate(save.updatedAt)}
@@ -379,7 +379,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                       <div className="flex-1">
                         <div className="font-medium text-white">{save.name}</div>
                         <div className="text-xs text-white/70">
-                          Week {save.week} • ${typeof money === 'number' ? money.toLocaleString() : '—'} • Rep {typeof reputation === 'number' ? reputation : '—'}
+                          Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
                         </div>
                         <div className="text-xs text-white/50">
                           Saved {formatDate(save.updatedAt)}
