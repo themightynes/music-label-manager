@@ -15,6 +15,85 @@ import { GenreSelectionModal } from './GenreSelectionModal';
 import { toast } from '@/hooks/use-toast';
 import logger from '@/lib/logger';
 
+function createAbortError(): Error {
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function waitWithSignal(delay: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(createAbortError());
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (signal) {
+        signal.removeEventListener('abort', onAbort);
+      }
+      resolve();
+    }, delay);
+
+    const onAbort = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', onAbort);
+      reject(createAbortError());
+    };
+
+    if (signal) {
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+  });
+}
+
+function getBackoffDelay(attempt: number, baseDelay: number): number {
+  const exponential = baseDelay * Math.pow(2, attempt - 1);
+  const jitter = Math.random() * baseDelay;
+  return Math.min(exponential + jitter, baseDelay * 8);
+}
+
+interface RetryOptions {
+  attempts: number;
+  baseDelay?: number;
+  signal?: AbortSignal;
+  onRetry?: (attempt: number, delay: number, error: unknown) => void;
+}
+
+async function retryWithBackoff<T>(operation: () => Promise<T>, options: RetryOptions): Promise<T> {
+  const { attempts, baseDelay = 500, signal, onRetry } = options;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    if (signal?.aborted) {
+      throw createAbortError();
+    }
+
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) {
+        break;
+      }
+
+      const delay = getBackoffDelay(attempt, baseDelay);
+      onRetry?.(attempt, delay, error);
+      await waitWithSignal(delay, signal);
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+
+  throw new Error('Retry attempts exhausted');
+}
+
 interface AROfficeProps {
   gameId: string;
   gameState: GameState;
@@ -68,57 +147,80 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
 
   // Load discovered artists after an operation completes (true -> false transition)
   const prevArUsedRef = useRef<boolean>(!!gameState.arOfficeSlotUsed);
-  const retryAttemptRef = useRef<number>(0);
+  const retryControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const prev = prevArUsedRef.current;
     const curr = !!gameState.arOfficeSlotUsed;
 
-    // Log A&R operation lifecycle for debugging
     if (prev !== curr) {
-      console.log(`[A&R] Operation state changed: ${prev} -> ${curr}`);
+      logger.debug(`[A&R] Operation state changed: ${prev} -> ${curr}`);
     }
 
     if (prev === true && curr === false) {
       logger.debug('[A&R] Operation completed, loading discovered artists');
       setLoading(true);
-      setError(null); // Clear error state before starting retry sequence
-      retryAttemptRef.current = 0;
+      setError(null);
 
-      const loadWithRetry = async (attempt = 1): Promise<void> => {
-        try {
-          await loadDiscoveredArtists();
-          logger.debug('[A&R] Successfully loaded discovered artists');
-          setError(null); // Clear error state on successful load
-          setLoading(false); // Clear loading state on successful load
-        } catch (error) {
-          logger.error(`[A&R] Failed to load discovered artists (attempt ${attempt}):`, error);
+      const controller = new AbortController();
+      if (retryControllerRef.current) {
+        retryControllerRef.current.abort();
+      }
+      retryControllerRef.current = controller;
 
-          if (attempt < 3) {
-            const delay = 500 * attempt; // Exponential backoff: 500ms, 1000ms, 1500ms
-            logger.debug(`[A&R] Retrying in ${delay}ms...`);
-            setTimeout(() => loadWithRetry(attempt + 1), delay);
-          } else {
-            logger.error('[A&R] All retry attempts failed');
-            const errorMessage = 'Failed to load discovered artists after multiple attempts';
-            setError(errorMessage);
-            setLoading(false); // Clear loading state after final retry
-            toast({
-              title: "Failed to load artists",
-              description: "Unable to load discovered artists after multiple attempts. Please try again.",
-              variant: "destructive",
-              duration: 5000,
-            });
+      retryWithBackoff(() => loadDiscoveredArtists(), {
+        attempts: 3,
+        baseDelay: 500,
+        signal: controller.signal,
+        onRetry: (attempt, delay, error) => {
+          logger.warn(`[A&R] Failed to load discovered artists (attempt ${attempt}):`, error);
+          logger.debug(`[A&R] Retrying in ${Math.round(delay)}ms...`);
+        },
+      })
+        .then(() => {
+          if (controller.signal.aborted) {
+            logger.debug('[A&R] Retry sequence aborted before completion');
+            return;
           }
-        }
-      };
+          logger.debug('[A&R] Successfully loaded discovered artists');
+          setError(null);
+        })
+        .catch((error) => {
+          if (isAbortError(error)) {
+            logger.debug('[A&R] Retry sequence cancelled');
+            return;
+          }
 
-      loadWithRetry();
+          logger.error('[A&R] All retry attempts failed', error);
+          const errorMessage = 'Failed to load discovered artists after multiple attempts';
+          setError(errorMessage);
+          toast({
+            title: "Failed to load artists",
+            description: "Unable to load discovered artists after multiple attempts. Please try again.",
+            variant: "destructive",
+            duration: 5000,
+          });
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
+          if (retryControllerRef.current === controller) {
+            retryControllerRef.current = null;
+          }
+        });
     }
 
     prevArUsedRef.current = curr;
+
+    return () => {
+      if (retryControllerRef.current) {
+        retryControllerRef.current.abort();
+        retryControllerRef.current = null;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.arOfficeSlotUsed]);
+  }, [gameState.arOfficeSlotUsed, loadDiscoveredArtists, toast]);
 
   // Align the displayed sourcing mode with actual operation state
   // When operation is active, show the mode; when not, clear selection

@@ -8,15 +8,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useGameStore } from '@/store/gameStore';
 import { apiRequest } from '@/lib/queryClient';
-
-// Base API URL - adjust if needed for your environment
-const API_BASE = '';
+import { apiPaths } from '@/lib/apiPaths';
 
 /**
  * Helper function to make API requests with error handling
  */
 async function fetchAnalytics(url: string) {
-  const response = await apiRequest('GET', url);
+  const response = await apiRequest('GET', url, undefined, { retry: true });
   return response.json();
 }
 
@@ -25,18 +23,25 @@ async function fetchAnalytics(url: string) {
  */
 export function useArtistROI(artistId: string | undefined) {
   const gameState = useGameStore((state: any) => state.gameState);
+
+  const queryKey = [
+    'analytics:artist-roi',
+    gameState?.id ?? null,
+    artistId ?? null,
+  ] as const;
   
   return useQuery({
-    queryKey: ['artist-roi', artistId, gameState?.id],
+    queryKey,
     queryFn: () => {
       if (!artistId || !gameState?.id) {
         throw new Error('Missing artist ID or game ID');
       }
-      return fetchAnalytics(`${API_BASE}/api/analytics/artist/${artistId}/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(apiPaths.analytics.artistRoi(gameState.id, artistId));
     },
     enabled: !!artistId && !!gameState?.id,
     staleTime: 60000, // 1 minute
     gcTime: 300000, // 5 minutes (formerly cacheTime)
+    retry: 1,
   });
 }
 
@@ -45,18 +50,25 @@ export function useArtistROI(artistId: string | undefined) {
  */
 export function useProjectROI(projectId: string | undefined) {
   const gameState = useGameStore((state: any) => state.gameState);
+
+  const queryKey = [
+    'analytics:project-roi',
+    gameState?.id ?? null,
+    projectId ?? null,
+  ] as const;
   
   return useQuery({
-    queryKey: ['project-roi', projectId, gameState?.id],
+    queryKey,
     queryFn: () => {
       if (!projectId || !gameState?.id) {
         throw new Error('Missing project ID or game ID');
       }
-      return fetchAnalytics(`${API_BASE}/api/analytics/project/${projectId}/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(apiPaths.analytics.projectRoi(gameState.id, projectId));
     },
     enabled: !!projectId && !!gameState?.id,
     staleTime: 60000, // 1 minute
     gcTime: 300000, // 5 minutes
+    retry: 1,
   });
 }
 
@@ -65,18 +77,25 @@ export function useProjectROI(projectId: string | undefined) {
  */
 export function useReleaseROI(releaseId: string | undefined) {
   const gameState = useGameStore((state: any) => state.gameState);
+
+  const queryKey = [
+    'analytics:release-roi',
+    gameState?.id ?? null,
+    releaseId ?? null,
+  ] as const;
   
   return useQuery({
-    queryKey: ['release-roi', releaseId, gameState?.id],
+    queryKey,
     queryFn: () => {
       if (!releaseId || !gameState?.id) {
         throw new Error('Missing release ID or game ID');
       }
-      return fetchAnalytics(`${API_BASE}/api/analytics/release/${releaseId}/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(apiPaths.analytics.releaseRoi(gameState.id, releaseId));
     },
     enabled: !!releaseId && !!gameState?.id,
     staleTime: 120000, // 2 minutes
     gcTime: 300000, // 5 minutes
+    retry: 1,
   });
 }
 
@@ -85,18 +104,21 @@ export function useReleaseROI(releaseId: string | undefined) {
  */
 export function usePortfolioROI() {
   const gameState = useGameStore((state: any) => state.gameState);
+
+  const queryKey = ['analytics:portfolio-roi', gameState?.id ?? null] as const;
   
   return useQuery({
-    queryKey: ['portfolio-roi', gameState?.id],
+    queryKey,
     queryFn: () => {
       if (!gameState?.id) {
         throw new Error('Missing game ID');
       }
-      return fetchAnalytics(`${API_BASE}/api/analytics/portfolio/roi?gameId=${gameState.id}`);
+      return fetchAnalytics(apiPaths.analytics.portfolioRoi(gameState.id));
     },
     enabled: !!gameState?.id,
     staleTime: 30000, // 30 seconds for dashboard
     gcTime: 180000, // 3 minutes
+    retry: 2,
   });
 }
 

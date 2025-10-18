@@ -7,8 +7,8 @@
 import { execSync } from 'child_process';
 
 const CONTAINER_NAME = 'music-label-test-db';
-const POSTGRES_PASSWORD = 'testpassword';
-const POSTGRES_USER = 'testuser';
+const POSTGRES_PASSWORD = 'postgres';
+const POSTGRES_USER = 'postgres';
 const POSTGRES_DB = 'music_label_test';
 const HOST_PORT = '5433';
 const CONTAINER_PORT = '5432';

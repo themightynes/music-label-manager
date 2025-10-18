@@ -10,6 +10,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { LabelCreationModal } from '@/components/LabelCreationModal';
 import type { LabelData } from '@shared/types/gameTypes';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 export default function GamePage() {
   const [showCampaignResults, setShowCampaignResults] = useState(false);
@@ -152,9 +153,37 @@ export default function GamePage() {
   };
 
   const handleLabelModalOpenChange = async (open: boolean) => {
-    // If modal is closing (open becomes false) and we have a game but no label, create default label (only for new games)
     if (!open && gameState && !(gameState as any).musicLabel && gameState.currentWeek === 1) {
-      await createDefaultLabelForGame(gameState.id);
+      const activeGameId = gameState.id;
+      toast({
+        title: 'Create your label first',
+        description: 'Finish creating your label before starting week one. You can generate a starter label if you are unsure.',
+        action: (
+          <ToastAction
+            altText="Create default label"
+            onClick={async () => {
+              try {
+                await createDefaultLabelForGame(activeGameId);
+                setShowLabelModal(false);
+                toast({
+                  title: 'Default label created',
+                  description: 'A starter label has been added. You can refine the details later.',
+                });
+              } catch (error) {
+                console.error('Failed to create default label from toast action:', error);
+                toast({
+                  title: 'Could not create default label',
+                  description: 'Please try again or enter your own label details.',
+                  variant: 'destructive',
+                });
+              }
+            }}
+          >
+            Use default label
+          </ToastAction>
+        ),
+      });
+      return;
     }
     setShowLabelModal(open);
   };

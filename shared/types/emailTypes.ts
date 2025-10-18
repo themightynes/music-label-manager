@@ -2,7 +2,8 @@ export type EmailCategory =
   | "chart"
   | "financial"
   | "artist"
-  | "ar";
+  | "ar"
+  | "other";
 
 export interface EmailMetadataBase {
   [key: string]: unknown;

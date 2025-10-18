@@ -20,7 +20,6 @@ interface ExecutiveAction {
 
 interface SelectionSummaryProps {
   selectedActions: string[];
-  actions: any[]; // Keep for now, will be removed later
   onRemoveAction: (actionId: string) => void;
   onReorderActions: (startIndex: number, endIndex: number) => void;
   onAdvanceWeek: () => void;
@@ -71,7 +70,6 @@ function parseSelectedAction(id: string):
 
 export function SelectionSummary({
   selectedActions,
-  actions,
   onRemoveAction,
   onReorderActions,
   onAdvanceWeek,

@@ -14,39 +14,12 @@ interface WeekPlannerProps {
   isAdvancing: boolean;
 }
 
-interface WeeklyAction {
-  id: string;
-  name: string;
-  type: string;
-  icon: string;
-  description?: string;
-  role_id?: string;
-  category: string;
-  project_type?: string;
-  campaign_type?: string;
-  details?: {
-    cost: string;
-    duration: string;
-    prerequisites: string;
-    outcomes: string[];
-    benefits: string[];
-  };
-  recommendations?: {
-    urgent_when?: Record<string, any>;
-    recommended_when?: Record<string, any>;
-    reasons?: Record<string, string>;
-  };
-  firstMeetingId?: string;
-  availableMeetings?: number;
-}
-
 export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
   const { gameState, selectedActions, removeAction, reorderActions, selectAction, getAROfficeStatus } = useGameStore();
   const { gameId } = useGameContext();
   const [, setLocation] = useLocation();
 
   // Executive meetings removed - keep empty structure for SelectionSummary compatibility
-  const weeklyActions: WeeklyAction[] = [];
   const loading = false;
   const error: string | null = null;
 
@@ -110,7 +83,6 @@ export function WeekPlanner({ onAdvanceWeek, isAdvancing }: WeekPlannerProps) {
             <div className="lg:col-span-1">
               <SelectionSummary
                 selectedActions={selectedActions}
-                actions={weeklyActions}
                 onRemoveAction={removeAction}
                 onReorderActions={reorderActions}
                 onAdvanceWeek={onAdvanceWeek}

@@ -20,6 +20,7 @@ export function InboxWidget() {
       <Card
         role="button"
         tabIndex={0}
+        aria-label="Open inbox"
         onClick={() => setOpen(true)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -114,6 +115,8 @@ function formatCategory(category: string) {
       return 'Artist';
     case 'ar':
       return 'A&R';
+    case 'other':
+      return 'Other';
     default:
       return 'Update';
   }

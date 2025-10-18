@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { ClerkProvider } from '@clerk/clerk-react';
+import type { Appearance } from '@clerk/types';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import App from "./App";
 import "./lib/fontawesome";
@@ -22,7 +23,6 @@ const clerkAppearance = {
     colorText: '#F7F4F4',
     colorInputBackground: '#2a1821',
     colorInputText: '#F7F4F4',
-    colorInputBorder: '#4E324C',
     borderRadius: '0.75rem',
     fontFamily: 'Inter, system-ui, sans-serif',
   },
@@ -41,10 +41,10 @@ const clerkAppearance = {
     navbar: 'bg-brand-dark border-b border-white/10',
     modalBackdrop: 'backdrop-blur-sm bg-black/70',
   },
-};
+} satisfies Appearance;
 
 createRoot(document.getElementById("root")!).render(
-  <ClerkProvider publishableKey={publishableKey} appearance={clerkAppearance as any}>
+  <ClerkProvider publishableKey={publishableKey} appearance={clerkAppearance}>
     <App />
   </ClerkProvider>
 );

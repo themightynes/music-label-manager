@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGameStore } from '@/store/gameStore';
 import { apiRequest } from '@/lib/queryClient';
-import type { EmailRecord, EmailCategory } from '@shared/types/emailTypes';
+import { apiPaths, type EmailListQueryParams } from '@/lib/apiPaths';
+import logger from '@/lib/logger';
+import type { EmailCategory, EmailRecord } from '@shared/types/emailTypes';
 
-const VALID_EMAIL_CATEGORIES: EmailCategory[] = ['chart', 'financial', 'artist', 'ar'];
+const VALID_EMAIL_CATEGORIES: EmailCategory[] = ['chart', 'financial', 'artist', 'ar', 'other'];
 
 const LEGACY_CATEGORY_MAP: Record<string, EmailCategory> = {
   financial_report: 'financial',
@@ -16,41 +18,15 @@ const LEGACY_CATEGORY_MAP: Record<string, EmailCategory> = {
   artist_discovery: 'ar',
 };
 
-export interface EmailListQuery {
-  isRead?: boolean;
-  category?: EmailCategory;
-  week?: number;
-  limit?: number;
-  offset?: number;
-}
+const EMAIL_LIST_SCOPE = 'emails:list';
+const EMAIL_UNREAD_SCOPE = 'emails:unread-count';
+
+export type EmailListQuery = EmailListQueryParams;
 
 export interface EmailListResponse {
   emails: EmailRecord<Record<string, unknown>>[];
   total: number;
   unreadCount: number;
-}
-
-function buildQueryString(params: EmailListQuery): string {
-  const searchParams = new URLSearchParams();
-
-  if (typeof params.limit === 'number') {
-    searchParams.set('limit', String(params.limit));
-  }
-  if (typeof params.offset === 'number') {
-    searchParams.set('offset', String(params.offset));
-  }
-  if (typeof params.week === 'number') {
-    searchParams.set('week', String(params.week));
-  }
-  if (typeof params.isRead === 'boolean') {
-    searchParams.set('isRead', params.isRead ? 'true' : 'false');
-  }
-  if (params.category) {
-    searchParams.set('category', params.category);
-  }
-
-  const queryString = searchParams.toString();
-  return queryString ? `?${queryString}` : '';
 }
 
 function normalizeEmail(email: any): EmailRecord<Record<string, unknown>> {
@@ -70,7 +46,7 @@ function normalizeEmail(email: any): EmailRecord<Record<string, unknown>> {
   const mappedCategory = rawCategory ? LEGACY_CATEGORY_MAP[rawCategory] ?? rawCategory : null;
   const category: EmailCategory = mappedCategory && VALID_EMAIL_CATEGORIES.includes(mappedCategory as EmailCategory)
     ? (mappedCategory as EmailCategory)
-    : 'financial';
+    : 'other';
 
   return {
     id: email?.id ?? '',
@@ -91,25 +67,60 @@ function normalizeEmail(email: any): EmailRecord<Record<string, unknown>> {
 
 export function useEmails(params: EmailListQuery = {}) {
   const gameId = useGameStore((state) => state.gameState?.id);
-  const memoizedParams = useMemo(() => ({ ...params }), [JSON.stringify(params)]);
+
+  const limitFilter = typeof params.limit === 'number' ? params.limit : null;
+  const offsetFilter = typeof params.offset === 'number' ? params.offset : null;
+  const weekFilter = typeof params.week === 'number' ? params.week : null;
+  const isReadFilter = typeof params.isRead === 'boolean' ? params.isRead : null;
+  const categoryFilter =
+    params.category && VALID_EMAIL_CATEGORIES.includes(params.category)
+      ? params.category
+      : null;
+
+  const normalizedParams = useMemo<EmailListQueryParams>(() => {
+    const next: EmailListQueryParams = {};
+    if (limitFilter !== null) next.limit = limitFilter;
+    if (offsetFilter !== null) next.offset = offsetFilter;
+    if (weekFilter !== null) next.week = weekFilter;
+    if (isReadFilter !== null) next.isRead = isReadFilter;
+    if (categoryFilter !== null) next.category = categoryFilter;
+    return next;
+  }, [limitFilter, offsetFilter, weekFilter, isReadFilter, categoryFilter]);
+
+  const queryKey = useMemo(
+    () =>
+      [
+        EMAIL_LIST_SCOPE,
+        gameId ?? null,
+        limitFilter,
+        offsetFilter,
+        weekFilter,
+        isReadFilter,
+        categoryFilter,
+      ] as const,
+    [gameId, limitFilter, offsetFilter, weekFilter, isReadFilter, categoryFilter],
+  );
 
   return useQuery<EmailListResponse>({
-    queryKey: ['emails', gameId, memoizedParams],
+    queryKey,
     enabled: Boolean(gameId),
     staleTime: 0, // Always refetch to ensure filters work correctly
+    retry: false,
     queryFn: async () => {
       if (!gameId) {
         return { emails: [], total: 0, unreadCount: 0 };
       }
 
-      const queryString = buildQueryString(memoizedParams);
-      console.log('[useEmails] Fetching emails with params:', memoizedParams);
-      console.log('[useEmails] Query string:', queryString);
+      const requestUrl = apiPaths.emails.list(gameId, normalizedParams);
+      logger.debug('[useEmails] Fetching emails', { requestUrl, params: normalizedParams });
 
-      const response = await apiRequest('GET', `/api/game/${gameId}/emails${queryString}`);
+      const response = await apiRequest('GET', requestUrl, undefined, { retry: true });
       const data = await response.json();
 
-      console.log('[useEmails] Received response:', { total: data?.total, emailCount: data?.emails?.length });
+      logger.debug('[useEmails] Received response', {
+        total: data?.total,
+        emailCount: data?.emails?.length,
+      });
 
       return {
         emails: Array.isArray(data?.emails) ? data.emails.map(normalizeEmail) : [],
@@ -123,8 +134,13 @@ export function useEmails(params: EmailListQuery = {}) {
 export function useUnreadEmailCount() {
   const gameId = useGameStore((state) => state.gameState?.id);
 
+  const queryKey = useMemo(
+    () => [EMAIL_UNREAD_SCOPE, gameId ?? null] as const,
+    [gameId],
+  );
+
   return useQuery<{ count: number }>({
-    queryKey: ['emails', gameId, 'unread-count'],
+    queryKey,
     enabled: Boolean(gameId),
     staleTime: 15_000,
     queryFn: async () => {
@@ -132,7 +148,9 @@ export function useUnreadEmailCount() {
         return { count: 0 };
       }
 
-      const response = await apiRequest('GET', `/api/game/${gameId}/emails/unread-count`);
+      const response = await apiRequest('GET', apiPaths.emails.unreadCount(gameId), undefined, {
+        retry: true,
+      });
       return response.json();
     },
   });
@@ -148,17 +166,26 @@ export function useMarkEmailRead() {
         throw new Error('No game selected');
       }
 
-      const response = await apiRequest('PATCH', `/api/game/${gameId}/emails/${emailId}/read`, {
+      const response = await apiRequest(
+        'PATCH',
+        apiPaths.emails.markRead(gameId, emailId),
+        {
         isRead,
-      });
+        },
+      );
 
       const data = await response.json();
       return normalizeEmail(data?.email);
     },
     onSuccess: () => {
       if (!gameId) return;
-      queryClient.invalidateQueries({ queryKey: ['emails', gameId] });
-      queryClient.invalidateQueries({ queryKey: ['emails', gameId, 'unread-count'] });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === EMAIL_LIST_SCOPE && query.queryKey[1] === gameId,
+      });
+      queryClient.invalidateQueries({
+        queryKey: [EMAIL_UNREAD_SCOPE, gameId],
+      });
     },
   });
 }
@@ -173,13 +200,18 @@ export function useDeleteEmail() {
         throw new Error('No game selected');
       }
 
-      const response = await apiRequest('DELETE', `/api/game/${gameId}/emails/${emailId}`);
+      const response = await apiRequest('DELETE', apiPaths.emails.remove(gameId, emailId));
       return response.json();
     },
     onSuccess: () => {
       if (!gameId) return;
-      queryClient.invalidateQueries({ queryKey: ['emails', gameId] });
-      queryClient.invalidateQueries({ queryKey: ['emails', gameId, 'unread-count'] });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === EMAIL_LIST_SCOPE && query.queryKey[1] === gameId,
+      });
+      queryClient.invalidateQueries({
+        queryKey: [EMAIL_UNREAD_SCOPE, gameId],
+      });
     },
   });
 }

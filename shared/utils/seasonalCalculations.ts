@@ -152,3 +152,63 @@ export function getWeeksInQuarter(quarter: string): number[] {
 export function isValidWeek(week: number): boolean {
   return week >= 1 && week <= 52;
 }
+export interface WeekDateRange {
+  start: Date;
+  end: Date;
+}
+
+export interface WeekDateRangeOptions {
+  /** Day the week starts on: 0 = Sunday, 1 = Monday, ... */
+  weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+}
+
+const DEFAULT_WEEK_START_DAY: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0;
+
+export function getWeekDateRange(
+  startYear: number,
+  week: number,
+  options: WeekDateRangeOptions = {}
+): WeekDateRange {
+  const weekStartsOn = options.weekStartsOn ?? DEFAULT_WEEK_START_DAY;
+  const safeWeek = Math.max(1, Math.floor(week));
+  const year = Number.isFinite(startYear) ? Math.trunc(startYear) : new Date().getFullYear();
+
+  const yearStart = new Date(year, 0, 1);
+  const firstWeekStart = new Date(yearStart);
+  const dayOfWeek = yearStart.getDay();
+  const offset = (7 + dayOfWeek - weekStartsOn) % 7;
+  firstWeekStart.setDate(yearStart.getDate() - offset);
+
+  const startDate = new Date(firstWeekStart);
+  startDate.setDate(firstWeekStart.getDate() + (safeWeek - 1) * 7);
+
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6);
+
+  return { start: startDate, end: endDate };
+}
+
+export function formatWeekEndDate(
+  startYear: number,
+  week: number,
+  options: WeekDateRangeOptions = {}
+): string {
+  const { end } = getWeekDateRange(startYear, week, options);
+  const month = String(end.getMonth() + 1).padStart(2, '0');
+  const day = String(end.getDate()).padStart(2, '0');
+  const year = String(end.getFullYear()).slice(-2);
+  return `${month}/${day}/${year}`;
+}
+
+export function getWeekDates(
+  startYear: number,
+  week: number,
+  options: WeekDateRangeOptions = {}
+): Date[] {
+  const { start } = getWeekDateRange(startYear, week, options);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date;
+  });
+}

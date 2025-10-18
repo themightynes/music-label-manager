@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getWeekDates as getWeekDatesForYear, formatWeekEndDate } from '@shared/utils/seasonalCalculations';
 
 interface WeekPickerProps {
   selectedWeek: number;
@@ -25,34 +26,14 @@ export const WeekPicker = ({
   startYear
 }: WeekPickerProps) => {
   // Sunday-based week calculation to match MusicCalendar
-  const getSundayBasedWeekDates = (weekNumber: number): Date[] => {
-    if (!startYear) return [];
-    // Start from Jan 1st of the start year
-    const yearStart = new Date(startYear, 0, 1);
+  const resolvedStartYear = startYear ?? new Date().getFullYear();
 
-    // Find the first Sunday of the year
-    const firstSunday = new Date(yearStart);
-    const dayOfWeek = yearStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    if (dayOfWeek !== 0) {
-      firstSunday.setDate(yearStart.getDate() + (7 - dayOfWeek));
-    }
-
-    // Calculate the start of the selected week (weeks start on Sunday)
-    const weekStartDate = new Date(firstSunday);
-    weekStartDate.setDate(firstSunday.getDate() + (weekNumber - 1) * 7);
-
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStartDate);
-      date.setDate(weekStartDate.getDate() + i);
-      dates.push(date);
-    }
-    return dates;
+  const getWeekDates = (weekNumber: number): Date[] => {
+    return getWeekDatesForYear(resolvedStartYear, weekNumber);
   };
 
   const formatWeekLabel = (week: number) => {
-    if (!startYear) return String(week);
-    const weekDates = getSundayBasedWeekDates(week);
+    const weekDates = getWeekDates(week);
     if (weekDates.length === 0) return String(week);
 
     const date = weekDates[0]; // Sunday (start of week)
@@ -62,18 +43,7 @@ export const WeekPicker = ({
     return `M${month}W${weekOfMonth}`;
   };
 
-  const getWeekEndingDate = (week: number) => {
-    if (!startYear) return null;
-    const weekDates = getSundayBasedWeekDates(week);
-    if (weekDates.length === 0) return null;
-
-    const weekEndDate = weekDates[6]; // Saturday (end of week)
-    const month = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-    const day = String(weekEndDate.getDate()).padStart(2, '0');
-    const year = String(weekEndDate.getFullYear()).slice(-2);
-
-    return `${month}/${day}/${year}`;
-  };
+  const getWeekEndingDate = (week: number) => formatWeekEndDate(resolvedStartYear, week);
   return (
     <TooltipProvider>
       <div className={cn("space-y-4", className)}>

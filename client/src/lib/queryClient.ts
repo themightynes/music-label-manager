@@ -291,37 +291,57 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const token = await getClerkToken();
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+
+/**
+ * Query key contract (when using the shared `getQueryFn` default):
+ * - `queryKey[0]` MUST be the fully qualified request URL (use helpers in `apiPaths.ts`)
+ * - Additional elements may contain metadata used for cache scoping or invalidation
+ * - `getQueryFn` will route all requests through `apiRequest` for consistent auth, retry, and logging
+ */
+type QueryKeyWithUrl = readonly [string, ...unknown[]];
+
+function extractUrlFromQueryKey(queryKey: readonly unknown[]): string {
+  const [url] = queryKey as QueryKeyWithUrl;
+  if (typeof url !== "string" || url.length === 0) {
+    throw new Error("Query key must provide the request URL as the first element.");
+  }
+  return url;
+}
+
+export function getQueryFn<T>({ on401: unauthorizedBehavior }: { on401: UnauthorizedBehavior }): QueryFunction<T> {
+  return async ({ queryKey }) => {
+    const url = extractUrlFromQueryKey(queryKey);
+    const shouldReturnNull = unauthorizedBehavior === "returnNull";
+
+    try {
+      const response = await apiRequest("GET", url, undefined, {
+        silent401: shouldReturnNull,
+        retry: true,
+      });
+      return (await response.json()) as T;
+    } catch (error) {
+      if (shouldReturnNull && (error as any)?.status === 401) {
+        return null as unknown as T;
+      }
+      throw error;
     }
-
-    const res = await fetch(queryKey.join("/") as string, {
-      headers: Object.keys(headers).length > 0 ? headers : undefined,
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      refetchOnWindowFocus: true,
+      staleTime: 60_000,
+      retry: (failureCount, error) => {
+        const status = (error as any)?.status;
+        if (typeof status === "number" && status < 500 && status !== 429) {
+          return false;
+        }
+        return failureCount < 3;
+      },
     },
     mutations: {
       retry: false,

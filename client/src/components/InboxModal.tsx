@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -30,11 +30,15 @@ import {
   FinancialEmail,
 } from './email-templates';
 
+const CATEGORY_STORAGE_KEY = 'inbox:lastCategory';
+const UNREAD_STORAGE_KEY = 'inbox:showUnreadOnly';
+
 const CATEGORY_LABELS: Record<EmailCategory, string> = {
   chart: 'Chart',
   financial: 'Financial',
   artist: 'Artist',
   ar: 'A&R',
+  other: 'Other',
 };
 
 const CATEGORY_OPTIONS: { value: 'all' | EmailCategory; label: string }[] = [
@@ -43,6 +47,7 @@ const CATEGORY_OPTIONS: { value: 'all' | EmailCategory; label: string }[] = [
   { value: 'financial', label: 'Financial' },
   { value: 'artist', label: 'Artist' },
   { value: 'ar', label: 'A&R' },
+  { value: 'other', label: 'Other' },
 ];
 
 const TEMPLATE_MAP: Record<EmailCategory, React.ComponentType<EmailTemplateProps>> = {
@@ -50,7 +55,46 @@ const TEMPLATE_MAP: Record<EmailCategory, React.ComponentType<EmailTemplateProps
   financial: FinancialEmail, // Handles financial reports and tier unlocks
   artist: ArtistEmail, // Handles tours and releases
   ar: AREmail, // Handles artist discovery and signing
+  other: DefaultEmailTemplate,
 };
+
+function isEmailCategory(value: unknown): value is EmailCategory {
+  return typeof value === 'string' && value in CATEGORY_LABELS;
+}
+
+function readStoredCategory(): 'all' | EmailCategory {
+  if (typeof window === 'undefined') {
+    return 'all';
+  }
+
+  const stored = window.localStorage.getItem(CATEGORY_STORAGE_KEY);
+  if (stored === 'all') {
+    return 'all';
+  }
+
+  if (isEmailCategory(stored)) {
+    return stored;
+  }
+
+  return 'all';
+}
+
+function readStoredUnread(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const stored = window.localStorage.getItem(UNREAD_STORAGE_KEY);
+  if (stored === 'true') {
+    return true;
+  }
+
+  if (stored === 'false') {
+    return false;
+  }
+
+  return false;
+}
 
 interface InboxModalProps {
   open: boolean;
@@ -59,8 +103,8 @@ interface InboxModalProps {
 }
 
 export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalProps) {
-  const [category, setCategory] = useState<'all' | EmailCategory>('all');
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [category, setCategory] = useState<'all' | EmailCategory>(() => readStoredCategory());
+  const [showUnreadOnly, setShowUnreadOnly] = useState(() => readStoredUnread());
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -84,8 +128,6 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
   useEffect(() => {
     if (!open) {
       setSelectedEmailId(null);
-      setCategory('all');
-      setShowUnreadOnly(false);
       return;
     }
 
@@ -106,6 +148,22 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
       return emails[0]?.id ?? null;
     });
   }, [open, emails, initialEmailId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(CATEGORY_STORAGE_KEY, category);
+  }, [category]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(UNREAD_STORAGE_KEY, showUnreadOnly ? 'true' : 'false');
+  }, [showUnreadOnly]);
 
   const selectedEmail = emails.find((email) => email.id === selectedEmailId) ?? null;
 
@@ -179,16 +237,21 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                     variant="ghost"
                     size="sm"
                     className="text-xs text-white/70 hover:text-white"
-                    onClick={() => refetch()}
+                    onClick={() => {
+                      if (!isFetching) {
+                        refetch();
+                      }
+                    }}
                     disabled={isFetching}
+                    aria-label="Refresh inbox"
                   >
-                    {isFetching ? 'Refreshing…' : 'Refresh'}
+                    {isFetching ? 'Refreshing...' : 'Refresh'}
                   </Button>
                 </div>
               </div>
 
               <ScrollArea className="flex-1">
-                <div className="space-y-2 p-3">
+                <div className="space-y-2 p-3" role="listbox" aria-label="Inbox messages">
                   {isLoading ? (
                     <LoadingList />
                   ) : emails.length === 0 ? (
@@ -200,6 +263,8 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                       <button
                         key={email.id}
                         type="button"
+                        role="option"
+                        aria-selected={selectedEmailId === email.id}
                         className={cn(
                           'w-full rounded-lg border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-brand-burgundy',
                           selectedEmailId === email.id
@@ -252,7 +317,7 @@ export function InboxModal({ open, onOpenChange, initialEmailId }: InboxModalPro
                   <div>
                     <h3 className="text-xl font-semibold text-white">{selectedEmail.subject}</h3>
                     <p className="text-xs text-white/60">
-                      {selectedEmail.sender} • {formatTimestamp(selectedEmail.createdAt)}
+                      {selectedEmail.sender} - {formatTimestamp(selectedEmail.createdAt)}
                     </p>
                   </div>
 

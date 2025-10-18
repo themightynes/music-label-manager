@@ -27,6 +27,7 @@ import { UserButton, useUser } from '@clerk/clerk-react';
 import { useIsAdmin } from '@/auth/useCurrentUser';
 import { toast } from '@/hooks/use-toast';
 import logger from '@/lib/logger';
+import { formatWeekEndDate } from '@shared/utils/seasonalCalculations';
 import {
   Home,
   Rocket,
@@ -209,27 +210,7 @@ export function GameSidebar({
                   {(() => {
                     const week = gameState?.currentWeek || 1;
                     const startYear = (gameState as any)?.musicLabel?.foundedYear || new Date().getFullYear();
-
-                    // Sunday-based week calculation to match MusicCalendar
-                    const yearStart = new Date(startYear, 0, 1);
-                    const firstSunday = new Date(yearStart);
-                    const dayOfWeek = yearStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
-                    if (dayOfWeek !== 0) {
-                      firstSunday.setDate(yearStart.getDate() + (7 - dayOfWeek));
-                    }
-
-                    const weekStartDate = new Date(firstSunday);
-                    weekStartDate.setDate(firstSunday.getDate() + (week - 1) * 7);
-
-                    // Get Saturday (end of week)
-                    const weekEndDate = new Date(weekStartDate);
-                    weekEndDate.setDate(weekStartDate.getDate() + 6);
-
-                    const month = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-                    const day = String(weekEndDate.getDate()).padStart(2, '0');
-                    const year = String(weekEndDate.getFullYear()).slice(-2);
-
-                    return `${month}/${day}/${year}`;
+                    return formatWeekEndDate(startYear, week);
                   })()}
                 </span>
                 <span className="text-green-400">${(gameState?.money || 0).toLocaleString()}</span>

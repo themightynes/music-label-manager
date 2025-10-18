@@ -7,6 +7,7 @@ import { Plus, Music, Mic2, Clock } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { cn } from '@/lib/utils';
 import { getCompletedCities, getTourMetadata } from '@/utils/tourHelpers';
+import { getWeekDateRange, getWeekDates as getWeekDatesForYear, formatWeekEndDate } from '@shared/utils/seasonalCalculations';
 
 interface CalendarEvent {
   id: string;
@@ -59,38 +60,16 @@ export function MusicCalendar({
   }, [gameState]);
 
   // Calculate all 7 days for the selected week (Sunday to Saturday)
-  const getWeekDates = useCallback((weekNumber: number): Date[] => {
-    if (!startYear) return [];
-    // Start from Jan 1st of the start year
-    const yearStart = new Date(startYear, 0, 1);
-
-    // Find the first Sunday of the year
-    const firstSunday = new Date(yearStart);
-    const dayOfWeek = yearStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    if (dayOfWeek !== 0) {
-      firstSunday.setDate(yearStart.getDate() + (7 - dayOfWeek));
-    }
-
-    // Calculate the start of the selected week (weeks start on Sunday)
-    const weekStartDate = new Date(firstSunday);
-    weekStartDate.setDate(firstSunday.getDate() + (weekNumber - 1) * 7);
-
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStartDate);
-      date.setDate(weekStartDate.getDate() + i);
-      dates.push(date);
-    }
-    return dates;
-  }, [startYear]);
+  const getWeekDates = useCallback(
+    (weekNumber: number): Date[] => getWeekDatesForYear(startYear, weekNumber),
+    [startYear],
+  );
 
   // Convert week numbers to actual dates (using Sunday-based weeks)
   const weekToDate = useCallback((weekNumber: number): Date => {
-    if (!startYear) return new Date();
-    // Use the same logic as getWeekDates but return the week ending date (Saturday)
-    const weekDates = getWeekDates(weekNumber);
-    return weekDates.length > 0 ? weekDates[6] : new Date(); // Return Saturday (end of week)
-  }, [startYear, getWeekDates]);
+    const { end } = getWeekDateRange(startYear, weekNumber);
+    return end;
+  }, [startYear]);
 
   // Week picker mode helper functions
   const formatWeekLabel = useCallback((week: number) => {
@@ -106,17 +85,8 @@ export function MusicCalendar({
   }, [startYear, getWeekDates]);
 
   const getWeekEndingDate = useCallback((week: number) => {
-    if (!startYear) return null;
-    const weekDates = getWeekDates(week);
-    if (weekDates.length === 0) return null;
-
-    const weekEndDate = weekDates[6]; // Saturday (end of week)
-    const month = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-    const day = String(weekEndDate.getDate()).padStart(2, '0');
-    const year = String(weekEndDate.getFullYear()).slice(-2);
-
-    return `${month}/${day}/${year}`;
-  }, [startYear, getWeekDates]);
+    return formatWeekEndDate(startYear, week);
+  }, [startYear]);
 
   // Get current game week and calculate the date for that week
   const currentGameWeek = gameState?.currentWeek || 1;

@@ -199,6 +199,7 @@ export function ExecutiveMeetings({
               variant="ghost"
               size="sm"
               onClick={() => send({ type: 'BACK_TO_EXECUTIVES' })}
+              aria-label="Back to executive list"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -250,6 +251,7 @@ export function ExecutiveMeetings({
               variant="ghost"
               size="sm"
               onClick={() => send({ type: 'BACK_TO_MEETINGS' })}
+              aria-label="Back to meeting list"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>

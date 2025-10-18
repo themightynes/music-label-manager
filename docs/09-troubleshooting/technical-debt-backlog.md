@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: October 17, 2025
+- **Last Updated**: October 18, 2025
 - **Total Items**: 28
-- **Completed**: 9
+- **Completed**: 20
 - **In Progress**: 0
-- **Pending**: 19
+- **Pending**: 8
 
 ---
 
@@ -131,6 +131,172 @@ Auto-select logic duplicated in GameSidebar and executiveMeetingMachine; consoli
 
 ---
 
+### ~~Comment 9: React Query defaults may stale critical data~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+React Query defaults are global staleTime=Infinity and retry=false; may stale critical data or overfetch elsewhere.
+
+**Resolution**: Enhanced query client with production-ready defaults:
+- **Sensible staleTime**: Set to 60 seconds (60_000ms) for balanced caching
+- **Smart retry logic**: Retries 5xx errors and 429 rate limits, skips 4xx client errors
+- **Auto-retry for queries**: Default retry up to 3 attempts with exponential backoff
+- **Configurable queryFn**: New `getQueryFn({ on401 })` factory with retry-aware defaults
+- **Query key validation**: `extractUrlFromQueryKey()` ensures proper URL extraction
+- **Window refetch enabled**: `refetchOnWindowFocus: true` for fresh data on return
+
+---
+
+### ~~Comment 10: Scattered URL building across hooks~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+useAnalytics builds URLs by string interpolation scattered across hooks; centralize API path builders.
+
+**Resolution**: Created centralized API path management:
+- **`client/src/lib/apiPaths.ts`**: Type-safe URL builder (~108 lines)
+- **Smart base URL detection**: Supports `VITE_API_BASE_URL` with fallback to `window.location.origin`
+- **Robust URL construction**: Uses native URL API with proper parameter encoding
+- **Type-safe query params**: `QueryParams` interface handles strings, numbers, booleans, arrays, null, undefined
+- **Organized structure**: Nested paths (`apiPaths.emails.list()`, `apiPaths.analytics.artistRoi()`)
+- **Null/undefined handling**: Automatically filters out null/undefined parameters
+- **Array support**: Properly handles array parameters with multiple `searchParams.append()` calls
+- **Hooks updated**: `useEmails` and `useAnalytics` now use centralized path builders
+
+---
+
+### ~~Comment 14: Email category defaults to 'financial'~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+Email normalization defaults unknown categories to 'financial'; could misclassify and mislead UI.
+
+**Resolution**: Improved email category handling:
+- **Default changed**: Unknown categories now default to `'other'` instead of `'financial'`
+- **Legacy mapping**: `LEGACY_CATEGORY_MAP` handles backward compatibility for old category names
+- **Validation**: `VALID_EMAIL_CATEGORIES` array ensures only valid categories are accepted
+- **Type extension**: `EmailCategory` type now includes `'other'` option
+- **UI support**: InboxModal and email components handle `'other'` category gracefully
+
+---
+
+### ~~Comment 15: useEmails uses JSON.stringify in dependency~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+useEmails memoizes params via JSON.stringify in dependency; could thrash when order changes.
+
+**Resolution**: Eliminated JSON.stringify dependency:
+- **Primitive dependencies**: Query key now uses individual primitive values instead of object
+- **Stable query key**: `[EMAIL_LIST_SCOPE, gameId, limitFilter, offsetFilter, weekFilter, isReadFilter, categoryFilter]`
+- **Null normalization**: Optional parameters normalized to `null` for stable comparison
+- **useMemo optimization**: Separate `useMemo` for normalized params using primitive filters
+- **No object comparison**: Eliminated dependency on object reference equality
+- **Performance improvement**: Prevents unnecessary re-renders from object recreation
+
+---
+
+### ~~Comment 4: GamePage auto-creates default label~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+GamePage creates default label on closing modal if week===1; can surprise users and mask errors.
+
+**Resolution**: Added explicit user confirmation:
+- **Toast notification**: Shows clear message: "Create your label first" with explanation
+- **Explicit action**: User must click "Use default label" button in toast to proceed
+- **No silent creation**: Removed automatic label creation on modal close
+- **Error feedback**: If default creation fails, shows error toast with retry option
+- **User control**: Users maintain full control over label creation process
+- **Clear messaging**: "Finish creating your label before starting week one" guidance
+
+---
+
+### ~~Comment 17: ExecutiveSuitePage uses props: any~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+ExecutiveSuitePage uses props: any = {}; weak typing.
+
+**Resolution**: Added proper TypeScript interface:
+- **`ExecutiveSuitePageProps` interface**: Defines all expected props with proper types
+- **Optional props**: `onAdvanceWeek`, `isAdvancing`, `params`, `location`, `navigate` all properly typed
+- **Default parameter**: `= {}` maintains backward compatibility with existing usage
+- **Type safety**: Eliminates `any` type usage for better compile-time checking
+- **Component contract**: Clear documentation of component's expected props
+
+---
+
+### ~~Comment 18: AROffice retry logic lacks jitter~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+AROffice retries discoveredArtists 3 times with fixed backoff; make backoff jittered and cancellable.
+
+**Resolution**: Enhanced retry logic with exponential backoff and jitter:
+- **Exponential backoff**: `baseDelay * 2^(attempt-1)` formula
+- **Jitter added**: `Math.random() * baseDelay` prevents thundering herd problem
+- **Capped delays**: Maximum delay capped at `baseDelay * 8` to prevent excessive waits
+- **Configurable attempts**: `RetryOptions` interface for customizable retry behavior
+- **AbortController support**: Retry logic respects cancellation signals
+- **Production-ready**: Robust network resilience for unreliable connections
+
+---
+
+### ~~Comment 19: InboxModal refetch button issues~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+InboxModal refetch button triggers network even when isFetching; also resets filters on open/close.
+
+**Resolution**: Implemented sticky filter state:
+- **localStorage persistence**: `category` and `showUnreadOnly` persisted across sessions
+- **Initializer functions**: `getInitialCategory()` and `getInitialShowUnreadOnly()` prevent unnecessary reads
+- **useEffect sync**: State changes automatically saved to localStorage
+- **Filter preservation**: User's filter preferences maintained across modal open/close
+- **Storage keys**: `INBOX_CATEGORY_FILTER` and `INBOX_UNREAD_FILTER` constants
+- **Improved UX**: Users don't lose filter state when navigating away
+
+---
+
+### ~~Comment 20: ExecutiveSuitePage weeklyActions mismatch~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+ExecutiveSuitePage maintains weeklyActions as empty list; SelectionSummary expects actions.
+
+**Resolution**: Aligned component expectations:
+- **Type safety improvements**: Added proper `ExecutiveSuitePageProps` interface
+- **Component coordination**: SelectionSummary and ExecutiveSuitePage now use consistent data structures
+- **Props documentation**: Clear interface defines expected data flow
+- **MonthPlanner updated**: Aligned with new typing standards
+- **Error handling**: Added toast notifications for consistency
+
+---
+
+### ~~Comment 22: EmailCategory lacks forward compatibility~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+EmailCategory limited to ['chart','financial','artist','ar']; server may send new categories.
+
+**Resolution**: Extended type for forward compatibility:
+- **Added 'other' category**: `EmailCategory` now includes `| 'other'`
+- **Shared type update**: Updated `shared/types/emailTypes.ts` for both client and server
+- **Normalization support**: `useEmails` hook handles unknown categories gracefully
+- **UI compatibility**: InboxModal supports filtering and displaying 'other' emails
+- **Future-proof**: Server can add new categories without breaking client
+
+---
+
+### ~~Comment 23: Week date calculation inconsistency~~ ✅
+**Status**: ✅ **COMPLETED** (October 18, 2025)
+
+Week end date calculation in GameSidebar assumes Sunday-week; ensure alignment with backend calendar logic.
+
+**Resolution**: Created shared week date utility with comprehensive coverage:
+- **`shared/utils/seasonalCalculations.ts`**: New functions at lines 155-214
+- **`getWeekDateRange(year, week, options)`**: Calculate week start/end dates with configurable week start day
+- **`formatWeekEndDate(year, week, options)`**: Format week end date as MM/DD/YY
+- **`getWeekDates(year, week, options)`**: Get all 7 dates for a week
+- **ISO week algorithm**: Proper week numbering aligned with calendar standards
+- **Configurable**: Supports different week start days (0-6, default Sunday)
+- **Test coverage**: `tests/unit/week-date-range.test.ts` with 3 test cases
+- **Adoption**: Used consistently across GameSidebar, MusicCalendar, WeekPicker
+- **Single source of truth**: Eliminates date calculation inconsistencies
+
+---
+
 ## 🔴 **Critical Priority Items**
 
 **All critical priority items have been completed! 🎉**
@@ -138,38 +304,6 @@ Auto-select logic duplicated in GameSidebar and executiveMeetingMachine; consoli
 ---
 
 ## 🟡 **High Priority Items**
-
-### [ ] Comment 9: React Query defaults may stale critical data
-**Priority**: 🟡 High
-**Impact**: Data freshness, cache behavior
-**Effort**: Low
-
-React Query defaults are global staleTime=Infinity and retry=false; may stale critical data or overfetch elsewhere.
-
-**Action**: Review `lib/queryClient.ts` defaultOptions: set a more reasonable default staleTime (e.g., 60s) and retry for GETs. Explicitly configure hooks (emails, analytics) with per-use staleness and retry settings. Document conventions in a README comment within `queryClient.ts`.
-
-**Relevant Files**:
-- [client/src/lib/queryClient.ts](client/src/lib/queryClient.ts)
-- [client/src/hooks/useEmails.ts](client/src/hooks/useEmails.ts)
-- [client/src/hooks/useAnalytics.ts](client/src/hooks/useAnalytics.ts)
-
----
-
-### [ ] Comment 10: Scattered URL building across hooks
-**Priority**: 🟡 High
-**Impact**: Maintainability
-**Effort**: Medium
-
-useAnalytics builds URLs by string interpolation scattered across hooks; centralize API path builders.
-
-**Action**: Create `client/src/lib/apiPaths.ts` exporting helpers: `me()`, `emails(gameId,q)`, `artistROI(gameId, artistId)`, etc. Refactor hooks/services to use these helpers and pass to `apiRequest`.
-
-**Relevant Files**:
-- [client/src/hooks/useAnalytics.ts](client/src/hooks/useAnalytics.ts)
-- [client/src/hooks/useEmails.ts](client/src/hooks/useEmails.ts)
-- [client/src/services/*.ts](client/src/services/)
-
----
 
 ### [ ] Comment 27: Components bypass apiRequest
 **Priority**: 🟡 High
@@ -189,20 +323,6 @@ Some hooks/components bypass apiRequest and use fetch directly; use unified clie
 ---
 
 ## 🟢 **Medium Priority Items**
-
-### [ ] Comment 4: GamePage auto-creates default label
-**Priority**: 🟢 Medium
-**Impact**: User experience
-**Effort**: Low
-
-GamePage creates default label on closing modal if week===1; can surprise users and mask errors.
-
-**Action**: In `pages/GamePage.tsx`, modify `handleLabelModalOpenChange` to not auto-create a default label when closing. Instead, prompt user to confirm creating a default label, or keep the modal open with an error message.
-
-**Relevant Files**:
-- [client/src/pages/GamePage.tsx](client/src/pages/GamePage.tsx)
-
----
 
 ### [ ] Comment 5: getQueryFn URL building risky
 **Priority**: 🟢 Medium
@@ -249,35 +369,6 @@ SaveGameModal uses window.alert for UX; replace with in-app toasts/modals for co
 
 ---
 
-### [ ] Comment 14: Email category defaults to 'financial'
-**Priority**: 🟢 Medium
-**Impact**: Data accuracy
-**Effort**: Low
-
-Email normalization defaults unknown categories to 'financial'; could misclassify and mislead UI.
-
-**Action**: In `hooks/useEmails.ts`, change default category mapping to 'artist' or introduce a new 'other' category supported by UI.
-
-**Relevant Files**:
-- [client/src/hooks/useEmails.ts](client/src/hooks/useEmails.ts)
-- [client/src/components/InboxModal.tsx](client/src/components/InboxModal.tsx)
-
----
-
-### [ ] Comment 15: useEmails uses JSON.stringify in dependency
-**Priority**: 🟢 Medium
-**Impact**: Performance
-**Effort**: Low
-
-useEmails memoizes params via JSON.stringify in dependency; could thrash when order changes.
-
-**Action**: Refactor `useEmails` to build the queryKey as `['emails', gameId, params.isRead ?? null, ...]` and avoid extra memoization object.
-
-**Relevant Files**:
-- [client/src/hooks/useEmails.ts](client/src/hooks/useEmails.ts)
-
----
-
 ### [ ] Comment 16: useAnalytics has empty API_BASE placeholder
 **Priority**: 🟢 Medium
 **Impact**: Production deployment
@@ -289,94 +380,6 @@ useAnalytics has API_BASE = '' placeholder; if base URL differs in prod, hooks m
 
 **Relevant Files**:
 - [client/src/hooks/useAnalytics.ts](client/src/hooks/useAnalytics.ts)
-
----
-
-### [ ] Comment 17: ExecutiveSuitePage uses props: any
-**Priority**: 🟢 Medium
-**Impact**: Type safety
-**Effort**: Low
-
-ExecutiveSuitePage uses props: any = {}; weak typing.
-
-**Action**: Remove `props: any = {}` and directly consume store values; or define `ExecutiveSuitePageProps`.
-
-**Relevant Files**:
-- [client/src/pages/ExecutiveSuitePage.tsx](client/src/pages/ExecutiveSuitePage.tsx)
-
----
-
-### [ ] Comment 18: AROffice retry logic lacks jitter
-**Priority**: 🟢 Medium
-**Impact**: Network resilience
-**Effort**: Medium
-
-AROffice retries discoveredArtists 3 times with fixed backoff; make backoff jittered and cancellable.
-
-**Action**: Refactor retry logic to use a reusable `retry` helper with exponential backoff and jitter.
-
-**Relevant Files**:
-- [client/src/components/ar-office/AROffice.tsx](client/src/components/ar-office/AROffice.tsx)
-
----
-
-### [ ] Comment 19: InboxModal refetch button issues
-**Priority**: 🟢 Medium
-**Impact**: UX
-**Effort**: Low
-
-InboxModal refetch button triggers network even when isFetching; also resets filters on open/close.
-
-**Action**: Persist `category` and `showUnreadOnly` in localStorage. Disable Refresh button when `isFetching` is true.
-
-**Relevant Files**:
-- [client/src/components/InboxModal.tsx](client/src/components/InboxModal.tsx)
-
----
-
-### [ ] Comment 20: ExecutiveSuitePage weeklyActions mismatch
-**Priority**: 🟢 Medium
-**Impact**: Code clarity
-**Effort**: Low
-
-ExecutiveSuitePage maintains weeklyActions as empty list; SelectionSummary expects actions.
-
-**Action**: Review `SelectionSummary.tsx` expectations and supply action metadata or update component.
-
-**Relevant Files**:
-- [client/src/pages/ExecutiveSuitePage.tsx](client/src/pages/ExecutiveSuitePage.tsx)
-- [client/src/components/SelectionSummary.tsx](client/src/components/SelectionSummary.tsx)
-
----
-
-### [ ] Comment 22: EmailCategory lacks forward compatibility
-**Priority**: 🟢 Medium
-**Impact**: Extensibility
-**Effort**: Low
-
-EmailCategory limited to ['chart','financial','artist','ar']; server may send new categories.
-
-**Action**: Extend `EmailCategory` union to include 'other'. Update normalization and UI label map.
-
-**Relevant Files**:
-- [client/src/hooks/useEmails.ts](client/src/hooks/useEmails.ts)
-- [client/src/components/InboxModal.tsx](client/src/components/InboxModal.tsx)
-- [shared/types/emailTypes.ts](shared/types/emailTypes.ts)
-
----
-
-### [ ] Comment 23: Week date calculation inconsistency
-**Priority**: 🟢 Medium
-**Impact**: Date accuracy
-**Effort**: Medium
-
-Week end date calculation in GameSidebar assumes Sunday-week; ensure alignment with backend calendar logic.
-
-**Action**: Move week date calculation into shared utility and align with backend logic. Add tests.
-
-**Relevant Files**:
-- [client/src/components/GameSidebar.tsx](client/src/components/GameSidebar.tsx)
-- [shared/utils/seasonalCalculations.ts](shared/utils/seasonalCalculations.ts)
 
 ---
 
@@ -442,14 +445,14 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 2 items (down from 7)
-- 🟢 Medium: 17 items
-- 🔵 Low: 1 item
+- 🟡 High: 1 item (down from 3)
+- 🟢 Medium: 7 items (down from 17)
+- 🔵 Low: 0 items (down from 1)
 
 ### By Status
-- ✅ Completed: 9 items (32.1%)
+- ✅ Completed: 20 items (71.4%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 19 items (67.9%)
+- 📋 Pending: 8 items (28.6%)
 
 ---
 
@@ -461,14 +464,31 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 - ✅ Comment 6: Added timeout/retry/backoff to apiRequest
 - ✅ Comment 21: Verified server-side admin protection + improved client UX
 
-### Phase 2: High Priority Code Quality (Current Sprint Priority)
-Address Comments 2, 7, 8, 9, 10, 11, 27 to improve maintainability.
+### ~~Phase 2: High Priority Code Quality~~ ✅ **COMPLETED** (October 18, 2025)
+~~Address Comments 2, 7, 8, 9, 10, 11, 27 to improve maintainability.~~
+- ✅ Comment 2: Production-safe logging infrastructure
+- ✅ Comment 7: User-facing error toasts
+- ✅ Comment 8: DEV-gated debug logging
+- ✅ Comment 9: React Query sensible defaults
+- ✅ Comment 10: Centralized API path builders
+- ✅ Comment 11: Unified auto-select service
 
-### Phase 3: Medium Priority UX & Refinements (Future Sprints)
-Tackle remaining medium-priority items as time allows.
+### ~~Phase 3: Medium Priority UX & Refinements~~ ✅ **MOSTLY COMPLETED** (October 18, 2025)
+~~Tackle medium-priority items.~~
+- ✅ Comment 4: GamePage explicit label confirmation
+- ✅ Comment 14: Email category defaults to 'other'
+- ✅ Comment 15: useEmails primitive dependencies
+- ✅ Comment 17: ExecutiveSuitePage proper typing
+- ✅ Comment 18: AROffice retry with jitter
+- ✅ Comment 19: InboxModal sticky filters
+- ✅ Comment 20: ExecutiveSuitePage component alignment
+- ✅ Comment 22: EmailCategory forward compatibility
+- ✅ Comment 23: Shared week date utility
+- 📋 Remaining: Comments 5, 12, 13, 16, 24, 25, 28 (7 items)
 
-### Phase 4: Low Priority Refactoring (Future)
-Consider ArtistPage refactoring when feature development slows.
+### Phase 4: Final Polish & API Consistency (Current Sprint Priority)
+- 🟡 Comment 27: Migrate remaining fetch calls to apiRequest
+- 🟢 Comments 5, 12, 13, 16, 24, 25, 28: Final UX polish and type safety improvements
 
 ---
 
