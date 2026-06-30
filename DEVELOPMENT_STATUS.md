@@ -23,6 +23,28 @@
 
 ---
 
+## 🗂️ Backlog / Candidate Work
+*Compiled June 30, 2026 from the docs review + onboarding. Pick from here next session.*
+
+**Quick wins**
+- [ ] **Tech-debt Comment 25** — `ClerkProvider` appearance cast to `any` in `client/src/main.tsx`; tighten typing. Small/isolated. (See `docs/09-troubleshooting/technical-debt-backlog.md`.)
+- [ ] **Patch doc index files** — `docs/README.md` + `docs/claude.md` don't list `98-research/` or `api-specifications/` (invisible to navigation).
+- [ ] **Reconcile focus-slot unlock values** — engine hardcodes `reputation ≥ 50` (`shared/engine/game-engine.ts:~350`), but `data/balance/projects.json` says week 26 and `data/balance/progression.json` says rep 18. Collapse to one source of truth; only the hardcoded value runs.
+
+**Medium**
+- [ ] **Verify the financial bug** — `docs/98-research/FINANCIAL_CALCULATION_BUG_ANALYSIS.md` documents a dual-path revenue/expense bug; confirm whether it was fixed in current code.
+- [ ] **Tech-debt Comment 26** — `client/src/pages/ArtistPage.tsx` is monolithic; split into memoized subcomponents. Larger refactor.
+- [ ] **Add a GameEngine architecture doc** — `02-architecture/` has no dedicated doc for the core shared `GameEngine`, despite its centrality.
+
+**Feature threads** (from `docs/01-planning/`)
+- [ ] **Artist-mood plan** — paused after Phase 5 (Oct 12, 2025), resumable. (`implementation-specs/[IN-PROGRESS] artist-mood-plan.md`)
+- [ ] **Artist-contract-system refactor** — flagged as next target; dependency map exists (`implementation-specs/artist-contract-system-dependencies.md`).
+
+**Housekeeping**
+- [ ] Merge open PRs **#24** (queryClient fix), **#25** (weekly-workflow docs), **#26** (session workflow), then resync local `main`.
+
+---
+
 ## 🚀 **MAJOR SYSTEM REFACTORING - SEPTEMBER 24, 2025**
 
 ### **MASSIVE MONTH-TO-WEEK CONVERSION COMPLETE**
