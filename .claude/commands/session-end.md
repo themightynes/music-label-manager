@@ -1,90 +1,46 @@
 ---
 description: Complete session documentation update with current status and changes
-allowed-tools: Read, Edit, MultiEdit, Bash(git status), Bash(date), Bash(npm run check:*)
-argument-hint: [session summary/changes made]
+allowed-tools: Read, Edit, MultiEdit, Bash(git status:*), Bash(git log:*), Bash(date:*), Bash(npm run check:*)
+argument-hint: [short summary of what was done this session]
 ---
 
-# 🎯 Session End - Documentation Update
+# 🎯 Session End — Documentation Sync
 
-Performing comprehensive documentation update for session end...
+Capturing this session's work so the next session can resume cleanly.
 
-## Current Status Check
+## 1. Snapshot current state
 !Bash date "+Session End: %Y-%m-%d %H:%M"
 !Bash git status
+!Bash git log --oneline -8
 
-## Session Summary
-**Changes This Session**: $ARGUMENTS
+## 2. Session summary (from the user)
+**Changes this session**: $ARGUMENTS
 
-## Updating Documentation Files
+## 3. Update the running log — `DEVELOPMENT_STATUS.md`
+This is the project's single source of truth for current progress. Read it, then update it:
+!Read DEVELOPMENT_STATUS.md
 
-I'll now update the key documentation files with current status and session information:
+Do the following edits:
+- Update the `*Updated: <date>*` line near the top to **today's date** (from step 1).
+- Add a new dated entry at the top of the status body (just under the header/`---`) titled `## 📅 Session Log — <today's date>` summarizing `$ARGUMENTS`: what changed, any branches/PRs opened, decisions made, and **explicit next steps / open threads** so the next session knows where to pick up.
+- If a priority or phase changed, reflect it in the relevant existing section.
 
-### 1. Update Development Status Report
-!Read /home/runner/workspace/DEVELOPMENT_STATUS.md
+## 4. Update AI onboarding context — `ai_instructions.md`
+!Read ai_instructions.md
 
-I'm updating the development status report with today's date and current post-MVP phase information...
+If it has a "Current State" (or similar) section, refresh its date and any status that changed this session. If nothing material changed, leave it.
 
-!Edit /home/runner/workspace/DEVELOPMENT_STATUS.md "*Updated: August 18, 2025*" "*Updated: August 18, 2025 - Session End Documentation Sync*"
+## 5. Reconcile feature tasks — `tasks/`
+!Bash git status
+If this session advanced a feature tracked in `tasks/`, check off completed sub-tasks in the relevant `tasks-*.md`, and move any finished PRD + task list into `tasks/completed/`. Skip if no tracked feature progressed.
 
-### 2. Update AI Instructions Current State
-!Read /home/runner/workspace/ai_instructions.md
+## 6. Optional: validate before handoff
+Offer to run `npm run check` so the next session doesn't start on a red build. Only run if the user agrees.
 
-Updating the current state section in AI instructions...
-
-!Edit /home/runner/workspace/ai_instructions.md "## Current State (Updated: August 18, 2025)" "## Current State (Updated: August 18, 2025 - Session End)"
-
-### 3. Update Claude Session Onboarding Document
-!Read /home/runner/workspace/docs/CLAUDE_SESSION_ONBOARDING.md
-
-Refreshing the onboarding document date...
-
-!Edit /home/runner/workspace/docs/CLAUDE_SESSION_ONBOARDING.md "*Updated: August 18, 2025*" "*Updated: August 18, 2025 - Latest Session Sync*"
-
-### 4. Update Main Documentation Hub
-!Read /home/runner/workspace/docs/README.md
-
-Ensuring the main README reflects current status...
-
-### 5. Update Handoff Summary
-!Read /home/runner/workspace/docs/HANDOFF_SUMMARY.md
-
-## 📋 Documentation Update Summary
-
-✅ **Files Updated:**
-- DEVELOPMENT_STATUS.md - Phase status refreshed and priorities confirmed
-- ai_instructions.md - Current state section updated  
-- docs/CLAUDE_SESSION_ONBOARDING.md - Onboarding document refreshed
-- docs/README.md - Main documentation hub verified
-- docs/HANDOFF_SUMMARY.md - Development handoff info current
-
-✅ **Project Status Confirmed:**
-- **Phase**: Post-MVP Development (MVP completed August 2025)
-- **Playability**: Fully functional strategic simulation game
-- **Architecture**: React 18 + TypeScript + Node.js + PostgreSQL
-- **Documentation**: Comprehensive strategic + technical documentation
-
-✅ **Key Systems Documented:**
-- Complete 52-week campaign with scoring and victory conditions
-- Artist discovery, signing, and management systems  
-- Project creation workflow (Singles, EPs, Mini-Tours)
-- Role-based dialogue system with 72+ dialogue choices
-- Resource management (money, reputation, access tiers)
-- Save/load system with multiple slots and JSON export
-- Campaign completion screen with restart functionality
-
-## 🚀 Session End Complete
-
-**Music Label Manager** documentation has been synchronized for post-MVP development phase and is ready for the next session.
-
-**Session Notes**: $ARGUMENTS
-
-**Next Steps**: 
-- All documentation reflects current 98% MVP completion status
-- Use `/onboard` command at start of next session for full context
-- Consider committing documentation updates to preserve session state
-- Project ready for continued development or team handoff
-
-**Final Status**: Documentation sync complete - project ready for next session or handoff.
+## 7. Wrap up
+- Summarize exactly which files were updated.
+- Remind the user these doc updates should be committed (prefer a branch, e.g. `docs/session-<date>`), and offer to do it.
+- Confirm: next session should start with `/onboard`.
 
 ---
-*Session ended and documented: August 18, 2025*
+*This command keeps `DEVELOPMENT_STATUS.md` current as the cross-session handoff. Paths are repo-relative so it works on any machine.*
