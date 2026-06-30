@@ -9,10 +9,10 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: June 30, 2026
-- **Total Items**: 32
+- **Total Items**: 33
 - **Completed**: 26
 - **In Progress**: 0
-- **Pending**: 6
+- **Pending**: 7
 
 ---
 
@@ -496,6 +496,25 @@ The save/load snapshot was upgraded (`SNAPSHOT_VERSION = 2`) and now captures ad
 
 ---
 
+### [ ] Comment 33: Test DB provisioned via `drizzle-kit push` is missing SQL-migration CHECK constraints
+**Priority**: 🟢 Medium
+**Impact**: Test reliability / developer experience — false test failures on a freshly provisioned test DB
+**Effort**: Low
+
+The test DB helper provisions tables with `drizzle-kit push` (see note in [tests/helpers/test-db.ts](tests/helpers/test-db.ts)), but `push` does not materialize the raw-SQL `CHECK` constraints that are defined both inline in `shared/schema.ts` (e.g. `artists_mood_check`, line ~59) and in the SQL migration files (`migrations/0009_add_mood_constraints.sql`, `migrations/0020_add_artist_attribute_constraints.sql`). As a result, a cleanly push-provisioned test DB has **no** check constraints on `artists`, and `tests/features/artist-mood-constraints.test.ts` fails (2 cases) because out-of-range mood inserts are accepted instead of rejected. Manually applying the constraint (`ALTER TABLE artists ADD CONSTRAINT artists_mood_check ...`) makes all 4 tests pass, confirming the gap is provisioning-only, not a code defect.
+
+**Action**: Provision the test DB via migrations (`drizzle-kit migrate` / apply `migrations/*.sql`) instead of, or in addition to, `drizzle-kit push` — or add a constraint-application step to the test-db setup helper. Document the chosen approach in `tests/helpers/test-db.ts`.
+
+**Relevant Files**:
+- [tests/helpers/test-db.ts](tests/helpers/test-db.ts)
+- [tests/start-test-db.js](tests/start-test-db.js)
+- [migrations/0020_add_artist_attribute_constraints.sql](migrations/0020_add_artist_attribute_constraints.sql)
+- [tests/features/artist-mood-constraints.test.ts](tests/features/artist-mood-constraints.test.ts)
+
+*Identified June 30, 2026 during the email-snapshot/save-load full test-suite validation.*
+
+---
+
 ## 🔵 **Low Priority Items**
 
 ### [ ] Comment 26: ArtistPage is monolithic
@@ -534,13 +553,13 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (C29)
-- 🟢 Medium: 3 items (C25, C30, C31)
+- 🟢 Medium: 4 items (C25, C30, C31, C33)
 - 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 26 items (81.3%)
+- ✅ Completed: 26 items (78.8%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 6 items (18.7%)
+- 📋 Pending: 7 items (21.2%)
 
 ---
 
