@@ -376,9 +376,9 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                             <span className="text-sm">{getChangeIcon(change.type)}</span>
                             <span className="text-sm font-medium text-brand-burgundy">{change.description}</span>
                           </div>
-                          {change.amount !== undefined && change.amount !== 0 && (
+                          {change.type === 'reputation' && change.amount !== undefined && change.amount !== 0 && (
                             <Badge variant="outline" className="text-xs text-brand-burgundy border-brand-burgundy/30 font-semibold">
-                              +{change.amount}
+                              {change.amount > 0 ? '+' : ''}{change.amount}
                             </Badge>
                           )}
                         </div>

@@ -13,8 +13,8 @@ function toEmailCategory(rawCategory: unknown): EmailCategory {
   return 'other';
 }
 
-const EMAIL_LIST_SCOPE = 'emails:list';
-const EMAIL_UNREAD_SCOPE = 'emails:unread-count';
+export const EMAIL_LIST_SCOPE = 'emails:list';
+export const EMAIL_UNREAD_SCOPE = 'emails:unread-count';
 
 // Server-side normalization is the source of truth for email categories
 

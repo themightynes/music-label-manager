@@ -198,7 +198,7 @@ export class DatabaseStorage implements IStorage {
         money: sql<number | null>`(game_saves.game_state->'gameState'->>'money')::int`,
         reputation: sql<number | null>`(game_saves.game_state->'gameState'->>'reputation')::int`,
         gameId: sql<string | null>`game_saves.game_state->'gameState'->>'id'`, // FR-2: Extract gameId for orphaned game cleanup
-        musicLabelName: sql<string | null>`(game_saves.game_state->'gameState'->'musicLabel'->>'name')`,
+        musicLabelName: sql<string | null>`(game_saves.game_state->'musicLabel'->>'name')`,
       })
       .from(gameSaves)
       .where(eq(gameSaves.userId, userId))

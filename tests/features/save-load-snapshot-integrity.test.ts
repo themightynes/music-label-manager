@@ -149,8 +149,11 @@ describe('Snapshot Integrity', () => {
       gameState: {
         id: legacyGame.id,
         currentWeek: legacyGame.currentWeek,
-        musicLabel: { id: crypto.randomUUID(), gameId: legacyGame.id, name: labelName, genreFocus: 'pop' },
       } as any,
+      // Production shape: musicLabel is a TOP-LEVEL SIBLING of gameState in the
+      // snapshot (see gameStore.saveGame / SaveGameModal.handleExport), NOT nested
+      // inside gameState. The migration must read it from this sibling path.
+      musicLabel: { id: crypto.randomUUID(), gameId: legacyGame.id, name: labelName, genreFocus: 'pop' },
     } as schema.GameSaveSnapshot;
 
     const saveWeek = legacyGame.currentWeek;
