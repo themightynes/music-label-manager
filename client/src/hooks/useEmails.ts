@@ -4,22 +4,19 @@ import { useGameStore } from '@/store/gameStore';
 import { apiRequest } from '@/lib/queryClient';
 import { apiPaths, type EmailListQueryParams } from '@/lib/apiPaths';
 import logger from '@/lib/logger';
-import type { EmailCategory, EmailRecord } from '@shared/types/emailTypes';
+import { EMAIL_CATEGORIES, type EmailCategory, type EmailRecord } from '@shared/types/emailTypes';
 
-const VALID_EMAIL_CATEGORIES: EmailCategory[] = ['chart', 'financial', 'artist', 'ar', 'other'];
-
-const LEGACY_CATEGORY_MAP: Record<string, EmailCategory> = {
-  financial_report: 'financial',
-  tier_unlock: 'financial',
-  tour_completion: 'artist',
-  release: 'artist',
-  top_10_debut: 'chart',
-  number_one_debut: 'chart',
-  artist_discovery: 'ar',
-};
+function toEmailCategory(rawCategory: unknown): EmailCategory {
+  if (typeof rawCategory === 'string' && EMAIL_CATEGORIES.includes(rawCategory as EmailCategory)) {
+    return rawCategory as EmailCategory;
+  }
+  return 'other';
+}
 
 const EMAIL_LIST_SCOPE = 'emails:list';
 const EMAIL_UNREAD_SCOPE = 'emails:unread-count';
+
+// Server-side normalization is the source of truth for email categories
 
 export type EmailListQuery = EmailListQueryParams;
 
@@ -42,11 +39,7 @@ function normalizeEmail(email: any): EmailRecord<Record<string, unknown>> {
       ? email.updatedAt
       : createdAt;
 
-  const rawCategory = typeof email?.category === 'string' ? email.category : null;
-  const mappedCategory = rawCategory ? LEGACY_CATEGORY_MAP[rawCategory] ?? rawCategory : null;
-  const category: EmailCategory = mappedCategory && VALID_EMAIL_CATEGORIES.includes(mappedCategory as EmailCategory)
-    ? (mappedCategory as EmailCategory)
-    : 'other';
+  const category = toEmailCategory(email?.category);
 
   return {
     id: email?.id ?? '',
@@ -73,7 +66,7 @@ export function useEmails(params: EmailListQuery = {}) {
   const weekFilter = typeof params.week === 'number' ? params.week : null;
   const isReadFilter = typeof params.isRead === 'boolean' ? params.isRead : null;
   const categoryFilter =
-    params.category && VALID_EMAIL_CATEGORIES.includes(params.category)
+    params.category && EMAIL_CATEGORIES.includes(params.category)
       ? params.category
       : null;
 
@@ -104,7 +97,7 @@ export function useEmails(params: EmailListQuery = {}) {
   return useQuery<EmailListResponse>({
     queryKey,
     enabled: Boolean(gameId),
-    staleTime: 0, // Always refetch to ensure filters work correctly
+    staleTime: 30_000, // Give emails 30 seconds to avoid excessive refetches that cause re-sorting
     retry: false,
     queryFn: async () => {
       if (!gameId) {

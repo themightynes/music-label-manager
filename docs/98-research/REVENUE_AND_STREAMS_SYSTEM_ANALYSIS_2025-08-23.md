@@ -634,15 +634,8 @@ const reputationGain = Object.values(summary.reputationChanges)
   .reduce((total, change) => total + change, 0);
 const netCashFlow = summary.revenue - summary.expenses;
 
-if (reputationGain > 0 && netCashFlow !== 0) {
-  const efficiency = Math.abs(netCashFlow) / reputationGain;
-  summary.changes.push({
-    type: 'unlock',
-    description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point`,
-    amount: 0
-  });
-}
-```
+// Note: Efficiency achievement removed - reputation tracking is now direct per activity
+// Players see exact reputation points gained rather than confusing efficiency ratios
 
 ### Revenue Lifecycle Analysis
 

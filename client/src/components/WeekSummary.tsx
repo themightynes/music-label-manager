@@ -42,6 +42,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       case 'unlock': return '🔓';
       case 'artist': return '🎤';
       case 'mood': return '💭'; // Mood changes
+      case 'reputation': return '⭐'; // Reputation changes
       default: return '📊';
     }
   };
@@ -128,7 +129,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
         categories.revenue.push(change);
       } else if (change.type === 'expense') {
         categories.expenses.push(change);
-      } else if (change.type === 'unlock') {
+      } else if (change.type === 'unlock' || change.type === 'reputation') {
         categories.achievements.push(change);
       } else if (change.type === 'mood') {
         categories.mood.push(change);
@@ -370,9 +371,16 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {categorizedChanges.achievements.map((change: GameChange, index: number) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 bg-brand-burgundy/10 rounded-lg border border-brand-burgundy/20">
-                          <span className="text-sm">{getChangeIcon(change.type)}</span>
-                          <span className="text-sm font-medium text-brand-burgundy">{change.description}</span>
+                        <div key={index} className="flex items-center justify-between p-3 bg-brand-burgundy/10 rounded-lg border border-brand-burgundy/20">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm">{getChangeIcon(change.type)}</span>
+                            <span className="text-sm font-medium text-brand-burgundy">{change.description}</span>
+                          </div>
+                          {change.amount !== undefined && change.amount !== 0 && (
+                            <Badge variant="outline" className="text-xs text-brand-burgundy border-brand-burgundy/30 font-semibold">
+                              +{change.amount}
+                            </Badge>
+                          )}
                         </div>
                       ))}
                     </CardContent>

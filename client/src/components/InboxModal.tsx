@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEmails, useMarkEmailRead, useDeleteEmail, useUnreadEmailCount } from '@/hooks/useEmails';
-import type { EmailCategory } from '@shared/types/emailTypes';
+import { EMAIL_CATEGORIES, EMAIL_CATEGORY_LABELS, type EmailCategory } from '@shared/types/emailTypes';
 import type { EmailTemplateData, EmailTemplateProps } from './email-templates';
 import {
   AREmail,
@@ -34,21 +34,11 @@ import {
 const CATEGORY_STORAGE_KEY = 'inbox:lastCategory';
 const UNREAD_STORAGE_KEY = 'inbox:showUnreadOnly';
 
-const CATEGORY_LABELS: Record<EmailCategory, string> = {
-  chart: 'Chart',
-  financial: 'Financial',
-  artist: 'Artist',
-  ar: 'A&R',
-  other: 'Other',
-};
+const CATEGORY_LABELS = EMAIL_CATEGORY_LABELS;
 
 const CATEGORY_OPTIONS: { value: 'all' | EmailCategory; label: string }[] = [
   { value: 'all', label: 'All categories' },
-  { value: 'chart', label: 'Chart' },
-  { value: 'financial', label: 'Financial' },
-  { value: 'artist', label: 'Artist' },
-  { value: 'ar', label: 'A&R' },
-  { value: 'other', label: 'Other' },
+  ...EMAIL_CATEGORIES.map((category) => ({ value: category, label: CATEGORY_LABELS[category] }))
 ];
 
 const TEMPLATE_MAP: Record<EmailCategory, React.ComponentType<EmailTemplateProps>> = {

@@ -10,14 +10,48 @@ import {
   type MusicLabel, type InsertMusicLabel, type Email, type InsertEmail,
   type MoodEvent, type InsertMoodEvent
 } from "@shared/schema";
+import { EMAIL_CATEGORIES, type EmailCategory } from "@shared/types/emailTypes";
 import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
 import type { ReleasedSongData } from "@shared/engine/ChartService";
+
+// Server-side email category normalization constants
+const VALID_EMAIL_CATEGORIES = EMAIL_CATEGORIES;
+type ValidEmailCategory = EmailCategory;
+
+// Legacy category mapping for normalization
+const LEGACY_CATEGORY_MAP: Record<string, ValidEmailCategory> = {
+  financial_report: 'financial',
+  tier_unlock: 'financial', 
+  tour_completion: 'artist',
+  release: 'artist',
+  top_10_debut: 'chart',
+  number_one_debut: 'chart',
+  artist_discovery: 'ar',
+};
+
+/**
+ * Normalizes email category to valid set server-side
+ * @param category - Raw category from database
+ * @returns Normalized category within VALID_EMAIL_CATEGORIES
+ */
+function normalizeEmailCategory(category: string | null | undefined): ValidEmailCategory {
+  if (!category) return 'other';
+  
+  // If already valid, return as-is
+  if (VALID_EMAIL_CATEGORIES.includes(category as ValidEmailCategory)) {
+    return category as ValidEmailCategory;
+  }
+  
+  // Map legacy categories
+  return LEGACY_CATEGORY_MAP[category] || 'other';
+}
 
 export type GameSaveSummary = Pick<GameSave, "id" | "name" | "week" | "isAutosave" | "createdAt" | "updatedAt"> & {
   money: number | null;
   reputation: number | null;
   gameId: string | null; // Added for FR-2: orphaned game cleanup
+  musicLabelName?: string | null; // Added for autosave name migration
 };
 
 export interface IStorage {
@@ -153,7 +187,7 @@ export class DatabaseStorage implements IStorage {
 
   // Game saves
   async getGameSaves(userId: string): Promise<GameSaveSummary[]> {
-    return await this.db
+    const saves = await this.db
       .select({
         id: gameSaves.id,
         name: gameSaves.name,
@@ -164,10 +198,26 @@ export class DatabaseStorage implements IStorage {
         money: sql<number | null>`(game_saves.game_state->'gameState'->>'money')::int`,
         reputation: sql<number | null>`(game_saves.game_state->'gameState'->>'reputation')::int`,
         gameId: sql<string | null>`game_saves.game_state->'gameState'->>'id'`, // FR-2: Extract gameId for orphaned game cleanup
+        musicLabelName: sql<string | null>`(game_saves.game_state->'gameState'->'musicLabel'->>'name')`,
       })
       .from(gameSaves)
       .where(eq(gameSaves.userId, userId))
       .orderBy(desc(gameSaves.updatedAt));
+
+    // Migration: Normalize legacy autosave names for consistent UX
+    return saves.map(save => {
+      if (
+        save.isAutosave &&
+        save.name === 'Autosave' &&
+        save.musicLabelName
+      ) {
+        return {
+          ...save,
+          name: `${save.musicLabelName} - Week ${save.week}`
+        };
+      }
+      return save;
+    });
   }
 
   async getGameSave(id: string): Promise<GameSave | undefined> {
@@ -864,9 +914,23 @@ export class DatabaseStorage implements IStorage {
     const [totalResult, unreadResult, emailRows] = await Promise.all([
       db.select({ value: sql<number>`count(*)::int` }).from(emails).where(whereClause),
       db.select({ value: sql<number>`count(*)::int` }).from(emails).where(and(eq(emails.gameId, gameId), eq(emails.isRead, false))),
-      db.select().from(emails)
+      db.select({
+        id: emails.id,
+        gameId: emails.gameId, 
+        week: emails.week,
+        category: emails.category, // Keep raw category for potential debugging
+        sender: emails.sender,
+        senderRoleId: emails.senderRoleId,
+        subject: emails.subject,
+        preview: emails.preview,
+        body: emails.body,
+        metadata: emails.metadata,
+        isRead: emails.isRead,
+        createdAt: emails.createdAt,
+        updatedAt: emails.updatedAt
+      }).from(emails)
         .where(whereClause)
-        .orderBy(desc(emails.createdAt))
+        .orderBy(desc(emails.week), desc(emails.createdAt), desc(emails.id)) // Add id tie-breaker for deterministic order
         .limit(resultLimit)
         .offset(resultOffset)
     ]);
@@ -874,8 +938,14 @@ export class DatabaseStorage implements IStorage {
     const total = Number(totalResult[0]?.value ?? 0);
     const unreadCount = Number(unreadResult[0]?.value ?? 0);
 
+    // Normalize categories server-side to prevent drift
+    const normalizedEmailRows = emailRows.map(email => ({
+      ...email,
+      category: normalizeEmailCategory(email.category)
+    }));
+
     return {
-      emails: emailRows,
+      emails: normalizedEmailRows,
       total,
       unreadCount,
     };
@@ -887,7 +957,13 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(emails.gameId, gameId), eq(emails.id, emailId)))
       .limit(1);
 
-    return email || undefined;
+    if (!email) return undefined;
+
+    // Normalize category server-side
+    return {
+      ...email,
+      category: normalizeEmailCategory(email.category)
+    };
   }
 
   async createEmail(emailInput: InsertEmail, dbTransaction?: any): Promise<Email> {

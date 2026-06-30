@@ -729,8 +729,18 @@ export const useGameStore = create<GameStore>()(
           });
 
           try {
-            const autosaveLabel = `Autosave - Week ${syncedGameState.currentWeek}`;
-            await get().saveGame(autosaveLabel, { isAutosave: true });
+            let labelName = syncedGameState.musicLabel?.name;
+            if (!labelName) {
+              try {
+                const labelResponse = await apiRequest('GET', `/api/game/${syncedGameState.id}/label`);
+                const labelPayload = await labelResponse.json();
+                labelName = labelPayload?.name ?? null;
+              } catch (labelFetchError) {
+                console.warn('[Autosave] Failed to fetch label name, falling back to generic label:', labelFetchError);
+              }
+            }
+            const resolvedLabel = labelName || `Label ${syncedGameState.id}`;
+            await get().saveGame(`${resolvedLabel} - Week ${syncedGameState.currentWeek}`, { isAutosave: true });
           } catch (autosaveError) {
             console.warn('[Autosave] Failed to create autosave:', autosaveError);
           }

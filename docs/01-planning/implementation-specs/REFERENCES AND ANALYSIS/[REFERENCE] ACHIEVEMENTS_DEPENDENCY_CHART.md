@@ -89,10 +89,11 @@ summary.changes.push({
   description: `📈 Catalog revenue efficiency: $${ongoingRevenue.toLocaleString()}`
 });
 
-// Strategic Efficiency
+// Note: Strategic efficiency achievement removed - served no gameplay purpose
+// Reputation gained from releases is now displayed as direct point values
 summary.changes.push({
   type: 'unlock',
-  description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point`
+  description: getEfficiencyAchievementText(netCashFlow, efficiency) // "Profit efficiency" or "Investment efficiency"
 });
 ```
 

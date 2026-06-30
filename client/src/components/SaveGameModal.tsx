@@ -61,6 +61,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       setPendingImport(null);
       setImporting(false);
       setDeleting(null);
+      setNewSaveName('');
     }
   }, [open]);
 
@@ -223,27 +224,33 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         weeklyOutcome
       } = useGameStore.getState();
 
-      const exportData = {
+      const snapshotCandidate = {
         snapshotVersion: SNAPSHOT_VERSION,
-        gameState: {
-          gameState: gameStateWithoutLabel,
-          musicLabel: musicLabel || null,
-          artists,
-          projects,
-          roles,
-          songs,
-          releases,
-          emails: emailSnapshot.emails,
-          releaseSongs: releaseSongsSnapshot ?? releaseSongs,
-          executives: executivesSnapshot ?? executives,
-          moodEvents: moodEventsSnapshot ?? moodEvents,
-          emailMetadata: {
-            total: emailSnapshot.total,
-            unreadCount: emailSnapshot.unreadCount
-          },
-          weeklyActions,
-          weeklyOutcome: weeklyOutcome ?? null
+        gameState: gameStateWithoutLabel,
+        musicLabel: musicLabel || null,
+        artists,
+        projects,
+        roles,
+        songs,
+        releases,
+        emails: emailSnapshot.emails,
+        releaseSongs: releaseSongsSnapshot ?? releaseSongs,
+        executives: executivesSnapshot ?? executives,
+        moodEvents: moodEventsSnapshot ?? moodEvents,
+        emailMetadata: {
+          total: emailSnapshot.total,
+          unreadCount: emailSnapshot.unreadCount,
+          truncated: emailSnapshot.truncated
         },
+        weeklyActions,
+        weeklyOutcome: weeklyOutcome ?? null
+      };
+
+      const validatedSnapshot = gameSaveSnapshotSchema.parse(snapshotCandidate);
+
+      const exportData = {
+        snapshotVersion: validatedSnapshot.snapshotVersion,
+        gameState: validatedSnapshot,
         timestamp: new Date().toISOString(),
         version: '1.0'
       };
@@ -279,14 +286,40 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         const text = await file.text();
         const importData = JSON.parse(text);
 
-        if (!importData?.gameState) {
-          throw new Error('Missing gameState payload');
+        const candidateSnapshot = (() => {
+          if (importData && typeof importData === 'object') {
+            if (importData.snapshotVersion !== undefined && typeof importData.gameState === 'object' && importData.gameState !== null) {
+              return importData.gameState;
+            }
+            if ('gameState' in importData && typeof (importData as any).gameState === 'object' && (importData as any).gameState !== null) {
+              return importData as Record<string, unknown>;
+            }
+          }
+          return null;
+        })();
+
+        if (!candidateSnapshot) {
+          throw new Error('Invalid save file: expected snapshotVersion and gameState structure.');
         }
 
-        const parsedSnapshot = gameSaveSnapshotSchema.parse({
-          snapshotVersion: importData.snapshotVersion ?? SNAPSHOT_VERSION,
-          ...importData.gameState,
-        });
+        const missingKeys: string[] = [];
+        const snapshotGameState = (candidateSnapshot as any).gameState;
+        if (!snapshotGameState || typeof snapshotGameState !== 'object') {
+          missingKeys.push('gameState');
+        } else {
+          if (typeof snapshotGameState.id !== 'string' || !snapshotGameState.id) {
+            missingKeys.push('gameState.id');
+          }
+          if (typeof snapshotGameState.currentWeek !== 'number') {
+            missingKeys.push('gameState.currentWeek');
+          }
+        }
+
+        if (missingKeys.length > 0) {
+          throw new Error(`Invalid save data. Missing or malformed keys: ${missingKeys.join(', ')}`);
+        }
+
+        const parsedSnapshot = gameSaveSnapshotSchema.parse(candidateSnapshot);
         const importName = importData?.name || `Imported Save ${new Date().toLocaleString()}`;
 
         setPendingImport({
@@ -298,7 +331,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         console.error('Failed to import save:', error);
         toast({
           title: 'Import failed',
-          description: error instanceof Error ? error.message : 'Invalid save file format.',
+          description: error instanceof Error ? error.message : 'Invalid save file format. Expected { snapshotVersion, gameState } payload.',
           variant: 'destructive',
         });
       }
@@ -322,11 +355,24 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       });
 
       const createdSave = await createResponse.json();
-      setSaveDetails(prev => ({ ...prev, [createdSave.id]: snapshot }));
+      setSaveDetails(prev => {
+        if (mode === 'overwrite') {
+          return prev;
+        }
+        return { ...prev, [createdSave.id]: snapshot };
+      });
 
       const importedGameId = await loadGameFromSave(createdSave.id, snapshot, mode);
       if (importedGameId) {
         setGameId(importedGameId);
+      }
+
+      if (mode === 'overwrite') {
+        try {
+          await apiRequest('DELETE', `/api/saves/${createdSave.id}`);
+        } catch (cleanupError) {
+          console.warn('[Import] Failed to remove temporary imported save:', cleanupError);
+        }
       }
 
       refetchSaves();
