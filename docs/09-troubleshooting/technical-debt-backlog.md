@@ -9,10 +9,10 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: June 30, 2026
-- **Total Items**: 34
+- **Total Items**: 38
 - **Completed**: 26
 - **In Progress**: 0
-- **Pending**: 8
+- **Pending**: 12
 
 ---
 
@@ -532,6 +532,24 @@ The reputation-visibility work surfaces a ⭐ "+N reputation points" line in Wee
 
 ---
 
+### [ ] Comment 35: Game snapshot object is built field-by-field in two places (export vs saveGame)
+**Priority**: 🟢 Medium
+**Impact**: Maintainability + latent data drift between manual/auto saves and exported files
+**Effort**: Medium
+
+The save snapshot (`{snapshotVersion, gameState, musicLabel, artists, projects, roles, songs, releases, emails, emailMetadata, releaseSongs, executives, moodEvents, weeklyActions, weeklyOutcome}`) is assembled independently in `client/src/components/SaveGameModal.tsx` `handleExport` (~line 227) and `client/src/store/gameStore.ts` `saveGame` (~line 1208). They have ALREADY diverged: `handleExport` sets `emailMetadata.truncated` but `saveGame`'s `emailMetadata` omits it, so manual saves and autosaves never persist the `truncated` flag while exports do.
+
+**Action**: Extract a single `buildGameSnapshot(state, collections)` helper (e.g. under `client/src/utils/` next to `emailSnapshot.ts`) and call it from both `handleExport` and `saveGame` so the field list lives in one place.
+
+**Relevant Files**:
+- [client/src/components/SaveGameModal.tsx](client/src/components/SaveGameModal.tsx)
+- [client/src/store/gameStore.ts](client/src/store/gameStore.ts)
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+
+*Identified June 30, 2026 during the PR #29 code review.*
+
+---
+
 ## 🔵 **Low Priority Items**
 
 ### [ ] Comment 26: ArtistPage is monolithic
@@ -565,18 +583,68 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ---
 
+### [ ] Comment 36: Autosave display-name format hardcoded in three places
+**Priority**: 🔵 Low
+**Impact**: Format drift risk between write, migration, and tests
+**Effort**: Low
+
+The `"{label} - Week {n}"` format is constructed independently in `client/src/store/gameStore.ts` (autosave write), `server/storage.ts` `getGameSaves` (legacy-name migration), and `tests/features/save-load-snapshot-integrity.test.ts` (local `getAutosaveName` helper). A format change in one place silently breaks the others (migration would rewrite to a name that no longer matches fresh autosaves).
+
+**Action**: Extract a single `formatAutosaveName(labelName, week)` helper into `shared/` and use it from all three.
+
+**Relevant Files**:
+- [client/src/store/gameStore.ts](client/src/store/gameStore.ts)
+- [server/storage.ts](server/storage.ts)
+- [tests/features/save-load-snapshot-integrity.test.ts](tests/features/save-load-snapshot-integrity.test.ts)
+
+*Identified June 30, 2026 during the PR #29 code review.*
+
+---
+
+### [ ] Comment 37: emailSnapshot pagination has 5 overlapping safety checks (one is dead code)
+**Priority**: 🔵 Low
+**Impact**: Unnecessary complexity; harder to reason about truncation
+**Effort**: Low
+
+`client/src/utils/emailSnapshot.ts` accreted five separate safety checks. Check 5 (`collected.length > total + PAGE_SIZE`) is unreachable because check 4 (`collected.length >= total`) exits the loop one threshold earlier in the same iteration; the post-loop "adjust total" block is similarly redundant.
+
+**Action**: Collapse to a single principled termination bound — paginate until a short page (`pageEmails.length < PAGE_SIZE`), keep the `MAX_PAGES` hard cap, and drop the dead/overlapping checks. Treat `total` as a sanity-check log only, not a loop condition.
+
+**Relevant Files**:
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+
+*Identified June 30, 2026 during the PR #29 code review.*
+
+---
+
+### [ ] Comment 38: SaveGameModal import duplicates schema validation with a manual missingKeys block
+**Priority**: 🔵 Low
+**Impact**: Validation logic encoded twice; drifts from the Zod schema
+**Effort**: Low
+
+`client/src/components/SaveGameModal.tsx` `handleImport` hand-checks `gameState` existence, `gameState.id` (non-empty string), and `gameState.currentWeek` (number) immediately before calling `gameSaveSnapshotSchema.parse(candidateSnapshot)`, which already validates those fields. When the schema's required fields change, the manual block goes stale.
+
+**Action**: Drop the manual `missingKeys` block and rely on `gameSaveSnapshotSchema.parse`, catching `ZodError` and surfacing `error.issues` for a field-level message.
+
+**Relevant Files**:
+- [client/src/components/SaveGameModal.tsx](client/src/components/SaveGameModal.tsx)
+
+*Identified June 30, 2026 during the PR #29 code review.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (C29)
-- 🟢 Medium: 5 items (C25, C30, C31, C33, C34)
-- 🔵 Low: 2 items (C26, C32)
+- 🟢 Medium: 6 items (C25, C30, C31, C33, C34, C35)
+- 🔵 Low: 5 items (C26, C32, C36, C37, C38)
 
 ### By Status
-- ✅ Completed: 26 items (76.5%)
+- ✅ Completed: 26 items (68.4%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 8 items (23.5%)
+- 📋 Pending: 12 items (31.6%)
 
 ---
 
