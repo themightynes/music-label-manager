@@ -4,11 +4,10 @@
     "_dev_note_campaign_length": "UPDATED: Campaign now runs for full calendar year (52 weeks)",
     "_dev_note_locations": [
       "COMPLETED: client/src/components/GameSidebar.tsx - Updated to Week XX/52 display",
-      "COMPLETED: client/src/pages/PlanReleasePage.tsx - Updated to week <= 52 check",
-      "COMPLETED: Adjusted focus_slots_unlock_threshold to week 26 (halfway through 52-week campaign)"
+      "COMPLETED: client/src/pages/PlanReleasePage.tsx - Updated to week <= 52 check"
     ],
+    "_dev_note_focus_slots": "The 4th-slot unlock is REPUTATION-based and lives in progression.json -> progression_thresholds.fourth_focus_slot_reputation (canonical). Only focus_slots_base/max live here.",
     "focus_slots_base": 3,
-    "focus_slots_unlock_threshold": 26,
     "focus_slots_max": 4,
     
     "project_durations": {

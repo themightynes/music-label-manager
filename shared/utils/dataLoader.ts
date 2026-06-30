@@ -265,7 +265,6 @@ export class GameDataLoader {
       time_progression: {
         campaign_length_weeks: projects.time_progression.campaign_length_weeks,
         focus_slots_base: projects.time_progression.focus_slots_base,
-        focus_slots_unlock_threshold: projects.time_progression.focus_slots_unlock_threshold,
         focus_slots_max: projects.time_progression.focus_slots_max,
         project_durations: projects.time_progression.project_durations,
         seasonal_modifiers: markets.seasonal_modifiers // CORRECTLY ASSEMBLED HERE

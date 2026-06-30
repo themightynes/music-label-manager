@@ -52,7 +52,7 @@ CREATE TABLE game_states (
   money INTEGER DEFAULT 500000,
   reputation INTEGER DEFAULT 10,
   creative_capital INTEGER DEFAULT 15,
-  focus_slots INTEGER DEFAULT 2,
+  focus_slots INTEGER DEFAULT 3,
   used_focus_slots INTEGER DEFAULT 0,
   
   -- Access Tiers

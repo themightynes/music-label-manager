@@ -1,4 +1,4 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, QueryKey } from "@tanstack/react-query";
 import logger, { redactSensitiveHeaders } from "./logger";
 
 async function getClerkToken(): Promise<string | null> {
@@ -308,7 +308,11 @@ function extractUrlFromQueryKey(queryKey: readonly unknown[]): string {
   return url;
 }
 
-export function getQueryFn<T>({ on401: unauthorizedBehavior }: { on401: UnauthorizedBehavior }): QueryFunction<T, QueryKeyWithUrl> {
+export function getQueryFn<T>({ on401: unauthorizedBehavior }: { on401: UnauthorizedBehavior }): QueryFunction<T, QueryKey> {
+  // NOTE: typed over the general `QueryKey` (not `QueryKeyWithUrl`) so this is
+  // assignable to TanStack's default `queryFn` slot, which must accept any key
+  // shape. The string-URL contract is enforced at runtime by
+  // `extractUrlFromQueryKey`, which throws if `queryKey[0]` is not a string.
   return async ({ queryKey }) => {
     const url = extractUrlFromQueryKey(queryKey);
     const shouldReturnNull = unauthorizedBehavior === "returnNull";

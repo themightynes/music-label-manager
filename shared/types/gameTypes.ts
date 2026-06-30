@@ -204,7 +204,6 @@ export interface BalanceConfig {
   time_progression: {
     campaign_length_weeks: number;
     focus_slots_base: number;
-    focus_slots_unlock_threshold: number;
     focus_slots_max: number;
     project_durations: Record<string, number[]>;
     seasonal_modifiers: Record<string, number>;

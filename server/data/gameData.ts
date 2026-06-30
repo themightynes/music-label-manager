@@ -636,7 +636,7 @@ export class ServerGameData {
     if (!this.balanceData) {
       return {
         second_artist_reputation: 10,
-        fourth_focus_slot_reputation: 18,
+        fourth_focus_slot_reputation: 50,
         label_size_thresholds: {
           local: 0,
           regional: 25,

@@ -339,6 +339,22 @@ Some interactive elements lack clear focus management and aria attributes (Inbox
 
 ## 🟡 **High Priority Items**
 
+### [ ] Comment 29: ActionSelectionPool hardcodes 3-slot selection cap
+**Priority**: 🟡 High
+**Impact**: Gameplay correctness — defeats the 4th focus slot
+**Effort**: Low
+
+`ActionSelectionPool.tsx:209` computes `isDisabled = !isSelected && selectedActions.length >= 3` with a `// TODO: Use gameState.focusSlots from props`. The literal `3` means that even after a player unlocks the 4th focus slot (reputation ≥ 50, see `shared/engine/game-engine.ts:349` and `data/balance/progression.json → progression_thresholds.fourth_focus_slot_reputation`), this selection UI still caps them at 3 actions per week — so the unlocked slot may be unusable from this component.
+
+**Action**: Replace the literal `3` with the player's actual slot count from `gameState.focusSlots` (threaded through props), so the cap tracks the unlocked value.
+
+**Relevant Files**:
+- [client/src/components/ActionSelectionPool.tsx](client/src/components/ActionSelectionPool.tsx)
+
+*Identified June 30, 2026 during the focus-slot unlock reconciliation.*
+
+---
+
 ### ~~Comment 27: Components bypass apiRequest~~ 🟠.
 **Status**: 🟠. **COMPLETED** (October 19, 2025)
 

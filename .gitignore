@@ -8,6 +8,9 @@ nul
 
 .env
 
+# Claude Code local (per-user) settings
+.claude/settings.local.json
+
 # Playwright
 /test-results/
 /playwright-report/
