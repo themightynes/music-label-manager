@@ -628,14 +628,14 @@ const calculateArtistROI = (artist: Artist) => {
 ```
 
 **Strategic Performance Insights:**
-```typescript
-// Monthly efficiency calculation
-const reputationGain = Object.values(summary.reputationChanges)
-  .reduce((total, change) => total + change, 0);
-const netCashFlow = summary.revenue - summary.expenses;
 
-// Note: Efficiency achievement removed - reputation tracking is now direct per activity
-// Players see exact reputation points gained rather than confusing efficiency ratios
+> **REMOVED:** Earlier versions included a "Strategic Efficiency" achievement that
+> computed a dollars-per-reputation-point ratio (net cash flow divided by total
+> reputation gain) in `generateEconomicInsights()`. This achievement has been
+> removed from `shared/engine/game-engine.ts` because it served no gameplay purpose.
+> Reputation is now tracked directly per release/activity in their respective
+> sections, so players see exact reputation points gained rather than a confusing
+> efficiency ratio.
 
 ### Revenue Lifecycle Analysis
 

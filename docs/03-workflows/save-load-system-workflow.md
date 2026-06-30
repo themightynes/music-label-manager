@@ -14,7 +14,7 @@ Snapshot-based save system with support for manual saves, autosaves, and JSON im
 1. **Client** calls `saveGame(name, isAutosave)` in `gameStore.ts`
 2. **API** validates snapshot with `gameSaveSnapshotSchema`
 3. **Database** stores JSONB snapshot in `game_saves` table
-4. **Cleanup** deletes old autosaves (keeps only newest per game)
+4. **Cleanup** deletes old autosaves (keeps newest 3 per game)
 
 ### Load Operation (Overwrite Mode)
 1. **Fetch** snapshot from `GET /api/saves/:saveId`
@@ -96,12 +96,14 @@ const convertTimestamps = (obj: any): any => {
 ## Autosave System
 
 **Trigger**: After successful week advancement
-**Naming**: `"Autosave - Week {currentWeek}"`
-**Cleanup**: Only keeps newest autosave per game
+**Naming**: `"{musicLabelName} - Week {week}"` (e.g. `"Acme Records - Week 8"`). The label name is fetched from the game's label; if unavailable it falls back to `"Label {gameId} - Week {week}"`.
+**Legacy migration**: `getGameSaves()` normalizes legacy autosaves still named `"Autosave"` on read, rewriting them to `"{musicLabelName} - Week {week}"` for display.
+**Cleanup**: Keeps the newest 3 autosaves per game (`purgeOldAutosaves(..., keep: 3)`)
 
 ```typescript
-// In gameStore.ts advanceWeek()
-await saveGame(`Autosave - Week ${newWeek}`, true);
+// In gameStore.ts after week advancement
+const resolvedLabel = labelName || `Label ${syncedGameState.id}`;
+await get().saveGame(`${resolvedLabel} - Week ${syncedGameState.currentWeek}`, { isAutosave: true });
 ```
 
 ## Data Validation
@@ -125,9 +127,11 @@ await saveGame(`Autosave - Week ${newWeek}`, true);
 {
   "gameState": { /* complete snapshot */ },
   "timestamp": "2025-10-12T...",
-  "version": "1.0"
+  "snapshotVersion": 2
 }
 ```
+
+**Versioning**: The current snapshot version is `SNAPSHOT_VERSION = 2` (`shared/schema.ts`). The snapshot field is the numeric `snapshotVersion` (not a `"version"` string). The restore endpoint in `server/routes.ts` rejects any snapshot whose `snapshotVersion` does not match the current version, returning HTTP 400 with `error: 'UNSUPPORTED_SNAPSHOT_VERSION'`.
 
 ## Error Handling
 

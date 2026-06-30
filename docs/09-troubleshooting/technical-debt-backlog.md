@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: October 19, 2025
-- **Total Items**: 28
+- **Last Updated**: June 30, 2026
+- **Total Items**: 32
 - **Completed**: 26
 - **In Progress**: 0
-- **Pending**: 2
+- **Pending**: 6
 
 ---
 
@@ -443,6 +443,43 @@ ClerkProvider appearance is cast to any; tighten typing to avoid runtime mismatc
 
 ---
 
+### [ ] Comment 30: Email notification reference documents 7 legacy categories; system uses 5
+**Priority**: 🟢 Medium
+**Impact**: Documentation accuracy / onboarding confusion
+**Effort**: Medium
+
+`docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md` (around line 356 / 799-809) documents 7 event-type email categories (tour_completion, top_10_debut, release, number_one_debut, tier_unlock, artist_discovery, financial_report). The actual system uses 5 generic categories (chart, financial, artist, ar, other), with the legacy 7 mapped into them via `LEGACY_CATEGORY_MAP`. NOTE this is PRE-EXISTING debt — it predates the email-snapshot/save-load branch (main already maps these).
+
+**Action**: Rewrite the categories section of that reference doc to document the 5 current categories plus the legacy→current mapping.
+
+**Relevant Files**:
+- [docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md](docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md)
+- [shared/types/emailTypes.ts](shared/types/emailTypes.ts)
+- [server/storage.ts](server/storage.ts) (normalizeEmailCategory)
+
+*Identified June 30, 2026 during the email-snapshot/save-load documentation audit.*
+
+---
+
+### [ ] Comment 31: Save snapshot v2 format and email-truncation system undocumented
+**Priority**: 🟢 Medium
+**Impact**: Documentation completeness for save/load + email subsystems
+**Effort**: Medium
+
+The save/load snapshot was upgraded (`SNAPSHOT_VERSION = 2`) and now captures additional collections (emails + `emailMetadata.truncated`, releaseSongs, executives, moodEvents, musicLabel) and the email snapshot has a truncation/safety system (~10k cap, `truncated` flag, 5 pagination guardrails) — none of which is documented beyond the workflow doc's basic example. Also document the server-side email category normalization, deterministic email ordering (week, createdAt, id), and the useEmails staleTime change (0 → 30s). Minor footnote: the autosave-name migration will also rename a save a user manually named exactly "Autosave" (benign edge case) — worth a one-line caveat in whatever doc covers autosave naming.
+
+**Action**: Add a "Snapshot v2 format" section to the save/load docs (or a new doc) enumerating all captured collections + the email truncation behavior and `truncated` flag.
+
+**Relevant Files**:
+- [shared/schema.ts](shared/schema.ts) (gameSaveSnapshotSchema, SNAPSHOT_VERSION)
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+- [server/storage.ts](server/storage.ts)
+- [docs/03-workflows/save-load-system-workflow.md](docs/03-workflows/save-load-system-workflow.md)
+
+*Identified June 30, 2026 during the email-snapshot/save-load documentation audit.*
+
+---
+
 ## 🔵 **Low Priority Items**
 
 ### [ ] Comment 26: ArtistPage is monolithic
@@ -459,18 +496,35 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ---
 
+### [ ] Comment 32: Email snapshot silently truncates for very long games (~10k email cap)
+**Priority**: 🔵 Low
+**Impact**: Save completeness for long-running games (edge case)
+**Effort**: Medium
+
+`client/src/utils/emailSnapshot.ts` caps email capture at ~10,000 emails (100 pages) and sets a `truncated` flag when the cap is hit. For very long-running games this means saved snapshots omit older emails. This is intentional safety behavior (prevents pagination hangs) and is flagged via `truncated`, but the cap itself is a long-term limitation.
+
+**Action**: Future — consider chunked/paged email storage or a higher/configurable cap, and surface the `truncated` state to players in the save/restore UI.
+
+**Relevant Files**:
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+- [shared/schema.ts](shared/schema.ts) (emailMetadata.truncated)
+
+*Identified June 30, 2026 during the email-snapshot/save-load documentation audit.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 0 items (down from 3)
-- 🟢 Medium: 1 item (down from 17)
-- ?? Low: 1 item (down from 1)
+- 🟡 High: 1 item (C29)
+- 🟢 Medium: 3 items (C25, C30, C31)
+- 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 26 items (92.9%)
+- ✅ Completed: 26 items (81.3%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 2 items (7.1%)
+- 📋 Pending: 6 items (18.7%)
 
 ---
 
@@ -507,6 +561,7 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ### Phase 4: Final Polish & API Consistency (Current Sprint Priority)
 - 🟢 Comments 25 & 26: Final polish and refactor follow-ups
+- 🟢 Comments 30, 31, 32: Save-snapshot v2 / email-system documentation debt (identified June 30, 2026)
 
 ---
 
