@@ -346,14 +346,20 @@ export class GameEngine {
     
     console.log(`[MONEY UPDATE] Starting: $${weekStartMoney}, Revenue: $${summary.revenue}, Expenses: $${summary.expenses}, Final: $${finalMoney}`);
     
-    // Check for focus slot unlock at 50+ reputation
-    if (this.gameState.reputation && this.gameState.reputation >= 50) {
-      const currentSlots = this.gameState.focusSlots || 3;
-      if (currentSlots < 4) {
-        this.gameState.focusSlots = 4;
+    // Check for focus slot unlock — config-driven (single source of truth):
+    //   threshold: data/balance/progression.json -> progression_thresholds.fourth_focus_slot_reputation
+    //   base/max:  data/balance/projects.json     -> time_progression.focus_slots_base / focus_slots_max
+    const focusBalance = this.gameData.getBalanceConfigSync();
+    const focusSlotUnlockReputation = focusBalance?.progression_thresholds?.fourth_focus_slot_reputation ?? 50;
+    const focusSlotsBase = focusBalance?.time_progression?.focus_slots_base ?? 3;
+    const focusSlotsMax = focusBalance?.time_progression?.focus_slots_max ?? 4;
+    if (this.gameState.reputation && this.gameState.reputation >= focusSlotUnlockReputation) {
+      const currentSlots = this.gameState.focusSlots || focusSlotsBase;
+      if (currentSlots < focusSlotsMax) {
+        this.gameState.focusSlots = focusSlotsMax;
         summary.changes.push({
           type: 'unlock',
-          description: 'Fourth focus slot unlocked! You can now select 4 actions per week.'
+          description: `Fourth focus slot unlocked! You can now select ${focusSlotsMax} actions per week.`
         });
         console.log('[UNLOCK] Fourth focus slot unlocked at reputation', this.gameState.reputation);
       }

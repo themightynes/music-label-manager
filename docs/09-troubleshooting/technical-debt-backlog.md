@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: October 19, 2025
-- **Total Items**: 28
+- **Last Updated**: June 30, 2026
+- **Total Items**: 29
 - **Completed**: 26
 - **In Progress**: 0
-- **Pending**: 2
+- **Pending**: 3
 
 ---
 
@@ -339,6 +339,22 @@ Some interactive elements lack clear focus management and aria attributes (Inbox
 
 ## 🟡 **High Priority Items**
 
+### [ ] Comment 29: ActionSelectionPool hardcodes 3-slot selection cap
+**Priority**: 🟡 High
+**Impact**: Gameplay correctness — defeats the 4th focus slot
+**Effort**: Low
+
+`ActionSelectionPool.tsx:209` computes `isDisabled = !isSelected && selectedActions.length >= 3` with a `// TODO: Use gameState.focusSlots from props`. The literal `3` means that even after a player unlocks the 4th focus slot (reputation ≥ 50, see `shared/engine/game-engine.ts:349` and `data/balance/progression.json → progression_thresholds.fourth_focus_slot_reputation`), this selection UI still caps them at 3 actions per week — so the unlocked slot may be unusable from this component.
+
+**Action**: Replace the literal `3` with the player's actual slot count from `gameState.focusSlots` (threaded through props), so the cap tracks the unlocked value.
+
+**Relevant Files**:
+- [client/src/components/ActionSelectionPool.tsx](client/src/components/ActionSelectionPool.tsx)
+
+*Identified June 30, 2026 during the focus-slot unlock reconciliation.*
+
+---
+
 ### ~~Comment 27: Components bypass apiRequest~~ 🟠.
 **Status**: 🟠. **COMPLETED** (October 19, 2025)
 
@@ -463,14 +479,14 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 0 items (down from 3)
-- 🟢 Medium: 1 item (down from 17)
-- ?? Low: 1 item (down from 1)
+- 🟡 High: 1 item (Comment 29)
+- 🟢 Medium: 1 item (Comment 25)
+- 🔵 Low: 1 item (Comment 26)
 
 ### By Status
-- ✅ Completed: 26 items (92.9%)
+- ✅ Completed: 26 items (89.7%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 2 items (7.1%)
+- 📋 Pending: 3 items (10.3%)
 
 ---
 

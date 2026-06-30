@@ -14,9 +14,11 @@
 - **Reviewed all of `docs/`** (6-agent fan-out). Headline: well-organized but two-tier currency; two core flow docs still described the obsolete monthly loop.
 - **Converted the two stale flow docs to the weekly (52-week) system** — `docs/03-workflows/game-system-workflows.md` + `user-interaction-flows.md`, with code-verified corrections (decay is ~15%/week not /month; weekly burn $3–6k base + ~$1,200/artist/wk; song gen Single 2/wk, EP 3/wk; starting money $500k; campaign ends week 52). → branch `docs/weekly-workflow-conversion`.
 - **Fixed the `/session-end` command** (was broken: hardcoded Linux paths, frozen dates, missing files) and added this session-log convention. → branch `chore/session-workflow`.
+- **Reconciled the focus-slot unlock discrepancy (quick win #1)** — collapsed the 3 conflicting values to one source of truth. Canonical = `data/balance/progression.json → progression_thresholds.fourth_focus_slot_reputation`, set to **50** (preserves the previously shipped behavior). The engine now **reads** the threshold + base + max from config instead of hardcoding (`shared/engine/game-engine.ts:349`). Deleted the misnamed week-26 `focus_slots_unlock_threshold` from `projects.json` and its loaders/type (`data/balance.ts`, `shared/utils/dataLoader.ts`, `shared/types/gameTypes.ts`, `scripts/archive/compile-balance.ts`); set the rep value to 50 in `world.json` + the `gameData.ts` sync fallback; fixed `database-design.md` (`focus_slots DEFAULT 2 → 3`). `npm run check` passes. → branch TBD.
 
 **Open threads / next steps:**
-- **Focus-slot unlock has 3 conflicting config values** — engine hardcodes `reputation ≥ 50` (`shared/engine/game-engine.ts:350`), but `data/balance/projects.json` says week 26 and `data/balance/progression.json` says rep 18. Only the hardcoded `≥ 50` runs. Worth reconciling. *(Note: this DEVELOPMENT_STATUS doc's older "Focus Slots unlock at week 26" claim is also wrong vs the engine.)*
+- **(Out of scope, flagged) UI focus-slot cap** — `client/src/components/ActionSelectionPool.tsx:209` hardcodes `selectedActions.length >= 3` with a `// TODO: Use gameState.focusSlots`, so the selection UI may still cap at 3 even after the 4th slot unlocks. Worth a follow-up.
+- **(Historical only)** the Sept-2025 refactoring log below still says "Focus Slots: Unlock at week 26"; left as-is as a point-in-time record, but it does not reflect current behavior (reputation ≥ 50).
 - **Open PRs/branches to merge or close**: PR #24 (queryClient), plus local branches `docs/weekly-workflow-conversion` and `chore/session-workflow` (not yet pushed).
 - **Two open tech-debt items** per `docs/09-troubleshooting/technical-debt-backlog.md`: Comment 25 (`ClerkProvider` `any` cast in `client/src/main.tsx` — quick win) and Comment 26 (`ArtistPage.tsx` is monolithic — larger refactor).
 - **Docs still on the legacy monthly framing** in spots; index files (`docs/README.md`, `docs/claude.md`) don't list `98-research/` or `api-specifications/`.
@@ -29,7 +31,7 @@
 **Quick wins**
 - [ ] **Tech-debt Comment 25** — `ClerkProvider` appearance cast to `any` in `client/src/main.tsx`; tighten typing. Small/isolated. (See `docs/09-troubleshooting/technical-debt-backlog.md`.)
 - [ ] **Patch doc index files** — `docs/README.md` + `docs/claude.md` don't list `98-research/` or `api-specifications/` (invisible to navigation).
-- [ ] **Reconcile focus-slot unlock values** — engine hardcodes `reputation ≥ 50` (`shared/engine/game-engine.ts:~350`), but `data/balance/projects.json` says week 26 and `data/balance/progression.json` says rep 18. Collapse to one source of truth; only the hardcoded value runs.
+- [x] **Reconcile focus-slot unlock values** — ✅ Done June 30, 2026. Canonical source = `progression.json → fourth_focus_slot_reputation` (set to 50); engine reads threshold/base/max from config; deleted the dead week-26 `focus_slots_unlock_threshold`. See session log above.
 
 **Medium**
 - [ ] **Verify the financial bug** — `docs/98-research/FINANCIAL_CALCULATION_BUG_ANALYSIS.md` documents a dual-path revenue/expense bug; confirm whether it was fixed in current code.
