@@ -2,6 +2,7 @@
 
 **Music Label Manager - Backend System Flows**  
 *Technical Process Documentation*
+*Updated: June 30, 2026 — reflects the weekly (52-week) GameEngine loop*
 
 This document focuses on **system-level processing** and backend workflows. For player experience flows, see [User Interaction Flows](./user-interaction-flows.md).
 
@@ -9,9 +10,9 @@ This document focuses on **system-level processing** and backend workflows. For 
 
 ## 🎮 Core Game Loop Processing
 
-The Music Label Manager operates on a **monthly turn-based system** where multiple systems interact to process player actions and advance game state.
+The Music Label Manager operates on a **weekly turn-based system** across a **52-week campaign** where multiple systems interact to process player actions and advance game state. Turn processing is **server-authoritative**: the client POSTs selected actions to `POST /api/advance-week` (`server/routes.ts`), which runs `GameEngine.advanceWeek(weeklyActions, dbTransaction)` (`shared/engine/game-engine.ts`) inside a single database transaction.
 
-### **Monthly Turn Processing Flow**
+### **Weekly Turn Processing Flow**
 
 ```
 Action Selection → Validation → Processing → State Updates → Results Display
@@ -52,6 +53,23 @@ Calculated Changes → Database Transaction → Client State Update → UI Refre
 - Updated projects     - All or nothing      - Game state      - Component
 - Changed relations    - Consistent state    - Action reset      refresh
 ```
+
+### **Authoritative Weekly Processing Order**
+
+The engine executes these steps in order each week (`GameEngine.advanceWeek`, `shared/engine/game-engine.ts`):
+
+1. Process pending artist signing fees
+2. Reset `usedFocusSlots` to 0 and increment `currentWeek`
+3. Run the A&R Office weekly lifecycle
+4. Apply role-meeting actions, then all other selected actions
+5. Accrue ongoing revenue for released projects; generate songs for recording projects
+6. Process lead singles and planned releases
+7. Update weekly charts; advance project stages
+8. Apply delayed effects; weekly artist mood & popularity changes; executive mood/loyalty decay
+9. Roll random events
+10. Apply weekly burn (base operations + artist salaries) and executive salaries
+11. Evaluate progression gates; unlock access tiers and producer tiers
+12. Finalize financials, queue emails, run the campaign-completion check (week 52), and commit the single money update
 
 ---
 
@@ -101,10 +119,10 @@ Poor (0-39)           No bonus/penalty       Poor revenue        Relationship st
 ```
 Project Creation → Production → Marketing → Release → Revenue Generation
        ↓              ↓           ↓          ↓            ↓
-1. Player defines   2. System    3. Auto    4. Songs     5. Monthly
+1. Player defines   2. System    3. Auto    4. Songs     5. Weekly
    parameters          generates    advance    marked       revenue
    (type, budget,      songs        through    released     decay
-   producer, time)     monthly      stages                  processing
+   producer, time)     weekly       stages                  processing
 ```
 
 ### **Multi-Song Project Workflow**
@@ -112,9 +130,10 @@ Project Creation → Production → Marketing → Release → Revenue Generation
 ```
 Project Start → Song Generation → Quality Calculation → Release Processing → Revenue Tracking
      ↓               ↓                 ↓                    ↓                   ↓
-1. Set song      2. Monthly song    3. Individual       4. All songs        5. Each song
+1. Set song      2. Weekly song     3. Individual       4. All songs        5. Each song
    count (1-5)      creation          song quality        automatically       tracked
-                    (2-3/month)       calculated          released            separately
+                    (Single 2/wk,     calculated          released            separately
+                     EP 3/wk)
 ```
 
 **Song Generation Process**:
@@ -122,7 +141,7 @@ Project Start → Song Generation → Quality Calculation → Release Processing
 Project Parameters → Base Quality → Modifier Application → Final Song → Revenue Potential
        ↓                ↓               ↓                    ↓              ↓
 - Producer tier      - Random        - Producer bonus     - Stored in    - Initial streams
-- Time investment      base           - Time bonus           database     - Monthly decay
+- Time investment      base           - Time bonus           database     - Weekly decay
 - Budget allocation    (40-60)        - Budget bonus       - Associated   - Revenue calculation
 - Artist mood                         - Mood bonus           with project
 ```
@@ -134,23 +153,27 @@ Project Parameters → Base Quality → Modifier Application → Final Song → 
 ### **Revenue Generation Flow**
 
 ```
-Project Releases → Initial Revenue → Monthly Decay → Access Tier Bonuses → Final Revenue
+Project Releases → Initial Revenue → Weekly Decay → Access Tier Bonuses → Final Revenue
        ↓               ↓                ↓                 ↓                  ↓
-Songs released     Quality-based    15% monthly       Reputation-based   Player receives
+Songs released     Quality-based    ~15% weekly       Reputation-based   Player receives
 automatically      initial          decay applied     multipliers        money each
-when projects      calculations     to all active     (playlist/press/   month from
+when projects      calculations     to all active     (playlist/press/   week from
 complete                           releases          venue access)       catalog
 ```
+
+> **Streaming decay:** each release retains **85% of streams per week** (`weekly_decay_rate: 0.85` in `data/balance/markets.json`), i.e. ~15% decay *per week* — applied as `0.85^weeksSinceRelease` and zeroed after **24 weeks** (`max_decay_weeks`). Revenue is `streams × $0.05` (`revenue_per_stream`). *(The previous "15% monthly" figure was incorrect on both rate and cadence.)*
 
 ### **Expense Processing Workflow**
 
 ```
-Monthly Expenses → Base Operations → Artist Costs → Project Budgets → Total Deduction
-       ↓               ↓               ↓              ↓                ↓
-Automatic          $3,000-6,000    $600-2,000      Allocated at     Total monthly
-monthly            base burn       per artist      project start    burn applied
-processing                         monthly                          to player money
+Weekly Expenses → Base Operations → Artist Costs → Executive Salaries → Total Deduction
+       ↓               ↓               ↓              ↓                   ↓
+Automatic          $3,000-6,000    ~$1,200 per     Per signed         Total weekly
+weekly             base burn       artist/week     executive          burn applied
+processing                         (default)       (role salary)      to player money
 ```
+
+> **Weekly burn** = base operations (`weekly_burn_base: [3000, 6000]`, `data/balance/economy.json`) + per-artist salaries (`artist.weeklyCost`, default **$1,200/week**) + executive salaries. Project budgets are deducted up front at project start, not per week. Bankruptcy threshold is **-$10,000**.
 
 ---
 
@@ -305,7 +328,7 @@ Role Selection → Dialogue Options → Player Choice → Immediate Effects → 
      ↓              ↓                 ↓              ↓                  ↓
 Player selects   System presents   Player makes   Resources         Effects trigger
 industry role    context-specific  choice from    updated           in future
-from available   dialogue tree     2-3 options    immediately       months
+from available   dialogue tree     2-3 options    immediately       weeks
 roles                                                               (if applicable)
 ```
 
@@ -322,7 +345,7 @@ option         Delayed =           right now     systems
 
 **Effect Types Flow**:
 - **Immediate**: Money +/-, reputation +/-, creative capital +/-
-- **Delayed**: Flag set for future month processing
+- **Delayed**: Flag set for future week processing
 - **Conditional**: Effects based on current game state
 
 ---
