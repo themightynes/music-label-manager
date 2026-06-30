@@ -287,13 +287,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         const importData = JSON.parse(text);
 
         const candidateSnapshot = (() => {
-          if (importData && typeof importData === 'object') {
-            if (importData.snapshotVersion !== undefined && typeof importData.gameState === 'object' && importData.gameState !== null) {
-              return importData.gameState;
-            }
-            if ('gameState' in importData && typeof (importData as any).gameState === 'object' && (importData as any).gameState !== null) {
-              return importData as Record<string, unknown>;
-            }
+          if (!importData || typeof importData !== 'object') return null;
+          const wrapped = (importData as any).gameState;
+          // Double-wrapped export: importData.gameState is itself a snapshot (has its own .gameState)
+          if (wrapped && typeof wrapped === 'object' && typeof wrapped.gameState === 'object' && wrapped.gameState !== null) {
+            return wrapped as Record<string, unknown>;
+          }
+          // Single-wrapped / raw snapshot: importData itself is the snapshot
+          if (wrapped && typeof wrapped === 'object') {
+            return importData as Record<string, unknown>;
           }
           return null;
         })();

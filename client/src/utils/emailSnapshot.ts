@@ -11,16 +11,21 @@ export type EmailSnapshot = {
 
 export async function fetchEmailSnapshot(gameId: string): Promise<EmailSnapshot> {
   const collected: any[] = [];
-  let total = 0;
+  let serverReportedTotal = 0;
   let unreadCount = 0;
   let offset = 0;
   const MAX_PAGES = 100; // Safety cap: maximum 100 pages (10,000 emails)
-  let consecutiveEmptyPages = 0;
   let truncated = false;
 
-  while (true) {
-    // Safety check 1: Prevent endless loops with pathological totals
-    if (offset >= EMAIL_PAGE_SIZE * MAX_PAGES) {
+  // Page through the inbox until a SHORT page is returned. A page is "short"
+  // when it has fewer than EMAIL_PAGE_SIZE rows, which means there is nothing
+  // left to fetch. This single condition handles both the last partial page
+  // and a fully empty page (offset past the end), so there are no wasted
+  // round trips on inconsistent/over-reported totals. The MAX_PAGES cap is the
+  // ONLY thing that flags a snapshot as truncated.
+  for (let page = 0; ; page++) {
+    // Hard cap: a genuine cap hit means the snapshot is genuinely incomplete.
+    if (page >= MAX_PAGES) {
       console.warn(`[EmailSnapshot] Safety limit reached: exceeded ${MAX_PAGES} pages (${EMAIL_PAGE_SIZE * MAX_PAGES} emails). Stopping pagination.`);
       truncated = true;
       break;
@@ -37,41 +42,13 @@ export async function fetchEmailSnapshot(gameId: string): Promise<EmailSnapshot>
     const pageEmails = Array.isArray(payload.emails) ? payload.emails : [];
 
     if (offset === 0) {
-      total = typeof payload.total === 'number' ? payload.total : pageEmails.length;
+      serverReportedTotal = typeof payload.total === 'number' ? payload.total : pageEmails.length;
       unreadCount = typeof payload.unreadCount === 'number' ? payload.unreadCount : 0;
-      
-      // Safety check 2: Warn about potentially inconsistent totals
-      if (total > EMAIL_PAGE_SIZE * MAX_PAGES) {
-        console.warn(`[EmailSnapshot] Large total count detected: ${total}. This may cause performance issues.`);
-      }
-    }
-
-    // Safety check 3: Break if server returns zero emails (inconsistent total)
-    if (pageEmails.length === 0) {
-      consecutiveEmptyPages++;
-      if (consecutiveEmptyPages >= 3) {
-        console.warn(`[EmailSnapshot] Server returned ${consecutiveEmptyPages} consecutive empty pages. Total may be inconsistent. Stopping pagination.`);
-        truncated = true;
-        break;
-      }
-    } else {
-      consecutiveEmptyPages = 0;
     }
 
     collected.push(...pageEmails);
 
-    // Safety check 4: Break if offset growth exceeds reasonable bounds
-    if (collected.length >= total && total > 0) {
-      break;
-    }
-
-    // Safety check 5: Stop if we've collected more emails than the reported total
-    if (total > 0 && collected.length > total + EMAIL_PAGE_SIZE) {
-      console.warn(`[EmailSnapshot] Collected more emails (${collected.length}) than reported total (${total}). Stopping pagination.`);
-      truncated = true;
-      break;
-    }
-
+    // A short page means we have reached the end of the inbox.
     if (pageEmails.length < EMAIL_PAGE_SIZE) {
       break;
     }
@@ -79,15 +56,16 @@ export async function fetchEmailSnapshot(gameId: string): Promise<EmailSnapshot>
     offset += EMAIL_PAGE_SIZE;
   }
 
-  // Final safety: Update total if we collected more than expected
-  if (collected.length > total) {
-    console.warn(`[EmailSnapshot] Adjusting total from ${total} to ${collected.length} based on actual collection count.`);
-    total = collected.length;
+  // The actual collected count is authoritative; the server `total` is only an
+  // estimate and is never used to terminate the loop. Log a sanity warning if
+  // they disagree, but do NOT treat a disagreement as a truncated snapshot.
+  if (serverReportedTotal !== collected.length) {
+    console.warn(`[EmailSnapshot] Server-reported total (${serverReportedTotal}) disagreed with collected count (${collected.length}). Using collected count.`);
   }
 
   return {
     emails: collected,
-    total,
+    total: collected.length,
     unreadCount,
     truncated
   };

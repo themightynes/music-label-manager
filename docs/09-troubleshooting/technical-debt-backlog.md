@@ -10,9 +10,9 @@
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: June 30, 2026
 - **Total Items**: 38
-- **Completed**: 26
+- **Completed**: 27
 - **In Progress**: 0
-- **Pending**: 12
+- **Pending**: 11
 
 ---
 
@@ -601,19 +601,17 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 
 ---
 
-### [ ] Comment 37: emailSnapshot pagination has 5 overlapping safety checks (one is dead code)
-**Priority**: 🔵 Low
-**Impact**: Unnecessary complexity; harder to reason about truncation
-**Effort**: Low
+### ~~Comment 37: emailSnapshot pagination has 5 overlapping safety checks (one is dead code)~~ ✅
+**Status**: ✅ **COMPLETED** (June 30, 2026)
 
-`client/src/utils/emailSnapshot.ts` accreted five separate safety checks. Check 5 (`collected.length > total + PAGE_SIZE`) is unreachable because check 4 (`collected.length >= total`) exits the loop one threshold earlier in the same iteration; the post-loop "adjust total" block is similarly redundant.
+`client/src/utils/emailSnapshot.ts` accreted five separate safety checks. Check 5 (`collected.length > total + PAGE_SIZE`) was unreachable because check 4 (`collected.length >= total`) exited the loop one threshold earlier in the same iteration; the post-loop "adjust total" block was similarly redundant, and the over-collection check set a false `truncated = true`.
 
-**Action**: Collapse to a single principled termination bound — paginate until a short page (`pageEmails.length < PAGE_SIZE`), keep the `MAX_PAGES` hard cap, and drop the dead/overlapping checks. Treat `total` as a sanity-check log only, not a loop condition.
+**Resolution**: Collapsed the loop to a single principled termination bound while fixing review finding #6 — paginate until a short page (`pageEmails.length < EMAIL_PAGE_SIZE`, which also covers a fully empty page so no redundant fetches), with the `MAX_PAGES` cap as the only path that sets `truncated`. The server `total` is used only as a sanity-check `console.warn`, never for loop termination, and the returned `total` is the true collected count. Complete snapshots are no longer falsely flagged truncated.
 
 **Relevant Files**:
 - [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
 
-*Identified June 30, 2026 during the PR #29 code review.*
+*Identified June 30, 2026 during the PR #29 code review; resolved same day alongside finding #6.*
 
 ---
 
@@ -639,12 +637,12 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (C29)
 - 🟢 Medium: 6 items (C25, C30, C31, C33, C34, C35)
-- 🔵 Low: 5 items (C26, C32, C36, C37, C38)
+- 🔵 Low: 4 items (C26, C32, C36, C38)
 
 ### By Status
-- ✅ Completed: 26 items (68.4%)
+- ✅ Completed: 27 items (71.1%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 12 items (31.6%)
+- 📋 Pending: 11 items (28.9%)
 
 ---
 
