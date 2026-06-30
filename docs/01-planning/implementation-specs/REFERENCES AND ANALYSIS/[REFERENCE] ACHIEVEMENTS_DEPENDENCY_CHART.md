@@ -89,11 +89,11 @@ summary.changes.push({
   description: `📈 Catalog revenue efficiency: $${ongoingRevenue.toLocaleString()}`
 });
 
-// Strategic Efficiency
-summary.changes.push({
-  type: 'unlock',
-  description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point`
-});
+// REMOVED: Strategic Efficiency achievement (dollars-per-reputation-point).
+// It served no gameplay purpose and has been deleted from
+// generateEconomicInsights() in shared/engine/game-engine.ts.
+// Reputation gained from releases/activities is now displayed as direct
+// point values in their respective sections instead.
 ```
 
 ### 6. Project Stage Advancement
@@ -128,7 +128,7 @@ summary.changes.push({
 | **Press Coverage** | Media pickups > 0 | Marketing calculations |
 | **Investment Tracking** | Project spending | Monthly financial summary |
 | **Revenue Efficiency** | Ongoing revenue > 0 | Catalog performance |
-| **Strategic Efficiency** | Reputation + cash flow | Monthly performance metrics |
+| ~~**Strategic Efficiency**~~ | _Removed_ | Removed — reputation now tracked directly per activity |
 | **Project Advancement** | Time-based progression | Database project timelines |
 | **Campaign Complete** | Month 36 reached | Campaign length limit |
 

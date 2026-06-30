@@ -1162,6 +1162,12 @@ export class GameEngine {
           break;
         case 'reputation':
           this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + value));
+          // Track reputation changes in summary for analysis
+          if (!summary.reputationChanges) {
+            summary.reputationChanges = {};
+          }
+          const targetKey = artistId || 'global';
+          summary.reputationChanges[targetKey] = (summary.reputationChanges[targetKey] || 0) + value;
           break;
         case 'creative_capital':
           this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + value);
@@ -2112,7 +2118,7 @@ export class GameEngine {
             
             summary.changes.push({
               type: 'reputation',
-              description: `📰 Press coverage for "${release.title}"`,
+              description: `📰 "${release.title}" earned +${reputationGain} reputation points`,
               amount: reputationGain
             });
             
@@ -4375,18 +4381,8 @@ export class GameEngine {
       });
     }
     
-    // Track reputation-to-money efficiency this week
-    const reputationGain = Object.values(summary.reputationChanges).reduce((total, change) => total + change, 0);
-    const netCashFlow = summary.revenue - summary.expenses;
-    
-    if (reputationGain > 0 && netCashFlow !== 0) {
-      const efficiency = Math.abs(netCashFlow) / reputationGain;
-      summary.changes.push({
-        type: 'unlock',
-        description: `🎯 Strategic efficiency: $${efficiency.toFixed(0)} per reputation point this week`,
-        amount: 0
-      });
-    }
+    // Note: Removed efficiency achievement as it serves no gameplay purpose
+    // Instead, track reputation gains per release/activity in their respective sections
   }
 
   /**

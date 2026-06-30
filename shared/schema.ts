@@ -550,6 +550,7 @@ export const gameSaveSnapshotSchema = z.object({
   emailMetadata: z.object({
     total: z.number().optional(),
     unreadCount: z.number().optional(),
+    truncated: z.boolean().optional(),
   }).optional(),
   releaseSongs: z.array(z.record(z.any())).optional(),
   executives: z.array(z.record(z.any())).optional(),

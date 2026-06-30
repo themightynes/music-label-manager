@@ -1,9 +1,20 @@
-export type EmailCategory =
-  | "chart"
-  | "financial"
-  | "artist"
-  | "ar"
-  | "other";
+export const EMAIL_CATEGORIES = [
+  "chart",
+  "financial",
+  "artist",
+  "ar",
+  "other"
+] as const;
+
+export type EmailCategory = typeof EMAIL_CATEGORIES[number];
+
+export const EMAIL_CATEGORY_LABELS: Record<EmailCategory, string> = {
+  chart: 'Chart',
+  financial: 'Financial',
+  artist: 'Artist',
+  ar: 'A&R',
+  other: 'Other'
+};
 
 export interface EmailMetadataBase {
   [key: string]: unknown;

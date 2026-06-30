@@ -9,10 +9,10 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: June 30, 2026
-- **Total Items**: 29
-- **Completed**: 26
+- **Total Items**: 38
+- **Completed**: 27
 - **In Progress**: 0
-- **Pending**: 3
+- **Pending**: 11
 
 ---
 
@@ -459,6 +459,97 @@ ClerkProvider appearance is cast to any; tighten typing to avoid runtime mismatc
 
 ---
 
+### [ ] Comment 30: Email notification reference documents 7 legacy categories; system uses 5
+**Priority**: 🟢 Medium
+**Impact**: Documentation accuracy / onboarding confusion
+**Effort**: Medium
+
+`docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md` (around line 356 / 799-809) documents 7 event-type email categories (tour_completion, top_10_debut, release, number_one_debut, tier_unlock, artist_discovery, financial_report). The actual system uses 5 generic categories (chart, financial, artist, ar, other), with the legacy 7 mapped into them via `LEGACY_CATEGORY_MAP`. NOTE this is PRE-EXISTING debt — it predates the email-snapshot/save-load branch (main already maps these).
+
+**Action**: Rewrite the categories section of that reference doc to document the 5 current categories plus the legacy→current mapping.
+
+**Relevant Files**:
+- [docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md](docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md)
+- [shared/types/emailTypes.ts](shared/types/emailTypes.ts)
+- [server/storage.ts](server/storage.ts) (normalizeEmailCategory)
+
+*Identified June 30, 2026 during the email-snapshot/save-load documentation audit.*
+
+---
+
+### [ ] Comment 31: Save snapshot v2 format and email-truncation system undocumented
+**Priority**: 🟢 Medium
+**Impact**: Documentation completeness for save/load + email subsystems
+**Effort**: Medium
+
+The save/load snapshot was upgraded (`SNAPSHOT_VERSION = 2`) and now captures additional collections (emails + `emailMetadata.truncated`, releaseSongs, executives, moodEvents, musicLabel) and the email snapshot has a truncation/safety system (~10k cap, `truncated` flag, 5 pagination guardrails) — none of which is documented beyond the workflow doc's basic example. Also document the server-side email category normalization, deterministic email ordering (week, createdAt, id), and the useEmails staleTime change (0 → 30s). Minor footnote: the autosave-name migration will also rename a save a user manually named exactly "Autosave" (benign edge case) — worth a one-line caveat in whatever doc covers autosave naming.
+
+**Action**: Add a "Snapshot v2 format" section to the save/load docs (or a new doc) enumerating all captured collections + the email truncation behavior and `truncated` flag.
+
+**Relevant Files**:
+- [shared/schema.ts](shared/schema.ts) (gameSaveSnapshotSchema, SNAPSHOT_VERSION)
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+- [server/storage.ts](server/storage.ts)
+- [docs/03-workflows/save-load-system-workflow.md](docs/03-workflows/save-load-system-workflow.md)
+
+*Identified June 30, 2026 during the email-snapshot/save-load documentation audit.*
+
+---
+
+### [ ] Comment 33: Test DB provisioned via `drizzle-kit push` is missing SQL-migration CHECK constraints
+**Priority**: 🟢 Medium
+**Impact**: Test reliability / developer experience — false test failures on a freshly provisioned test DB
+**Effort**: Low
+
+The test DB helper provisions tables with `drizzle-kit push` (see note in [tests/helpers/test-db.ts](tests/helpers/test-db.ts)), but `push` does not materialize the raw-SQL `CHECK` constraints that are defined both inline in `shared/schema.ts` (e.g. `artists_mood_check`, line ~59) and in the SQL migration files (`migrations/0009_add_mood_constraints.sql`, `migrations/0020_add_artist_attribute_constraints.sql`). As a result, a cleanly push-provisioned test DB has **no** check constraints on `artists`, and `tests/features/artist-mood-constraints.test.ts` fails (2 cases) because out-of-range mood inserts are accepted instead of rejected. Manually applying the constraint (`ALTER TABLE artists ADD CONSTRAINT artists_mood_check ...`) makes all 4 tests pass, confirming the gap is provisioning-only, not a code defect.
+
+**Action**: Provision the test DB via migrations (`drizzle-kit migrate` / apply `migrations/*.sql`) instead of, or in addition to, `drizzle-kit push` — or add a constraint-application step to the test-db setup helper. Document the chosen approach in `tests/helpers/test-db.ts`.
+
+**Relevant Files**:
+- [tests/helpers/test-db.ts](tests/helpers/test-db.ts)
+- [tests/start-test-db.js](tests/start-test-db.js)
+- [migrations/0020_add_artist_attribute_constraints.sql](migrations/0020_add_artist_attribute_constraints.sql)
+- [tests/features/artist-mood-constraints.test.ts](tests/features/artist-mood-constraints.test.ts)
+
+*Identified June 30, 2026 during the email-snapshot/save-load full test-suite validation.*
+
+---
+
+### [ ] Comment 34: WeekSummary shows reputation gains only from press coverage, not role-meeting effects
+**Priority**: 🟢 Medium
+**Impact**: Player-facing feedback gap — most reputation gains are invisible in the week summary
+**Effort**: Low (code) + design decision
+
+The reputation-visibility work surfaces a ⭐ "+N reputation points" line in WeekSummary only for **press-coverage** reputation, which pushes a `type: 'reputation'` change in [shared/engine/game-engine.ts](shared/engine/game-engine.ts) (~line 2119-2120). Reputation gained through **role-meeting effects** goes through `applyEffect` (~line 1166-1170), which only updates the aggregate `summary.reputationChanges` total and does **not** push a `type: 'reputation'` change — so it produces no ⭐ Achievement line. Reproduced in manual smoke testing: a role-meeting choice granting +1 reputation updated the total (reputation → 22) but showed nothing in the Week Summary's Achievements section.
+
+**Action**: Decide the intended UX, then implement. Options: (a) have `applyEffect` also push a `type: 'reputation'` change so all reputation sources surface; (b) aggregate per-week reputation into a single ⭐ summary line to avoid noise from many small ±1 effects. Needs a product decision on per-artist vs global and description text before coding.
+
+**Relevant Files**:
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts) (applyEffect ~1166-1170; press-coverage change ~2119-2126)
+- [client/src/components/WeekSummary.tsx](client/src/components/WeekSummary.tsx) (achievements grouping ~line 132; ⭐ icon ~line 45)
+
+*Identified June 30, 2026 during the email-snapshot/save-load manual smoke test (PR #29).*
+
+---
+
+### [ ] Comment 35: Game snapshot object is built field-by-field in two places (export vs saveGame)
+**Priority**: 🟢 Medium
+**Impact**: Maintainability + latent data drift between manual/auto saves and exported files
+**Effort**: Medium
+
+The save snapshot (`{snapshotVersion, gameState, musicLabel, artists, projects, roles, songs, releases, emails, emailMetadata, releaseSongs, executives, moodEvents, weeklyActions, weeklyOutcome}`) is assembled independently in `client/src/components/SaveGameModal.tsx` `handleExport` (~line 227) and `client/src/store/gameStore.ts` `saveGame` (~line 1208). They have ALREADY diverged: `handleExport` sets `emailMetadata.truncated` but `saveGame`'s `emailMetadata` omits it, so manual saves and autosaves never persist the `truncated` flag while exports do.
+
+**Action**: Extract a single `buildGameSnapshot(state, collections)` helper (e.g. under `client/src/utils/` next to `emailSnapshot.ts`) and call it from both `handleExport` and `saveGame` so the field list lives in one place.
+
+**Relevant Files**:
+- [client/src/components/SaveGameModal.tsx](client/src/components/SaveGameModal.tsx)
+- [client/src/store/gameStore.ts](client/src/store/gameStore.ts)
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+
+*Identified June 30, 2026 during the PR #29 code review.*
+
+---
+
 ## 🔵 **Low Priority Items**
 
 ### [ ] Comment 26: ArtistPage is monolithic
@@ -475,18 +566,83 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ---
 
+### [ ] Comment 32: Email snapshot silently truncates for very long games (~10k email cap)
+**Priority**: 🔵 Low
+**Impact**: Save completeness for long-running games (edge case)
+**Effort**: Medium
+
+`client/src/utils/emailSnapshot.ts` caps email capture at ~10,000 emails (100 pages) and sets a `truncated` flag when the cap is hit. For very long-running games this means saved snapshots omit older emails. This is intentional safety behavior (prevents pagination hangs) and is flagged via `truncated`, but the cap itself is a long-term limitation.
+
+**Action**: Future — consider chunked/paged email storage or a higher/configurable cap, and surface the `truncated` state to players in the save/restore UI.
+
+**Relevant Files**:
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+- [shared/schema.ts](shared/schema.ts) (emailMetadata.truncated)
+
+*Identified June 30, 2026 during the email-snapshot/save-load documentation audit.*
+
+---
+
+### [ ] Comment 36: Autosave display-name format hardcoded in three places
+**Priority**: 🔵 Low
+**Impact**: Format drift risk between write, migration, and tests
+**Effort**: Low
+
+The `"{label} - Week {n}"` format is constructed independently in `client/src/store/gameStore.ts` (autosave write), `server/storage.ts` `getGameSaves` (legacy-name migration), and `tests/features/save-load-snapshot-integrity.test.ts` (local `getAutosaveName` helper). A format change in one place silently breaks the others (migration would rewrite to a name that no longer matches fresh autosaves).
+
+**Action**: Extract a single `formatAutosaveName(labelName, week)` helper into `shared/` and use it from all three.
+
+**Relevant Files**:
+- [client/src/store/gameStore.ts](client/src/store/gameStore.ts)
+- [server/storage.ts](server/storage.ts)
+- [tests/features/save-load-snapshot-integrity.test.ts](tests/features/save-load-snapshot-integrity.test.ts)
+
+*Identified June 30, 2026 during the PR #29 code review.*
+
+---
+
+### ~~Comment 37: emailSnapshot pagination has 5 overlapping safety checks (one is dead code)~~ ✅
+**Status**: ✅ **COMPLETED** (June 30, 2026)
+
+`client/src/utils/emailSnapshot.ts` accreted five separate safety checks. Check 5 (`collected.length > total + PAGE_SIZE`) was unreachable because check 4 (`collected.length >= total`) exited the loop one threshold earlier in the same iteration; the post-loop "adjust total" block was similarly redundant, and the over-collection check set a false `truncated = true`.
+
+**Resolution**: Collapsed the loop to a single principled termination bound while fixing review finding #6 — paginate until a short page (`pageEmails.length < EMAIL_PAGE_SIZE`, which also covers a fully empty page so no redundant fetches), with the `MAX_PAGES` cap as the only path that sets `truncated`. The server `total` is used only as a sanity-check `console.warn`, never for loop termination, and the returned `total` is the true collected count. Complete snapshots are no longer falsely flagged truncated.
+
+**Relevant Files**:
+- [client/src/utils/emailSnapshot.ts](client/src/utils/emailSnapshot.ts)
+
+*Identified June 30, 2026 during the PR #29 code review; resolved same day alongside finding #6.*
+
+---
+
+### [ ] Comment 38: SaveGameModal import duplicates schema validation with a manual missingKeys block
+**Priority**: 🔵 Low
+**Impact**: Validation logic encoded twice; drifts from the Zod schema
+**Effort**: Low
+
+`client/src/components/SaveGameModal.tsx` `handleImport` hand-checks `gameState` existence, `gameState.id` (non-empty string), and `gameState.currentWeek` (number) immediately before calling `gameSaveSnapshotSchema.parse(candidateSnapshot)`, which already validates those fields. When the schema's required fields change, the manual block goes stale.
+
+**Action**: Drop the manual `missingKeys` block and rely on `gameSaveSnapshotSchema.parse`, catching `ZodError` and surfacing `error.issues` for a field-level message.
+
+**Relevant Files**:
+- [client/src/components/SaveGameModal.tsx](client/src/components/SaveGameModal.tsx)
+
+*Identified June 30, 2026 during the PR #29 code review.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 1 item (Comment 29)
-- 🟢 Medium: 1 item (Comment 25)
-- 🔵 Low: 1 item (Comment 26)
+- 🟡 High: 1 item (C29)
+- 🟢 Medium: 6 items (C25, C30, C31, C33, C34, C35)
+- 🔵 Low: 4 items (C26, C32, C36, C38)
 
 ### By Status
-- ✅ Completed: 26 items (89.7%)
+- ✅ Completed: 27 items (71.1%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 3 items (10.3%)
+- 📋 Pending: 11 items (28.9%)
 
 ---
 
@@ -523,6 +679,7 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ### Phase 4: Final Polish & API Consistency (Current Sprint Priority)
 - 🟢 Comments 25 & 26: Final polish and refactor follow-ups
+- 🟢 Comments 30, 31, 32: Save-snapshot v2 / email-system documentation debt (identified June 30, 2026)
 
 ---
 

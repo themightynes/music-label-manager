@@ -7,6 +7,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { SNAPSHOT_VERSION } from '@shared/schema';
 import { toast } from '@/hooks/use-toast';
 import { fetchSnapshotCollections, fetchEmailSnapshot } from '@/utils/emailSnapshot';
+import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
@@ -729,8 +730,11 @@ export const useGameStore = create<GameStore>()(
           });
 
           try {
-            const autosaveLabel = `Autosave - Week ${syncedGameState.currentWeek}`;
-            await get().saveGame(autosaveLabel, { isAutosave: true });
+            const labelName = syncedGameState.musicLabel?.name;
+            const autosaveName = labelName
+              ? `${labelName} - Week ${syncedGameState.currentWeek}`
+              : `Autosave - Week ${syncedGameState.currentWeek}`;
+            await get().saveGame(autosaveName, { isAutosave: true });
           } catch (autosaveError) {
             console.warn('[Autosave] Failed to create autosave:', autosaveError);
           }
@@ -786,7 +790,11 @@ export const useGameStore = create<GameStore>()(
           // CRITICAL: Invalidate executives cache to refresh mood/loyalty after meetings
           await queryClient.invalidateQueries({ queryKey: ['executives'] });
           // Invalidate emails cache to refresh inbox with new week's emails
-          await queryClient.invalidateQueries({ queryKey: ['emails'] });
+          await queryClient.invalidateQueries({
+            predicate: (query) =>
+              (query.queryKey[0] === EMAIL_LIST_SCOPE || query.queryKey[0] === EMAIL_UNREAD_SCOPE) &&
+              query.queryKey[1] === syncedGameState.id,
+          });
         } catch (error) {
           console.error('=== ADVANCE WEEK ERROR ===');
           console.error('Error occurred during week advancement');

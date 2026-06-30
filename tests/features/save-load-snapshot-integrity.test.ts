@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestDatabase, clearDatabase, seedMinimalGame, seedArtist, seedSong } from '../helpers/test-db';
 import * as schema from '@shared/schema';
+import { DatabaseStorage } from '../../server/storage';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
+
+function getAutosaveName(label: string, week: number) {
+  return `${label} - Week ${week}`;
+}
 
 describe('Snapshot Integrity', () => {
   let db: NodePgDatabase<typeof schema>;
@@ -115,5 +120,74 @@ describe('Snapshot Integrity', () => {
     expect(storedSnapshot.releaseSongs?.[0].songId).toBe(song.id);
     expect(storedSnapshot.executives?.[0].role).toBe('head_ar');
     expect(storedSnapshot.moodEvents?.[0].eventType).toBe('release_success');
+  });
+
+  it('migrates legacy autosave names and preserves new format', async () => {
+    const userId = crypto.randomUUID();
+    const legacyGame = await seedMinimalGame(db, { currentWeek: 6 });
+    const labelName = 'Legacy Label';
+
+    await db.insert(schema.users).values({
+      id: userId,
+      clerkId: `clerk_${userId}`,
+      email: 'legacy@test.com',
+    });
+
+    await db.update(schema.gameStates)
+      .set({ userId })
+      .where(eq(schema.gameStates.id, legacyGame.id));
+
+    await db.insert(schema.musicLabels).values({
+      id: crypto.randomUUID(),
+      gameId: legacyGame.id,
+      name: labelName,
+      genreFocus: 'pop',
+    });
+
+    const snapshot: schema.GameSaveSnapshot = {
+      snapshotVersion: schema.SNAPSHOT_VERSION,
+      gameState: {
+        id: legacyGame.id,
+        currentWeek: legacyGame.currentWeek,
+      } as any,
+      // Production shape: musicLabel is a TOP-LEVEL SIBLING of gameState in the
+      // snapshot (see gameStore.saveGame / SaveGameModal.handleExport), NOT nested
+      // inside gameState. The migration must read it from this sibling path.
+      musicLabel: { id: crypto.randomUUID(), gameId: legacyGame.id, name: labelName, genreFocus: 'pop' },
+    } as schema.GameSaveSnapshot;
+
+    const saveWeek = legacyGame.currentWeek;
+    await db.insert(schema.gameSaves).values([
+      {
+        id: crypto.randomUUID(),
+        userId,
+        // Real legacy format from the pre-migration client: "Autosave - Week N"
+        name: `Autosave - Week ${saveWeek}`,
+        week: saveWeek,
+        gameState: snapshot,
+        isAutosave: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        userId,
+        name: getAutosaveName(labelName, saveWeek - 1),
+        week: saveWeek - 1,
+        gameState: {
+          ...snapshot,
+          gameState: { ...snapshot.gameState, currentWeek: saveWeek - 1 },
+        } as schema.GameSaveSnapshot,
+        isAutosave: true,
+      },
+    ]);
+
+    const storage = new DatabaseStorage(db as any);
+
+    const saves = await storage.getGameSaves(userId);
+
+    const migratedName = getAutosaveName(labelName, saveWeek);
+    expect(saves.filter(save => save.isAutosave && save.name === migratedName)).toHaveLength(1);
+    // No un-migrated legacy autosave name should remain (catches the exact-match bug)
+    expect(saves.filter(save => save.isAutosave && /^Autosave\b/.test(save.name))).toHaveLength(0);
+    expect(saves.filter(save => save.isAutosave && save.name === getAutosaveName(labelName, saveWeek - 1))).toHaveLength(1);
   });
 });
