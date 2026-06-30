@@ -158,7 +158,8 @@ describe('Snapshot Integrity', () => {
       {
         id: crypto.randomUUID(),
         userId,
-        name: 'Autosave',
+        // Real legacy format from the pre-migration client: "Autosave - Week N"
+        name: `Autosave - Week ${saveWeek}`,
         week: saveWeek,
         gameState: snapshot,
         isAutosave: true,
@@ -182,7 +183,8 @@ describe('Snapshot Integrity', () => {
 
     const migratedName = getAutosaveName(labelName, saveWeek);
     expect(saves.filter(save => save.isAutosave && save.name === migratedName)).toHaveLength(1);
-    expect(saves.filter(save => save.isAutosave && save.name === 'Autosave')).toHaveLength(0);
+    // No un-migrated legacy autosave name should remain (catches the exact-match bug)
+    expect(saves.filter(save => save.isAutosave && /^Autosave\b/.test(save.name))).toHaveLength(0);
     expect(saves.filter(save => save.isAutosave && save.name === getAutosaveName(labelName, saveWeek - 1))).toHaveLength(1);
   });
 });

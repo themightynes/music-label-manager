@@ -204,11 +204,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gameSaves.userId, userId))
       .orderBy(desc(gameSaves.updatedAt));
 
-    // Migration: Normalize legacy autosave names for consistent UX
+    // Migration: Normalize legacy autosave names for consistent UX.
+    // Legacy autosaves were named "Autosave - Week N" (and, even earlier, bare
+    // "Autosave"); match that prefix rather than an exact string. New-format
+    // autosaves ("{label} - Week N") don't start with "Autosave" and are left as-is.
     return saves.map(save => {
       if (
         save.isAutosave &&
-        save.name === 'Autosave' &&
+        /^Autosave\b/.test(save.name) &&
         save.musicLabelName
       ) {
         return {
