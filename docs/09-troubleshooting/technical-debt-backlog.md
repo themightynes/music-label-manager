@@ -9,10 +9,10 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: June 30, 2026
-- **Total Items**: 33
+- **Total Items**: 34
 - **Completed**: 26
 - **In Progress**: 0
-- **Pending**: 7
+- **Pending**: 8
 
 ---
 
@@ -515,6 +515,23 @@ The test DB helper provisions tables with `drizzle-kit push` (see note in [tests
 
 ---
 
+### [ ] Comment 34: WeekSummary shows reputation gains only from press coverage, not role-meeting effects
+**Priority**: 🟢 Medium
+**Impact**: Player-facing feedback gap — most reputation gains are invisible in the week summary
+**Effort**: Low (code) + design decision
+
+The reputation-visibility work surfaces a ⭐ "+N reputation points" line in WeekSummary only for **press-coverage** reputation, which pushes a `type: 'reputation'` change in [shared/engine/game-engine.ts](shared/engine/game-engine.ts) (~line 2119-2120). Reputation gained through **role-meeting effects** goes through `applyEffect` (~line 1166-1170), which only updates the aggregate `summary.reputationChanges` total and does **not** push a `type: 'reputation'` change — so it produces no ⭐ Achievement line. Reproduced in manual smoke testing: a role-meeting choice granting +1 reputation updated the total (reputation → 22) but showed nothing in the Week Summary's Achievements section.
+
+**Action**: Decide the intended UX, then implement. Options: (a) have `applyEffect` also push a `type: 'reputation'` change so all reputation sources surface; (b) aggregate per-week reputation into a single ⭐ summary line to avoid noise from many small ±1 effects. Needs a product decision on per-artist vs global and description text before coding.
+
+**Relevant Files**:
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts) (applyEffect ~1166-1170; press-coverage change ~2119-2126)
+- [client/src/components/WeekSummary.tsx](client/src/components/WeekSummary.tsx) (achievements grouping ~line 132; ⭐ icon ~line 45)
+
+*Identified June 30, 2026 during the email-snapshot/save-load manual smoke test (PR #29).*
+
+---
+
 ## 🔵 **Low Priority Items**
 
 ### [ ] Comment 26: ArtistPage is monolithic
@@ -553,13 +570,13 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (C29)
-- 🟢 Medium: 4 items (C25, C30, C31, C33)
+- 🟢 Medium: 5 items (C25, C30, C31, C33, C34)
 - 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 26 items (78.8%)
+- ✅ Completed: 26 items (76.5%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 7 items (21.2%)
+- 📋 Pending: 8 items (23.5%)
 
 ---
 
