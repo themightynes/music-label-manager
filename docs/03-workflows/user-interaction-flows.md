@@ -2,8 +2,11 @@
 
 **Music Label Manager - Player Journey Documentation**  
 *User Experience Workflows*
+*Updated: June 30, 2026 — reflects the weekly (52-week) campaign system*
 
 This document focuses on the **player's perspective** and user experience flows. For system-level processing workflows, see [Game System Workflows](./game-system-workflows.md).
+
+> **Game cadence:** The game runs on **weekly turns** across a **52-week campaign**. Earlier drafts of this document described a monthly/12-turn loop; that is obsolete.
 
 ---
 
@@ -12,30 +15,32 @@ This document focuses on the **player's perspective** and user experience flows.
 ### **1. New Player Onboarding Flow**
 
 ```
-App Launch → Game Creation → Dashboard Introduction → First Actions → Month 1 Complete
+Main Menu → Label Creation → Dashboard Introduction → First Actions → Week 1 Complete
     ↓             ↓              ↓                    ↓                ↓
-1. User        2. System       3. Player sees      4. Player       5. Tutorial
-   visits         creates         starting           learns basic    complete,
-   application    new game        resources          interactions    player ready
-                  with defaults   and UI layout                      for gameplay
+1. User        2. Player       3. Player sees      4. Player       5. Player
+   clicks         names label,    starting           learns basic    advances the
+   "New Game"     genre, start    resources          interactions    first week
+                  year (weeks)    and UI layout
 ```
 
 **Detailed Onboarding Steps**:
-1. **Initial Landing**: Dashboard loads with starting resources ($75k, 5 rep, 10 creative capital)
-2. **UI Orientation**: Player sees KPI cards, empty artist roster, available focus slots
+1. **Label Creation**: `LabelCreationModal` collects label name, description, genre focus, and a starting year (weeks are calendar-based); `createNewGame('standard', labelData)` then opens the game at week 1
+2. **Initial Landing**: Dashboard loads with starting resources ($500k, 5 rep, 10 creative capital) and 3 focus slots
 3. **First Actions**: Encouraged to discover artists and start first project
-4. **Guided Experience**: Month planner shows available actions with context
+4. **Guided Experience**: The week planner ("Week N Focus Strategy") shows available actions with context
 
-### **2. Monthly Gameplay Flow**
+### **2. Weekly Gameplay Flow**
 
 ```
-Month Start → Action Planning → Action Execution → Month Advancement → Results Review
+Week Start → Action Planning → Action Execution → Week Advancement → Results Review
      ↓             ↓               ↓                ↓                  ↓
 1. Player      2. Player       3. Player       4. System          5. Player
    reviews        selects         executes        processes          reviews
-   current        up to 3         chosen          all changes        month
-   situation      actions         actions                            summary
+   current        focus-slot      chosen          all changes        Weekly
+   situation      actions         actions         (server)           Results
 ```
+
+> Players have **3 focus slots** (a 4th unlocks at reputation ≥ 50). The "AUTO" button can smart-fill open slots.
 
 **Action Selection Process**:
 ```
@@ -63,7 +68,7 @@ new artist      modal        available      selects     validates      processed
 Artist Stats Review → Cost Analysis → Strategic Fit → Decision → Commitment
         ↓                ↓              ↓             ↓           ↓
 - Talent level       - Signing cost  - Genre match  Choice     - Focus slot
-- Archetype         - Monthly cost  - Archetype     made       - Money deducted
+- Archetype         - Weekly cost   - Archetype     made       - Money deducted
 - Genre specialty   - ROI potential   strategy               - Artist added
 ```
 
@@ -117,25 +122,28 @@ response option     immediate vs         changes right now       effects if
 
 ---
 
-## 📈 Month Advancement Workflow
+## 📈 Week Advancement Workflow
 
-### **End-of-Month Processing Flow**
+### **End-of-Week Processing Flow**
 
 ```
 Advance Trigger → Validation → System Processing → State Update → Summary Display
       ↓             ↓            ↓                  ↓             ↓
-Player clicks   Check all      GameEngine         Database      Month summary
-"End Month"     actions        processes          transaction   modal shows
-                completed      all changes        commits       results
+Player clicks   Check ≥1       GameEngine         Database      Weekly Results
+"Advance Week"  action         processes          transaction   modal shows
+                selected       all changes        commits        results
 ```
 
-**Processing Order Workflow**:
+The sidebar **"Advance Week"** button calls the `advanceWeek()` store action, which POSTs to `/api/advance-week`, reloads state, and writes an autosave ("Autosave - Week N").
+
+**Processing Order Workflow** (server-authoritative — see [Game System Workflows](./game-system-workflows.md) for the full ordered list):
 ```
 1. Apply Action Effects → 2. Process Projects → 3. Calculate Revenue → 4. Update Relations → 5. Check Progression
          ↓                       ↓                   ↓                  ↓                    ↓
-Dialogue effects         Advance project      Apply revenue          Update artist        Check access
-and immediate           stages, generate     decay, process         mood/loyalty         tier unlocks
-resource changes        new songs            catalog income         changes              and campaign end
+Dialogue effects         Advance project      Apply weekly           Update artist        Check access
+and immediate           stages, generate     streaming decay,       mood/energy and      tier unlocks
+resource changes        new songs            process catalog        executive            and campaign end
+                                             income                 mood/loyalty          (week 52)
 ```
 
 ---
@@ -145,12 +153,12 @@ resource changes        new songs            catalog income         changes     
 ### **End-Game User Journey**
 
 ```
-Month 12 → Final Month → Campaign Complete → Score Review → Decision
+Week 52 → Final Week → Campaign Complete → Score Review → Decision
     ↓          ↓             ↓                ↓              ↓
-Player     Player sees   Achievement      Player reviews  Choose restart
-advances   "Final        modal opens      final results   or quit game
-to month   Month"        automatically    and stats
-12         indicator
+Player     Player sees   CampaignResults  Player reviews  Choose restart
+advances   "Week N/52"   modal opens      final results   or quit game
+to week    progress      automatically    and stats
+52         indicator
 ```
 
 **Player Decision Points**:
