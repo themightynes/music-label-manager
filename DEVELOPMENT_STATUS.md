@@ -1,6 +1,47 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: October 15, 2025*
+*Updated: June 30, 2026*
+
+---
+
+## 📅 Session Log — June 30, 2026
+
+**First session back after ~8 months away.** Focus was re-orientation, repo hygiene, and documentation accuracy. No gameplay/feature changes.
+
+**Done this session:**
+- **Synced local `main`** — it was 2 PRs behind `origin/main`; fast-forwarded 8 commits to `27f4d3d` (also pruned two malformed `ux-prototypes` files).
+- **Fixed a TypeScript build break** — `client/src/lib/queryClient.ts` default `queryFn` was typed over a too-narrow `QueryKeyWithUrl`, unassignable to TanStack's `QueryKey` slot (TS2322). Retyped over `QueryKey`; runtime URL contract still enforced by `extractUrlFromQueryKey`. `npm run check` now passes. → branch `fix/queryclient-querykey-type`, **PR #24**.
+- **Reviewed all of `docs/`** (6-agent fan-out). Headline: well-organized but two-tier currency; two core flow docs still described the obsolete monthly loop.
+- **Converted the two stale flow docs to the weekly (52-week) system** — `docs/03-workflows/game-system-workflows.md` + `user-interaction-flows.md`, with code-verified corrections (decay is ~15%/week not /month; weekly burn $3–6k base + ~$1,200/artist/wk; song gen Single 2/wk, EP 3/wk; starting money $500k; campaign ends week 52). → branch `docs/weekly-workflow-conversion`.
+- **Fixed the `/session-end` command** (was broken: hardcoded Linux paths, frozen dates, missing files) and added this session-log convention. → branch `chore/session-workflow`.
+
+**Open threads / next steps:**
+- **Focus-slot unlock has 3 conflicting config values** — engine hardcodes `reputation ≥ 50` (`shared/engine/game-engine.ts:350`), but `data/balance/projects.json` says week 26 and `data/balance/progression.json` says rep 18. Only the hardcoded `≥ 50` runs. Worth reconciling. *(Note: this DEVELOPMENT_STATUS doc's older "Focus Slots unlock at week 26" claim is also wrong vs the engine.)*
+- **Open PRs/branches to merge or close**: PR #24 (queryClient), plus local branches `docs/weekly-workflow-conversion` and `chore/session-workflow` (not yet pushed).
+- **Two open tech-debt items** per `docs/09-troubleshooting/technical-debt-backlog.md`: Comment 25 (`ClerkProvider` `any` cast in `client/src/main.tsx` — quick win) and Comment 26 (`ArtistPage.tsx` is monolithic — larger refactor).
+- **Docs still on the legacy monthly framing** in spots; index files (`docs/README.md`, `docs/claude.md`) don't list `98-research/` or `api-specifications/`.
+
+---
+
+## 🗂️ Backlog / Candidate Work
+*Compiled June 30, 2026 from the docs review + onboarding. Pick from here next session.*
+
+**Quick wins**
+- [ ] **Tech-debt Comment 25** — `ClerkProvider` appearance cast to `any` in `client/src/main.tsx`; tighten typing. Small/isolated. (See `docs/09-troubleshooting/technical-debt-backlog.md`.)
+- [ ] **Patch doc index files** — `docs/README.md` + `docs/claude.md` don't list `98-research/` or `api-specifications/` (invisible to navigation).
+- [ ] **Reconcile focus-slot unlock values** — engine hardcodes `reputation ≥ 50` (`shared/engine/game-engine.ts:~350`), but `data/balance/projects.json` says week 26 and `data/balance/progression.json` says rep 18. Collapse to one source of truth; only the hardcoded value runs.
+
+**Medium**
+- [ ] **Verify the financial bug** — `docs/98-research/FINANCIAL_CALCULATION_BUG_ANALYSIS.md` documents a dual-path revenue/expense bug; confirm whether it was fixed in current code.
+- [ ] **Tech-debt Comment 26** — `client/src/pages/ArtistPage.tsx` is monolithic; split into memoized subcomponents. Larger refactor.
+- [ ] **Add a GameEngine architecture doc** — `02-architecture/` has no dedicated doc for the core shared `GameEngine`, despite its centrality.
+
+**Feature threads** (from `docs/01-planning/`)
+- [ ] **Artist-mood plan** — paused after Phase 5 (Oct 12, 2025), resumable. (`implementation-specs/[IN-PROGRESS] artist-mood-plan.md`)
+- [ ] **Artist-contract-system refactor** — flagged as next target; dependency map exists (`implementation-specs/artist-contract-system-dependencies.md`).
+
+**Housekeeping**
+- [ ] Merge open PRs **#24** (queryClient fix), **#25** (weekly-workflow docs), **#26** (session workflow), then resync local `main`.
 
 ---
 
