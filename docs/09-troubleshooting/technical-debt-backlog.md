@@ -10,9 +10,9 @@
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 1, 2026
 - **Total Items**: 39
-- **Completed**: 36
+- **Completed**: 37
 - **In Progress**: 0
-- **Pending**: 3
+- **Pending**: 2
 
 ---
 
@@ -579,20 +579,18 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ---
 
-### [ ] Comment 39: CLAUDE.md references npm scripts that don't exist in package.json
-**Priority**: 🔵 Low
-**Impact**: Developer/AI-session guidance accuracy (misleading instructions every session)
-**Effort**: Low
+### ~~Comment 39: CLAUDE.md references npm scripts that don't exist in package.json~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
 
-Root `CLAUDE.md` has drifted from `package.json`: the "Database & Migrations" and "Validation Commands" sections reference `npm run db:generate`, `npm run db:studio`, and `npm run db:introspect`, none of which exist as scripts (only `db:push` and `db:cleanup-orphaned` do). `npm test` is described as "watch mode" but is defined as `vitest run` (single run; watch would be bare `vitest`). `pkill -f "tsx server"` is a Linux command documented for a Windows dev environment.
+**Resolution**: Added the missing scripts to `package.json` rather than deleting the documented workflow — `db:generate` (`drizzle-kit generate`), `db:studio` (`drizzle-kit studio`), `db:introspect` (`drizzle-kit introspect`); all three commands are supported by the installed drizzle-kit 0.30.4 and `docs/06-development/database-practices.md` documents them extensively as the intended workflow. Fixed CLAUDE.md: `npm test` now correctly described as a single run (`vitest run`) with `npx vitest` for watch mode; replaced the POSIX-only `pkill` cleanup line with `npx kill-port 5000`; corrected the dev-server description (single Express process with Vite middleware, not two servers); fixed the emergency-recovery migration path (`migrations/`, not `drizzle/migrations/`).
 
-**Action**: Reconcile CLAUDE.md with the actual scripts — either fix the doc text or add the missing drizzle-kit scripts to `package.json` if they're meant to exist (check `drizzle.config.ts` and `docs/06-development/database-practices.md` for intent). Land on a small docs/chore branch off main.
+Root `CLAUDE.md` had drifted from `package.json`: the "Database & Migrations" and "Validation Commands" sections referenced `npm run db:generate`, `npm run db:studio`, and `npm run db:introspect`, none of which existed as scripts. `npm test` was described as "watch mode" but was defined as `vitest run`. `pkill -f "tsx server"` was a Linux command documented for a Windows dev environment.
 
 **Relevant Files**:
 - [CLAUDE.md](CLAUDE.md)
 - [package.json](package.json)
 
-*Identified July 1, 2026 during the architecture-docs cleanup session.*
+*Identified July 1, 2026 during the architecture-docs cleanup session; resolved same day.*
 
 ---
 
@@ -650,12 +648,12 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉)
 - 🟢 Medium: 0 items (all completed! 🎉)
-- 🔵 Low: 3 items (C26, C32, C39)
+- 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 36 items (92.3%)
+- ✅ Completed: 37 items (94.9%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 3 items (7.7%)
+- 📋 Pending: 2 items (5.1%)
 
 ---
 
