@@ -1,4 +1,5 @@
 import { gameDataLoader } from '../../shared/utils/dataLoader';
+import { applyStartingMoneyMultiplier, type DifficultyLevel } from '../../shared/utils/startingValues';
 import type { 
   GameDataFiles, 
   GameArtist, 
@@ -209,10 +210,14 @@ export class ServerGameData {
     return this.dataLoader.getWorldConfig();
   }
 
-  async getStartingValues(): Promise<{ money: number; reputation: number; creativeCapital: number }> {
+  async getStartingValues(difficulty: DifficultyLevel = 'normal'): Promise<{ money: number; reputation: number; creativeCapital: number }> {
     const balance = await this.getBalanceConfig();
     return {
-      money: balance.economy.starting_money,
+      money: applyStartingMoneyMultiplier(
+        balance.economy.starting_money,
+        balance.difficulty_modifiers,
+        difficulty
+      ),
       reputation: balance.reputation_system.starting_reputation,
       creativeCapital: balance.reputation_system.starting_creative_capital ?? 0
     };

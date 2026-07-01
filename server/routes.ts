@@ -46,6 +46,7 @@ import {
   getBugReportStats
 } from './utils/bugReportArchival';
 import { seededRandomPick, generateMeetingSeed } from '@shared/utils/seededRandom';
+import { normalizeDifficulty } from '@shared/utils/startingValues';
 
 const EMAIL_CATEGORY_VALUES = [
   "chart",
@@ -512,8 +513,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/game", requireClerkUser, async (req, res) => {
     console.log('🚀 [GAME CREATION] Starting new game creation...');
     try {
-      const { labelData, ...gameStateData } = req.body;
+      const { labelData, difficulty, ...gameStateData } = req.body;
       const validatedData = insertGameStateSchema.parse(gameStateData);
+
+      // MISSING: no UI exposes difficulty selection yet — every game defaults to
+      // 'normal' (1.0x). Passing 'easy'/'hard' applies progression.json's
+      // difficulty_modifiers.starting_money_multiplier (1.5x / 0.7x).
+      const gameDifficulty = normalizeDifficulty(difficulty);
       console.log('📝 [GAME CREATION] Validated data reputation:', validatedData.reputation);
 
       // Validate label data if provided
@@ -525,8 +531,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure serverGameData is initialized before accessing balance config
       await serverGameData.initialize();
 
-      // Set starting values from balance.json configuration
-      const startingValues = await serverGameData.getStartingValues();
+      // Set starting values from balance.json configuration (money scaled by difficulty)
+      const startingValues = await serverGameData.getStartingValues(gameDifficulty);
       // Make these logs more visible
       console.error('🎮🎮🎮 REPUTATION FROM BALANCE:', startingValues.reputation);
       console.error('💰💰💰 MONEY FROM BALANCE:', startingValues.money);
@@ -553,6 +559,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         money: startingValues.money,
         reputation: startingValues.reputation,
         creativeCapital: startingValues.creativeCapital, // FIXED: Use balance.json configuration like money and reputation
+        // Persist difficulty so future systems (reputation_decay, market_variance,
+        // goal_time_extension modifiers) can read it without a schema migration
+        flags: { ...((validatedData.flags as Record<string, unknown>) ?? {}), difficulty: gameDifficulty },
         userId: req.userId  // CRITICAL: Associate game with user
       };
       console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation, 'VenueAccess:', gameDataWithBalance.venueAccess);
