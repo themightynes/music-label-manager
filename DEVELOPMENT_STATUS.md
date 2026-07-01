@@ -45,7 +45,7 @@
 - **(Historical only)** the Sept-2025 refactoring log below still says "Focus Slots: Unlock at week 26"; left as-is as a point-in-time record, but it does not reflect current behavior (reputation ≥ 50).
 - **Open PRs/branches to merge or close**: PR #24 (queryClient), plus local branches `docs/weekly-workflow-conversion` and `chore/session-workflow` (not yet pushed).
 - **Two open tech-debt items** per `docs/09-troubleshooting/technical-debt-backlog.md`: Comment 25 (`ClerkProvider` `any` cast in `client/src/main.tsx` — quick win) and Comment 26 (`ArtistPage.tsx` is monolithic — larger refactor).
-- **Docs still on the legacy monthly framing** in spots; index files (`docs/README.md`, `docs/claude.md`) don't list `98-research/` or `api-specifications/`.
+- **Docs still on the legacy monthly framing** in spots; index files (`docs/README.md`, `docs/CLAUDE.md`) don't list `98-research/` or `api-specifications/`.
 
 ---
 
@@ -54,7 +54,7 @@
 
 **Quick wins**
 - [ ] **Tech-debt Comment 25** — `ClerkProvider` appearance cast to `any` in `client/src/main.tsx`; tighten typing. Small/isolated. (See `docs/09-troubleshooting/technical-debt-backlog.md`.)
-- [ ] **Patch doc index files** — `docs/README.md` + `docs/claude.md` don't list `98-research/` or `api-specifications/` (invisible to navigation).
+- [ ] **Patch doc index files** — `docs/README.md` + `docs/CLAUDE.md` don't list `98-research/` or `api-specifications/` (invisible to navigation).
 - [x] **Reconcile focus-slot unlock values** — ✅ Done June 30, 2026. Canonical source = `progression.json → fourth_focus_slot_reputation` (set to 50); engine reads threshold/base/max from config; deleted the dead week-26 `focus_slots_unlock_threshold`. See session log above.
 
 **Medium**
