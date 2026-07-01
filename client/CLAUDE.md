@@ -46,7 +46,7 @@
 
 **Cache Management:**
 - Use TanStack Query for server data
-- After week advancement: invalidate `['artist-roi']`, `['executives']`, `['emails']`
+- After week advancement, invalidate server-data queries so new state shows immediately. ⚠️ TanStack matches query keys **element-by-element**, not by string prefix: invalidating `['emails']` does NOT match the scoped email keys `['emails:list', gameId]` / `['emails:unread-count', gameId]`. Use a predicate (`invalidateQueries({ predicate: q => q.queryKey[0] === EMAIL_LIST_SCOPE || q.queryKey[0] === EMAIL_UNREAD_SCOPE })`) or the exact scoped keys. Also invalidate `['artist-roi']`, `['executives']`.
 
 ## XState Machines
 - `machines/executiveMeetingMachine.ts` - Multi-step executive meeting flows

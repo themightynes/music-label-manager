@@ -11,6 +11,10 @@ nul
 # Claude Code local (per-user) settings
 .claude/settings.local.json
 
+# Merge/patch artifacts (never commit these)
+*.orig
+*.rej
+
 # Playwright
 /test-results/
 /playwright-report/
