@@ -328,7 +328,25 @@ export class GameEngine {
       expenses: summary.expenses,
       weekKey
     });
-    
+
+    // C34: Emit a SINGLE aggregated reputation Achievement (⭐) line for the week.
+    // Reputation is label-wide (global), so instead of many noisy per-source ±1 lines
+    // we surface one line reflecting the TOTAL net reputation change across ALL sources
+    // (press coverage + role-meeting effects + any others). This is the single source of
+    // truth for the reputation ⭐ line — no per-source `type: 'reputation'` change is pushed
+    // elsewhere, so there is no double-counting. Net is summed from summary.reputationChanges,
+    // which every source accumulates into (same reduce used for weeklyStats.reputationChange above).
+    const netReputationChange = Object.values(summary.reputationChanges)
+      .reduce((sum, change) => sum + change, 0);
+    if (netReputationChange !== 0) {
+      const sign = netReputationChange > 0 ? '+' : ''; // negatives already carry '-'
+      summary.changes.push({
+        type: 'reputation',
+        description: `${sign}${netReputationChange} reputation points`,
+        amount: netReputationChange
+      });
+    }
+
     // SINGLE POINT OF MONEY UPDATE - at the very end
     // All revenue and expenses have been accumulated in the summary
     console.log('\n[FINAL MONEY CALCULATION]');
@@ -2115,14 +2133,12 @@ export class GameEngine {
           if (pressOutcome.pickups > 0) {
             const reputationGain = pressOutcome.reputationGain;
             this.gameState.reputation = (this.gameState.reputation || 0) + reputationGain;
-            
-            summary.changes.push({
-              type: 'reputation',
-              description: `📰 "${release.title}" earned +${reputationGain} reputation points`,
-              amount: reputationGain
-            });
-            
-            summary.reputationChanges[release.artistId] = 
+
+            // C34: Do NOT push a per-source `type: 'reputation'` change here.
+            // Reputation is label-wide; a single aggregated ⭐ Achievement line is
+            // emitted at the end of advanceWeek() from the net of summary.reputationChanges.
+            // We still track this gain in reputationChanges so it feeds that aggregate.
+            summary.reputationChanges[release.artistId] =
               (summary.reputationChanges[release.artistId] || 0) + reputationGain;
           }
         }
