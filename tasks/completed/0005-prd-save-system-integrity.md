@@ -45,7 +45,7 @@ Music Label Manager’s save/load system currently loses critical data (emails, 
 - No new data-integrity bugs reported for save/load within one release cycle.
 
 ### Assumptions & References
-- Implementation must align with the architecture, auth, and testing standards outlined in `/claude.md`.
+- Implementation must align with the architecture, auth, and testing standards outlined in `/CLAUDE.md`.
 - Any new manual testing steps should reference `MANUAL-TEST-GUIDE.md` for consistency.
 - Legacy saves created before this fix are unsupported and may fail to load; players must create fresh saves after deployment.
 - Current email volumes are within limits, so pagination can remain request-based without chunked streaming.

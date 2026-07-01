@@ -11,7 +11,7 @@
 
 ### Notes
 
-- Follow project testing guidance from `/claude.md`; use Vitest for unit/integration tests and Playwright for E2E if needed.
+- Follow project testing guidance from `/CLAUDE.md`; use Vitest for unit/integration tests and Playwright for E2E if needed.
 - Aim for production-ready implementations; avoid introducing new TODO/STUB annotations unless absolutely unavoidable and pre-approved.
 
 ## Tasks
