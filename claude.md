@@ -61,6 +61,11 @@ npm run db:studio     # Verify in database
 - All JSON data must validate with Zod schemas
 - Use small, incremental changes: Plan → Propose → Build → Verify
 
+## 💾 Save/Load Snapshots
+- **Snapshot shape**: a save snapshot is `{ snapshotVersion, gameState: <inner game state>, musicLabel, artists, projects, roles, songs, releases, emails, emailMetadata, releaseSongs, executives, moodEvents, weeklyActions, weeklyOutcome }`. `musicLabel` and all collections are **siblings of `gameState`**, NOT nested inside it (`saveGame`/`handleExport` strip `musicLabel` out of `gameState`). Server JSON-path queries must read `game_state->'musicLabel'`, not `game_state->'gameState'->'musicLabel'`.
+- **Built in two places**: `client/src/components/SaveGameModal.tsx` (`handleExport`) and `client/src/store/gameStore.ts` (`saveGame`) assemble the snapshot independently — keep them in sync (they have already drifted on `emailMetadata.truncated`).
+- **`SNAPSHOT_VERSION`** lives in `shared/schema.ts`; restore rejects mismatched versions. Bump it and add migration logic when the shape changes.
+
 ## 🎨 Color System
 - **Brand Colors**: Use `brand-*` Tailwind classes for game-specific UI (e.g., `bg-brand-burgundy`, `text-brand-rose`)
 - **Semantic Colors**: Use semantic classes for generic UI (e.g., `bg-success`, `text-warning`, `bg-sidebar`)
@@ -88,6 +93,9 @@ npm run db:studio     # Verify in database
 - **Structure**: Wrap tests in `describe()` blocks, use `it()` or `test()` for assertions
 - **Commands**: `npm test` (watch), `npm run test:ui` (interactive UI), `npm run test:coverage` (coverage report)
 - **Database**: **NEVER** import `server/db` in tests - always use `createTestDatabase()` from `tests/helpers/test-db` to avoid polluting production database
+- **Integration DB setup**: integration tests hit a real Postgres on `localhost:5433` (Docker container `music-label-test`, db `music_label_test`, user/pass `postgres`). Start it, then provision schema — but ⚠️ `drizzle-kit push` does **NOT** create the raw-SQL `CHECK` constraints (e.g. `artists_mood_check`), so apply the SQL migrations (`migrations/*.sql`, at least `0020`) or `artist-mood-constraints.test.ts` fails on a fresh DB.
+- **CI coverage gap**: CI (`.github/workflows/playwright.yml`) runs **Playwright only** — the vitest suite is **NOT** in CI. Run `npm run test:run` **locally** before trusting vitest results.
+- **Mirror production data shapes in tests** — e.g. the save snapshot stores `musicLabel` as a sibling of `gameState` (see Save/Load Snapshots); a test that nests it can pass while the real code path is broken (this shipped a real migration bug).
 
 ## XState & Stately Runtime Notes
 - `xstate` drives multi-step decision flows; prefer typed machine definitions and actor logic over ad-hoc reducer state.
@@ -123,6 +131,11 @@ function calculateMood() { return Math.random() * 100; }
 ```
 
 This ensures we can easily grep for `STUB:`, `HARDCODED:`, `TODO:`, and `MISSING:` to find what needs enhancement in future iterations.
+
+## 🔀 Git & Branch Workflow
+- **Prefer selective `git add <paths>` over `git add -A`** — blanket adds have swept machine-local files (`.claude/settings.local.json`) and merge artifacts (`*.orig`) into commits here. `*.orig`/`*.rej` are gitignored; don't force-add them.
+- **Resuming a stale/long-lived branch**: merge `main` in and validate (`npm run check` + relevant tests) **before** building new work on it. Branches cut from old `main` can carry hidden conflicts (e.g. `game-engine.ts` auto-merges cleanly at the text level but may still need review).
+- **Keep session-log / status-doc updates off feature PRs** — land them on a small `docs/session-<date>` branch off `main` so feature PRs stay focused.
 
 ---
 *For project overview, current status, and documentation references, use the `/onboard` command*
