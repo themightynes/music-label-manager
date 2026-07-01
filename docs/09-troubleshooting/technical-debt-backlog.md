@@ -9,10 +9,10 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 1, 2026
-- **Total Items**: 38
+- **Total Items**: 39
 - **Completed**: 36
 - **In Progress**: 0
-- **Pending**: 2
+- **Pending**: 3
 
 ---
 
@@ -579,6 +579,23 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ---
 
+### [ ] Comment 39: CLAUDE.md references npm scripts that don't exist in package.json
+**Priority**: 🔵 Low
+**Impact**: Developer/AI-session guidance accuracy (misleading instructions every session)
+**Effort**: Low
+
+Root `CLAUDE.md` has drifted from `package.json`: the "Database & Migrations" and "Validation Commands" sections reference `npm run db:generate`, `npm run db:studio`, and `npm run db:introspect`, none of which exist as scripts (only `db:push` and `db:cleanup-orphaned` do). `npm test` is described as "watch mode" but is defined as `vitest run` (single run; watch would be bare `vitest`). `pkill -f "tsx server"` is a Linux command documented for a Windows dev environment.
+
+**Action**: Reconcile CLAUDE.md with the actual scripts — either fix the doc text or add the missing drizzle-kit scripts to `package.json` if they're meant to exist (check `drizzle.config.ts` and `docs/06-development/database-practices.md` for intent). Land on a small docs/chore branch off main.
+
+**Relevant Files**:
+- [CLAUDE.md](CLAUDE.md)
+- [package.json](package.json)
+
+*Identified July 1, 2026 during the architecture-docs cleanup session.*
+
+---
+
 ### ~~Comment 36: Autosave display-name format hardcoded in three places~~ ✅
 **Status**: ✅ **COMPLETED** (July 1, 2026)
 
@@ -633,12 +650,12 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉)
 - 🟢 Medium: 0 items (all completed! 🎉)
-- 🔵 Low: 2 items (C26, C32)
+- 🔵 Low: 3 items (C26, C32, C39)
 
 ### By Status
-- ✅ Completed: 36 items (94.7%)
+- ✅ Completed: 36 items (92.3%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 2 items (5.3%)
+- 📋 Pending: 3 items (7.7%)
 
 ---
 
