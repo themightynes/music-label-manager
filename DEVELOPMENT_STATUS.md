@@ -44,7 +44,7 @@
 - **(Resolved July 1, 2026) UI focus-slot cap** — Investigated end-to-end (backlog C29): the live focus-slot UI (`ExecutiveSuitePage` → `ExecutiveMeetings`/`SelectionSummary`, gated by `gameStore.selectAction()`) already honors the dynamic `gameState.focusSlots`, so the 4th slot works today — **no live bug**. Cleanup done: deleted the dead `ActionSelectionPool.tsx` + `MonthPlanner.tsx` (zero render sites) and removed a latent `.max(3)` cap on the orphaned `/api/select-actions` route (`shared/api/contracts.ts`).
 - **(Historical only)** the Sept-2025 refactoring log below still says "Focus Slots: Unlock at week 26"; left as-is as a point-in-time record, but it does not reflect current behavior (reputation ≥ 50).
 - **Open PRs/branches to merge or close**: PR #24 (queryClient), plus local branches `docs/weekly-workflow-conversion` and `chore/session-workflow` (not yet pushed).
-- **Two open tech-debt items** per `docs/09-troubleshooting/technical-debt-backlog.md`: Comment 25 (`ClerkProvider` `any` cast in `client/src/main.tsx` — quick win) and Comment 26 (`ArtistPage.tsx` is monolithic — larger refactor).
+- **Two open tech-debt items** (both 🔵 Low) per `docs/09-troubleshooting/technical-debt-backlog.md`: Comment 26 (`ArtistPage.tsx` is monolithic — larger refactor) and Comment 32 (email snapshot ~10k truncation cap — future enhancement). All Critical/High/Medium items are now resolved.
 - **Docs still on the legacy monthly framing** in spots; index files (`docs/README.md`, `docs/CLAUDE.md`) don't list `98-research/` or `api-specifications/`.
 
 ---
