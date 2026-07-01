@@ -160,7 +160,7 @@ POST /api/saves/:saveId/load
 src/
 ├── components/
 │   ├── Dashboard.tsx          # Main game dashboard
-│   ├── MonthPlanner.tsx       # Turn planning interface
+│   ├── SelectionSummary.tsx   # Weekly action selection + advance (used by ExecutiveSuitePage)
 │   ├── ArtistRoster.tsx       # Artist management
 │   ├── ActiveProjects.tsx     # Project tracking
 │   └── modals/

@@ -34,7 +34,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 ### Frontend
 - `client/src/store/gameStore.ts` - Zustand store (game state management)
 - `client/src/components/Dashboard.tsx` - Main game interface
-- `client/src/components/MonthPlanner.tsx` - Enhanced action planning UI with strategic recommendations
+- `client/src/pages/ExecutiveSuitePage.tsx` - Weekly action planning UI (renders `ExecutiveMeetings` + `SelectionSummary`)
 - `client/src/components/WeekSummary.tsx` - Weekly results display
 - `client/src/components/ProjectCreationModal.tsx` - Project creation interface
 
