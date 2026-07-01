@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: June 30, 2026
+- **Last Updated**: July 1, 2026
 - **Total Items**: 38
-- **Completed**: 27
+- **Completed**: 36
 - **In Progress**: 0
-- **Pending**: 11
+- **Pending**: 2
 
 ---
 
@@ -339,19 +339,19 @@ Some interactive elements lack clear focus management and aria attributes (Inbox
 
 ## 🟡 **High Priority Items**
 
-### [ ] Comment 29: ActionSelectionPool hardcodes 3-slot selection cap
-**Priority**: 🟡 High
-**Impact**: Gameplay correctness — defeats the 4th focus slot
-**Effort**: Low
+### ~~Comment 29: ActionSelectionPool hardcodes 3-slot selection cap~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
 
-`ActionSelectionPool.tsx:209` computes `isDisabled = !isSelected && selectedActions.length >= 3` with a `// TODO: Use gameState.focusSlots from props`. The literal `3` means that even after a player unlocks the 4th focus slot (reputation ≥ 50, see `shared/engine/game-engine.ts:349` and `data/balance/progression.json → progression_thresholds.fourth_focus_slot_reputation`), this selection UI still caps them at 3 actions per week — so the unlocked slot may be unusable from this component.
+`ActionSelectionPool.tsx` computed `isDisabled = !isSelected && selectedActions.length >= 3` (and the same literal in the Auto-Recommend disable check) with a `// TODO: Use gameState.focusSlots from props`. The literal `3` meant that even after a player unlocked the 4th focus slot (reputation ≥ 50), this selection UI would cap them at 3 actions per week.
 
-**Action**: Replace the literal `3` with the player's actual slot count from `gameState.focusSlots` (threaded through props), so the cap tracks the unlocked value.
+**Resolution**: Added an optional `focusSlots?: number` prop and derived `const maxFocusSlots = focusSlots && focusSlots > 0 ? focusSlots : 3;` (fallback to the base slot count so selection is never fully disabled by an undefined/0 value). Both the per-card `isDisabled` and the Auto-Recommend `disabled` checks now compare against `maxFocusSlots`. Stale TODO removed; `npm run check` passes.
+
+**Follow-up investigation (July 1, 2026)**: `ActionSelectionPool` had **no render call site** anywhere in the app (dead code), so the fix above had no runtime effect. A read-only trace of the live path confirmed the real focus-slot UI — `ExecutiveSuitePage` → `ExecutiveMeetings` / `SelectionSummary`, gated by `gameStore.selectAction()` — **already computes the cap dynamically from `gameState.focusSlots`** (the `|| 3` occurrences are just fallback defaults), as do all live server routes (`/api/advance-week`, A&R/meeting slot routes) and the engine unlock logic. **The 4th slot is usable end-to-end today; there was no live bug.** As cleanup: deleted the dead `ActionSelectionPool.tsx` and `MonthPlanner.tsx`, and removed a latent `.max(3)` cap on `SelectActionsRequest` (`shared/api/contracts.ts`) that gated the **orphaned** `/api/select-actions` route (no live caller) — now uncapped to match `AdvanceWeekRequest`.
 
 **Relevant Files**:
 - [client/src/components/ActionSelectionPool.tsx](client/src/components/ActionSelectionPool.tsx)
 
-*Identified June 30, 2026 during the focus-slot unlock reconciliation.*
+*Identified June 30, 2026 during the focus-slot unlock reconciliation; resolved July 1, 2026.*
 
 ---
 
@@ -445,28 +445,24 @@ Unauthorized visitors now see a friendly explanation with a live countdown befor
 ---
 ## 🟢 **Medium Priority Items**
 
-### [ ] Comment 25: ClerkProvider appearance cast to any
-**Priority**: 🟢 Medium
-**Impact**: Type safety
-**Effort**: Low
+### ~~Comment 25: ClerkProvider appearance cast to any~~ ✅
+**Status**: ✅ **COMPLETED** (verified July 1, 2026 — already resolved in a prior change)
 
-ClerkProvider appearance is cast to any; tighten typing to avoid runtime mismatches.
+ClerkProvider appearance was cast to `any`; tighten typing to avoid runtime mismatches.
 
-**Action**: Import `type { Appearance } from '@clerk/types'` and remove `as any`.
+**Resolution**: `client/src/main.tsx` already imports `type { Appearance } from '@clerk/types'` and types the appearance object via `} satisfies Appearance;` — no `as any` cast remains. Verified against `@clerk/types` v4.86.0; `npm run check` passes.
 
 **Relevant Files**:
 - [client/src/main.tsx](client/src/main.tsx)
 
 ---
 
-### [ ] Comment 30: Email notification reference documents 7 legacy categories; system uses 5
-**Priority**: 🟢 Medium
-**Impact**: Documentation accuracy / onboarding confusion
-**Effort**: Medium
+### ~~Comment 30: Email notification reference documents 7 legacy categories; system uses 5~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
 
-`docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md` (around line 356 / 799-809) documents 7 event-type email categories (tour_completion, top_10_debut, release, number_one_debut, tier_unlock, artist_discovery, financial_report). The actual system uses 5 generic categories (chart, financial, artist, ar, other), with the legacy 7 mapped into them via `LEGACY_CATEGORY_MAP`. NOTE this is PRE-EXISTING debt — it predates the email-snapshot/save-load branch (main already maps these).
+`docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md` (around line 356 / 799-809) documented 7 event-type email categories (tour_completion, top_10_debut, release, number_one_debut, tier_unlock, artist_discovery, financial_report). The actual system uses 5 generic categories (chart, financial, artist, ar, other), with the legacy 7 mapped into them via `LEGACY_CATEGORY_MAP`.
 
-**Action**: Rewrite the categories section of that reference doc to document the 5 current categories plus the legacy→current mapping.
+**Resolution**: Rewrote both category sections of the reference doc: added a "Current Categories (5 Generic)" table, a "Legacy Event Type → Current Category Mapping" table transcribed verbatim from `LEGACY_CATEGORY_MAP` in `server/storage.ts`, relabeled the 7 event-type subsections as legacy sender/content specs, and corrected the `EmailCategory` enum block (~line 826) to the 5 shipped values. Other doc sections left untouched.
 
 **Relevant Files**:
 - [docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md](docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md)
@@ -477,10 +473,10 @@ ClerkProvider appearance is cast to any; tighten typing to avoid runtime mismatc
 
 ---
 
-### [ ] Comment 31: Save snapshot v2 format and email-truncation system undocumented
-**Priority**: 🟢 Medium
-**Impact**: Documentation completeness for save/load + email subsystems
-**Effort**: Medium
+### ~~Comment 31: Save snapshot v2 format and email-truncation system undocumented~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
+
+**Resolution**: Added "Snapshot v2 Format" and "Email Snapshot & Truncation" sections to `docs/03-workflows/save-load-system-workflow.md` — enumerates all captured collections (with `musicLabel`/collections as siblings of `gameState`), `SNAPSHOT_VERSION = 2` restore gating, the ~10k email cap + `truncated`-flag semantics (only the `MAX_PAGES` path flags truncation; complete snapshots are never falsely flagged), server-side category normalization + deterministic ordering, and the `useEmails` 0 → 30s staleTime, plus the benign "Autosave"-rename caveat.
 
 The save/load snapshot was upgraded (`SNAPSHOT_VERSION = 2`) and now captures additional collections (emails + `emailMetadata.truncated`, releaseSongs, executives, moodEvents, musicLabel) and the email snapshot has a truncation/safety system (~10k cap, `truncated` flag, 5 pagination guardrails) — none of which is documented beyond the workflow doc's basic example. Also document the server-side email category normalization, deterministic email ordering (week, createdAt, id), and the useEmails staleTime change (0 → 30s). Minor footnote: the autosave-name migration will also rename a save a user manually named exactly "Autosave" (benign edge case) — worth a one-line caveat in whatever doc covers autosave naming.
 
@@ -496,10 +492,10 @@ The save/load snapshot was upgraded (`SNAPSHOT_VERSION = 2`) and now captures ad
 
 ---
 
-### [ ] Comment 33: Test DB provisioned via `drizzle-kit push` is missing SQL-migration CHECK constraints
-**Priority**: 🟢 Medium
-**Impact**: Test reliability / developer experience — false test failures on a freshly provisioned test DB
-**Effort**: Low
+### ~~Comment 33: Test DB provisioned via `drizzle-kit push` is missing SQL-migration CHECK constraints~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
+
+**Resolution**: `tests/helpers/test-db.ts` `setupDatabase()` now applies the real `migrations/0009_add_mood_constraints.sql` + `migrations/0020_add_artist_attribute_constraints.sql` after `drizzle-kit push`, executed statement-by-statement and made idempotent (duplicate-object errors `42710`/`42P07` are swallowed; `0020` also uses `DROP CONSTRAINT IF EXISTS`). Chose applying the actual migration SQL over re-hardcoding constraints in the helper (avoids re-creating the drift class) and over `drizzle-kit migrate` (the journal doesn't list `0009`/`0020`). Verified on a freshly-provisioned DB: `artist-mood-constraints.test.ts` 4/4 pass, and the full suite (532 tests) is green with `[Test DB] CHECK constraints applied`.
 
 The test DB helper provisions tables with `drizzle-kit push` (see note in [tests/helpers/test-db.ts](tests/helpers/test-db.ts)), but `push` does not materialize the raw-SQL `CHECK` constraints that are defined both inline in `shared/schema.ts` (e.g. `artists_mood_check`, line ~59) and in the SQL migration files (`migrations/0009_add_mood_constraints.sql`, `migrations/0020_add_artist_attribute_constraints.sql`). As a result, a cleanly push-provisioned test DB has **no** check constraints on `artists`, and `tests/features/artist-mood-constraints.test.ts` fails (2 cases) because out-of-range mood inserts are accepted instead of rejected. Manually applying the constraint (`ALTER TABLE artists ADD CONSTRAINT artists_mood_check ...`) makes all 4 tests pass, confirming the gap is provisioning-only, not a code defect.
 
@@ -515,10 +511,10 @@ The test DB helper provisions tables with `drizzle-kit push` (see note in [tests
 
 ---
 
-### [ ] Comment 34: WeekSummary shows reputation gains only from press coverage, not role-meeting effects
-**Priority**: 🟢 Medium
-**Impact**: Player-facing feedback gap — most reputation gains are invisible in the week summary
-**Effort**: Low (code) + design decision
+### ~~Comment 34: WeekSummary shows reputation gains only from press coverage, not role-meeting effects~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
+
+**Resolution**: Product decision was **option (b): a single aggregated ⭐ line** (reputation is label-wide; avoids noise from many small ±1 effects). Implemented in `shared/engine/game-engine.ts`: `summary.reputationChanges` is already accumulated by *every* source (role-meeting `applyEffect` + press coverage), so removed the press-coverage-only `type: 'reputation'` push and now emit ONE aggregated Achievement line from the net weekly total at the end of `advanceWeek()` (same reduce used for `weeklyStats.reputationChange`). Single source of truth → no double-counting; net of 0 emits nothing; negatives render correctly. `WeekSummary.tsx` needed no change (already renders `type: 'reputation'`). Worked example: +2 press & +1 role-meeting → one "+3 reputation points" line.
 
 The reputation-visibility work surfaces a ⭐ "+N reputation points" line in WeekSummary only for **press-coverage** reputation, which pushes a `type: 'reputation'` change in [shared/engine/game-engine.ts](shared/engine/game-engine.ts) (~line 2119-2120). Reputation gained through **role-meeting effects** goes through `applyEffect` (~line 1166-1170), which only updates the aggregate `summary.reputationChanges` total and does **not** push a `type: 'reputation'` change — so it produces no ⭐ Achievement line. Reproduced in manual smoke testing: a role-meeting choice granting +1 reputation updated the total (reputation → 22) but showed nothing in the Week Summary's Achievements section.
 
@@ -532,10 +528,10 @@ The reputation-visibility work surfaces a ⭐ "+N reputation points" line in Wee
 
 ---
 
-### [ ] Comment 35: Game snapshot object is built field-by-field in two places (export vs saveGame)
-**Priority**: 🟢 Medium
-**Impact**: Maintainability + latent data drift between manual/auto saves and exported files
-**Effort**: Medium
+### ~~Comment 35: Game snapshot object is built field-by-field in two places (export vs saveGame)~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
+
+**Resolution**: Extracted `client/src/utils/buildGameSnapshot.ts` as the single snapshot assembler and call it from both `gameStore.saveGame` (manual/autosave) and `SaveGameModal.handleExport` (export). This resolves the `emailMetadata.truncated` drift — `saveGame` previously omitted the flag, so autosaves/manual saves never persisted it while exports did; now both go through the helper, which always sets `{ total, unreadCount, truncated }`. Snapshot shape preserved (`musicLabel` stripped to a sibling of `gameState`); `SNAPSHOT_VERSION` unchanged. Verified: `save-load-snapshot-integrity.test.ts` passes.
 
 The save snapshot (`{snapshotVersion, gameState, musicLabel, artists, projects, roles, songs, releases, emails, emailMetadata, releaseSongs, executives, moodEvents, weeklyActions, weeklyOutcome}`) is assembled independently in `client/src/components/SaveGameModal.tsx` `handleExport` (~line 227) and `client/src/store/gameStore.ts` `saveGame` (~line 1208). They have ALREADY diverged: `handleExport` sets `emailMetadata.truncated` but `saveGame`'s `emailMetadata` omits it, so manual saves and autosaves never persist the `truncated` flag while exports do.
 
@@ -583,10 +579,10 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 
 ---
 
-### [ ] Comment 36: Autosave display-name format hardcoded in three places
-**Priority**: 🔵 Low
-**Impact**: Format drift risk between write, migration, and tests
-**Effort**: Low
+### ~~Comment 36: Autosave display-name format hardcoded in three places~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
+
+**Resolution**: Extracted `formatAutosaveName(labelName, week)` into `shared/utils/saveName.ts` and use it from all three sites: `gameStore.ts` (autosave write), `server/storage.ts` `getGameSaves` (legacy-name migration), and `tests/features/save-load-snapshot-integrity.test.ts` (local `getAutosaveName` helper deleted). All three already agreed on `"{label} - Week {n}"`; standardized on that. The no-label `"Autosave - Week {n}"` fallback is intentionally left as-is.
 
 The `"{label} - Week {n}"` format is constructed independently in `client/src/store/gameStore.ts` (autosave write), `server/storage.ts` `getGameSaves` (legacy-name migration), and `tests/features/save-load-snapshot-integrity.test.ts` (local `getAutosaveName` helper). A format change in one place silently breaks the others (migration would rewrite to a name that no longer matches fresh autosaves).
 
@@ -615,10 +611,10 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 
 ---
 
-### [ ] Comment 38: SaveGameModal import duplicates schema validation with a manual missingKeys block
-**Priority**: 🔵 Low
-**Impact**: Validation logic encoded twice; drifts from the Zod schema
-**Effort**: Low
+### ~~Comment 38: SaveGameModal import duplicates schema validation with a manual missingKeys block~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
+
+**Resolution**: `SaveGameModal.handleImport` now relies solely on `gameSaveSnapshotSchema.parse` — removed the manual `missingKeys` block that hand-checked `gameState`/`gameState.id`/`gameState.currentWeek`. On failure it catches `ZodError` and surfaces `error.issues` as a readable field-level toast (`path: message`), falling back to `error.message` for non-Zod errors. A malformed import now yields a precise per-field message instead of a lumped string.
 
 `client/src/components/SaveGameModal.tsx` `handleImport` hand-checks `gameState` existence, `gameState.id` (non-empty string), and `gameState.currentWeek` (number) immediately before calling `gameSaveSnapshotSchema.parse(candidateSnapshot)`, which already validates those fields. When the schema's required fields change, the manual block goes stale.
 
@@ -635,14 +631,14 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 1 item (C29)
-- 🟢 Medium: 6 items (C25, C30, C31, C33, C34, C35)
-- 🔵 Low: 4 items (C26, C32, C36, C38)
+- 🟡 High: 0 items (all completed! 🎉)
+- 🟢 Medium: 0 items (all completed! 🎉)
+- 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 27 items (71.1%)
+- ✅ Completed: 36 items (94.7%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 11 items (28.9%)
+- 📋 Pending: 2 items (5.3%)
 
 ---
 

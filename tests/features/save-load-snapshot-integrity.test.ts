@@ -5,10 +5,7 @@ import { DatabaseStorage } from '../../server/storage';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
-
-function getAutosaveName(label: string, week: number) {
-  return `${label} - Week ${week}`;
-}
+import { formatAutosaveName } from '@shared/utils/saveName';
 
 describe('Snapshot Integrity', () => {
   let db: NodePgDatabase<typeof schema>;
@@ -170,7 +167,7 @@ describe('Snapshot Integrity', () => {
       {
         id: crypto.randomUUID(),
         userId,
-        name: getAutosaveName(labelName, saveWeek - 1),
+        name: formatAutosaveName(labelName, saveWeek - 1),
         week: saveWeek - 1,
         gameState: {
           ...snapshot,
@@ -184,10 +181,10 @@ describe('Snapshot Integrity', () => {
 
     const saves = await storage.getGameSaves(userId);
 
-    const migratedName = getAutosaveName(labelName, saveWeek);
+    const migratedName = formatAutosaveName(labelName, saveWeek);
     expect(saves.filter(save => save.isAutosave && save.name === migratedName)).toHaveLength(1);
     // No un-migrated legacy autosave name should remain (catches the exact-match bug)
     expect(saves.filter(save => save.isAutosave && /^Autosave\b/.test(save.name))).toHaveLength(0);
-    expect(saves.filter(save => save.isAutosave && save.name === getAutosaveName(labelName, saveWeek - 1))).toHaveLength(1);
+    expect(saves.filter(save => save.isAutosave && save.name === formatAutosaveName(labelName, saveWeek - 1))).toHaveLength(1);
   });
 });

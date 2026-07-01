@@ -4,9 +4,10 @@ import type { Artist, Project, Role, WeeklyAction, MusicLabel, GameSaveSnapshot 
 import type { GameState, LabelData, SourcingTypeString } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { SNAPSHOT_VERSION } from '@shared/schema';
 import { toast } from '@/hooks/use-toast';
 import { fetchSnapshotCollections, fetchEmailSnapshot } from '@/utils/emailSnapshot';
+import { buildGameSnapshot } from '@/utils/buildGameSnapshot';
+import { formatAutosaveName } from '@shared/utils/saveName';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 
 // Internal helper to sync focus slots and A&R operation status to the server
@@ -732,7 +733,7 @@ export const useGameStore = create<GameStore>()(
           try {
             const labelName = syncedGameState.musicLabel?.name;
             const autosaveName = labelName
-              ? `${labelName} - Week ${syncedGameState.currentWeek}`
+              ? formatAutosaveName(labelName, syncedGameState.currentWeek)
               : `Autosave - Week ${syncedGameState.currentWeek}`;
             await get().saveGame(autosaveName, { isAutosave: true });
           } catch (autosaveError) {
@@ -1198,31 +1199,25 @@ export const useGameStore = create<GameStore>()(
           const { emailSnapshot, releaseSongs: releaseSongsSnapshot, executives: executivesSnapshot, moodEvents: moodEventsSnapshot } =
             await fetchSnapshotCollections(gameState.id);
 
-          const { musicLabel, ...gameStateWithoutLabel } = gameState;
           const isAutosave = options?.isAutosave ?? false;
+          const snapshot = buildGameSnapshot({
+            gameState,
+            emailSnapshot,
+            artists,
+            projects,
+            roles,
+            songs,
+            releases,
+            releaseSongs: releaseSongsSnapshot ?? releaseSongs,
+            executives: executivesSnapshot ?? executives,
+            moodEvents: moodEventsSnapshot ?? moodEvents,
+            weeklyActions,
+            weeklyOutcome,
+          });
           const saveData = {
             // userId will be set by the server from authentication
             name,
-            gameState: {
-              snapshotVersion: SNAPSHOT_VERSION,
-              gameState: gameStateWithoutLabel,
-              musicLabel: musicLabel || null,
-              artists,
-              projects,
-              roles,
-              songs,
-              releases,
-              emails: emailSnapshot.emails,
-              emailMetadata: {
-                total: emailSnapshot.total,
-                unreadCount: emailSnapshot.unreadCount
-              },
-              releaseSongs: releaseSongsSnapshot ?? releaseSongs,
-              executives: executivesSnapshot ?? executives,
-              moodEvents: moodEventsSnapshot ?? moodEvents,
-              weeklyActions,
-              weeklyOutcome: weeklyOutcome ?? null
-            },
+            gameState: snapshot,
             week: gameState.currentWeek,
             isAutosave
           };

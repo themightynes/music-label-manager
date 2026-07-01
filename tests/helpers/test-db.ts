@@ -1,5 +1,8 @@
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import * as schema from '@shared/schema';
 import type { Song, Artist } from '@shared/schema';
 
@@ -39,11 +42,85 @@ export function createTestDatabase(): NodePgDatabase<typeof schema> & { $client:
 }
 
 /**
+ * CHECK-constraint migration files (relative to /migrations) that `drizzle-kit push`
+ * does NOT materialize. `push` diffs table/column structure but silently drops the
+ * raw-SQL `CHECK (...)` expressions declared inline in shared/schema.ts, so a freshly
+ * pushed test DB has NO check constraints on `artists`. We re-apply the real migration
+ * SQL here so the test DB matches production behaviour (e.g. artists_mood_check).
+ *
+ * Order matters: 0020 supersedes 0009 for artists_mood_check and is the authoritative,
+ * idempotent (DROP ... IF EXISTS then ADD) definition of all artist attribute checks.
+ */
+const CHECK_CONSTRAINT_MIGRATIONS = [
+  '0009_add_mood_constraints.sql',
+  '0020_add_artist_attribute_constraints.sql',
+];
+
+// Resolve /migrations relative to this file: tests/helpers/ -> ../../migrations
+const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'migrations');
+
+// Postgres: 42710 = duplicate_object (constraint already exists),
+// 42P07 = duplicate_table/relation (index already exists).
+const IDEMPOTENT_PG_CODES = new Set(['42710', '42P07']);
+
+/**
+ * Applies the raw-SQL CHECK-constraint migrations against the test DB.
+ *
+ * WHY (Comment/Tech-debt C33): the test DB is provisioned with `drizzle-kit push`,
+ * which does NOT create the inline raw-SQL CHECK constraints from shared/schema.ts
+ * (e.g. artists_mood_check). Without this step, out-of-range inserts are accepted and
+ * tests/features/artist-mood-constraints.test.ts fails on a freshly provisioned DB.
+ *
+ * APPROACH (Option A): apply the actual migrations/*.sql constraint files rather than
+ * re-hardcoding the constraint SQL in this helper. Re-hardcoding would recreate the same
+ * drift class (helper vs. schema/migrations going out of sync); reading the real SQL keeps
+ * this in lockstep with the migrations that run against production.
+ *
+ * IDEMPOTENCY: this runs once per suite (beforeAll -> setupDatabase) but the DB may already
+ * have the constraints (e.g. suite re-run against a persisted container, or 0020 dropping/
+ * re-adding what 0009 added). Statements are split on `;` and executed individually; errors
+ * with Postgres codes for "already exists" (42710 / 42P07) are swallowed so re-runs and
+ * already-provisioned DBs don't crash setup. Any other error is re-thrown.
+ */
+async function applyCheckConstraints() {
+  for (const file of CHECK_CONSTRAINT_MIGRATIONS) {
+    const sqlText = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
+
+    // Split into individual statements. Drizzle uses `--> statement-breakpoint` markers,
+    // but these plain constraint migrations are simple enough to split on `;`.
+    const statements = sqlText
+      .split('--> statement-breakpoint')
+      .join('\n')
+      .split(';')
+      .map((s) => s.trim())
+      // Drop empties and comment-only fragments
+      .filter((s) => s.length > 0 && !s.split('\n').every((line) => line.trim().startsWith('--')));
+
+    for (const statement of statements) {
+      try {
+        await testPool!.query(statement);
+      } catch (error: any) {
+        if (IDEMPOTENT_PG_CODES.has(error?.code)) {
+          // Constraint/index already present — safe to ignore for idempotent setup.
+          continue;
+        }
+        console.error(`[Test DB] Failed applying constraint statement from ${file}:`, statement);
+        throw error;
+      }
+    }
+  }
+  console.log('[Test DB] CHECK constraints applied');
+}
+
+/**
  * Sets up the database tables
  * Run this once before your test suite starts
  *
  * NOTE: Tables are created by running `drizzle-kit push` before tests start.
- * This ensures the test schema EXACTLY matches production schema from shared/schema.ts
+ * This ensures the test schema EXACTLY matches production schema from shared/schema.ts.
+ *
+ * `drizzle-kit push` does NOT materialize the inline raw-SQL CHECK constraints, so after
+ * verifying the connection we apply the constraint migrations (see applyCheckConstraints).
  */
 export async function setupDatabase() {
   const db = createTestDatabase();
@@ -57,6 +134,9 @@ export async function setupDatabase() {
     console.error('[Test DB] Connection failed:', error);
     throw error;
   }
+
+  // Re-apply raw-SQL CHECK constraints that `drizzle-kit push` drops (tech-debt C33).
+  await applyCheckConstraints();
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   type MoodEvent, type InsertMoodEvent
 } from "@shared/schema";
 import { EMAIL_CATEGORIES, type EmailCategory } from "@shared/types/emailTypes";
+import { formatAutosaveName } from "@shared/utils/saveName";
 import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
 import type { ReleasedSongData } from "@shared/engine/ChartService";
@@ -216,7 +217,7 @@ export class DatabaseStorage implements IStorage {
       ) {
         return {
           ...save,
-          name: `${save.musicLabelName} - Week ${save.week}`
+          name: formatAutosaveName(save.musicLabelName, save.week)
         };
       }
       return save;

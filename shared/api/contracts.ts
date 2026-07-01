@@ -182,7 +182,11 @@ export const AdvanceWeekResponse = z.object({
 // Action selection schemas
 export const SelectActionsRequest = z.object({
   gameId: z.string().uuid(),
-  selectedActions: z.array(ActionSchema).max(3)
+  // No fixed cap: the focus-slot count is dynamic (base 3, unlocks a 4th at
+  // reputation >= 50 via focus_slots_max). Matches AdvanceWeekRequest, which is
+  // uncapped; the effective per-week limit is enforced server-side against
+  // gameState.focusSlots. A hardcoded .max() here would silently break the 4th slot.
+  selectedActions: z.array(ActionSchema)
 });
 
 export const SelectActionsResponse = z.object({
