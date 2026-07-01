@@ -45,7 +45,7 @@ TypeScript monorepo with Express backend and React frontend for a music industry
 **Emergency Recovery**:
 ```bash
 # If migrations are stuck:
-psql $DATABASE_URL < drizzle/migrations/XXXX.sql
+psql $DATABASE_URL < migrations/XXXX.sql
 npm run check          # Validate TypeScript
 npm run db:studio     # Verify in database
 ```
@@ -80,10 +80,10 @@ npm run db:studio     # Verify in database
 
 ## ✅ Validation Commands
 - `npm run check` - Run TypeScript compilation check
-- `npm run dev` - Starts both client and server with hot reload
-- `npm test` - Run tests in watch mode
+- `npm run dev` - Starts the dev server (single Express process on port 5000 with Vite as middleware — no separate client dev server)
+- `npm test` - Run tests once (alias of `test:run`; for watch mode use `npx vitest`)
 - `npm run test:run` - Run tests once (CI mode)
-- `pkill -f "tsx server"` - Clean up any lingering server processes
+- `npx kill-port 5000` - Clean up a lingering dev server (Windows-friendly; `pkill -f "tsx server"` on POSIX)
 
 ## 🧪 Testing Framework
 - **Framework**: Vitest (native Vite integration, Jest-compatible API)
@@ -91,7 +91,7 @@ npm run db:studio     # Verify in database
 - **Test Files**: Use `*.test.ts` or `*.spec.ts` naming convention
 - **Setup**: Global test configuration in `tests/setup.ts`
 - **Structure**: Wrap tests in `describe()` blocks, use `it()` or `test()` for assertions
-- **Commands**: `npm test` (watch), `npm run test:ui` (interactive UI), `npm run test:coverage` (coverage report)
+- **Commands**: `npm test` (single run), `npx vitest` (watch), `npm run test:ui` (interactive UI), `npm run test:coverage` (coverage report)
 - **Database**: **NEVER** import `server/db` in tests - always use `createTestDatabase()` from `tests/helpers/test-db` to avoid polluting production database
 - **Integration DB setup**: integration tests hit a real Postgres on `localhost:5433` (Docker container `music-label-test`, db `music_label_test`, user/pass `postgres`). Start it, then provision schema — but ⚠️ `drizzle-kit push` does **NOT** create the raw-SQL `CHECK` constraints (e.g. `artists_mood_check`), so apply the SQL migrations (`migrations/*.sql`, at least `0020`) or `artist-mood-constraints.test.ts` fails on a fresh DB.
 - **CI**: The vitest suite now runs in CI as the `vitest` job in `.github/workflows/playwright.yml` (a `postgres:16` service on port 5433 + `drizzle-kit push --force` provisions the schema, then `npm run test:run`). Local runs still need the Docker test DB — start it with `npm run test:db:start` (container `music-label-test-db`) before running `npm run test:run`, and `npm run test:db:stop` when done.
