@@ -25,3 +25,44 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+
+  vitest:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    # The vitest suite (tests/setup.ts) connects to Postgres unconditionally for ALL
+    # tests. The connection is hardcoded to localhost:5433 / music_label_test /
+    # postgres:postgres in tests/helpers/test-db.ts, so we run a matching service
+    # container and provision the schema before running the suite.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: music_label_test
+        ports:
+          # Map host 5433 -> container 5432 to match TEST_DATABASE_URL.
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # drizzle.config.ts throws if DATABASE_URL is unset; the push step and any
+      # test code that reads it point at the service container.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/music_label_test
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Provision test schema
+      # setupDatabase() in tests/helpers/test-db.ts verifies the connection and
+      # applies the CHECK-constraint migrations, but does NOT create tables. Push
+      # the schema from shared/schema.ts first (same as the local test:db workflow).
+      run: npx drizzle-kit push --force
+    - name: Run vitest suite
+      run: npm run test:run
