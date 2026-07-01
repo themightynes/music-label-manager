@@ -16,8 +16,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
 import { apiRequest } from '@/lib/queryClient';
 import type { GameSaveSnapshot } from '@shared/schema';
-import { gameSaveSnapshotSchema, SNAPSHOT_VERSION } from '@shared/schema';
+import { gameSaveSnapshotSchema } from '@shared/schema';
+import { ZodError } from 'zod';
 import { fetchSnapshotCollections } from '@/utils/emailSnapshot';
+import { buildGameSnapshot } from '@/utils/buildGameSnapshot';
 import { useToast } from '@/hooks/use-toast';
 
 type SaveSummary = {
@@ -208,9 +210,10 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       const { emailSnapshot, releaseSongs: releaseSongsSnapshot, executives: executivesSnapshot, moodEvents: moodEventsSnapshot } =
         await fetchSnapshotCollections(gameState.id);
 
-      // Export in the same format as game saves (nested snapshot structure)
-      // This ensures imported saves can be validated by gameSaveSnapshotSchema
-      const { musicLabel, ...gameStateWithoutLabel } = gameState;
+      // Export in the same format as game saves (nested snapshot structure).
+      // Uses the shared buildGameSnapshot helper so the export snapshot's field
+      // list (and emailMetadata shape, incl. `truncated`) stays identical to
+      // manual saves / autosaves and validates against gameSaveSnapshotSchema.
       const {
         artists,
         projects,
@@ -224,27 +227,20 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         weeklyOutcome
       } = useGameStore.getState();
 
-      const snapshotCandidate = {
-        snapshotVersion: SNAPSHOT_VERSION,
-        gameState: gameStateWithoutLabel,
-        musicLabel: musicLabel || null,
+      const snapshotCandidate = buildGameSnapshot({
+        gameState,
+        emailSnapshot,
         artists,
         projects,
         roles,
         songs,
         releases,
-        emails: emailSnapshot.emails,
         releaseSongs: releaseSongsSnapshot ?? releaseSongs,
         executives: executivesSnapshot ?? executives,
         moodEvents: moodEventsSnapshot ?? moodEvents,
-        emailMetadata: {
-          total: emailSnapshot.total,
-          unreadCount: emailSnapshot.unreadCount,
-          truncated: emailSnapshot.truncated
-        },
         weeklyActions,
-        weeklyOutcome: weeklyOutcome ?? null
-      };
+        weeklyOutcome,
+      });
 
       const validatedSnapshot = gameSaveSnapshotSchema.parse(snapshotCandidate);
 
@@ -304,23 +300,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           throw new Error('Invalid save file: expected snapshotVersion and gameState structure.');
         }
 
-        const missingKeys: string[] = [];
-        const snapshotGameState = (candidateSnapshot as any).gameState;
-        if (!snapshotGameState || typeof snapshotGameState !== 'object') {
-          missingKeys.push('gameState');
-        } else {
-          if (typeof snapshotGameState.id !== 'string' || !snapshotGameState.id) {
-            missingKeys.push('gameState.id');
-          }
-          if (typeof snapshotGameState.currentWeek !== 'number') {
-            missingKeys.push('gameState.currentWeek');
-          }
-        }
-
-        if (missingKeys.length > 0) {
-          throw new Error(`Invalid save data. Missing or malformed keys: ${missingKeys.join(', ')}`);
-        }
-
+        // Rely on the schema for structural validation (it already checks
+        // gameState.id, gameState.currentWeek, etc.). A ZodError is surfaced
+        // below as a readable field-level message.
         const parsedSnapshot = gameSaveSnapshotSchema.parse(candidateSnapshot);
         const importName = importData?.name || `Imported Save ${new Date().toLocaleString()}`;
 
@@ -331,9 +313,23 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         });
       } catch (error) {
         console.error('Failed to import save:', error);
+
+        let description = 'Invalid save file format. Expected { snapshotVersion, gameState } payload.';
+        if (error instanceof ZodError) {
+          const fieldErrors = error.issues
+            .map(issue => {
+              const path = issue.path.join('.');
+              return path ? `${path}: ${issue.message}` : issue.message;
+            })
+            .join('; ');
+          description = `Invalid save data. ${fieldErrors}`;
+        } else if (error instanceof Error) {
+          description = error.message;
+        }
+
         toast({
           title: 'Import failed',
-          description: error instanceof Error ? error.message : 'Invalid save file format. Expected { snapshotVersion, gameState } payload.',
+          description,
           variant: 'destructive',
         });
       }
