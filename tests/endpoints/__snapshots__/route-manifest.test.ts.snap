@@ -1,0 +1,578 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`registerRoutes route manifest > registers the exact set of routes and named middleware (characterization) 1`] = `
+[
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/actions/weekly",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/actions-config",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/actions-config",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/cleanup-orphaned-games",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/database-stats",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/health",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/advance-week",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/analytics/artist/:artistId/roi",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/analytics/portfolio/roi",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/analytics/project/:projectId/roi",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/analytics/release/:releaseId/roi",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/artists/:archetype/dialogue",
+  },
+  {
+    "method": "PATCH",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/artists/:id",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/artists/available",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/budget-calculation",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/bug-reports",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/bug-reports",
+  },
+  {
+    "method": "PATCH",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/bug-reports/:id/status",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/bug-reports/archives",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/bug-reports/archives/:fileName",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/bug-reports/stats",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/debug/data-load",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/debug/game/:gameId/revenue",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/dev/markets-config",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/dev/markets-config",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/dialogue-scenes",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/dialogue/:roleType",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/events",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game-state",
+  },
+  {
+    "method": "DELETE",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/actions",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/ar-office/artists",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/ar-office/cancel",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/ar-office/start",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/ar-office/status",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/artist-dialogue",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/artists",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/artists/:artistId/songs",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/artists/:artistId/songs/ready",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/artists/ready-for-release",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/balance",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/charts/top10",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/charts/top100",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/emails",
+  },
+  {
+    "method": "DELETE",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/emails/:emailId",
+  },
+  {
+    "method": "PATCH",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/emails/:emailId/read",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/emails/unread-count",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/executive/:execId/action",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/executives",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/label",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/mood-events",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/projects",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/release-songs",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/releases",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/releases",
+  },
+  {
+    "method": "DELETE",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/releases/:releaseId",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/releases/plan",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/releases/preview",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/songs",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/songs/clear-reservations",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/songs/conflicts",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:gameId/test/streaming-decay",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:id",
+  },
+  {
+    "method": "PATCH",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/game/:id",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/games",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/health",
+  },
+  {
+    "method": "GET",
+    "middleware": [],
+    "path": "/api/me",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/project-types",
+  },
+  {
+    "method": "PATCH",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/projects/:id",
+  },
+  {
+    "method": "DELETE",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/projects/:id/cancel",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/roles/:roleId",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/roles/:roleId/meetings/:meetingId",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/saves",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/saves",
+  },
+  {
+    "method": "DELETE",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/saves/:saveId",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/saves/:saveId",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/saves/:saveId/restore",
+  },
+  {
+    "method": "POST",
+    "middleware": [],
+    "path": "/api/select-actions",
+  },
+  {
+    "method": "PATCH",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/songs/:songId",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/test-data",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/tour/estimate",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/validate-types",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "handleClerkWebhook",
+    ],
+    "path": "/api/webhooks/clerk",
+  },
+]
+`;
