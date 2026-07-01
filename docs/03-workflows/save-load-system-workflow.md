@@ -97,7 +97,9 @@ const convertTimestamps = (obj: any): any => {
 
 **Trigger**: After successful week advancement
 **Naming**: `"{musicLabelName} - Week {week}"` (e.g. `"Acme Records - Week 8"`). The label name is fetched from the game's label; if unavailable it falls back to `"Label {gameId} - Week {week}"`.
-**Legacy migration**: `getGameSaves()` normalizes legacy autosaves still named `"Autosave"` on read, rewriting them to `"{musicLabelName} - Week {week}"` for display.
+**Legacy migration**: `getGameSaves()` normalizes legacy autosaves still named `"Autosave"` on read (it matches any autosave whose name starts with `Autosave`), rewriting them to `"{musicLabelName} - Week {week}"` for display.
+
+> **Caveat**: The migration matches on the `Autosave` name prefix for autosave records, so a save a user *manually* named exactly `"Autosave"` will also be renamed on display. This is a benign edge case — the underlying save data is untouched.
 **Cleanup**: Keeps the newest 3 autosaves per game (`purgeOldAutosaves(..., keep: 3)`)
 
 ```typescript
@@ -117,6 +119,87 @@ await get().saveGame(`${resolvedLabel} - Week ${syncedGameState.currentWeek}`, {
   }
 });
 ```
+
+## Snapshot v2 Format
+
+**Version**: `SNAPSHOT_VERSION = 2` (defined in `shared/schema.ts`, validated by `gameSaveSnapshotSchema`)
+
+A snapshot is assembled by a shared snapshot builder used by both the manual/autosave path (store `saveGame`) and the JSON export path (`SaveGameModal` export). This keeps the captured field set identical regardless of how the snapshot is produced.
+
+### Structure: `musicLabel` and collections are siblings of `gameState`
+
+The most important structural fact: **`musicLabel` and every collection are siblings of `gameState`, NOT nested inside it.** The `gameState` object holds only the inner per-game state (money, reputation, week, focus slots, A&R office fields, access tiers, flags, etc.). Everything else lives alongside it at the top level of the snapshot.
+
+```
+{
+  snapshotVersion,        // SNAPSHOT_VERSION = 2; gates restore (see below)
+  gameState: { ... },     // inner game state ONLY (money, reputation, currentWeek, focusSlots, arOffice*, *Access, flags, weeklyStats, tierUnlockHistory, ...)
+  musicLabel,             // sibling of gameState — NOT gameState.musicLabel
+  artists,
+  projects,
+  roles,
+  songs,
+  releases,
+  weeklyActions,
+  emails,
+  emailMetadata,
+  releaseSongs,
+  executives,
+  moodEvents,
+  weeklyOutcome
+}
+```
+
+> ⚠️ Because `musicLabel` is a sibling, any server-side JSON-path query must read `game_state->'musicLabel'`, not `game_state->'gameState'->'musicLabel'`.
+
+### Captured collections/fields
+
+| Field | Description |
+|-------|-------------|
+| `snapshotVersion` | Numeric schema version (`SNAPSHOT_VERSION = 2`). Gates restore — a mismatched version is **rejected** (see Version gating). |
+| `gameState` | Inner per-game state only: `id`, `currentWeek`, `money`, `reputation`, `creativeCapital`, focus-slot fields, `arOffice*` fields, `playlistAccess`/`pressAccess`/`venueAccess`, `campaignType`/`campaignCompleted`, `rngSeed`, `flags`, `weeklyStats`, `tierUnlockHistory`. Uses `.passthrough()` so extra fields survive. |
+| `musicLabel` | The label record (name, genre focus, founding info). Sibling of `gameState`; nullable/optional. |
+| `artists` | Signed artist roster. |
+| `projects` | Recording/tour projects. |
+| `roles` | Executive/industry role records. |
+| `songs` | All songs (recorded, released, in-progress). |
+| `releases` | Planned and released singles/EPs/albums. |
+| `weeklyActions` | Actions submitted per week (focus-slot selections). |
+| `emails` | Full inbox snapshot (see Email snapshot truncation). |
+| `emailMetadata` | `{ total?, unreadCount?, truncated? }` — inbox counts plus the truncation flag (see below). |
+| `releaseSongs` | Release↔song junction rows (track ordering). |
+| `executives` | Executive suite state (mood, relationships). |
+| `moodEvents` | Artist/global mood-event history. |
+| `weeklyOutcome` | Last week-advancement result payload (arbitrary shape). |
+
+The top-level schema also uses `.passthrough()`, so unrecognized top-level keys are preserved rather than stripped.
+
+### Version gating
+
+The restore endpoint in `server/routes.ts` compares the snapshot's `snapshotVersion` against the current `SNAPSHOT_VERSION`. Any mismatch is **rejected** with HTTP 400 and `error: 'UNSUPPORTED_SNAPSHOT_VERSION'`. When the snapshot shape changes in a breaking way, bump `SNAPSHOT_VERSION` and add migration logic.
+
+## Email Snapshot & Truncation
+
+Emails require special handling because an inbox can grow large. The snapshot builder captures the inbox by paginating the server's email API.
+
+### Truncation system (`client/src/utils/emailSnapshot.ts`)
+
+- **Page size**: `EMAIL_PAGE_SIZE = 100`.
+- **Safety cap**: `MAX_PAGES = 100` → a hard limit of ~10,000 emails per snapshot.
+- **Termination**: pagination pulls pages until a **short page** is returned (a page with fewer than `EMAIL_PAGE_SIZE` rows means the end of the inbox has been reached). This single condition handles both the last partial page and an empty page past the end, so there are no wasted round trips on inconsistent totals.
+- **`truncated` flag semantics**: The `MAX_PAGES` cap is the **only** path that sets `truncated = true`. If pagination ends naturally on a short page, `truncated` stays `false`. This means:
+  - `truncated === true` → the inbox genuinely exceeded ~10,000 emails and the snapshot is intentionally incomplete.
+  - **Complete snapshots are never falsely flagged.** A normally-terminated snapshot always reports `truncated === false`, regardless of how the server's `total` compares.
+- **Server `total` is a sanity-check only**: the collected count is authoritative and is what gets stored in `emailMetadata.total`. The server-reported `total` is never used to terminate the loop; if it disagrees with the collected count, a `console.warn` is logged but the snapshot is **not** marked truncated.
+
+### Server-side email handling (`server/storage.ts`)
+
+- **Category normalization**: the server is the source of truth for email categories. `normalizeEmailCategory()` maps every stored category into one of **5 generic categories** — `chart`, `financial`, `artist`, `ar`, `other` (defined by `EMAIL_CATEGORIES` in `shared/types/emailTypes.ts`). Legacy/DB categories are remapped via `LEGACY_CATEGORY_MAP` (e.g. `financial_report`/`tier_unlock` → `financial`, `tour_completion`/`release` → `artist`, `top_10_debut`/`number_one_debut` → `chart`, `artist_discovery` → `ar`); anything unrecognized (or null) falls back to `other`. Normalizing server-side prevents category drift between saves.
+- **Deterministic ordering**: email queries order by `week DESC, createdAt DESC, id DESC`. The `id` tie-breaker guarantees a stable, deterministic order even when week and `createdAt` collide — important so paginated snapshot pages don't overlap or skip rows.
+
+### `useEmails` staleTime
+
+The live inbox query (`client/src/hooks/useEmails.ts`) uses `staleTime: 30_000` (30 seconds), raised from the previous `0`. Giving emails a 30-second stale window avoids excessive refetches that would otherwise re-sort the visible list on every interaction.
 
 ## JSON Import/Export
 
