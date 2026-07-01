@@ -94,7 +94,7 @@ npm run db:studio     # Verify in database
 - **Commands**: `npm test` (watch), `npm run test:ui` (interactive UI), `npm run test:coverage` (coverage report)
 - **Database**: **NEVER** import `server/db` in tests - always use `createTestDatabase()` from `tests/helpers/test-db` to avoid polluting production database
 - **Integration DB setup**: integration tests hit a real Postgres on `localhost:5433` (Docker container `music-label-test`, db `music_label_test`, user/pass `postgres`). Start it, then provision schema — but ⚠️ `drizzle-kit push` does **NOT** create the raw-SQL `CHECK` constraints (e.g. `artists_mood_check`), so apply the SQL migrations (`migrations/*.sql`, at least `0020`) or `artist-mood-constraints.test.ts` fails on a fresh DB.
-- **CI coverage gap**: CI (`.github/workflows/playwright.yml`) runs **Playwright only** — the vitest suite is **NOT** in CI. Run `npm run test:run` **locally** before trusting vitest results.
+- **CI**: The vitest suite now runs in CI as the `vitest` job in `.github/workflows/playwright.yml` (a `postgres:16` service on port 5433 + `drizzle-kit push --force` provisions the schema, then `npm run test:run`). Local runs still need the Docker test DB — start it with `npm run test:db:start` (container `music-label-test-db`) before running `npm run test:run`, and `npm run test:db:stop` when done.
 - **Mirror production data shapes in tests** — e.g. the save snapshot stores `musicLabel` as a sibling of `gameState` (see Save/Load Snapshots); a test that nests it can pass while the real code path is broken (this shipped a real migration bug).
 
 ## XState & Stately Runtime Notes
