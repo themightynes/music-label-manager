@@ -368,7 +368,7 @@ import { motion } from "motion/react"
 client/src/
 ├── components/           # Shared UI components
 │   ├── Dashboard.tsx     # Main game dashboard
-│   ├── MonthPlanner.tsx  # Enhanced action planner with strategic recommendations
+│   ├── SelectionSummary.tsx # Focus-slot display + advance-week control
 │   ├── DialogueModal.tsx # Role conversation system
 │   ├── SaveGameModal.tsx # Save/load system
 │   ├── ArtistDiscoveryModal.tsx  # Artist signing
@@ -409,11 +409,13 @@ App.tsx
 ├── GameProvider (GameContext)
 └── Router
     ├── LoginPage.tsx
+    ├── ExecutiveSuitePage.tsx (Route /executives - Weekly Action Planning)
+    │   ├── ExecutiveMeetings.tsx (Action Picker - gates selection via hasAvailableSlots)
+    │   └── SelectionSummary.tsx (Focus-Slot Display + Advance-Week Control)
     └── GamePage.tsx
         ├── ErrorBoundary
         ├── Dashboard.tsx (Main Game Interface)
         │   ├── Header (KPIs, Save Button)
-        │   ├── MonthPlanner.tsx (Enhanced Action Selection with Recommendations)
         │   ├── AccessTierBadges.tsx (Detailed Progression System)
         │   ├── ArtistRoster.tsx (Enhanced Artist Management with Analytics)
         │   ├── ActiveProjects.tsx (Enhanced Project Tracking with Revenue Analytics)
@@ -452,7 +454,6 @@ export function Dashboard() {
         <div className="lg:col-span-8">
           <KPICards />
           <AccessTierBadges gameState={gameState} />
-          <MonthPlanner onAdvanceMonth={handleAdvanceMonth} isAdvancing={isAdvancingMonth} />
         </div>
         
         <div className="lg:col-span-4">
@@ -485,81 +486,104 @@ export function Dashboard() {
 - Action coordination between components
 - Background image integration and visual hierarchy
 
-#### **MonthPlanner.tsx** - Enhanced Turn-Based Action System with Strategic Recommendations
-```typescript
-export function MonthPlanner({ onAdvanceMonth, isAdvancing }: MonthPlannerProps) {
-  const { gameState, selectedActions, selectAction, removeAction, openDialogue } = useGameStore();
-  
-  const industryRoles = [
-    { id: 'meet_manager', name: 'Sarah Mitchell', title: 'Manager', type: 'Manager' },
-    { id: 'meet_ar', name: 'Marcus Chen', title: 'A&R Rep', type: 'A&R' },
-    // ... more roles
-  ];
+#### **ExecutiveSuitePage.tsx** - Weekly Action Planning (route `/executives`)
 
-  const handleRoleClick = async (roleId: string, actionId: string) => {
-    // Role ID mapping for dialogue system
-    const roleMapping: Record<string, string> = {
-      'meet_manager': 'manager',
-      'meet_ar': 'anr',
-      'meet_operations': 'ops'
-    };
-    
-    const mappedRoleId = roleMapping[roleId] || roleId;
-    const meetingId = 'monthly_check_in';
-    
-    // Add action to selected list AND open dialogue
-    selectAction(actionId);
-    await openDialogue(mappedRoleId, meetingId);
-  };
+The live weekly action-planning UI is the `ExecutiveSuitePage`, not a standalone
+planner component. The page reads game state and slot allocation from `useGameStore()`,
+renders the `ExecutiveMeetings` action picker in the top row and the `SelectionSummary`
+focus-slot display + advance-week control in the bottom row, and wires week advancement
+through the store's `advanceWeek()`.
+
+```typescript
+interface ExecutiveSuitePageProps {
+  onAdvanceWeek?: () => Promise<void>;
+  isAdvancing?: boolean;
+  params?: Record<string, string | undefined>;
+  location?: string;
+  navigate?: (to: string) => void;
+}
+
+export default function ExecutiveSuitePage({
+  onAdvanceWeek,
+  isAdvancing,
+}: ExecutiveSuitePageProps = {}) {
+  const {
+    gameState, selectedActions, removeAction, reorderActions,
+    selectAction, getAROfficeStatus, advanceWeek, isAdvancingWeek,
+  } = useGameStore();
+  const { gameId } = useGameContext();
+  const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
+    immediate: {}, delayed: {}, selectedChoices: [],
+  });
+
+  // Falls back to the store's advanceWeek() if no onAdvanceWeek prop is supplied
+  const handleAdvanceWeek = onAdvanceWeek || (async () => { await advanceWeek(); });
+  const handleIsAdvancing = (typeof isAdvancing === 'boolean') ? isAdvancing : !!isAdvancingWeek;
+
+  if (!gameState || !gameId) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Month {gameState?.currentMonth || 1} Action Planner</CardTitle>
-        <CardDescription>
-          Select up to {focusSlots} actions to focus on this month
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent>
-        {/* Industry Roles Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {industryRoles.map((role) => (
-            <RoleCard
-              key={role.id}
-              role={role}
-              onClick={() => handleRoleClick(role.id, role.id)}
-              isSelected={selectedActions.includes(role.id)}
-            />
-          ))}
-        </div>
-        
-        {/* Project Options Section */}
-        <ProjectOptions gameState={gameState} />
-        
-        {/* Advance Month Button */}
-        <Button 
-          onClick={onAdvanceMonth}
-          disabled={selectedActions.length === 0 || isAdvancing}
-          className="w-full"
-        >
-          {isAdvancing ? 'Processing...' : `Advance to Month ${(gameState?.currentMonth || 1) + 1}`}
-        </Button>
-      </CardContent>
-    </Card>
+    <GameLayout>
+      {/* Top Row - Executive Meetings action picker */}
+      <ExecutiveMeetings
+        gameId={gameId}
+        currentWeek={gameState.currentWeek}
+        onActionSelected={selectAction}
+        focusSlots={{
+          total: gameState.focusSlots || 3,
+          used: gameState.usedFocusSlots || 0,
+        }}
+        arOfficeStatus={getAROfficeStatus()}
+        onImpactPreviewUpdate={setImpactPreview}
+      />
+
+      {/* Bottom Row - Focus slots + advance-week control */}
+      <SelectionSummary
+        selectedActions={selectedActions}
+        onRemoveAction={removeAction}
+        onReorderActions={reorderActions}
+        onAdvanceWeek={handleAdvanceWeek}
+        isAdvancing={handleIsAdvancing}
+        impactPreview={impactPreview}
+      />
+    </GameLayout>
   );
 }
 ```
 
 **Responsibilities**:
-- Enhanced action selection UI with detailed metadata (costs, durations, outcomes)
-- Strategic recommendation system based on current game state
-- Project pipeline visualization with progress indicators
-- Interactive action details with hover-based information
-- Intelligent action categorization (urgent, recommended, situational)
-- Role meeting triggers
-- Project creation workflow
-- Month advancement initiation
+- Route-level container for the weekly action-planning flow (`/executives`)
+- Reads `focusSlots` / `usedFocusSlots` from `gameState` to drive slot allocation
+- Wires week advancement to the store's `advanceWeek()` (via `handleAdvanceWeek`)
+- Coordinates the impact preview between `ExecutiveMeetings` and `SelectionSummary`
+
+#### **ExecutiveMeetings.tsx** - Weekly Action Picker
+
+The action picker for the executive-suite flow. It drives a multi-step decision flow
+with the `executiveMeetingMachine` XState machine (select executive → select meeting →
+dialogue → choice). Selection is gated by `hasAvailableSlots` (`context.focusSlotsUsed <
+context.focusSlotsTotal`); executive cards are disabled when no slots remain or the
+executive has already been used this week. Each confirmed choice is reported to the
+parent through the `onActionSelected` callback, and `gameStore.selectAction()` is the
+authoritative gate against the dynamic `gameState.focusSlots`.
+
+**Responsibilities**:
+- Renders executive cards and the active-column meeting/dialogue flow
+- Gates selection via `hasAvailableSlots` against `focusSlots.total`
+- Reports confirmed choices via `onActionSelected`
+- Surfaces an impact preview to the parent via `onImpactPreviewUpdate`
+
+#### **SelectionSummary.tsx** - Focus-Slot Display + Advance-Week Control
+
+Displays the allocated focus slots (drag-to-reorder, remove) and the impact preview,
+and renders the "Advance to Next Week" button. The button calls `onAdvanceWeek` and is
+disabled while `isAdvancing` is true or when no actions are selected (and no A&R office
+operation is active).
+
+**Responsibilities**:
+- Focus-slot visualization with drag-and-drop reordering and per-slot removal
+- Impact preview (immediate vs. delayed effects) for the selected actions
+- Week advancement initiation via the `onAdvanceWeek` callback
 
 #### **DialogueModal.tsx** - Role Conversation System
 ```typescript
@@ -1630,23 +1654,26 @@ const useGameStore = create<GameStore>()(
 ```typescript
 // Example component test
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MonthPlanner } from './MonthPlanner';
+import { SelectionSummary } from './SelectionSummary';
 
-describe('MonthPlanner', () => {
-  it('should allow selecting up to 3 actions', () => {
+describe('SelectionSummary', () => {
+  it('should advance the week when actions are selected', () => {
     const mockOnAdvance = jest.fn();
-    render(<MonthPlanner onAdvanceMonth={mockOnAdvance} isAdvancing={false} />);
-    
-    // Select 3 actions
-    fireEvent.click(screen.getByText('Meet Manager'));
-    fireEvent.click(screen.getByText('Meet A&R Rep'));
-    fireEvent.click(screen.getByText('Meet Producer'));
-    
-    // Fourth action should be disabled
-    expect(screen.getByText('Meet Operations')).toBeDisabled();
-    
-    // Advance button should be enabled
-    expect(screen.getByText(/Advance to Month/)).not.toBeDisabled();
+    render(
+      <SelectionSummary
+        selectedActions={['{"roleId":"ceo","actionId":"mgr_priorities","choiceId":"studio_first"}']}
+        onRemoveAction={jest.fn()}
+        onReorderActions={jest.fn()}
+        onAdvanceWeek={mockOnAdvance}
+        isAdvancing={false}
+      />
+    );
+
+    // Advance button should be enabled and invoke onAdvanceWeek
+    const advanceButton = screen.getByText(/Advance to Next Week/);
+    expect(advanceButton).not.toBeDisabled();
+    fireEvent.click(advanceButton);
+    expect(mockOnAdvance).toHaveBeenCalled();
   });
 });
 ```
