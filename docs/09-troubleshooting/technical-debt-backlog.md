@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: June 30, 2026
+- **Last Updated**: July 1, 2026
 - **Total Items**: 38
-- **Completed**: 27
+- **Completed**: 30
 - **In Progress**: 0
-- **Pending**: 11
+- **Pending**: 8
 
 ---
 
@@ -339,19 +339,19 @@ Some interactive elements lack clear focus management and aria attributes (Inbox
 
 ## 🟡 **High Priority Items**
 
-### [ ] Comment 29: ActionSelectionPool hardcodes 3-slot selection cap
-**Priority**: 🟡 High
-**Impact**: Gameplay correctness — defeats the 4th focus slot
-**Effort**: Low
+### ~~Comment 29: ActionSelectionPool hardcodes 3-slot selection cap~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
 
-`ActionSelectionPool.tsx:209` computes `isDisabled = !isSelected && selectedActions.length >= 3` with a `// TODO: Use gameState.focusSlots from props`. The literal `3` means that even after a player unlocks the 4th focus slot (reputation ≥ 50, see `shared/engine/game-engine.ts:349` and `data/balance/progression.json → progression_thresholds.fourth_focus_slot_reputation`), this selection UI still caps them at 3 actions per week — so the unlocked slot may be unusable from this component.
+`ActionSelectionPool.tsx` computed `isDisabled = !isSelected && selectedActions.length >= 3` (and the same literal in the Auto-Recommend disable check) with a `// TODO: Use gameState.focusSlots from props`. The literal `3` meant that even after a player unlocked the 4th focus slot (reputation ≥ 50), this selection UI would cap them at 3 actions per week.
 
-**Action**: Replace the literal `3` with the player's actual slot count from `gameState.focusSlots` (threaded through props), so the cap tracks the unlocked value.
+**Resolution**: Added an optional `focusSlots?: number` prop and derived `const maxFocusSlots = focusSlots && focusSlots > 0 ? focusSlots : 3;` (fallback to the base slot count so selection is never fully disabled by an undefined/0 value). Both the per-card `isDisabled` and the Auto-Recommend `disabled` checks now compare against `maxFocusSlots`. Stale TODO removed; `npm run check` passes.
+
+**Note (follow-up)**: `ActionSelectionPool` currently has **no render call site** anywhere in `client/src` — it is effectively dead code, so this fix has no runtime effect until the component is wired up (or it should be deleted). The live focus-slot selection UI is elsewhere. Tracked as a follow-up.
 
 **Relevant Files**:
 - [client/src/components/ActionSelectionPool.tsx](client/src/components/ActionSelectionPool.tsx)
 
-*Identified June 30, 2026 during the focus-slot unlock reconciliation.*
+*Identified June 30, 2026 during the focus-slot unlock reconciliation; resolved July 1, 2026.*
 
 ---
 
@@ -445,28 +445,24 @@ Unauthorized visitors now see a friendly explanation with a live countdown befor
 ---
 ## 🟢 **Medium Priority Items**
 
-### [ ] Comment 25: ClerkProvider appearance cast to any
-**Priority**: 🟢 Medium
-**Impact**: Type safety
-**Effort**: Low
+### ~~Comment 25: ClerkProvider appearance cast to any~~ ✅
+**Status**: ✅ **COMPLETED** (verified July 1, 2026 — already resolved in a prior change)
 
-ClerkProvider appearance is cast to any; tighten typing to avoid runtime mismatches.
+ClerkProvider appearance was cast to `any`; tighten typing to avoid runtime mismatches.
 
-**Action**: Import `type { Appearance } from '@clerk/types'` and remove `as any`.
+**Resolution**: `client/src/main.tsx` already imports `type { Appearance } from '@clerk/types'` and types the appearance object via `} satisfies Appearance;` — no `as any` cast remains. Verified against `@clerk/types` v4.86.0; `npm run check` passes.
 
 **Relevant Files**:
 - [client/src/main.tsx](client/src/main.tsx)
 
 ---
 
-### [ ] Comment 30: Email notification reference documents 7 legacy categories; system uses 5
-**Priority**: 🟢 Medium
-**Impact**: Documentation accuracy / onboarding confusion
-**Effort**: Medium
+### ~~Comment 30: Email notification reference documents 7 legacy categories; system uses 5~~ ✅
+**Status**: ✅ **COMPLETED** (July 1, 2026)
 
-`docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md` (around line 356 / 799-809) documents 7 event-type email categories (tour_completion, top_10_debut, release, number_one_debut, tier_unlock, artist_discovery, financial_report). The actual system uses 5 generic categories (chart, financial, artist, ar, other), with the legacy 7 mapped into them via `LEGACY_CATEGORY_MAP`. NOTE this is PRE-EXISTING debt — it predates the email-snapshot/save-load branch (main already maps these).
+`docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md` (around line 356 / 799-809) documented 7 event-type email categories (tour_completion, top_10_debut, release, number_one_debut, tier_unlock, artist_discovery, financial_report). The actual system uses 5 generic categories (chart, financial, artist, ar, other), with the legacy 7 mapped into them via `LEGACY_CATEGORY_MAP`.
 
-**Action**: Rewrite the categories section of that reference doc to document the 5 current categories plus the legacy→current mapping.
+**Resolution**: Rewrote both category sections of the reference doc: added a "Current Categories (5 Generic)" table, a "Legacy Event Type → Current Category Mapping" table transcribed verbatim from `LEGACY_CATEGORY_MAP` in `server/storage.ts`, relabeled the 7 event-type subsections as legacy sender/content specs, and corrected the `EmailCategory` enum block (~line 826) to the 5 shipped values. Other doc sections left untouched.
 
 **Relevant Files**:
 - [docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md](docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md)
@@ -635,14 +631,14 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 1 item (C29)
-- 🟢 Medium: 6 items (C25, C30, C31, C33, C34, C35)
+- 🟡 High: 0 items (C29 completed! 🎉)
+- 🟢 Medium: 4 items (C31, C33, C34, C35)
 - 🔵 Low: 4 items (C26, C32, C36, C38)
 
 ### By Status
-- ✅ Completed: 27 items (71.1%)
+- ✅ Completed: 30 items (78.9%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 11 items (28.9%)
+- 📋 Pending: 8 items (21.1%)
 
 ---
 

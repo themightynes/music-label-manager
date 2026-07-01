@@ -35,6 +35,8 @@ interface ActionSelectionPoolProps {
   onSelectAction: (actionId: string) => void;
   onClearAll: () => void;
   onAutoRecommend: () => void;
+  /** Number of focus slots the player has unlocked (3 by default, 4 after the reputation threshold). */
+  focusSlots?: number;
 }
 
 // Default category configuration (fallback if not provided from API)
@@ -79,9 +81,14 @@ export function ActionSelectionPool({
   selectedActions,
   onSelectAction,
   onClearAll,
-  onAutoRecommend
+  onAutoRecommend,
+  focusSlots
 }: ActionSelectionPoolProps) {
-  
+
+  // Fall back to the base slot count (3) when the unlocked count is unavailable,
+  // so selection is never disabled entirely by an undefined/0 value.
+  const maxFocusSlots = focusSlots && focusSlots > 0 ? focusSlots : 3;
+
   // Group actions by category
   const actionsByCategory = actions.reduce((acc, action) => {
     const categoryKey = action.category || 'business'; // Default fallback
@@ -137,7 +144,7 @@ export function ActionSelectionPool({
             variant="outline"
             size="sm"
             onClick={onAutoRecommend}
-            disabled={selectedActions.length >= (3)}
+            disabled={selectedActions.length >= maxFocusSlots}
             className="text-xs"
           >
             <i className="fas fa-magic mr-1"></i>
@@ -206,7 +213,7 @@ export function ActionSelectionPool({
                 const actionDetails = getActionDetails(action.id);
                 const recommendation = getActionRecommendation(action.id);
                 const isSelected = selectedActions.includes(action.id);
-                const isDisabled = !isSelected && selectedActions.length >= 3; // TODO: Use gameState.focusSlots from props
+                const isDisabled = !isSelected && selectedActions.length >= maxFocusSlots;
 
                 return (
                   <ActionCard

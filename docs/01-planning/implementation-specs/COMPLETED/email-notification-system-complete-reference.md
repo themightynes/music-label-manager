@@ -1,7 +1,7 @@
 # Email & Notification System - Complete Reference
 **Status**: Planning
 **Created**: 2025-09-30
-**Last Updated**: 2025-09-30 (Updated with executive sender assignments and voice profiles)
+**Last Updated**: 2026-07-01 (Corrected email category docs: 5 shipped generic categories + legacy event-type mapping)
 
 ---
 
@@ -353,7 +353,37 @@ Your executive team will send emails based on their expertise areas:
 
 ---
 
-### Email Categories (7 Total) - Sender Assignments
+### Email Categories
+
+> **Updated 2026-07-01**: The shipped system stores emails under **5 generic categories** (`chart`, `financial`, `artist`, `ar`, `other`), defined by the `EmailCategory` type in `shared/types/emailTypes.ts`. The **7 event types** described below (Tour Completion, Top 10 Debut, etc.) are **legacy names** retained only for backward compatibility — they are normalized into the 5 generic categories at read time by `normalizeEmailCategory` / `LEGACY_CATEGORY_MAP` in `server/storage.ts`. The subsections below remain useful as the per-event **sender assignments and content specs**, but they are event *types*, not stored categories.
+
+#### Current Categories (5 Generic)
+
+Defined by `EMAIL_CATEGORIES` / `EmailCategory` in `shared/types/emailTypes.ts` (label from `EMAIL_CATEGORY_LABELS`):
+
+| Category | Label | Description |
+|----------|-------|-------------|
+| `chart` | Chart | Chart performance emails — Top 10 and #1 debuts. |
+| `financial` | Financial | Money-related emails — weekly financial reports and tier unlocks. |
+| `artist` | Artist | Artist-facing outcomes — tour completions and release announcements. |
+| `ar` | A&R | A&R and talent scouting — artist discovery. |
+| `other` | Other | Fallback for anything without a recognized category. |
+
+#### Legacy Event Type → Current Category Mapping
+
+Transcribed verbatim from `LEGACY_CATEGORY_MAP` in `server/storage.ts` (any legacy/unknown value not in this map falls back to `other`):
+
+| Legacy Event Type | Current Category |
+|-------------------|------------------|
+| `financial_report` | `financial` |
+| `tier_unlock` | `financial` |
+| `tour_completion` | `artist` |
+| `release` | `artist` |
+| `top_10_debut` | `chart` |
+| `number_one_debut` | `chart` |
+| `artist_discovery` | `ar` |
+
+#### Legacy Event Types (7) - Sender Assignments
 
 #### 1. Tour Completion Emails
 **Sender**: Patricia "Pat" Williams, PhD (Head of Distribution/Operations)
@@ -796,17 +826,18 @@ Net: [↑/↓] [X]%
 }
 ```
 
-**EmailCategory Enum**:
+**EmailCategory Enum** (as shipped — see `shared/types/emailTypes.ts`):
 ```typescript
+// The 5 current generic categories
 type EmailCategory =
-  | 'tour_completion'
-  | 'top_10_debut'
-  | 'release'
-  | 'number_one_debut'
-  | 'tier_unlock'
-  | 'artist_discovery'
-  | 'financial_report';
+  | 'chart'
+  | 'financial'
+  | 'artist'
+  | 'ar'
+  | 'other';
 ```
+
+> **Note**: The 7 event-type names (`tour_completion`, `top_10_debut`, `release`, `number_one_debut`, `tier_unlock`, `artist_discovery`, `financial_report`) are **legacy** and are **not** the stored category values. They are normalized into the 5 categories above via `LEGACY_CATEGORY_MAP` in `server/storage.ts`. See the [Legacy Event Type → Current Category Mapping](#legacy-event-type--current-category-mapping) table above.
 
 **Indexes**:
 - `gameId` (for fetching all emails for a game)
