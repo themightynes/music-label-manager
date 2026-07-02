@@ -29,6 +29,7 @@ import bugReportsRouter from './routes/bugReports';
 import adminRouter from './routes/admin';
 import emailsRouter from './routes/emails';
 import devToolsRouter from './routes/devTools';
+import contentRouter from './routes/content';
 import { ClerkExpressWithAuth, clerkClient } from '@clerk/clerk-sdk-node';
 import { seededRandomPick, generateMeetingSeed } from '@shared/utils/seededRandom';
 import { normalizeDifficulty } from '@shared/utils/startingValues';
@@ -471,17 +472,7 @@ const musicLabelData = {
     }
   });
 
-  // Get available artists for discovery
-  app.get("/api/artists/available", async (req, res) => {
-    try {
-      await serverGameData.initialize();
-      const allArtists = await serverGameData.getAllArtists();
-      res.json({ artists: allArtists || [] });
-    } catch (error) {
-      console.error('Failed to load available artists:', error);
-      res.status(500).json({ error: 'Failed to load available artists' });
-    }
-  });
+  app.use(contentRouter);
 
   // ========================= A&R OFFICE ENDPOINTS =========================
   // Start an A&R sourcing operation
@@ -888,38 +879,6 @@ const musicLabelData = {
     }
   });
 
-  // Get available weekly actions with enriched role data and categories
-  app.get("/api/actions/weekly", requireClerkUser, async (req, res) => {
-    try {
-      await serverGameData.initialize();
-      const actionsData = await serverGameData.getWeeklyActionsWithCategories();
-      const roles = await serverGameData.getAllRoles();
-      
-      // Enrich actions with role meeting data
-      const enrichedActions = actionsData.actions.map((action: any) => {
-        if (action.type === 'role_meeting' && action.role_id) {
-          const role = roles.find(r => r.id === action.role_id);
-          if (role && role.meetings && role.meetings.length > 0) {
-            return {
-              ...action,
-              firstMeetingId: role.meetings[0].id,
-              availableMeetings: role.meetings.length
-            };
-          }
-        }
-        return action;
-      });
-      
-      res.json({ 
-        actions: enrichedActions || [],
-        categories: actionsData.categories || []
-      });
-    } catch (error) {
-      console.error('Failed to load weekly actions:', error);
-      res.status(500).json({ error: 'Failed to load weekly actions' });
-    }
-  });
-
   // Get role/executive data with all their meetings
   // Following the rule: JSON = Content & Config, Database = State & Saves
   // Query params: gameId, week (optional) - for weekly meeting randomization
@@ -1246,18 +1205,6 @@ const musicLabelData = {
         success: false,
         message: error instanceof Error ? error.message : "Failed to process artist dialogue"
       });
-    }
-  });
-
-  // Get project types and configuration
-  app.get("/api/project-types", requireClerkUser, async (req, res) => {
-    try {
-      await serverGameData.initialize();
-      const projectTypes = await serverGameData.getProjectTypes();
-      res.json({ projectTypes: projectTypes || {} });
-    } catch (error) {
-      console.error('Failed to load project types:', error);
-      res.status(500).json({ error: 'Failed to load project types' });
     }
   });
 
@@ -2291,16 +2238,6 @@ const musicLabelData = {
 
   // REMOVED: Duplicate role endpoints - using the implementation at lines 307-362 instead
 
-  // Artist dialogue endpoints
-  app.get("/api/artists/:archetype/dialogue", async (req, res) => {
-    try {
-      const dialogues = await serverGameData.getArtistDialogue(req.params.archetype);
-      res.json(dialogues);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch artist dialogue" });
-    }
-  });
-
   // Dialogue choices (legacy endpoint - kept for backwards compatibility)
   app.get("/api/dialogue/:roleType", async (req, res) => {
     try {
@@ -2329,16 +2266,6 @@ const musicLabelData = {
         message: "Failed to load dialogue data",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-    }
-  });
-
-  // Game events
-  app.get("/api/events", async (req, res) => {
-    try {
-      const events = await storage.getGameEvents();
-      res.json(events);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch game events" });
     }
   });
 
@@ -4053,20 +3980,6 @@ const musicLabelData = {
   });
 
   app.use(bugReportsRouter);
-
-  // Balance data endpoint
-  app.get('/api/game/:gameId/balance', requireClerkUser, async (req, res) => {
-    try {
-      const balance = await serverGameData.getBalanceConfig();
-      res.json({ balance });
-    } catch (error: any) {
-      console.error('[BALANCE] Failed to load balance data:', error);
-      res.status(500).json({
-        error: 'BALANCE_LOAD_FAILED',
-        message: error.message || 'Failed to load balance configuration'
-      });
-    }
-  });
 
   // Register analytics routes
   app.use('/api/analytics', requireClerkUser, analyticsRouter);
