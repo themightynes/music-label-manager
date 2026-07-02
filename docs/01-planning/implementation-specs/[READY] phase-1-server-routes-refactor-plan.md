@@ -4,6 +4,29 @@
 *Status: READY — execution gated on merge order: PR #38 (vitest CI) → #36 → #37 → start Phase 1.*
 *Part of the four-phase scaling arc (Phase 0: CI safety net · Phase 1: server seams · Phase 2: engine seams · Phase 3: client state ownership · Phase 4: game feel).*
 
+## Execution status
+
+*Updated July 2, 2026. All pure-move PRs merged to `main`; `server/routes.ts` went 5,341 → 121 lines. Every PR was a pure move: byte-identical route-manifest snapshot, tsc clean, 545/545 vitest. (GitHub PR #49 was an unrelated docs PR, not part of this plan.)*
+
+- ✅ PR-1 — route-manifest characterization test (#39, prior session)
+- ✅ PR-2 — `bugReports.ts` router (#42)
+- ✅ PR-3 — `admin.ts` router (#43)
+- ✅ PR-4 — `emails.ts` router + email zod schemas (#44)
+- ✅ PR-5 — `devTools.ts` router (#45)
+- ✅ PR-6 — `content.ts` router (#46)
+- ✅ PR-7 — `arOffice.ts` router (#47)
+- ✅ PR-8 — `executives.ts` router (#48)
+- ✅ PR-9 — `artists.ts` router (#50)
+- ✅ PR-10 — `projects.ts` router (#51)
+- ✅ PR-11 — `charts.ts` + `tour.ts` routers (#52)
+- ✅ PR-12 — `releases.ts` router (#53)
+- ✅ PR-13 — `games.ts` router (#54)
+- ✅ PR-14 — `saves.ts` + `gameLoop.ts` routers (#55)
+- ⏳ PR-15 — `gameCreationService` extraction (pending)
+- ⏳ PR-16 — `saveService` extraction (pending)
+- ⏳ PR-17 — `releasePlanningService` extraction (pending)
+- ⏳ PR-18 — `artistService` extraction (pending)
+
 ## 0. Ground truth (verified against the working tree)
 
 - `server/routes.ts` is **5,341 lines** with **85 route registrations + 1 router mount** (`/api/analytics`).

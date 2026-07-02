@@ -24,8 +24,25 @@ The Music Label Manager backend is a **Node.js** application built with **Expres
 ```
 server/
 ├── index.ts              # Server entry point and configuration
-├── routes.ts             # All API endpoints and route handlers
-├── auth.ts               # Authentication system (Passport.js)
+├── routes.ts             # Thin route registry (~121 lines): webhook/health/me + mounts feature routers, exports createServer
+├── routes/               # Feature routers (one Express Router per domain)
+│   ├── analytics.ts      #   /api/analytics
+│   ├── bugReports.ts     #   bug report endpoints
+│   ├── admin.ts          #   admin-only endpoints
+│   ├── emails.ts         #   in-game inbox
+│   ├── devTools.ts       #   dev/debug tooling
+│   ├── content.ts        #   game content (some public/no-auth)
+│   ├── arOffice.ts       #   A&R Office operations
+│   ├── executives.ts     #   executive team + dialogue
+│   ├── artists.ts        #   artist signing/management
+│   ├── projects.ts       #   project creation/lifecycle
+│   ├── charts.ts         #   weekly charts
+│   ├── tour.ts           #   tour endpoints
+│   ├── releases.ts       #   release planning
+│   ├── games.ts          #   game lifecycle
+│   ├── saves.ts          #   save/load snapshots
+│   └── gameLoop.ts       #   advance-week / select-actions
+├── auth.ts               # Authentication system (Clerk)
 ├── db.ts                 # Database connection and configuration
 ├── storage.ts            # Data access layer abstraction
 ├── vite.ts               # Vite integration for development
@@ -50,7 +67,7 @@ shared/
 ## 🔧 Server Implementation
 
 ### **1. Express.js Route Structure**
-RESTful API implementation with middleware integration:
+RESTful API implementation, decomposed into per-feature routers (Phase 1 route refactor — see `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md`). `server/routes.ts` is a thin registry that mounts 16 feature routers from `server/routes/`. Each router registers its **full API path** and is mounted **bare**, with **auth middleware applied per-route** inside the router. Endpoint paths, request/response behavior, and auth requirements are **unchanged** from the previous monolithic `routes.ts` — only the file organization changed.
 
 ```typescript
 // Core game operations

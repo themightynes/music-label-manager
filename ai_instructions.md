@@ -8,7 +8,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 ## Current State (Updated: July 1, 2026 — scaling arc underway)
 **Latest Session**: Decided against a game-engine rewrite; adopted a 4-phase scaling arc (CI safety net → server seams → engine seams → client state → game feel)
 - **Tech Stack**: React 18 + Vite, Express, PostgreSQL (Railway), Clerk auth, TypeScript, Zustand, React Query, XState
-- **Architecture**: GameEngine (`shared/engine/`) is the single source of truth for game logic; `server/routes.ts` decomposition into feature routers + services is in progress — see `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md`
+- **Architecture**: GameEngine (`shared/engine/`) is the single source of truth for game logic; the `server/routes.ts` decomposition into feature routers is **done for all pure moves** — `routes.ts` is now a thin ~121-line registry mounting 16 feature routers from `server/routes/`. The follow-on **service extraction (PR-15..18) is still pending** — see `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md`
 - **CI**: vitest suite (545 tests) + Playwright both run in `.github/workflows/playwright.yml`
 - **Current Phase**: Phase 1 of the scaling arc (route extraction, PR-2..18 of the plan)
 
@@ -41,7 +41,8 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 - `client/src/components/ProjectCreationModal.tsx` - Project creation interface
 
 ### Backend
-- `server/routes.ts` - Express HTTP handling ONLY (delegates ALL business logic to GameEngine)
+- `server/routes.ts` - Thin route registry (~121 lines): mounts feature routers, exports `createServer`
+- `server/routes/` - Per-feature Express routers (emails, games, saves, releases, artists, projects, executives, arOffice, charts, tour, gameLoop, admin, content, devTools, bugReports, analytics); HTTP handling ONLY (delegates ALL business logic to GameEngine)
 - `server/storage.ts` - Pure database operations ONLY
 - `server/data/gameData.ts` - Pure JSON data access ONLY (NO calculations or business logic)
 
@@ -79,7 +80,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 ### Adding a New Feature
 1. Define types in `shared/types/gameTypes.ts`
 2. Add API contract in `shared/api/contracts.ts`
-3. Implement server endpoint in `server/routes.ts`
+3. Implement server endpoint in the relevant `server/routes/<feature>.ts` router (register the full path; add auth middleware per-route)
 4. Create React Query hook in `client/src/features/[feature]/hooks/`
 5. Build UI component
 6. Update this document

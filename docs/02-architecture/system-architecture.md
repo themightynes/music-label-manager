@@ -119,8 +119,13 @@ export const musicLabels = pgTable("music_labels", { /* player label identity */
 export const moodEvents = pgTable("mood_events", { /* artist mood history */ });
 ```
 
-### **3. REST API Layer (`/server/routes.ts`)**
+### **3. REST API Layer (`/server/routes.ts` + `/server/routes/`)**
 **Purpose**: HTTP interface for client-server communication
+
+**Structure** (as of Phase 1 route refactor — see `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md`):
+- `server/routes.ts` is now a **thin registry (~121 lines)**: it wires the Clerk webhook + health + `/api/me`, then mounts 16 feature routers from `server/routes/` in the original registration order, and exports `createServer`. The prior monolithic 5,341-line file is gone.
+- **Feature routers** (`server/routes/`): `analytics`, `bugReports`, `admin`, `emails`, `devTools`, `content`, `arOffice`, `executives`, `artists`, `projects`, `charts`, `tour`, `releases`, `games`, `saves`, `gameLoop`.
+- **Full-path router convention**: each router registers its routes with the **full API path** (e.g. `/api/game/:gameId/emails`) and is mounted **bare** (`app.use(emailsRouter)`, not under a path prefix), with **auth middleware applied per-route** inside each router. Paths and behavior are unchanged from the monolith.
 
 **API Design Principles**:
 - **RESTful conventions**: Clear resource-based URLs
