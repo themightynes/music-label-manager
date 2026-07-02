@@ -5,8 +5,8 @@ import { db } from '../db';
 import { eq, desc, sql } from 'drizzle-orm';
 import { requireClerkUser } from '../auth';
 import { serverGameData } from '../data/gameData';
-import { insertGameStateSchema, labelRequestSchema, gameStates, gameSaves, executives } from '@shared/schema';
-import { normalizeDifficulty } from '@shared/utils/startingValues';
+import { labelRequestSchema, gameStates, gameSaves } from '@shared/schema';
+import { gameCreationService } from '../services/gameCreationService';
 
 const router = Router();
 
@@ -41,117 +41,9 @@ const router = Router();
   });
 
   router.post("/api/game", requireClerkUser, async (req, res) => {
-    console.log('🚀 [GAME CREATION] Starting new game creation...');
     try {
-      const { labelData, difficulty, ...gameStateData } = req.body;
-      const validatedData = insertGameStateSchema.parse(gameStateData);
-
-      // MISSING: no UI exposes difficulty selection yet — every game defaults to
-      // 'normal' (1.0x). Passing 'easy'/'hard' applies progression.json's
-      // difficulty_modifiers.starting_money_multiplier (1.5x / 0.7x).
-      const gameDifficulty = normalizeDifficulty(difficulty);
-      console.log('📝 [GAME CREATION] Validated data reputation:', validatedData.reputation);
-
-      // Validate label data if provided
-      let validatedLabelData = null;
-      if (labelData) {
-        validatedLabelData = labelRequestSchema.parse(labelData);
-      }
-
-      // Ensure serverGameData is initialized before accessing balance config
-      await serverGameData.initialize();
-
-      // Set starting values from balance.json configuration (money scaled by difficulty)
-      const startingValues = await serverGameData.getStartingValues(gameDifficulty);
-      // Make these logs more visible
-      console.error('🎮🎮🎮 REPUTATION FROM BALANCE:', startingValues.reputation);
-      console.error('💰💰💰 MONEY FROM BALANCE:', startingValues.money);
-      console.error('🎨🎨🎨 CREATIVE CAPITAL FROM BALANCE:', startingValues.creativeCapital);
-
-      // Derive initial access tiers from starting reputation (ignore client-provided access fields)
-      const accessTiers = serverGameData.getAccessTiersSync() as any;
-      const rep = startingValues.reputation || 0;
-      const pickTier = (tiersObj: Record<string, { threshold: number }>) => (
-        Object.entries(tiersObj)
-          .sort(([, a], [, b]) => (b as any).threshold - (a as any).threshold)
-          .find(([, cfg]) => rep >= (cfg as any).threshold)?.[0] || 'none'
-      );
-      const initialPlaylist = pickTier(accessTiers.playlist_access);
-      const initialPress = pickTier(accessTiers.press_access);
-      const initialVenue = pickTier(accessTiers.venue_access);
-
-      const gameDataWithBalance = {
-        ...validatedData,
-        // Force correct initial access tiers based on reputation
-        playlistAccess: initialPlaylist,
-        pressAccess: initialPress,
-        venueAccess: initialVenue,
-        money: startingValues.money,
-        reputation: startingValues.reputation,
-        creativeCapital: startingValues.creativeCapital, // FIXED: Use balance.json configuration like money and reputation
-        // Persist difficulty so future systems (reputation_decay, market_variance,
-        // goal_time_extension modifiers) can read it without a schema migration
-        flags: { ...((validatedData.flags as Record<string, unknown>) ?? {}), difficulty: gameDifficulty },
-        userId: req.userId  // CRITICAL: Associate game with user
-      };
-      console.error('✅✅✅ FINAL GAME DATA - Money:', gameDataWithBalance.money, 'Reputation:', gameDataWithBalance.reputation, 'VenueAccess:', gameDataWithBalance.venueAccess);
-
-      // Create game state and music label atomically within a transaction
-      const result = await db.transaction(async (tx) => {
-        const gameState = await storage.createGameState(gameDataWithBalance, tx);
-
-        // Create music label for the new game
-const musicLabelData = {
-          name: validatedLabelData?.name || "New Music Label",
-          gameId: gameState.id,
-          foundedWeek: validatedLabelData?.foundedWeek || 1,
-          foundedYear: validatedLabelData?.foundedYear || new Date().getFullYear(),
-          description: validatedLabelData?.description || null,
-          genreFocus: validatedLabelData?.genreFocus || null
-        };
-        const musicLabel = await storage.createMusicLabel(musicLabelData, tx);
-        console.log('🎵 Created music label:', musicLabel.name, 'for game:', gameState.id);
-
-        return { gameState, musicLabel };
-      });
-
-      const { gameState, musicLabel } = result;
-
-      // Initialize executives for the new game (CEO excluded - player is the CEO)
-      console.log('🎭 Creating executives for game:', gameState.id);
-      try {
-        const executiveRecords = [
-          { gameId: gameState.id, role: 'head_ar', level: 1, mood: 50, loyalty: 50 },
-          { gameId: gameState.id, role: 'cmo', level: 1, mood: 50, loyalty: 50 },
-          { gameId: gameState.id, role: 'cco', level: 1, mood: 50, loyalty: 50 },
-          { gameId: gameState.id, role: 'head_distribution', level: 1, mood: 50, loyalty: 50 }
-        ];
-        await db.insert(executives).values(executiveRecords);
-        console.log('✅ Successfully created 4 executives for game:', gameState.id);
-      } catch (error) {
-        console.error('❌ Failed to create executives:', error);
-        // Continue anyway - don't break game creation
-      }
-
-      // Initialize default roles for new game
-      const defaultRoles = [
-        { name: "Sarah Mitchell", title: "Manager", type: "Manager", gameId: gameState.id },
-        { name: "Marcus Chen", title: "A&R Representative", type: "A&R", gameId: gameState.id },
-        { name: "Elena Rodriguez", title: "Producer", type: "Producer", gameId: gameState.id },
-        { name: "David Kim", title: "PR Specialist", type: "PR", gameId: gameState.id },
-        { name: "Lisa Thompson", title: "Digital Marketing", type: "Digital", gameId: gameState.id },
-        { name: "Ryan Jackson", title: "Streaming Curator", type: "Streaming", gameId: gameState.id },
-        { name: "Amanda Foster", title: "Booking Agent", type: "Booking", gameId: gameState.id },
-        { name: "Chris Park", title: "Operations Manager", type: "Operations", gameId: gameState.id }
-      ];
-
-      // Note: This would need proper role creation through storage interface
-      // For now, returning basic game state with music label
-
-      res.json({
-        ...gameState,
-        musicLabel
-      });
+      const game = await gameCreationService.createGame(req.userId, req.body);
+      res.json(game);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid game data", errors: error.errors });
@@ -393,18 +285,12 @@ const musicLabelData = {
 
       // Determine initial access tiers based on starting reputation
       // This ensures venue access starts at 'clubs' when starting reputation >= 5
-      const accessTiers = serverGameData.getAccessTiersSync() as any;
-      const rep = startingValues.reputation || 0;
-      const pickTier = (tiersObj: Record<string, { threshold: number }>) => {
-        return (
-          Object.entries(tiersObj)
-            .sort(([, a], [, b]) => (b as any).threshold - (a as any).threshold)
-            .find(([, cfg]) => rep >= (cfg as any).threshold)?.[0] || 'none'
-        );
-      };
-      const initialPlaylist = pickTier(accessTiers.playlist_access);
-      const initialPress = pickTier(accessTiers.press_access);
-      const initialVenue = pickTier(accessTiers.venue_access);
+      // Reuses gameCreationService.deriveInitialAccessTiers (PR-15 dedup: the
+      // inline pickTier here was logic-identical to POST /api/game's).
+      const tiers = gameCreationService.deriveInitialAccessTiers(startingValues.reputation || 0);
+      const initialPlaylist = tiers.playlist;
+      const initialPress = tiers.press;
+      const initialVenue = tiers.venue;
 
       const defaultState = {
         userId: userId,

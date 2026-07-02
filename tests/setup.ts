@@ -34,20 +34,24 @@ afterEach(() => {
   cleanup();
 });
 
-// Mock window.matchMedia (required for responsive components)
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+// Mock window.matchMedia (required for responsive components).
+// Guard on `window` so node-environment tests (e.g. HTTP-layer endpoint
+// characterization tests using `@vitest-environment node`) can share this setup.
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(), // deprecated
+      removeListener: vi.fn(), // deprecated
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
 
 // Mock IntersectionObserver (used by some UI components)
 global.IntersectionObserver = class IntersectionObserver {
