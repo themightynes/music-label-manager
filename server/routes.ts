@@ -6,7 +6,6 @@ import { insertGameStateSchema, insertGameSaveSchema, gameSaveSnapshotSchema, in
 import { z } from "zod";
 import { serverGameData } from "./data/gameData";
 import { GameEngine } from "../shared/engine/game-engine";
-import { FinancialSystem, VenueCapacityManager } from "../shared/engine/FinancialSystem";
 import { ChartService } from "../shared/engine/ChartService";
 import {
   AdvanceWeekRequest,
@@ -31,6 +30,8 @@ import arOfficeRouter from './routes/arOffice';
 import executivesRouter from './routes/executives';
 import artistsRouter from './routes/artists';
 import projectsRouter from './routes/projects';
+import chartsRouter from './routes/charts';
+import tourRouter from './routes/tour';
 import { ClerkExpressWithAuth, clerkClient } from '@clerk/clerk-sdk-node';
 import { normalizeDifficulty } from '@shared/utils/startingValues';
 
@@ -1225,152 +1226,7 @@ const musicLabelData = {
     }
   });
 
-  // Get Top 10 chart data for a game
-  app.get("/api/game/:gameId/charts/top10", requireClerkUser, async (req, res) => {
-    try {
-      const { gameId } = req.params;
-      const userId = req.userId!;
-
-      // Verify user has access to this game
-      const [gameOwnership] = await db.select()
-        .from(gameStates)
-        .where(and(
-          eq(gameStates.id, gameId),
-          eq(gameStates.userId, userId)
-        ))
-        .limit(1);
-
-      if (!gameOwnership) {
-        return res.status(403).json({
-          error: 'UNAUTHORIZED',
-          message: 'You do not have permission to access this game'
-        });
-      }
-
-      // Get current game to determine chart week
-      const game = await storage.getGameState(gameId);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
-      }
-
-      // Create ChartService instance
-      const rng = () => Math.random(); // Simple RNG for chart generation
-      const chartService = new ChartService(serverGameData, rng, storage, gameId);
-
-      // Calculate current chart week from game week
-      const currentChartWeek = ChartService.generateChartWeekFromGameWeek(game.currentWeek ?? 1);
-
-      // Get Top 10 chart data
-      const top10Data = await chartService.getTop10ChartData(currentChartWeek);
-
-      console.log(`[API] Top 10 chart data fetched for game ${gameId}, week ${currentChartWeek}:`, {
-        totalEntries: top10Data.length,
-        playerSongs: top10Data.filter(entry => entry.isPlayerSong).length,
-        competitorSongs: top10Data.filter(entry => entry.isCompetitorSong).length,
-        debuts: top10Data.filter(entry => entry.isDebut).length
-      });
-
-      res.json({
-        chartWeek: currentChartWeek,
-        currentWeek: game.currentWeek,
-        top10: top10Data
-      });
-
-    } catch (error) {
-      console.error('[API] Error fetching Top 10 chart data:', error);
-      res.status(500).json({
-        message: "Failed to fetch Top 10 chart data",
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
-  // Get Top 100 chart data for a game
-  app.get("/api/game/:gameId/charts/top100", requireClerkUser, async (req, res) => {
-    try {
-      const { gameId } = req.params;
-      const userId = req.userId!;
-
-      // Verify user has access to this game
-      const [gameOwnership] = await db.select()
-        .from(gameStates)
-        .where(and(
-          eq(gameStates.id, gameId),
-          eq(gameStates.userId, userId)
-        ))
-        .limit(1);
-
-      if (!gameOwnership) {
-        return res.status(403).json({
-          error: 'UNAUTHORIZED',
-          message: 'You do not have permission to access this game'
-        });
-      }
-
-      // Get current game to determine chart week
-      const game = await storage.getGameState(gameId);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
-      }
-
-      // Create ChartService instance
-      const rng = () => Math.random(); // Simple RNG for chart generation
-      const chartService = new ChartService(serverGameData, rng, storage, gameId);
-
-      // Calculate current chart week from game week
-      const currentChartWeek = ChartService.generateChartWeekFromGameWeek(game.currentWeek ?? 1);
-
-      // Get Top 100 chart data (all charting songs)
-      const currentEntries = await chartService.getCurrentWeekChartEntries(currentChartWeek);
-      const top100Entries = currentEntries
-        .filter(entry => entry.position !== null && entry.position >= 1 && entry.position <= 100)
-        .sort((a, b) => (a.position || 101) - (b.position || 101))
-        .map(entry => ({
-          position: entry.position!,
-          songId: entry.songId || entry.competitorTitle || 'unknown',
-          songTitle: entry.songTitle,
-          artistName: entry.artistName,
-          streams: entry.streams,
-          movement: entry.movement ?? 0,
-          weeksOnChart: entry.weeksOnChart,
-          peakPosition: entry.peakPosition ?? (entry.position ?? null),
-          lastWeekPosition: entry.lastWeekPosition ?? null,
-          isPlayerSong: !entry.isCompetitorSong,
-          isCompetitorSong: entry.isCompetitorSong ?? false,
-          isDebut: entry.isDebut ?? false
-        }));
-
-      console.log(`[API] Top 100 chart data fetched for game ${gameId}, week ${currentChartWeek}:`, {
-        totalEntries: top100Entries.length,
-        playerSongs: top100Entries.filter(entry => entry.isPlayerSong).length,
-        competitorSongs: top100Entries.filter(entry => !entry.isPlayerSong).length,
-        debuts: top100Entries.filter(entry => entry.isDebut).length
-      });
-
-      // Debug: Log first few entries to check lastWeekPosition
-      if (top100Entries.length > 0) {
-        console.log('[API] First 3 entries with lastWeekPosition:', top100Entries.slice(0, 3).map(entry => ({
-          position: entry.position,
-          songTitle: entry.songTitle,
-          lastWeekPosition: entry.lastWeekPosition,
-          movement: entry.movement
-        })));
-      }
-
-      res.json({
-        chartWeek: currentChartWeek,
-        currentWeek: game.currentWeek,
-        top100: top100Entries
-      });
-
-    } catch (error) {
-      console.error('[API] Error fetching Top 100 chart data:', error);
-      res.status(500).json({
-        message: "Failed to fetch Top 100 chart data",
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  app.use(chartsRouter);
 
   // Get releases for a game
   app.get("/api/game/:gameId/releases", requireClerkUser, async (req, res) => {
@@ -2267,124 +2123,7 @@ const musicLabelData = {
     }
   });
 
-  // Tour estimation endpoint - Phase 3: API Bridge
-  app.post('/api/tour/estimate', requireClerkUser, async (req, res) => {
-    try {
-      const { artistId, cities, budgetPerCity, gameId, venueCapacity } = req.body;
-
-      // VALIDATE INPUTS - CRASH IF INVALID
-      if (!artistId || !cities || budgetPerCity === undefined || !gameId) {
-        return res.status(400).json({
-          error: 'Missing required parameters: artistId, cities, budgetPerCity, gameId'
-        });
-      }
-
-      // ENHANCED: Validate venueCapacity if provided
-      if (venueCapacity !== undefined) {
-        if (typeof venueCapacity !== 'number' || venueCapacity < 50) {
-          return res.status(400).json({
-            error: 'venueCapacity must be a number >= 50'
-          });
-        }
-      }
-
-      // Get game state - CRASH IF MISSING
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        return res.status(404).json({ error: `Game not found: ${gameId}` });
-      }
-
-      // Get artist - CRASH IF MISSING
-      const artist = await storage.getArtist(artistId);
-      if (!artist) {
-        return res.status(404).json({ error: `Artist not found: ${artistId}` });
-      }
-
-      // Get venue access - CRASH IF MISSING
-      const venueAccess = gameState.venueAccess;
-      if (!venueAccess || venueAccess === 'none') {
-        return res.status(400).json({ error: `Invalid venue access: ${venueAccess}` });
-      }
-
-      // Initialize serverGameData before creating financial system
-      await serverGameData.initialize();
-
-      // Initialize financial system for validation and calculations
-      const financialSystem = new FinancialSystem(serverGameData, () => Math.random());
-
-      // ENHANCED: Validate venueCapacity using VenueCapacityManager
-      if (venueCapacity !== undefined) {
-        try {
-          VenueCapacityManager.validateCapacity(venueCapacity, venueAccess, serverGameData);
-        } catch (error) {
-          return res.status(400).json({
-            error: `Venue capacity validation failed: ${(error as Error).message}`
-          });
-        }
-      }
-
-      // Get base costs to determine marketing budget
-      const baseCosts = financialSystem.calculateTourCosts(venueAccess, cities, 0);
-      const totalMarketingBudget = budgetPerCity * cities;
-      const totalBudget = baseCosts.totalCosts + totalMarketingBudget;
-
-      // ENHANCED: Calculate detailed breakdown with specific capacity or tier fallback
-      const detailedBreakdown = financialSystem.calculateDetailedTourBreakdown({
-        venueCapacity: venueCapacity || 0, // Use provided capacity or fallback to tier
-        venueTier: venueAccess, // Keep for backward compatibility and fallback
-        artistPopularity: artist.popularity || 0,
-        localReputation: gameState.reputation || 0,
-        cities,
-        marketingBudget: totalMarketingBudget
-      });
-
-      // Get tier range for response using VenueCapacityManager
-      const tierRange = VenueCapacityManager.getCapacityRangeFromTier(venueAccess, serverGameData);
-
-      // Calculate price per ticket from first city (all cities have same pricing)
-      const firstCity = detailedBreakdown.cities[0];
-      const pricePerTicket = firstCity
-        ? Math.round((firstCity.ticketRevenue / (firstCity.venueCapacity * firstCity.sellThroughRate)) || 0)
-        : 0;
-
-      // Get venue categorization using VenueCapacityManager
-      console.log('[TOUR ESTIMATE] Getting venue categorization for capacity:', venueCapacity || 500);
-      const venueCategory = VenueCapacityManager.categorizeVenue(venueCapacity || 500, serverGameData);
-      console.log('[TOUR ESTIMATE] Venue category result:', venueCategory);
-
-      // Create enhanced response with detailed breakdown
-      const response = {
-        estimatedRevenue: detailedBreakdown.totalRevenue,
-        totalCosts: detailedBreakdown.totalCosts,
-        estimatedProfit: detailedBreakdown.netProfit,
-        roi: detailedBreakdown.totalCosts > 0 ? (detailedBreakdown.netProfit / detailedBreakdown.totalCosts) * 100 : 0,
-        canAfford: totalBudget <= (gameState.money || 0),
-        totalBudget,
-        breakdown: detailedBreakdown.costBreakdown,
-        sellThroughRate: detailedBreakdown.sellThroughAnalysis.finalRate,
-        // ENHANCED: Include detailed city-by-city breakdown
-        cities: detailedBreakdown.cities,
-        sellThroughAnalysis: detailedBreakdown.sellThroughAnalysis,
-        venueCapacity: detailedBreakdown.cities[0]?.venueCapacity || 0,
-        // PHASE 2 ENHANCEMENTS: New fields for capacity selection
-        selectedCapacity: detailedBreakdown.cities[0]?.venueCapacity || 0,
-        tierRange,
-        pricePerTicket,
-        playerTier: venueAccess,
-        venueCategory // NEW: Configuration-driven venue categorization
-      };
-
-      res.json(response);
-
-    } catch (error) {
-      // LOG ERROR BUT DON'T HIDE IT
-      console.error('[TOUR ESTIMATE ERROR]', (error as Error).message);
-      res.status(500).json({
-        error: 'Tour estimation failed',
-        details: (error as Error).message
-      });
-    }
-  });
+  app.use(tourRouter);
 
   // Week advancement with action processing using GameEngine and transactions
   app.post("/api/advance-week", requireClerkUser, async (req, res) => {
