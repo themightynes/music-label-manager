@@ -6,7 +6,7 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 > ⚠️ **Parts of this document below this section are stale (Aug 2025, Neon/Replit era).** `../DEVELOPMENT_STATUS.md` is the single source of truth for current status; root `CLAUDE.md` has the current commands and conventions. A full reconciliation of this file is pending.
 
 ## Current State (Updated: July 1, 2026 — scaling arc underway)
-**Latest Session**: Decided against a game-engine rewrite; adopted a 4-phase scaling arc (CI safety net → server seams → engine seams → client state → game feel)
+**Latest Session**: UI overflow/layout fixes (PR #40 — save modal scroll, avatar cropping, dashboard responsiveness, layout-level `min-w-0`); scaling arc unchanged — 4 phases (CI safety net → server seams → engine seams → client state → game feel)
 - **Tech Stack**: React 18 + Vite, Express, PostgreSQL (Railway), Clerk auth, TypeScript, Zustand, React Query, XState
 - **Architecture**: GameEngine (`shared/engine/`) is the single source of truth for game logic; the `server/routes.ts` decomposition into feature routers is **done for all pure moves** — `routes.ts` is now a thin ~121-line registry mounting 16 feature routers from `server/routes/`. The follow-on **service extraction (PR-15..18) is still pending** — see `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md`
 - **CI**: vitest suite (545 tests) + Playwright both run in `.github/workflows/playwright.yml`
