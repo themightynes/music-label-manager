@@ -1,8 +1,31 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 1, 2026*
+*Updated: July 2, 2026*
 
 ---
+
+## 📅 Session Log — July 2, 2026 (Phase 1 executed: PRs 2–15, orchestrator + Opus subagent factory)
+
+**Phase 1's entire pure-move sequence is DONE and merged, plus the first service extraction.** Ran as an orchestrator/subagent pipeline: one Opus agent per PR (Sonnet for the CI tweak), each reviewed by the orchestrator before merge. `server/routes.ts`: **5,341 → 121 lines**.
+
+**Done this session:**
+- **PRs 2–14 (pure moves) all merged** — one feature router per PR, every one verified with byte-identical route-manifest snapshot, clean `tsc`, and full vitest suite: **#42** bugReports · **#43** admin · **#44** emails (+ email zod schemas) · **#45** devTools (streaming-decay moved verbatim; TODO flags on 2 weak-auth endpoints) · **#46** content (3 public no-auth preserved) · **#47** arOffice (280-line artists handler, character-identical diff check) · **#48** executives/roles (2 legacy no-auth dialogue) · **#50** artists (fat sign-artist verbatim; `clamp` moved with dialogue handler) · **#51** projects (tour-cancel with `TODO(C40)`) · **#52** charts + tour · **#53** releases (13 endpoints, ~900 lines, relative registration order explicitly verified) · **#54** games (pickTier duplication intentionally preserved) · **#55** saves + gameLoop (`validateSnapshotCollections` → module scope in saves.ts; orphaned `select-actions` moved with phase-2 delete TODO). PRs 2–4 were stacked while merge permission was sorted; 5+ went sequentially from main.
+- **routes.ts final shape**: imports + `registerRoutes()` (webhook/health/me + 17 router mounts in original registration order) + `createServer`; signature unchanged. Boot smoke on decomposed main: dev server clean, `GET /api/health` 200.
+- **PR-15 gameCreationService** (**#57**, first logic change, characterization-first): new `tests/endpoints/game-creation.characterization.test.ts` (supertest, 10 tests, committed green against OLD code first, green after swap); `server/services/gameCreationService.ts` (AnalyticsService convention); POST `/api/game` handler now validate→service→respond; `pickTier` dedup verified logic-identical then removed from `GET /api/game-state` via `deriveInitialAccessTiers`; dead `defaultRoles` dropped with TODO. Suite now **555 tests**. Adds `supertest` devDep + `typeof window` guard in `tests/setup.ts` (node-env tests). vitest CI job **passed**; **auto-merge armed** pending the slow Playwright job.
+- **Milestone docs PR merged** (**#56**): execution-status checklist added to the Phase 1 plan doc; `system-architecture.md` + `backend-architecture.md` now describe the feature-router layout; `ai_instructions.md` routes references fixed (file still stale overall).
+- **CI: Playwright browser caching** (**#58**, Sonnet agent): `actions/cache@v4` on `~/.cache/ms-playwright` keyed on resolved `@playwright/test` version; install-deps-only on hit. First post-merge run seeds the cache; ~1–3 min savings thereafter.
+- **Landed parallel-session docs** (**#49**): backlog **C40** (tour cancel trusts client `refundAmount` — fix as standalone PR now that the projects-router move is merged) + **C41** (missing `venueCapacity` bricks week advance) + `[FUTURE] tour-experience-improvement-plan.md`.
+
+**Decisions made:**
+- Full-path router convention (routers register complete paths, mounted bare at original positions, per-route auth) held for all 16 routers; import removals were grep-audited case by case.
+- Merge flow: user granted `gh pr merge` permission mid-session; pure moves merged green-local per policy, PR-15 waits for CI (auto-merge armed).
+
+**Open threads / next steps:**
+- **PR-15 (#57)**: confirm auto-merge completed (vitest passed; was waiting on Playwright). Then **PR-16 saveService → PR-17 releasePlanningService → PR-18 artistService**, each characterization-first, wait-for-CI. PR-16 gates on nothing (PR-14 merged).
+- **Manual smoke still owed** for domains with zero HTTP coverage (plan §4 notes): authenticated pass — new game → sign artist → create project → plan release → A&R op → advance week → save/restore. Deferred throughout; do once before or right after PR-16.
+- **C40 fix** (server-side refund recompute) is unblocked now — standalone PR, small.
+- After PR-18: move the Phase 1 plan doc to COMPLETED, final docs sweep, then Phase 2 (engine seams) planning.
+- Local env: dev server and Docker test DB (`music-label-test-db`) were **stopped** at session end. Restart with `npm run test:db:start` before running tests.
 
 ## 📅 Session Log — July 1, 2026 (Session 2 — architecture docs, scaling decision, Phase 0 + Phase 1 kickoff)
 
