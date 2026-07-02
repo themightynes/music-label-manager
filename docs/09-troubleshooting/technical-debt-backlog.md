@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: July 1, 2026
-- **Total Items**: 39
+- **Last Updated**: July 2, 2026
+- **Total Items**: 41
 - **Completed**: 37
 - **In Progress**: 0
-- **Pending**: 2
+- **Pending**: 4
 
 ---
 
@@ -642,18 +642,47 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 
 ---
 
+### Comment 40: Tour cancellation trusts client-supplied refundAmount 🟡
+**Status**: 📋 **PENDING**
+
+The 60% tour-cancellation refund is computed entirely client-side (`client/src/components/ActiveTours.tsx`, `refundPercentage = 0.6`) and sent in the request body of `POST /api/projects/:id/cancel`. The server (currently `server/routes.ts:1934`; will move with the Phase 1 tour-domain route PR) applies the client's `refundAmount` to the player's money without recomputing or capping it — any refund amount can be submitted.
+
+**Action**: Recompute the refund server-side (`(totalCost / plannedCities) * remainingCities * 0.6`) and ignore or validate the client value; move the 60% constant to balance config while at it. **Do as a standalone PR after the Phase 1 tour-domain route move lands** — don't touch `routes.ts` mid-decomposition.
+
+**Relevant Files**:
+- [client/src/components/ActiveTours.tsx](client/src/components/ActiveTours.tsx)
+- [server/routes.ts](server/routes.ts)
+
+*Identified July 2, 2026 during the tour-experience code trace (see `docs/01-planning/implementation-specs/[FUTURE] tour-experience-improvement-plan.md`).*
+
+---
+
+### Comment 41: Missing venueCapacity metadata hard-crashes tour week processing 🟢
+**Status**: 📋 **PENDING**
+
+`processUnifiedTourRevenue` (`shared/engine/game-engine.ts:3680`) throws if `project.metadata.venueCapacity` is absent, with no fallback to tier-based capacity generation. Capacity has been stored at creation since the Phase 3 venue-capacity feature, so this only bites legacy/imported tours — but a single bad project bricks week advancement for that save.
+
+**Action**: Add a fallback (derive capacity from the stored `venueAccess` tier's range, or skip the tour with a logged warning) so one malformed project can't block the week.
+
+**Relevant Files**:
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+
+*Identified July 2, 2026 during the tour-experience code trace.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 0 items (all completed! 🎉)
-- 🟢 Medium: 0 items (all completed! 🎉)
+- 🟡 High: 1 item (C40)
+- 🟢 Medium: 1 item (C41)
 - 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 37 items (94.9%)
+- ✅ Completed: 37 items (90.2%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 2 items (5.1%)
+- 📋 Pending: 4 items (9.8%)
 
 ---
 
