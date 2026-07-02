@@ -419,8 +419,10 @@ export default function ArtistPage() {
         <Tabs defaultValue="overview" className="space-y-6">
           <div className="relative">
             <TabsList className="grid grid-cols-5 w-full max-w-2xl">
-              {/* Nova Sterling positioned relative to tab menu */}
-              <div className="absolute -top-40 -right-20 z-10">
+              {/* Artist avatar positioned relative to tab menu — wrapper height =
+                  top offset (160px) + tab bar (40px) + space-y-6 gap (24px) so the
+                  image crops exactly at the translucent card's top edge below */}
+              <div className="absolute -top-40 -right-20 z-10 h-56 overflow-hidden">
                 <img
                   src={getAvatarUrl(artist.name)}
                   alt={`${artist.name} avatar`}

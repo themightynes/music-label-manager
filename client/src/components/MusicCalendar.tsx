@@ -453,11 +453,11 @@ export function MusicCalendar({
               key={event.id}
               className="bg-brand-purple/30 after:bg-brand-burgundy relative rounded-md p-2 pl-6 text-sm after:absolute after:inset-y-2 after:left-2 after:w-1 after:rounded-full"
             >
-              <div className="font-medium text-white flex items-center gap-2">
-                {getEventIcon(event.type)}
-                {event.title}
+              <div className="font-medium text-white flex items-start gap-2">
+                <span className="shrink-0 mt-0.5">{getEventIcon(event.type)}</span>
+                <span className="min-w-0 break-words">{event.title}</span>
               </div>
-              <div className="text-white/50 text-xs">
+              <div className="text-white/50 text-xs break-words">
                 {formatDateRange(event.from, event.to)}
                 {event.artistName && ` • ${event.artistName}`}
               </div>
@@ -479,7 +479,7 @@ export function MusicCalendar({
       <TooltipProvider>
         <Card className={cn("py-4 bg-brand-dark-card border-brand-purple h-full", className)}>
           <CardContent className="px-4 h-full flex flex-col">
-            <div className="flex gap-4 flex-1">
+            <div className="flex flex-wrap gap-4 flex-1">
               {/* Week picker grid on the left */}
               <div className="flex-shrink-0">
                 <div className="border border-brand-burgundy/30 rounded-lg p-4 bg-brand-dark-card/40">
@@ -555,7 +555,7 @@ export function MusicCalendar({
               </div>
 
               {/* Events on the right */}
-              <div className="flex-1 border-l border-brand-purple pl-4 flex flex-col">
+              <div className="flex-1 basis-44 min-w-0 border-l border-brand-purple pl-4 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
                   <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
                 </div>
@@ -572,7 +572,7 @@ export function MusicCalendar({
   return (
     <Card className={cn("py-4 bg-brand-dark-card border-brand-purple h-full", className)}>
       <CardContent className="px-4 h-full flex flex-col">
-        <div className="flex gap-4 flex-1">
+        <div className="flex flex-wrap gap-4 flex-1">
           {/* Calendar on the left */}
           <div className="flex-shrink-0">
             <Calendar
@@ -615,7 +615,7 @@ export function MusicCalendar({
           </div>
 
           {/* Events on the right (display mode) or Week info (selection mode) */}
-          <div className="flex-1 border-l border-brand-purple pl-4 flex flex-col">
+          <div className="flex-1 basis-44 min-w-0 border-l border-brand-purple pl-4 flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
               {!selectionMode && (

@@ -201,6 +201,12 @@ export function MetricsDashboard() {
   const netProfitLoss = stats.revenue - stats.expenses;
   const reputationChange = getReputationChange();
 
+  // Whole-dollar display with the sign before the $ ("-$16,688", not "$-16,687.5")
+  const formatMoney = (amount: number) =>
+    `${amount < 0 ? '-' : ''}$${Math.abs(Math.round(amount)).toLocaleString()}`;
+  const formatSignedMoney = (amount: number) =>
+    amount >= 0 ? `+${formatMoney(amount)}` : formatMoney(amount);
+
   const renderExpenseBreakdown = () => {
     if (!stats.expenseBreakdown) {
       return <div className="text-xs text-black/50">No expense breakdown available</div>;
@@ -354,10 +360,12 @@ export function MetricsDashboard() {
         
         {/* Desktop Layout */}
         <div className="hidden lg:block">
-          <div className="grid grid-cols-11 gap-6">
-            
+          {/* Sections sit side-by-side only at xl+; below that they stack so the
+              money figures don't overflow their ~70px grid cells */}
+          <div className="grid grid-cols-1 xl:grid-cols-11 gap-4 xl:gap-6">
+
             {/* Core Status Section */}
-            <div className="col-span-3 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
+            <div className="xl:col-span-3 min-w-0 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
                 <i className="fas fa-tachometer-alt mr-2 text-brand-burgundy"></i>
                 Core Status
@@ -387,7 +395,7 @@ export function MetricsDashboard() {
             </div>
 
             {/* Weekly Performance Section */}
-            <div className="col-span-5 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
+            <div className="xl:col-span-5 min-w-0 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
                 <i className="fas fa-chart-line mr-2 text-green-600"></i>
                 Weekly Performance
@@ -405,7 +413,7 @@ export function MetricsDashboard() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="cursor-help">
-                        <div className="text-lg font-bold text-emerald-600">${stats.revenue.toLocaleString()}</div>
+                        <div className="text-lg font-bold text-emerald-600">{formatMoney(stats.revenue)}</div>
                         <div className="text-xs text-white/50">earned</div>
                       </div>
                     </TooltipTrigger>
@@ -418,7 +426,7 @@ export function MetricsDashboard() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="cursor-help">
-                        <div className="text-lg font-bold text-red-600">${stats.expenses.toLocaleString()}</div>
+                        <div className="text-lg font-bold text-red-600">{formatMoney(stats.expenses)}</div>
                         <div className="text-xs text-white/50">spent</div>
                       </div>
                     </TooltipTrigger>
@@ -429,7 +437,7 @@ export function MetricsDashboard() {
                 </div>
                 <div className="text-center">
                   <div className={`text-lg font-bold ${netProfitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {netProfitLoss >= 0 ? '+' : ''}${netProfitLoss.toLocaleString()}
+                    {formatSignedMoney(netProfitLoss)}
                   </div>
                   <div className="text-xs text-white/50">{netProfitLoss >= 0 ? 'profit' : 'loss'}</div>
                 </div>
@@ -437,7 +445,7 @@ export function MetricsDashboard() {
             </div>
 
             {/* Access Tiers Section */}
-            <div className="col-span-3 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
+            <div className="xl:col-span-3 min-w-0 bg-brand-dark-card/[0.66] rounded-[8px] p-4 border border-brand-purple-light">
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
                 <i className="fas fa-trophy mr-2 text-brand-burgundy-dark"></i>
                 Access Tiers
@@ -518,7 +526,7 @@ export function MetricsDashboard() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="cursor-help">
-                        <div className="text-base font-bold text-emerald-600">${stats.revenue.toLocaleString()}</div>
+                        <div className="text-base font-bold text-emerald-600">{formatMoney(stats.revenue)}</div>
                         <div className="text-xs text-white/50">earned</div>
                       </div>
                     </TooltipTrigger>
@@ -531,7 +539,7 @@ export function MetricsDashboard() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="cursor-help">
-                        <div className="text-base font-bold text-red-600">${stats.expenses.toLocaleString()}</div>
+                        <div className="text-base font-bold text-red-600">{formatMoney(stats.expenses)}</div>
                         <div className="text-xs text-white/50">spent</div>
                       </div>
                     </TooltipTrigger>
@@ -542,7 +550,7 @@ export function MetricsDashboard() {
                 </div>
                 <div className="text-center p-2 bg-brand-purple/20 rounded">
                   <div className={`text-base font-bold ${netProfitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {netProfitLoss >= 0 ? '+' : ''}${netProfitLoss.toLocaleString()}
+                    {formatSignedMoney(netProfitLoss)}
                   </div>
                   <div className="text-xs text-white/50">net</div>
                 </div>
@@ -644,7 +652,7 @@ export function MetricsDashboard() {
                 </div>
                 <div className="text-center p-2 bg-brand-purple/20 rounded-lg">
                   <div className={`text-base font-bold ${netProfitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {netProfitLoss >= 0 ? '+' : ''}${netProfitLoss.toLocaleString()}
+                    {formatSignedMoney(netProfitLoss)}
                   </div>
                   <div className="text-xs text-white/50">net {netProfitLoss >= 0 ? 'profit' : 'loss'}</div>
                 </div>
@@ -655,7 +663,7 @@ export function MetricsDashboard() {
                 <div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-emerald-600 font-medium cursor-help">${stats.revenue.toLocaleString()}</span>
+                      <span className="text-emerald-600 font-medium cursor-help">{formatMoney(stats.revenue)}</span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       {renderRevenueBreakdown()}
@@ -666,7 +674,7 @@ export function MetricsDashboard() {
                 <div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-red-600 font-medium cursor-help">${stats.expenses.toLocaleString()}</span>
+                      <span className="text-red-600 font-medium cursor-help">{formatMoney(stats.expenses)}</span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       {renderExpenseBreakdown()}

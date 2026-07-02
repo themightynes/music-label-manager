@@ -404,12 +404,12 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-2xl">
+        <DialogContent className="w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader className="border-b border-brand-purple pb-4">
             <DialogTitle className="text-lg font-semibold text-white">Save & Load Game</DialogTitle>
           </DialogHeader>
 
-          <div className="p-6 space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
             {/* Manual saves */}
             {manualSaves.length > 0 && (
               <div className="space-y-3">
@@ -529,23 +529,23 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                 <p className="text-sm text-white/50">Empty Slot</p>
               </div>
             ))}
+          </div>
 
-            {/* New save input */}
-            <div className="space-y-2">
-              <Input
-                placeholder="Enter save name..."
-                value={newSaveName}
-                onChange={(e) => setNewSaveName(e.target.value)}
-                className="w-full"
-              />
-              <Button
-                onClick={handleSave}
-                disabled={!newSaveName.trim() || saving}
-                className="w-full bg-brand-burgundy text-white hover:bg-brand-burgundy"
-              >
-                {saving ? 'Saving...' : 'Save Game'}
-              </Button>
-            </div>
+          {/* New save input — pinned below the scrolling list */}
+          <div className="px-6 pt-4 space-y-2 border-t border-brand-purple">
+            <Input
+              placeholder="Enter save name..."
+              value={newSaveName}
+              onChange={(e) => setNewSaveName(e.target.value)}
+              className="w-full"
+            />
+            <Button
+              onClick={handleSave}
+              disabled={!newSaveName.trim() || saving}
+              className="w-full bg-brand-burgundy text-white hover:bg-brand-burgundy"
+            >
+              {saving ? 'Saving...' : 'Save Game'}
+            </Button>
           </div>
 
           <div className="p-6 border-t border-brand-purple flex justify-between">
