@@ -41,8 +41,10 @@ export default function AROffice() {
         </div>
 
         <div className="relative">
-          {/* Marcus Rodriguez Executive Office Avatar */}
-          <div className="absolute -top-72 -right-20 z-10">
+          {/* Marcus Rodriguez Executive Office Avatar — wrapper height matches the
+              -top offset so the image is cropped exactly at the card's top edge
+              (the card background is translucent, so it can't hide the overlap) */}
+          <div className="absolute -top-72 -right-20 z-10 h-72 overflow-hidden">
             <img
               src="/avatars/marcus_rodriguez_exec_office.png"
               alt="Marcus Rodriguez in executive office"
