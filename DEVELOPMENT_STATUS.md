@@ -1,6 +1,33 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: June 30, 2026*
+*Updated: July 1, 2026*
+
+---
+
+## 📅 Session Log — July 1, 2026 (Session 2 — architecture docs, scaling decision, Phase 0 + Phase 1 kickoff)
+
+**The big one: decided NOT to rewrite on a game engine, and started a 4-phase scaling arc instead.** Session went: stale-docs cleanup → "should I start over with a game engine?" conversation → diagnosis (the pain is monolith debt, not the web platform) → four-phase plan → Phase 0 executed and Phase 1 begun, all merged to `main` (PRs **#36–#39**).
+
+**Done this session:**
+- **Rewrote the two stale architecture docs** — `docs/02-architecture/system-architecture.md` + `database-design.md` were pre-weekly-conversion (advanceMonth, Passport auth, fictional endpoints, `monthly_actions`). Rewrote both against current code, then **verified every claim with two code-reading subagents** (26 claims checked, 5 doc fixes applied). Committed direct to `main` (`78ff2e3`). Found in passing: `executives` seeding uses role `'head_ar'` while the schema.ts comment says `'head_of_ar'`; migration `0020` lacks the temperament CHECK (Drizzle-schema-only); `progression.json`'s `difficulty_modifiers` were dead config.
+- **Backlog C39 added → resolved same day** (**PR #36**): added the missing `db:generate`/`db:studio`/`db:introspect` npm scripts (drizzle-kit 0.30.4 supports all three; CLAUDE.md + database-practices.md documented them but they never existed), fixed CLAUDE.md's `npm test` description (single run, not watch), replaced POSIX `pkill` with `npx kill-port 5000`, fixed the emergency-recovery path (`migrations/`, not `drizzle/migrations/`). Backlog: **39 items, 37 done, 2 pending** (C26 ArtistPage refactor, C32 email-snapshot cap).
+- **Wired the dead difficulty multiplier** (**PR #37**): `getStartingValues(difficulty)` now applies `difficulty_modifiers.starting_money_multiplier` (easy 1.5×/normal 1.0×/hard 0.7×) via new pure helpers in `shared/utils/startingValues.ts`; `POST /api/game` accepts optional `difficulty` (default `'normal'` → zero behavior change) and persists it in `flags.difficulty`. **MISSING: no UI exposes difficulty yet** — every game still starts at $500k. 9 new unit tests.
+- **Scaling decision**: player asked whether to rebuild on a game engine (Unity/Godot). Answer: **no** — management sims are menu-driven by genre (Football Manager, Game Dev Tycoon, Melvor Idle are web/UI tech); `shared/engine/GameEngine` IS the engine; the pain is monolith debt. Adopted a **4-phase arc**: Phase 0 CI safety net → Phase 1 server seams → Phase 2 engine seams → Phase 3 client state ownership → Phase 4 game feel (parallel juice track, esp. the week-advance moment).
+- **Phase 0 DONE** (**PR #38**, executed by an Opus subagent): vitest suite now runs in CI as a `vitest` job in `.github/workflows/playwright.yml` (`postgres:16` service on 5433 + `drizzle-kit push --force` + `npm run test:run`, ~2min). Added `tests/features/game-spine-advance-save-restore.test.ts` — the create→advance 3 weeks→save→restore→parity spine was previously uncovered end-to-end. CLAUDE.md CI note updated.
+- **Phase 1 plan created** (Plan subagent, code-verified): `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md` — an **18-PR strangler sequence** decomposing `server/routes.ts` (5,341 lines, 85 routes) into feature routers + services. Key findings: only ONE closure-shared helper exists (the feared extraction phase collapses); the suite had **zero HTTP-layer tests** (nothing failed if a route move dropped auth middleware); `routes/analytics.ts` + `AnalyticsService.ts` already model the target convention.
+- **Phase 1 PR-1 DONE** (**PR #39**): route-manifest characterization test — walks the Express router stack after `registerRoutes()` and snapshot-locks all **84 routes with middleware chains** (70× `requireClerkUser`, 10× `requireAdmin`), plus hard assertions on `/api/admin/*` and the game-mutating core loop. Every subsequent move PR now gets wiring-regression checks from CI.
+- **Validated & merged**: `tsc` green; suite **545/545 (38 files, ~26s)**; PRs #36→#39 all merged to `main` (merge order #38→#36→#37 per plan gating).
+
+**Decisions made:**
+- **Merge policy for Phase 1**: pure-move PRs (2–12) merge on green-local without blocking on CI (test-only/move changes, cheap to revert); **service-extraction PRs (15–18) wait for CI** — they change production logic.
+- **GitGuardian** flags the `postgres:postgres@localhost:5433` test-DB string on every PR that adds it — **confirmed false positive** (same string has been on `main` in 3 files all along), non-blocking (`MERGEABLE`). → **Action for Nes: dismiss the incident in the GitGuardian dashboard** so it stops re-flagging Phase 1 test files.
+
+**Open threads / next steps:**
+- **Phase 1 PR-2..12 are ready to execute** — pure one-domain-per-PR moves, order-independent; plan says start with the self-contained low-risk domains (bugReports → admin → emails). PR-13 (games router) and PR-15 (gameCreationService) were gated on #37, which is now merged. Full sequence + route inventory in the `[READY]` plan doc.
+- **Difficulty UI** is an open product decision — the multiplier plumbing exists (easy/normal/hard), but nothing exposes it; the other three modifiers (`reputation_decay`, `market_variance`, `goal_time_extension`) remain unimplemented.
+- **`ai_instructions.md` is badly stale** (Aug 2025, Neon/Replit era, wrong commands) — lightly patched this session; full reconciliation flagged as a spawn-task chip.
+- **Phase 4 (game feel)** has no concrete tickets yet — first candidate: staged WeekSummary reveal with animated count-ups (Motion.dev already in stack).
+- **Local env**: Docker test DB (`music-label-test-db`, port 5433) was used this session; a background watcher stops it after PR #39's CI finishes.
 
 ---
 

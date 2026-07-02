@@ -1,14 +1,16 @@
 # AI Assistant Instructions for Music Label Manager
 
 ## Quick Context
-You're working on **Top Roles: Music Label Manager**, a browser-based music industry simulation game. This is a monorepo with React (Vite) frontend, Express backend, PostgreSQL database (via Neon on Replit), and shared TypeScript code.
+You're working on **Top Roles: Music Label Manager**, a browser-based music industry simulation game. This is a monorepo with React (Vite) frontend, Express backend, PostgreSQL database (Railway, `pg` driver), Clerk auth, and shared TypeScript code.
 
-## Current State (Updated: August 20, 2025 - Single Source of Truth Migration Complete)
-**Latest Session**: CRITICAL ARCHITECTURAL MIGRATION - Eliminated all duplicate logic across layers
-- **Tech Stack**: React + Vite, Express, PostgreSQL (Neon), TypeScript, Zustand, React Query
-- **Architecture**: CLEAN SEPARATION OF CONCERNS - GameEngine is single source of truth for ALL business logic
-- **Game Content**: 8 roles, 24 meetings, 6 artists, 12 events (all in JSON files under /data)
-- **Current Phase**: 100% Complete MVP + Clean Architecture Migration
+> ⚠️ **Parts of this document below this section are stale (Aug 2025, Neon/Replit era).** `../DEVELOPMENT_STATUS.md` is the single source of truth for current status; root `CLAUDE.md` has the current commands and conventions. A full reconciliation of this file is pending.
+
+## Current State (Updated: July 1, 2026 — scaling arc underway)
+**Latest Session**: Decided against a game-engine rewrite; adopted a 4-phase scaling arc (CI safety net → server seams → engine seams → client state → game feel)
+- **Tech Stack**: React 18 + Vite, Express, PostgreSQL (Railway), Clerk auth, TypeScript, Zustand, React Query, XState
+- **Architecture**: GameEngine (`shared/engine/`) is the single source of truth for game logic; `server/routes.ts` decomposition into feature routers + services is in progress — see `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md`
+- **CI**: vitest suite (545 tests) + Playwright both run in `.github/workflows/playwright.yml`
+- **Current Phase**: Phase 1 of the scaling arc (route extraction, PR-2..18 of the plan)
 
 ## Completed Major Systems ✅
 1. ✅ **Single Source of Truth Architecture** - GameEngine handles ALL business logic, zero duplication
