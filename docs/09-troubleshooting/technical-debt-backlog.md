@@ -9,10 +9,10 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 2, 2026
-- **Total Items**: 41
+- **Total Items**: 45
 - **Completed**: 37
 - **In Progress**: 0
-- **Pending**: 4
+- **Pending**: 8
 
 ---
 
@@ -645,13 +645,13 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 ### Comment 40: Tour cancellation trusts client-supplied refundAmount 🟡
 **Status**: 📋 **PENDING**
 
-The 60% tour-cancellation refund is computed entirely client-side (`client/src/components/ActiveTours.tsx`, `refundPercentage = 0.6`) and sent in the request body of `POST /api/projects/:id/cancel`. The server (currently `server/routes.ts:1934`; will move with the Phase 1 tour-domain route PR) applies the client's `refundAmount` to the player's money without recomputing or capping it — any refund amount can be submitted.
+The 60% tour-cancellation refund is computed entirely client-side (`client/src/components/ActiveTours.tsx`, `refundPercentage = 0.6`) and sent in the request body of `DELETE /api/projects/:id/cancel`. The server (`server/routes/projects.ts:205` since the Phase 1 route moves) applies the client's `refundAmount` to the player's money without recomputing or capping it — any refund amount can be submitted.
 
-**Action**: Recompute the refund server-side (`(totalCost / plannedCities) * remainingCities * 0.6`) and ignore or validate the client value; move the 60% constant to balance config while at it. **Do as a standalone PR after the Phase 1 tour-domain route move lands** — don't touch `routes.ts` mid-decomposition.
+**Action**: Recompute the refund server-side (`(totalCost / plannedCities) * remainingCities * 0.6`) and ignore or validate the client value; move the 60% constant to balance config while at it. **Unblocked as of July 2, 2026** — the Phase 1 route moves are done; do as a standalone PR.
 
 **Relevant Files**:
 - [client/src/components/ActiveTours.tsx](client/src/components/ActiveTours.tsx)
-- [server/routes.ts](server/routes.ts)
+- [server/routes/projects.ts](server/routes/projects.ts)
 
 *Identified July 2, 2026 during the tour-experience code trace (see `docs/01-planning/implementation-specs/[FUTURE] tour-experience-improvement-plan.md`).*
 
@@ -671,18 +671,78 @@ The 60% tour-cancellation refund is computed entirely client-side (`client/src/c
 
 ---
 
+### Comment 42: Awareness system is fully implemented dead bookkeeping 🟢
+**Status**: 📋 **PENDING**
+
+The song awareness system (`shared/engine/game-engine.ts:1617-1750`) runs every week: awareness gain from marketing channels (weeks 1–4), breakthrough checks with 2.5× awareness explosions (weeks 3–6), and decay (weeks 5+). Values are persisted per song and announced in WeekSummary ("🔥 BREAKTHROUGH ACHIEVED!") — but awareness feeds into **nothing**: not streaming revenue, not charts, not any financial metric. The game celebrates a stat with zero mechanical existence. Config lives in `data/balance/markets.json` (awareness_system); the integration design exists in `docs/01-planning/implementation-specs/[FUTURE] awareness-system-design.md` but the "Awareness System Backend Integration" work was never finished.
+
+**Action**: Product decision — either wire awareness into the ongoing streaming multiplier (preferred; see the release-experience plan Tier 2) or stop surfacing it in WeekSummary until it does something.
+
+**Relevant Files**:
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+- [data/balance/markets.json](data/balance/markets.json)
+
+*Identified July 2, 2026 during the release-experience code trace (see `docs/01-planning/implementation-specs/[FUTURE] release-experience-improvement-plan.md`).*
+
+---
+
+### Comment 43: Planned releases cannot be cancelled, edited, or rescheduled 🟢
+**Status**: 📋 **PENDING**
+
+`POST /api/game/:gameId/releases/plan` (`server/routes/releases.ts:435`) deducts the full marketing budget plus 1 creative capital at plan time and locks songs to the release — and there is no endpoint (or UI) to cancel, edit, or reschedule a planned release afterward. Money committed to a distant release week is unrecoverable regardless of changed circumstances. Tours, by contrast, support cancellation with a 60% refund.
+
+**Action**: Add a cancel (and optionally reschedule) endpoint with a partial refund, computed server-side from day one (don't repeat C40's client-trust mistake). Land after PR-17 (releasePlanningService) settles this domain.
+
+**Relevant Files**:
+- [server/routes/releases.ts](server/routes/releases.ts)
+- [client/src/components/ReleaseWorkflowCard.tsx](client/src/components/ReleaseWorkflowCard.tsx)
+
+*Identified July 2, 2026 during the release-experience code trace.*
+
+---
+
+### Comment 44: Release preview and execution are separate calculation code paths 🟡
+**Status**: 📋 **PENDING**
+
+The planning preview uses `GameEngine.calculateReleasePreview()` (`shared/engine/game-engine.ts:4692-4941`) while release-week execution uses `calculateSophisticatedReleaseOutcome()` — two independent implementations of the same multiplier chain (release type, seasonal, marketing synergy/diversity, lead-single boost). Any change to one that misses the other silently makes the preview lie to the player. Same divergence pathology as C35 (snapshot built in two places), which already shipped a real bug once.
+
+**Action**: Extract one shared calculation used by both the preview endpoint and week-advance execution. Natural fit for the PR-17 releasePlanningService extraction or immediately after it.
+
+**Relevant Files**:
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+- [server/routes/releases.ts](server/routes/releases.ts)
+
+*Identified July 2, 2026 during the release-experience code trace.*
+
+---
+
+### Comment 45: Dead release config and unsurfaced press data 🔵
+**Status**: 📋 **PENDING**
+
+Two small leftovers from the release trace: (1) `data/balance/markets.json` `streaming_calculation.star_power_amplification` is `enabled: true` but nothing in the engine consumes it — dead config that reads as a live mechanic; (2) `calculatePressOutcome()` computes a detailed result (pickups count, structure) but only `reputationGain` is used, and `summary.pressMentions` is a standing `TODO` (`shared/engine/game-engine.ts:319`).
+
+**Action**: Either implement star-power amplification and press-mention surfacing or delete the dead config/fields so balance files reflect reality.
+
+**Relevant Files**:
+- [data/balance/markets.json](data/balance/markets.json)
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+
+*Identified July 2, 2026 during the release-experience code trace.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 1 item (C40)
-- 🟢 Medium: 1 item (C41)
-- 🔵 Low: 2 items (C26, C32)
+- 🟡 High: 2 items (C40, C44)
+- 🟢 Medium: 3 items (C41, C42, C43)
+- 🔵 Low: 3 items (C26, C32, C45)
 
 ### By Status
-- ✅ Completed: 37 items (90.2%)
+- ✅ Completed: 37 items (82.2%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 4 items (9.8%)
+- 📋 Pending: 8 items (17.8%)
 
 ---
 
