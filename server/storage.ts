@@ -76,23 +76,23 @@ export interface IStorage {
   updateGameState(id: string, gameState: Partial<InsertGameState>): Promise<GameState>;
 
   // Artists
-  getArtistsByGame(gameId: string): Promise<Artist[]>;
-  getArtist(id: string): Promise<Artist | undefined>;
+  getArtistsByGame(gameId: string, dbTransaction?: any): Promise<Artist[]>;
+  getArtist(id: string, dbTransaction?: any): Promise<Artist | undefined>;
   createArtist(artist: InsertArtist): Promise<Artist>;
-  updateArtist(id: string, artist: Partial<InsertArtist>): Promise<Artist>;
+  updateArtist(id: string, artist: Partial<InsertArtist>, dbTransaction?: any): Promise<Artist>;
 
   // Projects
-  getProjectsByGame(gameId: string): Promise<Project[]>;
+  getProjectsByGame(gameId: string, dbTransaction?: any): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
-  updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
+  updateProject(id: string, project: Partial<InsertProject>, dbTransaction?: any): Promise<Project>;
   deleteProject(id: string): Promise<void>;
   getActiveRecordingProjects(gameId: string): Promise<Project[]>;
 
   // Songs 
   getSongsByGame(gameId: string): Promise<Song[]>;
-  getSongsByArtist(artistId: string, gameId: string): Promise<Song[]>;
-  getSong(id: string): Promise<Song | undefined>;
+  getSongsByArtist(artistId: string, gameId: string, dbTransaction?: any): Promise<Song[]>;
+  getSong(id: string, dbTransaction?: any): Promise<Song | undefined>;
   createSong(song: InsertSong): Promise<Song>;
   updateSong(id: string, song: Partial<InsertSong>): Promise<Song>;
   getReleasedSongs(gameId: string): Promise<Song[]>;
@@ -102,9 +102,9 @@ export interface IStorage {
   // Releases
   getReleasesByGame(gameId: string, dbTransaction?: any): Promise<Release[]>;
   getReleasesByArtist(artistId: string, gameId: string): Promise<Release[]>;
-  getRelease(id: string): Promise<Release | undefined>;
+  getRelease(id: string, dbTransaction?: any): Promise<Release | undefined>;
   createRelease(release: InsertRelease): Promise<Release>;
-  updateRelease(id: string, release: Partial<InsertRelease>): Promise<Release>;
+  updateRelease(id: string, release: Partial<InsertRelease>, dbTransaction?: any): Promise<Release>;
   getPlannedReleases(gameId: string, week: number, dbTransaction?: any): Promise<Release[]>;
   getSongsByRelease(releaseId: string, dbTransaction?: any): Promise<Song[]>;
   updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any): Promise<Release>;
@@ -331,12 +331,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Artists
-  async getArtistsByGame(gameId: string): Promise<Artist[]> {
-    return await this.db.select().from(artists).where(eq(artists.gameId, gameId));
+  async getArtistsByGame(gameId: string, dbTransaction?: any): Promise<Artist[]> {
+    const dbContext = dbTransaction || this.db;
+    return await dbContext.select().from(artists).where(eq(artists.gameId, gameId));
   }
 
-  async getArtist(id: string): Promise<Artist | undefined> {
-    const [artist] = await this.db.select().from(artists).where(eq(artists.id, id));
+  async getArtist(id: string, dbTransaction?: any): Promise<Artist | undefined> {
+    const dbContext = dbTransaction || this.db;
+    const [artist] = await dbContext.select().from(artists).where(eq(artists.id, id));
     return artist || undefined;
   }
 
@@ -345,8 +347,9 @@ export class DatabaseStorage implements IStorage {
     return newArtist;
   }
 
-  async updateArtist(id: string, artist: Partial<InsertArtist>): Promise<Artist> {
-    const [updatedArtist] = await this.db.update(artists)
+  async updateArtist(id: string, artist: Partial<InsertArtist>, dbTransaction?: any): Promise<Artist> {
+    const dbContext = dbTransaction || this.db;
+    const [updatedArtist] = await dbContext.update(artists)
       .set(artist)
       .where(eq(artists.id, id))
       .returning();
@@ -354,8 +357,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Projects
-  async getProjectsByGame(gameId: string): Promise<Project[]> {
-    return await this.db.select().from(projects).where(eq(projects.gameId, gameId));
+  async getProjectsByGame(gameId: string, dbTransaction?: any): Promise<Project[]> {
+    const dbContext = dbTransaction || this.db;
+    return await dbContext.select().from(projects).where(eq(projects.gameId, gameId));
   }
 
   async getProject(id: string): Promise<Project | undefined> {
@@ -368,8 +372,9 @@ export class DatabaseStorage implements IStorage {
     return newProject;
   }
 
-  async updateProject(id: string, project: Partial<InsertProject>): Promise<Project> {
-    const [updatedProject] = await this.db.update(projects)
+  async updateProject(id: string, project: Partial<InsertProject>, dbTransaction?: any): Promise<Project> {
+    const dbContext = dbTransaction || this.db;
+    const [updatedProject] = await dbContext.update(projects)
       .set(project)
       .where(eq(projects.id, id))
       .returning();
@@ -432,17 +437,18 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(songs).where(eq(songs.gameId, gameId));
   }
 
-  async getSongsByArtist(artistId: string, gameId: string): Promise<Song[]> {
+  async getSongsByArtist(artistId: string, gameId: string, dbTransaction?: any): Promise<Song[]> {
+    const dbContext = dbTransaction || this.db;
     console.log('[DatabaseStorage] getSongsByArtist query:', { artistId, gameId });
-    const result = await this.db.select().from(songs)
+    const result = await dbContext.select().from(songs)
       .where(and(eq(songs.artistId, artistId), eq(songs.gameId, gameId)))
       .orderBy(desc(songs.createdAt));
     console.log('[DatabaseStorage] getSongsByArtist found:', result.length, 'songs');
-    
+
     // Also try a simpler query to debug
     if (result.length === 0) {
       console.log('[DatabaseStorage] DEBUG: Checking all songs for this game...');
-      const allGameSongs = await this.db.select().from(songs)
+      const allGameSongs = await dbContext.select().from(songs)
         .where(eq(songs.gameId, gameId));
       console.log('[DatabaseStorage] DEBUG: Total songs in game:', allGameSongs.length);
       if (allGameSongs.length > 0) {
@@ -458,8 +464,9 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getSong(id: string): Promise<Song | undefined> {
-    const [song] = await this.db.select().from(songs).where(eq(songs.id, id));
+  async getSong(id: string, dbTransaction?: any): Promise<Song | undefined> {
+    const dbContext = dbTransaction || this.db;
+    const [song] = await dbContext.select().from(songs).where(eq(songs.id, id));
     return song || undefined;
   }
 
@@ -556,8 +563,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(releases.createdAt));
   }
 
-  async getRelease(id: string): Promise<Release | undefined> {
-    const [release] = await this.db.select().from(releases).where(eq(releases.id, id));
+  async getRelease(id: string, dbTransaction?: any): Promise<Release | undefined> {
+    const dbContext = dbTransaction || this.db;
+    const [release] = await dbContext.select().from(releases).where(eq(releases.id, id));
     return release || undefined;
   }
 
@@ -566,8 +574,9 @@ export class DatabaseStorage implements IStorage {
     return newRelease;
   }
 
-  async updateRelease(id: string, release: Partial<InsertRelease>): Promise<Release> {
-    const [updatedRelease] = await this.db.update(releases)
+  async updateRelease(id: string, release: Partial<InsertRelease>, dbTransaction?: any): Promise<Release> {
+    const dbContext = dbTransaction || this.db;
+    const [updatedRelease] = await dbContext.update(releases)
       .set(release)
       .where(eq(releases.id, id))
       .returning();
@@ -743,17 +752,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Executives
-  async getExecutivesByGame(gameId: string): Promise<any[]> {
+  async getExecutivesByGame(gameId: string, dbTransaction?: any): Promise<any[]> {
+    const dbContext = dbTransaction || this.db;
     console.log('[STORAGE] getExecutivesByGame called with gameId:', gameId);
-    const result = await this.db.select().from(executives).where(eq(executives.gameId, gameId));
+    const result = await dbContext.select().from(executives).where(eq(executives.gameId, gameId));
     console.log('[STORAGE] Executives found:', result);
     console.log('[STORAGE] Number of executives:', result ? result.length : 0);
     return result;
   }
 
-  async getExecutive(execId: string): Promise<any | null> {
+  async getExecutive(execId: string, dbTransaction?: any): Promise<any | null> {
+    const dbContext = dbTransaction || this.db;
     console.log('[STORAGE] getExecutive called with execId:', execId);
-    const result = await this.db.select().from(executives)
+    const result = await dbContext.select().from(executives)
       .where(eq(executives.id, execId))
       .limit(1);
     console.log('[STORAGE] Executive found:', result[0] || null);

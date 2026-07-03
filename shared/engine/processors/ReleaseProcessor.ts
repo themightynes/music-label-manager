@@ -597,6 +597,7 @@ export class ReleaseProcessor {
   async processReleasedProjects(ctx: WeekContext, summary: WeekSummary): Promise<void> {
 
     try {
+      const dbTransaction = ctx.dbTransaction;
       // Define current week for awareness calculations
       const currentWeek = ctx.gameState.currentWeek || 1;
 
@@ -611,7 +612,7 @@ export class ReleaseProcessor {
       let artistMap: Map<string, any> = new Map();
       if (ctx.storage?.getArtistsByGame) {
         try {
-          const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id);
+          const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, dbTransaction);
           if (artists && artists.length > 0) {
             artists.forEach((artist: any) => artistMap.set(artist.id, artist));
           }
@@ -624,7 +625,7 @@ export class ReleaseProcessor {
       let releaseMap: Map<string, any> = new Map();
       if (ctx.storage?.getReleasesByGame) {
         try {
-          const releases = await ctx.storage.getReleasesByGame(ctx.gameState.id);
+          const releases = await ctx.storage.getReleasesByGame(ctx.gameState.id, dbTransaction);
           if (releases && releases.length > 0) {
             releases.forEach((release: any) => releaseMap.set(release.id, release));
           }
@@ -653,7 +654,7 @@ export class ReleaseProcessor {
               let release = releaseMap.get(song.releaseId);
               if (!release && ctx.storage?.getRelease) {
                 // Fallback to individual lookup if not in cache
-                release = await ctx.storage.getRelease(song.releaseId);
+                release = await ctx.storage.getRelease(song.releaseId, dbTransaction);
               }
               const marketingBreakdown = release?.metadata?.marketingBudgetBreakdown;
 
@@ -785,7 +786,7 @@ export class ReleaseProcessor {
               // Use cached artist if available, fallback to individual lookup
               let artist = artistMap.get(song.artistId);
               if (!artist && ctx.storage?.getArtist) {
-                artist = await ctx.storage.getArtist(song.artistId);
+                artist = await ctx.storage.getArtist(song.artistId, dbTransaction);
               }
 
               if (artist) {
@@ -859,9 +860,9 @@ export class ReleaseProcessor {
       
       // Update songs in batch if available
       if (songUpdates.length > 0 && ctx.gameData.updateSongs) {
-        await ctx.gameData.updateSongs(songUpdates);
+        await ctx.gameData.updateSongs(songUpdates, dbTransaction);
       }
-      
+
       // Add total ongoing revenue and streams to summary
       if (totalOngoingRevenue > 0) {
         summary.revenue += totalOngoingRevenue;
@@ -916,7 +917,7 @@ export class ReleaseProcessor {
             const leadSingleBudget = Object.values(budgetBreakdown).reduce((sum: number, budget) => sum + (budget as number), 0);
             
             // Get artist data for sophisticated calculation
-            const artist = await ctx.storage?.getArtist(leadSong.artistId);
+            const artist = await ctx.storage?.getArtist(leadSong.artistId, dbTransaction);
 
             if (!artist) {
               console.warn(`[LEAD SINGLE] Artist not found, skipping lead single`);
@@ -1048,7 +1049,7 @@ export class ReleaseProcessor {
         // the outcome was computed with the wrong artist's popularity, and the
         // preview (which uses the correct artist) diverged from execution.
         const metadata = release.metadata as any;
-        const releaseArtist = await ctx.storage?.getArtist(release.artistId);
+        const releaseArtist = await ctx.storage?.getArtist(release.artistId, dbTransaction);
 
         if (!releaseArtist) {
           console.warn(`[PLANNED RELEASE] Artist not found for release, skipping`);
@@ -1213,7 +1214,7 @@ export class ReleaseProcessor {
     
     
     // Get artist popularity
-    const artist = await ctx.storage?.getArtist(song.artistId);
+    const artist = await ctx.storage?.getArtist(song.artistId, ctx.dbTransaction);
     const artistPopularity = artist?.popularity || 0;
 
     // Calculate initial streams using individual song quality (not project quality)

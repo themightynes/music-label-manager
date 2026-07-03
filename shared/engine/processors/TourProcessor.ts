@@ -242,7 +242,7 @@ export class TourProcessor {
     const { summary } = ctx;
     try {
       // Get artist data from storage since this.artists is not initialized
-      const artist = await ctx.storage?.getArtist?.(artistId);
+      const artist = await ctx.storage?.getArtist?.(artistId, dbTransaction);
       if (!artist) {
         console.warn(`[TOUR IMPACTS] Artist ${artistId} not found`);
         return;

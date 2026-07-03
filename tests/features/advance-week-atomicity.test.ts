@@ -16,17 +16,19 @@
  *
  * Because tx1 and tx2 are SEPARATE transactions, a crash between them leaves a
  * half-applied week: the engine's rows are committed but the week/money never
- * advance (Test A). And because some writes escape tx1 entirely, an error during
- * tx1 rolls back the tx-bound writes yet leaves the escaping artist writes
- * committed (Test B).
+ * advance (Test A — still pinned; flips in PR-3).
  *
- * Every assertion tagged `// PINS CURRENT BROKEN BEHAVIOR (D6):` is deliberately
- * pinning today's broken behavior and is expected to be FLIPPED (inverted) by a
- * later D6 PR:
- *   - Test A flips in PR-3 (single transaction): a crash leaves the game exactly
- *     at week N — the engine rows must ALSO roll back.
- *   - Test B flips in PR-2 (plumb tx through escaping writes): the escaping artist
- *     mood write must ALSO roll back with tx1.
+ * Test B was updated by D6 PR-2: the artist mood/energy/popularity writes that
+ * previously escaped tx1 (via storage.updateArtist, which had no tx param) now
+ * honor the threaded dbTransaction and roll back WITH tx1. Its assertion is
+ * inverted accordingly.
+ *
+ * Each assertion tagged `// PINS CURRENT BROKEN BEHAVIOR (D6):` deliberately pins
+ * today's broken behavior:
+ *   - Test A stays pinned; it flips in PR-3 (single transaction): a crash leaves
+ *     the game exactly at week N — the engine rows must ALSO roll back.
+ *   - Test B was FLIPPED in PR-2 (tx threaded through the escaping writes): the
+ *     artist mood write now rolls back with tx1 (assertion inverted below).
  *
  * Harness: constructs `AdvanceWeekService` with INJECTED deps (test-DB-backed
  * `DatabaseStorage`, a `db` proxy that can inject a tx failure, and a gameData
@@ -282,12 +284,11 @@ describe('D6 PR-1 — advance-week failure-injection characterization (pins brok
     expect(emailsAfter.length).toBe(0);
     expect(chartsAfter.length).toBe(0);
 
-    // PINS CURRENT BROKEN BEHAVIOR (D6): the artist mood write ESCAPED tx1 (it ran
-    // on the global connection via storage.updateArtist, which takes no tx param)
-    // and stayed committed even though tx1 rolled back. mood drifted 70 -> 67.
-    // PR-2 (plumb the tx handle through updateArtist) flips this: the mood write
-    // must roll back WITH tx1, so mood stays at its seeded 70.
-    expect(artistAfter.mood).not.toBe(70);
-    expect(artistAfter.mood).toBe(67);
+    // D6 PR-2 GUARANTEE (flipped from the pinned broken behavior): the artist mood
+    // write is now tx-BOUND. storage.updateArtist honors the dbTransaction threaded
+    // through ArtistStateProcessor, so when tx1 rolls back the mood write rolls back
+    // WITH it — no longer escaping on the global connection. mood stays at its
+    // seeded 70 instead of drifting to 67.
+    expect(artistAfter.mood).toBe(70);
   });
 });

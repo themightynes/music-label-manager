@@ -55,7 +55,7 @@ export class ArtistStateProcessor {
     // Check if createMoodEvent method exists for logging
     const canLogMoodEvents = typeof ctx.storage.createMoodEvent === 'function';
 
-    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id);
+    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, dbTransaction);
     if (!artists || artists.length === 0) {
       console.log('[ARTIST CHANGES] No artists found for mood/energy updates');
       return;
@@ -150,7 +150,7 @@ export class ArtistStateProcessor {
 
       // Update the artist in database
       if (hasUpdates) {
-        await ctx.storage.updateArtist(artist.id, updates);
+        await ctx.storage.updateArtist(artist.id, updates, dbTransaction);
       }
     }
 
@@ -173,12 +173,13 @@ export class ArtistStateProcessor {
    */
   async processWeeklyMoodChanges(ctx: WeekContext): Promise<void> {
     const { summary } = ctx;
+    const dbTransaction = ctx.dbTransaction;
     // Get artists and projects from storage
     if (!ctx.storage || !ctx.storage.getArtistsByGame) return;
-    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id);
+    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, dbTransaction);
     if (!artists || artists.length === 0) return;
     const projects = ctx.storage.getProjectsByGame ?
-      await ctx.storage.getProjectsByGame(ctx.gameState.id) : [];
+      await ctx.storage.getProjectsByGame(ctx.gameState.id, dbTransaction) : [];
 
     // Process each artist
     for (const artist of artists) {
@@ -196,7 +197,7 @@ export class ArtistStateProcessor {
       // Apply to database if changed
       if (totalMoodChange !== 0) {
         const newMood = Math.max(0, Math.min(100, currentMood + totalMoodChange));
-        await ctx.storage.updateArtist(artist.id, { mood: newMood });
+        await ctx.storage.updateArtist(artist.id, { mood: newMood }, dbTransaction);
 
         // Log summary entry if non-drift changes occurred
         if (totalMoodChange !== naturalDrift) {
@@ -326,12 +327,13 @@ export class ArtistStateProcessor {
    */
   async processWeeklyPopularityChanges(ctx: WeekContext): Promise<void> {
     const { summary } = ctx;
+    const dbTransaction = ctx.dbTransaction;
     // Get artists from storage if available
     if (!ctx.storage || !ctx.storage.getArtistsByGame) {
       return;
     }
 
-    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id);
+    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, dbTransaction);
     if (!artists || artists.length === 0) return;
 
     for (const artist of artists) {
@@ -351,7 +353,7 @@ export class ArtistStateProcessor {
 
         // Update artist popularity in storage
         if (ctx.storage.updateArtist) {
-          await ctx.storage.updateArtist(artist.id, { popularity: newPopularity });
+          await ctx.storage.updateArtist(artist.id, { popularity: newPopularity }, dbTransaction);
         }
 
         // Track change - always show the total popularity change
@@ -378,7 +380,7 @@ export class ArtistStateProcessor {
         return;
       }
 
-      const executives = await ctx.storage.getExecutivesByGame(ctx.gameState.id);
+      const executives = await ctx.storage.getExecutivesByGame(ctx.gameState.id, dbTransaction);
       if (!executives || executives.length === 0) {
         console.log('[GAME-ENGINE] No executives found for game, skipping decay');
         return;
@@ -493,7 +495,7 @@ export class ArtistStateProcessor {
       return null;
     }
 
-    const allArtists = await ctx.storage.getArtistsByGame(ctx.gameState.id);
+    const allArtists = await ctx.storage.getArtistsByGame(ctx.gameState.id, ctx.dbTransaction);
     const signedArtists = allArtists.filter((a: Artist) => a.signed);
 
     // Edge case: No signed artists
@@ -535,7 +537,7 @@ export class ArtistStateProcessor {
     if (!ctx.storage?.getArtistsByGame) {
       return [];
     }
-    const allArtists = await ctx.storage.getArtistsByGame(ctx.gameState.id);
+    const allArtists = await ctx.storage.getArtistsByGame(ctx.gameState.id, ctx.dbTransaction);
     return allArtists.filter((a: Artist) => a.signed);
   }
 }

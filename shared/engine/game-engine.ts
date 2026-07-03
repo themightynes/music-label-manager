@@ -196,7 +196,7 @@ export class GameEngine {
     }
 
     // Process ongoing revenue from released projects
-    await this.processReleasedProjects(summary);
+    await this.processReleasedProjects(summary, dbTransaction);
 
     // B6 (Phase 2 D3): the no-op processNewlyRecordedProjects pass was removed —
     // songs are born isRecorded:true, so its !isRecorded filter always matched
@@ -226,10 +226,10 @@ export class GameEngine {
     await this.applyArtistChangesToDatabase(summary, dbTransaction);
 
     // Process weekly mood changes
-    await this.processWeeklyMoodChanges(summary);
+    await this.processWeeklyMoodChanges(summary, dbTransaction);
 
     // Process weekly popularity changes
-    await this.processWeeklyPopularityChanges(summary);
+    await this.processWeeklyPopularityChanges(summary, dbTransaction);
 
     // Process executive mood/loyalty decay
     await this.processExecutiveMoodDecay(summary, dbTransaction);
@@ -767,9 +767,9 @@ export class GameEngine {
    */
   // DELEGATED TO ReleaseProcessor (Phase 2 engine-seams PR-10). Same-signature
   // wrapper; still called from advanceWeek.
-  private async processReleasedProjects(summary: WeekSummary): Promise<void> {
+  private async processReleasedProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     return new ReleaseProcessor().processReleasedProjects(
-      this.weekContext(summary),
+      this.weekContext(summary, dbTransaction),
       summary
     );
   }
@@ -919,8 +919,8 @@ export class GameEngine {
    * 2. Workload stress (too many projects)
    * 3. Natural drift toward neutral (50)
    */
-  private async processWeeklyMoodChanges(summary: WeekSummary): Promise<void> {
-    return new ArtistStateProcessor().processWeeklyMoodChanges(this.weekContext(summary));
+  private async processWeeklyMoodChanges(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    return new ArtistStateProcessor().processWeeklyMoodChanges(this.weekContext(summary, dbTransaction));
   }
 
   /**
@@ -928,8 +928,8 @@ export class GameEngine {
    * UNIFIED FORMAT: Now reads from per-artist objects (artistChanges[artistId].popularity)
    * Mirrors processWeeklyMoodChanges pattern for consistency
    */
-  private async processWeeklyPopularityChanges(summary: WeekSummary): Promise<void> {
-    return new ArtistStateProcessor().processWeeklyPopularityChanges(this.weekContext(summary));
+  private async processWeeklyPopularityChanges(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    return new ArtistStateProcessor().processWeeklyPopularityChanges(this.weekContext(summary, dbTransaction));
   }
 
   /**

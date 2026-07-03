@@ -244,7 +244,7 @@ export class ActionProcessor {
     (summary as any).usedExecutives.add(executiveId);
 
     // Get executive from database
-    const executive = await ctx.storage.getExecutive(executiveId);
+    const executive = await ctx.storage.getExecutive(executiveId, dbTransaction);
     if (!executive) {
       console.log('[GAME-ENGINE] Executive not found:', executiveId);
       return;

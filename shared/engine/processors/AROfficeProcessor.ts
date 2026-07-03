@@ -78,7 +78,7 @@ export class AROfficeProcessor {
             // Enhanced signed and discovered artist filtering
             try {
               if (ctx.storage?.getArtistsByGame) {
-                const signed = await ctx.storage.getArtistsByGame(gameState.id);
+                const signed = await ctx.storage.getArtistsByGame(gameState.id, ctx.dbTransaction);
                 console.log('[A&R DEBUG] Signed artists:', signed?.length, 'signed');
 
                 // BUGFIX: Match by name (case-insensitive) instead of ID
