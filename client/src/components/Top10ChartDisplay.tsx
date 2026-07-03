@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Trophy, BarChart3 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
-import { apiRequest } from '@/lib/queryClient';
+import { useTop10Chart } from '@/hooks/useCharts';
 import { ChartDataTable } from '@/components/chart/ChartDataTable';
 import { ChartEntry, chartColumns } from '@/components/chart/chartColumns';
 import { isPlayerSongHighlight } from '../../../shared/utils/chartUtils';
@@ -12,61 +12,25 @@ import logger from '@/lib/logger';
 
 type Top10Entry = ChartEntry;
 
-interface Top10ChartData {
-  chartWeek: string;
-  currentWeek: number;
-  top10: Top10Entry[];
-}
-
 export function Top10ChartDisplay() {
   logger.debug('🚀 Top10ChartDisplay component rendering...');
 
   const { gameState } = useGameStore();
   logger.debug('🎮 GameState from store:', { id: gameState?.id, currentWeek: gameState?.currentWeek });
 
-  const [chartData, setChartData] = useState<Top10ChartData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    data: chartData,
+    isLoading: loading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useTop10Chart();
 
-  const fetchTop10Data = async () => {
-    logger.debug('📡 fetchTop10Data called, gameState:', { id: gameState?.id, exists: !!gameState });
-
-    if (!gameState?.id) {
-      logger.debug('❌ No gameState.id, returning early');
-      return;
-    }
-
-    try {
-      logger.debug('🔄 Starting Top 10 chart fetch...');
-      setRefreshing(true);
-      const apiUrl = `/api/game/${gameState.id}/charts/top10`;
-      logger.debug('📍 Fetching from URL:', apiUrl);
-
-      const response = await apiRequest('GET', apiUrl);
-      const data = await response.json();
-      setChartData(data);
-      setError(null);
-    } catch (err) {
-      logger.error('Error fetching Top 10 chart data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load chart data');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    logger.debug('🎵 Chart Debug Info:', {
-      gameStateId: gameState?.id,
-      hasGameState: !!gameState,
-      apiUrl: `/api/game/${gameState?.id}/charts/top10`
-    });
-    fetchTop10Data();
-  }, [gameState?.id]);
+  const refreshing = isFetching;
+  const error = queryError ? (queryError instanceof Error ? queryError.message : 'Failed to load chart data') : null;
 
   const handleRefresh = () => {
-    fetchTop10Data();
+    refetch();
   };
 
   if (loading) {

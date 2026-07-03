@@ -41,14 +41,25 @@ beforeEach(() => {
   resetGameStore();
 });
 
-/** Extract the last `predicate` passed to invalidateQueries. */
-function lastPredicate(): (query: { queryKey: readonly unknown[] }) => boolean {
+/**
+ * Extract the `predicate` passed to invalidateQueries that matches the EMAIL
+ * scopes specifically, scoped to `gameId`. `advanceWeek`/`loadGameFromSave`
+ * fire several scoped predicate invalidations (ROI analytics, charts, emails)
+ * — search by scope+id rather than assuming email is the last call, so this
+ * pin doesn't break when another predicate invalidation is added alongside it.
+ */
+function lastPredicate(gameId: string): (query: { queryKey: readonly unknown[] }) => boolean {
   const calls = mockedInvalidateQueries.mock.calls;
   for (let i = calls.length - 1; i >= 0; i--) {
     const arg = calls[i][0];
-    if (arg && typeof arg.predicate === 'function') return arg.predicate;
+    if (arg && typeof arg.predicate === 'function') {
+      const predicate = arg.predicate;
+      if (predicate({ queryKey: [EMAIL_LIST_SCOPE, gameId] })) {
+        return predicate;
+      }
+    }
   }
-  throw new Error('No invalidateQueries call with a predicate was recorded');
+  throw new Error('No invalidateQueries call with an email-scoped predicate was recorded');
 }
 
 function assertEmailPredicateScopedTo(
@@ -109,7 +120,7 @@ describe('loadGameFromSave email invalidation (C49)', () => {
     await useGameStore.getState().loadGameFromSave('save-1', snapshot, 'overwrite');
 
     // The predicate must be keyed on the RESTORED id, not the snapshot's own id.
-    assertEmailPredicateScopedTo(lastPredicate(), restoredGameId);
+    assertEmailPredicateScopedTo(lastPredicate(restoredGameId), restoredGameId);
   });
 });
 
@@ -138,6 +149,6 @@ describe('advanceWeek email invalidation', () => {
 
     await useGameStore.getState().advanceWeek();
 
-    assertEmailPredicateScopedTo(lastPredicate(), gameId);
+    assertEmailPredicateScopedTo(lastPredicate(gameId), gameId);
   });
 });

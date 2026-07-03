@@ -22,6 +22,7 @@
 import { describe, it, expect } from 'vitest';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 import { EXECUTIVES_SCOPE, executivesQueryKey } from '@/hooks/useExecutives';
+import { CHART_TOP10_SCOPE, CHART_TOP100_SCOPE } from '@/hooks/useCharts';
 
 const GAME_ID = 'game-1';
 const ARTIST_ID = 'artist-1';
@@ -32,6 +33,7 @@ const RELEASE_ID = 'release-1';
  * Representative REAL query keys produced by the app's hooks.
  * - Analytics keys (useAnalytics.ts): `[url, 'analytics:<scope>-roi', { ... }]`
  * - Email keys (useEmails.ts): `[SCOPE, gameId, ...filters]`
+ * - Chart keys (useCharts.ts): `[SCOPE, gameId]`
  * - Saves key (SaveGameModal.tsx): `['api', 'saves']`
  */
 const REAL_QUERY_KEYS: readonly unknown[][] = [
@@ -43,6 +45,8 @@ const REAL_QUERY_KEYS: readonly unknown[][] = [
   [EMAIL_UNREAD_SCOPE, GAME_ID],
   // Executives (useExecutives.ts, PR-8): [EXECUTIVES_SCOPE, gameId]
   [...executivesQueryKey(GAME_ID)],
+  [CHART_TOP10_SCOPE, GAME_ID],
+  [CHART_TOP100_SCOPE, GAME_ID],
   ['api', 'saves'],
 ];
 
@@ -72,6 +76,27 @@ describe('query-key contract: invalidations that DO match a real hook key', () =
       (q.queryKey[0] === EMAIL_LIST_SCOPE || q.queryKey[0] === EMAIL_UNREAD_SCOPE) &&
       q.queryKey[1] === GAME_ID;
     expect(someRealKeyMatchesPredicate(emailPredicate)).toBe(true);
+  });
+});
+
+describe('query-key contract: advanceWeek chart invalidations (PR-5)', () => {
+  // Mirrors client/src/store/gameStore.ts advanceWeek's chart invalidation
+  // predicate exactly: matches CHART_TOP10_SCOPE/CHART_TOP100_SCOPE at
+  // queryKey[0] and requires queryKey[1] to equal the current game's id.
+  function chartPredicate(gameId: string) {
+    return (q: { queryKey: readonly unknown[] }) =>
+      (q.queryKey[0] === CHART_TOP10_SCOPE || q.queryKey[0] === CHART_TOP100_SCOPE) &&
+      q.queryKey[1] === gameId;
+  }
+
+  it('advanceWeek chart predicate matches both real chart query keys', () => {
+    const predicate = chartPredicate(GAME_ID);
+    const matches = REAL_QUERY_KEYS.filter((real) => predicate({ queryKey: real }));
+    expect(matches.length).toBe(2);
+  });
+
+  it('advanceWeek chart predicate does NOT match a different game\'s chart keys', () => {
+    expect(someRealKeyMatchesPredicate(chartPredicate('some-other-game'))).toBe(false);
   });
 });
 
