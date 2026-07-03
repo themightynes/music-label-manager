@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { HoloDisc } from '@/components/ui/holo-disc';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useArtists } from '@/hooks/useArtists';
 import { useGameContext } from '@/contexts/GameContext';
 import { LabelCreationModal } from '@/components/LabelCreationModal';
@@ -116,7 +117,8 @@ export default function MainMenuPage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { gameId, setGameId } = useGameContext();
-  const { gameState, createNewGame } = useGameStore();
+  const gameState = useGameState();
+  const { createNewGame } = useGameStore();
   // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
   const { data: artists = [] } = useArtists();
   const { isAdmin } = useIsAdmin();

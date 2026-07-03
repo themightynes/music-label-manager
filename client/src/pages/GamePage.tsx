@@ -4,6 +4,7 @@ import { CampaignResultsModal } from '../components/CampaignResultsModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import GameLayout from '@/layouts/GameLayout';
 import { useGameStore } from '../store/gameStore';
+import { useGameState } from '../hooks/useGameState';
 import { useGameContext } from '../contexts/GameContext';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/queryClient';
@@ -22,7 +23,8 @@ export default function GamePage() {
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [isCreatingGameWithLabel, setIsCreatingGameWithLabel] = useState(false);
 
-  const { gameState, campaignResults, createNewGame, isAdvancingWeek, loadGame } = useGameStore();
+  const gameState = useGameState();
+  const { campaignResults, createNewGame, isAdvancingWeek, loadGame } = useGameStore();
   const { setGameId } = useGameContext();
   const { toast } = useToast();
   

@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { AlertCircle, Loader2, Briefcase } from 'lucide-react';
 import { SelectionSummary } from '../components/SelectionSummary';
 import { ExecutiveMeetings } from '../components/executive-meetings/ExecutiveMeetings';
@@ -36,7 +37,8 @@ export default function ExecutiveSuitePage({
   onAdvanceWeek,
   isAdvancing,
 }: ExecutiveSuitePageProps = {}) {
-  const { gameState, selectedActions, removeAction, reorderActions, selectAction, getAROfficeStatus, advanceWeek, isAdvancingWeek } = useGameStore();
+  const gameState = useGameState();
+  const { selectedActions, removeAction, reorderActions, selectAction, getAROfficeStatus, advanceWeek, isAdvancingWeek } = useGameStore();
   const { gameId } = useGameContext();
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},

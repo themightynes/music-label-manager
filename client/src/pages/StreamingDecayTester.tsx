@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BarChart3, TrendingUp, Loader2, Settings, Code } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { apiRequest } from '@/lib/queryClient';
 import GameLayout from '@/layouts/GameLayout';
 
@@ -65,7 +65,7 @@ interface AwarenessConfig {
 
 export default function StreamingDecayTester() {
   const [, setLocation] = useLocation();
-  const { gameState } = useGameStore();
+  const gameState = useGameState();
 
   // Test Parameters
   const [songQuality, setSongQuality] = useState(75);
