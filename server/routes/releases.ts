@@ -1,19 +1,39 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { storage } from '../storage';
 import { requireClerkUser } from '../auth';
+import { requireGameOwner } from '../middleware/requireGameOwner';
 import { serverGameData } from '../data/gameData';
 import { artists, gameStates, releases, releaseSongs, songs } from '@shared/schema';
 import { GameEngine } from '@shared/engine/game-engine';
 import { ChartService } from '@shared/engine/ChartService';
+import { releasePlanningService, ReleaseServiceError } from '../services/releasePlanningService';
 
 const router = Router();
+
+// Whitelist for POST /api/game/:gameId/releases (plain create). Only fields the
+// handler actually consumes are accepted; server-computed columns
+// (revenueGenerated, streamsGenerated, peakChartPosition, gameId, id,
+// createdAt/updatedAt) are NOT client-settable. `.strict()` rejects any unknown
+// field with a 400 so mass-assignment can't smuggle extra columns.
+const createReleaseSchema = z.object({
+  artistId: z.string(),
+  title: z.string(),
+  type: z.string(),
+  releaseWeek: z.number().optional(),
+  totalQuality: z.number().optional(),
+  marketingBudget: z.number().optional(),
+  status: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+  songIds: z.array(z.string()).optional(),
+}).strict();
 
   // Phase 1: Song and Release Management API Routes
 
   // Get songs for a game
-  router.get("/api/game/:gameId/songs", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/songs", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const songs = await serverGameData.getSongsByGame(req.params.gameId);
       res.json(songs);
@@ -23,7 +43,7 @@ const router = Router();
   });
 
   // Get songs for a specific artist
-  router.get("/api/game/:gameId/artists/:artistId/songs", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/artists/:artistId/songs", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId, artistId } = req.params;
 
@@ -94,7 +114,7 @@ const router = Router();
   });
 
   // Get releases for a game
-  router.get("/api/game/:gameId/releases", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/releases", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const releases = await serverGameData.getReleasesByGame(req.params.gameId);
       res.json(releases);
@@ -103,17 +123,11 @@ const router = Router();
     }
   });
 
-  router.get("/api/game/:gameId/release-songs", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/release-songs", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState || gameState.userId !== req.userId) {
-        return res.status(403).json({
-          error: 'UNAUTHORIZED',
-          message: 'You do not have permission to access this game'
-        });
-      }
-
+      // Ownership verified by requireGameOwner (its 404 replaces the previous
+      // inline 403 UNAUTHORIZED check).
       const releaseSongsRows = await storage.getReleaseSongsByGame(gameId);
       res.json(releaseSongsRows);
     } catch (error) {
@@ -123,10 +137,23 @@ const router = Router();
   });
 
   // Create a new release (Single/EP/Album)
-  router.post("/api/game/:gameId/releases", requireClerkUser, async (req, res) => {
+  router.post("/api/game/:gameId/releases", requireClerkUser, requireGameOwner, async (req, res) => {
+    // HARDENING (PR-17): whitelist fields with a .strict() schema so
+    // server-computed columns (revenueGenerated/streamsGenerated/
+    // peakChartPosition/gameId/...) can't be mass-assigned by the client.
+    const parsed = createReleaseSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'INVALID_RELEASE_FIELDS',
+        message: 'Release payload contains missing or unexpected fields',
+        details: parsed.error.errors,
+      });
+    }
+
     try {
+      const { songIds, ...releaseFields } = parsed.data;
       const releaseData = {
-        ...req.body,
+        ...releaseFields,
         gameId: req.params.gameId,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -135,11 +162,11 @@ const router = Router();
       const release = await serverGameData.createRelease(releaseData);
 
       // If songs are provided, create the release-song relationships
-      if (req.body.songIds && req.body.songIds.length > 0) {
-        for (let i = 0; i < req.body.songIds.length; i++) {
+      if (songIds && songIds.length > 0) {
+        for (let i = 0; i < songIds.length; i++) {
           await serverGameData.createReleaseSong({
             releaseId: release.id,
-            songId: req.body.songIds[i],
+            songId: songIds[i],
             trackNumber: i + 1
           });
         }
@@ -155,7 +182,7 @@ const router = Router();
   // PLAN RELEASE ENDPOINTS
 
   // Get artists with ready songs for release planning
-  router.get("/api/game/:gameId/artists/ready-for-release", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/artists/ready-for-release", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const minSongs = parseInt(req.query.minSongs as string) || 1;
@@ -216,7 +243,7 @@ const router = Router();
   });
 
   // Get ready songs for a specific artist
-  router.get("/api/game/:gameId/artists/:artistId/songs/ready", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/artists/:artistId/songs/ready", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId, artistId } = req.params;
       const includeDrafts = req.query.includeDrafts === 'true';
@@ -311,7 +338,7 @@ const router = Router();
   });
 
   // Calculate release preview metrics
-  router.post("/api/game/:gameId/releases/preview", requireClerkUser, async (req, res) => {
+  router.post("/api/game/:gameId/releases/preview", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const {
@@ -432,226 +459,21 @@ const router = Router();
   });
 
   // Create planned release
-  router.post("/api/game/:gameId/releases/plan", requireClerkUser, async (req, res) => {
+  router.post("/api/game/:gameId/releases/plan", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
-      const {
-        artistId,
-        title,
-        type,
-        songIds,
-        leadSingleId,
-        seasonalTiming,
-        scheduledReleaseWeek,
-        marketingBudget,
-        leadSingleStrategy,
-        metadata
-      } = req.body;
-
-      // Validate inputs
-      if (!artistId || !title || !type || !songIds || songIds.length === 0) {
-        return res.status(400).json({
-          error: 'VALIDATION_ERROR',
-          message: 'Release validation failed',
-          details: [
-            { field: 'artistId', error: 'Required' },
-            { field: 'title', error: 'Required' },
-            { field: 'type', error: 'Required' },
-            { field: 'songIds', error: 'Must have at least one song' }
-          ]
-        });
-      }
-
-      // Check if user has sufficient funds
-      const [gameState] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-      if (!gameState) {
-        return res.status(404).json({
-          error: 'GAME_NOT_FOUND',
-          message: 'Game session not found',
-          gameId
-        });
-      }
-
-      // Validate release week is in the future
-      const currentWeek = gameState.currentWeek || 1;
-      if (scheduledReleaseWeek && scheduledReleaseWeek <= currentWeek) {
-        return res.status(400).json({
-          error: 'INVALID_RELEASE_WEEK',
-          message: 'Cannot plan releases for current or past weeks',
-          currentWeek,
-          scheduledReleaseWeek,
-          details: [
-            { field: 'scheduledReleaseWeek', error: `Must be greater than current week (${currentWeek})` }
-          ]
-        });
-      }
-
-      // Validate lead single week if provided
-      if (leadSingleStrategy?.leadSingleReleaseWeek) {
-        if (leadSingleStrategy.leadSingleReleaseWeek <= currentWeek) {
-          return res.status(400).json({
-            error: 'INVALID_LEAD_SINGLE_WEEK',
-            message: 'Cannot plan lead single for current or past weeks',
-            currentWeek,
-            leadSingleReleaseWeek: leadSingleStrategy.leadSingleReleaseWeek,
-            details: [
-              { field: 'leadSingleReleaseWeek', error: `Must be greater than current week (${currentWeek})` }
-            ]
-          });
-        }
-      }
-
-      const totalBudget = Object.values(marketingBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) +
-        (leadSingleStrategy ? Object.values(leadSingleStrategy.leadSingleBudget || {}).reduce((sum: number, budget) => sum + (budget as number), 0) : 0);
-
-      // Check if user has sufficient creative capital
-      const currentCreativeCapital = gameState.creativeCapital || 0;
-      if (currentCreativeCapital < 1) {
-        return res.status(402).json({
-          error: 'INSUFFICIENT_CREATIVE_CAPITAL',
-          message: 'Insufficient creative capital. You need 1 creative capital to plan a release.',
-          required: 1,
-          available: currentCreativeCapital
-        });
-      }
-
-      if ((gameState.money || 0) < totalBudget) {
-        return res.status(402).json({
-          error: 'INSUFFICIENT_FUNDS',
-          message: 'Not enough money for marketing budget',
-          required: totalBudget,
-          available: gameState.money || 0,
-          suggestions: [
-            { action: 'REDUCE_BUDGET', description: 'Reduce marketing allocation', potentialSavings: totalBudget - (gameState.money || 0) }
-          ]
-        });
-      }
-
-      // Check for song conflicts (songs already scheduled for release)
-      const conflictingSongs = await db
-        .select()
-        .from(songs)
-        .where(and(
-          eq(songs.gameId, gameId),
-          inArray(songs.id, songIds),
-          sql`${songs.releaseId} IS NOT NULL`
-        ));
-
-      if (conflictingSongs.length > 0) {
-        return res.status(409).json({
-          error: 'SONG_ALREADY_SCHEDULED',
-          message: 'Some songs are already part of a planned release',
-          conflictingSongs: conflictingSongs.map(c => ({
-            songId: c.id,
-            songTitle: c.title,
-            conflictingReleaseId: c.releaseId,
-            conflictingReleaseTitle: 'Unknown Release'
-          })),
-          resolutionOptions: [
-            { action: 'CHOOSE_DIFFERENT_SONGS', description: 'Select different songs for this release' }
-          ]
-        });
-      }
-
-      // Create the planned release in a transaction
-      const result = await db.transaction(async (tx) => {
-        // CRITICAL FIX: Single deduction of marketing budget and creative capital
-        await tx.update(gameStates)
-          .set({
-            money: (gameState.money || 0) - totalBudget,
-            creativeCapital: currentCreativeCapital - 1
-          })
-          .where(eq(gameStates.id, gameId));
-
-        console.log(`[PLAN RELEASE] Deducted $${totalBudget} and 1 creative capital for release planning`);
-
-        // Create release record
-        const [newRelease] = await tx.insert(releases).values({
-          gameId,
-          artistId,
-          title,
-          type,
-          releaseWeek: scheduledReleaseWeek,
-          status: 'planned',
-          marketingBudget: totalBudget,
-          metadata: {
-            ...metadata,
-            seasonalTiming,
-            scheduledReleaseWeek,
-            marketingChannels: Object.keys(marketingBudget || {}),
-            marketingBudgetBreakdown: marketingBudget || {}, // CRITICAL FIX: Store per-channel budgets for release execution
-            leadSingleStrategy: leadSingleStrategy ? {
-              ...leadSingleStrategy,
-              leadSingleBudgetBreakdown: leadSingleStrategy.leadSingleBudget || {} // Store per-channel breakdown for lead single too
-            } : null
-          }
-        }).returning();
-
-        // Update songs to mark them as reserved for this release
-        await tx.update(songs)
-          .set({ releaseId: newRelease.id })
-          .where(inArray(songs.id, songIds));
-
-        // CRITICAL FIX: Also create entries in the junction table for proper song-release association
-        // This ensures songs are properly linked when releases are executed
-        const releaseSongEntries = songIds.map((songId: string, index: number) => ({
-          id: crypto.randomUUID(),
-          releaseId: newRelease.id,
-          songId: songId,
-          trackNumber: index + 1, // Track order based on selection order
-          createdAt: new Date()
-        }));
-
-        await tx.insert(releaseSongs).values(releaseSongEntries);
-        console.log(`[PLAN RELEASE] Created ${releaseSongEntries.length} junction table entries for release ${newRelease.id}`);
-
-        return newRelease;
-      });
-
-      // Get updated game state and planned releases
-      const [updatedGameState] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-      const plannedReleases = await db.select().from(releases)
-        .where(and(eq(releases.gameId, gameId), eq(releases.status, 'planned')));
-
-      res.status(201).json({
-        success: true,
-        release: {
-          id: result.id,
-          title: result.title,
-          type: result.type,
-          artistId: result.artistId,
-          artistName: 'Artist Name', // Would need artist lookup
-          songIds,
-          leadSingleId,
-          scheduledReleaseWeek,
-          status: 'planned',
-          estimatedMetrics: {
-            streams: metadata?.estimatedStreams || 0,
-            revenue: metadata?.estimatedRevenue || 0,
-            roi: metadata?.projectedROI || 0,
-            chartPotential: 50
-          },
-          createdAt: result.createdAt?.toISOString(),
-          createdByWeek: updatedGameState.currentWeek
-        },
-        updatedGameState: {
-          money: updatedGameState.money,
-          plannedReleases: plannedReleases.map(r => ({
-            id: r.id,
-            title: r.title,
-            artistName: 'Artist Name', // Would need artist lookup
-            type: r.type,
-            scheduledWeek: r.releaseWeek,
-            status: r.status
-          })),
-          artistsAffected: [{
-            artistId,
-            songsReserved: songIds.length,
-            moodImpact: 5 // Positive mood boost from planned release
-          }]
-        }
-      });
+      // gameState is the owner-verified row from requireGameOwner.
+      const payload = await releasePlanningService.planRelease(
+        req.userId,
+        gameId,
+        req.gameState!,
+        req.body,
+      );
+      res.status(201).json(payload);
     } catch (error) {
+      if (error instanceof ReleaseServiceError) {
+        return res.status(error.status).json(error.body);
+      }
       console.error("Failed to create planned release:", error);
       console.error("Error stack:", (error as Error).stack);
       console.error("Error message:", (error as Error).message);
@@ -668,7 +490,7 @@ const router = Router();
 
 
   // Song conflict resolution endpoints
-  router.get("/api/game/:gameId/songs/conflicts", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/songs/conflicts", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
 
@@ -807,7 +629,7 @@ const router = Router();
   });
 
   // Clear all song reservations (for debugging/testing)
-  router.post("/api/game/:gameId/songs/clear-reservations", requireClerkUser, async (req, res) => {
+  router.post("/api/game/:gameId/songs/clear-reservations", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
 
@@ -840,63 +662,18 @@ const router = Router();
 
 
   // Delete a planned release and free up its songs
-  router.delete("/api/game/:gameId/releases/:releaseId", requireClerkUser, async (req, res) => {
+  router.delete("/api/game/:gameId/releases/:releaseId", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const releaseId = req.params.releaseId;
-
-      // Get the release to return marketing budget
-      const [release] = await db.select().from(releases)
-        .where(and(eq(releases.id, releaseId), eq(releases.gameId, gameId)));
-
-      if (!release) {
-        return res.status(404).json({
-          error: 'RELEASE_NOT_FOUND',
-          message: 'Planned release not found'
-        });
-      }
-
-      if (release.status !== 'planned') {
-        return res.status(400).json({
-          error: 'CANNOT_DELETE_RELEASED',
-          message: 'Cannot delete a release that has already been executed'
-        });
-      }
-
-      // Execute deletion in transaction
-      const result = await db.transaction(async (tx) => {
-        // Free up songs reserved for this release
-        const freedSongs = await tx.update(songs)
-          .set({ releaseId: null })
-          .where(eq(songs.releaseId, releaseId))
-          .returning();
-
-        // Return marketing budget to player
-        const [gameState] = await tx.select().from(gameStates)
-          .where(eq(gameStates.id, gameId));
-
-        if (gameState) {
-          await tx.update(gameStates)
-            .set({ money: (gameState.money || 0) + (release.marketingBudget || 0) })
-            .where(eq(gameStates.id, gameId));
-        }
-
-        // Delete the planned release
-        await tx.delete(releases).where(eq(releases.id, releaseId));
-
-        return { freedSongs, refundedAmount: release.marketingBudget || 0 };
-      });
-
-      res.json({
-        success: true,
-        message: `Deleted planned release "${release.title}"`,
-        freedSongs: result.freedSongs.map(s => ({
-          songId: s.id,
-          songTitle: s.title
-        })),
-        refundedAmount: result.refundedAmount
-      });
+      // Ownership verified by requireGameOwner. Refund comes from the STORED
+      // release.marketingBudget inside the service, never from client input.
+      const payload = await releasePlanningService.deleteRelease(req.userId, gameId, releaseId);
+      res.json(payload);
     } catch (error) {
+      if (error instanceof ReleaseServiceError) {
+        return res.status(error.status).json(error.body);
+      }
       console.error("Failed to delete planned release:", error);
       res.status(500).json({
         error: 'DELETE_RELEASE_ERROR',

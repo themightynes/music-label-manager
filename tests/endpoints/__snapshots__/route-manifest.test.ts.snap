@@ -262,6 +262,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/artists/:artistId/songs",
   },
@@ -269,6 +270,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/artists/:artistId/songs/ready",
   },
@@ -276,6 +278,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/artists/ready-for-release",
   },
@@ -367,6 +370,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/release-songs",
   },
@@ -374,6 +378,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/releases",
   },
@@ -381,6 +386,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/releases",
   },
@@ -388,6 +394,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "DELETE",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/releases/:releaseId",
   },
@@ -395,6 +402,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/releases/plan",
   },
@@ -402,6 +410,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/releases/preview",
   },
@@ -409,6 +418,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/songs",
   },
@@ -416,6 +426,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/songs/clear-reservations",
   },
@@ -423,6 +434,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/songs/conflicts",
   },
