@@ -45,6 +45,7 @@ import { findArtistBySlugOrId, generateArtistSlug } from '@/utils/artistSlug';
 import type { Artist, Song, Project, Release } from '@/components/artist/types';
 import { getQualityColor, getReleaseTypeBadge, getStatusBadge } from '@/components/artist/artistPageUtils';
 import { AnalyticsTab } from '@/components/artist/AnalyticsTab';
+import { ReleasesTab } from '@/components/artist/ReleasesTab';
 
 export default function ArtistPage() {
   const params = useParams();
@@ -672,76 +673,13 @@ export default function ArtistPage() {
           </TabsContent>
           
           {/* Releases Tab */}
-          <TabsContent value="releases" className="space-y-6 relative z-20">
-            {/* Upcoming Releases */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                <Clock className="w-5 h-5" />
-                <span>Upcoming Releases</span>
-                <Badge variant="outline" className="ml-2">
-                  {artistReleases.filter(r => r.status === 'planned').length}
-                </Badge>
-              </h3>
-              
-              {artistReleases.filter(r => r.status === 'planned').length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <Clock className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                    <p className="text-white/70 mb-4">No planned releases</p>
-                    <Button onClick={() => setLocation('/plan-release')}>
-                      Plan New Release
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {artistReleases.filter(r => r.status === 'planned').map(release => (
-                    <ReleaseWorkflowCard
-                      key={release.id}
-                      release={release}
-                      currentWeek={gameState?.currentWeek || 1}
-                      artistName={artist.name}
-                      songs={songs}
-                      onReleasePage={true}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Released */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                <PlayCircle className="w-5 h-5" />
-                <span>Released</span>
-                <Badge variant="outline" className="ml-2">
-                  {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length}
-                </Badge>
-              </h3>
-              
-              {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <PlayCircle className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                    <p className="text-white/70">No releases yet</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').map(release => (
-                    <ReleaseWorkflowCard
-                      key={release.id}
-                      release={release}
-                      currentWeek={gameState?.currentWeek || 1}
-                      artistName={artist.name}
-                      songs={songs}
-                      onReleasePage={true}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
+          <ReleasesTab
+            artistReleases={artistReleases}
+            songs={songs}
+            artistName={artist.name}
+            currentWeek={gameState?.currentWeek || 1}
+            onNavigate={setLocation}
+          />
           
           {/* Analytics Tab */}
           <AnalyticsTab songs={songs} artistReleases={artistReleases} />
