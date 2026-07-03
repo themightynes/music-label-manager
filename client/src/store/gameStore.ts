@@ -10,6 +10,52 @@ import { buildGameSnapshot } from '@/utils/buildGameSnapshot';
 import { formatAutosaveName } from '@shared/utils/saveName';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 
+// Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
+// identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
+// seven GETs, parses the six JSON bodies, and returns the raw bundle. Callers
+// keep their OWN gameState-sync + set(...) logic — only the common fetch+parse
+// moved here (Phase 3 PR-4). Ordering and .json() semantics are preserved
+// byte-identical to the previous inline copies.
+interface GameBundle {
+  gameData: any;
+  songs: any;
+  releases: any;
+  releaseSongs: any;
+  executives: any;
+  moodEvents: any;
+  emails: any[];
+}
+
+async function fetchGameBundle(gameId: string): Promise<GameBundle> {
+  const [
+    gameResponse,
+    songsResponse,
+    releasesResponse,
+    releaseSongsResponse,
+    executivesResponse,
+    moodEventsResponse,
+    emailSnapshot
+  ] = await Promise.all([
+    apiRequest('GET', `/api/game/${gameId}`),
+    apiRequest('GET', `/api/game/${gameId}/songs`),
+    apiRequest('GET', `/api/game/${gameId}/releases`),
+    apiRequest('GET', `/api/game/${gameId}/release-songs`),
+    apiRequest('GET', `/api/game/${gameId}/executives`),
+    apiRequest('GET', `/api/game/${gameId}/mood-events`),
+    fetchEmailSnapshot(gameId)
+  ]);
+
+  const gameData = await gameResponse.json();
+  const songs = await songsResponse.json();
+  const releases = await releasesResponse.json();
+  const emails = emailSnapshot.emails;
+  const releaseSongs = await releaseSongsResponse.json();
+  const executives = await executivesResponse.json();
+  const moodEvents = await moodEventsResponse.json();
+
+  return { gameData, songs, releases, releaseSongs, executives, moodEvents, emails };
+}
+
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
   gameId: string,
@@ -119,31 +165,15 @@ export const useGameStore = create<GameStore>()(
       // Load existing game
       loadGame: async (gameId: string) => {
         try {
-          const [
-            gameResponse,
-            songsResponse,
-            releasesResponse,
-            releaseSongsResponse,
-            executivesResponse,
-            moodEventsResponse,
-            emailSnapshot
-          ] = await Promise.all([
-            apiRequest('GET', `/api/game/${gameId}`),
-            apiRequest('GET', `/api/game/${gameId}/songs`),
-            apiRequest('GET', `/api/game/${gameId}/releases`),
-            apiRequest('GET', `/api/game/${gameId}/release-songs`),
-            apiRequest('GET', `/api/game/${gameId}/executives`),
-            apiRequest('GET', `/api/game/${gameId}/mood-events`),
-            fetchEmailSnapshot(gameId)
-          ]);
-
-          const data = await gameResponse.json();
-          const songs = await songsResponse.json();
-          const releases = await releasesResponse.json();
-          const emailList = emailSnapshot.emails;
-          const releaseSongs = await releaseSongsResponse.json();
-          const executives = await executivesResponse.json();
-          const moodEvents = await moodEventsResponse.json();
+          const {
+            gameData: data,
+            songs,
+            releases,
+            releaseSongs,
+            executives,
+            moodEvents,
+            emails: emailList,
+          } = await fetchGameBundle(gameId);
 
           console.log('GameStore loadGame debug:', {
             gameId,
@@ -256,31 +286,15 @@ export const useGameStore = create<GameStore>()(
 
           localStorage.setItem('currentGameId', restoredGameId);
 
-          const [
-            gameResponse,
-            songsResponse,
-            releasesResponse,
-            releaseSongsResponse,
-            executivesResponse,
-            moodEventsResponse,
-            emailSnapshot
-          ] = await Promise.all([
-            apiRequest('GET', `/api/game/${restoredGameId}`),
-            apiRequest('GET', `/api/game/${restoredGameId}/songs`),
-            apiRequest('GET', `/api/game/${restoredGameId}/releases`),
-            apiRequest('GET', `/api/game/${restoredGameId}/release-songs`),
-            apiRequest('GET', `/api/game/${restoredGameId}/executives`),
-            apiRequest('GET', `/api/game/${restoredGameId}/mood-events`),
-            fetchEmailSnapshot(restoredGameId),
-          ]);
-
-          const gameData = await gameResponse.json();
-          const songsData = await songsResponse.json();
-          const releasesData = await releasesResponse.json();
-          const emailList = emailSnapshot.emails;
-          const releaseSongsData = await releaseSongsResponse.json();
-          const executivesData = await executivesResponse.json();
-          const moodEventsData = await moodEventsResponse.json();
+          const {
+            gameData,
+            songs: songsData,
+            releases: releasesData,
+            releaseSongs: releaseSongsData,
+            executives: executivesData,
+            moodEvents: moodEventsData,
+            emails: emailList,
+          } = await fetchGameBundle(restoredGameId);
 
           const syncedGameState = {
             ...gameData.gameState,
@@ -677,30 +691,15 @@ export const useGameStore = create<GameStore>()(
           console.log('===============================');
           
           // Reload game data to get updated projects, songs, and releases after processing
-          const [
-            gameResponse,
-            songsResponse,
-            releasesResponse,
-            releaseSongsResponse,
-            executivesResponse,
-            moodEventsResponse,
-            emailSnapshot
-          ] = await Promise.all([
-            apiRequest('GET', `/api/game/${gameState.id}`),
-            apiRequest('GET', `/api/game/${gameState.id}/songs`),
-            apiRequest('GET', `/api/game/${gameState.id}/releases`),
-            apiRequest('GET', `/api/game/${gameState.id}/release-songs`),
-            apiRequest('GET', `/api/game/${gameState.id}/executives`),
-            apiRequest('GET', `/api/game/${gameState.id}/mood-events`),
-            fetchEmailSnapshot(gameState.id)
-          ]);
-          const gameData = await gameResponse.json();
-          const songs = await songsResponse.json();
-          const releases = await releasesResponse.json();
-          const emailList = emailSnapshot.emails;
-          const releaseSongsData = await releaseSongsResponse.json();
-          const executivesData = await executivesResponse.json();
-          const moodEventsData = await moodEventsResponse.json();
+          const {
+            gameData,
+            songs,
+            releases,
+            releaseSongs: releaseSongsData,
+            executives: executivesData,
+            moodEvents: moodEventsData,
+            emails: emailList,
+          } = await fetchGameBundle(gameState.id);
 
           console.log('=== POST-ADVANCE WEEK STATE SYNC ===');
           console.log('Game data releases count:', (gameData.releases || []).length);
