@@ -54,7 +54,6 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   
   // Subscribe to gameState to detect week changes
   const currentWeek = useGameStore((state) => state.gameState?.currentWeek);
-  const storeSongs = useGameStore((state) => state.songs);
 
   useEffect(() => {
     if (artistId && gameId) {

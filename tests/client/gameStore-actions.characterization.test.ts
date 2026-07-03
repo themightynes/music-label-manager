@@ -13,13 +13,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the network + cache layer BEFORE the store import (vitest hoists these).
+// Phase 3 PR-6: the store now seeds songs/releases/releaseSongs into the query
+// cache via setQueryData and reads them back via getQueryData, so the mocked
+// queryClient must expose a working in-memory cache for those methods.
+const queryCache = new Map<string, unknown>();
 vi.mock('@/lib/queryClient', () => ({
   apiRequest: vi.fn(),
-  queryClient: { invalidateQueries: vi.fn().mockResolvedValue(undefined) },
+  queryClient: {
+    invalidateQueries: vi.fn().mockResolvedValue(undefined),
+    setQueryData: vi.fn((key: unknown, value: unknown) => {
+      queryCache.set(JSON.stringify(key), value);
+      return value;
+    }),
+    getQueryData: vi.fn((key: unknown) => queryCache.get(JSON.stringify(key))),
+  },
 }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { songsQueryKey } from '@/hooks/useSongs';
+import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { useGameStore } from '@/store/gameStore';
 import {
   routeApiRequest as routeApiRequestImpl,
@@ -35,6 +48,7 @@ const resetGameStore = () => resetGameStoreImpl(useGameStore);
 
 beforeEach(() => {
   mockedApiRequest.mockReset();
+  queryCache.clear();
   resetGameStore();
 });
 
@@ -163,6 +177,11 @@ describe('cancelProject adopts server balance', () => {
 });
 
 describe('loadGame set(...) state shape', () => {
+  // Phase 3 PR-6 CHANGE: loadGame no longer writes songs / releases /
+  // releaseSongs into the store. It seeds those into the TanStack Query cache
+  // (via queryClient.setQueryData) so the useSongs/useReleases/useReleaseSongs
+  // hooks own them. The pins below assert the cache is seeded from the same
+  // fan-out bodies, and that the store set() no longer carries these arrays.
   it('writes exactly the collections loadGame owns and resets selectedActions', async () => {
     mockedApiRequest.mockImplementation(async (_m: string, url: string) => {
       if (url.endsWith('/songs')) return jsonResponse([{ id: 's1' }]);
@@ -194,13 +213,20 @@ describe('loadGame set(...) state shape', () => {
     expect(state.projects).toEqual([{ id: 'p1' }]);
     expect(state.roles).toEqual([{ id: 'role1' }]);
     expect(state.weeklyActions).toEqual([{ id: 'wa1' }]);
-    expect(state.songs).toEqual([{ id: 's1' }]);
-    expect(state.releases).toEqual([{ id: 'r1' }]);
     expect(state.emails).toEqual([{ id: 'em1' }]);
-    expect(state.releaseSongs).toEqual([{ id: 'rs1' }]);
     expect(state.executives).toEqual([{ id: 'e1' }]);
     expect(state.moodEvents).toEqual([{ id: 'm1' }]);
     expect(state.selectedActions).toEqual([]);
+
+    // PR-6: songs / releases / releaseSongs are seeded into the query cache, NOT
+    // the store. Assert the cache holds the fan-out bodies keyed by gameId.
+    expect(queryClient.getQueryData(songsQueryKey('game-1'))).toEqual([{ id: 's1' }]);
+    expect(queryClient.getQueryData(releasesQueryKey('game-1'))).toEqual([{ id: 'r1' }]);
+    expect(queryClient.getQueryData(releaseSongsQueryKey('game-1'))).toEqual([{ id: 'rs1' }]);
+    // And the store no longer exposes them.
+    expect((state as any).songs).toBeUndefined();
+    expect((state as any).releases).toBeUndefined();
+    expect((state as any).releaseSongs).toBeUndefined();
   });
 });
 
@@ -242,15 +268,21 @@ describe('advanceWeek set(...) state shape', () => {
     expect((state.gameState as any).currentWeek).toBe(6);
     expect(state.artists).toEqual([{ id: 'a1' }]);
     expect(state.projects).toEqual([{ id: 'p1' }]);
-    expect(state.songs).toEqual([{ id: 's1' }]);
-    expect(state.releases).toEqual([{ id: 'r1' }]);
     expect(state.emails).toEqual([{ id: 'em1' }]);
-    expect(state.releaseSongs).toEqual([{ id: 'rs1' }]);
     expect(state.executives).toEqual([{ id: 'e1' }]);
     expect(state.moodEvents).toEqual([{ id: 'm1' }]);
     expect(state.weeklyOutcome).toEqual({ week: 6 });
     expect(state.campaignResults).toBeNull();
     expect(state.selectedActions).toEqual([]);
     expect(state.isAdvancingWeek).toBe(false);
+
+    // PR-6: advanceWeek seeds songs / releases / releaseSongs into the query
+    // cache (via fetchGameBundle) instead of the store. Assert the seeded cache.
+    expect(queryClient.getQueryData(songsQueryKey('game-1'))).toEqual([{ id: 's1' }]);
+    expect(queryClient.getQueryData(releasesQueryKey('game-1'))).toEqual([{ id: 'r1' }]);
+    expect(queryClient.getQueryData(releaseSongsQueryKey('game-1'))).toEqual([{ id: 'rs1' }]);
+    expect((state as any).songs).toBeUndefined();
+    expect((state as any).releases).toBeUndefined();
+    expect((state as any).releaseSongs).toBeUndefined();
   });
 });

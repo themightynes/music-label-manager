@@ -18,6 +18,8 @@ import {
   Eye
 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
+import { useReleases } from '@/hooks/useReleases';
+import { useSongs } from '@/hooks/useSongs';
 import { useLocation, useParams } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { useArtistROI } from '@/hooks/useAnalytics';
@@ -33,7 +35,10 @@ export default function ArtistPage() {
   const params = useParams();
   const artistParam = params.artistParam; // Can be either ID or slug
   const [, setLocation] = useLocation();
-  const { gameState, artists, projects, releases } = useGameStore();
+  const { gameState, artists, projects } = useGameStore();
+  // Phase 3 PR-6: releases / songs read from the TanStack Query cache, not Zustand.
+  const { data: releases = [] } = useReleases();
+  const { data: storeSongs = [] } = useSongs();
 
   // Find the actual artist first to get ID for ROI
   const foundArtist = artists ? findArtistBySlugOrId(artists, artistParam || '') : null;
@@ -125,24 +130,22 @@ export default function ArtistPage() {
         if (data.songs) {
           setSongs(data.songs);
         } else {
-          // Fallback to store
-          const { songs: allSongs } = useGameStore.getState();
-          const artistSongs = allSongs?.filter(s => s.artistId === actualArtistId) || [];
+          // Fallback to the cached song list (Phase 3 PR-6: query cache, not store)
+          const artistSongs = storeSongs?.filter((s: any) => s.artistId === actualArtistId) || [];
           setSongs(artistSongs as Song[]);
         }
       } catch (error: any) {
         console.error('Failed to load songs:', error);
-        // Fallback to store on error
-        const { songs: allSongs } = useGameStore.getState();
-        const artistSongs = allSongs?.filter(s => s.artistId === actualArtistId) || [];
+        // Fallback to the cached song list on error
+        const artistSongs = storeSongs?.filter((s: any) => s.artistId === actualArtistId) || [];
         setSongs(artistSongs as Song[]);
       } finally {
         setLoadingSongs(false);
       }
     };
-    
+
     loadSongsData();
-  }, [actualArtistId, gameState?.id]);
+  }, [actualArtistId, gameState?.id, storeSongs]);
   
   const getArchetypeInfo = (archetype: string) => {
     const archetypeData: Record<string, any> = {
