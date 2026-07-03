@@ -26,6 +26,21 @@ vi.mock('@/hooks/useArtists', () => ({
   useArtists: mockUseArtists,
 }));
 
+// Phase 3.5 PR-5: `useGameState()`'s READ side flipped from Zustand onto the
+// TanStack cache (it now calls `useQueryClient()` + `useSyncExternalStore`), so
+// it needs a QueryClientProvider. Mock it here — same store-only pattern as
+// useProjects/useArtists above — so this component test stays store-only and
+// QueryClient-free. The mock returns the same fake gameState the store mock
+// supplies; assertions are unchanged. `useGameId` is unused by ArtistRoster.
+const { mockUseGameState } = vi.hoisted(() => ({ mockUseGameState: vi.fn() }));
+vi.mock('@/hooks/useGameState', () => ({
+  useGameState: (selector?: (gs: unknown) => unknown) => {
+    const gs = mockUseGameState();
+    return selector ? selector(gs) : gs;
+  },
+  useGameId: () => (mockUseGameState() as { id?: string } | null)?.id ?? null,
+}));
+
 vi.mock('wouter', () => ({
   useLocation: () => [null, setLocationMock],
 }));
@@ -71,6 +86,10 @@ describe('ArtistRoster', () => {
     setLocationMock.mockClear();
     mockUseGameStore.mockReset();
     mockUseArtists.mockReset();
+    mockUseGameState.mockReset();
+    // Façade returns the same spine the store mock supplies (PR-5: read path is
+    // the cache, mocked here to keep the test store-only / QueryClient-free).
+    mockUseGameState.mockReturnValue({ id: 'game-1', currentWeek: 12 });
 
     mockUseArtists.mockReturnValue({
       data: [

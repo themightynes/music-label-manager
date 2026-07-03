@@ -34,6 +34,7 @@ import {
   DISCOVERED_ARTISTS_SCOPE,
   discoveredArtistsQueryKey,
 } from '@/hooks/useDiscoveredArtists';
+import { gameStateQueryKey } from '@/hooks/useGameState';
 
 const mockedApiRequest = vi.mocked(apiRequest);
 const mockedUseGameStore = vi.mocked(useGameStore);
@@ -42,8 +43,18 @@ function jsonResponse(body: unknown): Response {
   return { json: async () => body } as unknown as Response;
 }
 
-/** Drive the three separate selectors the hook reads off a single state object. */
+// Phase 3.5 PR-5 harness update: `useDiscoveredArtists` reads flags /
+// arOfficeSlotUsed via `useGameState`, whose READ side now comes from the
+// TanStack cache (not Zustand). `useGameId` still reads the Zustand pointer, so
+// the store mock keeps supplying the id — but the record fields must ALSO be
+// seeded into the cache the flipped `useGameState` reads. `mockStore` stashes
+// the state so `renderWithClient` can seed both sources. No assertion changed —
+// only the source the same `gameState` is fed through. (Without this, the
+// cache-backed `useGameState` returns null flags and fires its cold-cache
+// fallback GET.)
+let currentMockState: any = null;
 function mockStore(state: any) {
+  currentMockState = state;
   mockedUseGameStore.mockImplementation((selector: any) => selector(state));
 }
 
@@ -51,6 +62,12 @@ function renderWithClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  // Seed the gameState record into the cache so the flipped `useGameState`
+  // (PR-5) reads flags/arOfficeSlotUsed from where the funnel writes them.
+  const gameState = currentMockState?.gameState;
+  if (gameState?.id) {
+    queryClient.setQueryData(gameStateQueryKey(gameState.id), gameState);
+  }
   render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
   return queryClient;
 }
