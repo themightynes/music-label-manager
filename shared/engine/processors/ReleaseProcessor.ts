@@ -1193,22 +1193,6 @@ export class ReleaseProcessor {
   }
 
   /**
-   * Gets the release type multiplier from balance.json
-   */
-  private getReleaseTypeMultiplier(ctx: WeekContext, releaseType: string): number {
-    const balance = ctx.gameData.getBalanceConfigSync();
-    const releaseTypeBonuses = balance?.market_formulas?.release_planning?.release_type_bonuses;
-    
-    if (!releaseTypeBonuses) {
-      console.warn('[PLANNED RELEASE] No release type bonuses found in balance.json');
-      return 1.0;
-    }
-    
-    const typeData = releaseTypeBonuses[releaseType.toLowerCase()];
-    return typeData?.revenue_multiplier || 1.0;
-  }
-
-  /**
    * Processes song release - calculates individual song streams and sets initial values
    * This is called when a project completes and songs are released
    */

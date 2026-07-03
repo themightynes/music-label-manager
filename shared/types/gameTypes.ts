@@ -178,14 +178,12 @@ export interface GameProject {
 export interface ProducerTierData {
   multiplier: number;
   unlock_rep: number;
-  quality_bonus: number;
   description: string;
 }
 
 export interface TimeInvestmentData {
   multiplier: number;
   duration_modifier: number;
-  quality_bonus: number;
   description: string;
 }
 
@@ -205,7 +203,6 @@ export interface BalanceConfig {
     campaign_length_weeks: number;
     focus_slots_base: number;
     focus_slots_max: number;
-    project_durations: Record<string, number[]>;
     seasonal_modifiers: Record<string, number>;
   };
   reputation_system: {

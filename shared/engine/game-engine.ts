@@ -597,58 +597,6 @@ export class GameEngine {
   }
 
   /**
-   * Processes a role meeting and applies effects
-   */
-  private async processRoleMeeting(action: GameEngineAction, summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    return new ActionProcessor().processRoleMeeting(
-      this.weekContext(summary, dbTransaction),
-      action,
-      dbTransaction
-    );
-  }
-
-  /**
-   * Processes executive-specific effects from actions
-   * Updates mood, loyalty, and lastActionWeek when executives are used
-   */
-  private async processExecutiveActions(
-    action: GameEngineAction,
-    summary: WeekSummary,
-    dbTransaction?: any
-  ): Promise<void> {
-    return new ActionProcessor().processExecutiveActions(
-      this.weekContext(summary, dbTransaction),
-      action,
-      dbTransaction
-    );
-  }
-
-  /**
-   * Select artist with highest popularity for predetermined meetings
-   * Handles edge cases: 0 artists (null), 1 artist (auto-select), ties (random)
-   * Per FR-10 (Predetermined meeting logic)
-   */
-  // DELEGATED TO ArtistStateProcessor (Phase 2 engine-seams PR-11). Same-signature
-  // wrapper; called from processRoleMeeting (predetermined targeting). RNG tie-break
-  // draws from the engine's single seeded stream via weekContext().
-  private async selectHighestPopularityArtist(): Promise<Artist | null> {
-    return new ArtistStateProcessor().selectHighestPopularityArtist(
-      this.weekContext({ changes: [] } as unknown as WeekSummary)
-    );
-  }
-
-  /**
-   * Load signed artists from storage (helper method)
-   */
-  // DELEGATED TO ArtistStateProcessor (Phase 2 engine-seams PR-11). Same-signature
-  // wrapper; called from the applyEffects hub for global artist targeting.
-  private async loadSignedArtists(): Promise<Artist[]> {
-    return new ArtistStateProcessor().loadSignedArtists(
-      this.weekContext({ changes: [] } as unknown as WeekSummary)
-    );
-  }
-
-  /**
    * Applies immediate effects to game state
    * @param effects - Effects to apply
    * @param summary - Week summary to update
@@ -657,6 +605,10 @@ export class GameEngine {
    * @param meetingName - Optional meeting name for logging
    * @param choiceId - Optional choice ID for logging
    */
+  // KEPT (PR-12): no longer called by advanceWeek (moved into ActionProcessor),
+  // but the mood test suite drives the engine's effect application directly via
+  // `(engine as any).applyEffects(...)` (immediate-mood-effect, mood-application-
+  // verification, etc.), so this delegate is part of the tested engine surface.
   private async applyEffects(effects: Record<string, number>, summary: WeekSummary, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
     return new ActionProcessor().applyEffects(
       this.weekContext(summary),
@@ -753,30 +705,6 @@ export class GameEngine {
     return this.financialSystem.getAccessChance(type, tier);
   }
   
-  /**
-   * Helper to get project duration from balance config
-   */
-  private getProjectDuration(projectType: string): number {
-    // Default durations based on project type
-    const durations = {
-      'single': 2,
-      'ep': 4, 
-      'mini-tour': 1,
-      'mini_tour': 1
-    };
-    
-    return durations[projectType.toLowerCase() as keyof typeof durations] || 2;
-  }
-
-  /**
-   * Calculates weekly operational costs including artist payments
-   */
-  private async calculateWeeklyBurn(): Promise<number> {
-    return new WeeklyFinancesProcessor().calculateWeeklyBurn(
-      this.weekContext({ changes: [] } as unknown as WeekSummary)
-    );
-  }
-
   /**
    * Calculates weekly operational costs with detailed breakdown for transparency
    */
@@ -917,55 +845,11 @@ export class GameEngine {
     );
   }
 
-  /**
-   * Calculates budget bonus for song quality using diminishing returns
-   * Now works with per-song budget amounts for clearer understanding
-   */
-  // DELEGATED TO FinancialSystem (originally lines 1559-1619)
-  calculateBudgetQualityBonus(
-    budgetPerSong: number,
-    projectType: string,
-    producerTier: string,
-    timeInvestment: string,
-    songCount: number = 1
-  ): number {
-    return this.financialSystem.calculateBudgetQualityBonus(
-      budgetPerSong,
-      projectType,
-      producerTier,
-      timeInvestment,
-      songCount
-    );
-  }
-
-  /**
-   * Calculates song count impact on individual song quality
-   */
-  // DELEGATED TO FinancialSystem (originally lines 1534-1560)
-  calculateSongCountQualityImpact(songCount: number): number {
-    return this.financialSystem.calculateSongCountQualityImpact(songCount);
-  }
-
   // MOVED TO SongGenerationProcessor (Phase 2 engine-seams PR-8):
   //   generateSong, generateWeeklyProjectSongs, shouldGenerateProjectSongs,
   //   getSongsPerWeek, generateSongMood, generateSongEconomicInsight,
   //   generateProjectCompletionSummary. These had no callers outside the moved
   //   song-generation set, so no engine delegates are kept for them.
-
-  /**
-   * Calculates ongoing revenue for an individual released song using streaming decay formula
-   * Each song has its own decay pattern based on individual quality and release timing
-   */
-  // DELEGATED TO ReleaseProcessor (Phase 2 engine-seams PR-10). Same-signature
-  // wrapper; kept because the release pipeline formerly called
-  // this.calculateOngoingSongRevenue.
-  private async calculateOngoingSongRevenue(song: any): Promise<number> {
-    return await new ReleaseProcessor().calculateOngoingSongRevenue(
-      this.weekContext({ changes: [] } as unknown as WeekSummary),
-      song
-    );
-  }
-
 
   /**
    * Processes song release - calculates individual song streams and sets initial values
@@ -1108,37 +992,8 @@ export class GameEngine {
   // LEGACY METHOD REMOVED - calculateCityRevenue()
   // Replaced with unified FinancialSystem calculations in processUnifiedTourRevenue()
 
-  /**
-   * Processes tour revenue using unified FinancialSystem calculations
-   * Replaces legacy random-based city revenue system
-   */
-  // DELEGATED TO TourProcessor (Phase 2 engine-seams PR-7). Same-signature wrapper;
-  // still called from advanceProjectStages (stays in engine until PR-9).
-  private async processUnifiedTourRevenue(project: any, cityNumber: number, summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    return new TourProcessor().processUnifiedTourRevenue(
-      this.weekContext(summary, dbTransaction),
-      project,
-      cityNumber,
-      dbTransaction
-    );
-  }
-
   // LEGACY METHOD REMOVED - processTourCityRevenue()
-  // Replaced with processUnifiedTourRevenue() using FinancialSystem calculations
-
-  /**
-   * Processes marketing campaigns (PR, Digital Ads, etc.)
-   */
-  private async processMarketing(action: GameEngineAction, summary: WeekSummary): Promise<void> {
-    return new ActionProcessor().processMarketing(this.weekContext(summary), action);
-  }
-
-  /**
-   * Processes artist dialogue interactions
-   */
-  private async processArtistDialogue(action: GameEngineAction, summary: WeekSummary): Promise<void> {
-    return new ActionProcessor().processArtistDialogue(this.weekContext(summary), action);
-  }
+  // Replaced with TourProcessor.processUnifiedTourRevenue() using FinancialSystem calculations
 
   /**
    * Process weekly charts after releases have been processed
@@ -1240,189 +1095,6 @@ export class GameEngine {
   // Budget efficiency is now handled by FinancialSystem.getBudgetEfficiencyRating()
 
   /**
-   * Calculates outcomes when a project completes
-   */
-  async calculateProjectOutcomes(project: any, summary: WeekSummary): Promise<{
-    revenue: number;
-    streams?: number;
-    pressPickups?: number;
-    description: string;
-  }> {
-    console.log(`[DEBUG] calculateProjectOutcomes called with project:`, {
-      type: project.type,
-      name: project.name,
-      quality: project.quality
-    });
-    
-    let revenue = 0;
-    let streams = 0;
-    let pressPickups = 0;
-    let description = '';
-
-    switch (project.type) {
-      case 'Single':
-      case 'single':
-      case 'EP':
-      case 'ep':
-        // Get artist popularity
-        const artist = await this.storage?.getArtist(project.artistId);
-        const artistPopularity = artist?.popularity || 0;
-
-        // Calculate streaming outcome
-        console.log(`[DEBUG] Calculating streams for ${project.type} project:`, {
-          quality: project.quality || 40,
-          playlistAccess: this.gameState.playlistAccess || 'none',
-          reputation: this.gameState.reputation || 5,
-          marketingSpend: project.marketingSpend || 0,
-          artistPopularity: artistPopularity
-        });
-
-        streams = this.calculateStreamingOutcome(
-          project.quality || 40,
-          this.gameState.playlistAccess || 'none',
-          this.gameState.reputation || 5,
-          project.marketingSpend || 0,
-          artistPopularity
-        );
-        
-        console.log(`[DEBUG] Calculated ${streams} streams for project ${project.name}`);
-        
-        // Revenue = streams × revenue per stream using balance.json configuration
-        const streamingConfig = this.gameData.getStreamingConfigSync();
-        const revenuePerStream = streamingConfig.ongoing_streams.revenue_per_stream;
-        revenue = streams * revenuePerStream;
-        console.log(`[DEBUG] Revenue calculation: ${streams} * ${revenuePerStream} = ${revenue}`);
-        
-        // Calculate press coverage
-        pressPickups = this.calculatePressPickups(
-          this.gameState.pressAccess || 'none',
-          project.marketingSpend || 0,
-          this.gameState.reputation || 5,
-          false // No story flag for basic project completion
-        );
-        
-        // Update reputation based on success
-        const reputationGain = Math.floor(streams / 10000); // 1 rep per 10k streams
-        this.gameState.reputation = Math.min(100, (this.gameState.reputation || 0) + reputationGain);
-        
-        description = `${streams.toLocaleString()} streams, $${Math.round(revenue).toLocaleString()} revenue`;
-        break;
-        
-      case 'Mini-Tour':
-      case 'mini_tour':
-        // NO CALCULATIONS HERE - just check if tour generated revenue
-        const tourStats = project.metadata?.tourStats;
-        if (tourStats?.cities && tourStats.cities.length > 0) {
-          // Sum revenue from completed cities - NO RECALCULATION
-          revenue = tourStats.cities.reduce((sum: number, city: any) => sum + (city.revenue || 0), 0);
-        } else {
-          revenue = 0; // No cities completed yet
-        }
-        
-        description = `$${Math.round(revenue).toLocaleString()} tour revenue`;
-        break;
-    }
-    
-    // Add revenue to summary
-    summary.revenue += revenue;
-    
-    // Add streams to summary for music projects
-    if (streams > 0) {
-      summary.streams = (summary.streams || 0) + streams;
-    }
-    
-    // Add detailed changes
-    if (streams > 0) {
-      summary.changes.push({
-        type: 'revenue',
-        description: `Streaming: ${streams.toLocaleString()} streams`,
-        amount: Math.round(revenue)
-      });
-    }
-    
-    if (pressPickups > 0) {
-      summary.changes.push({
-        type: 'unlock',
-        description: `Press coverage: ${pressPickups} pickup${pressPickups > 1 ? 's' : ''}`
-      });
-    }
-    
-    return { revenue, streams, pressPickups, description };
-  }
-
-  /**
-   * Tests the producer tier and time investment integration systems
-   * Used for debugging and validation of the complete integration
-   */
-  testProducerTierIntegration(): {
-    systemsLoaded: boolean;
-    availableTiers: string[];
-    availableTimeInvestments: string[];
-    costCalculations: Record<string, any>;
-    qualityCalculations: Record<string, any>;
-    validationTests: Record<string, any>;
-  } {
-    const reputation = this.gameState.reputation || 0;
-    
-    // Test system loading
-    const producerSystem = this.gameData.getProducerTierSystemSync();
-    const timeSystem = this.gameData.getTimeInvestmentSystemSync();
-    
-    // Test tier availability
-    const availableTiers = this.gameData.getAvailableProducerTiers(reputation);
-    const availableTimeInvestments = Object.keys(timeSystem);
-    
-    // Test cost calculations
-    const costCalculations: Record<string, any> = {};
-    for (const tier of availableTiers) {
-      for (const time of availableTimeInvestments) {
-        try {
-          const cost = this.calculateEnhancedProjectCost('single', tier, time, 50);
-          costCalculations[`${tier}_${time}`] = { cost, success: true };
-        } catch (error) {
-          costCalculations[`${tier}_${time}`] = { error: error instanceof Error ? error.message : 'Unknown error', success: false };
-        }
-      }
-    }
-    
-    // Test quality calculations
-    const qualityCalculations: Record<string, any> = {};
-    const mockArtist = { mood: 70, archetype: 'workhorse' };
-    const mockProject = { quality: 50, producerTier: 'regional', timeInvestment: 'extended' };
-    
-    try {
-      const quality = this.calculateEnhancedSongQuality(mockArtist, mockProject, 'regional', 'extended');
-      qualityCalculations.enhanced = { quality, success: true };
-    } catch (error) {
-      qualityCalculations.enhanced = { error: error instanceof Error ? error.message : 'Unknown error', success: false };
-    }
-    
-    // Test validation systems
-    const validationTests: Record<string, any> = {};
-    
-    // Test valid combination
-    const validTest = this.validateProducerTierAndTimeInvestment('local', 'standard', reputation);
-    validationTests.valid_combination = validTest;
-    
-    // Test invalid reputation
-    const invalidRepTest = this.validateProducerTierAndTimeInvestment('legendary', 'standard', 5);
-    validationTests.invalid_reputation = invalidRepTest;
-    
-    // Test business rule violation
-    const businessRuleTest = this.validateProducerTierAndTimeInvestment('legendary', 'rushed', 100);
-    validationTests.business_rule_violation = businessRuleTest;
-    
-    return {
-      systemsLoaded: Object.keys(producerSystem).length > 0 && Object.keys(timeSystem).length > 0,
-      availableTiers,
-      availableTimeInvestments,
-      costCalculations,
-      qualityCalculations,
-      validationTests
-    };
-  }
-  
-  /**
    * Enhanced weekly summary generation with economic insights
    */
   private generateEconomicInsights(summary: WeekSummary): void {
@@ -1484,16 +1156,6 @@ export class GameEngine {
       songCount,
       producerTier,
       timeInvestment
-    );
-  }
-
-  /**
-   * Generates human-readable financial breakdown string
-   */
-  private generateFinancialBreakdown(f: WeeklyFinancials): string {
-    return new WeeklyFinancesProcessor().generateFinancialBreakdown(
-      this.weekContext({ changes: [] } as unknown as WeekSummary),
-      f
     );
   }
 
