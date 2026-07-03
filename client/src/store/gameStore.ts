@@ -257,8 +257,7 @@ interface GameStore {
   loadGame: (gameId: string) => Promise<void>;
   loadGameFromSave: (saveId: string, snapshot: GameSaveSnapshot, mode?: 'overwrite' | 'fork') => Promise<string>;
   createNewGame: (campaignType: string, labelData?: LabelData) => Promise<GameState>;
-  updateGameState: (updates: Partial<GameState>) => Promise<void>;
-  
+
   // Weekly actions
   selectAction: (actionId: string) => Promise<void>;
   removeAction: (actionId: string) => Promise<void>;
@@ -633,70 +632,6 @@ export const useGameStore = create<GameStore>()(
         } catch (error) {
           console.error('Failed to create game:', error);
           throw error;
-        }
-      },
-
-      // Update game state
-      updateGameState: async (updates: Partial<GameState>) => {
-        const { gameState } = get();
-        if (!gameState) return;
-
-        try {
-          const response = await apiRequest('PATCH', `/api/game/${gameState.id}`, updates);
-          
-          // Clone response to safely read the body
-          const clonedResponse = response.clone();
-          let responseText;
-          try {
-            responseText = await clonedResponse.text();
-          } catch (e) {
-            console.error('[updateGameState] Failed to read response text:', e);
-            responseText = '';
-          }
-          
-          // If response body is empty or not valid JSON, merge updates locally
-          if (!responseText || responseText.trim() === '') {
-            console.warn('[updateGameState] Empty response from server, applying updates locally');
-            // Apply updates to local state
-            const updatedState = { ...gameState, ...updates };
-            set({ gameState: updatedState });
-            
-            // Try to sync with server in background
-            setTimeout(async () => {
-              try {
-                const syncResponse = await apiRequest('GET', `/api/game/${gameState.id}`);
-                const serverState = await syncResponse.json();
-                set({ gameState: serverState });
-                console.log('[updateGameState] Synced with server state');
-              } catch (syncError) {
-                console.error('[updateGameState] Failed to sync with server:', syncError);
-              }
-            }, 1000);
-            
-            return;
-          }
-          
-          // Try to parse the response
-          try {
-            const updatedState = JSON.parse(responseText);
-            set({ gameState: updatedState });
-          } catch (parseError) {
-            console.error('[updateGameState] Failed to parse response:', parseError);
-            // Apply updates locally as fallback
-            const updatedState = { ...gameState, ...updates };
-            set({ gameState: updatedState });
-          }
-        } catch (error) {
-          console.error('Failed to update game state:', error);
-          // If it's a 404, the game doesn't exist in the database
-          if ((error as any).status === 404) {
-            console.error('Game not found in database. You may need to create a new game.');
-            // Don't throw - just apply updates locally
-            const updatedState = { ...gameState, ...updates };
-            set({ gameState: updatedState });
-          } else {
-            throw error;
-          }
         }
       },
 
