@@ -83,6 +83,26 @@
 - After PR-18: move the Phase 1 plan doc to COMPLETED, final docs sweep, then Phase 2 (engine seams) planning.
 - Local env: dev server and Docker test DB (`music-label-test-db`) were **stopped** at session end. Restart with `npm run test:db:start` before running tests.
 
+## 📅 Session Log — July 1, 2026 (Session 3 — UI overflow/layout fixes)
+
+**Interactive UI-polish session driven from the live preview.** Played the app at non-wide window sizes, found five overflow/layout bugs, fixed and pixel-verified each in the browser, merged same-day. → **PR #40** (merged to `main`, `5023ae8`).
+
+**Done this session:**
+- **SaveGameModal scroll** — with many saves the Save & Load dialog grew past the viewport. Now capped at `max-h-[85vh]`; the saves list is the only scrollable region, with the save-name input and Export/Import/Cancel footer pinned (`client/src/components/SaveGameModal.tsx`).
+- **Avatar bleed-through cropped** — on the A&R Office and Artist pages, the absolutely-positioned character avatars overlapped the translucent cards below and showed through. Fix pattern: give the avatar wrapper a height equal to its negative-top offset + `overflow-hidden`, so the image crops exactly at the card's top edge (A&R: `-top-72`/`h-72`; Artist: `-top-40` + 40px tab bar + 24px gap → `h-56`). ⚠️ **The clip height mirrors the `-top-*` offset — if you reposition an avatar, change both together.**
+- **MetricsDashboard responsive fix** — the desktop 3/5/3 11-column grid started at `lg` (1024px), leaving ~60px cells that money strings overflowed and pushed past the viewport (clipping Access Tiers). Sections now stack below `xl` with `min-w-0`. Money display unified via `formatMoney`/`formatSignedMoney` helpers: whole dollars, sign before the symbol (`-$16,687`, not `$-16,687.5`) across desktop/tablet/mobile layouts.
+- **MusicCalendar containment** — the events panel next to the fixed-width calendar couldn't shrink (flex `min-width:auto`), so event titles/week header spilled outside the card. Added `min-w-0` + word wrap; the panel now wraps below the calendar when the card is narrow (`basis-44`).
+- **GameLayout root-cause fix** — `SidebarInset`'s flex chain lacked `min-w-0`, so any wide table's intrinsic width stretched the whole page horizontally instead of scrolling inside its `overflow-auto` wrapper (traced to a dashboard table with ~766px min-content). Fixed at the layout level in `client/src/layouts/GameLayout.tsx`, which covers **every** page.
+- **Verified**: each fix measured live in the browser preview (pixel-exact crop assertions, zero horizontal overflow at 1100px and 1440px); `tsc` green. Merged without waiting for CI per user call (UI-only changes).
+- **Tooling**: added machine-local `.claude/launch.json` (dev-server launch config for the preview tooling) — intentionally **not committed**.
+
+**Open threads / next steps:**
+- **Phase 1 PR-2..12 still queued** (server routes decomposition) — unchanged from Session 2; start with bugReports → admin → emails.
+- The avatar crop pattern is per-page manual math; if more pages get overlay avatars, consider extracting a small `CroppedAvatar` component so offset and clip height can't drift apart.
+- Vitest suite was **not** run this session (UI-only changes, no Docker test DB started); run it as usual before the next non-trivial change.
+
+---
+
 ## 📅 Session Log — July 1, 2026 (Session 2 — architecture docs, scaling decision, Phase 0 + Phase 1 kickoff)
 
 **The big one: decided NOT to rewrite on a game engine, and started a 4-phase scaling arc instead.** Session went: stale-docs cleanup → "should I start over with a game engine?" conversation → diagnosis (the pain is monolith debt, not the web platform) → four-phase plan → Phase 0 executed and Phase 1 begun, all merged to `main` (PRs **#36–#39**).
