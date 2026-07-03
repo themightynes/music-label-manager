@@ -9,10 +9,10 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 2, 2026
-- **Total Items**: 45
-- **Completed**: 37
+- **Total Items**: 47
+- **Completed**: 38
 - **In Progress**: 0
-- **Pending**: 8
+- **Pending**: 9
 
 ---
 
@@ -731,18 +731,48 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
+### Comment 46: Tour estimate's totalBudget draws tier-RNG capacity even when explicit capacity is supplied 🟢
+**Status**: 📋 **PENDING**
+
+`POST /api/tour/estimate` (`server/routes/tour.ts`) computes `totalBudget` by drawing venue capacity from the tier-based RNG helper even when the caller already supplied an explicit `venueCapacity`, so the displayed estimate total can vary run-to-run for what should be a deterministic preview of the same inputs. It's display-only — nothing charges the player at estimate time — but it makes `canAfford` checks against the estimate flaky relative to what the actual tour (via `TourProcessor`) will do with the same explicit capacity.
+
+**Action**: Product/behavior decision needed — either have the estimate always honor an explicit `venueCapacity` when provided (matching `TourProcessor`'s actual behavior) or document that the estimate is intentionally a range and stop treating `totalBudget` as a single comparable number for `canAfford`.
+
+**Relevant Files**:
+- [server/routes/tour.ts](server/routes/tour.ts)
+- [shared/engine/processors/TourProcessor.ts](shared/engine/processors/TourProcessor.ts)
+
+*Identified 2026-07-02 during Phase 2 PR-7 (TourProcessor extraction + tour-estimate unification).*
+
+---
+
+### Comment 47: artistPopularity defaults differ between tour estimate route and engine (0 vs 50) 🟢
+**Status**: 📋 **PENDING**
+
+`POST /api/tour/estimate` defaults `artistPopularity` to `0` when the field is absent from the request, while `TourProcessor`'s actual week-advance tour processing (`shared/engine/processors/TourProcessor.ts`) defaults the same field to `50`. For any caller that omits `artistPopularity`, the estimate and the real tour outcome are computed against different assumed popularity — a behavioral inconsistency between the preview and the executed tour, in the same family as C44 (release preview vs. execution divergence).
+
+**Action**: Product/behavior decision needed — pick one canonical default (50 matches the engine's general "unknown artist" convention used elsewhere) and align the route to it.
+
+**Relevant Files**:
+- [server/routes/tour.ts](server/routes/tour.ts)
+- [shared/engine/processors/TourProcessor.ts](shared/engine/processors/TourProcessor.ts)
+
+*Identified 2026-07-02 during Phase 2 PR-7 (TourProcessor extraction + tour-estimate unification).*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (C44)
-- 🟢 Medium: 3 items (C41, C42, C43)
+- 🟢 Medium: 5 items (C41, C42, C43, C46, C47)
 - 🔵 Low: 3 items (C26, C32, C45)
 
 ### By Status
-- ✅ Completed: 38 items (84.4%)
+- ✅ Completed: 38 items (81.3%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 7 items (15.6%)
+- 📋 Pending: 9 items (18.7%)
 
 ---
 

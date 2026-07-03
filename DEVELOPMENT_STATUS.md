@@ -4,6 +4,36 @@
 
 ---
 
+## 📅 Session Log — July 2, 2026 Late Evening (Phase 2 engine seams: full decomposition, PRs #72–#84)
+
+**Phase 2 (engine seams) is DONE and merged to `main` — the entire 13-PR sequence executed in one session, same orchestrator/subagent factory pattern as Phase 1.** `shared/engine/game-engine.ts` went **5,116 → 1,136 lines**; 8 new processor modules live under `shared/engine/processors/` (~3,900 lines total). The engine is now fully deterministic and covered by a golden-master characterization harness. Suite grew **545 → 692 passing (3 skipped)**.
+
+**Done this session:**
+- **PR-1 (#72) — determinism foundation**: seeded every remaining gameplay `Math.random()` call — the song-quality outlier roll, tour attendance variance, and a `FinancialSystem` breakthrough-growth roll the original plan missed — through the seeded RNG. Deleted a dead block that was silently shifting the RNG stream. Switched A&R `discoveryTime` from a wall-clock ISO string to sim-time (`week N`) so save-restore is reproducible. Distribution-verified (outlier rates, variance bounds) before merge.
+- **PR-2 (#73) — golden-master harness**: 8 seeded fixture scenarios run `advanceWeek` end-to-end; a normalizer strips UUIDs/timestamps so snapshots are byte-comparable; run-twice stability check confirms determinism. This became the safety net for every extraction PR that followed.
+- **PR-3 — `advanceWeekService` extraction**: pulled the orchestration out of `gameLoop.ts` (407 → 75 lines); the two-transaction split moved verbatim (no transactionality changes — that's the filed D6 follow-up).
+- **PR-4 — A&R artists GET made a pure read**: deleted an in-GET `Math.random()` write and legacy dual-format branches; `arOffice.ts` 408 → 284 lines.
+- **PR-5..11 — the 8 engine processors**, each a verbatim move guarded byte-identical by the golden master, using a new `WeekContext` pattern + `GameEngine.weekContext()` helper: `AROfficeProcessor`, `ProgressionProcessor` + `WeeklyFinancesProcessor`, `TourProcessor`, `SongGenerationProcessor` (+17 quality unit tests — first-ever coverage for the quality formula), `ProjectStageProcessor` (**B6 resolved** — deleted the ~95-line no-op "recorded" pass and wired the previously-never-firing "ready for release" notification; songs are born recorded), `ReleaseProcessor` (the biggest, ~1,250 lines, split across 2 commits), and `ActionProcessor` + `ArtistStateProcessor` (the `applyEffects` coupling hub, extracted last by design).
+- **PR-12 — dead code + dead config sweep**: ~440 net lines removed (`quality_bonus`/`segment_slopes` ranges/`quality_per_song_impact`/`project_durations` config keys + their types); stopped the engine writing legacy A&R singular keys (re-sourced a hidden email read along the way to stay byte-identical).
+- **PR-13 (#84) — engine-boundary leftovers**: artists PATCH now `.strict()`-whitelisted (`{mood, energy}` only, `INVALID_ARTIST_FIELDS` on violation); removed the stale `defaultRoles` TODO; routed `GET /api/game-state` auto-create through the new `gameCreationService.createBareGame` (**D4** — deliberately the *bare* creation method, not full `createGame`, because `createGame` also seeds a label + executives, which would suppress `GamePage`'s label-creation modal; documented in the PR).
+
+**The one player-visible change:** the B6 fix in PR-9 — the "recording complete, ready for release" notification now actually fires. Everything else in this phase is refactor-only; the plan's three sanctioned behavior changes (seeded-RNG per-seed differences, the B6 notification, the A&R legacy-branch response) are the only intended deltas.
+
+**Decisions made:**
+- **D1**: engine stays in `shared/` (server-only in practice, but a move to `server/engine/` is zero-behavior-gain churn; revisit in Phase 3).
+- **D6**: whole-week transaction atomicity stays out of scope — the per-step tx boundaries moved verbatim; wrapping the whole week in one transaction is a filed hardening follow-up, not bundled into this phase.
+- Determinism (PR-1) and the golden master (PR-2) were treated as the enabling foundation — nothing in PR-3 onward was allowed to move until both landed, since RNG-stream order is behavior and the golden master is what proves a move is verbatim.
+
+**Honest status: everything above is merged to `main`.** No open PRs from this phase.
+
+**Open threads / next steps:**
+- **Manual authenticated smoke pass is STILL owed** (carried over from Phase 1, not done this session either): new game → sign artist → create project → plan release → A&R op → advance week → save/restore.
+- **Two tour-estimate inconsistencies found during PR-7**, both need a product/behavior decision (logged to the tech-debt backlog this session):
+  1. `POST /api/tour/estimate`'s `totalBudget` draws venue-capacity from the tier RNG even when the caller supplies an explicit capacity — display-only today, but makes `canAfford` checks flaky against the actual tour outcome.
+  2. `artistPopularity` defaults to `0` in the estimate route but `50` in the engine's actual tour processing — the estimate and the real tour can diverge for the same artist.
+- **Whole-week transaction atomicity** (D6 follow-up) — still just a filed idea, not scheduled.
+- **Phase 3 (client state ownership) planning can begin.**
+
 ## 📅 Session Log — July 2, 2026 Evening (PR-16..18 services + security hardening wave)
 
 **Continued the Phase 1 service-extraction sequence (PR-16, PR-17, PR-18) and, in parallel, ran a security-focused wave off this morning's three `docs/98-research` reviews (RECORDING_SESSION, OWNERSHIP_AUTHORIZATION_SWEEP, AR_OFFICE).** Same orchestrator pattern as the day session: parallel scout subagents plus one mutating agent per checkout, worktree-isolated, characterization-test-first for every behavior-touching PR. **Everything below is merged to `main`** — PR-16 (#61), PR-17 (#63), PR-18 (#64), and the full security wave.
