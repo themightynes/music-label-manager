@@ -935,15 +935,11 @@ export const useGameStore = create<GameStore>()(
             console.warn('[Autosave] Failed to create autosave:', autosaveError);
           }
 
-          // Trigger tier unlock toasts based on weekly summary changes
-          try {
-            const { triggerUnlockToasts } = await import('@/utils/unlockToasts')
-            if (result?.summary) {
-              triggerUnlockToasts(result.summary, toast)
-            }
-          } catch (toastErr) {
-            console.warn('[UNLOCK TOASTS] Skipped due to error:', toastErr)
-          }
+          // Phase 4 PR-3: tier unlocks now surface IN the WeekSummary modal with
+          // hero visual weight (see WeekSummary "Milestone Moments"). Every
+          // advance-week path shows that modal (Dashboard auto-opens it on a
+          // fresh weeklyOutcome), so the old sequential unlock toasts — which a
+          // player reading the modal would miss anyway — are removed as redundant.
 
           // Always attempt to load discovered artists after week advancement if there was an active A&R operation
           const hadActiveAROperation = result?.summary?.arOffice?.completed;
