@@ -425,8 +425,9 @@ export function ActiveTours() {
               </Badge>
               <Button
                 size="sm"
+                variant="outline"
                 onClick={handleNavigateToLivePerformance}
-                className="text-neon-cyan border border-neon-cyan/35 bg-neon-cyan/[0.06] hover:bg-neon-cyan/10 rounded-button text-xs px-3 py-1.5"
+                className="rounded-button text-xs px-3 py-1.5"
               >
                 + Live Performance
               </Button>

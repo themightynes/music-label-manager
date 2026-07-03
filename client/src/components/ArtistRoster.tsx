@@ -236,7 +236,8 @@ export function ArtistRoster() {
               <Button
                 onClick={() => setShowDiscoveryModal(true)}
                 size="sm"
-                className="w-full justify-center gap-2 font-semibold text-neon-cyan border border-neon-cyan/35 bg-neon-cyan/[0.06] hover:bg-neon-cyan/10 rounded-button"
+                variant="outline"
+                className="w-full justify-center gap-2 font-semibold rounded-button"
               >
                 <Search className="w-4 h-4" />
                 Scouted Artists
@@ -331,7 +332,8 @@ export function ArtistRoster() {
                   <Button
                     onClick={() => setShowDiscoveryModal(true)}
                     size="sm"
-                    className="w-full justify-center gap-2 font-semibold text-neon-cyan border border-neon-cyan/35 bg-neon-cyan/[0.06] hover:bg-neon-cyan/10 rounded-button"
+                    variant="outline"
+                    className="w-full justify-center gap-2 font-semibold rounded-button"
                   >
                     <Plus className="w-4 h-4" />
                     Scouted Artists ({3 - artists.length} slots available)

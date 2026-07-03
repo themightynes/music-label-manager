@@ -129,7 +129,7 @@ export function ChartDataTable<TData>({
                     rowHighlight?.(row)
                       ? 'bg-neon-lilac/10 hover:bg-neon-lilac/20'
                       : isTopTen
-                        ? 'bg-neon-lilac/[0.04] shadow-glow-lilac hover:bg-white/[0.045]'
+                        ? 'bg-neon-lilac/[0.04] hover:bg-white/[0.045]'
                         : 'hover:bg-white/[0.045]'
                   )}
                 >
