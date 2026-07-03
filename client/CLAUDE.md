@@ -46,7 +46,8 @@
 
 **Cache Management:**
 - Use TanStack Query for server data
-- After week advancement, invalidate server-data queries so new state shows immediately. ⚠️ TanStack matches query keys **element-by-element**, not by string prefix: invalidating `['emails']` does NOT match the scoped email keys `['emails:list', gameId]` / `['emails:unread-count', gameId]`. Use a predicate (`invalidateQueries({ predicate: q => q.queryKey[0] === EMAIL_LIST_SCOPE || q.queryKey[0] === EMAIL_UNREAD_SCOPE })`) or the exact scoped keys. Also invalidate `['artist-roi']`, `['executives']`.
+- After week advancement, invalidate server-data queries so new state shows immediately. ⚠️ TanStack matches query keys **element-by-element**, not by string prefix: invalidating `['emails']` does NOT match the scoped email keys `['emails:list', gameId]` / `['emails:unread-count', gameId]`. Use a predicate (`invalidateQueries({ predicate: q => q.queryKey[0] === EMAIL_LIST_SCOPE || q.queryKey[0] === EMAIL_UNREAD_SCOPE })`) or the exact scoped keys.
+- Real key shapes by domain (Phase 3): analytics ROI keys are `[url, 'analytics:<scope>-roi', { gameId, ... }]` (scope at element **1** — match via predicate, as `advanceWeek` does); executives key on `executivesQueryKey(gameId)` = `['executives', gameId]` (exported by `hooks/useExecutives.ts`); charts key on `['charts:top10'|'charts:top100', gameId]` (`hooks/useCharts.ts`). Never invalidate bare `['artist-roi']`/`['executives']` — those match nothing (this was a real bug, fixed Phase 3 PR-3). `tests/client/query-key-contract.test.ts` enforces that every store invalidation matches a real hook key — extend it when adding scopes.
 
 ## XState Machines
 - `machines/executiveMeetingMachine.ts` - Multi-step executive meeting flows
