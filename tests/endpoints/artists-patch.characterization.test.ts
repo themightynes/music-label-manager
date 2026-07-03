@@ -149,20 +149,10 @@ describe('PATCH /api/artists/:id (characterization)', () => {
   });
 
   // --- Mass-assignment behavior flip -------------------------------------
-
-  // PRE-HARDENING baseline: server-computed `talent` is silently written
-  // through the raw-body pass-through. This block is REMOVED when the
-  // whitelist lands (it necessarily fails afterwards). Kept here to document
-  // the hole the whitelist closes.
-  it.skip('(pre-hardening baseline) silently mass-assigns a server-computed field (talent)', async () => {
-    const { artistId } = await seedGameWithArtist(TEST_USER_ID);
-    const res = await request(app)
-      .patch(`/api/artists/${artistId}`)
-      .send({ talent: 99 });
-    expect(res.status).toBe(200);
-    const [row] = await db.select().from(artists).where(eq(artists.id, artistId));
-    expect(row.talent).toBe(99); // mass-assignment: raw body written through
-  });
+  // The skipped "(pre-hardening baseline)" test documenting the raw-body
+  // mass-assignment hole was deleted after the PR-13 whitelist merged — the
+  // flip is preserved in git history; the post-hardening pins below cover
+  // current behavior.
 
   it('(post-hardening) rejects an unknown / server-computed field with 400 INVALID_ARTIST_FIELDS', async () => {
     const { artistId } = await seedGameWithArtist(TEST_USER_ID);
