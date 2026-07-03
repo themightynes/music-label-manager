@@ -4,6 +4,41 @@
 
 ---
 
+## 📅 Session Log — July 3, 2026 (Phase 3 COMPLETE + backlog cleared: PRs #87–#96, C26/C49 fixed, C32/C42/C43 dispositioned)
+
+**Phase 3 (client state ownership) planned AND executed in one orchestrated session, plus the tech-debt backlog fully dispositioned.** Ran as orchestrator + subagent factory (one Opus/Sonnet agent per PR in isolated worktrees, adversarial reviewer subagent on every med-high-risk PR before merge, fresh-context verifier at the end). Merge policy this session: user-granted self-merge on green CI. Everything below is merged to `main` (final: `0885ff0` + docs commits); full suite **774/774** (was 696), `tsc` clean, CI green on `main`'s own push runs.
+
+**Backlog work (all merged):**
+- **C49 ✅** (`2b57880`) — `loadGameFromSave` now invalidates `EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE` keyed on the server-confirmed `restoredGameId` (covers overwrite + fork; both SaveGameModal call sites funnel through it). Regression-tested in the Phase 3 client net.
+- **C26 ✅** (PR #89) — `ArtistPage.tsx` **1,180 → 369 lines**; five tabs + `PerformanceMetrics` extracted as `React.memo` components under `client/src/components/artist/` with the page's first-ever tests (12 render smokes). Independent review confirmed byte-identical JSX and verified every dead-code deletion against pre-refactor main. Avatar-crop block untouched.
+- **C32 ⏸️ deferred with teeth** — cap quantified as unreachable (~100–500 emails per 52-week campaign vs the 10,000 cap; no per-artist/per-song weekly email loops exist — three independent scouts agreed); the dead-write `truncated` flag is now surfaced as an export toast (`8669235`). Saves-list warning would need a server change (out of scope).
+- **C42/C43 ⏸️** — explicitly deferred by product decision (user call at session start); annotated in the backlog.
+- **C50 🆕 logged** — `tests/client/` jsdom tests carry an incidental Docker-DB dependency via the shared `tests/setup.ts` `beforeAll`; low, not scheduled.
+- Deleted the stale `_tmp-advance-week-timing.test.ts` scratch diagnostic.
+
+**Phase 3 (PRs #87–#96, plan doc: `[READY] phase-3-client-state-ownership-plan.md`):**
+- **PR-1 #87** — client characterization net (`tests/client/`): gameStore action pins, snapshot-shape pin, and a **query-key contract test** (every store invalidation must match a real hook key) with 5 red pins via `it.fails`.
+- **PR-3 #88** — fixed the four dead `['*-roi']` invalidations (real keys have the scope at element 1) + removed the dead `['executives']` one; red pins flipped green. The stale guidance in `client/CLAUDE.md` that prescribed the dead keys was corrected too.
+- **PR-4 #90** — the byte-identical 6-endpoint fan-out copied across `loadGame`/`loadGameFromSave`/`advanceWeek` collapsed into one `fetchGameBundle`.
+- **PR-5 #92 / PR-8 #91** — `useCharts` and `useExecutives` hooks (ran in parallel; #92 rebased over #91's contract-test edits — keep-both conflicts only). Executives: machine stays injection-pure via an `ensureQueryData`-backed injected fetch; thin store copy kept as sanctioned snapshot input.
+- **PR-6 #93 / PR-7 #94 / PR-9 #95** — `useReleases`+`useSongs`, `useProjects`, `useArtists`+`useDiscoveredArtists`: the store stopped owning all server collections; the fan-out seeds the query caches (`setQueryData`, zero extra requests); mutations invalidate. Projects/artists have no dedicated GET endpoints, so their queryFns select from `/api/game/:id` (client-only phase, no server changes). Reviewer on #95 caught a real regression — the A&R 404 short-circuit lost in the retry path — fixed pre-merge (`4047121`). The discovered-artists client-persistence worry was disproven: the persist partialize never included them; the server flags array is the source of truth.
+- **PR-10 #96** — the drift fix the phase existed for: `signArtist`/`createProject`/`planRelease` no longer do client-side money/creativeCapital arithmetic; they adopt server balances via `adoptServerBalances` refetch (none of the three endpoints return balances — verified in server code). Pins now use server numbers that differ from what client math would compute, plus a double-fire no-compounding test.
+- **PR-2 of the plan was dropped** — obsoleted by the C49 fix landing before planning finished (its test survives in PR-1).
+- **Fresh-context verifier: MEETS SPEC** — all 8 §4 acceptance criteria pass with independently observed evidence; the only find was a stale header counter in the backlog doc (fixed).
+
+**Decisions made:**
+- Session grants (via AskUserQuestion at start): self-merge on green CI; plan-and-execute Phase 3 continuously; C42 + C43 deferred.
+- `client/CLAUDE.md` State Management + Cache Management sections rewritten to describe the Phase 3 ownership model (the "Persisted" list had never matched the actual partialize).
+
+**Open threads / next steps:**
+- **Deferred from Phase 3** (plan §3 footnote): full `gameState`→TanStack migration (the spine, read in ~30 files) — a "Phase 3.5" candidate; `updateGameState` three-way fallback; orphan-cleanup path.
+- **Phase 4 (game feel)** still has no tickets; first candidate remains the staged WeekSummary reveal.
+- **D6** whole-week transaction atomicity — still a filed idea.
+- **Manual smoke of the Phase 3 surface** — the vitest net + reviewers covered it this session; a hands-on pass (plan→release→execute, A&R sign, save/restore, balance display after purchases) is cheap insurance next session.
+- Backlog: 46/50 completed, 3 deferred by decision, 1 pending (C50, low).
+
+---
+
 ## 📅 Session Log — July 3, 2026 (PR #86 merged, manual smoke pass, native-dialog UX sweep, C49)
 
 **Picked up the previous session's unmerged remote work, ran the manual authenticated smoke pass that's been owed since Phase 1, found and fixed a real UX bug it surfaced, then swept the whole client for the same bug class.** Everything below is merged to `main` (`612bb88`), pushed directly per user instruction (no PR).

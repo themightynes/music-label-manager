@@ -9,10 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 3, 2026
-- **Total Items**: 49
-- **Completed**: 44
+- **Total Items**: 50
+- **Completed**: 46
+- **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 5
+- **Pending**: 1 (C50)
 
 ---
 
