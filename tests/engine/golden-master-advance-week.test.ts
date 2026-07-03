@@ -49,6 +49,7 @@ const IDS = {
   arOffice: '00000000-0000-4000-8000-000000000006',
   catalog: '00000000-0000-4000-8000-000000000007',
   actions: '00000000-0000-4000-8000-000000000008',
+  tourLegacy: '00000000-0000-4000-8000-000000000009',
 };
 
 let db: TestDb;
@@ -262,6 +263,39 @@ describe('GameEngine.advanceWeek — golden master', () => {
     });
 
     const snap = await runScenario(IDS.tour, { id: IDS.tour, currentWeek: 3, venueAccess: 'clubs' });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('legacy-tour-week: Mini-Tour WITHOUT stored venueCapacity survives via tier-midpoint fallback (C41)', async () => {
+    // Legacy/imported saves predate the Phase 3 venue-capacity feature; their
+    // tour metadata has venueAccess but no venueCapacity. Pre-C41 this threw in
+    // TourProcessor pre-calculation and bricked week advancement for the save.
+    // Now it falls back to the tier range's deterministic midpoint
+    // (clubs [50,500] → 275) and the week completes.
+    await seedGame(IDS.tourLegacy, 3);
+    const artistId = await seedArtist(IDS.tourLegacy, { name: 'Legacy Tourer', popularity: 60 });
+    await db.insert(schema.projects).values({
+      id: crypto.randomUUID(),
+      gameId: IDS.tourLegacy,
+      artistId,
+      title: 'Legacy Tour',
+      type: 'Mini-Tour',
+      stage: 'production',
+      startWeek: 2,
+      totalCost: 30000,
+      quality: 50,
+      metadata: {
+        cities: 3,
+        venueAccess: 'clubs',
+        // venueCapacity deliberately absent
+      },
+    });
+
+    const snap = await runScenario(IDS.tourLegacy, { id: IDS.tourLegacy, currentWeek: 3, venueAccess: 'clubs' });
+    // The fallback capacity must show up in the revealed city data.
+    const digest: any = snap.digest;
+    const tourStats = digest.projects?.[0]?.metadata?.tourStats;
+    expect(tourStats?.cities?.[0]?.capacity).toBe(275);
     expect(snap).toMatchSnapshot();
   });
 

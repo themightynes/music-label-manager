@@ -1159,6 +1159,10 @@ export class ReleaseProcessor {
           );
           
           if (pressOutcome.pickups > 0) {
+            // C45: count pickups so weeklyStats.pressMentions reflects reality
+            // (the dashboard displayed a hardcoded 0 before this).
+            summary.pressMentions = (summary.pressMentions || 0) + pressOutcome.pickups;
+
             const reputationGain = pressOutcome.reputationGain;
             ctx.gameState.reputation = (ctx.gameState.reputation || 0) + reputationGain;
 

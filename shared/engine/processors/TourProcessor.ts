@@ -22,13 +22,22 @@
  * `GameEngine.advanceProjectStages` (which stays in the engine until PR-9); the
  * engine's same-signature delegate keeps that call site working.
  *
- * POST-EXTRACTION CHANGE (July 3, 2026, backlog C47): the `artistPopularity`
- * fallback changed from `|| 50` to `|| 1` — a zero/unset-popularity artist now
- * tours as an unknown instead of a mid-tier act. Sanctioned behavior change;
- * kept in lockstep with the estimate route (server/routes/tour.ts). No RNG-
- * stream impact (popularity affects magnitudes, not the number of draws).
+ * POST-EXTRACTION CHANGES (July 3, 2026 — sanctioned behavior changes, no
+ * longer character-identical to the extracted original):
+ * - C47: `artistPopularity` fallback `|| 50` → `|| 1` — a zero/unset-popularity
+ *   artist tours as an unknown, not a mid-tier act. Lockstep with the estimate
+ *   route (server/routes/tour.ts). No RNG-stream impact.
+ * - C41: a missing `metadata.venueCapacity` (legacy/imported tour) no longer
+ *   throws and bricks week advancement — it falls back to the deterministic
+ *   midpoint of the stored tier's capacity range. No RNG-stream impact.
+ * - C48: marketing-budget extraction uses `calculateTourCostsWithCapacity`
+ *   with the tour's actual capacity instead of `calculateTourCosts`'s hidden
+ *   random tier-capacity draw, so executed marketing spend equals what the
+ *   player chose and paid. REMOVES one RNG draw per tour pre-calculation —
+ *   the golden-master tour snapshot was regenerated for this.
  */
 import type { WeekContext } from './types';
+import { VenueCapacityManager } from '../FinancialSystem';
 
 export class TourProcessor {
   /**
@@ -75,21 +84,32 @@ export class TourProcessor {
         throw new Error(`Tour ${project.title} has invalid total cost: ${project.totalCost}`);
       }
 
-      // Calculate costs to extract marketing budget - LET IT CRASH IF INVALID
-      const costBreakdown = ctx.financialSystem.calculateTourCosts(venueAccess, totalCities, 0);
+      // C41: legacy/imported tours can predate stored capacity — fall back to
+      // the deterministic midpoint of the stored tier's range instead of
+      // throwing, so one malformed project can't brick week advancement.
+      // Midpoint, not an RNG draw: the seeded stream stays untouched.
+      let venueCapacity = storedVenueCapacity;
+      if (venueCapacity) {
+        console.log(`[TOUR EXECUTION] Using stored venue capacity: ${venueCapacity}`);
+      } else {
+        const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(venueAccess, ctx.gameData);
+        venueCapacity = Math.round((min + max) / 2);
+        console.warn(`[TOUR EXECUTION] Tour "${project.title}" has no stored venue capacity (legacy save?) — falling back to ${venueAccess} tier midpoint ${venueCapacity}`);
+      }
+
+      // C48: extract the marketing budget against the SAME capacity the tour
+      // actually plays (fixed fees are capacity×4 + capacity×2.7 per city), so
+      // marketing spend equals the budgetPerCity × cities the player chose and
+      // paid at creation. The old calculateTourCosts call drew a fresh random
+      // tier capacity here, silently inflating/deflating the marketing budget.
+      const costBreakdown = ctx.financialSystem.calculateTourCostsWithCapacity(venueCapacity, totalCities, 0);
       const marketingBudget = Math.max(0, project.totalCost - costBreakdown.totalCosts);
 
       console.log(`[TOUR EXECUTION] Pre-calculated ${totalCities} cities for ${project.title}`);
 
-      if (storedVenueCapacity) {
-        console.log(`[TOUR EXECUTION] Using stored venue capacity: ${storedVenueCapacity}`);
-      } else {
-        throw new Error(`[TOUR EXECUTION] Missing stored venue capacity for tour ${project.title}. Project metadata: ${JSON.stringify(currentMetadata)}`);
-      }
-
       // ENHANCED: SINGLE SOURCE OF TRUTH with capacity support
       const detailedBreakdown = ctx.financialSystem.calculateDetailedTourBreakdown({
-        venueCapacity: storedVenueCapacity, // Use stored capacity - NO FALLBACK
+        venueCapacity,
         venueTier: venueAccess, // Keep for backward compatibility
         artistPopularity,
         localReputation: reputation,

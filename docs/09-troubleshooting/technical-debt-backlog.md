@@ -657,15 +657,15 @@ The 60% tour-cancellation refund is computed entirely client-side (`client/src/c
 
 ---
 
-### Comment 41: Missing venueCapacity metadata hard-crashes tour week processing 🟢
-**Status**: 📋 **PENDING**
+### ~~Comment 41: Missing venueCapacity metadata hard-crashes tour week processing~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-`processUnifiedTourRevenue` (`shared/engine/game-engine.ts:3680`) throws if `project.metadata.venueCapacity` is absent, with no fallback to tier-based capacity generation. Capacity has been stored at creation since the Phase 3 venue-capacity feature, so this only bites legacy/imported tours — but a single bad project bricks week advancement for that save.
+**Resolution**: `TourProcessor.processUnifiedTourRevenue` (the code moved there in Phase 2 PR-7) no longer throws on a missing `metadata.venueCapacity` — it falls back to the **deterministic midpoint** of the stored `venueAccess` tier's capacity range (e.g. clubs [50,500] → 275) with a logged warning. Midpoint rather than an RNG draw so the seeded stream is untouched for other systems. Pinned by a new golden-master scenario (`legacy-tour-week`) that seeds a Mini-Tour without stored capacity and asserts the week completes with capacity 275.
 
-**Action**: Add a fallback (derive capacity from the stored `venueAccess` tier's range, or skip the tour with a logged warning) so one malformed project can't block the week.
+`processUnifiedTourRevenue` throws if `project.metadata.venueCapacity` is absent, with no fallback to tier-based capacity generation. Capacity has been stored at creation since the Phase 3 venue-capacity feature, so this only bites legacy/imported tours — but a single bad project bricks week advancement for that save.
 
 **Relevant Files**:
-- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+- [shared/engine/processors/TourProcessor.ts](shared/engine/processors/TourProcessor.ts)
 
 *Identified July 2, 2026 during the tour-experience code trace.*
 
@@ -716,12 +716,12 @@ The planning preview uses `GameEngine.calculateReleasePreview()` (`shared/engine
 
 ---
 
-### Comment 45: Dead release config and unsurfaced press data 🔵
-**Status**: 📋 **PENDING**
+### ~~Comment 45: Dead release config and unsurfaced press data~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-Two small leftovers from the release trace: (1) `data/balance/markets.json` `streaming_calculation.star_power_amplification` is `enabled: true` but nothing in the engine consumes it — dead config that reads as a live mechanic; (2) `calculatePressOutcome()` computes a detailed result (pickups count, structure) but only `reputationGain` is used, and `summary.pressMentions` is a standing `TODO` (`shared/engine/game-engine.ts:319`).
+**Resolution**: (1) The `star_power_amplification` claim was **incorrect** — the config IS live: `FinancialSystem.calculateStreamingOutcome` (called by `ReleaseProcessor` for every release's initial streams) applies the `1 + (popularity/100) × max_multiplier` amplification when `enabled`, and `tests/unit/financial-system-streaming.test.ts` covers the toggle. No change made; do NOT delete this config. (2) Press mentions are now surfaced: `WeekSummary.pressMentions` accumulates pickups from release press coverage (`ReleaseProcessor.calculatePressOutcome`) and PR campaigns (`ActionProcessor`), and `weeklyStats.pressMentions` reads it instead of the hardcoded `0` — MetricsDashboard's three press-mention displays now show real values. Golden-master release-week snapshot updated (only the new `pressMentions: 8` field appeared; no other numbers moved).
 
-**Action**: Either implement star-power amplification and press-mention surfacing or delete the dead config/fields so balance files reflect reality.
+Two small leftovers from the release trace: (1) `data/balance/markets.json` `streaming_calculation.star_power_amplification` is `enabled: true` but was believed unconsumed; (2) `calculatePressOutcome()` computes a detailed result (pickups count, structure) but only `reputationGain` was used, and `summary.pressMentions` was a standing `TODO`.
 
 **Relevant Files**:
 - [data/balance/markets.json](data/balance/markets.json)
@@ -765,18 +765,30 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
+### ~~Comment 48: Tour marketing-budget extraction drew tier-RNG capacity, drifting executed spend from the player's choice~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026 — fixed same session it was identified)
+
+**Resolution**: `TourProcessor.processUnifiedTourRevenue` extracted the marketing budget as `totalCost − calculateTourCosts(tier)`, where `calculateTourCosts` draws a **random** capacity from the tier range — so the executed tour's marketing spend differed from the `budgetPerCity × cities` the player chose and paid at creation by the delta between two capacity draws. Now extracts against the tour's actual capacity via `calculateTourCostsWithCapacity`, making executed marketing spend exactly the player's chosen amount. Sanctioned behavior change: removes one RNG draw per tour pre-calculation (shifts subsequent variance draws), so the golden-master `tour-week` snapshot was regenerated — the fixture now shows exactly $6,650/city marketing (was $8,619.80 inflated by a random ~206 capacity draw).
+
+**Relevant Files**:
+- [shared/engine/processors/TourProcessor.ts](shared/engine/processors/TourProcessor.ts)
+
+*Identified July 3, 2026 during the C46/C47 tour-estimate fixes; resolved same day.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (C44)
-- 🟢 Medium: 3 items (C41, C42, C43)
-- 🔵 Low: 3 items (C26, C32, C45)
+- 🟢 Medium: 2 items (C42, C43)
+- 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 40 items (85.1%)
+- ✅ Completed: 43 items (89.6%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 7 items (14.9%)
+- 📋 Pending: 5 items (10.4%)
 
 ---
 
