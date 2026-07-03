@@ -474,6 +474,9 @@ export interface WeekSummary {
   revenue: number;
   expenses: number;
   streams?: number;
+  // Press pickups earned this week (release press coverage + PR campaigns);
+  // surfaced as weeklyStats.pressMentions in MetricsDashboard (C45)
+  pressMentions?: number;
   reputationChanges: Record<string, number>;
   events: EventOccurrence[];
   // Per-artist stat changes (mood/energy/popularity) - UNIFIED FORMAT

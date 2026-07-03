@@ -669,6 +669,8 @@ export class ActionProcessor {
         );
         if (pressPickups > 0) {
           ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + pressPickups);
+          // C45: count pickups so weeklyStats.pressMentions reflects reality.
+          summary.pressMentions = (summary.pressMentions || 0) + pressPickups;
           effectDescription = `PR campaign generated ${pressPickups} press mentions`;
         } else {
           effectDescription = 'PR campaign completed - limited media pickup';

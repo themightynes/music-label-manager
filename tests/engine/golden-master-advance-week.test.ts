@@ -49,6 +49,8 @@ const IDS = {
   arOffice: '00000000-0000-4000-8000-000000000006',
   catalog: '00000000-0000-4000-8000-000000000007',
   actions: '00000000-0000-4000-8000-000000000008',
+  tourLegacy: '00000000-0000-4000-8000-000000000009',
+  multiArtistRelease: '00000000-0000-4000-8000-00000000000a',
 };
 
 let db: TestDb;
@@ -199,6 +201,51 @@ describe('GameEngine.advanceWeek — golden master', () => {
     expect(snap).toMatchSnapshot();
   });
 
+  it('multi-artist-release-week: release outcome uses the RELEASE artist, not the first artist in the game (C44)', async () => {
+    // Pre-C44 fix, processPlannedReleases fetched `getArtistsByGame(...)[0]` —
+    // with a multi-artist roster the outcome used the FIRST artist's popularity
+    // instead of the release artist's, so preview (correct artist) and
+    // execution diverged. Seed a low-popularity bystander FIRST and give the
+    // release to a high-popularity artist: streams in this snapshot are only
+    // reproducible if the release artist's popularity (90) drives the math.
+    await seedGame(IDS.multiArtistRelease, 4);
+    await seedArtist(IDS.multiArtistRelease, { name: 'Bystander Act', popularity: 5 });
+    const starArtistId = await seedArtist(IDS.multiArtistRelease, { name: 'Star Releaser', popularity: 90 });
+
+    const releaseId = crypto.randomUUID();
+    const songId = crypto.randomUUID();
+    await db.insert(schema.songs).values({
+      id: songId,
+      gameId: IDS.multiArtistRelease,
+      artistId: starArtistId,
+      title: 'Star Track',
+      quality: 75,
+      genre: 'pop',
+      isRecorded: true,
+      isReleased: false,
+    });
+    await db.insert(schema.releases).values({
+      id: releaseId,
+      gameId: IDS.multiArtistRelease,
+      artistId: starArtistId,
+      title: 'Star Single',
+      type: 'single',
+      status: 'planned',
+      releaseWeek: 5,
+      marketingBudget: 5000,
+      metadata: { marketingBudget: 5000, totalInvestment: 5000 },
+    });
+    await db.insert(schema.releaseSongs).values({
+      releaseId,
+      songId,
+      trackNumber: 1,
+      isSingle: true,
+    });
+
+    const snap = await runScenario(IDS.multiArtistRelease, { id: IDS.multiArtistRelease, currentWeek: 4 });
+    expect(snap).toMatchSnapshot();
+  });
+
   it('lead-single-week: leadSingleStrategy fires this week', async () => {
     await seedGame(IDS.leadSingle, 2);
     const artistId = await seedArtist(IDS.leadSingle, { name: 'LeadArtist' });
@@ -262,6 +309,39 @@ describe('GameEngine.advanceWeek — golden master', () => {
     });
 
     const snap = await runScenario(IDS.tour, { id: IDS.tour, currentWeek: 3, venueAccess: 'clubs' });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('legacy-tour-week: Mini-Tour WITHOUT stored venueCapacity survives via tier-midpoint fallback (C41)', async () => {
+    // Legacy/imported saves predate the Phase 3 venue-capacity feature; their
+    // tour metadata has venueAccess but no venueCapacity. Pre-C41 this threw in
+    // TourProcessor pre-calculation and bricked week advancement for the save.
+    // Now it falls back to the tier range's deterministic midpoint
+    // (clubs [50,500] → 275) and the week completes.
+    await seedGame(IDS.tourLegacy, 3);
+    const artistId = await seedArtist(IDS.tourLegacy, { name: 'Legacy Tourer', popularity: 60 });
+    await db.insert(schema.projects).values({
+      id: crypto.randomUUID(),
+      gameId: IDS.tourLegacy,
+      artistId,
+      title: 'Legacy Tour',
+      type: 'Mini-Tour',
+      stage: 'production',
+      startWeek: 2,
+      totalCost: 30000,
+      quality: 50,
+      metadata: {
+        cities: 3,
+        venueAccess: 'clubs',
+        // venueCapacity deliberately absent
+      },
+    });
+
+    const snap = await runScenario(IDS.tourLegacy, { id: IDS.tourLegacy, currentWeek: 3, venueAccess: 'clubs' });
+    // The fallback capacity must show up in the revealed city data.
+    const digest: any = snap.digest;
+    const tourStats = digest.projects?.[0]?.metadata?.tourStats;
+    expect(tourStats?.cities?.[0]?.capacity).toBe(275);
     expect(snap).toMatchSnapshot();
   });
 

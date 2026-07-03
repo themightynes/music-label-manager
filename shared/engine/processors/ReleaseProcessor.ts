@@ -1041,10 +1041,14 @@ export class ReleaseProcessor {
           continue;
         }
 
-        // Get artist data for sophisticated calculation
+        // Get artist data for sophisticated calculation.
+        // C44: fetch the RELEASE's artist. This previously grabbed the first
+        // artist in the game (`getArtistsByGame(...)[0]`) and only fell back to
+        // the correct artist on an empty roster — so on multi-artist rosters
+        // the outcome was computed with the wrong artist's popularity, and the
+        // preview (which uses the correct artist) diverged from execution.
         const metadata = release.metadata as any;
-        const [artist] = await ctx.storage?.getArtistsByGame(ctx.gameState.id) || [];
-        const releaseArtist = artist || await ctx.storage?.getArtist(release.artistId);
+        const releaseArtist = await ctx.storage?.getArtist(release.artistId);
 
         if (!releaseArtist) {
           console.warn(`[PLANNED RELEASE] Artist not found for release, skipping`);
@@ -1159,6 +1163,10 @@ export class ReleaseProcessor {
           );
           
           if (pressOutcome.pickups > 0) {
+            // C45: count pickups so weeklyStats.pressMentions reflects reality
+            // (the dashboard displayed a hardcoded 0 before this).
+            summary.pressMentions = (summary.pressMentions || 0) + pressOutcome.pickups;
+
             const reputationGain = pressOutcome.reputationGain;
             ctx.gameState.reputation = (ctx.gameState.reputation || 0) + reputationGain;
 

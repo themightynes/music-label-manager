@@ -243,70 +243,10 @@ describe('GET /api/game/:gameId/ar-office/artists — stable behavior', () => {
   });
 });
 
-// ===========================================================================
-// CURRENT (pre-pure-read) behavior for the legacy paths. These pins document
-// the migration write, the legacy singular branch, and the random-write
-// fallback. Commit 2 FLIPS them — after the flip they are replaced by the
-// "(post-pure-read)" block below. Kept commented (not deleted) so the
-// sanctioned behavior change is explicit in the diff.
-// ===========================================================================
-describe.skip('LEGACY paths — CURRENT behavior (pre-pure-read; flipped by Commit 2)', () => {
-  it('(c) legacy-only flags: migrates singular keys into the array, persists, and returns the enriched artist', async () => {
-    const gameId = await seedGame({
-      ownerId: TEST_USER_ID,
-      flags: {
-        ar_office_discovered_artist_id: KNOWN_JSON_ID,
-        ar_office_discovered_artist_info: {
-          name: 'Nova Sterling',
-          archetype: 'Visionary',
-          talent: 85,
-          popularity: 10,
-          genre: 'Pop',
-        },
-        ar_office_discovery_time: 3,
-        ar_office_sourcing_type: 'active',
-      },
-    });
-
-    const res = await request(app).get(`/api/game/${gameId}/ar-office/artists`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.artists).toHaveLength(1);
-    expect(res.body.artists[0].name).toBe('Nova Sterling');
-
-    // MIGRATION WRITE: the singular keys were copied into the array and persisted.
-    const flags = await readFlags(gameId);
-    expect(Array.isArray(flags.ar_office_discovered_artists)).toBe(true);
-    expect(flags.ar_office_discovered_artists).toHaveLength(1);
-    expect(flags.ar_office_discovered_artists[0].id).toBe(KNOWN_JSON_ID);
-  });
-
-  it('(d) unknown legacy id, NO info: Math.random() fallback picks an artist AND writes it back to flags', async () => {
-    // A legacy id that does NOT exist in data/artists.json, with NO _info blob
-    // (so the migration branch is skipped), falls through to the legacy branch
-    // and then the Math.random() fallback, which WRITES a new random id back to
-    // flags — a GET with a side effect. Pinned loosely: status + that a write
-    // occurred (the artist itself is random and not asserted).
-    const gameId = await seedGame({
-      ownerId: TEST_USER_ID,
-      flags: {
-        ar_office_discovered_artist_id: 'art_does_not_exist',
-      },
-    });
-
-    const res = await request(app).get(`/api/game/${gameId}/ar-office/artists`);
-
-    expect(res.status).toBe(200);
-    // A random artist was returned (pinned loosely: exactly one, and it is a fallback).
-    expect(res.body.artists).toHaveLength(1);
-    expect(res.body.metadata.isFallback).toBe(true);
-
-    // SIDE EFFECT: the fallback wrote a (random) artist id back to flags.
-    const flags = await readFlags(gameId);
-    expect(flags.ar_office_discovered_artist_id).toBeTruthy();
-    expect(flags.ar_office_discovered_artist_id).not.toBe('art_does_not_exist');
-  });
-});
+// The skipped "LEGACY paths — CURRENT behavior (pre-pure-read)" block that
+// documented the migration write and Math.random() GET side effect was
+// deleted after Phase 2 PR-4 merged — the sanctioned flip is preserved in git
+// history; the live "(post-pure-read)" pins below cover current behavior.
 
 // ===========================================================================
 // Post-pure-read behavior (Commit 2). These assert the collapsed pure-read

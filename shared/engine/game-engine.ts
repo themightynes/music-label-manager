@@ -330,7 +330,7 @@ export class GameEngine {
         marketingCosts: 0,
         roleMeetingCosts: 0
       },
-      pressMentions: 0, // TODO: Add press mentions tracking
+      pressMentions: summary.pressMentions || 0, // C45: release press coverage + PR campaigns
       reputationChange: Object.values(summary.reputationChanges).reduce((sum, change) => sum + change, 0),
       changes: summary.changes,
       events: summary.events

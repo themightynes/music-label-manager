@@ -657,15 +657,15 @@ The 60% tour-cancellation refund is computed entirely client-side (`client/src/c
 
 ---
 
-### Comment 41: Missing venueCapacity metadata hard-crashes tour week processing 🟢
-**Status**: 📋 **PENDING**
+### ~~Comment 41: Missing venueCapacity metadata hard-crashes tour week processing~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-`processUnifiedTourRevenue` (`shared/engine/game-engine.ts:3680`) throws if `project.metadata.venueCapacity` is absent, with no fallback to tier-based capacity generation. Capacity has been stored at creation since the Phase 3 venue-capacity feature, so this only bites legacy/imported tours — but a single bad project bricks week advancement for that save.
+**Resolution**: `TourProcessor.processUnifiedTourRevenue` (the code moved there in Phase 2 PR-7) no longer throws on a missing `metadata.venueCapacity` — it falls back to the **deterministic midpoint** of the stored `venueAccess` tier's capacity range (e.g. clubs [50,500] → 275) with a logged warning. Midpoint rather than an RNG draw so the seeded stream is untouched for other systems. Pinned by a new golden-master scenario (`legacy-tour-week`) that seeds a Mini-Tour without stored capacity and asserts the week completes with capacity 275.
 
-**Action**: Add a fallback (derive capacity from the stored `venueAccess` tier's range, or skip the tour with a logged warning) so one malformed project can't block the week.
+`processUnifiedTourRevenue` throws if `project.metadata.venueCapacity` is absent, with no fallback to tier-based capacity generation. Capacity has been stored at creation since the Phase 3 venue-capacity feature, so this only bites legacy/imported tours — but a single bad project bricks week advancement for that save.
 
 **Relevant Files**:
-- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+- [shared/engine/processors/TourProcessor.ts](shared/engine/processors/TourProcessor.ts)
 
 *Identified July 2, 2026 during the tour-experience code trace.*
 
@@ -701,27 +701,29 @@ The song awareness system (`shared/engine/game-engine.ts:1617-1750`) runs every 
 
 ---
 
-### Comment 44: Release preview and execution are separate calculation code paths 🟡
-**Status**: 📋 **PENDING**
+### ~~Comment 44: Release preview and execution are separate calculation code paths~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-The planning preview uses `GameEngine.calculateReleasePreview()` (`shared/engine/game-engine.ts:4692-4941`) while release-week execution uses `calculateSophisticatedReleaseOutcome()` — two independent implementations of the same multiplier chain (release type, seasonal, marketing synergy/diversity, lead-single boost). Any change to one that misses the other silently makes the preview lie to the player. Same divergence pathology as C35 (snapshot built in two places), which already shipped a real bug once.
+**Resolution**: The "two independent implementations" claim was **already stale** — since the Phase 2 `ReleaseProcessor` extraction, `calculateSophisticatedReleaseOutcome` is a thin adapter that reconstructs a release config from stored metadata and **delegates to `calculateReleasePreview`**; the multiplier chain (release type, seasonal, marketing synergy/diversity, lead-single boost) exists in exactly one place, and the preview endpoint (`POST /releases/preview`) calls the same method. The stored-metadata field names (`marketingBudgetBreakdown`, `leadSingleBudgetBreakdown`) were verified to line up between `releasePlanningService` (write) and the adapter (read).
 
-**Action**: Extract one shared calculation used by both the preview endpoint and week-advance execution. Natural fit for the PR-17 releasePlanningService extraction or immediately after it.
+**One real residual divergence was found and fixed**: `processPlannedReleases` fetched `getArtistsByGame(...)[0]` — the **first artist in the game** — and only fell back to `getArtist(release.artistId)` on an empty roster. On any multi-artist roster, execution computed the outcome with the wrong artist's popularity while the preview used the correct one. Now fetches the release's artist directly. Pinned by a new golden-master scenario (`multi-artist-release-week`: low-popularity bystander seeded first, release owned by a popularity-90 artist → 232,553 streams, vs 156,368 for the popularity-50 single-artist fixture with identical quality/marketing). The single-artist `release-week` snapshot stayed byte-identical, confirming no behavior change for single-artist games.
+
+**Accepted (inherent) preview/execution differences, documented here deliberately**: (1) RNG variance — the preview endpoint draws from a fresh engine seeded at the planning week; execution draws mid-stream during the release week's `advanceWeek`, so exact numbers differ (the preview is an estimate, not a quote); (2) game state evolves between plan time and release week (reputation, playlist access, artist popularity all legitimately move); (3) for EPs with a lead single, the preview estimates the whole campaign while execution splits it into the lead-single week and the main-release week (already-released songs are excluded from the main drop).
 
 **Relevant Files**:
-- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+- [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts)
 - [server/routes/releases.ts](server/routes/releases.ts)
 
 *Identified July 2, 2026 during the release-experience code trace.*
 
 ---
 
-### Comment 45: Dead release config and unsurfaced press data 🔵
-**Status**: 📋 **PENDING**
+### ~~Comment 45: Dead release config and unsurfaced press data~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-Two small leftovers from the release trace: (1) `data/balance/markets.json` `streaming_calculation.star_power_amplification` is `enabled: true` but nothing in the engine consumes it — dead config that reads as a live mechanic; (2) `calculatePressOutcome()` computes a detailed result (pickups count, structure) but only `reputationGain` is used, and `summary.pressMentions` is a standing `TODO` (`shared/engine/game-engine.ts:319`).
+**Resolution**: (1) The `star_power_amplification` claim was **incorrect** — the config IS live: `FinancialSystem.calculateStreamingOutcome` (called by `ReleaseProcessor` for every release's initial streams) applies the `1 + (popularity/100) × max_multiplier` amplification when `enabled`, and `tests/unit/financial-system-streaming.test.ts` covers the toggle. No change made; do NOT delete this config. (2) Press mentions are now surfaced: `WeekSummary.pressMentions` accumulates pickups from release press coverage (`ReleaseProcessor.calculatePressOutcome`) and PR campaigns (`ActionProcessor`), and `weeklyStats.pressMentions` reads it instead of the hardcoded `0` — MetricsDashboard's three press-mention displays now show real values. Golden-master release-week snapshot updated (only the new `pressMentions: 8` field appeared; no other numbers moved).
 
-**Action**: Either implement star-power amplification and press-mention surfacing or delete the dead config/fields so balance files reflect reality.
+Two small leftovers from the release trace: (1) `data/balance/markets.json` `streaming_calculation.star_power_amplification` is `enabled: true` but was believed unconsumed; (2) `calculatePressOutcome()` computes a detailed result (pickups count, structure) but only `reputationGain` was used, and `summary.pressMentions` was a standing `TODO`.
 
 **Relevant Files**:
 - [data/balance/markets.json](data/balance/markets.json)
@@ -731,10 +733,12 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
-### Comment 46: Tour estimate's totalBudget draws tier-RNG capacity even when explicit capacity is supplied 🟢
-**Status**: 📋 **PENDING**
+### ~~Comment 46: Tour estimate's totalBudget draws tier-RNG capacity even when explicit capacity is supplied~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-`POST /api/tour/estimate` (`server/routes/tour.ts`) computes `totalBudget` by drawing venue capacity from the tier-based RNG helper even when the caller already supplied an explicit `venueCapacity`, so the displayed estimate total can vary run-to-run for what should be a deterministic preview of the same inputs. It's display-only — nothing charges the player at estimate time — but it makes `canAfford` checks against the estimate flaky relative to what the actual tour (via `TourProcessor`) will do with the same explicit capacity.
+**Resolution**: The estimate now honors an explicit `venueCapacity` for `totalBudget` — `server/routes/tour.ts` costs it via `calculateTourCostsWithCapacity(venueCapacity, cities, 0)` and only falls back to the tier-RNG `calculateTourCosts` when no capacity was supplied. With an explicit capacity, `totalBudget` is deterministic and equals `breakdown.totalCosts` (fixed venue/production fees for the chosen capacity + marketing budget), so `canAfford` is stable and matches what the tour actually charges. The characterization test now pins `totalBudget`/`canAfford` exactly (the old `<rng-derived>` normalization is gone). Note the issue was **not** display-only as originally written: `LivePerformancePage` passes the estimate's `totalBudget` back as the tour's `totalCost` at creation, which the server charges verbatim — so the RNG draw was leaking into the player's actual charge.
+
+`POST /api/tour/estimate` (`server/routes/tour.ts`) computes `totalBudget` by drawing venue capacity from the tier-based RNG helper even when the caller already supplied an explicit `venueCapacity`, so the displayed estimate total can vary run-to-run for what should be a deterministic preview of the same inputs. It makes `canAfford` checks against the estimate flaky relative to what the actual tour (via `TourProcessor`) will do with the same explicit capacity.
 
 **Action**: Product/behavior decision needed — either have the estimate always honor an explicit `venueCapacity` when provided (matching `TourProcessor`'s actual behavior) or document that the estimate is intentionally a range and stop treating `totalBudget` as a single comparable number for `canAfford`.
 
@@ -746,8 +750,10 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
-### Comment 47: artistPopularity defaults differ between tour estimate route and engine (0 vs 50) 🟢
-**Status**: 📋 **PENDING**
+### ~~Comment 47: artistPopularity defaults differ between tour estimate route and engine (0 vs 50)~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
+
+**Resolution** (two steps, same day): First aligned the estimate route to the engine's `|| 50`. Then, per product decision, changed **both** sides to floor zero/unset popularity to **1** instead of 50 — `server/routes/tour.ts` and `TourProcessor.processUnifiedTourRevenue` both use `artist.popularity || 1`, so a true unknown tours (and previews) as a nobody rather than a mid-tier act. This is a sanctioned engine behavior change for zero/unset-popularity artists only; no RNG-stream impact (popularity affects magnitudes, not draw count), and the golden-master tour fixture (popularity 60) is unaffected. Pinned by a characterization test asserting popularity-0 ≡ popularity-1 estimates and popularity-0 < popularity-50 revenue (guards against the old default regressing).
 
 `POST /api/tour/estimate` defaults `artistPopularity` to `0` when the field is absent from the request, while `TourProcessor`'s actual week-advance tour processing (`shared/engine/processors/TourProcessor.ts`) defaults the same field to `50`. For any caller that omits `artistPopularity`, the estimate and the real tour outcome are computed against different assumed popularity — a behavioral inconsistency between the preview and the executed tour, in the same family as C44 (release preview vs. execution divergence).
 
@@ -761,18 +767,30 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
+### ~~Comment 48: Tour marketing-budget extraction drew tier-RNG capacity, drifting executed spend from the player's choice~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026 — fixed same session it was identified)
+
+**Resolution**: `TourProcessor.processUnifiedTourRevenue` extracted the marketing budget as `totalCost − calculateTourCosts(tier)`, where `calculateTourCosts` draws a **random** capacity from the tier range — so the executed tour's marketing spend differed from the `budgetPerCity × cities` the player chose and paid at creation by the delta between two capacity draws. Now extracts against the tour's actual capacity via `calculateTourCostsWithCapacity`, making executed marketing spend exactly the player's chosen amount. Sanctioned behavior change: removes one RNG draw per tour pre-calculation (shifts subsequent variance draws), so the golden-master `tour-week` snapshot was regenerated — the fixture now shows exactly $6,650/city marketing (was $8,619.80 inflated by a random ~206 capacity draw).
+
+**Relevant Files**:
+- [shared/engine/processors/TourProcessor.ts](shared/engine/processors/TourProcessor.ts)
+
+*Identified July 3, 2026 during the C46/C47 tour-estimate fixes; resolved same day.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 1 item (C44)
-- 🟢 Medium: 5 items (C41, C42, C43, C46, C47)
-- 🔵 Low: 3 items (C26, C32, C45)
+- 🟡 High: 0 items (all completed! 🎉)
+- 🟢 Medium: 2 items (C42, C43)
+- 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 38 items (81.3%)
+- ✅ Completed: 44 items (91.7%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 9 items (18.7%)
+- 📋 Pending: 4 items (8.3%)
 
 ---
 

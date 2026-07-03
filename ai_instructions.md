@@ -5,12 +5,12 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 
 > ⚠️ **Parts of this document below this section are stale (Aug 2025, Neon/Replit era).** `../DEVELOPMENT_STATUS.md` is the single source of truth for current status; root `CLAUDE.md` has the current commands and conventions. A full reconciliation of this file is pending.
 
-## Current State (Updated: July 1, 2026 — scaling arc underway)
-**Latest Session**: UI overflow/layout fixes (PR #40 — save modal scroll, avatar cropping, dashboard responsiveness, layout-level `min-w-0`); scaling arc unchanged — 4 phases (CI safety net → server seams → engine seams → client state → game feel)
+## Current State (Updated: July 3, 2026 — Phases 1 & 2 complete, tech-debt sweep done)
+**Latest Session**: Tech-debt sweep (C41–C48) — tour estimate/execution parity, legacy-tour crash fallback, marketing-budget RNG drift, press mentions surfaced, and the C44 wrong-artist release bug; backlog at 44/48 done (0 Critical, 0 High). Work on branch `claude/onboarding-08l2x6`, PR pending.
 - **Tech Stack**: React 18 + Vite, Express, PostgreSQL (Railway), Clerk auth, TypeScript, Zustand, React Query, XState
-- **Architecture**: GameEngine (`shared/engine/`) is the single source of truth for game logic; the `server/routes.ts` decomposition into feature routers is **done for all pure moves** — `routes.ts` is now a thin ~121-line registry mounting 16 feature routers from `server/routes/`. The follow-on **service extraction (PR-15..18) is still pending** — see `docs/01-planning/implementation-specs/[READY] phase-1-server-routes-refactor-plan.md`
-- **CI**: vitest suite (545 tests) + Playwright both run in `.github/workflows/playwright.yml`
-- **Current Phase**: Phase 1 of the scaling arc (route extraction, PR-2..18 of the plan)
+- **Architecture**: `routes.ts` is a thin ~121-line registry mounting 16 feature routers (`server/routes/`) with extracted services (**Phase 1 complete**, incl. PR-15..18 service extractions + security hardening). The engine is decomposed: `shared/engine/game-engine.ts` (~1,136 lines) orchestrates 8 processor modules in `shared/engine/processors/` (**Phase 2 complete**), fully seeded-RNG deterministic and covered by a golden-master harness (`tests/engine/`)
+- **CI**: vitest suite (~695 tests, 0 skipped) + Playwright in `.github/workflows/playwright.yml`
+- **Current Phase**: between phases — Phase 3 (client state ownership) planning is next; Phase 4 (game feel) has no tickets yet
 
 ## Completed Major Systems ✅
 1. ✅ **Single Source of Truth Architecture** - GameEngine handles ALL business logic, zero duplication

@@ -13,22 +13,23 @@
  * conclusion is protected — any future "unification" refactor that shifts a
  * number is caught here.
  *
- * DETERMINISM: the route's FinancialSystem is seeded with `() => Math.random()`.
- * The `calculateDetailedTourBreakdown` core (revenue, sell-through, per-city
- * economics, cost breakdown, pricing) draws RNG ONLY in the tier-capacity
- * fallback path (`generateCapacityFromTier`, taken when venueCapacity is 0/absent);
- * this test passes an explicit in-range `venueCapacity`, so that whole core is
- * fully deterministic and IS pinned exactly.
+ * DETERMINISM: the route's FinancialSystem is seeded with `() => Math.random()`,
+ * but RNG is only reachable through the tier-capacity fallback
+ * (`generateCapacityFromTier`, taken when venueCapacity is 0/absent). Since the
+ * C46 fix, an explicit `venueCapacity` also drives `totalBudget` (via
+ * `calculateTourCostsWithCapacity`), so with an explicit in-range capacity the
+ * ENTIRE response — including `totalBudget` and `canAfford` — is deterministic
+ * and pinned exactly. `totalBudget` is also coherent with
+ * `breakdown.totalCosts`: both are fixed fees for the chosen capacity plus the
+ * marketing budget. (Pre-C46, `totalBudget` drew a fresh random tier capacity
+ * on every call and varied run-to-run even for identical inputs — and the
+ * client passes it back as the tour's charged totalCost at creation.)
  *
- * ONE field is NOT deterministic: `totalBudget` (and the `canAfford` it feeds).
- * The route derives it from `calculateTourCosts(venueAccess, cities, 0)`, which
- * ALWAYS calls `generateCapacityFromTier` on the TIER (it ignores the explicit
- * venueCapacity), drawing RNG every call — so `totalBudget` varies run-to-run.
- * That is a pre-existing property of the endpoint (this display value is used
- * only for the affordability line, never for the breakdown). We therefore pin
- * `totalBudget`/`canAfford` structurally (present + typed) and EXCLUDE them from
- * the exact-value snapshot rather than churn route behavior in a no-behavior-change
- * PR. See the `stableBody` normalization below.
+ * C47 is pinned by the second test: the route floors `artistPopularity` to 1
+ * for zero/unset (matching TourProcessor's execution-path
+ * `artist.popularity || 1`), so an artist with unset/zero popularity estimates
+ * identically to a popularity-1 artist — touring as an unknown, not a
+ * mid-tier act — and never diverges from the executed tour.
  *
  * Harness mirrors projects-create.characterization.test.ts: real tour router over
  * supertest against the Docker test Postgres (localhost:5433), server/db mocked to
@@ -170,15 +171,52 @@ describe('POST /api/tour/estimate (characterization)', () => {
     expect(res.body.selectedCapacity).toBe(400);
     expect(res.body.cities).toHaveLength(3);
 
-    // totalBudget / canAfford are RNG-derived (see header) — pin them structurally.
-    expect(typeof res.body.totalBudget).toBe('number');
-    expect(typeof res.body.canAfford).toBe('boolean');
+    // C46: with an explicit capacity, totalBudget is deterministic and must
+    // agree with the detailed breakdown's total (fixed fees for THIS capacity
+    // + marketing budget) — no tier-RNG draw. capacity 400 → (1600 venue +
+    // 1080 production) × 3 cities + $6,000 marketing = $14,040.
+    expect(res.body.totalBudget).toBe(14040);
+    expect(res.body.totalBudget).toBe(res.body.breakdown.totalCosts);
+    expect(res.body.canAfford).toBe(true); // $14,040 vs $500,000
 
-    // Byte-identical value pin of the deterministic core of the response. The two
-    // RNG-derived display fields are normalized out; everything the tour math
-    // produces (revenue, sell-through, per-city economics, cost breakdown, pricing)
-    // is pinned exactly. Any refactor that shifts a tour number breaks here.
-    const stableBody = { ...res.body, totalBudget: '<rng-derived>', canAfford: '<rng-derived>' };
-    expect(stableBody).toMatchSnapshot();
+    // Byte-identical value pin of the full response — everything the tour math
+    // produces (revenue, sell-through, per-city economics, cost breakdown,
+    // pricing, budget totals) is deterministic with an explicit capacity.
+    // Any refactor that shifts a tour number breaks here.
+    expect(res.body).toMatchSnapshot();
+  });
+
+  it('C47: an artist with zero/unset popularity estimates identically to a popularity-1 artist (engine default parity)', async () => {
+    const { gameId } = await seedGame();
+
+    const zeroPopArtistId = crypto.randomUUID();
+    const onePopArtistId = crypto.randomUUID();
+    const fiftyPopArtistId = crypto.randomUUID();
+    await db.insert(artists).values([
+      { id: zeroPopArtistId, gameId, name: 'Unknown Artist', archetype: 'Visionary', popularity: 0 },
+      { id: onePopArtistId, gameId, name: 'Floor Artist', archetype: 'Visionary', popularity: 1 },
+      { id: fiftyPopArtistId, gameId, name: 'Mid-Tier Artist', archetype: 'Visionary', popularity: 50 },
+    ]);
+
+    const estimateFor = async (artistId: string) => {
+      const res = await request(app)
+        .post('/api/tour/estimate')
+        .send({ artistId, cities: 2, budgetPerCity: 1500, gameId, venueCapacity: 300 });
+      expect(res.status).toBe(200);
+      return res.body;
+    };
+
+    const zeroPop = await estimateFor(zeroPopArtistId);
+    const onePop = await estimateFor(onePopArtistId);
+    const fiftyPop = await estimateFor(fiftyPopArtistId);
+
+    // TourProcessor.processUnifiedTourRevenue uses `artist.popularity || 1` at
+    // execution; the estimate route must assume the same floor or the preview
+    // diverges from the executed tour for the same artist.
+    expect(zeroPop).toEqual(onePop);
+
+    // And the floor must NOT be the old mid-tier default — a true unknown
+    // draws less than a popularity-50 act (guards against `|| 50` regressing).
+    expect(zeroPop.estimatedRevenue).toBeLessThan(fiftyPop.estimatedRevenue);
   });
 });
