@@ -11,6 +11,14 @@ interface AnalyticsTabProps {
   artistReleases: Release[];
 }
 
+// Rank badge fills — top 3 get hue-tinted treatment, rest neutral glass.
+function rankBadgeClass(idx: number) {
+  if (idx === 0) return 'bg-warning/20 text-warning';
+  if (idx === 1) return 'bg-white/10 text-text-body';
+  if (idx === 2) return 'bg-neon-amber/20 text-neon-amber';
+  return 'bg-neon-lilac/10 text-text-muted';
+}
+
 function AnalyticsTabComponent({ songs, artistReleases }: AnalyticsTabProps) {
   return (
     <TabsContent value="analytics" className="space-y-6 relative z-20">
@@ -18,22 +26,24 @@ function AnalyticsTabComponent({ songs, artistReleases }: AnalyticsTabProps) {
         {/* Total Streams Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Radio className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <Radio className="w-5 h-5 text-neon-lilac" />
               <span>Total Streams by Song</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {songs.filter(s => s.isReleased).length === 0 ? (
               <div className="text-center py-8">
-                <Radio className="w-8 h-8 text-white/30 mx-auto mb-3" />
-                <p className="text-white/50">No released songs to analyze</p>
+                <div className="w-[54px] h-[54px] rounded-chip bg-neon-purple/10 border border-neon-purple/[0.28] flex items-center justify-center mx-auto mb-4 shadow-glow-purple">
+                  <Radio className="w-5 h-5 text-neon-lilac" />
+                </div>
+                <p className="text-text-muted text-sm">No released songs to analyze</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-xs text-white/50 border-b">
+                    <tr className="text-left text-xs font-mono uppercase tracking-[0.16em] text-text-muted border-b border-white/[0.07]">
                       <th className="pb-2">Rank</th>
                       <th className="pb-2">Song Title</th>
                       <th className="pb-2">Release</th>
@@ -49,25 +59,20 @@ function AnalyticsTabComponent({ songs, artistReleases }: AnalyticsTabProps) {
                       .map((song, idx) => {
                         const release = artistReleases.find(r => r.id === song.releaseId);
                         return (
-                          <tr key={song.id} className="border-b last:border-0">
+                          <tr key={song.id} className="border-b border-white/[0.05] last:border-0">
                             <td className="py-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
-                                idx === 1 ? 'bg-gray-500/20 text-white/90' :
-                                idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                'bg-brand-purple-light/10 text-white/70'
-                              }`}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono font-bold ${rankBadgeClass(idx)}`}>
                                 {idx + 1}
                               </div>
                             </td>
-                            <td className="py-3 font-medium">{song.title}</td>
-                            <td className="py-3 text-sm text-white/70">
+                            <td className="py-3 font-medium text-text-primary">{song.title}</td>
+                            <td className="py-3 text-sm text-text-body">
                               {release?.title || 'Unknown'}
                             </td>
-                            <td className="py-3 text-right font-mono font-semibold">
+                            <td className="py-3 text-right font-mono font-semibold text-text-primary">
                               {(song.totalStreams || 0).toLocaleString()}
                             </td>
-                            <td className="py-3 text-right font-mono text-green-600">
+                            <td className="py-3 text-right font-mono text-positive">
                               ${(song.totalRevenue || 0).toLocaleString()}
                             </td>
                           </tr>
@@ -83,22 +88,24 @@ function AnalyticsTabComponent({ songs, artistReleases }: AnalyticsTabProps) {
         {/* Last Week Streams Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <TrendingUp className="w-5 h-5 text-neon-lilac" />
               <span>Last Week Streams</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {songs.filter(s => s.isReleased && s.weeklyStreams).length === 0 ? (
               <div className="text-center py-8">
-                <TrendingUp className="w-8 h-8 text-white/30 mx-auto mb-3" />
-                <p className="text-white/50">No streaming data for last week</p>
+                <div className="w-[54px] h-[54px] rounded-chip bg-neon-purple/10 border border-neon-purple/[0.28] flex items-center justify-center mx-auto mb-4 shadow-glow-purple">
+                  <TrendingUp className="w-5 h-5 text-neon-lilac" />
+                </div>
+                <p className="text-text-muted text-sm">No streaming data for last week</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-xs text-white/50 border-b">
+                    <tr className="text-left text-xs font-mono uppercase tracking-[0.16em] text-text-muted border-b border-white/[0.07]">
                       <th className="pb-2">Rank</th>
                       <th className="pb-2">Song Title</th>
                       <th className="pb-2">Quality</th>
@@ -116,29 +123,24 @@ function AnalyticsTabComponent({ songs, artistReleases }: AnalyticsTabProps) {
                           ? ((song.weeklyStreams / Math.max(1, song.totalStreams - song.weeklyStreams)) * 100).toFixed(1)
                           : '0.0';
                         return (
-                          <tr key={song.id} className="border-b last:border-0">
+                          <tr key={song.id} className="border-b border-white/[0.05] last:border-0">
                             <td className="py-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
-                                idx === 1 ? 'bg-gray-500/20 text-white/90' :
-                                idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                'bg-brand-purple-light/10 text-white/70'
-                              }`}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono font-bold ${rankBadgeClass(idx)}`}>
                                 {idx + 1}
                               </div>
                             </td>
-                            <td className="py-3 font-medium">{song.title}</td>
+                            <td className="py-3 font-medium text-text-primary">{song.title}</td>
                             <td className="py-3">
                               <Badge className={getQualityColor(song.quality)}>
                                 {song.quality}
                               </Badge>
                             </td>
-                            <td className="py-3 text-right font-mono font-semibold">
+                            <td className="py-3 text-right font-mono font-semibold text-text-primary">
                               {(song.weeklyStreams || 0).toLocaleString()}
                             </td>
                             <td className="py-3 text-right">
-                              <span className={`font-semibold ${
-                                parseFloat(growth) > 0 ? 'text-green-600' : 'text-white/40'
+                              <span className={`font-mono font-semibold ${
+                                parseFloat(growth) > 0 ? 'text-positive' : 'text-text-muted'
                               }`}>
                                 {parseFloat(growth) > 0 ? '+' : ''}{growth}%
                               </span>

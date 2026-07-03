@@ -26,8 +26,8 @@ function ReleasesTabComponent({
     <TabsContent value="releases" className="space-y-6 relative z-20">
       {/* Upcoming Releases */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-          <Clock className="w-5 h-5" />
+        <h3 className="text-lg font-semibold text-text-primary flex items-center space-x-2">
+          <Clock className="w-5 h-5 text-neon-lilac" />
           <span>Upcoming Releases</span>
           <Badge variant="outline" className="ml-2">
             {artistReleases.filter(r => r.status === 'planned').length}
@@ -37,8 +37,10 @@ function ReleasesTabComponent({
         {artistReleases.filter(r => r.status === 'planned').length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <Clock className="w-12 h-12 text-white/30 mx-auto mb-4" />
-              <p className="text-white/70 mb-4">No planned releases</p>
+              <div className="w-[54px] h-[54px] rounded-chip bg-neon-purple/10 border border-neon-purple/[0.28] flex items-center justify-center mx-auto mb-4 shadow-glow-purple">
+                <Clock className="w-6 h-6 text-neon-lilac" />
+              </div>
+              <p className="text-text-body mb-4">No planned releases</p>
               <Button onClick={() => onNavigate('/plan-release')}>
                 Plan New Release
               </Button>
@@ -62,8 +64,8 @@ function ReleasesTabComponent({
 
       {/* Released */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-          <PlayCircle className="w-5 h-5" />
+        <h3 className="text-lg font-semibold text-text-primary flex items-center space-x-2">
+          <PlayCircle className="w-5 h-5 text-neon-lilac" />
           <span>Released</span>
           <Badge variant="outline" className="ml-2">
             {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length}
@@ -73,8 +75,10 @@ function ReleasesTabComponent({
         {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <PlayCircle className="w-12 h-12 text-white/30 mx-auto mb-4" />
-              <p className="text-white/70">No releases yet</p>
+              <div className="w-[54px] h-[54px] rounded-chip bg-neon-purple/10 border border-neon-purple/[0.28] flex items-center justify-center mx-auto mb-4 shadow-glow-purple">
+                <PlayCircle className="w-6 h-6 text-neon-lilac" />
+              </div>
+              <p className="text-text-body">No releases yet</p>
             </CardContent>
           </Card>
         ) : (
