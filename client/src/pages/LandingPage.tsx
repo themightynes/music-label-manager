@@ -16,6 +16,15 @@ function LandingPage() {
               'radial-gradient(80% 70% at 50% 46%, rgba(21,10,20,0.9) 0%, rgba(10,5,16,0.9) 48%, #050308 80%, #030205 100%)',
           }}
         />
+        {/* optional liquid-chrome photo at splash dim (0.22 per splash-disc.html) — tolerates absence */}
+        <img
+          src="/liquid-chrome-bg.jpg"
+          alt=""
+          aria-hidden="true"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.22]"
+          style={{ filter: 'saturate(1.05) brightness(0.9)' }}
+        />
         {/* vertical fractal-glass reeded refraction (poster tier — splash only) */}
         <div className="absolute inset-0 overflow-hidden opacity-[0.5] animate-ds-bloom">
           <div

@@ -93,6 +93,15 @@ export default function MainMenuPage() {
               'radial-gradient(80% 70% at 50% 40%, rgba(21,10,20,0.85) 0%, rgba(10,5,16,0.9) 48%, #050308 80%, #030205 100%)',
           }}
         />
+        {/* optional liquid-chrome photo — tolerates absence (same pattern as PageBackdrop) */}
+        <img
+          src="/liquid-chrome-bg.jpg"
+          alt=""
+          aria-hidden="true"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          className="absolute inset-0 h-full w-full object-cover opacity-30"
+          style={{ filter: 'saturate(1.1) brightness(0.9)' }}
+        />
         <div className="backdrop-bloom" />
         <div className="backdrop-dotgrid" />
         <div className="backdrop-scrim" />
