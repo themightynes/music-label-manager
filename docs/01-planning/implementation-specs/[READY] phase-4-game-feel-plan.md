@@ -1,8 +1,15 @@
 # [READY] Phase 4: Game Feel — The Week-Advance Moment and the Juice Pass
 
 *Created: July 3, 2026 — planned from a two-agent exploration of the live tree (no code modified).*
-*Status: READY — not started.*
+*Status: IN PROGRESS — PRs 1–2 merged 2026-07-03.*
 *Part of the scaling arc (Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 3.5 in flight · **Phase 4: game feel**).*
+
+## Execution status
+
+- **PR-1 ✅ MERGED** — #100 (`89d3f89`): `AnimatedNumber` primitive + MetricsDashboard net-income adoption; 8 new jsdom tests, client suite 75/75.
+- **PR-2 ✅ MERGED** — #102 (`d177cd8`): `shared/utils/changeImportance.ts` classifier (exhaustive over all 19 `GameChange` types, `assertNever` compile guard); optional additive `importance` on `GameChange`/`ChartUpdate`; single engine call site at WeekSummary assembly. Golden-master diff audited: 67 added lines, all `importance`, zero deletions (26 hero / 12 notable / 29 routine); run-twice stable. 30 classifier unit tests.
+- **PR-3..5, 7** — gated on Phase 3.5 (in flight, separate session).
+- **PR-6 (sound)** — awaiting user decision on asset sourcing (licensed pack vs. generated vs. commissioned).
 
 ## 0. Ground truth (verified against the working tree)
 
