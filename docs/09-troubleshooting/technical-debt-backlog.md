@@ -566,6 +566,9 @@ ArtistPage is very large and monolithic; split into subcomponents and memoize he
 **Priority**: 🔵 Low
 **Impact**: Save completeness for long-running games (edge case)
 **Effort**: Medium
+**Status**: ⏸️ **DEFERRED — cap unreachable in practice; "silently" part FIXED** (July 3, 2026)
+
+**Disposition (July 3, 2026)**: The cap itself is formally deferred with quantified justification: `EmailGenerator.generateEmails` runs once per week and produces exactly 1 guaranteed email (financial summary) plus small bounded conditionals (releases dropping *that week*, top-10 chart *debuts*, tour completions, rare tier unlocks, 0–1 A&R discovery) — no per-artist or per-song weekly loops exist. A full 52-week campaign lands at ~100–500 emails, roughly 20–100× below the 10,000-email cap; hitting it would take 1,000+ weeks of a single save's history. The truncation is also read-side only (drops *oldest* emails, per the `desc(week)` ordering in `server/storage.ts:937`) — no data is lost at insert time. What DID land (commit `8669235`): the export flow in `SaveGameModal.tsx` now shows an explicit toast when `emailMetadata.truncated` is set (previously a confirmed dead write — nothing read the flag anywhere). A saves-*list* warning would additionally require exposing `emailMetadata` in `storage.getGameSaves`' JSON-path SELECT (server change, out of scope for the client-only fix).
 
 `client/src/utils/emailSnapshot.ts` caps email capture at ~10,000 emails (100 pages) and sets a `truncated` flag when the cap is hit. For very long-running games this means saved snapshots omit older emails. This is intentional safety behavior (prevents pagination hangs) and is flagged via `truncated`, but the cap itself is a long-term limitation.
 
@@ -672,7 +675,7 @@ The 60% tour-cancellation refund is computed entirely client-side (`client/src/c
 ---
 
 ### Comment 42: Awareness system is fully implemented dead bookkeeping 🟢
-**Status**: 📋 **PENDING**
+**Status**: ⏸️ **DEFERRED** (product decision, July 3, 2026 — explicitly deferred by Nes during the Phase 3 session; neither wiring awareness into the streaming multiplier nor removing the bookkeeping was chosen yet. Revisit alongside the release-experience plan Tier 2.)
 
 The song awareness system (`shared/engine/game-engine.ts:1617-1750`) runs every week: awareness gain from marketing channels (weeks 1–4), breakthrough checks with 2.5× awareness explosions (weeks 3–6), and decay (weeks 5+). Values are persisted per song and announced in WeekSummary ("🔥 BREAKTHROUGH ACHIEVED!") — but awareness feeds into **nothing**: not streaming revenue, not charts, not any financial metric. The game celebrates a stat with zero mechanical existence. Config lives in `data/balance/markets.json` (awareness_system); the integration design exists in `docs/01-planning/implementation-specs/[FUTURE] awareness-system-design.md` but the "Awareness System Backend Integration" work was never finished.
 
@@ -687,7 +690,7 @@ The song awareness system (`shared/engine/game-engine.ts:1617-1750`) runs every 
 ---
 
 ### Comment 43: Planned releases cannot be cancelled, edited, or rescheduled 🟢
-**Status**: 📋 **PENDING**
+**Status**: ⏸️ **DEFERRED** (product decision, July 3, 2026 — explicitly deferred by Nes during the Phase 3 session; refund rule design still open. When picked up: server-side recompute from day one, per the Action note below.)
 
 `POST /api/game/:gameId/releases/plan` (`server/routes/releases.ts:435`) deducts the full marketing budget plus 1 creative capital at plan time and locks songs to the release — and there is no endpoint (or UI) to cancel, edit, or reschedule a planned release afterward. Money committed to a distant release week is unrecoverable regardless of changed circumstances. Tours, by contrast, support cancellation with a 60% refund.
 
@@ -779,8 +782,10 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
-### Comment 49: Inbox shows stale (pre-restore) emails until a full page reload after save/load restore 🟢
-**Status**: 📋 **PENDING**
+### ~~Comment 49: Inbox shows stale (pre-restore) emails until a full page reload after save/load restore~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026, commit `2b57880` on `main`)
+
+**Resolution**: `loadGameFromSave` now invalidates the email query cache immediately after the restore completes — a `queryClient.invalidateQueries` predicate matching `EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE` keyed on `restoredGameId` (the server-confirmed post-restore id, so overwrite-restores flush the stale cache under the same id and fork-restores start clean under the new id). Mirrors the week-advance invalidation pattern in the same file exactly, per the Action note below. Both SaveGameModal call sites (restore and JSON import) funnel through `loadGameFromSave`, so one fix covers both. No test added: no harness exists for the real Zustand store + TanStack Query wiring (the only gameStore test mocks predicates inline), and building one for an 8-line predicate was judged disproportionate — noted here rather than skipped silently.
 
 `loadGameFromSave` (`client/src/store/gameStore.ts:200`) restores a save by writing the snapshot's `emails` array directly into the Zustand store (`set({ emails: snapshot.emails || [], ... })`) and re-fetching related collections via direct `apiRequest` calls into local state — but it never invalidates the TanStack Query cache. `InboxWidget.tsx` and `InboxModal.tsx` read emails through `useEmails` (`client/src/hooks/useEmails.ts`), which is keyed on the scoped `EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE` query keys. After a restore, the dashboard inbox panel keeps rendering whatever was cached from before the restore (verified during the 2026-07-03 manual smoke test: restoring a Week 4 save while sitting on Week 6 briefly showed the Week 6 inbox entries) until a full page reload forces a refetch. The underlying game/email data in the store and database is correct immediately — this is purely a stale read from the query cache, same family as the week-advance email-invalidation gap fixed during the PR #29 review (`['emails']` not matching the scoped `emails:list`/`emails:unread-count` keys — see the Cache Management note in `client/CLAUDE.md`).
 
@@ -800,13 +805,14 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 3 items (C42, C43, C49)
-- 🔵 Low: 2 items (C26, C32)
+- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026)
+- 🔵 Low: 1 in progress (C26 — refactor PR in flight), 1 deferred (C32 — cap unreachable; surfacing fixed)
 
 ### By Status
-- ✅ Completed: 44 items (89.8%)
-- 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 5 items (10.2%)
+- ✅ Completed: 45 items (91.8%)
+- 🚧 In Progress: 1 item (C26)
+- ⏸️ Deferred by decision: 3 items (C32, C42, C43)
+- 📋 Pending: 0 items
 
 ---
 
