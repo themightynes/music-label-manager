@@ -115,7 +115,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
 
   const getStatusBadge = (song: Song) => {
     if (song.isReleased) {
-      return <Badge variant="default" className="bg-brand-burgundy/20 text-brand-burgundy">Released</Badge>;
+      return <Badge variant="default" className="bg-neon-purple/15 text-text-accent border border-neon-purple/30 rounded-chip">Released</Badge>;
     }
     if (song.isRecorded) {
       return <Badge variant="secondary" className="bg-green-900/30 text-green-300 border border-green-600/40">Ready</Badge>;
@@ -176,7 +176,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
     return (
       <div className={`space-y-3 ${className}`}>
         <div className="flex items-center justify-between">
-          <h5 className="text-xs font-semibold text-white/90">Song Catalog</h5>
+          <h5 className="text-xs font-semibold text-text-primary">Song Catalog</h5>
           <Skeleton className="h-4 w-16" />
         </div>
         <div className="space-y-2">
@@ -191,7 +191,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   if (error) {
     return (
       <div className={className}>
-        <h5 className="text-xs font-semibold text-white/90 mb-2">Song Catalog</h5>
+        <h5 className="text-xs font-semibold text-text-primary mb-2">Song Catalog</h5>
         <div className="text-xs text-red-300 p-3 bg-red-900/30 rounded border border-red-600/40">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -221,13 +221,13 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   if (songs.length === 0) {
     return (
       <div className={className}>
-        <h5 className="text-xs font-semibold text-white/90 mb-2">Song Catalog</h5>
-        <div className="text-xs text-white/50 p-3 bg-brand-dark-card/20 rounded border border-brand-purple">
+        <h5 className="text-xs font-semibold text-text-primary mb-2">Song Catalog</h5>
+        <div className="text-xs text-text-muted p-3 bg-surface-inner/40 rounded border border-white/[0.08]">
           <div className="flex items-center space-x-2 mb-2">
             <Music className="w-4 h-4" />
             <span className="font-medium">No songs yet</span>
           </div>
-          <div className="text-white/50 leading-relaxed">
+          <div className="text-text-muted leading-relaxed">
             Songs are created during recording projects. Try:
             <br />• Start a Single or EP recording project
             <br />• Wait for the project to reach "Production" stage
@@ -250,15 +250,15 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-2">
-        <h5 className="text-xs font-semibold text-white/90">Song Catalog</h5>
-        <div className="flex items-center space-x-2 text-xs text-white/50">
+        <h5 className="text-xs font-semibold text-text-primary">Song Catalog</h5>
+        <div className="flex items-center space-x-2 text-xs text-text-muted">
           <span>{recordedSongs.length} recorded</span>
           <span>•</span>
           <span>{releasedSongs.length} released</span>
           {totalRevenue > 0 && (
             <>
               <span>•</span>
-              <span className="text-green-600">${totalRevenue.toLocaleString()}</span>
+              <span className="text-positive">${totalRevenue.toLocaleString()}</span>
             </>
           )}
         </div>
@@ -267,12 +267,12 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       {/* Enhanced Summary Stats */}
       <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
         <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
-          <div className="font-medium text-white">{songs.length}</div>
-          <div className="text-white/50">Total Songs</div>
+          <div className="font-medium text-text-primary">{songs.length}</div>
+          <div className="text-text-muted">Total Songs</div>
         </div>
         <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
           <div className="font-medium text-green-300">{releasedSongs.length}</div>
-          <div className="text-white/50">Released</div>
+          <div className="text-text-muted">Released</div>
         </div>
       </div>
       
@@ -281,21 +281,21 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
         <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
           <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
             <div className="font-medium text-green-300">${totalRevenue.toLocaleString()}</div>
-            <div className="text-white/50">Total Revenue</div>
+            <div className="text-text-muted">Total Revenue</div>
           </div>
           <div className="p-2 bg-green-900/30 border border-green-600/40 rounded text-center">
             <div className="font-medium text-green-300">{totalStreams.toLocaleString()}</div>
-            <div className="text-white/50">Total Streams</div>
+            <div className="text-text-muted">Total Streams</div>
           </div>
         </div>
       )}
       
       {/* Last Week Performance - Only show if there was recent activity */}
       {lastWeekRevenue > 0 && (
-        <div className="p-2 bg-gradient-to-r from-green-900/20 to-brand-burgundy/20 border border-green-600/30 rounded mb-3">
+        <div className="p-2 bg-gradient-to-r from-positive/15 to-neon-purple/15 border border-positive/30 rounded-chip mb-3">
           <div className="text-xs text-center">
-            <div className="font-medium text-white/90">Last Week: +${lastWeekRevenue.toLocaleString()}</div>
-            <div className="text-white/50">Recent Performance</div>
+            <div className="font-medium text-text-primary">Last Week: +${lastWeekRevenue.toLocaleString()}</div>
+            <div className="text-text-muted">Recent Performance</div>
           </div>
         </div>
       )}
@@ -303,12 +303,12 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
       {/* Song List */}
       <div className="space-y-2 max-h-64 overflow-y-auto">
         {songs.map((song) => (
-          <Card key={song.id} className="border border-brand-purple">
+          <Card key={song.id} className="border border-white/[0.08]">
             <CardContent className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <Music className="w-3 h-3 text-white/50" />
-                  <span className="text-xs font-medium text-white truncate">
+                  <Music className="w-3 h-3 text-text-muted" />
+                  <span className="text-xs font-medium text-text-primary truncate">
                     {song.title}
                   </span>
                 </div>
@@ -323,11 +323,11 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
               {song.isReleased && song.currentChartPosition && (
                 <div className="flex items-center justify-between text-xs mb-2 p-2 bg-gradient-to-r from-purple-900/20 to-indigo-900/20 border border-purple-600/30 rounded">
                   <div className="flex items-center space-x-2">
-                    <span className="text-white/70">Chart:</span>
-                    <span className="font-medium text-white">#{song.currentChartPosition}</span>
+                    <span className="text-text-body">Chart:</span>
+                    <span className="font-medium text-text-primary">#{song.currentChartPosition}</span>
                     {getMovementIndicator(song)}
                   </div>
-                  <div className="flex items-center space-x-3 text-white/50">
+                  <div className="flex items-center space-x-3 text-text-muted">
                     {song.weeksOnChart && song.weeksOnChart > 0 && (
                       <span>{song.weeksOnChart} weeks</span>
                     )}
@@ -339,7 +339,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
               )}
 
               <div className="flex items-center justify-between text-xs mb-2">
-                <div className="flex items-center space-x-3 text-white/50">
+                <div className="flex items-center space-x-3 text-text-muted">
                   {song.genre && (
                     <span className="capitalize">{song.genre}</span>
                   )}
@@ -365,13 +365,13 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
 
               {/* Individual Song Metrics - Only show for released songs */}
               {song.isReleased && (song.totalStreams || song.totalRevenue) && (
-                <div className="pt-2 border-t border-brand-purple/50 space-y-1">
+                <div className="pt-2 border-t border-white/[0.06] space-y-1">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {song.totalStreams && (
                       <div className="flex items-center space-x-1">
-                        <PlayCircle className="w-3 h-3 text-brand-burgundy" />
-                        <span className="text-white/50">Streams:</span>
-                        <span className="font-mono text-brand-burgundy">
+                        <PlayCircle className="w-3 h-3 text-text-accent" />
+                        <span className="text-text-muted">Streams:</span>
+                        <span className="font-mono text-text-accent">
                           {song.totalStreams.toLocaleString()}
                         </span>
                       </div>
@@ -380,8 +380,8 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                     {song.totalRevenue && (
                       <div className="flex items-center space-x-1">
                         <DollarSign className="w-3 h-3 text-green-500" />
-                        <span className="text-white/50">Revenue:</span>
-                        <span className="font-mono text-green-600">
+                        <span className="text-text-muted">Revenue:</span>
+                        <span className="font-mono text-positive">
                           ${song.totalRevenue.toLocaleString()}
                         </span>
                       </div>
@@ -390,13 +390,13 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                   
                   {song.lastWeekRevenue && song.lastWeekRevenue > 0 && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Last Week:</span>
+                      <span className="text-text-muted">Last Week:</span>
                       <div className="flex items-center space-x-1">
-                        <span className="font-mono text-green-600">
+                        <span className="font-mono text-positive">
                           +${song.lastWeekRevenue.toLocaleString()}
                         </span>
                         {song.weeklyStreams && (
-                          <span className="text-white/50">
+                          <span className="text-text-muted">
                             ({song.weeklyStreams.toLocaleString()} streams)
                           </span>
                         )}
@@ -406,8 +406,8 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                   
                   {song.releaseWeek && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Released:</span>
-                      <span className="font-mono text-white/70">Week {song.releaseWeek}</span>
+                      <span className="text-text-muted">Released:</span>
+                      <span className="font-mono text-text-body">Week {song.releaseWeek}</span>
                     </div>
                   )}
                 </div>

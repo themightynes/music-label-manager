@@ -118,26 +118,26 @@ export function ActiveReleases() {
 
   const getReleaseTypeBadge = (type: string) => {
     const typeConfig = {
-      single: { label: 'Single', color: 'bg-brand-burgundy/20 text-brand-burgundy' },
-      ep: { label: 'EP', color: 'bg-brand-burgundy-dark/10 text-brand-burgundy-dark' },
-      album: { label: 'Album', color: 'bg-green-100 text-green-800' },
-      compilation: { label: 'Compilation', color: 'bg-orange-100 text-orange-800' }
+      single: { label: 'Single', color: 'bg-neon-purple/15 text-text-accent border border-neon-purple/30' },
+      ep: { label: 'EP', color: 'bg-neon-purple/15 text-text-accent border border-neon-purple/30' },
+      album: { label: 'Album', color: 'bg-positive/15 text-positive border border-positive/30' },
+      compilation: { label: 'Compilation', color: 'bg-neon-amber/15 text-neon-amber border border-neon-amber/30' }
     };
-    
+
     const config = typeConfig[type as keyof typeof typeConfig] || typeConfig.single;
-    return <Badge className={config.color}>{config.label}</Badge>;
+    return <Badge className={`rounded-chip ${config.color}`}>{config.label}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      planned: { label: 'Planned', color: 'bg-yellow-100 text-yellow-800' },
-      released: { label: 'Released', color: 'bg-green-100 text-green-800' },
-      catalog: { label: 'Catalog', color: 'bg-gray-100 text-white' }
+      planned: { label: 'Planned', color: 'bg-warning/15 text-warning border border-warning/30' },
+      released: { label: 'Released', color: 'bg-positive/15 text-positive border border-positive/30' },
+      catalog: { label: 'Catalog', color: 'bg-white/[0.04] text-text-muted border border-white/[0.08]' }
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || 
-                   { label: status, color: 'bg-gray-100 text-white' };
-    return <Badge className={config.color}>{config.label}</Badge>;
+
+    const config = statusConfig[status as keyof typeof statusConfig] ||
+                   { label: status, color: 'bg-white/[0.04] text-text-muted border border-white/[0.08]' };
+    return <Badge className={`rounded-chip ${config.color}`}>{config.label}</Badge>;
   };
 
   const getReleaseSongCount = (releaseId: string) => {
@@ -177,12 +177,12 @@ export function ActiveReleases() {
           </span>
         )}
         {chartInfo.weeksOnChart && (
-          <span className="text-xs text-white/50">
+          <span className="text-xs text-text-muted">
             {chartInfo.weeksOnChart}w
           </span>
         )}
         {chartInfo.peakPosition && (
-          <span className="text-xs text-white/50">
+          <span className="text-xs text-text-muted">
             Peak {formatChartPosition(chartInfo.peakPosition)}
           </span>
         )}
@@ -195,31 +195,31 @@ export function ActiveReleases() {
   const currentWeek = gameState?.currentWeek || 1;
 
   return (
-    <Card className="shadow-sm">
+    <Card className="glass-panel chromatic-hairline">
       <CardContent className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-white">Releases</h3>
-            <p className="text-sm text-white/70">Planned and released music</p>
+            <h3 className="text-lg font-semibold text-text-primary">Releases</h3>
+            <p className="text-sm text-text-body">Planned and released music</p>
           </div>
           
           {/* State Synchronization Indicator */}
           <div className="flex items-center space-x-2">
             {stateSync === 'synced' && (
-              <div className="flex items-center space-x-1 text-green-600">
+              <div className="flex items-center space-x-1 text-positive">
                 <CheckCircle className="w-4 h-4" />
                 <span className="text-xs">Synced</span>
               </div>
             )}
             {stateSync === 'syncing' && (
-              <div className="flex items-center space-x-1 text-brand-burgundy">
+              <div className="flex items-center space-x-1 text-text-accent">
                 <Clock className="w-4 h-4 animate-spin" />
                 <span className="text-xs">Syncing...</span>
               </div>
             )}
             {stateSync === 'error' && (
-              <div className="flex items-center space-x-1 text-amber-600" title="Some releases may be out of sync">
+              <div className="flex items-center space-x-1 text-warning" title="Some releases may be out of sync">
                 <AlertTriangle className="w-4 h-4" />
                 <span className="text-xs">Check Status</span>
               </div>
@@ -228,22 +228,22 @@ export function ActiveReleases() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 bg-brand-dark-card/30 p-1 rounded-lg mb-6">
+        <div className="flex space-x-1 bg-surface-inner/40 p-1 rounded-button mb-6">
           <button
-            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'upcoming' 
-                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm' 
-                : 'text-white/70 hover:text-white'
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-chip transition-colors ${
+              activeTab === 'upcoming'
+                ? 'bg-neon-purple/20 text-text-primary border border-neon-purple/40 shadow-sm'
+                : 'text-text-body hover:text-text-primary'
             }`}
             onClick={() => setActiveTab('upcoming')}
           >
             Upcoming ({upcomingReleases.length})
           </button>
           <button
-            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'released' 
-                ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm' 
-                : 'text-white/70 hover:text-white'
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-chip transition-colors ${
+              activeTab === 'released'
+                ? 'bg-neon-purple/20 text-text-primary border border-neon-purple/40 shadow-sm'
+                : 'text-text-body hover:text-text-primary'
             }`}
             onClick={() => setActiveTab('released')}
           >
@@ -257,8 +257,8 @@ export function ActiveReleases() {
             <>
               {upcomingReleases.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-white/50 mb-2">No upcoming releases planned</p>
-                  <p className="text-sm text-white/50">Use Plan Release to schedule new releases</p>
+                  <p className="text-text-muted mb-2">No upcoming releases planned</p>
+                  <p className="text-sm text-text-muted">Use Plan Release to schedule new releases</p>
                 </div>
               ) : (
                 upcomingReleases.map(release => (
@@ -278,8 +278,8 @@ export function ActiveReleases() {
             <>
               {releasedReleases.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-white/50 mb-2">No releases yet</p>
-                  <p className="text-sm text-white/50">Complete planned releases to see them here</p>
+                  <p className="text-text-muted mb-2">No releases yet</p>
+                  <p className="text-sm text-text-muted">Complete planned releases to see them here</p>
                 </div>
               ) : (
                 <>
@@ -291,29 +291,29 @@ export function ActiveReleases() {
                     const top40Songs = chartingSongs.filter(s => s.chartPosition && s.chartPosition <= 40);
 
                     return chartingSongs.length > 0 ? (
-                      <div className="mb-6 p-4 bg-brand-dark-card/30 rounded-lg border border-brand-burgundy/20">
+                      <div className="mb-6 p-4 bg-surface-inner/40 rounded-[14px] border border-white/[0.08]">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-semibold text-white flex items-center space-x-2">
-                            <BarChart3 className="w-4 h-4 text-brand-burgundy" />
+                          <h4 className="text-sm font-semibold text-text-primary flex items-center space-x-2">
+                            <BarChart3 className="w-4 h-4 text-text-accent" />
                             <span>Chart Performance</span>
                           </h4>
-                          <div className="text-xs text-white/50">
+                          <div className="text-xs text-text-muted">
                             {chartingSongs.length} song{chartingSongs.length !== 1 ? 's' : ''} charting
                           </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4 mb-4">
                           <div className="text-center">
-                            <div className="text-lg font-bold text-yellow-500">{top10Songs.length}</div>
-                            <div className="text-xs text-white/70">Top 10</div>
+                            <div className="text-lg font-mono font-semibold text-warning">{top10Songs.length}</div>
+                            <div className="text-xs text-text-body">Top 10</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-lg font-bold text-blue-500">{top40Songs.length}</div>
-                            <div className="text-xs text-white/70">Top 40</div>
+                            <div className="text-lg font-mono font-semibold text-neon-cyan">{top40Songs.length}</div>
+                            <div className="text-xs text-text-body">Top 40</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-lg font-bold text-green-500">{chartingSongs.length}</div>
-                            <div className="text-xs text-white/70">Charting</div>
+                            <div className="text-lg font-mono font-semibold text-positive">{chartingSongs.length}</div>
+                            <div className="text-xs text-text-body">Charting</div>
                           </div>
                         </div>
 
@@ -323,10 +323,10 @@ export function ActiveReleases() {
                             .sort((a, b) => (a.chartPosition || 101) - (b.chartPosition || 101))
                             .slice(0, 3)
                             .map(song => (
-                              <div key={song.id} className="flex items-center justify-between p-2 bg-black/20 rounded">
+                              <div key={song.id} className="flex items-center justify-between p-2 bg-surface-inner/50 rounded-chip">
                                 <div className="flex-1">
-                                  <div className="text-sm font-medium text-white">{song.title}</div>
-                                  <div className="text-xs text-white/60">{getArtistName(song.artistId)}</div>
+                                  <div className="text-sm font-medium text-text-primary">{song.title}</div>
+                                  <div className="text-xs text-text-muted">{getArtistName(song.artistId)}</div>
                                 </div>
                                 {renderChartBadge(song)}
                               </div>

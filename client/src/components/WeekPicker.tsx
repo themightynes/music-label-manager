@@ -51,8 +51,8 @@ export const WeekPicker = ({
       {renderSelectedInfo && renderSelectedInfo(selectedWeek)}
 
       {/* Pure 52-Week Grid */}
-      <div className="border border-brand-burgundy/30 rounded-lg p-4 bg-brand-dark-card/40">
-        <h3 className="text-sm font-semibold text-brand-burgundy mb-4 text-center">
+      <div className="border border-white/[0.08] rounded-[14px] p-4 bg-surface-inner/40">
+        <h3 className="font-mono text-xs font-semibold text-text-accent uppercase tracking-[0.2em] mb-4 text-center">
           Select Week
         </h3>
 
@@ -70,17 +70,17 @@ export const WeekPicker = ({
                 onClick={() => !isPast && onWeekSelect(week)}
                 disabled={isPast}
                 className={cn(
-                  "w-12 h-8 rounded text-[10px] font-medium transition-all duration-150 relative",
-                  // Base styles - uniform plum burgundy theme
-                  "border border-white/10 bg-brand-burgundy/10",
+                  "w-12 h-8 rounded-chip font-mono text-[10px] font-medium transition-all duration-150 relative",
+                  // Base styles - v2 glass chip
+                  "border border-white/10 bg-neon-purple/10 text-text-body",
                   // Selection state
-                  isSelected && "ring-2 ring-brand-burgundy/70 bg-brand-burgundy text-white font-bold z-10",
+                  isSelected && "ring-2 ring-neon-purple/70 bg-[rgba(160,90,240,0.26)] border-neon-purple/55 text-text-primary font-bold z-10",
                   // Current week
-                  isCurrent && !isSelected && "border-brand-burgundy/50 bg-brand-burgundy/20",
+                  isCurrent && !isSelected && "border-neon-purple/50 bg-neon-purple/20",
                   // Past weeks
-                  isPast && "opacity-30 cursor-not-allowed bg-gray-600/20",
+                  isPast && "opacity-30 cursor-not-allowed bg-white/[0.02]",
                   // Future weeks (clickable)
-                  !isPast && !isSelected && "hover:bg-brand-burgundy/20 hover:border-brand-burgundy/40 hover:scale-110"
+                  !isPast && !isSelected && "hover:bg-neon-purple/20 hover:border-neon-purple/40 hover:scale-110"
                 )}
               >
                 {formatWeekLabel(week)}
@@ -113,7 +113,7 @@ export const WeekPicker = ({
                         {weekButton}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-brand-dark-card border-brand-burgundy/30 text-white/90">
+                    <TooltipContent className="bg-surface-tooltip border-white/[0.12] text-text-primary">
                       <div className="text-xs">Week ending {weekEndingDate}</div>
                     </TooltipContent>
                   </Tooltip>
