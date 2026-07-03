@@ -155,13 +155,14 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
       isActive: (p) => p === '/ar-office' || p.startsWith('/ar-office/'),
     },
     {
-      label: 'Live Performance',
-      icon: Mic,
-      path: '/live-performance',
-      isActive: (p) => p === '/live-performance',
+      label: 'Top 100 Chart',
+      icon: Trophy,
+      path: '/charts/top100',
+      isActive: (p) => p === '/charts/top100',
     },
   ];
 
+  // Action trio grouped together (user request): plan → record → perform
   const rightItems: DockNavItem[] = [
     {
       label: 'Plan Release',
@@ -176,10 +177,10 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
       isActive: (p) => p === '/recording-session',
     },
     {
-      label: 'Top 100 Chart',
-      icon: Trophy,
-      path: '/charts/top100',
-      isActive: (p) => p === '/charts/top100',
+      label: 'Live Performance',
+      icon: Mic,
+      path: '/live-performance',
+      isActive: (p) => p === '/live-performance',
     },
   ];
 
