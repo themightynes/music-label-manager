@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { fetchMeetingDialogue } from '@/services/executiveService';
+import { AnimatedNumber } from '@/components/motion-primitives/animated-number';
 
 interface SelectedChoice {
   executiveName: string;
@@ -407,9 +408,11 @@ export function MetricsDashboard() {
                   </Tooltip>
                 </div>
                 <div>
-                  <div className={`font-mono font-semibold text-xl leading-none ${netProfitLoss >= 0 ? 'text-positive' : 'text-negative'}`}>
-                    {formatSignedMoney(netProfitLoss)}
-                  </div>
+                  <AnimatedNumber
+                    value={netProfitLoss}
+                    format={formatSignedMoney}
+                    className={`block font-mono font-semibold text-xl leading-none ${netProfitLoss >= 0 ? 'text-positive' : 'text-negative'}`}
+                  />
                   <div className="text-[11.5px] text-text-muted mt-1.5">{netProfitLoss >= 0 ? 'Profit' : 'Loss'}</div>
                 </div>
               </div>
