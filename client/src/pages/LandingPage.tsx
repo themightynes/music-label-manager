@@ -99,7 +99,7 @@ function LandingPage() {
       <div className="pointer-events-none absolute bottom-6 right-6 h-8 w-8 border-b-[1.5px] border-r-[1.5px] border-[rgba(212,163,115,0.55)]" />
 
       {/* top HUD strip */}
-      <header className="relative z-10 flex items-center justify-between px-8 py-6 font-mono text-[11px] uppercase tracking-[0.28em] text-text-muted">
+      <header className="relative z-10 flex items-center justify-between px-16 py-6 font-mono text-[11px] uppercase tracking-[0.28em] text-text-muted">
         <div className="flex items-center gap-3">
           <HoloDisc size={34} spinSeconds={20} />
           <span className="font-display text-sm lowercase normal-case tracking-normal text-text-primary">
@@ -117,7 +117,7 @@ function LandingPage() {
 
         {/* THE DISC + orbiting auth actions (md+) */}
         <div className="relative hidden md:block">
-          <HoloDisc size={360} spinSeconds={32} />
+          <HoloDisc size={360} spinSeconds={32} grooves />
           {/* Sign In — left of the wheel (0°), primary gold */}
           <SignInButton mode="modal">
             <button
@@ -150,7 +150,7 @@ function LandingPage() {
 
         {/* Smaller disc for narrow screens */}
         <div className="md:hidden">
-          <HoloDisc size={200} spinSeconds={32} />
+          <HoloDisc size={200} spinSeconds={32} grooves />
         </div>
 
         <h1 className="font-display text-aberration text-[clamp(26px,4vw,46px)] leading-[0.92] font-normal text-text-primary tracking-tight">
@@ -173,7 +173,7 @@ function LandingPage() {
       </main>
 
       {/* bottom strip */}
-      <footer className="relative z-10 px-8 py-6 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-text-muted">
+      <footer className="relative z-10 px-16 py-6 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-text-muted">
         Secure authentication provided by Clerk. Gameplay data is stored privately per account.
       </footer>
     </div>

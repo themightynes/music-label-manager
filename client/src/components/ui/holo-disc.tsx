@@ -19,13 +19,16 @@ export interface HoloDiscProps extends React.HTMLAttributes<HTMLDivElement> {
   spinSeconds?: number
   /** Render the brushed-sheen soft-light second conic layer. Default true. */
   sheen?: boolean
+  /** Vinyl dressing: concentric groove rings + specular highlight + inner darkening
+   *  (splash-disc.html recipe). For large hero discs; too fine to read below ~100px. */
+  grooves?: boolean
 }
 
 const SPECTRUM =
   "repeating-conic-gradient(from 0deg at 50% 50%, #ff3d6e 0deg, #ff9a3d 22deg, #ffe14d 42deg, #57ff8f 66deg, #37d6ff 92deg, #4a6bff 118deg, #b45cff 146deg, #ff3d6e 180deg)"
 
 const HoloDisc = React.forwardRef<HTMLDivElement, HoloDiscProps>(
-  ({ size = 40, spinSeconds = 14, sheen = true, className, style, ...props }, ref) => {
+  ({ size = 40, spinSeconds = 14, sheen = true, grooves = false, className, style, ...props }, ref) => {
     return (
       <div
         ref={ref}
@@ -59,6 +62,33 @@ const HoloDisc = React.forwardRef<HTMLDivElement, HoloDiscProps>(
               animationDuration: `${spinSeconds * 1.6}s`,
             }}
           />
+        )}
+        {/* vinyl dressing: grooves + specular highlight + inner darkening */}
+        {grooves && (
+          <>
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0) 1.5px, rgba(0,0,0,0) 4px, rgba(0,0,0,0.1) 5.5px)",
+              }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                mixBlendMode: "screen",
+                background:
+                  "radial-gradient(circle at 40% 34%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 34%)",
+              }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 50%, rgba(5,3,8,0.65) 0%, rgba(5,3,8,0) 30%)",
+              }}
+            />
+          </>
         )}
         {/* dark spindle center */}
         <div
