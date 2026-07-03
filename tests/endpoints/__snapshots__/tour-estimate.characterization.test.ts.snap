@@ -13,7 +13,7 @@ exports[`POST /api/tour/estimate (characterization) > happy path: pins the full 
     "totalCosts": 14040,
     "venueFees": 4800,
   },
-  "canAfford": "<rng-derived>",
+  "canAfford": true,
   "cities": [
     {
       "cityNumber": 1,
@@ -73,7 +73,7 @@ exports[`POST /api/tour/estimate (characterization) > happy path: pins the full 
     "max": 500,
     "min": 50,
   },
-  "totalBudget": "<rng-derived>",
+  "totalBudget": 14040,
   "totalCosts": 14040,
   "venueCapacity": 400,
   "venueCategory": {

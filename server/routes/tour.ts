@@ -64,8 +64,16 @@ const router = Router();
         }
       }
 
-      // Get base costs to determine marketing budget
-      const baseCosts = financialSystem.calculateTourCosts(venueAccess, cities, 0);
+      // Get base costs to determine marketing budget. C46: when the caller
+      // supplies an explicit venueCapacity, cost it directly — deterministic and
+      // consistent with both the detailed breakdown below and the fixed
+      // venue/production fees TourProcessor uses at execution. The tier-RNG
+      // draw (calculateTourCosts) remains only as the no-capacity fallback.
+      // This matters beyond display: the client passes totalBudget back as the
+      // tour's totalCost at creation (LivePerformancePage → POST /projects).
+      const baseCosts = venueCapacity
+        ? financialSystem.calculateTourCostsWithCapacity(venueCapacity, cities, 0)
+        : financialSystem.calculateTourCosts(venueAccess, cities, 0);
       const totalMarketingBudget = budgetPerCity * cities;
       const totalBudget = baseCosts.totalCosts + totalMarketingBudget;
 
@@ -77,15 +85,16 @@ const router = Router();
       // There is no duplicated assembly to extract: each caller only sources the
       // same `TourCalculationParams` fields from its own context (estimate = request
       // body / current gameState pre-tour; engine = stored project metadata post-
-      // creation). The one honest divergence is `artistPopularity` defaulting (|| 0
-      // here vs || 50 in the engine); changing it would be a behavior change and is
-      // intentionally left. The happy-path response is pinned by
+      // creation). `artistPopularity` defaults to 50 to match the engine's
+      // execution path (C47 — TourProcessor.processUnifiedTourRevenue uses
+      // `artist.popularity || 50`), so preview and executed tour agree for
+      // artists with unset/zero popularity. The happy-path response is pinned by
       // tests/endpoints/tour-estimate.characterization.test.ts.
       // ENHANCED: Calculate detailed breakdown with specific capacity or tier fallback
       const detailedBreakdown = financialSystem.calculateDetailedTourBreakdown({
         venueCapacity: venueCapacity || 0, // Use provided capacity or fallback to tier
         venueTier: venueAccess, // Keep for backward compatibility and fallback
-        artistPopularity: artist.popularity || 0,
+        artistPopularity: artist.popularity || 50,
         localReputation: gameState.reputation || 0,
         cities,
         marketingBudget: totalMarketingBudget

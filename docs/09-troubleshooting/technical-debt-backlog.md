@@ -731,10 +731,12 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
-### Comment 46: Tour estimate's totalBudget draws tier-RNG capacity even when explicit capacity is supplied 🟢
-**Status**: 📋 **PENDING**
+### ~~Comment 46: Tour estimate's totalBudget draws tier-RNG capacity even when explicit capacity is supplied~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-`POST /api/tour/estimate` (`server/routes/tour.ts`) computes `totalBudget` by drawing venue capacity from the tier-based RNG helper even when the caller already supplied an explicit `venueCapacity`, so the displayed estimate total can vary run-to-run for what should be a deterministic preview of the same inputs. It's display-only — nothing charges the player at estimate time — but it makes `canAfford` checks against the estimate flaky relative to what the actual tour (via `TourProcessor`) will do with the same explicit capacity.
+**Resolution**: The estimate now honors an explicit `venueCapacity` for `totalBudget` — `server/routes/tour.ts` costs it via `calculateTourCostsWithCapacity(venueCapacity, cities, 0)` and only falls back to the tier-RNG `calculateTourCosts` when no capacity was supplied. With an explicit capacity, `totalBudget` is deterministic and equals `breakdown.totalCosts` (fixed venue/production fees for the chosen capacity + marketing budget), so `canAfford` is stable and matches what the tour actually charges. The characterization test now pins `totalBudget`/`canAfford` exactly (the old `<rng-derived>` normalization is gone). Note the issue was **not** display-only as originally written: `LivePerformancePage` passes the estimate's `totalBudget` back as the tour's `totalCost` at creation, which the server charges verbatim — so the RNG draw was leaking into the player's actual charge.
+
+`POST /api/tour/estimate` (`server/routes/tour.ts`) computes `totalBudget` by drawing venue capacity from the tier-based RNG helper even when the caller already supplied an explicit `venueCapacity`, so the displayed estimate total can vary run-to-run for what should be a deterministic preview of the same inputs. It makes `canAfford` checks against the estimate flaky relative to what the actual tour (via `TourProcessor`) will do with the same explicit capacity.
 
 **Action**: Product/behavior decision needed — either have the estimate always honor an explicit `venueCapacity` when provided (matching `TourProcessor`'s actual behavior) or document that the estimate is intentionally a range and stop treating `totalBudget` as a single comparable number for `canAfford`.
 
@@ -746,8 +748,10 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
-### Comment 47: artistPopularity defaults differ between tour estimate route and engine (0 vs 50) 🟢
-**Status**: 📋 **PENDING**
+### ~~Comment 47: artistPopularity defaults differ between tour estimate route and engine (0 vs 50)~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
+
+**Resolution**: Aligned the estimate route to the engine's default — `server/routes/tour.ts` now passes `artistPopularity: artist.popularity || 50`, matching `TourProcessor.processUnifiedTourRevenue`'s `artist.popularity || 50` exactly (including the `||` semantics where popularity `0` is treated as 50, so a zero-popularity artist previews the same as it executes). Pinned by a new characterization test asserting a popularity-0 artist and a popularity-50 artist produce identical estimates. The engine side is untouched (no golden-master impact).
 
 `POST /api/tour/estimate` defaults `artistPopularity` to `0` when the field is absent from the request, while `TourProcessor`'s actual week-advance tour processing (`shared/engine/processors/TourProcessor.ts`) defaults the same field to `50`. For any caller that omits `artistPopularity`, the estimate and the real tour outcome are computed against different assumed popularity — a behavioral inconsistency between the preview and the executed tour, in the same family as C44 (release preview vs. execution divergence).
 
@@ -766,13 +770,13 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 1 item (C44)
-- 🟢 Medium: 5 items (C41, C42, C43, C46, C47)
+- 🟢 Medium: 3 items (C41, C42, C43)
 - 🔵 Low: 3 items (C26, C32, C45)
 
 ### By Status
-- ✅ Completed: 38 items (81.3%)
+- ✅ Completed: 40 items (85.1%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 9 items (18.7%)
+- 📋 Pending: 7 items (14.9%)
 
 ---
 
