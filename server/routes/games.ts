@@ -303,44 +303,13 @@ const patchGameStateSchema = z
         });
       }
 
-      // Create new game state for user
-      // Get starting values from balance configuration
-      const startingValues = await serverGameData.getStartingValues();
-
-      // Determine initial access tiers based on starting reputation
-      // This ensures venue access starts at 'clubs' when starting reputation >= 5
-      // Reuses gameCreationService.deriveInitialAccessTiers (PR-15 dedup: the
-      // inline pickTier here was logic-identical to POST /api/game's).
-      const tiers = gameCreationService.deriveInitialAccessTiers(startingValues.reputation || 0);
-      const initialPlaylist = tiers.playlist;
-      const initialPress = tiers.press;
-      const initialVenue = tiers.venue;
-
-      const defaultState = {
-        userId: userId,
-          currentWeek: 1,
-          money: startingValues.money,
-          reputation: startingValues.reputation,
-          creativeCapital: startingValues.creativeCapital,
-          focusSlots: 3,
-          usedFocusSlots: 0,
-          playlistAccess: initialPlaylist,
-          pressAccess: initialPress,
-          venueAccess: initialVenue,
-          campaignType: "standard",
-          rngSeed: Math.random().toString(36).substring(7),
-          flags: {},
-          weeklyStats: {}
-        };
-
-        // Create game state without music label - label will be created separately via frontend flow
-        const gameState = await storage.createGameState(defaultState);
-        console.log('🎮 Created auto-generated game state (label will be created separately):', gameState.id);
-
-        return res.json({
-          ...gameState,
-          musicLabel: null
-        });
+      // Auto-create a game for a user with none. PR-13 / D4: route through
+      // gameCreationService so game creation lives in one module. createBareGame
+      // preserves this endpoint's historical shape (label-less, no executives,
+      // campaignType "standard", flags {}) — see its docstring for why GamePage
+      // depends on musicLabel being null here.
+      const bareGame = await gameCreationService.createBareGame(userId);
+      return res.json(bareGame);
     } catch (error) {
       console.error('Get game state error:', error);
       res.status(500).json({ message: "Failed to fetch game state" });
