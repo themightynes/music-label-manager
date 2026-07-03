@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useMachine } from '@xstate/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { executiveMeetingMachine } from '../../machines/executiveMeetingMachine';
+import { makeCachedFetchExecutives } from '../../hooks/useExecutives';
 import { ExecutiveCard } from './ExecutiveCard';
 import { MeetingSelector } from './MeetingSelector';
 import { DialogueInterface } from './DialogueInterface';
@@ -8,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ArrowLeft, Loader2, Zap } from 'lucide-react';
-import { fetchExecutives, fetchRoleMeetings, fetchMeetingDialogue, fetchAllRoles } from '../../services/executiveService';
+import { fetchRoleMeetings, fetchMeetingDialogue, fetchAllRoles } from '../../services/executiveService';
 import { useGameStore } from '../../store/gameStore';
 
 interface ExecutiveMeetingsProps {
@@ -49,13 +51,23 @@ export function ExecutiveMeetings({
 
   const { getAROfficeStatus, selectedActions, artists } = useGameStore();
 
+  // Phase 3 PR-8: route the machine's executives fetch through the TanStack
+  // Query cache (key ['executives', gameId]) so the meeting flow and any
+  // useExecutives() consumers share ONE cached source. The machine keeps its
+  // injected-service pattern — it never imports TanStack or the store itself.
+  const queryClient = useQueryClient();
+  const cachedFetchExecutives = useMemo(
+    () => makeCachedFetchExecutives(queryClient),
+    [queryClient],
+  );
+
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
       gameId,
       currentWeek,
       focusSlotsTotal: focusSlots.total,
       onActionSelected,
-      fetchExecutives,
+      fetchExecutives: cachedFetchExecutives,
       fetchRoleMeetings,
       fetchMeetingDialogue,
     },
