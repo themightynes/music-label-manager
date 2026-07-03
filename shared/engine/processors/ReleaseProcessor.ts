@@ -1253,7 +1253,7 @@ export class ReleaseProcessor {
     if (ctx.gameData.updateSong) {
       try {
         console.log(`[SONG RELEASE] 🔄 Calling updateSong for song ID: ${song.id}`);
-        const updateResult = await ctx.gameData.updateSong(song.id, songUpdates);
+        const updateResult = await ctx.gameData.updateSong(song.id, songUpdates, ctx.dbTransaction);
         console.log(`[SONG RELEASE] ✅ Successfully updated song "${song.title}" in database`);
         console.log(`[SONG RELEASE] Update result:`, updateResult);
       } catch (error) {

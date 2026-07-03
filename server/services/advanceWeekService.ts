@@ -9,16 +9,26 @@
  *
  * Behavior is intentionally byte-equivalent to the pre-extraction handler,
  * including every console.log, the GameEngine construction, the action
- * formatting, the campaign-completed early return, and — critically — the
- * TWO SEPARATE transactions (D6: transactionality is out of scope; the split at
- * the boundary between engine execution and persistence moves verbatim, same tx
- * boundaries, same operations in each, same order).
+ * formatting, and the campaign-completed early return.
  *
- * TX 1: loads gameState + artists, checks campaign completion (early return),
- *       initializes serverGameData, loads released projects, builds the engine,
- *       formats actions, and runs engine.advanceWeek(actions, tx).
- * TX 2: persists the updated gameState, saves weekly actions, reads back
+ * D6 PR-3: the ENTIRE week advance is now ONE PostgreSQL transaction. The former
+ * TX 2 (gameStates UPDATE + weekly_actions INSERT + debug read-backs) was merged
+ * into TX 1, immediately after engine.advanceWeek(actions, tx) returns, in the
+ * SAME statement order. A crash anywhere mid-advance now rolls back the entire
+ * week — all-or-nothing (see tests/features/advance-week-atomicity.test.ts).
+ *
+ * The initial gameStates select takes a `SELECT ... FOR UPDATE` row lock so two
+ * concurrent advances for the same game serialize (the second blocks on the
+ * first's committed week N+1 state, then advances once more) instead of both
+ * reading week N and double-applying. (Reject-on-stale-week is a follow-up.)
+ *
+ * SINGLE TX: locks + loads gameState + artists, checks campaign completion
+ *       (early return — read-only), initializes serverGameData, loads released
+ *       projects, builds the engine, runs engine.advanceWeek(actions, tx),
+ *       persists the updated gameState, saves weekly actions, reads back
  *       projects/songs for the debug envelope, and assembles the response.
+ *       Response assembly/return happen from the resolved tx value; res.json is
+ *       after commit in the route.
  *
  * Errors: the service throws plain Errors (mirroring the handler's inline
  * `throw new Error(...)` sites). The route maps ZodError -> 400 VALIDATION_ERROR
@@ -47,12 +57,17 @@ export class AdvanceWeekService {
    */
   async advanceWeek(gameId: string, selectedActions: any[]) {
     // Wrap everything in a database transaction
-    const result = await this.db.transaction(async (tx) => {
-      // Get current game state
+    const finalResult = await this.db.transaction(async (tx) => {
+      // Get current game state. FOR UPDATE (D6 PR-3): lock this game's row for the
+      // whole transaction so two concurrent advance-week requests for the SAME game
+      // serialize — the second blocks here until the first commits week N+1, then
+      // reads that committed state and advances once more, instead of both reading
+      // week N and double-applying the week's effects.
       const [gameState] = await tx
         .select()
         .from(gameStates)
-        .where(eq(gameStates.id, gameId));
+        .where(eq(gameStates.id, gameId))
+        .for('update');
 
       if (!gameState) {
         throw new Error('Game not found');
@@ -140,7 +155,13 @@ export class AdvanceWeekService {
           hasSummary: !!weekResult.summary,
           hasCampaignResults: !!weekResult.campaignResults
         });
-        return { gameStateForEngine, weekResult };
+        // D6 PR-3: the campaign-completed path performs NO engine writes, but to
+        // stay byte-equivalent with the pre-merge two-tx handler (which always ran
+        // tx2 — persisting the unchanged gameState, no actions here, and assembling
+        // the debug envelope), we fall through to the SHARED persistence block
+        // below rather than returning early. currentWeek is unchanged (week 52),
+        // so the gameStates UPDATE is a no-op write of the same values.
+        return await this.persistAndAssemble(tx, gameId, weekResult, selectedActions);
       }
 
       // Initialize game data to load balance configuration
@@ -250,22 +271,38 @@ export class AdvanceWeekService {
         throw new Error(`Week advancement failed: ${engineError instanceof Error ? engineError.message : 'Unknown error'}`);
       }
 
-      return { gameStateForEngine, weekResult };
-    }); // End the first transaction here
+      // Ensure weekResult is defined (it should always be due to the throw in catch block)
+      if (!weekResult) {
+        throw new Error('Week advancement failed: No result returned from GameEngine');
+      }
 
-    console.log('[DEBUG] Project advancement transaction committed');
+      // D6 PR-3: persist + assemble the response INSIDE this same transaction
+      // (formerly the separate tx2). A crash anywhere above rolls the whole week
+      // back — all-or-nothing.
+      return await this.persistAndAssemble(tx, gameId, weekResult, selectedActions);
+    }); // End the single week-advance transaction here
 
-    // Destructure the result from the first transaction
-    const { gameStateForEngine, weekResult } = result;
+    console.log('[DEBUG] Week advancement transaction committed');
 
-    // Ensure weekResult is defined (it should always be due to the throw in catch block)
-    if (!weekResult) {
-      throw new Error('Week advancement failed: No result returned from GameEngine');
-    }
+    // Post-commit: return the envelope assembled from in-tx values. The route's
+    // res.json runs after this resolves (§4 post-commit ordering).
+    return finalResult;
+  }
 
-    // Now continue with the rest of the transaction for final updates
-    const finalResult = await this.db.transaction(async (tx) => {
-
+  /**
+   * Persists the advanced gameState + weekly actions and assembles the response
+   * envelope, running the debug read-backs. D6 PR-3: this is the former tx2 body,
+   * verbatim (same statements, same order), now invoked INSIDE the single
+   * week-advance transaction via the passed `tx`. Callers (both the normal and the
+   * campaign-completed early-return paths) share it so the envelope shape is
+   * identical in both branches.
+   */
+  private async persistAndAssemble(
+    tx: any,
+    gameId: string,
+    weekResult: any,
+    selectedActions: any[],
+  ) {
         // Update game state in database
         const [updatedGameState] = await tx
         .update(gameStates)
@@ -342,7 +379,7 @@ export class AdvanceWeekService {
             postEngineProjectCount: finalProjects?.length || 0
           },
           projectStates: {
-            final: finalProjects?.map(p => ({
+            final: finalProjects?.map((p: any) => ({
               id: p.id,
               title: p.title,
               stage: p.stage,
@@ -351,9 +388,9 @@ export class AdvanceWeekService {
           },
           songStates: {
             total: finalSongs?.length || 0,
-            released: finalSongs?.filter(s => s.isReleased).length || 0,
-            ready: finalSongs?.filter(s => s.isRecorded && !s.isReleased).length || 0,
-            songDetails: finalSongs?.map(s => ({
+            released: finalSongs?.filter((s: any) => s.isReleased).length || 0,
+            ready: finalSongs?.filter((s: any) => s.isRecorded && !s.isReleased).length || 0,
+            songDetails: finalSongs?.map((s: any) => ({
               id: s.id,
               title: s.title,
               isRecorded: s.isRecorded,
@@ -375,9 +412,6 @@ export class AdvanceWeekService {
           campaignResults: weekResult.campaignResults,
           debug: debugInfo
         };
-      });
-
-    return finalResult;
   }
 }
 
