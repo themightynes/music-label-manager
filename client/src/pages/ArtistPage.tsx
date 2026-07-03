@@ -1,114 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ReleaseWorkflowCard } from '@/components/ReleaseWorkflowCard';
-import { ArtistCard, getArchetypeInfo as getArtistCardArchetypeInfo, getRelationshipStatus } from '@/components/ArtistCard';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GameLayout from '@/layouts/GameLayout';
 import {
-  ArrowLeft,
   User,
   Music,
-  Calendar,
-  DollarSign,
   TrendingUp,
-  Heart,
   Star,
-  Play,
   AlertCircle,
   Loader2,
   BarChart3,
-  Activity,
-  Award,
   Settings,
-  Filter,
   PlayCircle,
-  Mic,
-  Users,
   Target,
-  Clock,
-  ChevronDown,
-  Eye,
-  Disc,
-  Radio
+  Eye
 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useLocation, useParams } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { useArtistROI } from '@/hooks/useAnalytics';
 import { findArtistBySlugOrId, generateArtistSlug } from '@/utils/artistSlug';
-
-// Types based on existing patterns
-interface Artist {
-  id: string;
-  name: string;
-  archetype: string;
-  talent?: number | null;
-  workEthic?: number | null;
-  popularity?: number | null;
-  temperament?: number | null;
-  energy: number | null;
-  mood: number | null;
-  signed?: boolean | null;
-  signingCost?: number | null;
-  weeklyCost?: number | null;
-  bio?: string;
-  genre?: string;
-  age?: number | null;
-}
-
-interface Song {
-  id: string;
-  title: string;
-  quality: number;
-  genre: string;
-  mood: string;
-  artistId: string;
-  artistName: string;
-  createdWeek: number;
-  isRecorded: boolean;
-  isReleased: boolean;
-  releaseId?: string | null;
-  totalStreams?: number;
-  totalRevenue?: number;
-  weeklyStreams?: number;
-  lastWeekRevenue?: number;
-  releaseWeek?: number;
-  metadata?: any;
-}
-
-interface Project {
-  id: string;
-  title: string;
-  type: 'Single' | 'EP' | 'Mini-Tour';
-  artistId: string;
-  stage: 'planning' | 'production' | 'released';
-  quality: number;
-  budget: number;
-  budgetUsed: number;
-  dueWeek: number;
-  startWeek: number;
-  metadata?: Record<string, any>;
-}
-
-interface Release {
-  id: string;
-  title: string;
-  type: 'single' | 'ep' | 'album';
-  artistId: string;
-  status: 'planned' | 'released' | 'catalog';
-  releaseWeek?: number;
-  songIds: string[];
-  streamsGenerated: number;
-  revenueGenerated: number;
-  marketingBudget?: number;
-  metadata?: Record<string, any>;
-}
+import type { Artist, Song, Project, Release } from '@/components/artist/types';
+import { OverviewTab } from '@/components/artist/OverviewTab';
+import { DiscographyTab } from '@/components/artist/DiscographyTab';
+import { AnalyticsTab } from '@/components/artist/AnalyticsTab';
+import { ReleasesTab } from '@/components/artist/ReleasesTab';
+import { ManagementTab } from '@/components/artist/ManagementTab';
 
 export default function ArtistPage() {
   const params = useParams();
@@ -128,8 +47,7 @@ export default function ArtistPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [artistProjects, setArtistProjects] = useState<Project[]>([]);
   const [artistReleases, setArtistReleases] = useState<Release[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
-  
+
   // Loading and error states
   const [loadingArtist, setLoadingArtist] = useState(true);
   const [loadingSongs, setLoadingSongs] = useState(true);
@@ -138,8 +56,6 @@ export default function ArtistPage() {
   
   // Filter states for discography
   const [songFilter, setSongFilter] = useState<'all' | 'recorded' | 'released'>('all');
-  const [qualityFilter, setQualityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [sortBy, setSortBy] = useState<'creation' | 'quality' | 'streams' | 'revenue'>('creation');
 
   // Artist card state
   const [expandedArtist, setExpandedArtist] = useState<boolean>(false);
@@ -228,68 +144,6 @@ export default function ArtistPage() {
     loadSongsData();
   }, [actualArtistId, gameState?.id]);
   
-  // Helper functions
-  const getQualityColor = (quality: number) => {
-    if (quality >= 90) return 'bg-green-500/20 text-green-800';
-    if (quality >= 80) return 'bg-blue-500/20 text-blue-800';
-    if (quality >= 70) return 'bg-yellow-500/20 text-yellow-800';
-    return 'bg-red-500/20 text-red-800';
-  };
-  
-  const getReleaseTypeBadge = (type: string) => {
-    const typeConfig = {
-      single: { label: 'Single', color: 'bg-blue-500/20 text-blue-800' },
-      ep: { label: 'EP', color: 'bg-brand-burgundy-dark/20 text-brand-burgundy-dark' },
-      album: { label: 'Album', color: 'bg-green-500/20 text-green-800' }
-    };
-    
-    const config = typeConfig[type as keyof typeof typeConfig] || typeConfig.single;
-    return <Badge className={config.color}>{config.label}</Badge>;
-  };
-  
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      planned: { label: 'Planned', color: 'bg-yellow-500/20 text-yellow-800', icon: Clock },
-      released: { label: 'Released', color: 'bg-green-500/20 text-green-800', icon: PlayCircle },
-      catalog: { label: 'Catalog', color: 'bg-gray-500/20 text-white', icon: Disc }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || 
-                   { label: status, color: 'bg-gray-500/20 text-white', icon: Music };
-    return (
-      <Badge className={`${config.color} flex items-center space-x-1`}>
-        <config.icon className="w-3 h-3" />
-        <span>{config.label}</span>
-      </Badge>
-    );
-  };
-  
-  // Group songs by release
-  const getSongsByRelease = () => {
-    const releasedSongs: { [releaseId: string]: Song[] } = {};
-    const unreleasedSongs: Song[] = [];
-    
-    songs.forEach(song => {
-      if (song.isReleased && song.releaseId) {
-        if (!releasedSongs[song.releaseId]) {
-          releasedSongs[song.releaseId] = [];
-        }
-        releasedSongs[song.releaseId].push(song);
-      } else {
-        unreleasedSongs.push(song);
-      }
-    });
-    
-    return { releasedSongs, unreleasedSongs };
-  };
-  
-  // Calculate total marketing cost including lead single
-  const getTotalMarketingCost = (release: Release) => {
-    const mainBudget = release.marketingBudget || 0;
-    const leadSingleBudget = release.metadata?.leadSingleStrategy?.totalLeadSingleBudget || 0;
-    return mainBudget + leadSingleBudget;
-  };
-  
   const getArchetypeInfo = (archetype: string) => {
     const archetypeData: Record<string, any> = {
       'Visionary': { color: 'text-brand-burgundy-dark', icon: Star, description: 'Creative and experimental' },
@@ -319,29 +173,64 @@ export default function ArtistPage() {
     }
   };
 
+  // Derived values (memoized) — computed unconditionally to respect the Rules
+  // of Hooks; guarded against a null `artist` so they are safe before the
+  // loading/error early returns below.
+  const avgQuality = useMemo(() => (
+    songs.length > 0
+      ? Math.round(songs.reduce((sum, s) => sum + s.quality, 0) / songs.length)
+      : 0
+  ), [songs]);
+
+  const archetypeInfo = useMemo(
+    () => getArchetypeInfo(artist?.archetype ?? ''),
+    [artist?.archetype]
+  );
+
+  const moodStatus = useMemo(() => {
+    const mood = artist?.mood ?? 50;
+    return mood >= 70
+      ? { status: 'Happy', color: 'text-green-600', bgColor: 'bg-green-500/10' }
+      : mood >= 40
+      ? { status: 'Neutral', color: 'text-yellow-600', bgColor: 'bg-yellow-500/10' }
+      : { status: 'Unhappy', color: 'text-red-600', bgColor: 'bg-red-500/10' };
+  }, [artist?.mood]);
+
   // Enhanced artist analytics (for artist card)
-  const getArtistInsights = (artist: Artist) => {
-    const mood = artist.mood || 50;
-    const energy = artist.energy ?? (artist as any).loyalty ?? 50;
-    const popularity = artist.popularity || 0;
+  const insights = useMemo(() => {
+    const mood = artist?.mood ?? 50;
+    const energy = artist?.energy ?? (artist as any)?.loyalty ?? 50;
+    const popularity = artist?.popularity ?? 0;
 
     // Total revenue from songs
-    const totalRevenue = songs.reduce((sum, song) => {
-      return sum + (song.totalRevenue || 0);
-    }, 0);
+    const totalRevenue = songs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
 
     return {
       projects: artistProjects.length,
       releasedProjects: songs.filter(s => s.isReleased).length,
       totalRevenue,
-      archetype: artist.archetype,
+      archetype: artist?.archetype,
       mood,
       energy,
       loyalty: energy,
       popularity
     };
-  };
-  
+  }, [artist, songs, artistProjects]);
+
+  // Artist card handlers (memoized for the memoized OverviewTab child)
+  const handleArtistMeeting = useCallback(() => {
+    console.info(`[ArtistPage] Artist meetings temporarily unavailable for ${artist?.name}.`);
+  }, [artist?.name]);
+
+  const handleNavigateToArtist = useCallback(() => {
+    // Already on artist page, so scroll to top or refresh
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleToggleExpand = useCallback(() => {
+    setExpandedArtist(prev => !prev);
+  }, []);
+
   if (loadingArtist) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -367,34 +256,7 @@ export default function ArtistPage() {
       </div>
     );
   }
-  
-  const avgQuality = songs.length > 0 
-    ? Math.round(songs.reduce((sum, s) => sum + s.quality, 0) / songs.length)
-    : 0;
-  
-  const totalStreams = songs.reduce((sum, s) => sum + (s.totalStreams || 0), 0);
-  const totalRevenue = songs.reduce((sum, s) => sum + (s.totalRevenue || 0), 0);
-  const releasedSongs = songs.filter(s => s.isReleased).length;
-  
-  const archetypeInfo = getArchetypeInfo(artist.archetype);
-  const moodStatus = (artist.mood || 50) >= 70 
-    ? { status: 'Happy', color: 'text-green-600', bgColor: 'bg-green-500/10' }
-    : (artist.mood || 50) >= 40 
-    ? { status: 'Neutral', color: 'text-yellow-600', bgColor: 'bg-yellow-500/10' }
-    : { status: 'Unhappy', color: 'text-red-600', bgColor: 'bg-red-500/10' };
-  
-  const { releasedSongs: songsByRelease, unreleasedSongs } = getSongsByRelease();
 
-  // Artist card handlers
-  const handleArtistMeeting = () => {
-    console.info(`[ArtistPage] Artist meetings temporarily unavailable for ${artist.name}.`);
-  };
-
-  const handleNavigateToArtist = () => {
-    // Already on artist page, so scroll to top or refresh
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  
   return (
     <GameLayout>
       <div className="min-h-screen">
@@ -455,727 +317,46 @@ export default function ArtistPage() {
           </div>
           
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Rich Artist Card */}
-            <Card className="relative z-20">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-center space-x-2">
-                    <User className="w-5 h-5" />
-                    <span>Artist Overview</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ArtistCard
-                    artist={artist}
-                    insights={getArtistInsights(artist)}
-                    relationship={getRelationshipStatus(artist.mood || 50, artist.energy ?? (artist as any).loyalty ?? 50)}
-                    archetype={getArtistCardArchetypeInfo(artist.archetype)}
-                    isExpanded={expandedArtist}
-                    onToggleExpand={() => setExpandedArtist(!expandedArtist)}
-                    onMeet={handleArtistMeeting}
-                    onNavigate={handleNavigateToArtist}
-                    gameState={gameState}
-                    roiData={roiData}
-                  />
-                </CardContent>
-              </Card>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Artist Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <User className="w-5 h-5" />
-                    <span>Artist Stats</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Mood</span>
-                        <span className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {artist.mood || 50}%
-                        </span>
-                      </div>
-                      <Progress value={artist.mood || 50} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                      <span>Energy</span>
-                        <span className={`font-medium ${((artist.energy ?? (artist as any).loyalty ?? 50) >= 70) ? 'text-green-600' : ((artist.energy ?? (artist as any).loyalty ?? 50) >= 40) ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {artist.energy ?? (artist as any).loyalty ?? 50}%
-                        </span>
-                      </div>
-                      <Progress value={artist.energy ?? (artist as any).loyalty ?? 50} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Talent</span>
-                        <span className="font-medium">{artist.talent || 50}%</span>
-                      </div>
-                      <Progress value={artist.talent || 50} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Work Ethic</span>
-                        <span className="font-medium">{artist.workEthic || 50}%</span>
-                      </div>
-                      <Progress value={artist.workEthic || 50} className="h-2" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Performance Metrics */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <BarChart3 className="w-5 h-5" />
-                    <span>Performance</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <PerformanceMetrics
-                    artistId={actualArtistId || ''}
-                    avgQuality={avgQuality}
-                    projectCount={artistProjects.length}
-                    readySongs={songs.filter(s => s.isRecorded && !s.isReleased).length}
-                    popularity={artist.popularity || 0}
-                    roiData={roiData}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Activity className="w-5 h-5" />
-                    <span>Recent Activity</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {songs.length === 0 ? (
-                      <div className="text-center text-white/50 py-4">
-                        <Music className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                        <p className="text-sm">No activity yet</p>
-                      </div>
-                    ) : (
-                      <>
-                        {songs.slice(0, 3).map(song => (
-                          <div key={song.id} className="flex items-center justify-between p-2 bg-brand-dark-card/5 rounded">
-                            <div>
-                              <div className="text-sm font-medium">{song.title}</div>
-                              <div className="text-xs text-white/50">
-                                {song.isReleased ? 'Released' : song.isRecorded ? 'Recorded' : 'Recording'} • Week {song.createdWeek}
-                              </div>
-                            </div>
-                            <Badge className={getQualityColor(song.quality)}>
-                              {song.quality}
-                            </Badge>
-                          </div>
-                        ))}
-                        {songs.length > 3 && (
-                          <div className="text-center">
-                            <Button variant="ghost" size="sm">
-                              View All {songs.length} Songs
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+          <OverviewTab
+            artist={artist}
+            songs={songs}
+            artistId={actualArtistId || ''}
+            avgQuality={avgQuality}
+            projectCount={artistProjects.length}
+            insights={insights}
+            roiData={roiData}
+            gameState={gameState}
+            expandedArtist={expandedArtist}
+            onToggleExpand={handleToggleExpand}
+            onMeet={handleArtistMeeting}
+            onNavigate={handleNavigateToArtist}
+          />
           
           {/* Discography Tab - Reorganized with releases grouping */}
-          <TabsContent value="discography" className="space-y-6 relative z-20">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Complete Discography</span>
-                  <Badge variant="outline">{songs.length} Total Songs</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Released Songs by Release */}
-                {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').map(release => {
-                  const releaseSongs = songsByRelease[release.id] || [];
-                  if (releaseSongs.length === 0) return null;
-                  
-                  // Calculate totals for this release
-                  const releaseTotalStreams = releaseSongs.reduce((sum, song) => sum + (song.totalStreams || 0), 0);
-                  const releaseTotalRevenue = releaseSongs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
-                  
-                  return (
-                    <div key={release.id} className="mb-6 last:mb-0">
-                      <div className="flex items-center justify-between mb-3 pb-2 border-b">
-                        <div className="flex items-center space-x-3">
-                          <h3 className="font-semibold text-lg">{release.title}</h3>
-                          {getReleaseTypeBadge(release.type)}
-                          {getStatusBadge(release.status)}
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-sm text-white/70">
-                            Week {release.releaseWeek} • {releaseSongs.length} songs
-                          </div>
-                          <div className="flex items-center space-x-3 text-sm">
-                            <div className="flex items-center space-x-1">
-                              <span className="text-white/50">Total:</span>
-                              <span className="font-semibold text-blue-600">
-                                {(releaseTotalStreams / 1000).toFixed(0)}k streams
-                              </span>
-                            </div>
-                            <div className="text-white/30">•</div>
-                            <div className="flex items-center space-x-1">
-                              <span className="font-semibold text-green-600">
-                                ${(releaseTotalRevenue / 1000).toFixed(1)}k
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="text-left text-xs text-white/50 border-b">
-                              <th className="pb-2">#</th>
-                              <th className="pb-2">Title</th>
-                              <th className="pb-2">Quality</th>
-                              <th className="pb-2">Genre</th>
-                              <th className="pb-2">Mood</th>
-                              <th className="pb-2 text-right">Streams</th>
-                              <th className="pb-2 text-right">Revenue</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {releaseSongs.map((song, idx) => (
-                              <tr key={song.id} className="border-b last:border-0">
-                                <td className="py-2 text-sm text-white/50">{idx + 1}</td>
-                                <td className="py-2 font-medium">{song.title}</td>
-                                <td className="py-2">
-                                  <Badge className={getQualityColor(song.quality)}>
-                                    {song.quality}
-                                  </Badge>
-                                </td>
-                                <td className="py-2 text-sm capitalize">{song.genre}</td>
-                                <td className="py-2 text-sm capitalize">{song.mood}</td>
-                                <td className="py-2 text-sm text-right">
-                                  {(song.totalStreams || 0).toLocaleString()}
-                                </td>
-                                <td className="py-2 text-sm text-right">
-                                  ${(song.totalRevenue || 0).toLocaleString()}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {/* Unreleased Songs */}
-                {unreleasedSongs.length > 0 && (
-                  <div className="mt-6 pt-6 border-t">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-lg">Unreleased Songs</h3>
-                      <Badge variant="outline" className="bg-yellow-500/10">
-                        {unreleasedSongs.length} songs
-                      </Badge>
-                    </div>
-                    
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-left text-xs text-white/50 border-b">
-                            <th className="pb-2">#</th>
-                            <th className="pb-2">Title</th>
-                            <th className="pb-2">Quality</th>
-                            <th className="pb-2">Genre</th>
-                            <th className="pb-2">Mood</th>
-                            <th className="pb-2">Status</th>
-                            <th className="pb-2">Created</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {unreleasedSongs.map((song, idx) => (
-                            <tr key={song.id} className="border-b last:border-0">
-                              <td className="py-2 text-sm text-white/50">{idx + 1}</td>
-                              <td className="py-2 font-medium">{song.title}</td>
-                              <td className="py-2">
-                                <Badge className={getQualityColor(song.quality)}>
-                                  {song.quality}
-                                </Badge>
-                              </td>
-                              <td className="py-2 text-sm capitalize">{song.genre}</td>
-                              <td className="py-2 text-sm capitalize">{song.mood}</td>
-                              <td className="py-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {song.isRecorded ? 'Ready' : 'Recording'}
-                                </Badge>
-                              </td>
-                              <td className="py-2 text-sm">Week {song.createdWeek}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                
-                {songs.length === 0 && (
-                  <div className="text-center py-8">
-                    <Music className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                    <p className="text-white/50">No songs recorded yet</p>
-                  </div>
-                )}
-                
-                {/* Overall Summary for all releases */}
-                {songs.filter(s => s.isReleased).length > 0 && (
-                  <div className="mt-6 pt-4 border-t-2 border-brand-purple/50">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">Career Totals</h3>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-blue-600">
-                            {(songs.filter(s => s.isReleased).reduce((sum, s) => sum + (s.totalStreams || 0), 0) / 1000000).toFixed(1)}M
-                          </div>
-                          <div className="text-xs text-white/70">Total Streams</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-green-600">
-                            ${(songs.filter(s => s.isReleased).reduce((sum, s) => sum + (s.totalRevenue || 0), 0) / 1000).toFixed(0)}k
-                          </div>
-                          <div className="text-xs text-white/70">Total Revenue</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-brand-burgundy-dark">
-                            {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length}
-                          </div>
-                          <div className="text-xs text-white/70">Releases</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-orange-600">
-                            {songs.filter(s => s.isReleased).length}
-                          </div>
-                          <div className="text-xs text-white/70">Released Songs</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <DiscographyTab songs={songs} artistReleases={artistReleases} />
           
           {/* Releases Tab */}
-          <TabsContent value="releases" className="space-y-6 relative z-20">
-            {/* Upcoming Releases */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                <Clock className="w-5 h-5" />
-                <span>Upcoming Releases</span>
-                <Badge variant="outline" className="ml-2">
-                  {artistReleases.filter(r => r.status === 'planned').length}
-                </Badge>
-              </h3>
-              
-              {artistReleases.filter(r => r.status === 'planned').length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <Clock className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                    <p className="text-white/70 mb-4">No planned releases</p>
-                    <Button onClick={() => setLocation('/plan-release')}>
-                      Plan New Release
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {artistReleases.filter(r => r.status === 'planned').map(release => (
-                    <ReleaseWorkflowCard
-                      key={release.id}
-                      release={release}
-                      currentWeek={gameState?.currentWeek || 1}
-                      artistName={artist.name}
-                      songs={songs}
-                      onReleasePage={true}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Released */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                <PlayCircle className="w-5 h-5" />
-                <span>Released</span>
-                <Badge variant="outline" className="ml-2">
-                  {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length}
-                </Badge>
-              </h3>
-              
-              {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <PlayCircle className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                    <p className="text-white/70">No releases yet</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').map(release => (
-                    <ReleaseWorkflowCard
-                      key={release.id}
-                      release={release}
-                      currentWeek={gameState?.currentWeek || 1}
-                      artistName={artist.name}
-                      songs={songs}
-                      onReleasePage={true}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
+          <ReleasesTab
+            artistReleases={artistReleases}
+            songs={songs}
+            artistName={artist.name}
+            currentWeek={gameState?.currentWeek || 1}
+            onNavigate={setLocation}
+          />
           
           {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6 relative z-20">
-            <div className="space-y-6">
-              {/* Total Streams Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Radio className="w-5 h-5" />
-                    <span>Total Streams by Song</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {songs.filter(s => s.isReleased).length === 0 ? (
-                    <div className="text-center py-8">
-                      <Radio className="w-8 h-8 text-white/30 mx-auto mb-3" />
-                      <p className="text-white/50">No released songs to analyze</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-left text-xs text-white/50 border-b">
-                            <th className="pb-2">Rank</th>
-                            <th className="pb-2">Song Title</th>
-                            <th className="pb-2">Release</th>
-                            <th className="pb-2 text-right">Total Streams</th>
-                            <th className="pb-2 text-right">Revenue</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {songs
-                            .filter(s => s.isReleased)
-                            .sort((a, b) => (b.totalStreams || 0) - (a.totalStreams || 0))
-                            .slice(0, 10)
-                            .map((song, idx) => {
-                              const release = artistReleases.find(r => r.id === song.releaseId);
-                              return (
-                                <tr key={song.id} className="border-b last:border-0">
-                                  <td className="py-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                      idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
-                                      idx === 1 ? 'bg-gray-500/20 text-white/90' :
-                                      idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                      'bg-brand-purple-light/10 text-white/70'
-                                    }`}>
-                                      {idx + 1}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 font-medium">{song.title}</td>
-                                  <td className="py-3 text-sm text-white/70">
-                                    {release?.title || 'Unknown'}
-                                  </td>
-                                  <td className="py-3 text-right font-mono font-semibold">
-                                    {(song.totalStreams || 0).toLocaleString()}
-                                  </td>
-                                  <td className="py-3 text-right font-mono text-green-600">
-                                    ${(song.totalRevenue || 0).toLocaleString()}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {/* Last Week Streams Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5" />
-                    <span>Last Week Streams</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {songs.filter(s => s.isReleased && s.weeklyStreams).length === 0 ? (
-                    <div className="text-center py-8">
-                      <TrendingUp className="w-8 h-8 text-white/30 mx-auto mb-3" />
-                      <p className="text-white/50">No streaming data for last week</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-left text-xs text-white/50 border-b">
-                            <th className="pb-2">Rank</th>
-                            <th className="pb-2">Song Title</th>
-                            <th className="pb-2">Quality</th>
-                            <th className="pb-2 text-right">Weekly Streams</th>
-                            <th className="pb-2 text-right">Growth</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {songs
-                            .filter(s => s.isReleased)
-                            .sort((a, b) => (b.weeklyStreams || 0) - (a.weeklyStreams || 0))
-                            .slice(0, 10)
-                            .map((song, idx) => {
-                              const growth = song.totalStreams && song.weeklyStreams 
-                                ? ((song.weeklyStreams / Math.max(1, song.totalStreams - song.weeklyStreams)) * 100).toFixed(1)
-                                : '0.0';
-                              return (
-                                <tr key={song.id} className="border-b last:border-0">
-                                  <td className="py-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                      idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
-                                      idx === 1 ? 'bg-gray-500/20 text-white/90' :
-                                      idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                      'bg-brand-purple-light/10 text-white/70'
-                                    }`}>
-                                      {idx + 1}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 font-medium">{song.title}</td>
-                                  <td className="py-3">
-                                    <Badge className={getQualityColor(song.quality)}>
-                                      {song.quality}
-                                    </Badge>
-                                  </td>
-                                  <td className="py-3 text-right font-mono font-semibold">
-                                    {(song.weeklyStreams || 0).toLocaleString()}
-                                  </td>
-                                  <td className="py-3 text-right">
-                                    <span className={`font-semibold ${
-                                      parseFloat(growth) > 0 ? 'text-green-600' : 'text-white/40'
-                                    }`}>
-                                      {parseFloat(growth) > 0 ? '+' : ''}{growth}%
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+          <AnalyticsTab songs={songs} artistReleases={artistReleases} />
           
           {/* Management Tab */}
-          <TabsContent value="management" className="space-y-6 relative z-20">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Artist Status */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Heart className="w-5 h-5" />
-                    <span>Artist Relationship</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className={`p-4 rounded-lg ${moodStatus.bgColor}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">Overall Status</span>
-                      <Badge className={`${moodStatus.color} border-current`} variant="outline">
-                        {moodStatus.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-white/70">
-                      {(artist.mood || 50) >= 70 
-                        ? 'Artist is happy and motivated. Continue current management approach.'
-                        : (artist.mood || 50) >= 40 
-                        ? 'Artist relationship is stable but could be improved with attention.'
-                        : 'Artist is unhappy. Immediate attention needed to improve relationship.'
-                      }
-                    </p>
-                  </div>
-                  
-                  {/* Archetype Information */}
-                  <div className="p-4 border border-brand-purple/50 rounded-lg">
-                    <h4 className="font-medium mb-2">Archetype: {artist.archetype}</h4>
-                    <p className="text-sm text-white/70 mb-3">{archetypeInfo.description}</p>
-                    <div className="text-xs text-white/50">
-                      <strong>Management Tip:</strong> {
-                        artist.archetype === 'Visionary' 
-                          ? 'Provide creative freedom and avoid purely commercial decisions.'
-                          : artist.archetype === 'Workhorse'
-                          ? 'Maintain consistent project flow and clear communication.'
-                          : 'Focus on commercial viability and current market trends.'
-                      }
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Settings className="w-5 h-5" />
-                    <span>Quick Actions</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    className="w-full justify-start" 
-                    variant="outline"
-                    onClick={() => setLocation('/plan-release')}
-                  >
-                    <Mic className="w-4 h-4 mr-2" />
-                    Plan New Release
-                  </Button>
-                  
-                  <Button 
-                    className="w-full justify-start" 
-                    variant="outline"
-                    disabled
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    Schedule Meeting
-                  </Button>
-                  
-                  <Button 
-                    className="w-full justify-start" 
-                    variant="outline"
-                    disabled
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    View Contract
-                  </Button>
-                  
-                  <div className="pt-3 border-t border-brand-purple/50">
-                    <div className="text-sm text-white/70 mb-2">Weekly Cost</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold">${(artist.weeklyCost || artist.weeklyCost || 0).toLocaleString()}</span>
-                      <Badge variant="outline" className="text-xs">
-                        Per Week
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+          <ManagementTab
+            artist={artist}
+            moodStatus={moodStatus}
+            archetypeInfo={archetypeInfo}
+            onNavigate={setLocation}
+          />
         </Tabs>
         </main>
       </div>
     </GameLayout>
-  );
-}
-
-// Component to display performance metrics with backend ROI
-function PerformanceMetrics({
-  artistId,
-  avgQuality,
-  projectCount,
-  readySongs,
-  popularity,
-  roiData
-}: {
-  artistId: string;
-  avgQuality: number;
-  projectCount: number;
-  readySongs: number;
-  popularity: number;
-  roiData?: any;
-}) {
-  // Use passed roiData to avoid duplicate API calls
-  const overallROI = roiData?.overallROI ?? 0;
-  const totalRevenue = roiData?.totalRevenue ?? 0;
-  const totalStreams = roiData?.totalStreams ?? 0;
-  const totalProductionCost = roiData?.totalProductionInvestment ?? 0;
-  const totalMarketingCost = roiData?.totalMarketingInvestment ?? 0;
-  
-  return (
-    <div className="space-y-4">
-      {/* Main metrics grid */}
-      <div className="grid grid-cols-2 gap-4 text-center">
-        <div className="p-3 bg-blue-500/10 rounded-lg">
-          <div className="text-lg font-bold text-blue-700">{avgQuality}</div>
-          <div className="text-xs text-white/70">Avg Quality</div>
-        </div>
-        <div className="p-3 bg-green-500/10 rounded-lg">
-          <div className="text-lg font-bold text-green-700">{projectCount}</div>
-          <div className="text-xs text-white/70">Projects</div>
-        </div>
-        <div className="p-3 bg-brand-burgundy-dark/10 rounded-lg">
-          <div className="text-lg font-bold text-brand-burgundy-dark">{readySongs}</div>
-          <div className="text-xs text-white/70">Ready Songs</div>
-        </div>
-        <div className="p-3 bg-orange-500/10 rounded-lg">
-          <div className="text-lg font-bold text-orange-700">{popularity}</div>
-          <div className="text-xs text-white/70">Popularity</div>
-        </div>
-      </div>
-      
-      {/* Financial metrics - separate section */}
-      <div className="pt-3 border-t border-brand-purple/50">
-        <div className="grid grid-cols-2 gap-3">
-          {/* Revenue and Streams */}
-          <div className="p-3 bg-green-500/10 rounded-lg">
-            <div className="text-lg font-bold text-green-700">
-              ${(totalRevenue / 1000).toFixed(1)}k
-            </div>
-            <div className="text-xs text-white/70">Total Revenue</div>
-          </div>
-          <div className="p-3 bg-blue-500/10 rounded-lg">
-            <div className="text-lg font-bold text-blue-700">
-              {(totalStreams / 1000).toFixed(0)}k
-            </div>
-            <div className="text-xs text-white/70">Total Streams</div>
-          </div>
-          
-          {/* Costs */}
-          <div className="p-3 bg-brand-purple-light/10 rounded-lg">
-            <div className="text-lg font-bold text-brand-purple-light">
-              ${(totalProductionCost / 1000).toFixed(1)}k
-            </div>
-            <div className="text-xs text-white/70">Recording Costs</div>
-          </div>
-          <div className="p-3 bg-brand-burgundy/10 rounded-lg">
-            <div className="text-lg font-bold text-brand-burgundy">
-              ${(totalMarketingCost / 1000).toFixed(1)}k
-            </div>
-            <div className="text-xs text-white/70">Marketing Costs</div>
-          </div>
-          
-          {/* ROI - spans full width */}
-          <div className={`col-span-2 p-3 ${overallROI >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'} rounded-lg`}>
-            <div className={`text-xl font-bold ${overallROI >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {overallROI > 0 ? '+' : ''}{overallROI.toFixed(0)}%
-            </div>
-            <div className="text-xs text-white/70">Return on Investment</div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
