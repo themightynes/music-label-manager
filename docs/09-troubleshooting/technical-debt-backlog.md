@@ -815,11 +815,8 @@ The Phase 3 client characterization tests (`tests/client/` — gameStore actions
 
 ---
 
-### [ ] Comment 51: liquid-chrome-bg.jpg design asset not importable (256KB API cap)
-**Priority**: 🔵 Low
-**Impact**: Visual richness of the v2 backdrop (cosmetic)
-**Effort**: Trivial (manual file drop)
-**Status**: 📋 Pending — needs a human with the file
+### ~~Comment 51: liquid-chrome-bg.jpg design asset not importable (256KB API cap)~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026) — user supplied the file (425KB JPEG, 1376×768, confirming the 256KB cap was the blocker); committed to `client/public/liquid-chrome-bg.jpg`. All backdrop layers (PageBackdrop + MainMenu + splash) picked it up automatically, verified live.
 
 The Design System v2 comps layer a liquid-chrome photograph under every page at 0.3–0.42 opacity. The claude.ai/design API truncates file transfers at 256KB, so the asset could not be imported during the July 3, 2026 redesign. `PageBackdrop` (client/src/components/ui/page-backdrop.tsx) renders a CSS bloom approximation and already tolerates/uses `/liquid-chrome-bg.jpg` if present — **drop the real file into `client/public/` and the backdrop upgrades automatically**, no code change needed.
 
@@ -862,13 +859,13 @@ Grab-bag from the July 3, 2026 redesign agent reports: (1) `ChartPerformanceCard
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 4 pending (C50 — client tests' incidental DB dependency; C51–C53 — v2 redesign follow-ups, July 3, 2026)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 3 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups, July 3, 2026)
 
 ### By Status
 - ✅ Completed: 46 items (86.8%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 4 items (C50 — logged July 3, 2026; C51, C52, C53 — v2 redesign follow-ups, July 3, 2026; all low, not scheduled)
+- 📋 Pending: 3 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups, July 3, 2026; all low, not scheduled)
 
 ---
 
