@@ -20,6 +20,7 @@ import {
   fetchDiscoveredArtists,
 } from '@/hooks/useDiscoveredArtists';
 import { gameStateQueryKey } from '@/hooks/useGameState';
+import { playHighestPrioritySound, type SoundKey } from '@/lib/audio';
 
 // Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
 // identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
@@ -84,6 +85,28 @@ async function fetchGameBundle(gameId: string): Promise<GameBundle> {
   seedArtistsCache(gameId, gameData?.artists);
 
   return { gameData, songs, releases, releaseSongs, executives, moodEvents, emails };
+}
+
+// Phase 4 PR-6: decide which sting (if any) to play for a completed week.
+// Priority (highest wins, only one plays): campaign-end > hero-fanfare (a
+// No. 1 chart update) > tier-unlock (an 'unlock' GameChange) > week-advance.
+// Called once per advanceWeek resolution, right where weeklyOutcome/
+// campaignResults land — NOT inside WeekSummary.tsx (a parallel PR rewrites
+// that file's internals).
+function playWeekAdvanceSound(summary: any, campaignResults: any): void {
+  const candidates: SoundKey[] = ['week-advance'];
+
+  const hasUnlock = Array.isArray(summary?.changes)
+    && summary.changes.some((change: any) => change?.type === 'unlock');
+  if (hasUnlock) candidates.push('tier-unlock');
+
+  const hasHeroChartUpdate = Array.isArray(summary?.chartUpdates)
+    && summary.chartUpdates.some((update: any) => update?.importance === 'hero');
+  if (hasHeroChartUpdate) candidates.push('hero-fanfare');
+
+  if (campaignResults) candidates.push('campaign-end');
+
+  playHighestPrioritySound(candidates);
 }
 
 // Phase 3 PR-6: seed the release/song query caches from an already-fetched
@@ -924,6 +947,10 @@ export const useGameStore = create<GameStore>()(
             selectedActions: [],
             isAdvancingWeek: false
           });
+
+          // Phase 4 PR-6: single week-advance/tier-unlock/hero-fanfare/
+          // campaign-end sting, priority-picked so only one plays.
+          playWeekAdvanceSound(result.summary, result.campaignResults);
 
           try {
             const labelName = syncedGameState.musicLabel?.name;
