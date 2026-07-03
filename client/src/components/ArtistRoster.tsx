@@ -10,6 +10,7 @@ import {
   MenubarTrigger,
 } from '@/components/ui/menubar';
 import { useGameStore } from '@/store/gameStore';
+import { useProjects } from '@/hooks/useProjects';
 import { ArtistDiscoveryModal } from './ArtistDiscoveryModal';
 import { ArtistDashboardCard } from './ArtistDashboardCard';
 import { ArtistDialogueModal } from './artist-dialogue/ArtistDialogueModal';
@@ -45,7 +46,9 @@ const toGameArtist = (artist: DbArtist | (DbArtist & { loyalty?: number | null }
 };
 
 export function ArtistRoster() {
-  const { gameState, artists, signArtist, projects, loadGame } = useGameStore();
+  const { gameState, artists, signArtist, loadGame } = useGameStore();
+  // Phase 3 PR-7: projects are cache-owned; read via useProjects.
+  const { data: projects = [] } = useProjects();
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [isDialogueModalOpen, setIsDialogueModalOpen] = useState(false);
   const [selectedArtistForDialogue, setSelectedArtistForDialogue] = useState<DbArtist | null>(null);

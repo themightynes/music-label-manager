@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Plus, Music, Mic2, Clock } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useReleases } from '@/hooks/useReleases';
+import { useProjects } from '@/hooks/useProjects';
 import { cn } from '@/lib/utils';
 import { getCompletedCities, getTourMetadata } from '@/utils/tourHelpers';
 import { getWeekDateRange, getWeekDates as getWeekDatesForYear, formatWeekEndDate } from '@shared/utils/seasonalCalculations';
@@ -43,9 +44,11 @@ export function MusicCalendar({
   minWeek = 1,
   weekPickerMode = false
 }: MusicCalendarProps) {
-  const { gameState, projects, artists } = useGameStore();
-  // Phase 3 PR-6: releases read from the TanStack Query cache, not Zustand.
+  const { gameState, artists } = useGameStore();
+  // Phase 3 PR-6/PR-7: releases / projects read from the TanStack Query cache,
+  // not Zustand.
   const { data: releases = [] } = useReleases();
+  const { data: projects = [] } = useProjects();
 
   // Fast lookup of artist names by ID
   const artistNameById = useMemo(() => {

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useGameStore } from '@/store/gameStore';
+import { useProjects } from '@/hooks/useProjects';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, DollarSign, Users, Calculator } from 'lucide-react';
@@ -260,7 +261,9 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
 }
 
 export function ActiveTours() {
-  const { projects, artists, cancelProject, gameState } = useGameStore();
+  const { artists, cancelProject, gameState } = useGameStore();
+  // Phase 3 PR-7: projects are cache-owned; read via useProjects.
+  const { data: projects = [] } = useProjects();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [showCancelModal, setShowCancelModal] = useState(false);

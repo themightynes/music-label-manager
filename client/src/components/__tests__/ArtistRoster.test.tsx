@@ -13,6 +13,12 @@ vi.mock('@/store/gameStore', () => ({
   useGameStore: mockUseGameStore,
 }));
 
+// Phase 3 PR-7: ArtistRoster now reads projects via useProjects (TanStack).
+// Mock it so this component test stays store-only and needs no QueryClient.
+vi.mock('@/hooks/useProjects', () => ({
+  useProjects: () => ({ data: [] }),
+}));
+
 vi.mock('wouter', () => ({
   useLocation: () => [null, setLocationMock],
 }));

@@ -23,7 +23,7 @@ export function Dashboard({
   showSaveModal = false,
   setShowSaveModal = () => {}
 }: DashboardProps) {
-  const { gameState, isAdvancingWeek, advanceWeek, weeklyOutcome, artists, projects, createProject } = useGameStore();
+  const { gameState, isAdvancingWeek, advanceWeek, weeklyOutcome, artists, createProject } = useGameStore();
   const [, setLocation] = useLocation();
   const [showWeekSummary, setShowWeekSummary] = useState(false);
   const [lastProcessedWeek, setLastProcessedWeek] = useState<number | null>(null);

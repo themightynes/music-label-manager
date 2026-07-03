@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export function ToastNotification() {
   const { toast, dismiss } = useToast();
-  const { gameState, weeklyOutcome, projects } = useGameStore();
+  const { gameState, weeklyOutcome } = useGameStore();
   const prevGameState = useRef(gameState);
   const prevWeeklyOutcome = useRef(weeklyOutcome);
   const [recentToasts, setRecentToasts] = useState<Set<string>>(new Set());
