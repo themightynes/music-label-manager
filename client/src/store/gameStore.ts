@@ -173,6 +173,44 @@ async function refetchDiscoveredArtistsCache(gameState: GameState | null) {
   }
 }
 
+// Phase 3 PR-10: adopt the SERVER-CANONICAL money + creativeCapital after a
+// mutation instead of doing optimistic client-side arithmetic on gameState.
+// signArtist / createProject / planRelease all recompute cost server-side (Phase
+// 1 hardening: artistService derives signingCost, projects.ts recomputes
+// totalCost, releasePlanningService validates the marketing budget) and none of
+// their mutation responses carry BOTH updated fields:
+//   - POST .../artists           -> res.json(artist)   (no money at all)
+//   - POST .../projects          -> res.json(project)  (no money/creativeCapital)
+//   - POST .../releases/plan     -> payload.updatedGameState.money only (no cc)
+// So the single correct source for both fields is one refetch of GET
+// /api/game/:id, whose gameState carries money AND creativeCapital. We merge
+// ONLY those two fields onto the current store gameState so the synced A&R
+// fields / musicLabel / usedFocusSlots already in the store are preserved
+// (cancelProject stays on its response-field path — result.newBalance — because
+// its response DOES carry the authoritative balance and it never touches
+// creativeCapital). Returns silently on failure so a transient GET error never
+// throws out of the mutation (the mutation itself already succeeded on the
+// server); the next full reload reconciles.
+async function adoptServerBalances(get: () => GameStore, gameId: string) {
+  try {
+    const response = await apiRequest('GET', `/api/game/${gameId}`);
+    const data = await response.json();
+    const serverGameState = data?.gameState;
+    if (!serverGameState) return;
+    const current = get().gameState;
+    if (!current) return;
+    useGameStore.setState({
+      gameState: {
+        ...current,
+        money: serverGameState.money,
+        creativeCapital: serverGameState.creativeCapital,
+      },
+    });
+  } catch (error) {
+    console.error('[PR-10] Failed to adopt server balances:', error);
+  }
+}
+
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
   gameId: string,
@@ -1003,18 +1041,16 @@ export const useGameStore = create<GameStore>()(
           // Phase 3 PR-9: the roster is cache-owned now. Invalidate the artists
           // key so useArtists refetches the authoritative roster (which includes
           // the just-signed artist) instead of hand-appending to a store array.
-          // The money optimistic delta is UNTOUCHED (that's PR-10) — it stays as
-          // a client-side subtraction against gameState.money.
-          const signingCost = artistData.signingCost || 0;
-          set({
-            gameState: {
-              ...gameState,
-              money: Math.max(0, (gameState.money || 0) - signingCost)
-            }
-          });
           await queryClient.invalidateQueries({
             queryKey: artistsQueryKey(gameState.id),
           });
+
+          // Phase 3 PR-10: adopt the server-canonical money instead of the old
+          // optimistic `money -= signingCost` subtraction. The sign response is
+          // just the created artist row (no money field) and the signing cost is
+          // derived server-side (artistService), so the displayed balance must
+          // come from a refetch of GET /api/game/:id — not client arithmetic.
+          await adoptServerBalances(get, gameState.id);
 
           // Phase 3 PR-9: the discovered-artists list is cache-owned too. The
           // signed artist should drop out of it; the server's A&R read already
@@ -1067,22 +1103,13 @@ export const useGameStore = create<GameStore>()(
             queryKey: projectsQueryKey(gameState.id),
           });
 
-          // CRITICAL: Immediately update gameState to reflect cost and creative capital deduction
-          // The server has already deducted both the project cost and creative capital, so we need to sync our local state
-          const projectCost = projectData.totalCost || projectData.budgetPerSong || 0;
-          const currentCreativeCapital = gameState.creativeCapital || 0;
-          
-          const updatedGameState = {
-            ...gameState,
-            money: (gameState.money ?? 0) - projectCost,
-            creativeCapital: currentCreativeCapital - 1  // Deduct 1 creative capital
-          };
-          set({ gameState: updatedGameState });
-          
-          if (projectCost > 0) {
-            console.log(`[FRONTEND] Synced money deduction: -$${projectCost}, new balance: $${updatedGameState.money}`);
-          }
-          console.log(`[FRONTEND] Synced creative capital deduction: -1, new balance: ${updatedGameState.creativeCapital}`);
+          // Phase 3 PR-10: adopt the server-canonical money + creativeCapital
+          // instead of the old optimistic `money -= projectCost; cc -= 1` math.
+          // The create response is just the created project row (no money/cc) and
+          // the cost is recomputed server-side (projects.ts recomputes totalCost
+          // from budgetPerSong), so the displayed balances must come from a
+          // refetch of GET /api/game/:id — not client arithmetic.
+          await adoptServerBalances(get, gameState.id);
         } catch (error) {
           console.error('Failed to create project:', error);
           throw error;
@@ -1152,18 +1179,6 @@ export const useGameStore = create<GameStore>()(
           const response = await apiRequest('POST', `/api/game/${gameState.id}/releases/plan`, releaseData);
           const result = await response.json();
 
-          // Update game state to reflect marketing budget and creative capital deduction
-          const totalMarketingCost = releaseData.metadata?.totalInvestment || 0;
-          const currentCreativeCapital = gameState.creativeCapital || 0;
-          
-          const updatedGameState = {
-            ...gameState,
-            money: (gameState.money ?? 0) - totalMarketingCost,
-            creativeCapital: currentCreativeCapital - 1
-          };
-          
-          set({ gameState: updatedGameState });
-
           // Phase 3 PR-6: releases/releaseSongs/songs now live in the query cache
           // (formerly the store fan-out re-fetched them). Invalidate so the newly
           // planned release shows up without a full reload.
@@ -1171,7 +1186,14 @@ export const useGameStore = create<GameStore>()(
           await queryClient.invalidateQueries({ queryKey: releaseSongsQueryKey(gameState.id) });
           await queryClient.invalidateQueries({ queryKey: songsQueryKey(gameState.id) });
 
-          console.log(`[FRONTEND] Synced release planning: -$${totalMarketingCost}, -1 creative capital, new balances: $${updatedGameState.money}, ${updatedGameState.creativeCapital} creative capital`);
+          // Phase 3 PR-10: adopt the server-canonical money + creativeCapital
+          // instead of the old optimistic `money -= totalInvestment; cc -= 1`
+          // math. The plan response DOES carry `updatedGameState.money`, but it
+          // does NOT carry creativeCapital — so a single refetch of GET
+          // /api/game/:id is the one correct source for BOTH fields (adopting
+          // money from the response but refetching for cc would split one action
+          // across two sources). Server validates the marketing budget itself.
+          await adoptServerBalances(get, gameState.id);
 
           return result;
         } catch (error) {
