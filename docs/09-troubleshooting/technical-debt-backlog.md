@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 3, 2026
-- **Total Items**: 51
-- **Completed**: 46
+- **Total Items**: 59
+- **Completed**: 47
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 2 (C50, C51)
+- **Pending**: 9 (C50, C51, C52, C53, C55, C56, C57, C58, C59)
 
 ---
 
@@ -872,19 +872,90 @@ Two different "is the tour done?" definitions disagree by exactly one week. The 
 
 ---
 
+### [ ] Comment 55: Engine silently swallows email-creation errors during week advance
+**Priority**: 🔵 Low
+**Impact**: A failed `createEmails` during week advance is caught and discarded — the week commits without its emails, with no surfacing
+**Effort**: Small
+
+`shared/engine/game-engine.ts:552-554` wraps the week's `createEmails` call in a try/catch that swallows the error. Discovered by the D6 PR-1 agent: the plan's proposed failure-injection point (throwing from `createEmails`) could not roll back the transaction because the engine eats the exception. Post-D6, emails are tx-bound — so an email failure SHOULD arguably abort the week (all-or-nothing) or at minimum be logged/surfaced. Decide: rethrow (week rolls back) vs. log-and-continue (current, but with observability).
+
+**Relevant Files**:
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+
+*Identified July 3, 2026 during D6 PR-1 (failure-injection characterization).*
+
+---
+
+### [ ] Comment 56: `useGameState(selector)` lacks value-level re-render bail-out
+**Priority**: 🔵 Low
+**Impact**: Selector-form consumers re-render on every gameState commit even when the selected value is unchanged (perf only, no correctness issue)
+**Effort**: Small
+
+Phase 3.5 PR-5 flipped the façade to `useSyncExternalStore` on the QueryCache (`client/src/hooks/useGameState.ts:149-151`). Unlike Zustand's `useStore(selector)`, there is no selector-value equality bail-out — the root snapshot changes on every funnel write, then the selector runs. Only 2 real selector call sites exist today (`useDiscoveredArtists.ts`, `SongCatalog.tsx`), so blast radius is minimal. If selector usage grows, switch to `useSyncExternalStoreWithSelector` (from `use-sync-external-store/with-selector`).
+
+**Relevant Files**:
+- [client/src/hooks/useGameState.ts](client/src/hooks/useGameState.ts)
+
+*Identified July 3, 2026 by the adversarial review of PR #108.*
+
+---
+
+### [ ] Comment 57: `useGameState` cold-cache fallback 404s silently if mounted before a game exists
+**Priority**: 🔵 Low
+**Impact**: Latent sharp edge, not a live bug — the "queryFn never fires against a populated cache" invariant rests entirely on funnel ordering
+**Effort**: Small (comment/guard)
+
+The façade mounts a `useQuery` whose only job is cold-cache fallback (page reload with a rehydrated `{ id }` pointer) — `client/src/hooks/useGameState.ts:93-100`. If a future consumer mounts `useGameState` before `createNewGame` seeds the cache (new-game flow), the fallback GET `/api/game/:id` would 404 and reject silently (`.data` unused, so no UI throw). No change strictly required; a guard or an explanatory comment would de-sharpen the edge.
+
+**Relevant Files**:
+- [client/src/hooks/useGameState.ts](client/src/hooks/useGameState.ts)
+
+*Identified July 3, 2026 by the adversarial review of PR #108.*
+
+---
+
+### [ ] Comment 58: Advance-week has no reject-on-stale-week guard (double-click advances two weeks)
+**Priority**: 🟢 Medium
+**Impact**: Two rapid advance requests for the same game serialize correctly (D6's `FOR UPDATE`) but BOTH succeed — a double-submitted click advances two weeks instead of one
+**Effort**: Small-Medium
+
+D6 (PR #107) made the week advance one atomic transaction with `SELECT ... FOR UPDATE`, so concurrent advances can no longer interleave/double-apply a single week. But the second request simply waits for the lock, re-reads week N+1, and advances to N+2 — correct serialization, not idempotency. Follow-up deliberately left out of D6 scope: client sends its expected current week; server rejects inside the lock if the row's week differs (optimistic guard). See the code comment at `server/services/advanceWeekService.ts:23` and the D6 plan doc's open-decision note.
+
+**Relevant Files**:
+- [server/services/advanceWeekService.ts](server/services/advanceWeekService.ts)
+
+*Identified July 3, 2026 during D6 planning; deferred by orchestrator decision.*
+
+---
+
+### [ ] Comment 59: Triage the discovered-debt lists in the Phase 3.5 and D6 plan docs (~21 itemized findings)
+**Priority**: 🔵 Low
+**Impact**: Documentation/triage task — findings with file:line refs that were logged but never promoted to this backlog
+**Effort**: Small (triage session)
+
+Both July 3, 2026 plan docs carry a "Discovered debt" section with code-verified findings deliberately not fixed during execution: `[READY] phase-3.5-gamestate-tanstack-plan.md` §7 (10 items — incl. dual bootstrap paths GameContext `/api/games` vs GamePage `/api/game-state`, full-bundle refetch in useProjects/useArtists queryFns, advanceWeek merge-precedence quirk) and `[READY] d6-week-transaction-atomicity-plan.md` §7 (11 items). Triage each: promote to a numbered backlog entry, fix, or explicitly dismiss.
+
+**Relevant Files**:
+- [docs/01-planning/implementation-specs/[READY] phase-3.5-gamestate-tanstack-plan.md](docs/01-planning/implementation-specs/[READY]%20phase-3.5-gamestate-tanstack-plan.md)
+- [docs/01-planning/implementation-specs/[READY] d6-week-transaction-atomicity-plan.md](docs/01-planning/implementation-specs/[READY]%20d6-week-transaction-atomicity-plan.md)
+
+*Logged July 3, 2026 at Phase 3.5 + D6 session wrap-up.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 4 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag; C52–C53 — v2 redesign follow-ups, July 3, 2026)
+- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026), 1 pending (C58 — advance-week idempotency guard)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 8 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026)
 
 ### By Status
-- ✅ Completed: 47 items (87.0%)
+- ✅ Completed: 47 items (79.7%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 4 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups, July 3, 2026; all low, not scheduled)
+- 📋 Pending: 9 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings, July 3, 2026; all low except C58 medium, not scheduled)
 
 ---
 
