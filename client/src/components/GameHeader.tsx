@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useGameContext } from '@/contexts/GameContext';
 import { fetchExecutives, fetchRoleMeetings } from '@/services/executiveService';
 import {
@@ -21,7 +22,8 @@ import { Coins, ChevronsRight, Zap } from 'lucide-react';
  * (migrated from the old GameSidebar).
  */
 export function GameHeader() {
-  const { gameState, selectedActions, isAdvancingWeek, advanceWeek, selectAction } =
+  const gameState = useGameState();
+  const { selectedActions, isAdvancingWeek, advanceWeek, selectAction } =
     useGameStore();
   const { gameId } = useGameContext();
   const [isAutoSelecting, setIsAutoSelecting] = useState(false);

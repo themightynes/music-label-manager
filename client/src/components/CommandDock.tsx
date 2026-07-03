@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { useIsAdmin } from '@/auth/useCurrentUser';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useGameContext } from '@/contexts/GameContext';
 import {
   Tooltip,
@@ -110,7 +111,8 @@ function DockItem({
  */
 export function CommandDock({ onShowSaveModal }: CommandDockProps) {
   const [location, setLocation] = useLocation();
-  const { gameState, weeklyOutcome } = useGameStore();
+  const gameState = useGameState();
+  const { weeklyOutcome } = useGameStore();
   const { gameId } = useGameContext();
   const { user } = useUser();
   const { isAdmin } = useIsAdmin();

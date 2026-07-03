@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Music, Calendar, TrendingUp, DollarSign, PlayCircle, Award, Target } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { apiRequest } from '@/lib/queryClient';
 import {
   getChartPositionColor,
@@ -53,7 +53,7 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
   const [retryCount, setRetryCount] = useState(0);
   
   // Subscribe to gameState to detect week changes
-  const currentWeek = useGameStore((state) => state.gameState?.currentWeek);
+  const currentWeek = useGameState((gameState) => gameState?.currentWeek);
 
   useEffect(() => {
     if (artistId && gameId) {

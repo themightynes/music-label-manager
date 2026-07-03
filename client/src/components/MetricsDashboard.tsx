@@ -1,4 +1,5 @@
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
@@ -21,7 +22,8 @@ interface ImpactPreview {
 }
 
 export function MetricsDashboard() {
-  const { gameState, selectedActions } = useGameStore();
+  const gameState = useGameState();
+  const { selectedActions } = useGameStore();
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},
     delayed: {},

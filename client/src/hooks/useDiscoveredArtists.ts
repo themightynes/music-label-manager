@@ -26,7 +26,7 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState, useGameId } from '@/hooks/useGameState';
 import { apiRequest } from '@/lib/queryClient';
 
 export const DISCOVERED_ARTISTS_SCOPE = 'discovered-artists:list';
@@ -74,9 +74,9 @@ export async function fetchDiscoveredArtists(
 }
 
 export function useDiscoveredArtists() {
-  const gameId = useGameStore((state) => state.gameState?.id);
-  const flags = useGameStore((state) => (state.gameState as any)?.flags);
-  const arOfficeSlotUsed = useGameStore((state) => state.gameState?.arOfficeSlotUsed);
+  const gameId = useGameId();
+  const flags = useGameState((gameState) => (gameState as any)?.flags);
+  const arOfficeSlotUsed = useGameState((gameState) => gameState?.arOfficeSlotUsed);
 
   const queryKey = useMemo(() => discoveredArtistsQueryKey(gameId), [gameId]);
 
