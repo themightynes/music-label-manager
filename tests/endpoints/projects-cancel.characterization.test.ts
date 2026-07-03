@@ -9,12 +9,12 @@
  * player's money WITHOUT recomputing or capping it, and performed NO ownership
  * check — any authenticated user could mint arbitrary money against any game.
  *
- * This test pins the observable behavior of the CURRENT handler (including the
- * exploit) BEFORE the C40 fix, so the fix can be proven behavior-preserving for
- * honest clients and behavior-changing only for the exploit + cross-tenant
- * paths. The blocks tagged "(post-fix)" only pass AFTER the server-side
- * recompute + ownership check land; they are kept in this same file and run
- * against the hardened code.
+ * The "(characterization)" block pins the behavior that is IDENTICAL before and
+ * after the fix (honest happy path, unknown-project 404, non-tour 400), so the
+ * fix is proven behavior-preserving for honest clients. The "(post-fix)" block
+ * asserts the C40 hardening: body.refundAmount is now IGNORED and recomputed
+ * server-side, and a cross-tenant caller gets 404 with no money moved. Those
+ * only pass AFTER the fix lands.
  *
  * It drives the real projects router over supertest against the real test
  * Postgres (Docker, localhost:5433). Clerk auth is mocked to a fixed test user
@@ -206,29 +206,6 @@ describe('DELETE /api/projects/:id/cancel (characterization)', () => {
     expect(proj.totalRevenue).toBe(-(totalCost - legitRefund));
   });
 
-  it('EXPLOIT (pinned bug): a huge client-supplied refundAmount is credited verbatim', async () => {
-    // This pins the C40 vulnerability: the server trusts body.refundAmount.
-    // Post-fix this flips (see the post-fix block below).
-    const { gameId, projectId } = await seedTour({
-      ownerId: TEST_USER_ID,
-      money: 100000,
-      totalCost: 12000,
-      plannedCities: 4,
-      completedCities: 1,
-    });
-
-    const res = await request(app)
-      .delete(`/api/projects/${projectId}/cancel`)
-      .send({ refundAmount: 999999 });
-
-    expect(res.status).toBe(200);
-    expect(res.body.refundAmount).toBe(999999);
-    expect(res.body.newBalance).toBe(100000 + 999999);
-
-    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-    expect(gs.money).toBe(100000 + 999999);
-  });
-
   it('404 when the project does not exist', async () => {
     const res = await request(app)
       .delete(`/api/projects/${crypto.randomUUID()}/cancel`)
@@ -250,5 +227,89 @@ describe('DELETE /api/projects/:id/cancel (characterization)', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.message).toBe('Only tours can be cancelled');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Post-fix behavior (C40). These assert the server-side refund recompute +
+// ownership check. They only pass against the hardened handler.
+// ---------------------------------------------------------------------------
+describe('server-side refund + ownership (post-fix)', () => {
+  it('FLIP: a huge client-supplied refundAmount is IGNORED; server value is credited', async () => {
+    const totalCost = 12000;
+    const planned = 4;
+    const completed = 1;
+    const { gameId, projectId } = await seedTour({
+      ownerId: TEST_USER_ID,
+      money: 100000,
+      totalCost,
+      plannedCities: planned,
+      completedCities: completed,
+    });
+
+    const serverRefund = expectedRefund(totalCost, planned, completed); // 5400
+
+    const res = await request(app)
+      .delete(`/api/projects/${projectId}/cancel`)
+      .send({ refundAmount: 999999 }); // exploit attempt — must be ignored
+
+    expect(res.status).toBe(200);
+    expect(res.body.refundAmount).toBe(serverRefund);
+    expect(res.body.refundAmount).not.toBe(999999);
+    expect(res.body.newBalance).toBe(100000 + serverRefund);
+
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(100000 + serverRefund);
+  });
+
+  it('recomputes refund from stored data even when the client sends nothing', async () => {
+    const totalCost = 20000;
+    const planned = 5;
+    const completed = 2;
+    const { gameId, projectId } = await seedTour({
+      ownerId: TEST_USER_ID,
+      money: 50000,
+      totalCost,
+      plannedCities: planned,
+      completedCities: completed,
+    });
+
+    const serverRefund = expectedRefund(totalCost, planned, completed); // 3*(20000/5)*0.6 = 7200
+
+    const res = await request(app)
+      .delete(`/api/projects/${projectId}/cancel`)
+      .send({}); // no refundAmount at all
+
+    expect(res.status).toBe(200);
+    expect(res.body.refundAmount).toBe(serverRefund);
+    expect(serverRefund).toBe(7200);
+
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(50000 + serverRefund);
+  });
+
+  it('cross-tenant: 404 PROJECT_NOT_FOUND when the project belongs to another user; no money moved', async () => {
+    const { gameId, projectId } = await seedTour({
+      ownerId: OTHER_USER_ID,
+      money: 100000,
+      totalCost: 12000,
+      plannedCities: 4,
+      completedCities: 1,
+    });
+    currentUserId = TEST_USER_ID; // impersonate non-owner
+
+    const res = await request(app)
+      .delete(`/api/projects/${projectId}/cancel`)
+      .send({ refundAmount: 5400 });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('PROJECT_NOT_FOUND');
+
+    // Victim's game untouched; project not cancelled.
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(100000);
+    const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
+    expect(proj.stage).toBe('production');
+    expect(proj.completionStatus).toBe('active');
   });
 });
