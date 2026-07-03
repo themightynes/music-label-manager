@@ -4,17 +4,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  // v2 chip recipe: pill, mono-ish tracking, hue-tinted fill + matching border + text
+  "inline-flex items-center rounded-pill border px-3 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
+        // lilac accent chip
         default:
-          "border-transparent bg-brand-burgundy text-brand-burgundy-foreground hover:bg-brand-burgundy/80",
+          "border-neon-lilac/40 bg-neon-lilac/[0.14] text-neon-lilac hover:bg-neon-lilac/20",
+        // neutral glass chip
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-white/10 bg-white/[0.04] text-white/60 hover:bg-white/[0.07]",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-white/70 border-brand-purple",
+          "border-negative/40 bg-negative/[0.14] text-brand-pink hover:bg-negative/20",
+        outline: "text-white/60 border-white/10",
       },
     },
     defaultVariants: {

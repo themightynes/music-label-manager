@@ -1,101 +1,125 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Major+Mono+Display&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css');
+/* Fonts are loaded via <link> in client/index.html (Inter · JetBrains Mono · Major Mono Display) */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design System v2 — "Neo-Cyber HUD"
+ * Dark-only. :root carries the v2 dark palette directly (the app never toggles a `.dark`
+ * class on the root), and .dark mirrors it so shadcn dark: utilities also resolve correctly.
+ * See docs/04-frontend/design/v2/design-system-v2.md and tailwind.config.ts header.
+ */
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(210 25% 7.8431%);
-  --card: hsl(180 6.6667% 97.0588%);
-  --card-foreground: hsl(210 25% 7.8431%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(210 25% 7.8431%);
-  --primary: hsl(238.5 94.1% 67.1%);
-  --primary-foreground: hsl(0 0% 100%);
-  --success: hsl(142.1 76.2% 36.3%);
-  --success-foreground: hsl(0 0% 100%);
-  --warning: hsl(43.2 97.8% 48.8%);
-  --warning-foreground: hsl(0 0% 100%);
-  --danger: hsl(0 84.2% 60.2%);
-  --danger-foreground: hsl(0 0% 100%);
-  --muted: hsl(240 1.9608% 90%);
-  --muted-foreground: hsl(210 25% 7.8431%);
-  --accent: hsl(211.5789 51.3514% 92.7451%);
-  --accent-foreground: hsl(238.5 94.1% 67.1%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(201.4286 30.4348% 90.9804%);
-  --input: hsl(200 23.0769% 97.4510%);
-  --ring: hsl(238.5 94.1% 67.1%);
-  --chart-1: hsl(238.5 94.1% 67.1%);
-  --sidebar: rgb(44 34 42 / 0.5);
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #A75A5B;
+  /* Surfaces */
+  --background: #070610;
+  --foreground: #F7F4FB;
+  --card: #181228;
+  --card-foreground: #F7F4FB;
+  --popover: #180f2e;
+  --popover-foreground: #F7F4FB;
+
+  /* Primary = the d14a7a → 7a2fb0 action family */
+  --primary: #b83a8f;
+  --primary-foreground: #ffffff;
+
+  --secondary: rgba(255, 255, 255, 0.04);
+  --secondary-foreground: rgba(247, 244, 251, 0.85);
+
+  /* Semantic */
+  --success: #37e0b0;
+  --success-foreground: #04121a;
+  --warning: #f5c542;
+  --warning-foreground: #1a1405;
+  --danger: #ff5d8a;
+  --danger-foreground: #ffffff;
+
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: rgba(233, 230, 244, 0.5);
+  --accent: rgba(160, 90, 240, 0.16);
+  --accent-foreground: #c8a6ff;
+  --destructive: #ff5d8a;
+  --destructive-foreground: #ffffff;
+
+  /* All borders are white-alpha in v2 */
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: rgba(160, 90, 240, 0.5);
+
+  /* Charts pull from the spectral neon range */
+  --chart-1: #a05af0;
+  --chart-2: #37d6ff;
+  --chart-3: #ff3d6e;
+  --chart-4: #37e0b0;
+  --chart-5: #f5c542;
+
+  /* Nav chrome */
+  --sidebar: rgba(9, 8, 18, 0.8);
+  --sidebar-foreground: #F7F4FB;
+  --sidebar-primary: #a05af0;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #4e324c;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #4e324c;
-  --sidebar-ring: #A75A5B;
-  --chart-2: hsl(142.1 76.2% 36.3%);
-  --chart-3: hsl(43.2 97.8% 48.8%);
-  --chart-4: hsl(147.1429 78.5047% 41.9608%);
-  --chart-5: hsl(341.4894 75.2000% 50.9804%);
-  --font-sans: 'Inter', 'Open Sans', sans-serif;
+  --sidebar-accent: rgba(160, 90, 240, 0.16);
+  --sidebar-accent-foreground: #c8a6ff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: rgba(160, 90, 240, 0.5);
+
+  /* Type */
+  --font-sans: 'Inter', 'Open Sans', system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Menlo', monospace;
+  --font-display: 'Major Mono Display', 'Courier New', monospace;
   --font-heading: 'Major Mono Display', 'Courier New', monospace;
-  --radius: 1.3rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00), 0px 1px 2px -1px hsl(238.5 94.1% 67.1% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00), 0px 1px 2px -1px hsl(238.5 94.1% 67.1% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00), 0px 2px 4px -1px hsl(238.5 94.1% 67.1% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00), 0px 4px 6px -1px hsl(238.5 94.1% 67.1% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00), 0px 8px 10px -1px hsl(238.5 94.1% 67.1% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(238.5 94.1% 67.1% / 0.00);
+
+  /* v2 card radius = 16px */
+  --radius: 1rem;
+
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+
+  /* v2 chromatic hairline gradient (shared by utilities below) */
+  --ds-hairline: linear-gradient(90deg, transparent, rgba(255,77,141,0.4), rgba(160,90,240,0.5), rgba(55,214,255,0.4), transparent);
 }
 
+/* Mirror v2 palette onto .dark so shadcn `dark:` variants and any explicit .dark scope match */
 .dark {
-  --background: hsl(0 0% 0%);
-  --foreground: hsl(200 6.6667% 91.1765%);
-  --card: hsl(228 9.8039% 10%);
-  --card-foreground: hsl(0 0% 85.0980%);
-  --popover: hsl(0 0% 0%);
-  --popover-foreground: hsl(200 6.6667% 91.1765%);
-  --primary: hsl(238.5 94.1% 67.1%);
-  --primary-foreground: hsl(0 0% 100%);
-  --success: hsl(142.1 76.2% 36.3%);
-  --success-foreground: hsl(0 0% 100%);
-  --warning: hsl(43.2 97.8% 48.8%);
-  --warning-foreground: hsl(0 0% 100%);
-  --danger: hsl(0 84.2% 60.2%);
-  --danger-foreground: hsl(0 0% 100%);
-  --muted: hsl(0 0% 9.4118%);
-  --muted-foreground: hsl(210 3.3898% 46.2745%);
-  --accent: hsl(205.7143 70% 7.8431%);
-  --accent-foreground: hsl(238.5 94.1% 67.1%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(210 5.2632% 14.9020%);
-  --input: hsl(207.6923 27.6596% 18.4314%);
-  --ring: hsl(238.5 94.1% 67.1%);
-  --chart-1: hsl(238.5 94.1% 67.1%);
-  --sidebar: rgb(44 34 42 / 0.5);
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #A75A5B;
+  --background: #070610;
+  --foreground: #F7F4FB;
+  --card: #181228;
+  --card-foreground: #F7F4FB;
+  --popover: #180f2e;
+  --popover-foreground: #F7F4FB;
+  --primary: #b83a8f;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.04);
+  --secondary-foreground: rgba(247, 244, 251, 0.85);
+  --success: #37e0b0;
+  --success-foreground: #04121a;
+  --warning: #f5c542;
+  --warning-foreground: #1a1405;
+  --danger: #ff5d8a;
+  --danger-foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: rgba(233, 230, 244, 0.5);
+  --accent: rgba(160, 90, 240, 0.16);
+  --accent-foreground: #c8a6ff;
+  --destructive: #ff5d8a;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: rgba(160, 90, 240, 0.5);
+  --chart-1: #a05af0;
+  --chart-2: #37d6ff;
+  --chart-3: #ff3d6e;
+  --chart-4: #37e0b0;
+  --chart-5: #f5c542;
+  --sidebar: rgba(9, 8, 18, 0.8);
+  --sidebar-foreground: #F7F4FB;
+  --sidebar-primary: #a05af0;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #4e324c;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #4e324c;
-  --sidebar-ring: #A75A5B;
-  --chart-2: hsl(142.1 76.2% 36.3%);
-  --chart-3: hsl(43.2 97.8% 48.8%);
-  --chart-4: hsl(147.1429 78.5047% 41.9608%);
-  --chart-5: hsl(341.4894 75.2000% 50.9804%);
+  --sidebar-accent: rgba(160, 90, 240, 0.16);
+  --sidebar-accent-foreground: #c8a6ff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: rgba(160, 90, 240, 0.5);
 }
 
 @layer base {
@@ -104,74 +128,192 @@
   }
 
   body {
-    @apply font-sans antialiased text-foreground;
+    @apply font-sans antialiased;
     font-family: var(--font-sans);
+    background-color: #070610;
+    color: #F7F4FB;
     position: relative;
     min-height: 100vh;
   }
 
+  /* v2 app substrate (#070610). Kept as a fixed layer so content scrolls over it. */
   body::before {
     content: '';
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -2;
-    background-color: hsl(var(--background));
-  }
-
-  body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     z-index: -1;
-    background-image: url('/plum_background.880Z.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    opacity: 1;
+    background-color: #070610;
   }
 
   .font-mono {
     font-family: var(--font-mono);
   }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
 }
 
-/* Custom utility classes for the game */
-.text-success {
-  color: hsl(var(--success));
+/* ── v2 signature keyframes (spec §5) ──────────────────────────────────── */
+@keyframes ds-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes ds-shimmer {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes ds-bloom {
+  0%, 100% { transform: translate(-3%, -2%) scale(1.05); }
+  50% { transform: translate(4%, 3%) scale(1.16); }
+}
+@keyframes ds-grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-3%, 2%); }
+  50% { transform: translate(2%, -3%); }
+  75% { transform: translate(-2%, 2%); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes ds-ring {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
 }
 
-.text-warning {
-  color: hsl(var(--warning));
+@layer components {
+  /* Panel recipe — the single most repeated block (spec §1). Includes relative +
+     overflow-hidden so the chromatic hairline strip composes with one class. */
+  .glass-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(24, 18, 40, 0.72), rgba(12, 10, 24, 0.72));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Chromatic hairline — 1px gradient strip inset 18px on the top edge (spec §4.1).
+     Apply alongside a positioned/overflow-hidden container (or on .glass-panel). */
+  .chromatic-hairline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 18px;
+    right: 18px;
+    height: 1px;
+    background: var(--ds-hairline);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* HUD corner ticks — purple top-left, cyan bottom-right L-brackets (spec §4.2) */
+  .hud-ticks::before,
+  .hud-ticks::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .hud-ticks::before {
+    top: 12px;
+    left: 12px;
+    border-top: 1px solid rgba(160, 90, 240, 0.5);
+    border-left: 1px solid rgba(160, 90, 240, 0.5);
+  }
+  .hud-ticks::after {
+    bottom: 12px;
+    right: 12px;
+    border-bottom: 1px solid rgba(55, 214, 255, 0.5);
+    border-right: 1px solid rgba(55, 214, 255, 0.5);
+  }
+
+  /* Chromatic aberration — RGB-split text-shadow for display headers (spec §2/§4.3) */
+  .text-aberration {
+    text-shadow:
+      2px 0 0 rgba(255, 77, 141, 0.4),
+      -2px 0 0 rgba(55, 180, 255, 0.45),
+      0 0 40px rgba(160, 90, 240, 0.3);
+  }
+
+  /* Looping spectrum bar — page-title underline (spec §4.4) */
+  .shimmer-bar {
+    height: 3px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #ff4d8d, #a05af0, #37d6ff, #ff4d8d);
+    background-size: 200% 100%;
+    animation: ds-shimmer 6s linear infinite;
+  }
+
+  /* ── Backdrop stack helpers (spec §9) — layer inside a positioned parent ──── */
+  .backdrop-stack {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* Large soft spectral blooms drifting behind glass (spec §5/§9) */
+  .backdrop-bloom {
+    position: absolute;
+    top: -320px;
+    right: -160px;
+    width: 1000px;
+    height: 860px;
+    filter: blur(100px);
+    opacity: 0.5;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 42% 46%, #6a2fd0 0%, rgba(106, 47, 208, 0) 60%),
+      radial-gradient(circle at 70% 34%, #2f8fff 0%, rgba(47, 143, 255, 0) 55%),
+      radial-gradient(circle at 58% 68%, #ff2f7a 0%, rgba(255, 47, 122, 0) 52%);
+    animation: ds-bloom 52s ease-in-out infinite;
+  }
+
+  /* 26px dot lattice (spec §4.5) */
+  .backdrop-dotgrid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: radial-gradient(rgba(180, 170, 220, 0.05) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+
+  /* Dark scrim over the blooms (spec §9.3) */
+  .backdrop-scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(7, 6, 16, 0.5), rgba(7, 6, 16, 0.36));
+  }
+
+  /* Animated fractal-noise grain overlay (spec §4.7 / §9.6) */
+  .backdrop-grain,
+  .grain-overlay {
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    z-index: 6;
+    animation: ds-grain 3s steps(6) infinite;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 }
 
-.text-danger {
-  color: hsl(var(--danger));
-}
-
-.bg-success {
-  background-color: hsl(var(--success));
-}
-
-.bg-warning {
-  background-color: hsl(var(--warning));
-}
-
-.bg-danger {
-  background-color: hsl(var(--danger));
-}
+/* Legacy semantic utility classes (kept — used across game UI) */
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger { color: var(--danger); }
+.bg-success { background-color: var(--success); }
+.bg-warning { background-color: var(--warning); }
+.bg-danger { background-color: var(--danger); }
 
 /* Toast animations */
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease-out;
 }
-
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -183,21 +325,49 @@
   }
 }
 
-/* Custom scrollbar for modals */
+/* v2 scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #070610;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a1f44;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a2b5c;
+}
+
+/* Modal scrollbars keep the v2 treatment */
 .overflow-y-auto::-webkit-scrollbar {
   width: 8px;
 }
-
 .overflow-y-auto::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
+  background: #070610;
   border-radius: 4px;
 }
-
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: #2a1f44;
   border-radius: 4px;
 }
-
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--foreground) / 0.3);
+  background: #3a2b5c;
+}
+
+/* prefers-reduced-motion: disable v2 spin / shimmer / bloom / grain / ring (spec §10) */
+@media (prefers-reduced-motion: reduce) {
+  .animate-ds-spin,
+  .animate-ds-shimmer,
+  .animate-ds-bloom,
+  .animate-ds-grain,
+  .animate-ds-ring,
+  .shimmer-bar,
+  .backdrop-bloom,
+  .backdrop-grain,
+  .grain-overlay {
+    animation: none !important;
+  }
 }

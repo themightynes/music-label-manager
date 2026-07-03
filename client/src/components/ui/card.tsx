@@ -9,7 +9,9 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-[10px] bg-brand-dark-card/50 border border-brand-purple text-white shadow-sm",
+      // v2 glass panel: 16px radius, white-alpha hairline border, gradient fill,
+      // inset top-highlight + soft drop, chromatic hairline strip on top edge
+      "glass-panel chromatic-hairline text-white",
       className
     )}
     {...props}
