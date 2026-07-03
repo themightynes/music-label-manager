@@ -582,8 +582,8 @@ export class GameEngine {
           delete flags.ar_office_start_week;
         }
 
-        // Add discovery timestamp for tracking
-        flags.ar_office_discovery_time = new Date().toISOString();
+        // Add discovery timestamp for tracking (sim-time week for save-restore reproducibility — Phase 2 PR-1 / D2)
+        flags.ar_office_discovery_time = this.gameState.currentWeek;
         flags.ar_office_sourcing_type = sourcingType;
 
         // Enhanced artist selection with better validation and error handling
@@ -736,7 +736,7 @@ export class GameEngine {
                 talent: picked.talent || 0,
                 popularity: picked.popularity || 0,
                 genre: picked.genre || null,
-                discoveryTime: new Date().toISOString(),
+                discoveryTime: this.gameState.currentWeek, // sim-time week for save-restore reproducibility (Phase 2 PR-1 / D2)
                 sourcingType: sourcingType,
                 genreUsed: genreUsed || null // Track which genre filter was used
               });
@@ -2490,11 +2490,6 @@ export class GameEngine {
       throw new Error(`Cannot create song: missing gameId (${gameId}) or artistId (${artistId})`);
     }
 
-    // Enhanced metadata with economic factors
-    const baseQuality = 40 + Math.floor(this.getRandom(0, 20));
-    const producerBonus = this.gameData.getProducerTierSystemSync()[producerTier]?.quality_bonus || 0;
-    const timeBonus = this.gameData.getTimeInvestmentSystemSync()[timeInvestment]?.quality_bonus || 0;
-    
     // Don't include 'id' field - let database generate it
     return {
       title: randomName,
@@ -2625,7 +2620,8 @@ export class GameEngine {
     const baseVarianceRange = 35 - (30 * (combinedSkill / 100)); // 35% down to 5%
     
     // Check for outlier events (10% chance)
-    const outlierRoll = Math.random();
+    // Seeded RNG: getRandom(0, 1) is uniform [0,1), equivalent to Math.random() (Phase 2 PR-1)
+    const outlierRoll = this.getRandom(0, 1);
     let variance: number;
     let outlierType = '';
     
@@ -3693,7 +3689,8 @@ export class GameEngine {
       // Store pre-calculated cities - NO MANUAL CALCULATIONS
       const preCalculatedCities = detailedBreakdown.cities.map((city: any, index: number) => {
         // Add variance to actual tour performance (±20% attendance variance)
-        const varianceFactor = 0.8 + (Math.random() * 0.4);
+        // Seeded RNG: getRandom(0, 1) is uniform [0,1), equivalent to Math.random() (Phase 2 PR-1)
+        const varianceFactor = 0.8 + (this.getRandom(0, 1) * 0.4);
         const actualSellThrough = city.sellThroughRate * varianceFactor;
         const actualRevenue = Math.round(city.totalRevenue * varianceFactor);
 
