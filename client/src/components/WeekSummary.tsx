@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,35 @@ const STAGE_COUNT = 5;
 // ms BEFORE revealing each stage (index 0 = initial beat). Sum = total mandatory
 // sequence = 1800ms, comfortably under the ~4s worst-case budget.
 const STAGE_DELAYS = [0, 450, 500, 450, 400];
+
+// A staged reveal group: fades/slides in once `revealed` flips true. Under
+// reduced motion (`instant`) it renders as a plain div, everything visible
+// immediately. MODULE scope on purpose: defining this inside WeekSummary gave
+// it a new function identity every render, so React remounted each group
+// subtree on every stage tick and (with initial={false}) the motion.divs
+// snapped to their animate target — the fade/slide never actually played.
+const RevealGroup: React.FC<{
+  revealed: boolean;
+  instant: boolean;
+  className?: string;
+  children: React.ReactNode;
+}> = ({ revealed, instant, className, children }) => {
+  if (instant) {
+    return <div className={className}>{children}</div>;
+  }
+  return (
+    <motion.div
+      className={className}
+      initial={false}
+      animate={{ opacity: revealed ? 1 : 0, y: revealed ? 0 : 12 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      style={{ pointerEvents: revealed ? undefined : 'none' }}
+      aria-hidden={revealed ? undefined : true}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekResults, onClose }: WeekSummaryProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'projects'>('overview');
@@ -201,48 +230,40 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     instant,
   });
 
+  // Net-income hero count-up. AnimatedNumber renders STATICALLY on first mount
+  // (by PR-1 design) and only animates on value CHANGES — so mounting with
+  // netIncome already final meant the count-up never played. Instead, start a
+  // local hero value at 0 (or at netIncome under reduced motion, so there is
+  // never a $0 flash) and move it to netIncome right after mount to trigger
+  // the spring. A click-skip flips `wasSkipped`, which makes AnimatedNumber
+  // jump to the final value mid-flight.
+  const [heroValue, setHeroValue] = useState(() => (instant ? netIncome : 0));
+  const [wasSkipped, setWasSkipped] = useState(false);
+  useEffect(() => {
+    setHeroValue(netIncome);
+  }, [netIncome]);
+
   // Skip on any click / keypress inside the modal while the sequence is running.
   // Once revealed, interactions behave normally (tabs, close button, footer).
+  const skipAll = () => {
+    skip();
+    setWasSkipped(true);
+  };
   const handleSkipInteraction = () => {
-    if (!isComplete) skip();
+    if (!isComplete) skipAll();
   };
   const handleSkipKey = (_e: React.KeyboardEvent) => {
-    if (!isComplete) skip();
+    if (!isComplete) skipAll();
   };
 
   // Switching tabs mid-sequence completes the reveal so returning to Overview
   // shows the final state (the Charts/Projects tabs are static regardless).
   const handleTabChange = (value: string) => {
-    if (!isComplete) skip();
+    if (!isComplete) skipAll();
     setActiveTab(value as 'overview' | 'charts' | 'projects');
   };
 
   const hasResults = isWeekResults && (changes.length > 0 || playerChartUpdates.length > 0);
-
-  // A staged reveal group: fades/slides in once its stage is reached. Under
-  // reduced motion it renders as a plain div (everything visible immediately).
-  const RevealGroup: React.FC<{ stage: number; children: React.ReactNode; className?: string }> = ({
-    stage,
-    children,
-    className,
-  }) => {
-    if (instant) {
-      return <div className={className}>{children}</div>;
-    }
-    const revealed = currentStage >= stage;
-    return (
-      <motion.div
-        className={className}
-        initial={false}
-        animate={{ opacity: revealed ? 1 : 0, y: revealed ? 0 : 12 }}
-        transition={{ duration: 0.35, ease: 'easeOut' }}
-        style={{ pointerEvents: revealed ? undefined : 'none' }}
-        aria-hidden={revealed ? undefined : true}
-      >
-        {children}
-      </motion.div>
-    );
-  };
 
   const overviewBody = (
     <div className="space-y-6">
@@ -250,7 +271,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
 
         {/* Revenue Sources (stage 1) */}
         {categorizedChanges.revenue.length > 0 && (
-          <RevealGroup stage={STAGE_REVENUE}>
+          <RevealGroup revealed={currentStage >= STAGE_REVENUE} instant={instant}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2 text-positive text-sm">
@@ -279,7 +300,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             Elevated treatment via GlowEffect + .text-aberration. Moved into the
             modal so a player reading results never misses an unlock. */}
         {hasHeroMoments && (
-          <RevealGroup stage={STAGE_HERO}>
+          <RevealGroup revealed={currentStage >= STAGE_HERO} instant={instant}>
             <Card className="relative overflow-hidden border-neon-magenta/40">
               <GlowEffect
                 mode="pulse"
@@ -342,7 +363,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
 
         {/* Chart Performance Summary for Overview (stage 3, notable) */}
         {playerChartUpdates.length > 0 && (
-          <RevealGroup stage={STAGE_NOTABLE}>
+          <RevealGroup revealed={currentStage >= STAGE_NOTABLE} instant={instant}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2 text-neon-amber text-sm">
@@ -365,7 +386,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
 
         {/* Achievements (stage 3, notable) — unlocks already shown as heroes above */}
         {nonUnlockAchievements.length > 0 && (
-          <RevealGroup stage={STAGE_NOTABLE}>
+          <RevealGroup revealed={currentStage >= STAGE_NOTABLE} instant={instant}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2 text-neon-lilac text-sm">
@@ -394,7 +415,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
 
         {/* Mood Changes (stage 4, routine) */}
         {categorizedChanges.mood.length > 0 && (
-          <RevealGroup stage={STAGE_ROUTINE}>
+          <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2 text-neon-lilac text-sm">
@@ -463,7 +484,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       </div>
 
       {/* Performance Summary (stage 4, routine) */}
-      <RevealGroup stage={STAGE_ROUTINE}>
+      <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
@@ -537,8 +558,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                   netIncome >= 0 ? 'text-positive' : 'text-negative'
                 }`}>
                   <AnimatedNumber
-                    value={netIncome}
-                    skipAnimation={instant}
+                    value={heroValue}
+                    skipAnimation={instant || wasSkipped}
                     format={(n) => `${netIncome >= 0 ? '+' : ''}${formatCurrency(Math.round(n))}`}
                   />
                 </div>

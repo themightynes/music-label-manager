@@ -12,7 +12,7 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 
 // Flip reduced motion per-test; keep the rest of motion/react real so the
 // AnimatedNumber spring and layout animations behave as in production.
@@ -138,6 +138,26 @@ describe('WeekSummary staged reveal', () => {
     expect(screen.getByText('Label reputation grew')).toBeInTheDocument();
     expect(screen.getByText(/Nova is thrilled/)).toBeInTheDocument();
     expect(screen.getByText('Milestone Moments')).toBeInTheDocument();
+    // The count-up also collapses: skip flips skipAnimation, so the hero
+    // figure shows the final net income immediately.
+    expect(screen.getByText('+$10,000')).toBeInTheDocument();
+  });
+
+  it('hero count-up: starts from $0 and settles on the final net income', async () => {
+    // Real timers: the AnimatedNumber spring runs on rAF ticks.
+    renderSummary();
+
+    // The hero mounts at 0 (count-up start), not at the final value.
+    expect(screen.getByText('+$0')).toBeInTheDocument();
+    expect(screen.queryByText('+$10,000')).not.toBeInTheDocument();
+
+    // The spring then animates the local hero value up to netIncome.
+    await waitFor(
+      () => {
+        expect(screen.getByText('+$10,000')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('reduced motion: everything renders on first paint, no staging needed', () => {
