@@ -1,12 +1,12 @@
-# [READY] Phase 1: Split `server/routes.ts` into Feature Routers + Service Layer
+# [COMPLETE] Phase 1: Split `server/routes.ts` into Feature Routers + Service Layer
 
 *Created: July 1, 2026 — planned by a code-reading architect pass against the live tree.*
-*Status: READY — execution gated on merge order: PR #38 (vitest CI) → #36 → #37 → start Phase 1.*
+*Status: COMPLETE — all 18 PRs merged to `main`.*
 *Part of the four-phase scaling arc (Phase 0: CI safety net · Phase 1: server seams · Phase 2: engine seams · Phase 3: client state ownership · Phase 4: game feel).*
 
 ## Execution status
 
-*Updated July 2, 2026. All pure-move PRs merged to `main`; `server/routes.ts` went 5,341 → 121 lines. Every PR was a pure move: byte-identical route-manifest snapshot, tsc clean, 545/545 vitest. (GitHub PR #49 was an unrelated docs PR, not part of this plan.)*
+*Completed 2026-07-02. `server/routes.ts` went 5,341 → 121 lines across 18 PRs; services extracted: `gameCreationService`, `saveService`, `releasePlanningService`, `artistService`. All pure-move PRs were byte-identical route-manifest snapshots, tsc clean, 545/545 vitest. Same day, a parallel security-hardening wave (triggered by the `docs/98-research` reviews) also merged: #62 (zero-auth deletions + admin-gate), #66 (C40 tour-refund server-side recompute), #68 (projects create hardening B1-B4), #69 (ownership sweep across every game-scoped router). (GitHub PR #49 was an unrelated docs PR, not part of this plan.)*
 
 - ✅ PR-1 — route-manifest characterization test (#39, prior session)
 - ✅ PR-2 — `bugReports.ts` router (#42)
@@ -23,9 +23,9 @@
 - ✅ PR-13 — `games.ts` router (#54)
 - ✅ PR-14 — `saves.ts` + `gameLoop.ts` routers (#55)
 - ✅ PR-15 — `gameCreationService` extraction (#57, merged)
-- ⏳ PR-16 — `saveService` extraction (#61, complete — pending merge)
-- ⏳ PR-17 — `releasePlanningService` extraction (#63, complete — pending merge)
-- ⏳ PR-18 — `artistService` extraction (#64, stacked on #63, complete — pending merge)
+- ✅ PR-16 — `saveService` extraction (#61, merged)
+- ✅ PR-17 — `releasePlanningService` extraction (#63, merged)
+- ✅ PR-18 — `artistService` extraction (#64, merged)
 
 ## 0. Ground truth (verified against the working tree)
 
