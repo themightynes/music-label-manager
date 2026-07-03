@@ -1,41 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ReleaseWorkflowCard } from '@/components/ReleaseWorkflowCard';
-import { ArtistCard, getArchetypeInfo as getArtistCardArchetypeInfo, getRelationshipStatus } from '@/components/ArtistCard';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GameLayout from '@/layouts/GameLayout';
 import {
-  ArrowLeft,
   User,
   Music,
-  Calendar,
-  DollarSign,
   TrendingUp,
-  Heart,
   Star,
-  Play,
   AlertCircle,
   Loader2,
   BarChart3,
-  Activity,
-  Award,
   Settings,
-  Filter,
   PlayCircle,
-  Mic,
-  Users,
   Target,
-  Clock,
-  ChevronDown,
-  Eye,
-  Disc,
-  Radio
+  Eye
 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useLocation, useParams } from 'wouter';
@@ -43,7 +23,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useArtistROI } from '@/hooks/useAnalytics';
 import { findArtistBySlugOrId, generateArtistSlug } from '@/utils/artistSlug';
 import type { Artist, Song, Project, Release } from '@/components/artist/types';
-import { getQualityColor } from '@/components/artist/artistPageUtils';
+import { OverviewTab } from '@/components/artist/OverviewTab';
 import { DiscographyTab } from '@/components/artist/DiscographyTab';
 import { AnalyticsTab } from '@/components/artist/AnalyticsTab';
 import { ReleasesTab } from '@/components/artist/ReleasesTab';
@@ -193,29 +173,64 @@ export default function ArtistPage() {
     }
   };
 
+  // Derived values (memoized) — computed unconditionally to respect the Rules
+  // of Hooks; guarded against a null `artist` so they are safe before the
+  // loading/error early returns below.
+  const avgQuality = useMemo(() => (
+    songs.length > 0
+      ? Math.round(songs.reduce((sum, s) => sum + s.quality, 0) / songs.length)
+      : 0
+  ), [songs]);
+
+  const archetypeInfo = useMemo(
+    () => getArchetypeInfo(artist?.archetype ?? ''),
+    [artist?.archetype]
+  );
+
+  const moodStatus = useMemo(() => {
+    const mood = artist?.mood ?? 50;
+    return mood >= 70
+      ? { status: 'Happy', color: 'text-green-600', bgColor: 'bg-green-500/10' }
+      : mood >= 40
+      ? { status: 'Neutral', color: 'text-yellow-600', bgColor: 'bg-yellow-500/10' }
+      : { status: 'Unhappy', color: 'text-red-600', bgColor: 'bg-red-500/10' };
+  }, [artist?.mood]);
+
   // Enhanced artist analytics (for artist card)
-  const getArtistInsights = (artist: Artist) => {
-    const mood = artist.mood || 50;
-    const energy = artist.energy ?? (artist as any).loyalty ?? 50;
-    const popularity = artist.popularity || 0;
+  const insights = useMemo(() => {
+    const mood = artist?.mood ?? 50;
+    const energy = artist?.energy ?? (artist as any)?.loyalty ?? 50;
+    const popularity = artist?.popularity ?? 0;
 
     // Total revenue from songs
-    const totalRevenue = songs.reduce((sum, song) => {
-      return sum + (song.totalRevenue || 0);
-    }, 0);
+    const totalRevenue = songs.reduce((sum, song) => sum + (song.totalRevenue || 0), 0);
 
     return {
       projects: artistProjects.length,
       releasedProjects: songs.filter(s => s.isReleased).length,
       totalRevenue,
-      archetype: artist.archetype,
+      archetype: artist?.archetype,
       mood,
       energy,
       loyalty: energy,
       popularity
     };
-  };
-  
+  }, [artist, songs, artistProjects]);
+
+  // Artist card handlers (memoized for the memoized OverviewTab child)
+  const handleArtistMeeting = useCallback(() => {
+    console.info(`[ArtistPage] Artist meetings temporarily unavailable for ${artist?.name}.`);
+  }, [artist?.name]);
+
+  const handleNavigateToArtist = useCallback(() => {
+    // Already on artist page, so scroll to top or refresh
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleToggleExpand = useCallback(() => {
+    setExpandedArtist(prev => !prev);
+  }, []);
+
   if (loadingArtist) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -241,32 +256,7 @@ export default function ArtistPage() {
       </div>
     );
   }
-  
-  const avgQuality = songs.length > 0 
-    ? Math.round(songs.reduce((sum, s) => sum + s.quality, 0) / songs.length)
-    : 0;
-  
-  const totalStreams = songs.reduce((sum, s) => sum + (s.totalStreams || 0), 0);
-  const totalRevenue = songs.reduce((sum, s) => sum + (s.totalRevenue || 0), 0);
-  const releasedSongs = songs.filter(s => s.isReleased).length;
-  
-  const archetypeInfo = getArchetypeInfo(artist.archetype);
-  const moodStatus = (artist.mood || 50) >= 70 
-    ? { status: 'Happy', color: 'text-green-600', bgColor: 'bg-green-500/10' }
-    : (artist.mood || 50) >= 40 
-    ? { status: 'Neutral', color: 'text-yellow-600', bgColor: 'bg-yellow-500/10' }
-    : { status: 'Unhappy', color: 'text-red-600', bgColor: 'bg-red-500/10' };
 
-  // Artist card handlers
-  const handleArtistMeeting = () => {
-    console.info(`[ArtistPage] Artist meetings temporarily unavailable for ${artist.name}.`);
-  };
-
-  const handleNavigateToArtist = () => {
-    // Already on artist page, so scroll to top or refresh
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  
   return (
     <GameLayout>
       <div className="min-h-screen">
@@ -327,142 +317,20 @@ export default function ArtistPage() {
           </div>
           
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Rich Artist Card */}
-            <Card className="relative z-20">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-center space-x-2">
-                    <User className="w-5 h-5" />
-                    <span>Artist Overview</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ArtistCard
-                    artist={artist}
-                    insights={getArtistInsights(artist)}
-                    relationship={getRelationshipStatus(artist.mood || 50, artist.energy ?? (artist as any).loyalty ?? 50)}
-                    archetype={getArtistCardArchetypeInfo(artist.archetype)}
-                    isExpanded={expandedArtist}
-                    onToggleExpand={() => setExpandedArtist(!expandedArtist)}
-                    onMeet={handleArtistMeeting}
-                    onNavigate={handleNavigateToArtist}
-                    gameState={gameState}
-                    roiData={roiData}
-                  />
-                </CardContent>
-              </Card>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Artist Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <User className="w-5 h-5" />
-                    <span>Artist Stats</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Mood</span>
-                        <span className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {artist.mood || 50}%
-                        </span>
-                      </div>
-                      <Progress value={artist.mood || 50} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                      <span>Energy</span>
-                        <span className={`font-medium ${((artist.energy ?? (artist as any).loyalty ?? 50) >= 70) ? 'text-green-600' : ((artist.energy ?? (artist as any).loyalty ?? 50) >= 40) ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {artist.energy ?? (artist as any).loyalty ?? 50}%
-                        </span>
-                      </div>
-                      <Progress value={artist.energy ?? (artist as any).loyalty ?? 50} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Talent</span>
-                        <span className="font-medium">{artist.talent || 50}%</span>
-                      </div>
-                      <Progress value={artist.talent || 50} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Work Ethic</span>
-                        <span className="font-medium">{artist.workEthic || 50}%</span>
-                      </div>
-                      <Progress value={artist.workEthic || 50} className="h-2" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Performance Metrics */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <BarChart3 className="w-5 h-5" />
-                    <span>Performance</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <PerformanceMetrics
-                    artistId={actualArtistId || ''}
-                    avgQuality={avgQuality}
-                    projectCount={artistProjects.length}
-                    readySongs={songs.filter(s => s.isRecorded && !s.isReleased).length}
-                    popularity={artist.popularity || 0}
-                    roiData={roiData}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Activity className="w-5 h-5" />
-                    <span>Recent Activity</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {songs.length === 0 ? (
-                      <div className="text-center text-white/50 py-4">
-                        <Music className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                        <p className="text-sm">No activity yet</p>
-                      </div>
-                    ) : (
-                      <>
-                        {songs.slice(0, 3).map(song => (
-                          <div key={song.id} className="flex items-center justify-between p-2 bg-brand-dark-card/5 rounded">
-                            <div>
-                              <div className="text-sm font-medium">{song.title}</div>
-                              <div className="text-xs text-white/50">
-                                {song.isReleased ? 'Released' : song.isRecorded ? 'Recorded' : 'Recording'} • Week {song.createdWeek}
-                              </div>
-                            </div>
-                            <Badge className={getQualityColor(song.quality)}>
-                              {song.quality}
-                            </Badge>
-                          </div>
-                        ))}
-                        {songs.length > 3 && (
-                          <div className="text-center">
-                            <Button variant="ghost" size="sm">
-                              View All {songs.length} Songs
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+          <OverviewTab
+            artist={artist}
+            songs={songs}
+            artistId={actualArtistId || ''}
+            avgQuality={avgQuality}
+            projectCount={artistProjects.length}
+            insights={insights}
+            roiData={roiData}
+            gameState={gameState}
+            expandedArtist={expandedArtist}
+            onToggleExpand={handleToggleExpand}
+            onMeet={handleArtistMeeting}
+            onNavigate={handleNavigateToArtist}
+          />
           
           {/* Discography Tab - Reorganized with releases grouping */}
           <DiscographyTab songs={songs} artistReleases={artistReleases} />
@@ -490,94 +358,5 @@ export default function ArtistPage() {
         </main>
       </div>
     </GameLayout>
-  );
-}
-
-// Component to display performance metrics with backend ROI
-function PerformanceMetrics({
-  artistId,
-  avgQuality,
-  projectCount,
-  readySongs,
-  popularity,
-  roiData
-}: {
-  artistId: string;
-  avgQuality: number;
-  projectCount: number;
-  readySongs: number;
-  popularity: number;
-  roiData?: any;
-}) {
-  // Use passed roiData to avoid duplicate API calls
-  const overallROI = roiData?.overallROI ?? 0;
-  const totalRevenue = roiData?.totalRevenue ?? 0;
-  const totalStreams = roiData?.totalStreams ?? 0;
-  const totalProductionCost = roiData?.totalProductionInvestment ?? 0;
-  const totalMarketingCost = roiData?.totalMarketingInvestment ?? 0;
-  
-  return (
-    <div className="space-y-4">
-      {/* Main metrics grid */}
-      <div className="grid grid-cols-2 gap-4 text-center">
-        <div className="p-3 bg-blue-500/10 rounded-lg">
-          <div className="text-lg font-bold text-blue-700">{avgQuality}</div>
-          <div className="text-xs text-white/70">Avg Quality</div>
-        </div>
-        <div className="p-3 bg-green-500/10 rounded-lg">
-          <div className="text-lg font-bold text-green-700">{projectCount}</div>
-          <div className="text-xs text-white/70">Projects</div>
-        </div>
-        <div className="p-3 bg-brand-burgundy-dark/10 rounded-lg">
-          <div className="text-lg font-bold text-brand-burgundy-dark">{readySongs}</div>
-          <div className="text-xs text-white/70">Ready Songs</div>
-        </div>
-        <div className="p-3 bg-orange-500/10 rounded-lg">
-          <div className="text-lg font-bold text-orange-700">{popularity}</div>
-          <div className="text-xs text-white/70">Popularity</div>
-        </div>
-      </div>
-      
-      {/* Financial metrics - separate section */}
-      <div className="pt-3 border-t border-brand-purple/50">
-        <div className="grid grid-cols-2 gap-3">
-          {/* Revenue and Streams */}
-          <div className="p-3 bg-green-500/10 rounded-lg">
-            <div className="text-lg font-bold text-green-700">
-              ${(totalRevenue / 1000).toFixed(1)}k
-            </div>
-            <div className="text-xs text-white/70">Total Revenue</div>
-          </div>
-          <div className="p-3 bg-blue-500/10 rounded-lg">
-            <div className="text-lg font-bold text-blue-700">
-              {(totalStreams / 1000).toFixed(0)}k
-            </div>
-            <div className="text-xs text-white/70">Total Streams</div>
-          </div>
-          
-          {/* Costs */}
-          <div className="p-3 bg-brand-purple-light/10 rounded-lg">
-            <div className="text-lg font-bold text-brand-purple-light">
-              ${(totalProductionCost / 1000).toFixed(1)}k
-            </div>
-            <div className="text-xs text-white/70">Recording Costs</div>
-          </div>
-          <div className="p-3 bg-brand-burgundy/10 rounded-lg">
-            <div className="text-lg font-bold text-brand-burgundy">
-              ${(totalMarketingCost / 1000).toFixed(1)}k
-            </div>
-            <div className="text-xs text-white/70">Marketing Costs</div>
-          </div>
-          
-          {/* ROI - spans full width */}
-          <div className={`col-span-2 p-3 ${overallROI >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'} rounded-lg`}>
-            <div className={`text-xl font-bold ${overallROI >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {overallROI > 0 ? '+' : ''}{overallROI.toFixed(0)}%
-            </div>
-            <div className="text-xs text-white/70">Return on Investment</div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
