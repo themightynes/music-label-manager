@@ -1,7 +1,30 @@
 import { SignInButton, SignUpButton } from '@clerk/clerk-react';
-import { Button } from '@/components/ui/button';
 import { HoloDisc } from '@/components/ui/holo-disc';
-import { ArrowRight, LogIn } from 'lucide-react';
+
+const orbitBase =
+  'group whitespace-nowrap font-mono text-[13px] uppercase tracking-[0.22em] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(212,163,115,0.7)] rounded-sm';
+const orbitPrimary = `${orbitBase} text-money [text-shadow:0_0_14px_rgba(212,163,115,0.45)] hover:[text-shadow:0_0_20px_rgba(212,163,115,0.7)]`;
+const orbitMuted = `${orbitBase} text-text-muted hover:text-money focus-visible:text-money hover:[text-shadow:0_0_14px_rgba(212,163,115,0.45)] focus-visible:[text-shadow:0_0_14px_rgba(212,163,115,0.45)]`;
+
+/** decorative connector (dot + thin line) pointing from the option toward the disc */
+function Connector({ side }: { side: 'left' | 'right' }) {
+  return (
+    <span aria-hidden="true" className="pointer-events-none flex items-center">
+      {side === 'right' && (
+        <>
+          <span className="h-px w-7 bg-[rgba(212,163,115,0.35)]" />
+          <span className="mx-1.5 h-1 w-1 rounded-full bg-[rgba(212,163,115,0.55)]" />
+        </>
+      )}
+      {side === 'left' && (
+        <>
+          <span className="mx-1.5 h-1 w-1 rounded-full bg-[rgba(212,163,115,0.55)]" />
+          <span className="h-px w-7 bg-[rgba(212,163,115,0.35)]" />
+        </>
+      )}
+    </span>
+  );
+}
 
 function LandingPage() {
   return (
@@ -78,8 +101,10 @@ function LandingPage() {
       {/* top HUD strip */}
       <header className="relative z-10 flex items-center justify-between px-8 py-6 font-mono text-[11px] uppercase tracking-[0.28em] text-text-muted">
         <div className="flex items-center gap-3">
-          <img src="/logo4.png" alt="Music Label Manager" className="h-8 w-auto" />
-          <span>Music Label Manager</span>
+          <HoloDisc size={34} spinSeconds={20} />
+          <span className="font-display text-sm lowercase normal-case tracking-normal text-text-primary">
+            music label manager
+          </span>
         </div>
         <div className="hidden sm:block">est. mmxxvi</div>
       </header>
@@ -90,7 +115,43 @@ function LandingPage() {
           a record label simulation
         </p>
 
-        <HoloDisc size={360} spinSeconds={32} className="w-[min(44vmin,360px)] h-[min(44vmin,360px)]" />
+        {/* THE DISC + orbiting auth actions (md+) */}
+        <div className="relative hidden md:block">
+          <HoloDisc size={360} spinSeconds={32} />
+          {/* Sign In — left of the wheel (0°), primary gold */}
+          <SignInButton mode="modal">
+            <button
+              className={`absolute top-1/2 -translate-y-1/2 flex items-center ${orbitPrimary}`}
+              style={{ right: 'calc(100% + 28px)' }}
+            >
+              <span>▸ sign in</span>
+              <Connector side="left" />
+            </button>
+          </SignInButton>
+          {/* Sign Up — right of the wheel (0°) */}
+          <SignUpButton mode="modal">
+            <button
+              className={`absolute top-1/2 -translate-y-1/2 flex items-center ${orbitMuted}`}
+              style={{ left: 'calc(100% + 28px)' }}
+            >
+              <Connector side="right" />
+              <span>
+                <span
+                  aria-hidden="true"
+                  className="opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
+                >
+                  ▸{' '}
+                </span>
+                new label · sign up
+              </span>
+            </button>
+          </SignUpButton>
+        </div>
+
+        {/* Smaller disc for narrow screens */}
+        <div className="md:hidden">
+          <HoloDisc size={200} spinSeconds={32} />
+        </div>
 
         <h1 className="font-display text-aberration text-[clamp(26px,4vw,46px)] leading-[0.92] font-normal text-text-primary tracking-tight">
           music label manager
@@ -100,32 +161,13 @@ function LandingPage() {
           Run the label. Shape the charts.
         </p>
 
-        {/* diegetic prompt / auth row */}
-        <div className="flex flex-col items-center gap-4 pt-2">
+        {/* Below-md fallback: auth actions stack under the wordmark */}
+        <div className="md:hidden flex flex-col items-center gap-4 pt-2">
           <SignInButton mode="modal">
-            <button className="group flex items-center gap-3 rounded-button border border-[rgba(212,163,115,0.6)] bg-[rgba(212,163,115,0.06)] px-5 py-2.5 font-mono text-[13px] uppercase tracking-[0.22em] text-text-primary shadow-[inset_0_0_12px_rgba(212,163,115,0.15),0_0_14px_rgba(212,163,115,0.12)] transition-colors hover:bg-[rgba(212,163,115,0.12)]">
-              <LogIn className="h-4 w-4 text-money" aria-hidden="true" />
-              <span>press</span>
-              <span className="rounded-chip border border-[rgba(212,163,115,0.6)] px-2.5 py-1 text-money">
-                enter
-              </span>
-              <span>to begin</span>
-              <span
-                className="ml-0.5 inline-block h-[18px] w-[10px] animate-pulse bg-money shadow-[0_0_10px_rgba(212,163,115,0.7)]"
-                aria-hidden="true"
-              />
-            </button>
+            <button className={orbitPrimary}>▸ sign in</button>
           </SignInButton>
-
           <SignUpButton mode="modal">
-            <Button
-              size="lg"
-              variant="ghost"
-              className="gap-2 font-mono text-xs uppercase tracking-[0.24em] text-text-muted hover:text-text-primary"
-            >
-              new label
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
+            <button className={orbitMuted}>new label · sign up</button>
           </SignUpButton>
         </div>
       </main>
