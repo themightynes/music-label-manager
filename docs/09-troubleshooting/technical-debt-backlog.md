@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 3, 2026
-- **Total Items**: 50
+- **Total Items**: 51
 - **Completed**: 46
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 1 (C50)
+- **Pending**: 2 (C50, C51)
 
 ---
 
@@ -815,19 +815,38 @@ The Phase 3 client characterization tests (`tests/client/` — gameStore actions
 
 ---
 
+### [ ] Comment 51: Artist badge shows "On Tour" for one extra week after the tour's last show 🔵
+**Priority**: 🔵 Low
+**Impact**: Display inconsistency (one-week lag, self-corrects)
+**Effort**: Low-Medium
+
+Two different "is the tour done?" definitions disagree by exactly one week. The Live Performance / ActiveTours UI marks a tour **COMPLETE** the week its last city is played (metadata check: `cityCounts.completed >= cityCounts.planned`, `client/src/components/ActiveTours.tsx:345,373,397`). But the engine only advances the project's `stage` from `'production'` to `'recorded'` (which acts as "completed" for tours) **one week later** — `ProjectStageProcessor.advanceProjectStages` requires `weeksInProduction > citiesPlanned`, strictly greater (`shared/engine/processors/ProjectStageProcessor.ts:126-129`). The artist status badge derives "ON TOUR" from `stage === 'production'` (`client/src/components/ArtistCard.tsx:44-55`, duplicated in `client/src/components/ArtistRoster.tsx:168-176`), so for that one week the tour card says COMPLETE while the artist card still says On Tour. Reported live by Nes during the 2026-07-03 post-Phase-3 manual smoke.
+
+**Action**: Decide the authoritative definition, then align the other side. Options: (a) client-only — the badge derivation also checks the metadata city counts (same check ActiveTours uses) so a tour with all cities played stops counting as "on tour"; or (b) engine — advance tour stage the same week the last city completes (`>=` instead of `>`), but that changes week-advance behavior and needs a golden-master update + check that the final city's revenue processing isn't skipped. (a) is the safe display-layer fix. Either way, extract the duplicated status-derivation logic in ArtistCard/ArtistRoster into one shared helper so the two badges can't drift.
+
+**Relevant Files**:
+- [client/src/components/ArtistCard.tsx](client/src/components/ArtistCard.tsx)
+- [client/src/components/ArtistRoster.tsx](client/src/components/ArtistRoster.tsx)
+- [client/src/components/ActiveTours.tsx](client/src/components/ActiveTours.tsx)
+- [shared/engine/processors/ProjectStageProcessor.ts](shared/engine/processors/ProjectStageProcessor.ts)
+
+*Identified July 3, 2026 by Nes during the post-Phase-3 manual smoke pass.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 1 pending (C50 — client tests' incidental DB dependency)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 2 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag)
 
 ### By Status
-- ✅ Completed: 46 items (92.0%)
+- ✅ Completed: 46 items (90.2%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 1 item (C50 — logged July 3, 2026; low, not scheduled)
+- 📋 Pending: 2 items (C50, C51 — logged July 3, 2026; low, not scheduled)
 
 ---
 
