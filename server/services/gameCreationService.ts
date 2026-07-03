@@ -152,11 +152,6 @@ export class GameCreationService {
       // Continue anyway - don't break game creation
     }
 
-    // TODO(phase-2): the original handler declared a `defaultRoles` array of 8
-    // named roles here but never persisted it (dead code). It was dropped in
-    // the PR-15 extraction. If default roles are ever needed, create them
-    // through the storage interface rather than reviving the dead array.
-
     return {
       ...gameState,
       musicLabel
