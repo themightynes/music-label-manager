@@ -4,6 +4,39 @@
 
 ---
 
+## 📅 Session Log — July 3, 2026 (Phase 3.5 + D6 COMPLETE: PRs #98–#111 minus Phase 4's, orchestrator + subagent factory)
+
+**Phase 3.5 (gameState → TanStack Query) AND D6 (whole-week transaction atomicity) both planned and fully executed in one orchestrated session** — same pattern as Phases 1–3: planner agents first, one implementation agent per PR in isolated worktrees, adversarial reviewer on every med-high-risk PR, CI-gated self-merge (user-granted this session). All merged to `main` (final: `73cb031`). Ran concurrently with the parallel Phase 4 session (PRs #100/#102/#109 landed mid-flight; coordinated via relayed constraints, no conflicts).
+
+**D6 — the week advance is now ONE atomic transaction (PRs #101, #105, #107):**
+- **#101** — failure-injection characterization: injectable-deps tests pinning the OLD broken behavior (crash between tx1/tx2 → half-applied week; error during tx1 → escaping artist-mood write survives rollback). Found in planning: the "two-transaction split" understated it — `updateArtist` had no tx param and `updateProject` silently dropped its tx arg, so artist/project/release writes escaped BOTH transactions (autocommit).
+- **#105** — threaded `dbTransaction` through 11 storage methods + ~30 call sites; Test B flipped (escapes now roll back). Adversarial review: sound; golden master byte-identical.
+- **#107** — merged tx2 into tx1 (one `db.transaction` for the whole advance, statement order verbatim) + `SELECT … FOR UPDATE` on the game row (concurrent advances serialize; new concurrency test proves it). Test A flipped: crash at the worst-case point → TOTAL rollback (songs/emails/charts, tour stats, release flags, artist mood, week, money). Review found one MEDIUM (config JSON loads + Zod ran inside the row lock every advance) — fixed pre-merge by hoisting above the tx. Golden master 10/10 byte-identical: zero gameplay change.
+- Follow-up logged, not built: reject-on-stale-week idempotency guard (**C58**).
+
+**Phase 3.5 — the TanStack cache is the single owner of the gameState spine (PRs #98, #99, #103, #104, #106, #108, #110, #111):**
+- **#98** — spine characterization net (35 pins: slot math, advanceWeek merge quirk incl. refetch-beats-response precedence, adoptServerBalances, orphan cleanup, snapshot assembly input).
+- **#99** — deleted the dead `updateGameState` three-way fallback (zero call sites, independently verified; removed a latent musicLabel-clobber bug).
+- **#103/#104** — `useGameState()`/`useGameState(selector)`/`useGameId()` façade + mechanical migration of ALL ~36 spine-reader files (23 components/hooks, 11 pages, 2 stragglers the plan's inventory missed). CI caught a co-located-test blind spot (`ArtistRoster.test.tsx` selector-blind store mock) — fixed; lesson institutionalized: validate with `npx vitest run tests/client client/src`, both paths.
+- **#106** — `['gameState:record', gameId]` key + `commitGameState()` funnel; all 12 store write sites dual-write Zustand + `setQueryData`; cache≡store pinned after every action.
+- **#108** — THE FLIP: façade reads the query cache. Implementer discovered the plan's mechanism was wrong (RQ v5 `notifyManager` batches `useQuery` notifications → breaks same-tick slot math) and used the sanctioned alternative: `useSyncExternalStore` directly on the QueryCache; same-tick property proven by RTL test. Adversarial review: ship-worthy; two non-blocking notes logged (**C56** selector bail-out, **C57** cold-fallback edge).
+- **#110** — retired the Zustand copy: store keeps only a `{ id }` session pointer; `readGameState()` serves imperative reads (guards, saveGame, SaveGameModal); snapshot shape FROZEN (`SNAPSHOT_VERSION` still 2, `musicLabel` sibling verified); localStorage partialize byte-identical. Adversarial review traced save/export integrity end-to-end: clean, no circular test pins.
+- **#111** — client/CLAUDE.md ownership rewrite, stale-comment sweep, **grep-gate test** (`gameState-ownership.grepgate.test.ts`) permanently enforcing the façade rule, all 10 plan acceptance criteria verified + checked off.
+
+**Decisions made:** self-merge on green CI (session grant); D6 strictly all-or-nothing (no staged fallback); Phase 3.5 goes to full Zustand retirement (no permanent dual-write); legacy localStorage persist shape kept (no version bump); golden-master drift rule (root-cause per field or stop — result: zero unexplained drift all session).
+
+**Tech debt logged (C55–C59, `c2052df`):** engine swallows email-creation errors (found by D6 failure injection); façade selector re-render bail-out; cold-cache fallback 404 edge; advance-week idempotency guard (medium); triage of the ~21 itemized discovered-debt findings in the two plan docs' §7.
+
+**Verification:** baseline 776/776 before any change; every PR merged on green CI (vitest + Playwright); isolated full-suite runs during D6 hit 851–852 passing; plan docs (incl. Phase 3's, retroactively) moved to `COMPLETED/[COMPLETE] …`.
+
+**Open threads / next steps:**
+- **Phase 4 (game feel) is UNBLOCKED and already resumed** (parallel session, `feat/phase4-pr3-staged-reveal`). Its rules: spine reads via the façade only; record writes via store actions only; validate both test paths.
+- **C58** (advance-week idempotency guard) is the one medium-priority follow-up from this session.
+- **C59**: triage the two plan docs' §7 discovered-debt lists (~21 items with file:line refs).
+- Docker test DB (`music-label-test-db`, port 5433) left RUNNING for the Phase 4 session.
+
+---
+
 ## 📅 Session Log — July 3, 2026 (Full v2 website redesign: "Neo-Cyber HUD", 10 packages → PR #97)
 
 **The entire client was redesigned to the Design System v2 ("neo-cyber HUD": dark indigo #070610, glass panels, chromatic hairlines, spectral neon accents, glow-based depth) imported from the user's claude.ai/design project.** Developed locally on worktree branch `claude/adoring-solomon-db2391`, then pushed as **PR #97** on user approval (merge on green CI granted). Ran as orchestrator + 9 concurrent package agents (Fable/Opus/Sonnet/Haiku) with strict disjoint file ownership in one shared worktree; every package audited against tool evidence before its commit. Post-review live-feedback rounds folded in: stat scale 26→20px, outline-button variant fix, chart row glow removal, dock rebalance + reorder, header declutter (stacked AUTO/Advance Week), true radial splash menu with grooved vinyl, and the real `liquid-chrome-bg.jpg` asset (user-supplied) committed.
