@@ -30,6 +30,7 @@ import {
   releaseSongsQueryKey,
 } from '@/hooks/useReleases';
 import { SONGS_SCOPE, songsQueryKey } from '@/hooks/useSongs';
+import { PROJECTS_SCOPE, projectsQueryKey } from '@/hooks/useProjects';
 
 const GAME_ID = 'game-1';
 const ARTIST_ID = 'artist-1';
@@ -58,6 +59,8 @@ const REAL_QUERY_KEYS: readonly unknown[][] = [
   [...releasesQueryKey(GAME_ID)],
   [...releaseSongsQueryKey(GAME_ID)],
   [...songsQueryKey(GAME_ID)],
+  // Projects (useProjects.ts, PR-7): [SCOPE, gameId]
+  [...projectsQueryKey(GAME_ID)],
   ['api', 'saves'],
 ];
 
@@ -137,6 +140,23 @@ describe('query-key contract: planRelease invalidations (PR-6)', () => {
     expect(releasesQueryKey(GAME_ID)).toEqual([RELEASES_SCOPE, GAME_ID]);
     expect(releaseSongsQueryKey(GAME_ID)).toEqual([RELEASE_SONGS_SCOPE, GAME_ID]);
     expect(songsQueryKey(GAME_ID)).toEqual([SONGS_SCOPE, GAME_ID]);
+  });
+});
+
+describe('query-key contract: project mutation invalidations (PR-7)', () => {
+  // createProject / updateProject / cancelProject invalidate the projects cache
+  // with the EXACT scoped key (client/src/store/gameStore.ts): projectsQueryKey
+  // == [PROJECTS_SCOPE, gameId]. Assert each matches the useProjects hook key.
+  it('project mutation invalidation matches the useProjects hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(projectsQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('the projects invalidation does NOT match a different game', () => {
+    expect(someRealKeyMatchesInvalidationKey(projectsQueryKey('other'))).toBe(false);
+  });
+
+  it('the projects scope constant and hook key agree element-for-element', () => {
+    expect(projectsQueryKey(GAME_ID)).toEqual([PROJECTS_SCOPE, GAME_ID]);
   });
 });
 

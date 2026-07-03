@@ -11,6 +11,7 @@ import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info, Target, 
 import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
+import { useProjects } from '@/hooks/useProjects';
 import GameLayout from '@/layouts/GameLayout';
 
 
@@ -110,7 +111,9 @@ const PERFORMANCE_TYPES = [
 
 export default function LivePerformancePage() {
   const [, setLocation] = useLocation();
-  const { gameState, artists, projects, createProject } = useGameStore();
+  const { gameState, artists, createProject } = useGameStore();
+  // Phase 3 PR-7: projects are cache-owned; read via useProjects.
+  const { data: projects = [] } = useProjects();
   const [isCreating, setIsCreating] = useState(false);
 
   const [selectedType, setSelectedType] = useState<'single_show' | 'mini_tour' | null>(null);

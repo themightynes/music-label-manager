@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Heart, Info, ExternalLink } from 'lucide-react';
 import { SongCatalog } from './SongCatalog';
 import { useArtistROI } from '@/hooks/useAnalytics';
-import { useGameStore } from '@/store/gameStore';
+import { useProjects } from '@/hooks/useProjects';
 
 export interface ArtistCardProps {
   artist: any;
@@ -30,7 +30,8 @@ export function ArtistCard({
   gameState,
   roiData: passedRoiData
 }: ArtistCardProps) {
-  const { projects } = useGameStore();
+  // Phase 3 PR-7: projects are cache-owned; read via useProjects.
+  const { data: projects = [] } = useProjects();
 
   // Fetch ROI from backend only if not provided as prop (backward compatibility)
   const { data: fetchedRoiData } = useArtistROI(passedRoiData ? null : artist.id);

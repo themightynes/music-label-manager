@@ -33,6 +33,7 @@ vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { songsQueryKey } from '@/hooks/useSongs';
 import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
+import { projectsQueryKey } from '@/hooks/useProjects';
 import { useGameStore } from '@/store/gameStore';
 import {
   routeApiRequest as routeApiRequestImpl,
@@ -85,10 +86,14 @@ describe('signArtist optimistic delta', () => {
 });
 
 describe('createProject optimistic delta', () => {
-  it('deducts totalCost from money and 1 from creativeCapital, appends project', async () => {
+  // Phase 3 PR-7 CHANGE: projects are cache-owned now. createProject no longer
+  // splices the returned project into a store `projects` array; it invalidates
+  // the projects query key so useProjects refetches the authoritative list. The
+  // money/creativeCapital optimistic math is UNTOUCHED (that's PR-10), so those
+  // pins stay identical — only the array-splice pin becomes an invalidation pin.
+  it('deducts totalCost from money and 1 from creativeCapital, invalidates projects', async () => {
     useGameStore.setState({
-      gameState: baseGameState({ money: 100000, creativeCapital: 4 }),
-      projects: [],
+      gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }),
     });
     const newProject = { id: 'proj-1', title: 'EP' };
     routeApiRequest([{ match: (u) => u.includes('/projects'), body: newProject }]);
@@ -98,13 +103,16 @@ describe('createProject optimistic delta', () => {
     const state = useGameStore.getState();
     expect(state.gameState!.money).toBe(80000); // 100000 - 20000
     expect((state.gameState as any).creativeCapital).toBe(3); // 4 - 1
-    expect(state.projects).toEqual([newProject]);
+    // Projects no longer live in the store; the mutation invalidates the cache.
+    expect((state as any).projects).toBeUndefined();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: projectsQueryKey('game-1'),
+    });
   });
 
   it('falls back to budgetPerSong when totalCost is absent', async () => {
     useGameStore.setState({
       gameState: baseGameState({ money: 50000, creativeCapital: 2 }),
-      projects: [],
     });
     routeApiRequest([{ match: (u) => u.includes('/projects'), body: { id: 'p2' } }]);
 
@@ -117,7 +125,6 @@ describe('createProject optimistic delta', () => {
   it('deducts creative capital even when cost is 0', async () => {
     useGameStore.setState({
       gameState: baseGameState({ money: 30000, creativeCapital: 3 }),
-      projects: [],
     });
     routeApiRequest([{ match: (u) => u.includes('/projects'), body: { id: 'p3' } }]);
 
@@ -156,10 +163,13 @@ describe('planRelease optimistic delta', () => {
 });
 
 describe('cancelProject adopts server balance', () => {
-  it('sets money to result.newBalance (NOT a local delta) and removes the project', async () => {
+  // Phase 3 PR-7 CHANGE: projects are cache-owned. cancelProject no longer
+  // filters the cancelled project out of a store `projects` array; it
+  // invalidates the projects query key so useProjects refetches. The money
+  // pin (adopts server newBalance verbatim) is UNTOUCHED.
+  it('sets money to result.newBalance (NOT a local delta) and invalidates projects', async () => {
     useGameStore.setState({
-      gameState: baseGameState({ money: 20000 }),
-      projects: [{ id: 'proj-1' } as any, { id: 'proj-2' } as any],
+      gameState: baseGameState({ id: 'game-1', money: 20000 }),
     });
     routeApiRequest([
       {
@@ -172,16 +182,22 @@ describe('cancelProject adopts server balance', () => {
 
     const state = useGameStore.getState();
     expect(state.gameState!.money).toBe(27500); // adopts server newBalance verbatim
-    expect(state.projects).toEqual([{ id: 'proj-2' }]);
+    // Projects no longer live in the store; the mutation invalidates the cache.
+    expect((state as any).projects).toBeUndefined();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: projectsQueryKey('game-1'),
+    });
   });
 });
 
 describe('loadGame set(...) state shape', () => {
-  // Phase 3 PR-6 CHANGE: loadGame no longer writes songs / releases /
-  // releaseSongs into the store. It seeds those into the TanStack Query cache
-  // (via queryClient.setQueryData) so the useSongs/useReleases/useReleaseSongs
-  // hooks own them. The pins below assert the cache is seeded from the same
-  // fan-out bodies, and that the store set() no longer carries these arrays.
+  // Phase 3 PR-6/PR-7 CHANGE: loadGame no longer writes songs / releases /
+  // releaseSongs / projects into the store. It seeds those into the TanStack
+  // Query cache (via queryClient.setQueryData) so the useSongs/useReleases/
+  // useReleaseSongs/useProjects hooks own them. The pins below assert the cache
+  // is seeded from the same fan-out bodies, and that the store set() no longer
+  // carries these arrays. (projects is seeded from the base game payload's
+  // `projects` field — there is no dedicated projects endpoint.)
   it('writes exactly the collections loadGame owns and resets selectedActions', async () => {
     mockedApiRequest.mockImplementation(async (_m: string, url: string) => {
       if (url.endsWith('/songs')) return jsonResponse([{ id: 's1' }]);
@@ -210,7 +226,6 @@ describe('loadGame set(...) state shape', () => {
     expect((state.gameState as any).musicLabel).toEqual({ name: 'Loaded Label' });
     expect((state.gameState as any).usedFocusSlots).toBe(0);
     expect(state.artists).toEqual([{ id: 'a1' }]);
-    expect(state.projects).toEqual([{ id: 'p1' }]);
     expect(state.roles).toEqual([{ id: 'role1' }]);
     expect(state.weeklyActions).toEqual([{ id: 'wa1' }]);
     expect(state.emails).toEqual([{ id: 'em1' }]);
@@ -218,15 +233,18 @@ describe('loadGame set(...) state shape', () => {
     expect(state.moodEvents).toEqual([{ id: 'm1' }]);
     expect(state.selectedActions).toEqual([]);
 
-    // PR-6: songs / releases / releaseSongs are seeded into the query cache, NOT
-    // the store. Assert the cache holds the fan-out bodies keyed by gameId.
+    // PR-6/PR-7: songs / releases / releaseSongs / projects are seeded into the
+    // query cache, NOT the store. Assert the cache holds the fan-out bodies
+    // keyed by gameId (projects from the base game payload's `projects` field).
     expect(queryClient.getQueryData(songsQueryKey('game-1'))).toEqual([{ id: 's1' }]);
     expect(queryClient.getQueryData(releasesQueryKey('game-1'))).toEqual([{ id: 'r1' }]);
     expect(queryClient.getQueryData(releaseSongsQueryKey('game-1'))).toEqual([{ id: 'rs1' }]);
+    expect(queryClient.getQueryData(projectsQueryKey('game-1'))).toEqual([{ id: 'p1' }]);
     // And the store no longer exposes them.
     expect((state as any).songs).toBeUndefined();
     expect((state as any).releases).toBeUndefined();
     expect((state as any).releaseSongs).toBeUndefined();
+    expect((state as any).projects).toBeUndefined();
   });
 });
 
@@ -267,7 +285,6 @@ describe('advanceWeek set(...) state shape', () => {
     const state = useGameStore.getState();
     expect((state.gameState as any).currentWeek).toBe(6);
     expect(state.artists).toEqual([{ id: 'a1' }]);
-    expect(state.projects).toEqual([{ id: 'p1' }]);
     expect(state.emails).toEqual([{ id: 'em1' }]);
     expect(state.executives).toEqual([{ id: 'e1' }]);
     expect(state.moodEvents).toEqual([{ id: 'm1' }]);
@@ -276,13 +293,16 @@ describe('advanceWeek set(...) state shape', () => {
     expect(state.selectedActions).toEqual([]);
     expect(state.isAdvancingWeek).toBe(false);
 
-    // PR-6: advanceWeek seeds songs / releases / releaseSongs into the query
-    // cache (via fetchGameBundle) instead of the store. Assert the seeded cache.
+    // PR-6/PR-7: advanceWeek seeds songs / releases / releaseSongs / projects
+    // into the query cache (via fetchGameBundle) instead of the store. Assert
+    // the seeded cache (projects from the base game payload's `projects` field).
     expect(queryClient.getQueryData(songsQueryKey('game-1'))).toEqual([{ id: 's1' }]);
     expect(queryClient.getQueryData(releasesQueryKey('game-1'))).toEqual([{ id: 'r1' }]);
     expect(queryClient.getQueryData(releaseSongsQueryKey('game-1'))).toEqual([{ id: 'rs1' }]);
+    expect(queryClient.getQueryData(projectsQueryKey('game-1'))).toEqual([{ id: 'p1' }]);
     expect((state as any).songs).toBeUndefined();
     expect((state as any).releases).toBeUndefined();
     expect((state as any).releaseSongs).toBeUndefined();
+    expect((state as any).projects).toBeUndefined();
   });
 });
