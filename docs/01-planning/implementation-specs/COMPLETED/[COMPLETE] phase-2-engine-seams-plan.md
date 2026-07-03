@@ -1,24 +1,26 @@
-# [READY] Phase 2: Engine Seams — decompose `shared/engine` + engine-boundary services
+# [COMPLETE] Phase 2: Engine Seams — decompose `shared/engine` + engine-boundary services
 
 *Created: July 2, 2026 — planned from a three-scout code-reading pass against the post-Phase-1 tree (`main` @ Phase 1 complete, PRs #61–#70 merged).*
-*Status: READY — not started.*
+*Status: COMPLETE — merged to main 2026-07-02 (PRs #72–#84). `shared/engine/game-engine.ts` 5,116 → 1,136 lines; 8 processors extracted under `shared/engine/processors/`; engine fully deterministic; golden-master + song-quality + stage-recording tests added; suite 545 → 692 passing (3 skipped). See DEVELOPMENT_STATUS.md session log for the full closeout entry.*
 *Part of the four-phase scaling arc (Phase 0: CI safety net · Phase 1: server seams · Phase 2: engine seams · Phase 3: client state ownership · Phase 4: game feel).*
 
 ## Execution status
 
-- ⏳ PR-1 — determinism fixes (seeded RNG everywhere)
-- ⏳ PR-2 — golden-master `advanceWeek` characterization harness
-- ⏳ PR-3 — `advanceWeekService` (server orchestration extraction)
-- ⏳ PR-4 — A&R artists GET cleanup (pure read, canonical array)
-- ⏳ PR-5 — `AROfficeProcessor` extraction
-- ⏳ PR-6 — `ProgressionProcessor` + weekly-finances extraction
-- ⏳ PR-7 — `TourProcessor` extraction + tour-estimate unification
-- ⏳ PR-8 — `SongGenerationProcessor` (song gen + quality) extraction
-- ⏳ PR-9 — `ProjectStageProcessor` extraction + B6 resolution
-- ⏳ PR-10 — `ReleaseProcessor` (releases/streaming/awareness) extraction
-- ⏳ PR-11 — `ActionProcessor` + `ArtistStateProcessor` (effects hub) extraction
-- ⏳ PR-12 — dead code + dead config sweep
-- ⏳ PR-13 — engine-boundary leftovers (PATCH whitelist, defaultRoles, game-state auto-creation routing)
+**Completed 2026-07-02 — all 13 PRs done and merged; `game-engine.ts` 5,116 → 1,136 lines; 8 processors extracted; suite 692 passing.**
+
+- ✅ PR-1 (#72) — determinism fixes (seeded RNG everywhere) — done, merged
+- ✅ PR-2 (#73) — golden-master `advanceWeek` characterization harness — done, merged
+- ✅ PR-3 — `advanceWeekService` (server orchestration extraction) — done, merged
+- ✅ PR-4 — A&R artists GET cleanup (pure read, canonical array) — done, merged
+- ✅ PR-5 — `AROfficeProcessor` extraction — done, merged
+- ✅ PR-6 — `ProgressionProcessor` + weekly-finances extraction — done, merged
+- ✅ PR-7 — `TourProcessor` extraction + tour-estimate unification — done, merged
+- ✅ PR-8 — `SongGenerationProcessor` (song gen + quality) extraction — done, merged
+- ✅ PR-9 — `ProjectStageProcessor` extraction + B6 resolution — done, merged
+- ✅ PR-10 — `ReleaseProcessor` (releases/streaming/awareness) extraction — done, merged
+- ✅ PR-11 — `ActionProcessor` + `ArtistStateProcessor` (effects hub) extraction — done, merged
+- ✅ PR-12 — dead code + dead config sweep — done, merged
+- ✅ PR-13 (#84) — engine-boundary leftovers (PATCH whitelist, defaultRoles, game-state auto-creation routing) — done, merged
 
 ## 0. Ground truth (verified against the working tree, 2026-07-02)
 
