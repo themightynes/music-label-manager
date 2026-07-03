@@ -128,8 +128,7 @@ export default function ArtistPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [artistProjects, setArtistProjects] = useState<Project[]>([]);
   const [artistReleases, setArtistReleases] = useState<Release[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
-  
+
   // Loading and error states
   const [loadingArtist, setLoadingArtist] = useState(true);
   const [loadingSongs, setLoadingSongs] = useState(true);
@@ -138,8 +137,6 @@ export default function ArtistPage() {
   
   // Filter states for discography
   const [songFilter, setSongFilter] = useState<'all' | 'recorded' | 'released'>('all');
-  const [qualityFilter, setQualityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [sortBy, setSortBy] = useState<'creation' | 'quality' | 'streams' | 'revenue'>('creation');
 
   // Artist card state
   const [expandedArtist, setExpandedArtist] = useState<boolean>(false);
