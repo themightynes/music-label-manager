@@ -16,21 +16,30 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the network + cache layer BEFORE the store import (vitest hoists these).
-// Phase 3 PR-6: the store seeds songs/releases/releaseSongs into the query cache
-// via setQueryData, so the mocked queryClient must expose it (a no-op is fine
-// here — these tests only assert email invalidation).
+// Phase 3 PR-6: the gameState spine record is now cache-owned — the store's
+// actions read it via `readGameState` (queryClient.getQueryData). So the mocked
+// queryClient must back setQueryData/getQueryData with a real in-memory cache,
+// and `advanceWeek`'s early guard needs the record seeded (see the seed helper).
+const queryCache = new Map<string, unknown>();
 vi.mock('@/lib/queryClient', () => ({
   apiRequest: vi.fn(),
   queryClient: {
     invalidateQueries: vi.fn().mockResolvedValue(undefined),
-    setQueryData: vi.fn(),
-    getQueryData: vi.fn(),
+    setQueryData: vi.fn((key: unknown, value: unknown) => {
+      queryCache.set(JSON.stringify(key), value);
+      return value;
+    }),
+    getQueryData: vi.fn((key: unknown) => queryCache.get(JSON.stringify(key))),
+    removeQueries: vi.fn(({ queryKey }: { queryKey: unknown }) => {
+      queryCache.delete(JSON.stringify(queryKey));
+    }),
   },
 }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { gameStateQueryKey } from '@/hooks/useGameState';
 import { useGameStore } from '@/store/gameStore';
 import {
   jsonResponse,
@@ -42,9 +51,19 @@ const mockedApiRequest = apiRequest as unknown as ReturnType<typeof vi.fn>;
 const mockedInvalidateQueries = queryClient.invalidateQueries as unknown as ReturnType<typeof vi.fn>;
 const resetGameStore = () => resetGameStoreImpl(useGameStore);
 
+/**
+ * Phase 3.5 PR-6: seed BOTH the Zustand session pointer (`{ id }`) and the
+ * cache-owned spine record, so an action's `readGameState` guard passes.
+ */
+function seedGameState(gs: any) {
+  useGameStore.setState({ gameState: { id: gs.id } as any });
+  queryClient.setQueryData(gameStateQueryKey(gs.id), gs);
+}
+
 beforeEach(() => {
   mockedApiRequest.mockReset();
   mockedInvalidateQueries.mockClear();
+  queryCache.clear();
   resetGameStore();
 });
 
@@ -134,8 +153,8 @@ describe('loadGameFromSave email invalidation (C49)', () => {
 describe('advanceWeek email invalidation', () => {
   it('invalidates email queries via a predicate scoped to the advanced gameId', async () => {
     const gameId = 'game-adv-1';
+    seedGameState(baseGameState({ id: gameId, currentWeek: 5, arOfficeSlotUsed: false }));
     useGameStore.setState({
-      gameState: baseGameState({ id: gameId, currentWeek: 5, arOfficeSlotUsed: false }),
       selectedActions: ['{"roleId":"ceo","actionId":"a1","choiceId":"c1"}'],
     });
 

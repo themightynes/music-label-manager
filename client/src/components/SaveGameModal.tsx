@@ -138,10 +138,12 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
       const restoredGameId = await loadGameFromSave(saveId, snapshot, mode);
 
-      // Update the game context with the loaded game's ID
-      // We need to get the game ID from the loaded state
-      const { gameState: loadedState } = useGameStore.getState();
-      const activeGameId = restoredGameId || loadedState?.id;
+      // Update the game context with the loaded game's ID. Prefer the id
+      // returned by loadGameFromSave; fall back to the Zustand SESSION POINTER
+      // id (the only spine field Zustand still holds after Phase 3.5 PR-6 — the
+      // full record is cache-owned).
+      const pointerGameId = useGameStore.getState().gameState?.id ?? null;
+      const activeGameId = restoredGameId || pointerGameId;
       if (activeGameId) {
         setGameId(activeGameId);
       }
