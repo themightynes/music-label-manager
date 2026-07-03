@@ -59,6 +59,54 @@ export class GameCreationService {
   }
 
   /**
+   * Auto-create a "bare" game for GET /api/game-state when the user has none.
+   *
+   * PR-13 / D4: this is the ONE remaining second creation path. It routes
+   * through gameCreationService (so game creation lives in one module) but
+   * intentionally produces the pre-existing GET /api/game-state auto-create
+   * SHAPE, which differs from POST /api/game:
+   *   - NO music label (returns musicLabel: null). GamePage.tsx keys its
+   *     label-creation modal off `!serverGameState.musicLabel` — seeding a
+   *     default label here would silently suppress that modal.
+   *   - NO executives (POST /api/game seeds 4; the auto-created game does not).
+   *   - campaignType "standard" and flags {} (POST /api/game defaults
+   *     campaignType from the body and writes flags.difficulty).
+   *
+   * Shares the balance-starting-values + reputation-derived-tier logic with
+   * createGame so those never drift. Difficulty is always normal (1.0x) — the
+   * auto-create path has no difficulty selection.
+   */
+  async createBareGame(userId: string) {
+    await this.serverGameData.initialize();
+
+    const startingValues = await this.serverGameData.getStartingValues();
+    const tiers = this.deriveInitialAccessTiers(startingValues.reputation || 0);
+
+    const gameState = await this.storage.createGameState({
+      userId,
+      currentWeek: 1,
+      money: startingValues.money,
+      reputation: startingValues.reputation,
+      creativeCapital: startingValues.creativeCapital,
+      focusSlots: 3,
+      usedFocusSlots: 0,
+      playlistAccess: tiers.playlist,
+      pressAccess: tiers.press,
+      venueAccess: tiers.venue,
+      campaignType: 'standard',
+      rngSeed: Math.random().toString(36).substring(7),
+      flags: {},
+      weeklyStats: {},
+    } as any);
+    console.log('🎮 Created auto-generated game state (label will be created separately):', gameState.id);
+
+    return {
+      ...gameState,
+      musicLabel: null,
+    };
+  }
+
+  /**
    * Create a new game for the given user from a raw request body. Returns the
    * created game state merged with its music label (the exact response shape of
    * the original POST /api/game handler).
