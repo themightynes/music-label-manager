@@ -14,12 +14,14 @@ import { useGameStore } from '@/store/gameStore';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import type { GameSaveSnapshot } from '@shared/schema';
 import { gameSaveSnapshotSchema } from '@shared/schema';
 import { ZodError } from 'zod';
 import { fetchSnapshotCollections } from '@/utils/emailSnapshot';
 import { buildGameSnapshot } from '@/utils/buildGameSnapshot';
+import { songsQueryKey } from '@/hooks/useSongs';
+import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { useToast } from '@/hooks/use-toast';
 
 type SaveSummary = {
@@ -218,14 +220,18 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         artists,
         projects,
         roles,
-        songs,
-        releases,
-        releaseSongs,
         executives,
         moodEvents,
         weeklyActions,
         weeklyOutcome
       } = useGameStore.getState();
+
+      // Phase 3 PR-6: songs / releases / releaseSongs are no longer store-owned.
+      // Source them from the TanStack Query cache so the export snapshot shape
+      // stays byte-identical to manual saves / autosaves.
+      const songs = queryClient.getQueryData<any[]>(songsQueryKey(gameState.id)) ?? [];
+      const releases = queryClient.getQueryData<any[]>(releasesQueryKey(gameState.id)) ?? [];
+      const releaseSongs = queryClient.getQueryData<any[]>(releaseSongsQueryKey(gameState.id)) ?? [];
 
       const snapshotCandidate = buildGameSnapshot({
         gameState,

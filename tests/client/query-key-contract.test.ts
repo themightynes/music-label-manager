@@ -23,6 +23,13 @@ import { describe, it, expect } from 'vitest';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 import { EXECUTIVES_SCOPE, executivesQueryKey } from '@/hooks/useExecutives';
 import { CHART_TOP10_SCOPE, CHART_TOP100_SCOPE } from '@/hooks/useCharts';
+import {
+  RELEASES_SCOPE,
+  RELEASE_SONGS_SCOPE,
+  releasesQueryKey,
+  releaseSongsQueryKey,
+} from '@/hooks/useReleases';
+import { SONGS_SCOPE, songsQueryKey } from '@/hooks/useSongs';
 
 const GAME_ID = 'game-1';
 const ARTIST_ID = 'artist-1';
@@ -47,6 +54,10 @@ const REAL_QUERY_KEYS: readonly unknown[][] = [
   [...executivesQueryKey(GAME_ID)],
   [CHART_TOP10_SCOPE, GAME_ID],
   [CHART_TOP100_SCOPE, GAME_ID],
+  // Releases / songs (useReleases.ts, useSongs.ts, PR-6): [SCOPE, gameId]
+  [...releasesQueryKey(GAME_ID)],
+  [...releaseSongsQueryKey(GAME_ID)],
+  [...songsQueryKey(GAME_ID)],
   ['api', 'saves'],
 ];
 
@@ -97,6 +108,35 @@ describe('query-key contract: advanceWeek chart invalidations (PR-5)', () => {
 
   it('advanceWeek chart predicate does NOT match a different game\'s chart keys', () => {
     expect(someRealKeyMatchesPredicate(chartPredicate('some-other-game'))).toBe(false);
+  });
+});
+
+describe('query-key contract: planRelease invalidations (PR-6)', () => {
+  // planRelease invalidates the release/song caches with EXACT scoped keys
+  // (client/src/store/gameStore.ts): releasesQueryKey / releaseSongsQueryKey /
+  // songsQueryKey, each == [SCOPE, gameId]. Assert each matches its hook key.
+  it('planRelease releases invalidation matches the useReleases hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(releasesQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('planRelease release-songs invalidation matches the useReleaseSongs hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(releaseSongsQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('planRelease songs invalidation matches the useSongs hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(songsQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('none of the release/song invalidations match a different game', () => {
+    expect(someRealKeyMatchesInvalidationKey(releasesQueryKey('other'))).toBe(false);
+    expect(someRealKeyMatchesInvalidationKey(releaseSongsQueryKey('other'))).toBe(false);
+    expect(someRealKeyMatchesInvalidationKey(songsQueryKey('other'))).toBe(false);
+  });
+
+  it('release/song scope constants and hook keys agree element-for-element', () => {
+    expect(releasesQueryKey(GAME_ID)).toEqual([RELEASES_SCOPE, GAME_ID]);
+    expect(releaseSongsQueryKey(GAME_ID)).toEqual([RELEASE_SONGS_SCOPE, GAME_ID]);
+    expect(songsQueryKey(GAME_ID)).toEqual([SONGS_SCOPE, GAME_ID]);
   });
 });
 

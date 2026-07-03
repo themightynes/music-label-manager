@@ -47,10 +47,9 @@ export function resetGameStore(useGameStore: Store) {
     projects: [],
     roles: [],
     weeklyActions: [],
-    songs: [],
-    releases: [],
+    // Phase 3 PR-6: songs / releases / releaseSongs are no longer store-owned
+    // (they live in the TanStack Query cache), so they are not reset here.
     emails: [],
-    releaseSongs: [],
     executives: [],
     moodEvents: [],
     discoveredArtists: [],

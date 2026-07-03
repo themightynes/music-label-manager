@@ -16,9 +16,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the network + cache layer BEFORE the store import (vitest hoists these).
+// Phase 3 PR-6: the store seeds songs/releases/releaseSongs into the query cache
+// via setQueryData, so the mocked queryClient must expose it (a no-op is fine
+// here — these tests only assert email invalidation).
 vi.mock('@/lib/queryClient', () => ({
   apiRequest: vi.fn(),
-  queryClient: { invalidateQueries: vi.fn().mockResolvedValue(undefined) },
+  queryClient: {
+    invalidateQueries: vi.fn().mockResolvedValue(undefined),
+    setQueryData: vi.fn(),
+    getQueryData: vi.fn(),
+  },
 }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 

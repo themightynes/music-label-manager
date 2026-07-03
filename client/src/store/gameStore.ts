@@ -11,6 +11,8 @@ import { formatAutosaveName } from '@shared/utils/saveName';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 import { executivesQueryKey } from '@/hooks/useExecutives';
 import { CHART_TOP10_SCOPE, CHART_TOP100_SCOPE } from '@/hooks/useCharts';
+import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
+import { songsQueryKey } from '@/hooks/useSongs';
 
 // Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
 // identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
@@ -55,7 +57,36 @@ async function fetchGameBundle(gameId: string): Promise<GameBundle> {
   const executives = await executivesResponse.json();
   const moodEvents = await moodEventsResponse.json();
 
+  // Phase 3 PR-6: songs / releases / releaseSongs are owned by the TanStack
+  // Query cache now, not Zustand. The fan-out already fetched them, so SEED the
+  // query cache here with the fresh bodies (`setQueryData`) instead of firing a
+  // second request from useSongs/useReleases/useReleaseSongs — zero extra GETs.
+  // Callers no longer write these three arrays into the store.
+  seedReleaseAndSongCache(gameId, { songs, releases, releaseSongs });
+
   return { gameData, songs, releases, releaseSongs, executives, moodEvents, emails };
+}
+
+// Phase 3 PR-6: seed the release/song query caches from an already-fetched
+// bundle so the hooks (useSongs/useReleases/useReleaseSongs) read fresh data
+// with no extra round-trip. Arrays are coerced to [] to match the hooks'
+// queryFn contract (they always resolve an array).
+function seedReleaseAndSongCache(
+  gameId: string,
+  data: { songs: unknown; releases: unknown; releaseSongs: unknown },
+) {
+  queryClient.setQueryData(
+    songsQueryKey(gameId),
+    Array.isArray(data.songs) ? data.songs : [],
+  );
+  queryClient.setQueryData(
+    releasesQueryKey(gameId),
+    Array.isArray(data.releases) ? data.releases : [],
+  );
+  queryClient.setQueryData(
+    releaseSongsQueryKey(gameId),
+    Array.isArray(data.releaseSongs) ? data.releaseSongs : [],
+  );
 }
 
 // Internal helper to sync focus slots and A&R operation status to the server
@@ -81,10 +112,11 @@ interface GameStore {
   projects: Project[];
   roles: Role[];
   weeklyActions: WeeklyAction[];
-  songs: any[];
-  releases: any[];
+  // Phase 3 PR-6: songs / releases / releaseSongs are no longer owned by the
+  // store — they live in the TanStack Query cache (hooks/useSongs.ts,
+  // hooks/useReleases.ts). Consumers read them via useSongs/useReleases/
+  // useReleaseSongs; the fan-out seeds the cache, mutations invalidate it.
   emails: any[]; // Email system support
-  releaseSongs: any[];
   executives: any[];
   moodEvents: any[];
 
@@ -152,10 +184,7 @@ export const useGameStore = create<GameStore>()(
       projects: [],
       roles: [],
       weeklyActions: [],
-      songs: [],
-      releases: [],
       emails: [],
-      releaseSongs: [],
       executives: [],
       moodEvents: [],
       discoveredArtists: [],
@@ -171,7 +200,6 @@ export const useGameStore = create<GameStore>()(
             gameData: data,
             songs,
             releases,
-            releaseSongs,
             executives,
             moodEvents,
             emails: emailList,
@@ -203,16 +231,15 @@ export const useGameStore = create<GameStore>()(
             musicLabel: data.musicLabel || null
           };
 
+          // Phase 3 PR-6: songs / releases / releaseSongs are seeded into the
+          // TanStack Query cache by fetchGameBundle — no longer written here.
           set({
             gameState: gameStateWithLabel,
             artists: data.artists,
             projects: data.projects,
             roles: data.roles,
             weeklyActions: data.weeklyActions,
-            songs,
-            releases,
             emails: emailList,
-            releaseSongs: Array.isArray(releaseSongs) ? releaseSongs : [],
             executives: Array.isArray(executives) ? executives : [],
             moodEvents: Array.isArray(moodEvents) ? moodEvents : [],
             selectedActions: []
@@ -261,15 +288,22 @@ export const useGameStore = create<GameStore>()(
             updatedAt: null,
           };
 
+          // Phase 3 PR-6: seed the release/song query cache from the snapshot so
+          // the restored data shows immediately, then drop those arrays from the
+          // store set(). The post-restore fetchGameBundle below re-seeds with the
+          // server's authoritative copy.
+          seedReleaseAndSongCache(baseGameState.id, {
+            songs: snapshot.songs || [],
+            releases: snapshot.releases || [],
+            releaseSongs: snapshot.releaseSongs || [],
+          });
+
           set({
             gameState: interimGameState,
             artists: (snapshot.artists || []) as unknown as Artist[],
             projects: (snapshot.projects || []) as unknown as Project[],
             roles: (snapshot.roles || []) as unknown as Role[],
-            songs: snapshot.songs || [],
-            releases: snapshot.releases || [],
             emails: snapshot.emails || [],
-            releaseSongs: snapshot.releaseSongs || [],
             executives: snapshot.executives || [],
             moodEvents: snapshot.moodEvents || [],
             weeklyActions: (snapshot.weeklyActions || []) as unknown as WeeklyAction[],
@@ -290,9 +324,6 @@ export const useGameStore = create<GameStore>()(
 
           const {
             gameData,
-            songs: songsData,
-            releases: releasesData,
-            releaseSongs: releaseSongsData,
             executives: executivesData,
             moodEvents: moodEventsData,
             emails: emailList,
@@ -305,16 +336,15 @@ export const useGameStore = create<GameStore>()(
             arOfficeSourcingType: gameData.gameState?.arOfficeSourcingType ?? null,
           };
 
+          // Phase 3 PR-6: songs / releases / releaseSongs seeded into the query
+          // cache by fetchGameBundle above — no longer written into the store.
           set({
             gameState: syncedGameState,
             artists: gameData.artists || [],
             projects: gameData.projects || [],
             roles: gameData.roles || [],
             weeklyActions: gameData.weeklyActions || [],
-            songs: songsData || [],
-            releases: releasesData || [],
             emails: emailList || [],
-            releaseSongs: Array.isArray(releaseSongsData) ? releaseSongsData : [],
             executives: Array.isArray(executivesData) ? executivesData : [],
             moodEvents: Array.isArray(moodEventsData) ? moodEventsData : [],
             selectedActions: [],
@@ -454,6 +484,10 @@ export const useGameStore = create<GameStore>()(
             musicLabel: completeGameData.musicLabel || null
           };
 
+          // Phase 3 PR-6: seed the new game's release/song caches empty so the
+          // hooks read [] rather than any stale prior-game data.
+          seedReleaseAndSongCache(gameState.id, { songs: [], releases: [], releaseSongs: [] });
+
           // Clear campaign results and set new state
           set({
             gameState: syncedGameState,
@@ -461,10 +495,7 @@ export const useGameStore = create<GameStore>()(
             projects: [],
             roles: [],
             weeklyActions: [],
-            songs: [],
-            releases: [],
             emails: [],
-            releaseSongs: [],
             executives: [],
             moodEvents: [],
             selectedActions: [],
@@ -697,7 +728,6 @@ export const useGameStore = create<GameStore>()(
             gameData,
             songs,
             releases,
-            releaseSongs: releaseSongsData,
             executives: executivesData,
             moodEvents: moodEventsData,
             emails: emailList,
@@ -723,14 +753,13 @@ export const useGameStore = create<GameStore>()(
             musicLabel: gameData.musicLabel || (resultGameState as any)?.musicLabel || null,
           } as GameState;
 
+          // Phase 3 PR-6: songs / releases / releaseSongs seeded into the query
+          // cache by fetchGameBundle — no longer written into the store.
           set({
             gameState: syncedGameState,
             artists: gameData.artists || [], // Update artists to reflect mood changes
             projects: gameData.projects || [], // Update projects with current state
-            songs: songs || [], // Update songs to include newly recorded ones
-            releases: releases || [], // FIXED: Use explicit releases fetch for accurate status
             emails: emailList || [],
-            releaseSongs: Array.isArray(releaseSongsData) ? releaseSongsData : [],
             executives: Array.isArray(executivesData) ? executivesData : [],
             moodEvents: Array.isArray(moodEventsData) ? moodEventsData : [],
             weeklyOutcome: result.summary,
@@ -1035,9 +1064,16 @@ export const useGameStore = create<GameStore>()(
           };
           
           set({ gameState: updatedGameState });
-          
+
+          // Phase 3 PR-6: releases/releaseSongs/songs now live in the query cache
+          // (formerly the store fan-out re-fetched them). Invalidate so the newly
+          // planned release shows up without a full reload.
+          await queryClient.invalidateQueries({ queryKey: releasesQueryKey(gameState.id) });
+          await queryClient.invalidateQueries({ queryKey: releaseSongsQueryKey(gameState.id) });
+          await queryClient.invalidateQueries({ queryKey: songsQueryKey(gameState.id) });
+
           console.log(`[FRONTEND] Synced release planning: -$${totalMarketingCost}, -1 creative capital, new balances: $${updatedGameState.money}, ${updatedGameState.creativeCapital} creative capital`);
-          
+
           return result;
         } catch (error) {
           console.error('Failed to plan release:', error);
@@ -1216,15 +1252,21 @@ export const useGameStore = create<GameStore>()(
           artists,
           projects,
           roles,
-          songs,
-          releases,
-          releaseSongs,
           executives,
           moodEvents,
           weeklyActions,
           weeklyOutcome
         } = get();
         if (!gameState) return;
+
+        // Phase 3 PR-6: songs / releases / releaseSongs are no longer store-owned.
+        // Source them from the TanStack Query cache (seeded by the fan-out) so the
+        // snapshot shape is byte-identical to before. Autosave runs right after
+        // advanceWeek's fan-out, so the cache is freshly populated here.
+        const songs = queryClient.getQueryData<any[]>(songsQueryKey(gameState.id)) ?? [];
+        const releases = queryClient.getQueryData<any[]>(releasesQueryKey(gameState.id)) ?? [];
+        const releaseSongs =
+          queryClient.getQueryData<any[]>(releaseSongsQueryKey(gameState.id)) ?? [];
 
         try {
           const { emailSnapshot, releaseSongs: releaseSongsSnapshot, executives: executivesSnapshot, moodEvents: moodEventsSnapshot } =
