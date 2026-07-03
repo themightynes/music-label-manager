@@ -4,6 +4,7 @@ import { storage } from '../storage';
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
 import { requireClerkUser } from '../auth';
+import { requireGameOwner } from '../middleware/requireGameOwner';
 import { serverGameData } from '../data/gameData';
 import { GameEngine } from '../../shared/engine/game-engine';
 import {
@@ -16,7 +17,7 @@ import { insertWeeklyActionSchema, gameStates, weeklyActions, projects, songs, a
 const router = Router();
 
   // Weekly action routes
-  router.post("/api/game/:gameId/actions", requireClerkUser, async (req, res) => {
+  router.post("/api/game/:gameId/actions", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const validatedData = insertWeeklyActionSchema.parse({
         ...req.body,
@@ -34,7 +35,10 @@ const router = Router();
   });
 
   // Week advancement with action processing using GameEngine and transactions
-  router.post("/api/advance-week", requireClerkUser, async (req, res) => {
+  // gameId arrives in the request body; requireGameOwner resolves it via its
+  // body fallback and 404s a non-owner before any transaction runs. The
+  // in-transaction re-read below is kept intentionally for freshness/locking.
+  router.post("/api/advance-week", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       // Validate request using shared contract
       const request = validateRequest(AdvanceWeekRequest, req.body);

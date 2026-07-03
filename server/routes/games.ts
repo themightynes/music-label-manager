@@ -4,19 +4,34 @@ import { storage } from '../storage';
 import { db } from '../db';
 import { eq, desc, sql } from 'drizzle-orm';
 import { requireClerkUser } from '../auth';
+import { requireGameOwner, requireGameOwnerByParam } from '../middleware/requireGameOwner';
 import { serverGameData } from '../data/gameData';
 import { labelRequestSchema, gameStates, gameSaves } from '@shared/schema';
 import { gameCreationService } from '../services/gameCreationService';
 
 const router = Router();
 
+// HARDENING: whitelist the fields the client is actually allowed to PATCH on a
+// game. The only live PATCH /api/game/:id callers are syncSlotsPatch()
+// (client/src/store/gameStore.ts) and syncAROfficeSlots()
+// (client/src/services/arOfficeService.ts) — both send exactly
+// { usedFocusSlots, arOfficeSlotUsed, arOfficeSourcingType }. .strict() rejects
+// any other key so server-computed fields (money, reputation, access tiers,
+// flags, ...) can never be mass-assigned by the client.
+const patchGameStateSchema = z
+  .object({
+    usedFocusSlots: z.number().int().optional(),
+    arOfficeSlotUsed: z.boolean().optional(),
+    arOfficeSourcingType: z.string().nullable().optional(),
+  })
+  .strict();
+
   // Game state routes
-  router.get("/api/game/:id", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:id", requireClerkUser, requireGameOwnerByParam('id'), async (req, res) => {
     try {
-      const gameState = await storage.getGameState(req.params.id);
-      if (!gameState) {
-        return res.status(404).json({ message: "Game not found" });
-      }
+      // Ownership verified by requireGameOwner; req.gameState is the owner's row.
+      // Its 404 GAME_NOT_FOUND replaces the previous inline "Game not found" 404.
+      const gameState = req.gameState!;
 
       // Get related data
       const musicLabel = await storage.getMusicLabel(gameState.id);
@@ -53,12 +68,24 @@ const router = Router();
     }
   });
 
-  router.patch("/api/game/:id", requireClerkUser, async (req, res) => {
+  router.patch("/api/game/:id", requireClerkUser, requireGameOwnerByParam('id'), async (req, res) => {
     try {
       console.log('[PATCH /api/game/:id] Request params:', req.params.id);
       console.log('[PATCH /api/game/:id] Request body:', req.body);
 
-      const gameState = await storage.updateGameState(req.params.id, req.body);
+      // HARDENING: reject unknown / server-computed fields (mass-assignment).
+      const parsed = patchGameStateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: 'INVALID_GAME_FIELDS',
+          message: 'Game update payload contains unexpected fields',
+          details: parsed.error.errors,
+        });
+      }
+
+      // Ownership verified by requireGameOwner (its 404 GAME_NOT_FOUND replaces
+      // the previous "Game not found or update failed" 404 for missing games).
+      const gameState = await storage.updateGameState(req.params.id, parsed.data);
 
       console.log('[PATCH /api/game/:id] Updated game state:', gameState);
 
@@ -191,17 +218,14 @@ const router = Router();
   });
 
 // Create/update music label for existing game
-  router.post("/api/game/:gameId/label", requireClerkUser, async (req, res) => {
+  router.post("/api/game/:gameId/label", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
       console.log('[POST /api/game/:gameId/label] Creating/updating label for game:', gameId);
       console.log('[POST /api/game/:gameId/label] Label data:', req.body);
 
-      // Validate the game exists and belongs to the user
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        return res.status(404).json({ message: "Game not found" });
-      }
+      // Ownership + existence verified by requireGameOwner (404 GAME_NOT_FOUND
+      // replaces the previous inline "Game not found" 404).
 
       // Validate label data
       const validatedLabelData = labelRequestSchema.parse(req.body);

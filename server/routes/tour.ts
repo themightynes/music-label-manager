@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import { storage } from '../storage';
 import { requireClerkUser } from '../auth';
+import { requireGameOwner } from '../middleware/requireGameOwner';
 import { serverGameData } from '../data/gameData';
 import { FinancialSystem, VenueCapacityManager } from '@shared/engine/FinancialSystem';
 
 const router = Router();
 
   // Tour estimation endpoint - Phase 3: API Bridge
-  router.post('/api/tour/estimate', requireClerkUser, async (req, res) => {
+  // gameId arrives in the request body; requireGameOwner resolves it via its
+  // body fallback and 404s a non-owner (a missing gameId now yields the
+  // middleware's 400 MISSING_GAME_ID before this handler's combined 400).
+  router.post('/api/tour/estimate', requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { artistId, cities, budgetPerCity, gameId, venueCapacity } = req.body;
 
@@ -27,11 +31,9 @@ const router = Router();
         }
       }
 
-      // Get game state - CRASH IF MISSING
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        return res.status(404).json({ error: `Game not found: ${gameId}` });
-      }
+      // Ownership + existence verified by requireGameOwner (404 GAME_NOT_FOUND
+      // replaces the previous `Game not found: <id>` 404 body).
+      const gameState = req.gameState!;
 
       // Get artist - CRASH IF MISSING
       const artist = await storage.getArtist(artistId);

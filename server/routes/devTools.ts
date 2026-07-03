@@ -7,6 +7,7 @@ import { db } from '../db';
 import { gameStates } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { requireClerkUser, requireAdmin } from '../auth';
+import { requireGameOwner } from '../middleware/requireGameOwner';
 
 const router = Router();
 
@@ -204,7 +205,7 @@ router.get("/api/validate-types", requireClerkUser, async (req, res) => {
   });
 
   // Streaming decay testing endpoint
-  router.post('/api/game/:gameId/test/streaming-decay', requireClerkUser, async (req, res) => {
+  router.post('/api/game/:gameId/test/streaming-decay', requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const {
@@ -218,11 +219,10 @@ router.get("/api/validate-types", requireClerkUser, async (req, res) => {
         awarenessConfig
       } = req.body;
 
-      // Get game state for current week
-      const [gameState] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-      if (!gameState) {
-        return res.status(404).json({ error: 'Game not found' });
-      }
+      // Ownership + existence verified by requireGameOwner (404 GAME_NOT_FOUND
+      // replaces the previous inline 'Game not found' 404). Only currentWeek is
+      // read from the game below.
+      const gameState = req.gameState!;
 
       // Create mock song and release data for testing
       const mockSong = {
