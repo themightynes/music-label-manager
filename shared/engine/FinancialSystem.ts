@@ -951,7 +951,8 @@ export class FinancialSystem {
 
         if (weeksSinceRelease <= streamGrowthDuration) {
           // Stream growth phase: 20-40% increase instead of decay
-          const growthRate = 1.2 + (Math.random() * 0.2); // 1.2x to 1.4x growth
+          // Seeded RNG: getRandom(0, 1) is uniform [0,1), equivalent to Math.random() (Phase 2 PR-1)
+          const growthRate = 1.2 + (this.getRandom(0, 1) * 0.2); // 1.2x to 1.4x growth
           const growthDecay = Math.pow(growthRate, weeksSinceRelease - 1);
           weeklyStreams = initialStreams * growthDecay * reputationBonus * accessBonus * ongoingFactor;
         } else {
