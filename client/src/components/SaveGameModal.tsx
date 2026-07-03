@@ -260,6 +260,18 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      if (validatedSnapshot.emailMetadata?.truncated) {
+        toast({
+          title: 'Save exported (emails truncated)',
+          description: 'This save hit the email history safety cap, so some older emails were left out of the export.',
+        });
+      } else {
+        toast({
+          title: 'Save exported',
+          description: 'Your game snapshot has been downloaded.',
+        });
+      }
     } catch (error) {
       console.error('Failed to export save:', error);
       toast({
