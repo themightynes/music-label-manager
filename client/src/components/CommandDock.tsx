@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { useIsAdmin } from '@/auth/useCurrentUser';
@@ -20,8 +20,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { HoloDisc } from '@/components/ui/holo-disc';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { WeekSummary } from './WeekSummary';
 import { BugReportModal } from './BugReportModal';
+import { audioManager, type AudioSettings } from '@/lib/audio';
 import {
   UserRound,
   Building2,
@@ -37,6 +40,8 @@ import {
   Save,
   Bug,
   Shield,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -119,6 +124,12 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
 
   const [showWeekSummary, setShowWeekSummary] = useState(false);
   const [showBugReportModal, setShowBugReportModal] = useState(false);
+
+  // Phase 4 PR-6: sound settings (mute + volume), independent of the motion
+  // preference. Local state mirrors the audio manager's persisted settings so
+  // the More-menu control re-renders when either changes.
+  const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => audioManager.getSettings());
+  useEffect(() => audioManager.subscribe(setAudioSettings), []);
 
   const displayName =
     user?.username || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
@@ -327,6 +338,41 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
                     </span>
                   )}
                 </span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/[0.08]" />
+              {/* Sound settings (Phase 4 PR-6) — mute toggle + volume, fully
+                  independent of any motion/reduced-motion preference.
+                  onSelect is prevented so interacting with the slider/switch
+                  doesn't close the menu. */}
+              <DropdownMenuItem
+                onSelect={(e) => e.preventDefault()}
+                className="flex flex-col items-stretch gap-2 focus:bg-transparent"
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="flex items-center text-white/80">
+                    {audioSettings.muted ? (
+                      <VolumeX className="mr-2 h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Volume2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                    )}
+                    Sound
+                  </span>
+                  <Switch
+                    checked={!audioSettings.muted}
+                    onCheckedChange={(checked) => audioManager.setMuted(!checked)}
+                    aria-label="Toggle sound"
+                  />
+                </div>
+                <Slider
+                  value={[audioSettings.volume]}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  disabled={audioSettings.muted}
+                  onValueChange={([value]) => audioManager.setVolume(value)}
+                  aria-label="Sound volume"
+                  className="px-1"
+                />
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/[0.08]" />
               <DropdownMenuItem onSelect={() => setLocation('/')}>
