@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { HoloDisc } from "@/components/ui/holo-disc";
 import { Shuffle, Music } from "lucide-react";
-import { BorderTrail } from "./motion-primitives/border-trail";
 import type { LabelData } from "@shared/types/gameTypes";
 
 interface LabelCreationModalProps {
@@ -150,153 +150,140 @@ const handleSubmit = () => {
           }
         }}
       >
-        <div className="relative rounded-lg border border-brand-purple bg-brand-dark-card p-6 text-white shadow-lg">
-          <BorderTrail
-            size={360}
-            className="bg-gradient-to-l from-brand-burgundy via-brand-gold to-brand-rose"
-            transition={{
-              repeat: Infinity,
-              duration: 4,
-              ease: "linear"
-            }}
-          />
-            <DialogHeader className="border-b border-brand-purple pb-4">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Music className="w-5 h-5 text-brand-burgundy" />
-            Create Your Music Label
-          </DialogTitle>
-        </DialogHeader>
+        <div className="glass-panel chromatic-hairline hud-ticks p-6 text-white">
+          <DialogHeader className="flex-row items-center gap-3 border-b border-white/10 pb-4 space-y-0">
+            <HoloDisc size={40} spinSeconds={16} />
+            <DialogTitle className="flex items-center gap-2 font-display text-lg font-normal lowercase tracking-wide text-aberration">
+              <Music className="h-5 w-5 text-neon-lilac" />
+              Create Your Music Label
+            </DialogTitle>
+          </DialogHeader>
+          <div className="shimmer-bar mt-3 w-40" />
 
-        <div className="space-y-6 pt-4">
-          {/* Quick Start Section */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-300">Quick Start</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {suggestedNames.slice(0, 4).map((name) => (
-                <Button
-                  key={name}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSuggestedNameClick(name)}
+          <div className="space-y-6 pt-4">
+            {/* Quick Start Section */}
+            <div className="space-y-3">
+              <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">Quick Start</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {suggestedNames.slice(0, 4).map((name) => (
+                  <Button
+                    key={name}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSuggestedNameClick(name)}
+                    disabled={isCreating}
+                    className="h-8 border border-white/10 bg-white/[0.02] text-xs text-white/75 hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {name}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateRandomName}
+                disabled={isCreating}
+                className="w-full h-8"
+              >
+                <Shuffle className="w-3 h-3 mr-2" />
+                Random Name
+              </Button>
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-4">
+              {/* Label Name */}
+              <div className="space-y-2">
+                <Label htmlFor="labelName" className="text-sm font-medium text-white/75">
+                  Label Name <span className="text-neon-pink">*</span>
+                </Label>
+                <Input
+                  id="labelName"
+                  value={labelName}
+                  onChange={(e) => handleLabelNameChange(e.target.value)}
+                  placeholder="Enter your label name..."
                   disabled={isCreating}
-                  className="text-xs h-8 bg-brand-dark-card hover:bg-brand-dark-card border border-brand-purple text-gray-300 hover:text-white"
-                >
-                  {name}
-                </Button>
-              ))}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generateRandomName}
-              disabled={isCreating}
-              className="w-full h-8 bg-brand-dark-card hover:bg-brand-dark-card border-brand-purple text-gray-300 hover:text-white"
-            >
-              <Shuffle className="w-3 h-3 mr-2" />
-              Random Name
-            </Button>
-          </div>
+                />
+                {errors.name && (
+                  <p className="text-xs text-negative">{errors.name}</p>
+                )}
+              </div>
 
-          {/* Form Fields */}
-          <div className="space-y-4">
-            {/* Label Name */}
-            <div className="space-y-2">
-              <Label htmlFor="labelName" className="text-sm font-medium text-gray-300">
-                Label Name <span className="text-brand-burgundy">*</span>
-              </Label>
-              <Input
-                id="labelName"
-                value={labelName}
-                onChange={(e) => handleLabelNameChange(e.target.value)}
-                placeholder="Enter your label name..."
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm font-medium text-white/75">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Tell the story of your label..."
+                  disabled={isCreating}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              {/* Genre Focus */}
+              <div className="space-y-2">
+                <Label htmlFor="genreFocus" className="text-sm font-medium text-white/75">
+                  Genre Focus
+                </Label>
+                <Select value={genreFocus} onValueChange={setGenreFocus} disabled={isCreating}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a genre (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {genreOptions.map((genre) => (
+                      <SelectItem key={genre} value={genre}>
+                        {genre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Starting Year */}
+              <div className="space-y-2">
+                <Label htmlFor="startingYear" className="text-sm font-medium text-white/75">
+                  Starting Year <span className="text-xs text-white/50">(for calendar-based weeks)</span>
+                </Label>
+                <Input
+                  id="startingYear"
+                  type="number"
+                  min={1900}
+                  max={2100}
+                  value={startingYear}
+                  onChange={(e) => setStartingYear(Number(e.target.value))}
+                  disabled={isCreating}
+                />
+                {errors.year && (
+                  <p className="text-xs text-negative">{errors.year}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="secondary"
+                onClick={() => onOpenChange(false)}
                 disabled={isCreating}
-                className="bg-brand-dark-card border-brand-purple text-white placeholder-gray-500 focus:border-brand-burgundy"
-              />
-              {errors.name && (
-                <p className="text-red-400 text-xs">{errors.name}</p>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium text-gray-300">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Tell the story of your label..."
-                disabled={isCreating}
-                rows={3}
-                className="bg-brand-dark-card border-brand-purple text-white placeholder-gray-500 focus:border-brand-burgundy resize-none"
-              />
-            </div>
-
-{/* Genre Focus */}
-            <div className="space-y-2">
-              <Label htmlFor="genreFocus" className="text-sm font-medium text-gray-300">
-                Genre Focus
-              </Label>
-              <Select value={genreFocus} onValueChange={setGenreFocus} disabled={isCreating}>
-                <SelectTrigger className="bg-brand-dark-card border-brand-purple text-white focus:border-brand-burgundy">
-                  <SelectValue placeholder="Select a genre (optional)" />
-                </SelectTrigger>
-                <SelectContent className="bg-brand-dark-card border-brand-purple">
-                  {genreOptions.map((genre) => (
-                    <SelectItem
-                      key={genre}
-                      value={genre}
-                      className="text-white hover:bg-brand-dark-card focus:bg-brand-dark-card"
-                    >
-                      {genre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Starting Year */}
-            <div className="space-y-2">
-              <Label htmlFor="startingYear" className="text-sm font-medium text-gray-300">
-                Starting Year <span className="text-white/50 text-xs">(for calendar-based weeks)</span>
-              </Label>
-              <Input
-                id="startingYear"
-                type="number"
-                min={1900}
-                max={2100}
-                value={startingYear}
-                onChange={(e) => setStartingYear(Number(e.target.value))}
-                disabled={isCreating}
-                className="bg-brand-dark-card border-brand-purple text-white placeholder-gray-500 focus:border-brand-burgundy"
-              />
-              {errors.year && (
-                <p className="text-red-400 text-xs">{errors.year}</p>
-              )}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleSubmit}
+                disabled={!isFormValid || isCreating}
+                className="flex-1"
+              >
+                {isCreating ? "Creating..." : "Create Label"}
+              </Button>
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isCreating}
-              className="flex-1 bg-brand-dark-card hover:bg-brand-dark-card border-brand-purple text-gray-300 hover:text-white"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              onClick={handleSubmit}
-              disabled={!isFormValid || isCreating}
-              className="flex-1"
-            >
-              {isCreating ? "Creating..." : "Create Label"}
-            </Button>
-          </div>
-        </div>
         </div>
       </DialogContent>
     </Dialog>

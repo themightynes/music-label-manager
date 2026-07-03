@@ -300,17 +300,17 @@ export default function QualityTester() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-plum-900 via-plum-800 to-plum-900 text-white p-6">
+    <div className="min-h-screen bg-surface-app text-foreground p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-plum-800/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-burgundy-600/30">
+        <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 mb-6 border border-border">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3">
-                <Beaker className="h-8 w-8 text-burgundy-400" />
+                <Beaker className="h-8 w-8 text-brand-burgundy" />
                 Song Quality Testing Lab
               </h1>
-              <p className="text-gray-300 mt-2">
+              <p className="text-muted-foreground mt-2">
                 Simulate recording sessions and analyze quality outcomes
               </p>
             </div>
@@ -324,15 +324,15 @@ export default function QualityTester() {
         
         {/* Configuration Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="lg:col-span-1 bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30">
+          <div className="lg:col-span-1 bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border">
             <h2 className="text-xl font-bold mb-4">Test Configuration</h2>
             
             {/* Artist Attributes */}
             <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-semibold text-burgundy-300">Artist Attributes</h3>
-              
+              <h3 className="text-lg font-semibold text-primary">Artist Attributes</h3>
+
               <div>
-                <label className="text-sm text-gray-300">Talent: {config.talent}</label>
+                <label className="text-sm text-muted-foreground">Talent: {config.talent}</label>
                 <input
                   type="range"
                   min="20" max="95" step="5"
@@ -343,7 +343,7 @@ export default function QualityTester() {
               </div>
               
               <div>
-                <label className="text-sm text-gray-300">Work Ethic: {config.workEthic}</label>
+                <label className="text-sm text-muted-foreground">Work Ethic: {config.workEthic}</label>
                 <input
                   type="range"
                   min="20" max="95" step="5"
@@ -354,7 +354,7 @@ export default function QualityTester() {
               </div>
               
               <div>
-                <label className="text-sm text-gray-300">Popularity: {config.popularity}</label>
+                <label className="text-sm text-muted-foreground">Popularity: {config.popularity}</label>
                 <input
                   type="range"
                   min="0" max="100" step="10"
@@ -365,7 +365,7 @@ export default function QualityTester() {
               </div>
               
               <div>
-                <label className="text-sm text-gray-300">Mood: {config.mood}</label>
+                <label className="text-sm text-muted-foreground">Mood: {config.mood}</label>
                 <input
                   type="range"
                   min="20" max="95" step="5"
@@ -378,15 +378,14 @@ export default function QualityTester() {
             
             {/* Project Settings */}
             <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-semibold text-burgundy-300">Project Settings</h3>
-              
+              <h3 className="text-lg font-semibold text-primary">Project Settings</h3>
+
               <div>
-                <label className="text-sm text-gray-300">Producer Tier</label>
+                <label className="text-sm text-muted-foreground">Producer Tier</label>
                 <select
                   value={config.producer}
                   onChange={(e) => setConfig({...config, producer: e.target.value})}
-                  className="w-full bg-plum-900 border border-burgundy-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-burgundy-500"
-                  style={{ backgroundColor: 'rgb(44, 34, 42)' }}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="local" className="bg-plum-800">Local (40 skill)</option>
                   <option value="regional" className="bg-plum-800">Regional (55 skill)</option>
@@ -396,12 +395,11 @@ export default function QualityTester() {
               </div>
               
               <div>
-                <label className="text-sm text-gray-300">Time Investment</label>
+                <label className="text-sm text-muted-foreground">Time Investment</label>
                 <select
                   value={config.time}
                   onChange={(e) => setConfig({...config, time: e.target.value})}
-                  className="w-full bg-plum-900 border border-burgundy-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-burgundy-500"
-                  style={{ backgroundColor: 'rgb(44, 34, 42)' }}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="rushed" className="bg-plum-800">Rushed (-10%)</option>
                   <option value="standard" className="bg-plum-800">Standard (0%)</option>
@@ -411,12 +409,11 @@ export default function QualityTester() {
               </div>
               
               <div>
-                <label className="text-sm text-gray-300">Budget Level</label>
+                <label className="text-sm text-muted-foreground">Budget Level</label>
                 <select
                   value={config.budgetLevel}
                   onChange={(e) => setConfig({...config, budgetLevel: e.target.value})}
-                  className="w-full bg-plum-900 border border-burgundy-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-burgundy-500"
-                  style={{ backgroundColor: 'rgb(44, 34, 42)' }}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {BUDGET_LEVELS.map(level => (
                     <option key={level.name} value={level.name} className="bg-plum-800">
@@ -427,7 +424,7 @@ export default function QualityTester() {
               </div>
               
               <div>
-                <label className="text-sm text-gray-300">Songs: {config.songCount}</label>
+                <label className="text-sm text-muted-foreground">Songs: {config.songCount}</label>
                 <input
                   type="range"
                   min="1" max="10" step="1"
@@ -438,7 +435,7 @@ export default function QualityTester() {
               </div>
               
               <div>
-                <label className="text-sm text-gray-300">Simulations: {config.simulations}</label>
+                <label className="text-sm text-muted-foreground">Simulations: {config.simulations}</label>
                 <input
                   type="range"
                   min="5" max="50" step="5"
@@ -484,7 +481,7 @@ export default function QualityTester() {
               
               <button
                 onClick={() => setResults([])}
-                className="w-full py-2 bg-plum-700/50 hover:bg-plum-700/70 rounded-lg transition-colors text-sm"
+                className="w-full py-2 bg-secondary/50 hover:bg-secondary/70 rounded-lg transition-colors text-sm"
               >
                 Clear Results
               </button>
@@ -494,9 +491,9 @@ export default function QualityTester() {
           {/* Results Panel */}
           <div className="lg:col-span-2 space-y-4">
             {results.length === 0 ? (
-              <div className="bg-plum-800/30 backdrop-blur-sm rounded-xl p-12 border border-burgundy-600/30 text-center">
-                <Beaker className="h-16 w-16 mx-auto text-burgundy-400/50 mb-4" />
-                <p className="text-gray-400">
+              <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-12 border border-border text-center">
+                <Beaker className="h-16 w-16 mx-auto text-primary/50 mb-4" />
+                <p className="text-muted-foreground">
                   Configure your test parameters and run a simulation to see results
                 </p>
               </div>
@@ -504,7 +501,7 @@ export default function QualityTester() {
               results.map((result) => (
                 <div
                   key={result.id}
-                  className="bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30"
+                  className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border"
                 >
                   {/* Result Header */}
                   <div className="flex justify-between items-start mb-4">
@@ -533,20 +530,20 @@ export default function QualityTester() {
                   
                   {/* Quality Stats */}
                   <div className="grid grid-cols-4 gap-4 mb-4">
-                    <div className="bg-plum-900/30 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Average</div>
+                    <div className="bg-surface-inner rounded-lg p-3">
+                      <div className="text-xs text-muted-foreground mb-1">Average</div>
                       <div className={`text-2xl font-bold ${getQualityColor(result.avgQuality)}`}>
                         {result.avgQuality.toFixed(1)}
                       </div>
                     </div>
-                    <div className="bg-plum-900/30 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Min-Max</div>
+                    <div className="bg-surface-inner rounded-lg p-3">
+                      <div className="text-xs text-muted-foreground mb-1">Min-Max</div>
                       <div className="text-lg font-bold">
                         {result.minQuality}-{result.maxQuality}
                       </div>
                     </div>
-                    <div className="bg-plum-900/30 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Variance</div>
+                    <div className="bg-surface-inner rounded-lg p-3">
+                      <div className="text-xs text-muted-foreground mb-1">Variance</div>
                       <div className="text-lg font-bold">
                         {result.variance.toFixed(1)}%
                         <span className="text-xs text-gray-400 ml-1">
@@ -554,8 +551,8 @@ export default function QualityTester() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-plum-900/30 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Value</div>
+                    <div className="bg-surface-inner rounded-lg p-3">
+                      <div className="text-xs text-muted-foreground mb-1">Value</div>
                       <div className="text-lg font-bold text-green-400">
                         {(result.avgQuality / (result.totalCost / 1000)).toFixed(1)}
                         <span className="text-xs text-gray-400 ml-1">Q/$1k</span>
@@ -564,14 +561,14 @@ export default function QualityTester() {
                   </div>
                   
                   {/* Quality Distribution Bar */}
-                  <div className="bg-plum-900/30 rounded-lg p-3">
+                  <div className="bg-surface-inner rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-400">Quality Distribution</span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-muted-foreground">Quality Distribution</span>
+                      <span className="text-xs text-muted-foreground">
                         Budget Mult: {result.budgetMult.toFixed(3)}x
                       </span>
                     </div>
-                    <div className="relative h-8 bg-plum-800/50 rounded-lg overflow-hidden">
+                    <div className="relative h-8 bg-background rounded-lg overflow-hidden">
                       <div
                         className="absolute h-full bg-gradient-to-r from-red-600 via-yellow-500 to-green-500 opacity-30"
                         style={{ width: '100%' }}
@@ -589,21 +586,21 @@ export default function QualityTester() {
                       />
                     </div>
                     <div className="flex justify-between mt-1">
-                      <span className="text-xs text-gray-500">0</span>
-                      <span className="text-xs text-gray-500">25</span>
-                      <span className="text-xs text-gray-500">50</span>
-                      <span className="text-xs text-gray-500">75</span>
-                      <span className="text-xs text-gray-500">100</span>
+                      <span className="text-xs text-muted-foreground/70">0</span>
+                      <span className="text-xs text-muted-foreground/70">25</span>
+                      <span className="text-xs text-muted-foreground/70">50</span>
+                      <span className="text-xs text-muted-foreground/70">75</span>
+                      <span className="text-xs text-muted-foreground/70">100</span>
                     </div>
                   </div>
                   
                   {/* Detailed View */}
                   {showDetails === result.id && (
-                    <div className="mt-4 pt-4 border-t border-burgundy-600/30">
+                    <div className="mt-4 pt-4 border-t border-border">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <h4 className="font-semibold mb-2 text-burgundy-300">Artist Stats</h4>
-                          <div className="space-y-1 text-gray-400">
+                          <h4 className="font-semibold mb-2 text-primary">Artist Stats</h4>
+                          <div className="space-y-1 text-muted-foreground">
                             <div>Talent: {result.talent}</div>
                             <div>Work Ethic: {result.workEthic}</div>
                             <div>Popularity: {result.popularity}</div>
@@ -611,8 +608,8 @@ export default function QualityTester() {
                           </div>
                         </div>
                         <div>
-                          <h4 className="font-semibold mb-2 text-burgundy-300">Financial Analysis</h4>
-                          <div className="space-y-1 text-gray-400">
+                          <h4 className="font-semibold mb-2 text-primary">Financial Analysis</h4>
+                          <div className="space-y-1 text-muted-foreground">
                             <div>Min Viable: ${result.minViableCost}</div>
                             <div>Actual Budget: ${result.budgetPerSong}</div>
                             <div>Efficiency: {result.efficiency.toFixed(2)}x</div>
@@ -622,12 +619,12 @@ export default function QualityTester() {
                       </div>
                       
                       <div className="mt-4">
-                        <h4 className="font-semibold mb-2 text-burgundy-300">Sample Song Qualities</h4>
+                        <h4 className="font-semibold mb-2 text-primary">Sample Song Qualities</h4>
                         <div className="flex flex-wrap gap-2">
                           {result.qualities.map((q, i) => (
                             <span
                               key={i}
-                              className={`px-2 py-1 rounded-lg bg-plum-900/50 ${getQualityColor(q)}`}
+                              className={`px-2 py-1 rounded-lg bg-surface-inner ${getQualityColor(q)}`}
                             >
                               Song {i + 1}: {q.toFixed(0)}
                             </span>
@@ -644,33 +641,33 @@ export default function QualityTester() {
         
         {/* Summary Statistics */}
         {results.length > 0 && (
-          <div className="bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30">
+          <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border">
             <h2 className="text-xl font-bold mb-4">Session Statistics</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <div className="text-sm text-gray-400">Best Quality</div>
+                <div className="text-sm text-muted-foreground">Best Quality</div>
                 <div className="text-2xl font-bold text-green-400">
                   {Math.max(...results.map(r => r.avgQuality)).toFixed(1)}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-400">Best Value</div>
+                <div className="text-sm text-muted-foreground">Best Value</div>
                 <div className="text-2xl font-bold text-blue-400">
                   {Math.max(...results.map(r => r.avgQuality / (r.totalCost / 1000))).toFixed(1)}
-                  <span className="text-sm text-gray-400 ml-1">Q/$1k</span>
+                  <span className="text-sm text-muted-foreground ml-1">Q/$1k</span>
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-400">Lowest Cost</div>
+                <div className="text-sm text-muted-foreground">Lowest Cost</div>
                 <div className="text-2xl font-bold text-yellow-400">
                   ${Math.min(...results.map(r => r.totalCost)).toLocaleString()}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-400">Most Consistent</div>
+                <div className="text-sm text-muted-foreground">Most Consistent</div>
                 <div className="text-2xl font-bold text-purple-400">
                   {Math.min(...results.map(r => r.variance)).toFixed(1)}%
-                  <span className="text-sm text-gray-400 ml-1">variance</span>
+                  <span className="text-sm text-muted-foreground ml-1">variance</span>
                 </div>
               </div>
             </div>

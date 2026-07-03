@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { TabsContent } from '@/components/ui/tabs';
 import { User, Music, BarChart3, Activity } from 'lucide-react';
 import { ArtistCard, getArchetypeInfo as getArtistCardArchetypeInfo, getRelationshipStatus } from '@/components/ArtistCard';
@@ -25,6 +24,35 @@ interface OverviewTabProps {
   onNavigate: () => void;
 }
 
+// Stat value color by threshold (mood/energy semantics per design-system-v2 §6)
+function statValueColor(value: number) {
+  if (value >= 70) return 'text-positive';
+  if (value >= 40) return 'text-warning';
+  return 'text-negative';
+}
+
+// Progress bar fill gradient by threshold (artist-detail.html Artist Stats panel)
+function statBarGradient(value: number) {
+  if (value >= 70) return 'from-positive to-neon-cyan';
+  if (value >= 40) return 'from-warning to-neon-amber';
+  return 'from-negative to-neon-magenta';
+}
+
+// Lightweight labeled stat bar — 6px pill track, semantic gradient fill by value.
+// The shared shadcn Progress component always renders the action-pink→purple
+// gradient regardless of value, so these stat rows render their own bar to
+// honor the mood/energy/talent/work-ethic threshold coloring from the spec.
+function StatBar({ value }: { value: number }) {
+  return (
+    <div className="h-1.5 w-full rounded-pill bg-white/[0.08] overflow-hidden">
+      <div
+        className={`h-full rounded-pill bg-gradient-to-r ${statBarGradient(value)}`}
+        style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+      />
+    </div>
+  );
+}
+
 function OverviewTabComponent({
   artist,
   songs,
@@ -39,13 +67,18 @@ function OverviewTabComponent({
   onMeet,
   onNavigate,
 }: OverviewTabProps) {
+  const mood = artist.mood || 50;
+  const energy = artist.energy ?? (artist as any).loyalty ?? 50;
+  const talent = artist.talent || 50;
+  const workEthic = artist.workEthic || 50;
+
   return (
     <TabsContent value="overview" className="space-y-6">
       {/* Rich Artist Card */}
       <Card className="relative z-20">
           <CardHeader>
-            <CardTitle className="flex items-center justify-center space-x-2">
-              <User className="w-5 h-5" />
+            <CardTitle className="flex items-center justify-center space-x-2 text-base">
+              <User className="w-5 h-5 text-neon-lilac" />
               <span>Artist Overview</span>
             </CardTitle>
           </CardHeader>
@@ -69,44 +102,44 @@ function OverviewTabComponent({
         {/* Artist Stats */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <User className="w-5 h-5 text-neon-lilac" />
               <span>Artist Stats</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Mood</span>
-                  <span className={`font-medium ${(artist.mood || 50) >= 70 ? 'text-green-600' : (artist.mood || 50) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {artist.mood || 50}%
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-text-body">Mood</span>
+                  <span className={`font-mono font-medium ${statValueColor(mood)}`}>
+                    {mood}%
                   </span>
                 </div>
-                <Progress value={artist.mood || 50} className="h-2" />
+                <StatBar value={mood} />
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1">
-                <span>Energy</span>
-                  <span className={`font-medium ${((artist.energy ?? (artist as any).loyalty ?? 50) >= 70) ? 'text-green-600' : ((artist.energy ?? (artist as any).loyalty ?? 50) >= 40) ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {artist.energy ?? (artist as any).loyalty ?? 50}%
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-text-body">Energy</span>
+                  <span className={`font-mono font-medium ${statValueColor(energy)}`}>
+                    {energy}%
                   </span>
                 </div>
-                <Progress value={artist.energy ?? (artist as any).loyalty ?? 50} className="h-2" />
+                <StatBar value={energy} />
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Talent</span>
-                  <span className="font-medium">{artist.talent || 50}%</span>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-text-body">Talent</span>
+                  <span className={`font-mono font-medium ${statValueColor(talent)}`}>{talent}%</span>
                 </div>
-                <Progress value={artist.talent || 50} className="h-2" />
+                <StatBar value={talent} />
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Work Ethic</span>
-                  <span className="font-medium">{artist.workEthic || 50}%</span>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-text-body">Work Ethic</span>
+                  <span className={`font-mono font-medium ${statValueColor(workEthic)}`}>{workEthic}%</span>
                 </div>
-                <Progress value={artist.workEthic || 50} className="h-2" />
+                <StatBar value={workEthic} />
               </div>
             </div>
           </CardContent>
@@ -115,8 +148,8 @@ function OverviewTabComponent({
         {/* Performance Metrics */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <BarChart3 className="w-5 h-5 text-neon-lilac" />
               <span>Performance</span>
             </CardTitle>
           </CardHeader>
@@ -135,25 +168,30 @@ function OverviewTabComponent({
         {/* Recent Activity */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <Activity className="w-5 h-5 text-neon-lilac" />
               <span>Recent Activity</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {songs.length === 0 ? (
-                <div className="text-center text-white/50 py-4">
-                  <Music className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                  <p className="text-sm">No activity yet</p>
+                <div className="flex flex-col items-center justify-center text-center py-6 min-h-[200px]">
+                  <div className="w-[54px] h-[54px] rounded-chip bg-neon-purple/10 border border-neon-purple/[0.28] flex items-center justify-center mb-4 shadow-glow-purple">
+                    <Music className="w-5 h-5 text-neon-lilac" />
+                  </div>
+                  <p className="text-sm font-semibold text-text-body">No activity yet</p>
+                  <p className="text-xs text-text-muted mt-1 max-w-[190px]">
+                    Book a session or plan a release to get things moving.
+                  </p>
                 </div>
               ) : (
                 <>
                   {songs.slice(0, 3).map(song => (
-                    <div key={song.id} className="flex items-center justify-between p-2 bg-brand-dark-card/5 rounded">
+                    <div key={song.id} className="flex items-center justify-between p-2.5 rounded-chip bg-white/[0.02] border border-white/[0.05]">
                       <div>
-                        <div className="text-sm font-medium">{song.title}</div>
-                        <div className="text-xs text-white/50">
+                        <div className="text-sm font-medium text-text-primary">{song.title}</div>
+                        <div className="text-xs text-text-muted">
                           {song.isReleased ? 'Released' : song.isRecorded ? 'Recorded' : 'Recording'} • Week {song.createdWeek}
                         </div>
                       </div>

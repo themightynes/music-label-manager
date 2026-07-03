@@ -188,8 +188,8 @@ export function ExecutiveMeetings({
     if (state.matches('loadingMeetings')) {
       return (
         <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-white mb-2" />
-          <span className="text-white/70">Loading meetings...</span>
+          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
+          <span className="text-text-body">Loading meetings...</span>
         </div>
       );
     }
@@ -221,7 +221,7 @@ export function ExecutiveMeetings({
             {config && (
               <Badge
                 variant="secondary"
-                className="text-xs px-3 py-1 bg-brand-mauve/60 text-white border-brand-purple-light"
+                className="text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill"
               >
                 {config.shortTitle} - {config.name}
               </Badge>
@@ -240,8 +240,8 @@ export function ExecutiveMeetings({
     if (state.matches('loadingDialogue')) {
       return (
         <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-white mb-2" />
-          <span className="text-white/70">Loading dialogue...</span>
+          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
+          <span className="text-text-body">Loading dialogue...</span>
         </div>
       );
     }
@@ -273,7 +273,7 @@ export function ExecutiveMeetings({
             {config && (
               <Badge
                 variant="secondary"
-                className="text-xs px-3 py-1 bg-brand-mauve/60 text-white border-brand-purple-light"
+                className="text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill"
               >
                 {config.shortTitle} - {config.name}
               </Badge>
@@ -299,8 +299,8 @@ export function ExecutiveMeetings({
     if (state.matches('processingChoice')) {
       return (
         <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-white mb-2" />
-          <span className="text-white/70">Processing your choice...</span>
+          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
+          <span className="text-text-body">Processing your choice...</span>
         </div>
       );
     }
@@ -308,8 +308,8 @@ export function ExecutiveMeetings({
     if (state.matches('complete')) {
       return (
         <div className="flex flex-col items-center justify-center p-8">
-          <div className="text-green-300 font-medium">Meeting completed!</div>
-          <p className="text-sm text-white/50 mt-1">Returning to executives...</p>
+          <div className="text-positive font-medium">Meeting completed!</div>
+          <p className="text-sm text-text-muted mt-1">Returning to executives...</p>
         </div>
       );
     }
@@ -318,14 +318,14 @@ export function ExecutiveMeetings({
     if (executivesLoading && executives.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-white mb-2" />
-          <span className="text-white/70">Loading executives...</span>
+          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
+          <span className="text-text-body">Loading executives...</span>
         </div>
       );
     }
 
     return (
-      <div className="flex items-center justify-center text-white/50">
+      <div className="flex items-center justify-center text-text-muted">
         Select an executive
       </div>
     );
@@ -334,7 +334,7 @@ export function ExecutiveMeetings({
   return (
     <Card className="w-full bg-transparent border-none">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between text-text-primary font-display text-lg">
           Executive Meetings
           <div className="flex items-center gap-3">
             {hasAvailableSlots && (
@@ -343,7 +343,7 @@ export function ExecutiveMeetings({
                 size="sm"
                 onClick={() => send({ type: 'AUTO_SELECT' })}
                 disabled={!hasAvailableSlots || executives.length === 0}
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-1.5 rounded-button border border-neon-cyan/35 bg-neon-cyan/[0.06] text-neon-cyan hover:bg-neon-cyan/10 hover:text-neon-cyan"
               >
                 <Zap className="w-3.5 h-3.5" />
                 AUTO
@@ -355,9 +355,9 @@ export function ExecutiveMeetings({
       <CardContent className="px-0">
         {executivesError ? (
           <div className="text-center p-8">
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md mb-4">
-              <p className="text-sm text-red-300">Failed to load executives: {executivesError}</p>
-              <p className="text-xs text-white/50 mt-1">Please refresh to try again</p>
+            <div className="p-3 bg-negative/10 border border-negative/30 rounded-card mb-4">
+              <p className="text-sm text-negative">Failed to load executives: {executivesError}</p>
+              <p className="text-xs text-text-muted mt-1">Please refresh to try again</p>
             </div>
           </div>
         ) : (
@@ -429,8 +429,8 @@ export function ExecutiveMeetings({
         }
 
         {context.error && (
-          <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-            <p className="text-sm text-red-300">{context.error}</p>
+          <div className="mt-4 p-3 bg-negative/10 border border-negative/30 rounded-card">
+            <p className="text-sm text-negative">{context.error}</p>
           </div>
         )}
       </CardContent>

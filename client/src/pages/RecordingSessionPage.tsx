@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Music, Disc3, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
@@ -40,7 +40,7 @@ const PROJECT_TYPES = [
   {
     id: 'EP' as const,
     name: 'EP',
-    icon: Disc,
+    icon: Disc3,
     description: 'Recording session for 3-5 songs',
     duration: '3-5 weeks',
     isRecording: true,
@@ -382,23 +382,28 @@ export default function RecordingSessionPage() {
       <div className="container mx-auto p-6 max-w-6xl">
         <header className="mb-6 flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-heading font-bold text-white">Recording Session</h1>
+            <div className="text-label text-[10px] uppercase tracking-[0.24em] text-neon-lilac/60 mb-1 flex items-center gap-2">
+              <SlidersHorizontal className="w-3 h-3" />
+              Recording
+            </div>
+            <h1 className="font-display text-2xl md:text-[28px] text-text-primary text-aberration">Recording Session</h1>
+            <div className="shimmer-bar w-40 mt-2" />
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
+          <div className="inline-flex items-center gap-2 rounded-pill border border-white/10 bg-white/5 px-4 py-2 text-label text-[10px] font-semibold uppercase tracking-[0.4em] text-text-muted">
             The Studio
           </div>
         </header>
 
         <section
-          className="relative mb-8 overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 min-h-[320px] bg-cover bg-center"
+          className="glass-panel chromatic-hairline hud-ticks relative mb-8 min-h-[320px] bg-cover bg-center"
           style={{ backgroundImage: "url('/recording_session_background.png')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
-          <div className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-brand-burgundy/20 blur-3xl" aria-hidden />
-          <div className="absolute -bottom-32 -left-10 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-br from-surface-panel/70 via-transparent to-surface-panel-alt/80" aria-hidden />
+          <div className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-neon-purple/20 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-32 -left-10 h-72 w-72 rounded-full bg-neon-amber/10 blur-3xl" aria-hidden />
           <div className="absolute bottom-6 left-0 right-0 flex justify-center px-6">
-            <Badge variant="outline" className="inline-flex items-center gap-1 px-4 py-2 text-sm font-normal text-white/80 bg-white/10 border-white/30 text-center max-w-full">
-              Smooth sessions lift spirits; tough takes linger—your artist’s <span className="font-semibold text-brand-rose">Mood</span> and each song’s <span className="font-semibold text-brand-gold">Quality</span> shift with every take you chase.
+            <Badge variant="outline" className="inline-flex items-center gap-1 px-4 py-2 text-sm font-normal text-text-body bg-white/10 border-white/20 text-center max-w-full rounded-pill">
+              Smooth sessions lift spirits; tough takes linger—your artist’s <span className="font-semibold text-neon-lilac">Mood</span> and each song’s <span className="font-semibold text-money">Quality</span> shift with every take you chase.
             </Badge>
           </div>
         </section>
@@ -406,17 +411,17 @@ export default function RecordingSessionPage() {
         <div className="space-y-6">
           {/* Project Type Selection */}
           <div>
-            <Label className="text-base font-semibold text-white">Project Type</Label>
+            <Label className="text-label text-[10px] uppercase tracking-[0.2em] text-text-label">Project Type</Label>
             <div className="grid grid-cols-2 gap-4 mt-2">
               {loadingProjectTypes ? (
                 <div className="col-span-2 text-center py-8">
-                  <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
-                  <p className="text-white/70">Loading project types...</p>
+                  <Loader2 className="w-8 h-8 text-neon-purple mx-auto mb-4 animate-spin" />
+                  <p className="text-text-body">Loading project types...</p>
                 </div>
               ) : projectTypesError ? (
                 <div className="col-span-2 text-center py-8">
-                  <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-                  <p className="text-red-600 mb-4">Failed to load project types. Please refresh the page.</p>
+                  <AlertCircle className="w-8 h-8 text-negative mx-auto mb-4" />
+                  <p className="text-negative mb-4">Failed to load project types. Please refresh the page.</p>
                 </div>
               ) : (
                 PROJECT_TYPES.map((type) => {
@@ -435,25 +440,27 @@ export default function RecordingSessionPage() {
                     budgetRange = `$${apiProjectType.min?.toLocaleString()} - $${apiProjectType.max?.toLocaleString()}`;
                   }
 
+                  const isSelected = selectedType === type.id;
+
                   return (
-                    <Card
+                    <div
                       key={type.id}
-                      className={`cursor-pointer transition-all hover:shadow-md bg-brand-dark-card border-brand-purple ${
-                        selectedType === type.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
+                      className={`cursor-pointer transition-all rounded-card border p-4 ${
+                        isSelected
+                          ? 'bg-gradient-to-br from-action-pink/20 to-action-purple/20 border-neon-purple/50 shadow-glow-purple'
+                          : 'bg-surface-inner/50 border-white/10 hover:border-white/20 hover:bg-white/[0.03]'
                       }`}
                       onClick={() => handleTypeSelect(type.id)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3">
-                          <type.icon className="w-6 h-6 text-brand-burgundy" />
-                          <div>
-                            <h3 className="font-semibold text-white">{type.name}</h3>
-                            <p className="text-sm text-white/70">{type.description}</p>
-                            <p className="text-xs text-white/50">{budgetRange}</p>
-                          </div>
+                      <div className="flex items-center space-x-3">
+                        <type.icon className={`w-6 h-6 ${isSelected ? 'text-neon-lilac' : 'text-neon-purple'}`} />
+                        <div>
+                          <h3 className="font-semibold text-text-primary">{type.name}</h3>
+                          <p className="text-sm text-text-body">{type.description}</p>
+                          <p className="text-xs font-mono text-text-muted">{budgetRange}</p>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   );
                 })
               )}
@@ -464,7 +471,7 @@ export default function RecordingSessionPage() {
             <>
               {/* Artist Selection */}
               <div>
-                <Label htmlFor="artist" className="text-white">Artist</Label>
+                <Label htmlFor="artist" className="text-label text-[10px] uppercase tracking-[0.2em] text-text-label">Artist</Label>
                 <Select value={selectedArtist} onValueChange={(value) => {
                   setSelectedArtist(value);
                   const artist = artists.find(a => a.id === value);
@@ -472,7 +479,7 @@ export default function RecordingSessionPage() {
                     setTitle(`${artist.name} Recording Session`);
                   }
                 }}>
-                  <SelectTrigger className="bg-brand-dark border-brand-purple text-white">
+                  <SelectTrigger className="bg-surface-inner border-white/10 text-text-primary">
                     <SelectValue placeholder="Select an artist" />
                   </SelectTrigger>
                   <SelectContent>
@@ -480,13 +487,13 @@ export default function RecordingSessionPage() {
                       <SelectItem key={artist.id} value={artist.id}>
                         <div className="flex items-center space-x-2">
                           <span>{artist.name}</span>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs font-mono">
                             Pop: {artist.popularity || 0}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs font-mono">
                             Mood: {artist.mood || 0}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs font-mono">
                             Energy: {artist.energy ?? 0}
                           </Badge>
                         </div>
@@ -498,52 +505,53 @@ export default function RecordingSessionPage() {
 
               {/* Project Title */}
               <div>
-                <Label htmlFor="title" className="text-white">Project Title</Label>
+                <Label htmlFor="title" className="text-label text-[10px] uppercase tracking-[0.2em] text-text-label">Project Title</Label>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter project title"
-                  className="bg-brand-dark border-brand-purple text-white"
+                  className="bg-surface-inner border-white/10 text-text-primary"
                 />
               </div>
 
               {/* Producer Tier Selection */}
               <div>
-                <Label className="text-base font-semibold text-white">Producer Tier</Label>
+                <Label className="text-label text-[10px] uppercase tracking-[0.2em] text-text-label">Producer Tier</Label>
                 <div className="grid grid-cols-2 gap-4 mt-2">
                   {PRODUCER_TIERS.map((tier) => {
                     const isUnlocked = currentReputation >= tier.unlockReputation;
+                    const isSelected = selectedProducerTier === tier.id;
                     return (
-                      <Card
+                      <div
                         key={tier.id}
-                        className={`cursor-pointer transition-all bg-brand-dark-card border-brand-purple ${
-                          !isUnlocked ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
+                        className={`transition-all rounded-card border p-4 ${
+                          !isUnlocked
+                            ? 'opacity-50 cursor-not-allowed bg-surface-inner/50 border-white/10'
+                            : 'cursor-pointer bg-surface-inner/50 border-white/10 hover:border-white/20 hover:bg-white/[0.03]'
                         } ${
-                          selectedProducerTier === tier.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
+                          isSelected ? 'bg-gradient-to-br from-action-pink/20 to-action-purple/20 border-neon-purple/50 shadow-glow-purple' : ''
                         }`}
                         onClick={() => isUnlocked && setSelectedProducerTier(tier.id)}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <tier.icon className="w-5 h-5 text-brand-burgundy" />
-                              <div>
-                                <h4 className="font-semibold text-white">{tier.name}</h4>
-                                <p className="text-sm text-white/70">{tier.description}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-white/50">{tier.costMultiplier}x Cost</p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <tier.icon className={`w-5 h-5 ${isSelected ? 'text-neon-lilac' : 'text-neon-purple'}`} />
+                            <div>
+                              <h4 className="font-semibold text-text-primary">{tier.name}</h4>
+                              <p className="text-sm text-text-body">{tier.description}</p>
                             </div>
                           </div>
-                          {!isUnlocked && (
-                            <Badge variant="secondary" className="mt-2">
-                              Requires {tier.unlockReputation} Reputation
-                            </Badge>
-                          )}
-                        </CardContent>
-                      </Card>
+                          <div className="text-right">
+                            <p className="text-xs font-mono text-text-muted">{tier.costMultiplier}x Cost</p>
+                          </div>
+                        </div>
+                        {!isUnlocked && (
+                          <Badge variant="secondary" className="mt-2 rounded-chip">
+                            Requires {tier.unlockReputation} Reputation
+                          </Badge>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -551,41 +559,44 @@ export default function RecordingSessionPage() {
 
               {/* Time Investment */}
               <div>
-                <Label className="text-base font-semibold text-white">Time Investment</Label>
+                <Label className="text-label text-[10px] uppercase tracking-[0.2em] text-text-label">Time Investment</Label>
                 <div className="grid grid-cols-2 gap-4 mt-2">
-                  {TIME_INVESTMENT_OPTIONS.map((option) => (
-                    <Card
-                      key={option.id}
-                      className={`cursor-pointer transition-all hover:shadow-md bg-brand-dark-card border-brand-purple ${
-                        selectedTimeInvestment === option.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
-                      }`}
-                      onClick={() => setSelectedTimeInvestment(option.id)}
-                    >
-                      <CardContent className="p-4">
+                  {TIME_INVESTMENT_OPTIONS.map((option) => {
+                    const isSelected = selectedTimeInvestment === option.id;
+                    return (
+                      <div
+                        key={option.id}
+                        className={`cursor-pointer transition-all rounded-card border p-4 ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-action-pink/20 to-action-purple/20 border-neon-purple/50 shadow-glow-purple'
+                            : 'bg-surface-inner/50 border-white/10 hover:border-white/20 hover:bg-white/[0.03]'
+                        }`}
+                        onClick={() => setSelectedTimeInvestment(option.id)}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <option.icon className="w-5 h-5 text-brand-burgundy" />
+                            <option.icon className={`w-5 h-5 ${isSelected ? 'text-neon-lilac' : 'text-neon-purple'}`} />
                             <div>
-                              <h4 className="font-semibold text-white">{option.name}</h4>
-                              <p className="text-sm text-white/70">{option.description}</p>
+                              <h4 className="font-semibold text-text-primary">{option.name}</h4>
+                              <p className="text-sm text-text-body">{option.description}</p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-white/50">{option.costMultiplier}x Cost</p>
+                            <p className="text-xs font-mono text-text-muted">{option.costMultiplier}x Cost</p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Budget Per Song */}
               <div>
-                <Label htmlFor="budgetPerSong" className="text-white">
+                <Label htmlFor="budgetPerSong" className="text-label text-[10px] uppercase tracking-[0.2em] text-text-label">
                   {selectedProjectType?.isRecording ? 'Budget Per Song' : 'Budget'}
                   {!isBudgetValid && budgetPerSong > 0 && (
-                    <span className="text-red-500 text-sm ml-2">
+                    <span className="text-negative text-sm ml-2 normal-case tracking-normal">
                       (Outside valid range)
                     </span>
                   )}
@@ -595,7 +606,7 @@ export default function RecordingSessionPage() {
                   type="number"
                   value={budgetPerSong}
                   onChange={(e) => setBudgetPerSong(Number(e.target.value))}
-                  className={`bg-brand-dark border-brand-purple text-white ${!isBudgetValid && budgetPerSong > 0 ? 'border-red-500' : ''}`}
+                  className={`bg-surface-inner border-white/10 text-text-primary font-mono ${!isBudgetValid && budgetPerSong > 0 ? 'border-negative' : ''}`}
                   min={(() => {
                     if (!selectedType) return undefined;
                     const apiKey = selectedType === 'Single' ? 'single' : 'ep';
@@ -618,95 +629,95 @@ export default function RecordingSessionPage() {
                   })()}
                   placeholder={selectedProjectType?.isRecording ? "Investment per song" : "Total budget"}
                 />
-                <div className="mt-2 text-sm space-y-1">
+                <div className="mt-2 text-sm space-y-3">
                   {selectedProjectType?.isRecording && (
-                    <div className="p-3 bg-brand-dark-card/20 rounded-lg border border-brand-purple">
-                      <h4 className="font-medium text-white/90 mb-2">Cost Calculation:</h4>
+                    <div className="glass-panel chromatic-hairline p-4">
+                      <h4 className="font-medium text-text-primary mb-2 text-label text-[10px] uppercase tracking-[0.2em]">Cost Calculation</h4>
                       <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
-                          <span className="text-white/70">Budget per song:</span>
-                          <span className="font-mono text-white">${budgetPerSong.toLocaleString()}</span>
+                          <span className="text-text-body">Budget per song:</span>
+                          <span className="font-mono text-money">${budgetPerSong.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-white/70">Number of songs:</span>
-                          <span className="font-mono text-white">{songCount} song{songCount > 1 ? 's' : ''}</span>
+                          <span className="text-text-body">Number of songs:</span>
+                          <span className="font-mono text-text-primary">{songCount} song{songCount > 1 ? 's' : ''}</span>
                         </div>
-                        <div className="flex justify-between border-t border-brand-purple pt-1">
-                          <span className="text-white/70">Base cost:</span>
-                          <span className="font-mono text-white">${totalBaseCost.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/70">Producer ({producerMultiplier}x):</span>
-                          <span className="font-mono text-white">${Math.round(totalBaseCost * producerMultiplier).toLocaleString()}</span>
+                        <div className="flex justify-between border-t border-white/10 pt-1">
+                          <span className="text-text-body">Base cost:</span>
+                          <span className="font-mono text-money">${totalBaseCost.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-white/70">Time investment ({timeMultiplier}x):</span>
-                          <span className="font-mono text-white">${finalTotalCost.toLocaleString()}</span>
+                          <span className="text-text-body">Producer ({producerMultiplier}x):</span>
+                          <span className="font-mono text-money">${Math.round(totalBaseCost * producerMultiplier).toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between border-t border-brand-purple pt-1 font-semibold">
-                          <span className="text-white">Final total cost:</span>
-                          <span className="font-mono text-brand-burgundy">${finalTotalCost.toLocaleString()}</span>
+                        <div className="flex justify-between">
+                          <span className="text-text-body">Time investment ({timeMultiplier}x):</span>
+                          <span className="font-mono text-money">${finalTotalCost.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-white/10 pt-1 font-semibold">
+                          <span className="text-text-primary">Final total cost:</span>
+                          <span className="font-mono text-money">${finalTotalCost.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
                   )}
                   {!selectedProjectType?.isRecording && (
-                    <div className="text-white/70">
-                      <p>Total cost with multipliers: ${finalTotalCost.toLocaleString()}</p>
+                    <div className="text-text-body">
+                      <p>Total cost with multipliers: <span className="font-mono text-money">${finalTotalCost.toLocaleString()}</span></p>
                     </div>
                   )}
                   {/* Quality Preview with Breakdown */}
-                  <div className="p-3 bg-brand-burgundy/10 rounded-lg border border-brand-purple">
-                    <h4 className="font-medium text-brand-burgundy mb-2">Quality Preview:</h4>
+                  <div className="glass-panel chromatic-hairline p-4">
+                    <h4 className="font-medium text-neon-lilac mb-2 text-label text-[10px] uppercase tracking-[0.2em]">Quality Preview</h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-brand-burgundy">Base (talent+producer):</span>
-                        <span className="font-mono text-white">{Math.round(baseQuality)}</span>
+                        <span className="text-text-body">Base (talent+producer):</span>
+                        <span className="font-mono text-text-primary">{Math.round(baseQuality)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-brand-burgundy">Time & Work Ethic factor:</span>
-                        <span className="font-mono text-white">×{timeFactor.toFixed(2)}</span>
+                        <span className="text-text-body">Time & Work Ethic factor:</span>
+                        <span className="font-mono text-text-primary">×{timeFactor.toFixed(2)}</span>
                       </div>
                       {selectedArtist && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-brand-burgundy">Popularity factor:</span>
-                            <span className="font-mono text-white">×{popularityFactor.toFixed(2)}</span>
+                            <span className="text-text-body">Popularity factor:</span>
+                            <span className="font-mono text-text-primary">×{popularityFactor.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-brand-burgundy">Mood factor:</span>
-                            <span className="font-mono text-white">×{moodFactor.toFixed(2)}</span>
+                            <span className="text-text-body">Mood factor:</span>
+                            <span className="font-mono text-text-primary">×{moodFactor.toFixed(2)}</span>
                           </div>
                         </>
                       )}
                       {songCount > 3 && (
                         <div className="flex justify-between">
-                          <span className="text-brand-burgundy">Session fatigue:</span>
-                          <span className="font-mono text-amber-500">×{focusFactor.toFixed(2)}</span>
+                          <span className="text-text-body">Session fatigue:</span>
+                          <span className="font-mono text-warning">×{focusFactor.toFixed(2)}</span>
                         </div>
                       )}
                       {selectedProjectType?.isRecording && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-brand-burgundy">Budget factor:</span>
-                            <span className="font-mono font-semibold text-green-600">
+                            <span className="text-text-body">Budget factor:</span>
+                            <span className="font-mono font-semibold text-positive">
                               ×{budgetFactor.toFixed(2)}
                             </span>
                           </div>
                           {budgetEfficiency && budgetEfficiency.rating !== 'Unknown' && (
                             <div className="text-xs mt-1">
                               <span className={`${budgetEfficiency.color} font-medium`}>{budgetEfficiency.rating}:</span>
-                              <span className="text-white/60 ml-1">{budgetEfficiency.description}</span>
+                              <span className="text-text-muted ml-1">{budgetEfficiency.description}</span>
                             </div>
                           )}
                         </>
                       )}
-                      <div className="flex justify-between border-t border-brand-purple pt-1">
-                        <span className="text-brand-burgundy font-medium">Est. quality:</span>
-                        <span className="font-mono font-bold text-brand-burgundy">{Math.round(estimatedQuality)}</span>
+                      <div className="flex justify-between border-t border-white/10 pt-1">
+                        <span className="text-neon-lilac font-medium">Est. quality:</span>
+                        <span className="font-mono font-bold text-neon-lilac">{Math.round(estimatedQuality)}</span>
                       </div>
                       {selectedProjectType?.isRecording && selectedArtist && selectedProducer && (
-                        <div className="text-xs text-white/50 mt-1">
+                        <div className="text-xs text-text-muted mt-1">
                           <span>Variance: ±{Math.round(35 - 30 * ((selectedArtistData?.talent || 50) + (selectedProducer?.id === 'legendary' ? 95 : selectedProducer?.id === 'national' ? 75 : selectedProducer?.id === 'regional' ? 55 : 40)) / 200)}%</span>
                           <span className="ml-1">(10% chance of outliers)</span>
                         </div>
@@ -719,7 +730,7 @@ export default function RecordingSessionPage() {
               {/* Song Count for Recording Projects */}
               {selectedProjectType?.isRecording && (
                 <div>
-                  <Label htmlFor="songCount" className="text-white">Number of Songs</Label>
+                  <Label htmlFor="songCount" className="text-label text-[10px] uppercase tracking-[0.2em] text-text-label">Number of Songs</Label>
                   <Input
                     id="songCount"
                     type="number"
@@ -727,24 +738,24 @@ export default function RecordingSessionPage() {
                     onChange={(e) => setSongCount(Number(e.target.value))}
                     min={selectedProjectType.minSongs}
                     max={selectedProjectType.maxSongs}
-                    className="bg-brand-dark border-brand-purple text-white"
+                    className="bg-surface-inner border-white/10 text-text-primary font-mono"
                   />
                 </div>
               )}
 
               {/* Budget Warning */}
               {!canAfford && (
-                <div className="p-4 bg-red-100/10 border border-red-300/30 rounded-md">
-                  <p className="text-red-400">
-                    Insufficient funds! Need ${finalTotalCost.toLocaleString()} but only have ${currentMoney.toLocaleString()}
+                <div className="p-4 bg-negative/10 border border-negative/30 rounded-card">
+                  <p className="text-negative">
+                    Insufficient funds! Need <span className="font-mono">${finalTotalCost.toLocaleString()}</span> but only have <span className="font-mono">${currentMoney.toLocaleString()}</span>
                   </p>
                 </div>
               )}
-              
+
               {/* Creative Capital Warning */}
               {!hasCreativeCapital && (
-                <div className="p-4 bg-red-100/10 border border-red-300/30 rounded-md">
-                  <p className="text-red-400">
+                <div className="p-4 bg-negative/10 border border-negative/30 rounded-card">
+                  <p className="text-negative">
                     Insufficient creative capital! Need 1 creative capital to start a new project, but you have {currentCreativeCapital}.
                   </p>
                 </div>
@@ -752,13 +763,17 @@ export default function RecordingSessionPage() {
 
               {/* Submit Button */}
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setLocation('/game')}>
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation('/game')}
+                  className="rounded-button border-white/10 bg-white/[0.02] text-text-body hover:bg-white/[0.05]"
+                >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid || isCreating}
-                  className="bg-brand-burgundy hover:bg-brand-rose text-white"
+                  className="rounded-button bg-gradient-to-br from-action-pink to-action-purple shadow-action text-white font-semibold hover:opacity-90 disabled:opacity-40"
                 >
                   {isCreating ? 'Creating...' : 'Start Recording Session'}
                 </Button>

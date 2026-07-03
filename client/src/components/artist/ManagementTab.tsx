@@ -37,20 +37,20 @@ function ManagementTabComponent({
         {/* Artist Status */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Heart className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <Heart className="w-5 h-5 text-negative" />
               <span>Artist Relationship</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className={`p-4 rounded-lg ${moodStatus.bgColor}`}>
+            <div className="p-4 rounded-chip bg-white/[0.02] border border-white/[0.05]">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium">Overall Status</span>
+                <span className="font-medium text-text-primary">Overall Status</span>
                 <Badge className={`${moodStatus.color} border-current`} variant="outline">
                   {moodStatus.status}
                 </Badge>
               </div>
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-text-body">
                 {(artist.mood || 50) >= 70
                   ? 'Artist is happy and motivated. Continue current management approach.'
                   : (artist.mood || 50) >= 40
@@ -61,11 +61,11 @@ function ManagementTabComponent({
             </div>
 
             {/* Archetype Information */}
-            <div className="p-4 border border-brand-purple/50 rounded-lg">
-              <h4 className="font-medium mb-2">Archetype: {artist.archetype}</h4>
-              <p className="text-sm text-white/70 mb-3">{archetypeInfo.description}</p>
-              <div className="text-xs text-white/50">
-                <strong>Management Tip:</strong> {
+            <div className="p-4 rounded-chip bg-neon-purple/[0.06] border border-neon-purple/30">
+              <h4 className="font-medium mb-2 text-text-primary">Archetype: {artist.archetype}</h4>
+              <p className="text-sm text-text-body mb-3">{archetypeInfo.description}</p>
+              <div className="text-xs text-text-muted">
+                <strong className="text-text-body">Management Tip:</strong> {
                   artist.archetype === 'Visionary'
                     ? 'Provide creative freedom and avoid purely commercial decisions.'
                     : artist.archetype === 'Workhorse'
@@ -80,8 +80,8 @@ function ManagementTabComponent({
         {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Settings className="w-5 h-5" />
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <Settings className="w-5 h-5 text-neon-lilac" />
               <span>Quick Actions</span>
             </CardTitle>
           </CardHeader>
@@ -113,10 +113,10 @@ function ManagementTabComponent({
               View Contract
             </Button>
 
-            <div className="pt-3 border-t border-brand-purple/50">
-              <div className="text-sm text-white/70 mb-2">Weekly Cost</div>
+            <div className="pt-3 border-t border-white/[0.07]">
+              <div className="text-sm text-text-muted mb-2">Weekly Cost</div>
               <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold">${(artist.weeklyCost || artist.weeklyCost || 0).toLocaleString()}</span>
+                <span className="font-mono text-lg font-semibold text-money">${(artist.weeklyCost || artist.weeklyCost || 0).toLocaleString()}</span>
                 <Badge variant="outline" className="text-xs">
                   Per Week
                 </Badge>

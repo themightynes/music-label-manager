@@ -9,7 +9,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { useArtists } from '@/hooks/useArtists';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, DollarSign, Users, Calculator } from 'lucide-react';
+import { ChevronDown, ChevronRight, DollarSign, Users, Calculator, Route } from 'lucide-react';
 import { getTourMetadata, getTourStats, getCompletedCities, getCityCounts } from '@/utils/tourHelpers';
 
 // Completed Tours Table Component (integrated into main Tours UI)
@@ -23,8 +23,8 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
   // If no tours exist at all, show empty state
   if (allCompletedTours.length === 0) {
     return (
-      <div className="text-center py-8 text-white/50">
-        <i className="fas fa-route text-2xl mb-2 block text-white/50"></i>
+      <div className="text-center py-8 text-text-muted">
+        <Route className="w-8 h-8 mx-auto mb-2 text-text-muted" />
         <p className="text-sm">No completed tours yet</p>
         <p className="text-xs">Tours will appear here once completed</p>
       </div>
@@ -95,25 +95,25 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
   );
 
   return (
-    <div className="border border-brand-purple rounded-lg p-4">
+    <div className="border border-white/[0.08] rounded-lg p-4">
       {/* Tour Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <h4 className="text-white font-medium text-sm">
+          <h4 className="text-text-primary font-medium text-sm">
             {selectedTour.title} - {getArtistName(selectedTour.artistId || '')} • {getTourMetadata(selectedTour).cities || 0} Cities
           </h4>
-          <Badge className={`text-xs px-2 py-1 ${selectedTour.stage === 'cancelled' ? 'bg-red-600 text-white' : 'bg-green-500 text-white'}`}>
+          <Badge className={`text-xs px-2 py-1 rounded-chip ${selectedTour.stage === 'cancelled' ? 'bg-negative/20 text-negative border border-negative/40' : 'bg-positive/20 text-positive border border-positive/40'}`}>
             {selectedTour.stage === 'cancelled' ? '✗ Cancelled' : '✓ Complete'}
           </Badge>
         </div>
         {/* Tour Selection Dropdown if multiple tours */}
         {allCompletedTours.length > 1 && (
           <div className="flex items-center space-x-2">
-            <span className="text-xs text-white/50">Select Tour:</span>
+            <span className="text-xs text-text-muted">Select Tour:</span>
             <select
               value={selectedTour.id}
               onChange={(e) => setSelectedTourId(e.target.value)}
-              className="bg-brand-dark-card border border-brand-purple text-white text-xs px-2 py-1 rounded"
+              className="bg-surface-inner border border-white/[0.08] text-text-primary text-xs px-2 py-1 rounded"
             >
               {allCompletedTours.map(tour => (
                 <option key={tour.id} value={tour.id}>
@@ -128,99 +128,99 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
       {/* Tour Table */}
       <Table>
         <TableHeader>
-          <TableRow className="border-brand-purple">
+          <TableRow className="border-white/[0.08]">
             <TableHead
-              className="text-white/70 text-sm cursor-pointer hover:text-white"
+              className="text-text-body text-sm cursor-pointer hover:text-text-primary"
               onClick={() => handleSort('city')}
             >
               City {sortBy === 'city' && (sortOrder === 'asc' ? '↑' : '↓')}
             </TableHead>
-            <TableHead className="text-white/70 text-sm">Venue</TableHead>
+            <TableHead className="text-text-body text-sm">Venue</TableHead>
             <TableHead
-              className="text-white/70 text-sm cursor-pointer hover:text-white text-right"
+              className="text-text-body text-sm cursor-pointer hover:text-text-primary text-right"
               onClick={() => handleSort('attendance')}
             >
               Attendance {sortBy === 'attendance' && (sortOrder === 'asc' ? '↑' : '↓')}
             </TableHead>
             <TableHead
-              className="text-white/70 text-sm cursor-pointer hover:text-white text-right"
+              className="text-text-body text-sm cursor-pointer hover:text-text-primary text-right"
               onClick={() => handleSort('revenue')}
             >
               Revenue {sortBy === 'revenue' && (sortOrder === 'asc' ? '↑' : '↓')}
             </TableHead>
-            <TableHead className="text-white/70 text-sm text-right">Costs</TableHead>
+            <TableHead className="text-text-body text-sm text-right">Costs</TableHead>
             <TableHead
-              className="text-white/70 text-sm cursor-pointer hover:text-white text-right"
+              className="text-text-body text-sm cursor-pointer hover:text-text-primary text-right"
               onClick={() => handleSort('profit')}
             >
               Profit {sortBy === 'profit' && (sortOrder === 'asc' ? '↑' : '↓')}
             </TableHead>
-            <TableHead className="text-white/70 text-sm text-right">ROI</TableHead>
+            <TableHead className="text-text-body text-sm text-right">ROI</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {cities.length === 0 ? (
             <>
-              <TableRow className="border-brand-purple">
-                <TableCell colSpan={7} className="text-center py-8 text-white/50">
+              <TableRow className="border-white/[0.08]">
+                <TableCell colSpan={7} className="text-center py-8 text-text-muted">
                   {selectedTour.stage === 'cancelled' ? (
                     <div>
-                      <i className="fas fa-ban text-red-400 text-xl mb-2 block"></i>
+                      <i className="fas fa-ban text-negative text-xl mb-2 block"></i>
                       <p className="text-sm">Tour was cancelled before any performances</p>
-                      <p className="text-xs text-white/30">No city performance data available</p>
+                      <p className="text-xs text-text-muted">No city performance data available</p>
                     </div>
                   ) : (
                     <div>
-                      <i className="fas fa-chart-line text-white/30 text-xl mb-2 block"></i>
+                      <i className="fas fa-chart-line text-text-muted text-xl mb-2 block"></i>
                       <p className="text-sm">No performance data available</p>
-                      <p className="text-xs text-white/30">Tour completed without detailed analytics</p>
+                      <p className="text-xs text-text-muted">Tour completed without detailed analytics</p>
                     </div>
                   )}
                 </TableCell>
               </TableRow>
               {selectedTour.stage === 'cancelled' && (
-                <TableRow className="border-t border-brand-purple">
-                  <TableCell className="text-white font-bold text-sm">TOTAL LOSS</TableCell>
-                  <TableCell className="text-white/50 text-sm">-</TableCell>
-                  <TableCell className="text-right text-white font-bold text-sm">
+                <TableRow className="border-t border-white/[0.08]">
+                  <TableCell className="text-text-primary font-bold text-sm">TOTAL LOSS</TableCell>
+                  <TableCell className="text-text-muted text-sm">-</TableCell>
+                  <TableCell className="text-right text-text-primary font-bold text-sm">
                     <div className="font-mono">0/0</div>
-                    <div className="text-xs text-white/50 font-mono">0%</div>
+                    <div className="text-xs text-text-muted font-mono">0%</div>
                   </TableCell>
-                  <TableCell className="text-right text-white font-mono font-bold text-sm">$0</TableCell>
-                  <TableCell className="text-right text-red-400 font-mono font-bold text-sm">
+                  <TableCell className="text-right text-text-primary font-mono font-bold text-sm">$0</TableCell>
+                  <TableCell className="text-right text-negative font-mono font-bold text-sm">
                     ${(selectedTour.totalCost || 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-right text-red-400 font-mono font-bold text-sm">
+                  <TableCell className="text-right text-negative font-mono font-bold text-sm">
                     -${(selectedTour.totalCost || 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-right text-red-400 font-mono font-bold text-sm">-100%</TableCell>
+                  <TableCell className="text-right text-negative font-mono font-bold text-sm">-100%</TableCell>
                 </TableRow>
               )}
             </>
           ) : (
             <>
               {sortedCities.map((city, index) => (
-                <TableRow key={city.cityNumber || index} className="border-brand-purple">
-                  <TableCell className="text-white text-sm">
+                <TableRow key={city.cityNumber || index} className="border-white/[0.08]">
+                  <TableCell className="text-text-primary text-sm">
                     {city.cityName || `City ${city.cityNumber}`}
                   </TableCell>
-                  <TableCell className="text-white/60 text-sm">
+                  <TableCell className="text-text-muted text-sm">
                     {city.venue || 'Unknown Venue'}
                   </TableCell>
-                  <TableCell className="text-right text-white text-sm">
+                  <TableCell className="text-right text-text-primary text-sm">
                     <div className="font-mono">{(city.ticketsSold || 0).toLocaleString()}/{(city.capacity || 0).toLocaleString()}</div>
-                    <div className="text-xs text-white/50 font-mono">{city.attendanceRate || 0}%</div>
+                    <div className="text-xs text-text-muted font-mono">{city.attendanceRate || 0}%</div>
                   </TableCell>
-                  <TableCell className="text-right text-green-600 font-mono text-sm">
+                  <TableCell className="text-right text-positive font-mono text-sm">
                     ${(city.revenue || 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-right text-red-400 font-mono text-sm">
+                  <TableCell className="text-right text-negative font-mono text-sm">
                     ${(city.economics?.costs?.total || 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-right text-green-600 font-mono text-sm">
+                  <TableCell className="text-right text-positive font-mono text-sm">
                     ${(city.economics?.profit || 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-right text-white font-mono text-sm">
+                  <TableCell className="text-right text-text-primary font-mono text-sm">
                     {city.economics?.costs?.total && city.economics?.profit ? (
                       `${Math.round((city.economics.profit / city.economics.costs.total) * 100)}%`
                     ) : (
@@ -231,25 +231,25 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
               ))}
 
               {/* Totals Row */}
-              <TableRow className="border-t border-brand-purple">
-                <TableCell className="text-white font-bold text-sm">TOTALS</TableCell>
-                <TableCell className="text-white/50 text-sm">-</TableCell>
-                <TableCell className="text-right text-white font-bold text-sm">
+              <TableRow className="border-t border-white/[0.08]">
+                <TableCell className="text-text-primary font-bold text-sm">TOTALS</TableCell>
+                <TableCell className="text-text-muted text-sm">-</TableCell>
+                <TableCell className="text-right text-text-primary font-bold text-sm">
                   <div className="font-mono">{(totals.tickets || 0).toLocaleString()}</div>
-                  <div className="text-xs text-white/50 font-mono">
+                  <div className="text-xs text-text-muted font-mono">
                     {(totals.capacity || 0) > 0 ? Math.round(((totals.tickets || 0) / (totals.capacity || 1)) * 100) : 0}%
                   </div>
                 </TableCell>
-                <TableCell className="text-right text-green-600 font-mono font-bold text-sm">
+                <TableCell className="text-right text-positive font-mono font-bold text-sm">
                   ${(totals.revenue || 0).toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right text-red-400 font-mono font-bold text-sm">
+                <TableCell className="text-right text-negative font-mono font-bold text-sm">
                   ${(totals.costs || 0).toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right text-green-600 font-mono font-bold text-sm">
+                <TableCell className="text-right text-positive font-mono font-bold text-sm">
                   ${(totals.profit || 0).toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right text-white font-mono font-bold text-sm">
+                <TableCell className="text-right text-text-primary font-mono font-bold text-sm">
                   {(totals.costs || 0) > 0 ? `${Math.round(((totals.profit || 0) / (totals.costs || 1)) * 100)}%` : '0%'}
                 </TableCell>
               </TableRow>
@@ -323,15 +323,15 @@ export function ActiveTours() {
 
   const getStatusBadgeClass = (stage: string) => {
     switch (stage) {
-      case 'planning': return 'bg-brand-purple-light text-white';
-      case 'writing': return 'bg-warning text-white';
-      case 'recording': return 'bg-brand-burgundy text-white';
-      case 'recorded': return 'bg-green-500 text-white';
-      case 'production': return 'bg-warning text-white';
-      case 'marketing': return 'bg-brand-burgundy text-white';
-      case 'released': return 'bg-success text-white';
-      case 'cancelled': return 'bg-red-600 text-white';
-      default: return 'bg-brand-purple-light text-white';
+      case 'planning': return 'bg-neon-purple/20 text-text-accent border border-neon-purple/40';
+      case 'writing': return 'bg-warning/20 text-warning border border-warning/40';
+      case 'recording': return 'bg-neon-purple/20 text-text-accent border border-neon-purple/40';
+      case 'recorded': return 'bg-positive/20 text-positive border border-positive/40';
+      case 'production': return 'bg-warning/20 text-warning border border-warning/40';
+      case 'marketing': return 'bg-neon-purple/20 text-text-accent border border-neon-purple/40';
+      case 'released': return 'bg-positive/20 text-positive border border-positive/40';
+      case 'cancelled': return 'bg-negative/20 text-negative border border-negative/40';
+      default: return 'bg-neon-purple/20 text-text-accent border border-neon-purple/40';
     }
   };
 
@@ -412,21 +412,22 @@ export function ActiveTours() {
 
   return (
     <>
-      <Card className="shadow-sm">
+      <Card className="glass-panel chromatic-hairline">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-semibold text-white flex items-center">
-              <i className="fas fa-route text-brand-burgundy mr-2"></i>
+            <h3 className="text-base font-semibold text-text-primary flex items-center gap-2">
+              <Route className="w-4 h-4 text-text-accent" />
               Tours
             </h3>
             <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="text-xs">
+              <Badge className="font-mono text-xs bg-white/[0.04] text-text-muted border border-white/[0.08] rounded-pill">
                 {activeTours.length + completedTours.length}
               </Badge>
               <Button
                 size="sm"
+                variant="outline"
                 onClick={handleNavigateToLivePerformance}
-                className="bg-brand-burgundy hover:bg-brand-burgundy text-white text-xs px-3 py-1.5"
+                className="rounded-button text-xs px-3 py-1.5"
               >
                 + Live Performance
               </Button>
@@ -434,13 +435,13 @@ export function ActiveTours() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex space-x-1 mb-4 bg-brand-dark-card/30 p-1 rounded-lg">
+          <div className="flex space-x-1 mb-4 bg-surface-inner/40 p-1 rounded-button">
             <button
               onClick={() => setActiveTab('active')}
-              className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-chip transition-colors ${
                 activeTab === 'active'
-                  ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
-                  : 'text-white/70 hover:text-white'
+                  ? 'bg-neon-purple/20 text-text-primary border border-neon-purple/40 shadow-sm'
+                  : 'text-text-body hover:text-text-primary'
               }`}
             >
               Active Tours
@@ -452,10 +453,10 @@ export function ActiveTours() {
             </button>
             <button
               onClick={() => setActiveTab('completed')}
-              className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-chip transition-colors ${
                 activeTab === 'completed'
-                  ? 'bg-brand-burgundy/20 text-white border border-brand-burgundy/40 shadow-sm'
-                  : 'text-white/70 hover:text-white'
+                  ? 'bg-neon-purple/20 text-text-primary border border-neon-purple/40 shadow-sm'
+                  : 'text-text-body hover:text-text-primary'
               }`}
             >
               Completed Tours
@@ -472,18 +473,18 @@ export function ActiveTours() {
             {activeTab === 'completed' ? (
               <CompletedToursTable completedTours={completedTours} getArtistName={getArtistName} />
             ) : currentTours.length === 0 ? (
-              <div className="text-center py-8 text-white/50">
-                <i className="fas fa-route text-2xl mb-2 block text-white/50"></i>
+              <div className="text-center py-8 text-text-muted">
+                <Route className="w-8 h-8 mx-auto mb-2 text-text-muted" />
                 <p className="text-sm">No active tours</p>
                 <p className="text-xs">Create a Live Performance to book tours</p>
               </div>
             ) : (
               currentTours.map(project => (
-                <div key={project.id} className="border border-brand-purple rounded-lg p-3">
+                <div key={project.id} className="border border-white/[0.08] bg-surface-inner/50 rounded-[14px] p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <h4 className="font-medium text-white text-sm">{project.title}</h4>
-                      <div className="text-xs text-white/70">{getArtistName(project.artistId || '')}</div>
+                      <h4 className="font-medium text-text-primary text-sm">{project.title}</h4>
+                      <div className="text-xs text-text-body">{getArtistName(project.artistId || '')}</div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Badge className={`text-xs px-2 py-1 ${getStatusBadgeClass(project.stage || 'planning')}`}>
@@ -495,7 +496,7 @@ export function ActiveTours() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleCancelTour(project)}
-                          className="text-xs px-2 py-1 h-6 border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                          className="text-xs px-2 py-1 h-6 border-negative/50 text-negative hover:bg-negative/20 hover:text-text-primary rounded-button"
                         >
                           Cancel
                         </Button>
@@ -508,7 +509,7 @@ export function ActiveTours() {
                     {activeTab === 'active' && (
                       <>
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-white/50">Progress</span>
+                          <span className="text-text-muted">Progress</span>
                           <span className="font-mono">{Math.round(getProjectProgress(project))}%</span>
                         </div>
                         <Progress value={getProjectProgress(project)} className="w-full h-1.5" />
@@ -518,7 +519,7 @@ export function ActiveTours() {
                     {/* Note: This section is only for active tours - completed tours are handled by CompletedToursTable */}
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Tour Budget</span>
+                      <span className="text-text-muted">Tour Budget</span>
                       <span className="font-mono">
                         ${(project.totalCost || 0).toLocaleString()}
                       </span>
@@ -531,17 +532,17 @@ export function ActiveTours() {
 
                       if (completedCities.length > 0) {
                         return (
-                          <div className="pt-2 border-t border-brand-purple space-y-1">
-                            <div className="text-xs text-white/60 font-medium mb-1">
+                          <div className="pt-2 border-t border-white/[0.08] space-y-1">
+                            <div className="text-xs text-text-muted font-medium mb-1">
                               Cities Completed ({completedCities.length}/{cityCounts.planned})
                             </div>
                             {completedCities.map((city: any, index: number) => (
-                              <div key={index} className="bg-brand-dark-card/30 rounded p-2 text-xs space-y-1">
+                              <div key={index} className="bg-surface-inner/40 rounded p-2 text-xs space-y-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-white/70 font-medium">City {city.cityNumber}</span>
-                                  <span className="font-mono text-green-500">${city.revenue?.toLocaleString() || 0}</span>
+                                  <span className="text-text-body font-medium">City {city.cityNumber}</span>
+                                  <span className="font-mono text-positive">${city.revenue?.toLocaleString() || 0}</span>
                                 </div>
-                                <div className="flex items-center justify-between text-white/50">
+                                <div className="flex items-center justify-between text-text-muted">
                                   <span>{city.venue} ({city.capacity} capacity)</span>
                                   <span>{city.ticketsSold} tickets • {city.attendanceRate}%</span>
                                 </div>
@@ -563,37 +564,37 @@ export function ActiveTours() {
                         : 0;
 
                       return (
-                        <div className="pt-2 border-t border-brand-purple space-y-1">
+                        <div className="pt-2 border-t border-white/[0.08] space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-white/50">Tour Completed</span>
-                            <span className="font-mono text-green-600">
+                            <span className="text-text-muted">Tour Completed</span>
+                            <span className="font-mono text-positive">
                               {cityCounts.completed}/{cityCounts.planned} cities
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-white/50">Total Revenue</span>
-                            <span className="font-mono text-green-600">
+                            <span className="text-text-muted">Total Revenue</span>
+                            <span className="font-mono text-positive">
                               ${totalRevenue.toLocaleString()}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-white/50">Average Attendance</span>
-                            <span className="font-mono text-brand-burgundy">
+                            <span className="text-text-muted">Average Attendance</span>
+                            <span className="font-mono text-text-accent">
                               {avgAttendance}%
                             </span>
                           </div>
 
                           {completedCities.length > 0 && (
                             <>
-                              <div className="text-xs text-white/70 italic mt-1 mb-2">
+                              <div className="text-xs text-text-body italic mt-1 mb-2">
                                 Tour completed successfully
                               </div>
 
                               {/* City-by-City Details for Completed Tours */}
                               <div className="space-y-1">
-                                <div className="text-xs text-white/60 font-medium">
+                                <div className="text-xs text-text-muted font-medium">
                                   City Details ({completedCities.length} cities)
                                 </div>
                                 {completedCities.map((city: any, index: number) => {
@@ -602,23 +603,23 @@ export function ActiveTours() {
                                   const hasEconomics = city.economics;
 
                                   return (
-                                    <div key={index} className="bg-brand-dark-card/40 rounded p-2 text-xs space-y-1">
+                                    <div key={index} className="bg-surface-inner/50 rounded p-2 text-xs space-y-1">
                                       {/* Main city info - always visible */}
                                       <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-2">
-                                          <span className="text-white/80 font-medium">City {city.cityNumber}</span>
+                                          <span className="text-text-body font-medium">City {city.cityNumber}</span>
                                           {hasEconomics && (
                                             <button
                                               onClick={() => toggleCityDetails(cityKey)}
-                                              className="text-white/50 hover:text-white/80 transition-colors"
+                                              className="text-text-muted hover:text-text-body transition-colors"
                                             >
                                               {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                             </button>
                                           )}
                                         </div>
-                                        <span className="font-mono text-green-400">${city.revenue?.toLocaleString() || 0}</span>
+                                        <span className="font-mono text-positive">${city.revenue?.toLocaleString() || 0}</span>
                                       </div>
-                                      <div className="flex items-center justify-between text-white/60">
+                                      <div className="flex items-center justify-between text-text-muted">
                                         <span>{city.venue} ({city.capacity} capacity)</span>
                                         <span>{city.ticketsSold} tickets • {city.attendanceRate}%</span>
                                       </div>
@@ -630,28 +631,28 @@ export function ActiveTours() {
                                           <div className="bg-black/20 rounded p-2">
                                             <div className="flex items-center space-x-1 mb-1">
                                               <Users className="w-3 h-3 text-blue-400" />
-                                              <span className="text-white/70 font-medium">Sell-Through Breakdown</span>
+                                              <span className="text-text-body font-medium">Sell-Through Breakdown</span>
                                             </div>
                                             <div className="grid grid-cols-2 gap-1 text-xs">
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Base Rate:</span>
-                                                <span className="font-mono text-white/70">{city.economics.sellThrough.baseRate}%</span>
+                                                <span className="text-text-muted">Base Rate:</span>
+                                                <span className="font-mono text-text-body">{city.economics.sellThrough.baseRate}%</span>
                                               </div>
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Reputation:</span>
+                                                <span className="text-text-muted">Reputation:</span>
                                                 <span className="font-mono text-blue-400">+{city.economics.sellThrough.reputationBonus}%</span>
                                               </div>
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Popularity:</span>
+                                                <span className="text-text-muted">Popularity:</span>
                                                 <span className="font-mono text-purple-400">+{city.economics.sellThrough.popularityBonus}%</span>
                                               </div>
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Marketing:</span>
+                                                <span className="text-text-muted">Marketing:</span>
                                                 <span className="font-mono text-yellow-400">+{city.economics.sellThrough.marketingBonus}%</span>
                                               </div>
                                               <div className="flex justify-between font-medium col-span-2 pt-1 border-t border-white/10">
-                                                <span className="text-white/70">Total:</span>
-                                                <span className="font-mono text-green-400">{city.economics.sellThrough.rate}%</span>
+                                                <span className="text-text-body">Total:</span>
+                                                <span className="font-mono text-positive">{city.economics.sellThrough.rate}%</span>
                                               </div>
                                             </div>
                                           </div>
@@ -659,27 +660,27 @@ export function ActiveTours() {
                                           {/* Revenue Breakdown */}
                                           <div className="bg-black/20 rounded p-2">
                                             <div className="flex items-center space-x-1 mb-1">
-                                              <DollarSign className="w-3 h-3 text-green-400" />
-                                              <span className="text-white/70 font-medium">Revenue Analysis</span>
+                                              <DollarSign className="w-3 h-3 text-positive" />
+                                              <span className="text-text-body font-medium">Revenue Analysis</span>
                                             </div>
                                             <div className="space-y-1 text-xs">
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Ticket Price:</span>
-                                                <span className="font-mono text-white/70">
+                                                <span className="text-text-muted">Ticket Price:</span>
+                                                <span className="font-mono text-text-body">
                                                   ${city.economics.pricing.ticketPrice} (${city.economics.pricing.basePrice} + ${city.economics.pricing.capacityBonus})
                                                 </span>
                                               </div>
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Ticket Revenue:</span>
+                                                <span className="text-text-muted">Ticket Revenue:</span>
                                                 <span className="font-mono text-blue-400">${city.economics.revenue.tickets.toLocaleString()}</span>
                                               </div>
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Merch ({city.economics.revenue.merchRate}%):</span>
+                                                <span className="text-text-muted">Merch ({city.economics.revenue.merchRate}%):</span>
                                                 <span className="font-mono text-purple-400">${city.economics.revenue.merch.toLocaleString()}</span>
                                               </div>
                                               <div className="flex justify-between font-medium pt-1 border-t border-white/10">
-                                                <span className="text-white/70">Gross Revenue:</span>
-                                                <span className="font-mono text-green-400">${city.economics.revenue.total.toLocaleString()}</span>
+                                                <span className="text-text-body">Gross Revenue:</span>
+                                                <span className="font-mono text-positive">${city.economics.revenue.total.toLocaleString()}</span>
                                               </div>
                                             </div>
                                           </div>
@@ -687,29 +688,29 @@ export function ActiveTours() {
                                           {/* Cost & Profit Analysis */}
                                           <div className="bg-black/20 rounded p-2">
                                             <div className="flex items-center space-x-1 mb-1">
-                                              <Calculator className="w-3 h-3 text-red-400" />
-                                              <span className="text-white/70 font-medium">Profitability</span>
+                                              <Calculator className="w-3 h-3 text-negative" />
+                                              <span className="text-text-body font-medium">Profitability</span>
                                             </div>
                                             <div className="space-y-1 text-xs">
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Venue Fees:</span>
-                                                <span className="font-mono text-red-400">${city.economics.costs.venue.toLocaleString()}</span>
+                                                <span className="text-text-muted">Venue Fees:</span>
+                                                <span className="font-mono text-negative">${city.economics.costs.venue.toLocaleString()}</span>
                                               </div>
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Production:</span>
-                                                <span className="font-mono text-red-400">${city.economics.costs.production.toLocaleString()}</span>
+                                                <span className="text-text-muted">Production:</span>
+                                                <span className="font-mono text-negative">${city.economics.costs.production.toLocaleString()}</span>
                                               </div>
                                               <div className="flex justify-between">
-                                                <span className="text-white/50">Marketing:</span>
-                                                <span className="font-mono text-red-400">${city.economics.costs.marketing.toLocaleString()}</span>
+                                                <span className="text-text-muted">Marketing:</span>
+                                                <span className="font-mono text-negative">${city.economics.costs.marketing.toLocaleString()}</span>
                                               </div>
                                               <div className="flex justify-between pt-1 border-t border-white/10">
-                                                <span className="text-white/60">Total Costs:</span>
-                                                <span className="font-mono text-red-300">${city.economics.costs.total.toLocaleString()}</span>
+                                                <span className="text-text-muted">Total Costs:</span>
+                                                <span className="font-mono text-negative">${city.economics.costs.total.toLocaleString()}</span>
                                               </div>
                                               <div className="flex justify-between font-medium pt-1 border-t border-white/10">
-                                                <span className="text-white/70">Net Profit:</span>
-                                                <span className={`font-mono ${city.economics.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                <span className="text-text-body">Net Profit:</span>
+                                                <span className={`font-mono ${city.economics.profit >= 0 ? 'text-positive' : 'text-negative'}`}>
                                                   ${city.economics.profit.toLocaleString()}
                                                 </span>
                                               </div>
@@ -738,7 +739,7 @@ export function ActiveTours() {
       <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-red-600">Cancel Tour</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-negative">Cancel Tour</DialogTitle>
           </DialogHeader>
 
           {projectToCancel && (() => {
@@ -752,46 +753,46 @@ export function ActiveTours() {
 
             return (
               <div className="space-y-4">
-                <p className="text-white">
+                <p className="text-text-primary">
                   Are you sure you want to cancel <span className="font-semibold">"{projectToCancel.title}"</span>?
                   This action cannot be undone.
                 </p>
 
                 {/* Cost Breakdown */}
-                <div className="bg-brand-dark-card border border-brand-purple rounded-lg p-4 space-y-3">
-                  <h4 className="font-semibold text-white mb-2">Cancellation Breakdown</h4>
+                <div className="bg-surface-inner border border-white/[0.08] rounded-lg p-4 space-y-3">
+                  <h4 className="font-semibold text-text-primary mb-2">Cancellation Breakdown</h4>
 
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-white/70">Original Tour Cost:</span>
-                      <span className="font-mono text-white">${projectToCancel.totalCost.toLocaleString()}</span>
+                      <span className="text-text-body">Original Tour Cost:</span>
+                      <span className="font-mono text-money">${projectToCancel.totalCost.toLocaleString()}</span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-white/70">Cities Planned:</span>
-                      <span className="font-mono text-white">{cityCounts.planned}</span>
+                      <span className="text-text-body">Cities Planned:</span>
+                      <span className="font-mono text-text-primary">{cityCounts.planned}</span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-white/70">Cities Completed:</span>
-                      <span className="font-mono text-white">{cityCounts.completed}</span>
+                      <span className="text-text-body">Cities Completed:</span>
+                      <span className="font-mono text-text-primary">{cityCounts.completed}</span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-white/70">Remaining Cities:</span>
-                      <span className="font-mono text-white">{remainingCities}</span>
+                      <span className="text-text-body">Remaining Cities:</span>
+                      <span className="font-mono text-text-primary">{remainingCities}</span>
                     </div>
 
-                    <hr className="border-brand-purple" />
+                    <hr className="border-white/[0.08]" />
 
                     <div className="flex justify-between">
-                      <span className="text-red-400">Sunk Costs (non-refundable):</span>
-                      <span className="font-mono text-red-400">-${sunkCosts.toLocaleString()}</span>
+                      <span className="text-negative">Sunk Costs (non-refundable):</span>
+                      <span className="font-mono text-negative">-${sunkCosts.toLocaleString()}</span>
                     </div>
 
                     <div className="flex justify-between font-semibold">
-                      <span className="text-green-400">Refund (60% of remaining):</span>
-                      <span className="font-mono text-green-400">+${refundAmount.toLocaleString()}</span>
+                      <span className="text-positive">Refund (60% of remaining):</span>
+                      <span className="font-mono text-positive">+${refundAmount.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -801,13 +802,13 @@ export function ActiveTours() {
                   <Button
                     variant="outline"
                     onClick={() => setShowCancelModal(false)}
-                    className="border-brand-purple text-white hover:bg-brand-purple"
+                    className="border-white/[0.09] text-text-body bg-white/[0.02] hover:bg-white/[0.045] hover:text-text-primary rounded-button"
                   >
                     Keep Tour
                   </Button>
                   <Button
                     onClick={handleConfirmCancellation}
-                    className="bg-red-600 hover:bg-red-700 text-white"
+                    className="bg-negative/90 hover:bg-negative text-white rounded-button"
                   >
                     Cancel Tour
                   </Button>

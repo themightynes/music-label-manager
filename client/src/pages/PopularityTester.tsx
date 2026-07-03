@@ -191,27 +191,27 @@ export default function PopularityTester() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-plum-900 via-plum-800 to-plum-900 text-white p-6">
+    <div className="min-h-screen bg-surface-app text-foreground p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-plum-800/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-burgundy-600/30">
+        <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 mb-6 border border-border">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3">
-                <TrendingUp className="h-8 w-8 text-burgundy-400" />
+                <TrendingUp className="h-8 w-8 text-brand-burgundy" />
                 Popularity Testing Lab
               </h1>
-              <p className="text-gray-300 mt-2">
+              <p className="text-muted-foreground mt-2">
                 Test streaming-based popularity bonuses with diminishing returns
               </p>
-              <div className="mt-4 p-3 bg-plum-900/30 rounded-lg border border-burgundy-600/20">
-                <div className="text-xs text-gray-400 mb-1">OPTIMIZED FORMULA (from testing):</div>
-                <div className="text-xs text-burgundy-300 font-mono">
+              <div className="mt-4 p-3 bg-surface-inner rounded-lg border border-border/50">
+                <div className="text-xs text-muted-foreground mb-1">OPTIMIZED FORMULA (from testing):</div>
+                <div className="text-xs text-primary font-mono">
                   Saturation: 35 | Base Threshold: 3,000 | Dynamic: ON<br/>
                   Multiplier: 0.2 + (1.3 × [1 / (1 + (popularity / 35)⁴)])<br/>
                   Points: log₁₀(streams/dynamic_threshold) | Final: Points × Multiplier
                 </div>
-                <div className="text-xs text-gray-500 mt-2">
+                <div className="text-xs text-muted-foreground/70 mt-2">
                   <div className="font-semibold mb-1">💡 IMPLEMENTATION PLAN:</div>
 
                   <div className="mb-2">
@@ -262,15 +262,15 @@ export default function PopularityTester() {
 
         {/* Configuration Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="lg:col-span-1 bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30">
+          <div className="lg:col-span-1 bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border">
             <h2 className="text-xl font-bold mb-4">Test Configuration</h2>
 
             {/* Artist Settings */}
             <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-semibold text-burgundy-300">Artist Settings</h3>
+              <h3 className="text-lg font-semibold text-primary">Artist Settings</h3>
 
               <div>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Current Popularity: {config.currentPopularity}
                   <span className={`ml-2 ${getPopularityColor(config.currentPopularity)}`}>
                     (Multiplier: {calculatePopularityMultiplier(config.currentPopularity, config.saturationPoint).toFixed(3)}x)
@@ -286,9 +286,9 @@ export default function PopularityTester() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Saturation Point: {config.saturationPoint}
-                  <span className="text-burgundy-400 ml-2">
+                  <span className="text-primary ml-2">
                     (where multiplier = 0.85x)
                   </span>
                 </label>
@@ -302,7 +302,7 @@ export default function PopularityTester() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-300">Number of Songs: {config.songCount}</label>
+                <label className="text-sm text-muted-foreground">Number of Songs: {config.songCount}</label>
                 <input
                   type="range"
                   min="1" max="10" step="1"
@@ -315,10 +315,10 @@ export default function PopularityTester() {
 
             {/* Stream Settings */}
             <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-semibold text-burgundy-300">Stream Settings</h3>
+              <h3 className="text-lg font-semibold text-primary">Stream Settings</h3>
 
               <div>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Hot Song Threshold: {config.hotThreshold.toLocaleString()}
                 </label>
                 <input
@@ -331,10 +331,10 @@ export default function PopularityTester() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Base Popularity Threshold: {config.baseThreshold.toLocaleString()}
                   {config.dynamicThreshold && (
-                    <span className="text-burgundy-400 ml-2">
+                    <span className="text-primary ml-2">
                       (Actual: {calculateThreshold(config.currentPopularity, config.baseThreshold, config.dynamicThreshold).toLocaleString()})
                     </span>
                   )}
@@ -362,7 +362,7 @@ export default function PopularityTester() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Min Streams: {config.minStreams.toLocaleString()}
                 </label>
                 <input
@@ -375,7 +375,7 @@ export default function PopularityTester() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Max Streams: {config.maxStreams.toLocaleString()}
                 </label>
                 <input
@@ -426,18 +426,18 @@ export default function PopularityTester() {
 
           {/* Current Songs Panel */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30">
+            <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <Music className="h-5 w-5" />
                 Current Songs
-                <span className="text-sm font-normal text-gray-400">
+                <span className="text-sm font-normal text-muted-foreground">
                   ({songs.filter(s => s.weeklyStreams >= config.hotThreshold).length} hot songs)
                 </span>
               </h3>
 
               <div className="space-y-3">
                 {songs.map((song) => (
-                  <div key={song.id} className="bg-plum-900/30 rounded-lg p-3">
+                  <div key={song.id} className="bg-surface-inner rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{song.title}</span>
                       <span className={getStreamsColor(song.weeklyStreams, config.hotThreshold)}>
@@ -460,9 +460,9 @@ export default function PopularityTester() {
             </div>
 
             {/* Formula Explanation */}
-            <div className="bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30">
+            <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border">
               <h3 className="text-lg font-bold mb-4">Simple Stream-Based Popularity Formula</h3>
-              <div className="space-y-2 text-sm text-gray-300">
+              <div className="space-y-2 text-sm text-foreground">
                 <div><strong>Stream Points:</strong> log₁₀(streams/threshold) per song</div>
                 <div><strong>Base Threshold:</strong> {config.baseThreshold.toLocaleString()} streams</div>
                 {config.dynamicThreshold && (
@@ -470,8 +470,8 @@ export default function PopularityTester() {
                 )}
                 <div><strong>Multiplier:</strong> 0.2 + (1.3 × [1 / (1 + (popularity / {config.saturationPoint})⁴)])</div>
                 <div><strong>Final Bonus:</strong> Total Points × Multiplier (min 0.1, max 10)</div>
-                <div className="mt-3 p-3 bg-plum-900/30 rounded-lg">
-                  <div className="text-burgundy-300 font-medium mb-1">Current Preview:</div>
+                <div className="mt-3 p-3 bg-surface-inner rounded-lg">
+                  <div className="text-primary font-medium mb-1">Current Preview:</div>
                   {(() => {
                     const { baseBonus, multiplier, finalBonus, actualThreshold } = calculateStreamBasedPopularity(
                       songs,
@@ -487,11 +487,11 @@ export default function PopularityTester() {
                         <div>Total Stream Points: {baseBonus.toFixed(2)}</div>
                         <div>Multiplier: {multiplier.toFixed(3)}x</div>
                         <div>Final Bonus: +{finalBonus.toFixed(1)}</div>
-                        <div className="mt-2 pt-2 border-t border-burgundy-600/30">
+                        <div className="mt-2 pt-2 border-t border-border">
                           <div className={`text-lg font-bold ${getPopularityColor(newPop)}`}>
                             New Popularity: {newPop.toFixed(1)}
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted-foreground">
                             {config.currentPopularity} → {newPop.toFixed(1)}
                           </div>
                         </div>
@@ -507,9 +507,9 @@ export default function PopularityTester() {
         {/* Results Panel */}
         <div className="space-y-4">
           {results.length === 0 ? (
-            <div className="bg-plum-800/30 backdrop-blur-sm rounded-xl p-12 border border-burgundy-600/30 text-center">
-              <TrendingUp className="h-16 w-16 mx-auto text-burgundy-400/50 mb-4" />
-              <p className="text-gray-400">
+            <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-12 border border-border text-center">
+              <TrendingUp className="h-16 w-16 mx-auto text-primary/50 mb-4" />
+              <p className="text-muted-foreground">
                 Configure your test parameters and run a simulation to see popularity results
               </p>
             </div>
@@ -517,7 +517,7 @@ export default function PopularityTester() {
             results.map((result) => (
               <div
                 key={result.id}
-                className="bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30"
+                className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border"
               >
                 {/* Result Header */}
                 <div className="flex justify-between items-start mb-4">
@@ -528,7 +528,7 @@ export default function PopularityTester() {
                         (+{result.finalBonus.toFixed(1)})
                       </span>
                     </h3>
-                    <div className="text-sm text-gray-400 mt-1">
+                    <div className="text-sm text-muted-foreground mt-1">
                       {result.description}
                     </div>
                   </div>
@@ -542,26 +542,26 @@ export default function PopularityTester() {
 
                 {/* Quick Stats */}
                 <div className="grid grid-cols-4 gap-4 mb-4">
-                  <div className="bg-plum-900/30 rounded-lg p-3">
-                    <div className="text-xs text-gray-400 mb-1">Total Streams</div>
+                  <div className="bg-surface-inner rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Total Streams</div>
                     <div className="text-2xl font-bold text-orange-400">
                       {result.songs.reduce((sum, song) => sum + song.weeklyStreams, 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="bg-plum-900/30 rounded-lg p-3">
-                    <div className="text-xs text-gray-400 mb-1">Stream Points</div>
+                  <div className="bg-surface-inner rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Stream Points</div>
                     <div className="text-2xl font-bold text-blue-400">
                       {result.baseBonus.toFixed(1)}
                     </div>
                   </div>
-                  <div className="bg-plum-900/30 rounded-lg p-3">
-                    <div className="text-xs text-gray-400 mb-1">Multiplier</div>
+                  <div className="bg-surface-inner rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Multiplier</div>
                     <div className="text-2xl font-bold text-purple-400">
                       {result.popularityMultiplier.toFixed(3)}x
                     </div>
                   </div>
-                  <div className="bg-plum-900/30 rounded-lg p-3">
-                    <div className="text-xs text-gray-400 mb-1">Final Bonus</div>
+                  <div className="bg-surface-inner rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Final Bonus</div>
                     <div className={`text-2xl font-bold ${getPopularityColor(result.newPopularity)}`}>
                       +{result.finalBonus.toFixed(1)}
                     </div>
@@ -570,10 +570,10 @@ export default function PopularityTester() {
 
                 {/* Detailed View */}
                 {showDetails === result.id && (
-                  <div className="mt-4 pt-4 border-t border-burgundy-600/30">
+                  <div className="mt-4 pt-4 border-t border-border">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <h4 className="font-semibold mb-2 text-burgundy-300">Song Performance</h4>
+                        <h4 className="font-semibold mb-2 text-primary">Song Performance</h4>
                         <div className="space-y-1 text-sm">
                           {result.songs.map((song, i) => (
                             <div key={i} className="flex justify-between">
@@ -587,8 +587,8 @@ export default function PopularityTester() {
                         </div>
                       </div>
                       <div>
-                        <h4 className="font-semibold mb-2 text-burgundy-300">Calculation Breakdown</h4>
-                        <div className="space-y-1 text-sm text-gray-400">
+                        <h4 className="font-semibold mb-2 text-primary">Calculation Breakdown</h4>
+                        <div className="space-y-1 text-sm text-muted-foreground">
                           <div>Starting Popularity: {result.currentPopularity}</div>
                           <div>Songs Above Threshold: {result.hotSongsCount}</div>
                           <div>Base Bonus: +{result.baseBonus}</div>

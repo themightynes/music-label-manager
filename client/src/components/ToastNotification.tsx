@@ -60,10 +60,10 @@ export function ToastNotification() {
       title,
       description: enhancedDescription,
       duration,
-      className: type === 'achievement' ? 'border-yellow-200 bg-yellow-50' : 
-                 type === 'success' ? 'border-green-200 bg-green-50' :
-                 type === 'warning' ? 'border-orange-200 bg-orange-50' : 
-                 'border-brand-burgundy/20 bg-brand-burgundy/10'
+      className: type === 'achievement' ? 'border-money/40 bg-money/[0.08] shadow-glow-money' :
+                 type === 'success' ? 'border-positive/40 bg-positive/[0.08]' :
+                 type === 'warning' ? 'border-neon-amber/40 bg-neon-amber/[0.08]' :
+                 'border-neon-purple/40 bg-neon-purple/[0.08]'
     };
 
     // Add action button if provided
@@ -72,7 +72,7 @@ export function ToastNotification() {
         <ToastAction 
           altText={action.label}
           onClick={action.onClick}
-          className="bg-brand-dark-card hover:bg-brand-burgundy/20 border-brand-purple text-white"
+          className="rounded-button border-white/[0.09] bg-white/[0.02] text-white/75 hover:bg-white/[0.06] hover:text-white"
         >
           {action.label}
         </ToastAction>

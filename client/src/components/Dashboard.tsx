@@ -61,13 +61,26 @@ export function Dashboard({
 
   return (
     <>
-      {/* Label Name Header - Above Everything */}
-      <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-        <h1 className="text-3xl font-heading font-bold text-white flex items-center gap-3">
-          <i className="fas fa-compact-disc text-white"></i>
+      {/* Page frame header — eyebrow + display title + shimmer underline (v2 §4).
+          On lg+ it rises onto the GameHeader vitals row (balance/week/Advance Week),
+          matching the dashboard-dock.html single-row header; width is capped so the
+          title never runs under (or blocks clicks to) the right-aligned vitals. */}
+      <header className="pb-6 pt-2 lg:-mt-[60px] lg:w-[calc(100%-640px)]">
+        <div className="mb-3 flex items-center gap-3">
+          <span className="font-mono text-[11px] uppercase tracking-[0.28em] text-neon-cyan">
+            Studio Dashboard
+          </span>
+          <span
+            aria-hidden="true"
+            className="h-[5px] w-[5px] rounded-full bg-neon-green shadow-glow-green"
+          />
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">
+            sys · online
+          </span>
+        </div>
+        <h1 className="font-display text-aberration text-4xl lowercase leading-[0.95] text-text-primary md:text-[46px]">
           <TextScramble
             as="span"
-            className="text-3xl font-heading font-bold text-white"
             duration={0.5}
             speed={0.05}
             trigger={true}
@@ -75,12 +88,13 @@ export function Dashboard({
             {(gameState as any)?.musicLabel?.name || 'Music Label'}
           </TextScramble>
         </h1>
+        <div className="shimmer-bar mt-3.5 w-64 md:w-[360px]" aria-hidden="true" />
       </header>
 
       {/* Floating Metrics Dashboard */}
       <MetricsDashboard />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 md:py-2">
+      <main className="py-0 md:py-2">
         {/* Top Row - Inbox and Calendar */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 items-stretch">
 

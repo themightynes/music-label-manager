@@ -25,63 +25,63 @@ function PerformanceMetricsComponent({
 
   return (
     <div className="space-y-4">
-      {/* Main metrics grid */}
-      <div className="grid grid-cols-2 gap-4 text-center">
-        <div className="p-3 bg-blue-500/10 rounded-lg">
-          <div className="text-lg font-bold text-blue-700">{avgQuality}</div>
-          <div className="text-xs text-white/70">Avg Quality</div>
+      {/* Main metrics grid — hue-tinted stat tiles (design-system-v2 §6, artist-detail.html Performance panel) */}
+      <div className="grid grid-cols-2 gap-3 text-center">
+        <div className="p-3.5 rounded-chip bg-white/[0.02] border border-white/[0.05]">
+          <div className="font-mono text-lg font-semibold text-text-primary">{avgQuality}</div>
+          <div className="text-xs text-text-muted mt-1">Avg Quality</div>
         </div>
-        <div className="p-3 bg-green-500/10 rounded-lg">
-          <div className="text-lg font-bold text-green-700">{projectCount}</div>
-          <div className="text-xs text-white/70">Projects</div>
+        <div className="p-3.5 rounded-chip bg-neon-purple/[0.08] border border-neon-purple/25">
+          <div className="font-mono text-lg font-semibold text-neon-lilac">{projectCount}</div>
+          <div className="text-xs text-text-muted mt-1">Projects</div>
         </div>
-        <div className="p-3 bg-brand-burgundy-dark/10 rounded-lg">
-          <div className="text-lg font-bold text-brand-burgundy-dark">{readySongs}</div>
-          <div className="text-xs text-white/70">Ready Songs</div>
+        <div className="p-3.5 rounded-chip bg-white/[0.02] border border-white/[0.05]">
+          <div className="font-mono text-lg font-semibold text-text-primary">{readySongs}</div>
+          <div className="text-xs text-text-muted mt-1">Ready Songs</div>
         </div>
-        <div className="p-3 bg-orange-500/10 rounded-lg">
-          <div className="text-lg font-bold text-orange-700">{popularity}</div>
-          <div className="text-xs text-white/70">Popularity</div>
+        <div className="p-3.5 rounded-chip bg-negative/[0.08] border border-negative/25">
+          <div className="font-mono text-lg font-semibold text-negative">{popularity}</div>
+          <div className="text-xs text-text-muted mt-1">Popularity</div>
         </div>
       </div>
 
       {/* Financial metrics - separate section */}
-      <div className="pt-3 border-t border-brand-purple/50">
+      <div className="pt-3 border-t border-white/[0.07]">
         <div className="grid grid-cols-2 gap-3">
           {/* Revenue and Streams */}
-          <div className="p-3 bg-green-500/10 rounded-lg">
-            <div className="text-lg font-bold text-green-700">
+          <div className="p-3.5 rounded-chip bg-positive/[0.08] border border-positive/[0.22]">
+            <div className="font-mono text-base font-semibold text-positive">
               ${(totalRevenue / 1000).toFixed(1)}k
             </div>
-            <div className="text-xs text-white/70">Total Revenue</div>
+            <div className="text-xs text-text-muted mt-1">Total Revenue</div>
           </div>
-          <div className="p-3 bg-blue-500/10 rounded-lg">
-            <div className="text-lg font-bold text-blue-700">
+          <div className="p-3.5 rounded-chip bg-neon-cyan/[0.08] border border-neon-cyan/[0.22]">
+            <div className="font-mono text-base font-semibold text-neon-cyan">
               {(totalStreams / 1000).toFixed(0)}k
             </div>
-            <div className="text-xs text-white/70">Total Streams</div>
+            <div className="text-xs text-text-muted mt-1">Total Streams</div>
           </div>
 
           {/* Costs */}
-          <div className="p-3 bg-brand-purple-light/10 rounded-lg">
-            <div className="text-lg font-bold text-brand-purple-light">
+          <div className="p-3.5 rounded-chip bg-white/[0.02] border border-white/[0.05]">
+            <div className="font-mono text-base font-semibold text-text-body">
               ${(totalProductionCost / 1000).toFixed(1)}k
             </div>
-            <div className="text-xs text-white/70">Recording Costs</div>
+            <div className="text-xs text-text-muted mt-1">Recording Costs</div>
           </div>
-          <div className="p-3 bg-brand-burgundy/10 rounded-lg">
-            <div className="text-lg font-bold text-brand-burgundy">
+          <div className="p-3.5 rounded-chip bg-white/[0.02] border border-white/[0.05]">
+            <div className="font-mono text-base font-semibold text-text-body">
               ${(totalMarketingCost / 1000).toFixed(1)}k
             </div>
-            <div className="text-xs text-white/70">Marketing Costs</div>
+            <div className="text-xs text-text-muted mt-1">Marketing Costs</div>
           </div>
 
           {/* ROI - spans full width */}
-          <div className={`col-span-2 p-3 ${overallROI >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'} rounded-lg`}>
-            <div className={`text-xl font-bold ${overallROI >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+          <div className={`col-span-2 p-3.5 rounded-chip flex items-center justify-between ${overallROI >= 0 ? 'bg-positive/[0.08] border border-positive/[0.22]' : 'bg-negative/[0.08] border border-negative/[0.22]'}`}>
+            <span className="text-xs text-text-muted">Return on Investment</span>
+            <div className={`font-mono text-xl font-semibold ${overallROI >= 0 ? 'text-positive' : 'text-negative'}`}>
               {overallROI > 0 ? '+' : ''}{overallROI.toFixed(0)}%
             </div>
-            <div className="text-xs text-white/70">Return on Investment</div>
           </div>
         </div>
       </div>

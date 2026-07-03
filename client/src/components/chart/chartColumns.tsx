@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,15 +9,18 @@ import {
   formatStreamCount,
   formatLastWeekPosition,
   getChartExitRisk,
-  getChartExitRiskBgColor,
-  getChartPositionColor,
   getChartPositionOrdinal,
-  getMovementColor,
   isPlayerSongHighlight
 } from '@shared/utils/chartUtils';
 import { cn } from '@/lib/utils';
 
 import { ChartColumn, SortDirection } from './ChartDataTable';
+
+// v2 restyle note: `getChartPositionColor` / `getMovementColor` / `getChartExitRiskBgColor` from
+// shared/utils/chartUtils return legacy v1 utility classes (shared with other, out-of-scope
+// consumers). This table no longer calls them — position/movement/risk styling is derived
+// inline with v2 token classes (surface-inner, neon-lilac, positive/negative/warning) so the
+// chart matches the neo-cyber HUD system without editing the shared util.
 
 export interface ChartEntry {
   position: number;
@@ -37,18 +40,18 @@ export interface ChartEntry {
 }
 
 const headerButtonClasses =
-  'flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-wide text-white/60';
+  'flex w-full items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-text-label hover:text-text-accent transition-colors';
 
 function SortIndicator({ direction }: { direction: SortDirection | null }) {
   if (direction === 'asc') {
-    return <ArrowUp className="h-3 w-3 text-white/90" />;
+    return <ArrowUp className="h-3 w-3 text-neon-lilac" />;
   }
 
   if (direction === 'desc') {
-    return <ArrowDown className="h-3 w-3 text-white/90" />;
+    return <ArrowDown className="h-3 w-3 text-neon-lilac" />;
   }
 
-  return <ArrowUpDown className="h-3 w-3 text-white/30" />;
+  return <ArrowUpDown className="h-3 w-3 text-text-label" />;
 }
 
 export const chartColumns: ChartColumn<ChartEntry>[] = [
@@ -69,20 +72,22 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
     cell: entry => (
       <div className="flex items-center gap-3">
         {entry.position === 1 ? (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-sm font-bold text-yellow-900 shadow-lg">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-money to-neon-amber font-mono text-sm font-bold text-[#3a2a0a] shadow-glow-money">
             1
           </div>
         ) : (
           <div
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
-              getChartPositionColor(entry.position)
+              'flex h-8 w-8 items-center justify-center rounded-full font-mono text-sm font-semibold',
+              entry.position <= 10
+                ? 'bg-neon-lilac/[0.14] text-neon-lilac shadow-glow-lilac'
+                : 'bg-surface-inner text-text-body'
             )}
           >
             {entry.position}
           </div>
         )}
-        <span className="hidden text-[11px] font-mono uppercase tracking-wide text-white/40 xl:inline">
+        <span className="hidden font-mono text-[11px] uppercase tracking-wide text-text-label xl:inline">
           {getChartPositionOrdinal(entry.position)}
         </span>
       </div>
@@ -111,23 +116,29 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
             <span
               className={cn(
                 'truncate text-sm font-medium',
-                isHighlighted ? 'text-white' : 'text-white/90'
+                isHighlighted ? 'text-text-primary' : 'text-text-body'
               )}
             >
               {entry.songTitle}
             </span>
             {entry.isDebut && (
-              <Badge variant="secondary" className="bg-green-100 px-1 text-xs text-green-700">
+              <Badge
+                variant="secondary"
+                className="rounded-chip border border-positive/40 bg-positive/[0.14] px-1 text-xs text-positive"
+              >
                 NEW
               </Badge>
             )}
             {isHighlighted && (
-              <Badge variant="secondary" className="bg-brand-burgundy px-1 text-xs text-white">
+              <Badge
+                variant="secondary"
+                className="rounded-chip border border-neon-lilac/40 bg-neon-lilac/[0.14] px-1 text-xs text-neon-lilac"
+              >
                 YOURS
               </Badge>
             )}
           </div>
-          <div className="text-xs text-white/60">{entry.artistName}</div>
+          <div className="text-xs text-text-muted">{entry.artistName}</div>
         </div>
       )
     }
@@ -147,7 +158,7 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
       </button>
     ),
     cell: entry => (
-      <div className="text-right text-xs font-mono text-white/70">
+      <div className="text-right text-xs font-mono text-text-body">
         {formatStreamCount(entry.streams)}
       </div>
     )
@@ -170,7 +181,13 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
       const weeksText =
         entry.weeksOnChart > 0 ? formatWeeksOnChart(entry.weeksOnChart) : entry.isDebut ? 'Debut' : '—';
 
-      return <div className="text-right text-xs font-mono text-white/70">{weeksText}</div>;
+      return (
+        <div className="flex justify-end">
+          <span className="rounded-chip border border-white/[0.09] bg-white/[0.04] px-2 py-0.5 font-mono text-[11px] text-text-body">
+            {weeksText}
+          </span>
+        </div>
+      );
     }
   },
   {
@@ -188,7 +205,7 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
       </button>
     ),
     cell: entry => (
-      <div className="text-right text-xs font-mono text-white/70">
+      <div className="text-right text-xs font-mono text-text-body">
         {entry.peakPosition ? formatChartPosition(entry.peakPosition) : '—'}
       </div>
     )
@@ -215,7 +232,7 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
       // movement = previousPosition - currentPosition, so previousPosition = currentPosition + movement
       const calculatedLastWeekPosition = entry.movement !== 0 ? entry.position + entry.movement : null;
       return (
-        <div className="text-right text-xs font-mono text-white/70">
+        <div className="text-right text-xs font-mono text-text-body">
           {formatLastWeekPosition(calculatedLastWeekPosition)}
         </div>
       );
@@ -238,10 +255,12 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
     cell: entry => (
       <div
         className={cn(
-          'text-right text-xs font-semibold',
-          getMovementColor(entry.movement)
+          'flex items-center justify-end gap-1 text-xs font-semibold font-mono',
+          entry.movement > 0 ? 'text-positive' : entry.movement < 0 ? 'text-negative' : 'text-text-muted'
         )}
       >
+        {entry.movement > 0 && <TrendingUp className="h-3 w-3" />}
+        {entry.movement < 0 && <TrendingDown className="h-3 w-3" />}
         {formatChartMovement(entry.movement)}
       </div>
     )
@@ -251,7 +270,7 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
     headerClassName: 'text-right',
     cellClassName: 'text-right',
     header: () => (
-      <div className="flex w-full justify-end text-xs font-semibold uppercase tracking-wide text-white/60">
+      <div className="flex w-full justify-end font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-text-label">
         Risk
       </div>
     ),
@@ -259,11 +278,13 @@ export const chartColumns: ChartColumn<ChartEntry>[] = [
       const exitRisk = getChartExitRisk(entry.movement, entry.weeksOnChart);
       const riskLabel = exitRisk === 'high' ? 'High' : exitRisk === 'medium' ? 'Watch' : 'Stable';
       const riskTextClass =
-        exitRisk === 'high' ? 'text-red-400' : exitRisk === 'medium' ? 'text-amber-300' : 'text-green-400';
+        exitRisk === 'high' ? 'text-negative' : exitRisk === 'medium' ? 'text-warning' : 'text-positive';
+      const riskDotClass =
+        exitRisk === 'high' ? 'bg-negative shadow-glow-negative' : exitRisk === 'medium' ? 'bg-warning shadow-glow-amber' : 'bg-positive shadow-glow-positive';
 
       return (
         <div className="flex items-center justify-end gap-2">
-          <span className={cn('h-2.5 w-2.5 rounded-full', getChartExitRiskBgColor(exitRisk))} />
+          <span className={cn('h-2.5 w-2.5 rounded-full', riskDotClass)} />
           <span className={cn('text-[11px] font-semibold uppercase', riskTextClass)}>{riskLabel}</span>
         </div>
       );

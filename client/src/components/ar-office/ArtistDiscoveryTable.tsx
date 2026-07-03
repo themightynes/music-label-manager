@@ -66,10 +66,10 @@ export function ArtistDiscoveryTable({
 
   const getArchetypeColor = (archetype?: string) => {
     switch (archetype) {
-      case 'Visionary': return 'bg-brand-burgundy-dark/20 text-brand-burgundy border-brand-burgundy-dark/30';
-      case 'Workhorse': return 'bg-brand-burgundy/20 text-brand-burgundy border-brand-burgundy/30';
-      case 'Trendsetter': return 'bg-green-500/20 text-green-300 border-green-400/30';
-      default: return 'bg-brand-purple-light/20 text-brand-purple-light border-brand-purple-light/30';
+      case 'Visionary': return 'bg-neon-lilac/14 text-neon-lilac border-neon-lilac/40';
+      case 'Workhorse': return 'bg-positive/14 text-positive border-positive/40';
+      case 'Trendsetter': return 'bg-neon-cyan/14 text-neon-cyan border-neon-cyan/40';
+      default: return 'bg-white/8 text-text-body border-white/12';
     }
   };
 
@@ -82,67 +82,78 @@ export function ArtistDiscoveryTable({
             placeholder="Search artists by name or genre..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-3 pr-3 h-10 rounded-md bg-brand-dark-card border border-brand-purple text-white w-full"
+            className="pl-3 pr-3 h-10 rounded-button bg-white/[0.03] border border-white/9 text-text-primary placeholder:text-text-muted w-full focus:outline-none focus:border-neon-lilac/40 focus:bg-white/[0.045]"
           />
         </div>
         <div className="flex gap-2">
-          {['All', 'Visionary', 'Workhorse', 'Trendsetter'].map(type => (
-            <Button
-              key={type}
-              variant={selectedArchetype === type ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onArchetypeChange(type)}
-              className="whitespace-nowrap"
-            >
-              {type !== 'All' && getArchetypeIcon(type)}
-              <span className={type !== 'All' ? 'ml-1' : ''}>{type}</span>
-            </Button>
-          ))}
+          {['All', 'Visionary', 'Workhorse', 'Trendsetter'].map(type => {
+            const active = selectedArchetype === type;
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => onArchetypeChange(type)}
+                className={`inline-flex items-center whitespace-nowrap rounded-pill px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors ${
+                  active
+                    ? 'bg-gradient-to-r from-action-pink to-action-purple text-white shadow-action'
+                    : 'bg-white/[0.02] border border-white/9 text-text-body hover:bg-white/[0.045] hover:text-text-primary'
+                }`}
+              >
+                {type !== 'All' && getArchetypeIcon(type)}
+                <span className={type !== 'All' ? 'ml-1' : ''}>{type}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Table / states */}
       {loading ? (
         <div className="text-center py-8">
-          <Music className="w-12 h-12 text-white/50 mx-auto mb-4 animate-pulse" />
-          <p className="text-white/70">Loading available artists...</p>
+          <Music className="w-12 h-12 text-text-muted mx-auto mb-4 animate-pulse" />
+          <p className="text-text-body">Loading available artists...</p>
           {process.env.NODE_ENV === 'development' && (
-            <p className="text-xs text-white/50 mt-2">Debug: Loading discovered artists from A&R operation</p>
+            <p className="text-xs text-text-muted mt-2">Debug: Loading discovered artists from A&R operation</p>
           )}
         </div>
       ) : error ? (
         <div className="text-center py-8">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <AlertCircle className="w-12 h-12 text-negative mx-auto mb-4" />
           <div className="space-y-3">
             {/* Enhanced error messages based on error type */}
             {error.includes('404') ? (
               <>
-                <p className="text-orange-400 mb-2">No Artists Discovered</p>
-                <p className="text-sm text-white/70">Your A&R operation didn't discover any new artists this week.</p>
-                <p className="text-xs text-white/50">Try a different sourcing approach next time.</p>
+                <p className="text-neon-amber mb-2">No Artists Discovered</p>
+                <p className="text-sm text-text-body">Your A&R operation didn't discover any new artists this week.</p>
+                <p className="text-xs text-text-muted">Try a different sourcing approach next time.</p>
               </>
             ) : error.includes('500') ? (
               <>
-                <p className="text-red-400 mb-2">Server Error</p>
-                <p className="text-sm text-white/70">There was a problem loading discovered artists.</p>
-                <p className="text-xs text-white/50">This might be a temporary issue.</p>
+                <p className="text-negative mb-2">Server Error</p>
+                <p className="text-sm text-text-body">There was a problem loading discovered artists.</p>
+                <p className="text-xs text-text-muted">This might be a temporary issue.</p>
               </>
             ) : error.includes('network') || error.includes('fetch') ? (
               <>
-                <p className="text-yellow-400 mb-2">Network Error</p>
-                <p className="text-sm text-white/70">Unable to connect to the server.</p>
-                <p className="text-xs text-white/50">Check your internet connection.</p>
+                <p className="text-warning mb-2">Network Error</p>
+                <p className="text-sm text-text-body">Unable to connect to the server.</p>
+                <p className="text-xs text-text-muted">Check your internet connection.</p>
               </>
             ) : (
               <>
-                <p className="text-red-400 mb-2">Discovery Failed</p>
-                <p className="text-sm text-white/70">Failed to load discovered artists</p>
-                <p className="text-xs text-white/50">{error}</p>
+                <p className="text-negative mb-2">Discovery Failed</p>
+                <p className="text-sm text-text-body">Failed to load discovered artists</p>
+                <p className="text-xs text-text-muted">{error}</p>
               </>
             )}
 
             <div className="flex gap-2 justify-center">
-              <Button onClick={onRetry} variant="outline" size="sm">
+              <Button
+                onClick={onRetry}
+                variant="outline"
+                size="sm"
+                className="border-neon-cyan/35 bg-neon-cyan/6 text-neon-cyan hover:bg-neon-cyan/10 hover:text-neon-cyan"
+              >
                 Refresh
               </Button>
               {process.env.NODE_ENV === 'development' && (
@@ -166,7 +177,7 @@ export function ArtistDiscoveryTable({
                   }}
                   variant="ghost"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs text-text-muted hover:text-text-body"
                 >
                   Debug Info
                 </Button>
@@ -176,14 +187,14 @@ export function ArtistDiscoveryTable({
         </div>
       ) : artists.length === 0 ? (
         <div className="text-center py-8">
-          <Music className="w-12 h-12 text-white/50 mx-auto mb-4" />
+          <Music className="w-12 h-12 text-text-muted mx-auto mb-4" />
           {sourcingMode ? (
             <div className="space-y-2">
-              <p className="text-white/70">No new artists discovered this week</p>
-              <p className="text-sm text-white/50">
+              <p className="text-text-body">No new artists discovered this week</p>
+              <p className="text-sm text-text-muted">
                 Your {sourcingMode} sourcing operation completed, but no suitable artists were found.
               </p>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-text-muted/80">
                 {sourcingMode === 'active'
                   ? 'Try specialized sourcing for higher-quality artists next time.'
                   : sourcingMode === 'passive'
@@ -193,35 +204,35 @@ export function ArtistDiscoveryTable({
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-white/70">No artists found matching your criteria</p>
-              <p className="text-sm text-white/50">Try adjusting your search or filter settings.</p>
+              <p className="text-text-body">No artists found matching your criteria</p>
+              <p className="text-sm text-text-muted">Try adjusting your search or filter settings.</p>
             </div>
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="glass-panel chromatic-hairline border-0 overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-brand-purple hover:bg-brand-dark-card">
-                <TableHead className="text-white/90 font-semibold w-20">Avatar</TableHead>
-                <TableHead className="text-white/90 font-semibold">Artist</TableHead>
-                <TableHead className="text-white/90 font-semibold">Archetype</TableHead>
-                <TableHead className="text-white/90 font-semibold">Talent</TableHead>
-                <TableHead className="text-white/90 font-semibold">Work Ethic</TableHead>
-                <TableHead className="text-white/90 font-semibold">Popularity</TableHead>
+              <TableRow className="border-white/6 hover:bg-transparent">
+                <TableHead className="w-20 font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Avatar</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Artist</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Archetype</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Talent</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Work Ethic</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Popularity</TableHead>
                 {sourcingMode && sourcingMode !== 'passive' && (
-                  <TableHead className="text-white/90 font-semibold">Sourcing</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Sourcing</TableHead>
                 )}
-                <TableHead className="text-white/90 font-semibold">Signing Cost</TableHead>
-                <TableHead className="text-white/90 font-semibold">Weekly Cost</TableHead>
-                <TableHead className="text-white/90 font-semibold">Action</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Signing Cost</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Weekly Cost</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {artists.map((artist: UIArtist) => (
-                <TableRow key={artist.id || artist.name} className="border-brand-purple hover:bg-brand-dark-card/50">
+                <TableRow key={artist.id || artist.name} className="border-white/6 hover:bg-white/[0.045]">
                   <TableCell className="w-20">
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-brand-dark-card">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-surface-inner border border-white/8">
                       <img
                         src={`/avatars/${String(artist.name || '').toLowerCase().replace(/\s+/g, '_')}_full.png`}
                         alt={`${artist.name} avatar`}
@@ -237,36 +248,36 @@ export function ArtistDiscoveryTable({
                     <HoverCard>
                       <HoverCardTrigger asChild>
                         <div className="cursor-pointer">
-                          <div className="font-semibold text-white text-base hover:text-brand-burgundy transition-colors">{artist.name}</div>
-                          <div className="text-xs text-white/70">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</div>
+                          <div className="font-semibold text-text-primary text-base hover:text-neon-lilac transition-colors">{artist.name}</div>
+                          <div className="text-xs text-text-muted">{artist.genre || 'Unknown Genre'} • Age {artist.age || 25}</div>
                         </div>
                       </HoverCardTrigger>
-                      <HoverCardContent side="right" className="w-80 bg-brand-dark-card border-brand-purple text-white">
+                      <HoverCardContent side="right" className="w-80 bg-surface-tooltip border-white/12 text-text-primary">
                         <div className="space-y-2">
                           <h4 className="text-sm font-semibold">{artist.name}</h4>
-                          <p className="text-sm text-white/70">{artist.bio || 'Talented artist...'}</p>
+                          <p className="text-sm text-text-body">{artist.bio || 'Talented artist...'}</p>
                         </div>
                       </HoverCardContent>
                     </HoverCard>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`${getArchetypeColor(artist.archetype)} border`}>
+                    <Badge className={`${getArchetypeColor(artist.archetype)} border rounded-chip font-mono text-[11px]`}>
                       {getArchetypeIcon(artist.archetype)}
                       <span className="ml-1">{artist.archetype}</span>
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium text-white">{artist.talent}</span>
+                    <span className="font-mono text-text-primary">{artist.talent}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium text-white">{artist.workEthic}</span>
+                    <span className="font-mono text-text-primary">{artist.workEthic}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium text-white">{artist.popularity}</span>
+                    <span className="font-mono text-text-primary">{artist.popularity}</span>
                   </TableCell>
                   {sourcingMode && sourcingMode !== 'passive' && (
                     <TableCell>
-                      <div className="text-xs text-white/70 flex items-center gap-1">
+                      <div className="text-xs text-text-body flex items-center gap-1">
                         {sourcingMode === 'active' ? <MapPin className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
                         {sourcingMode === 'active' ? 'Club Circuit' : 'Digital Platforms'}
                       </div>
@@ -274,12 +285,12 @@ export function ArtistDiscoveryTable({
                   )}
                   <TableCell>
                     <div className="text-sm">
-                      <div className="font-semibold text-white">${(artist.signingCost || 5000).toLocaleString()}</div>
+                      <div className="font-mono font-semibold text-money">${(artist.signingCost || 5000).toLocaleString()}</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div className="font-medium text-white/90">${(artist.weeklyCost || 800).toLocaleString()}</div>
+                      <div className="font-mono text-money/90">${(artist.weeklyCost || 800).toLocaleString()}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -291,7 +302,13 @@ export function ArtistDiscoveryTable({
                         signedArtists.length >= 3
                       }
                       size="sm"
-                      variant={signingArtist === (artist.id || artist.name) ? 'secondary' : 'default'}
+                      className={
+                        signingArtist === (artist.id || artist.name) ||
+                        (gameState.money || 0) < (artist.signingCost || 5000) ||
+                        signedArtists.length >= 3
+                          ? 'bg-white/[0.02] border border-white/9 text-text-muted hover:bg-white/[0.02]'
+                          : 'bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action border-0 hover:opacity-90'
+                      }
                     >
                       {signingArtist === (artist.id || artist.name) ? 'Signing...' :
                         (gameState.money || 0) < (artist.signingCost || 5000) ? 'Cannot Afford' :

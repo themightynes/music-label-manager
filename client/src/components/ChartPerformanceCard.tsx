@@ -28,14 +28,14 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
   // Theme-aware styling
   const isDark = variant === 'dark';
   const containerClasses = isDark
-    ? 'bg-brand-dark-card/66 border-brand-purple text-white'
+    ? 'glass-panel chromatic-hairline text-text-primary'
     : 'bg-white border-gray-200 text-gray-900';
 
-  const headerTextClasses = isDark ? 'text-white' : 'text-gray-900';
-  const subTextClasses = isDark ? 'text-white/70' : 'text-gray-500';
-  const sectionBgClasses = isDark ? 'bg-black/20' : 'bg-gray-50';
-  const debutBgClasses = isDark ? 'bg-green-500/20 border-green-500/30' : 'bg-green-50 border-green-200';
-  const movementBgClasses = isDark ? 'bg-blue-500/20 border-blue-500/30' : 'bg-blue-50 border-blue-200';
+  const headerTextClasses = isDark ? 'text-text-primary' : 'text-gray-900';
+  const subTextClasses = isDark ? 'text-text-body' : 'text-gray-500';
+  const sectionBgClasses = isDark ? 'bg-surface-inner/50' : 'bg-gray-50';
+  const debutBgClasses = isDark ? 'bg-positive/20 border-positive/30' : 'bg-green-50 border-green-200';
+  const movementBgClasses = isDark ? 'bg-neon-cyan/20 border-neon-cyan/30' : 'bg-blue-50 border-blue-200';
   const itemHoverClasses = isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50';
   if (!chartUpdates || chartUpdates.length === 0) {
     return (
@@ -186,7 +186,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
 
       {/* Chart Summary Stats */}
       {chartUpdates.length > 3 && (
-        <div className={`mt-4 pt-3 border-t ${isDark ? 'border-brand-purple' : 'border-gray-200'}`}>
+        <div className={`mt-4 pt-3 border-t ${isDark ? 'border-white/[0.08]' : 'border-gray-200'}`}>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <div className={`text-lg font-semibold ${headerTextClasses}`}>

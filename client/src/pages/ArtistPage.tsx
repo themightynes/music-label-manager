@@ -15,7 +15,10 @@ import {
   Settings,
   PlayCircle,
   Target,
-  Eye
+  Eye,
+  ChevronRight,
+  Users,
+  CircleCheck
 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useReleases } from '@/hooks/useReleases';
@@ -154,11 +157,11 @@ export default function ArtistPage() {
   
   const getArchetypeInfo = (archetype: string) => {
     const archetypeData: Record<string, any> = {
-      'Visionary': { color: 'text-brand-burgundy-dark', icon: Star, description: 'Creative and experimental' },
-      'Workhorse': { color: 'text-blue-600', icon: Target, description: 'Reliable and productive' },
-      'Commercial': { color: 'text-green-600', icon: TrendingUp, description: 'Market-focused and strategic' }
+      'Visionary': { color: 'text-neon-lilac', icon: Star, description: 'Creative and experimental' },
+      'Workhorse': { color: 'text-neon-cyan', icon: Target, description: 'Reliable and productive' },
+      'Commercial': { color: 'text-positive', icon: TrendingUp, description: 'Market-focused and strategic' }
     };
-    return archetypeData[archetype] || { color: 'text-white/70', icon: User, description: 'Unique artist' };
+    return archetypeData[archetype] || { color: 'text-text-body', icon: User, description: 'Unique artist' };
   };
 
   // Dynamic avatar function based on artist name
@@ -198,10 +201,10 @@ export default function ArtistPage() {
   const moodStatus = useMemo(() => {
     const mood = artist?.mood ?? 50;
     return mood >= 70
-      ? { status: 'Happy', color: 'text-green-600', bgColor: 'bg-green-500/10' }
+      ? { status: 'Happy', color: 'text-positive', bgColor: 'bg-positive/10' }
       : mood >= 40
-      ? { status: 'Neutral', color: 'text-yellow-600', bgColor: 'bg-yellow-500/10' }
-      : { status: 'Unhappy', color: 'text-red-600', bgColor: 'bg-red-500/10' };
+      ? { status: 'Neutral', color: 'text-warning', bgColor: 'bg-warning/10' }
+      : { status: 'Unhappy', color: 'text-negative', bgColor: 'bg-negative/10' };
   }, [artist?.mood]);
 
   // Enhanced artist analytics (for artist card)
@@ -243,21 +246,21 @@ export default function ArtistPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-blue-500 mx-auto mb-4 animate-spin" />
-          <p className="text-white/70">Loading artist data...</p>
+          <Loader2 className="w-8 h-8 text-neon-lilac mx-auto mb-4 animate-spin" />
+          <p className="text-text-body">Loading artist data...</p>
         </div>
       </div>
     );
   }
-  
+
   if (artistError || !artist) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="p-8 text-center">
-            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Artist Not Found</h2>
-            <p className="text-white/70 mb-4">{artistError || 'The requested artist could not be found.'}</p>
+            <AlertCircle className="w-12 h-12 text-negative mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-text-primary mb-2">Artist Not Found</h2>
+            <p className="text-text-body mb-4">{artistError || 'The requested artist could not be found.'}</p>
             <Button onClick={() => setLocation('/game')}>Back to Dashboard</Button>
           </CardContent>
         </Card>
@@ -265,22 +268,45 @@ export default function ArtistPage() {
     );
   }
 
+  // 2-letter initials for the avatar tile fallback badge (Major Mono Display, per reference)
+  const initials = artist.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toLowerCase();
+
   return (
     <GameLayout>
       <div className="min-h-screen">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Move artist header info here as hero section */}
-          <div className="mb-8 mt-8">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-burgundy/80 to-brand-burgundy-dark/80 flex items-center justify-center">
-                <User className="w-8 h-8 text-white" />
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-xs text-text-muted mb-4 mt-8">
+            <Users className="w-3 h-3" />
+            <span>Artists</span>
+            <ChevronRight className="w-2.5 h-2.5 opacity-50" />
+            <span className="text-text-body">{artist.name}</span>
+          </div>
+
+          {/* Hero section */}
+          <div className="mb-8">
+            <div className="flex items-center gap-4">
+              <div className="relative w-[74px] h-[74px] rounded-card overflow-hidden flex-shrink-0 bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center shadow-glow-purple ring-1 ring-white/[0.14]">
+                <span className="font-display text-2xl text-white/90 lowercase">{initials}</span>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white">{artist.name}</h1>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Badge variant="outline" className="text-xs bg-white/10 text-white border-white/20">{artist.archetype}</Badge>
+                <h1 className="font-sans font-bold text-4xl leading-none tracking-tight text-text-primary">{artist.name}</h1>
+                <div className="flex items-center gap-2 mt-3">
+                  <Badge className="border-neon-lilac/40 bg-neon-lilac/[0.18] text-neon-lilac gap-1.5">
+                    <Star className="w-3 h-3" />
+                    {artist.archetype}
+                  </Badge>
                   {artist.signed && (
-                    <Badge className="text-xs bg-green-500/20 text-green-400 border-0">Signed</Badge>
+                    <Badge className="border-positive/40 bg-positive/[0.16] text-positive gap-1.5">
+                      <CircleCheck className="w-3 h-3" />
+                      Signed
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -296,7 +322,7 @@ export default function ArtistPage() {
                 <img
                   src={getAvatarUrl(artist.name)}
                   alt={`${artist.name} avatar`}
-                  className="w-[600px] h-auto object-cover object-top"
+                  className="relative w-[600px] h-auto object-cover object-top rounded-card"
                   style={{ height: '300px' }}
                   onError={handleImageError}
                 />
@@ -323,7 +349,7 @@ export default function ArtistPage() {
               </TabsTrigger>
             </TabsList>
           </div>
-          
+
           {/* Overview Tab */}
           <OverviewTab
             artist={artist}

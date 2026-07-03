@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info, Target, TrendingUp, TrendingDown, ArrowLeft } from 'lucide-react';
+import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info, Target, TrendingUp, TrendingDown, ArrowLeft, Ticket } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
@@ -204,12 +204,12 @@ export default function LivePerformancePage() {
   // Venue access integration using loaded configuration
   const getVenueAccessInfo = () => {
     if (!venueAccessConfig) {
-      return { name: 'Loading...', capacity: '---', color: 'text-gray-500', warning: 'Configuration loading...' };
+      return { name: 'Loading...', capacity: '---', color: 'text-text-muted', warning: 'Configuration loading...' };
     }
 
     const tierConfig = venueAccessConfig[currentVenueAccess];
     if (!tierConfig) {
-      return { name: 'Unknown Access', capacity: '---', color: 'text-red-500', warning: 'Invalid venue access tier' };
+      return { name: 'Unknown Access', capacity: '---', color: 'text-negative', warning: 'Invalid venue access tier' };
     }
 
     const [min, max] = tierConfig.capacity_range;
@@ -226,16 +226,16 @@ export default function LivePerformancePage() {
     };
 
     const accessColors = {
-      'none': 'text-red-500',
-      'clubs': 'text-green-500',
-      'theaters': 'text-blue-500',
-      'arenas': 'text-purple-500'
+      'none': 'text-negative',
+      'clubs': 'text-positive',
+      'theaters': 'text-neon-cyan',
+      'arenas': 'text-neon-purple'
     };
 
     return {
       name: accessNames[currentVenueAccess as keyof typeof accessNames] || 'Unknown Access',
       capacity: `${formatCapacity(min)}-${formatCapacity(max)}`,
-      color: accessColors[currentVenueAccess as keyof typeof accessColors] || 'text-gray-500',
+      color: accessColors[currentVenueAccess as keyof typeof accessColors] || 'text-text-muted',
       warning: currentVenueAccess === 'none' ? 'Very limited venue options' : null
     };
   };
@@ -314,9 +314,9 @@ export default function LivePerformancePage() {
 
   // Display comprehensive estimate data - NO CLIENT CALCULATIONS
   const renderEstimate = () => {
-    if (estimateLoading) return <div className="text-white/60">Calculating...</div>;
-    if (estimateError) return <div className="text-red-400">Error: {estimateError}</div>;
-    if (!estimateData) return <div className="text-white/60">Enter tour parameters</div>;
+    if (estimateLoading) return <div className="text-text-muted font-mono text-sm">Calculating...</div>;
+    if (estimateError) return <div className="text-negative">Error: {estimateError}</div>;
+    if (!estimateData) return <div className="text-text-muted">Enter tour parameters</div>;
 
     const hasDetailedData = estimateData.cities && estimateData.sellThroughAnalysis;
 
@@ -324,21 +324,21 @@ export default function LivePerformancePage() {
       <div className="space-y-4">
         {/* Phase 3: Enhanced display with capacity-specific data */}
         {estimateData.selectedCapacity && (
-          <div className="bg-blue-500/20 rounded p-2 mb-3">
+          <div className="rounded-card bg-neon-cyan/10 border border-neon-cyan/25 p-2 mb-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-blue-300">Selected Venue Size:</span>
-              <span className="font-mono text-blue-100">{estimateData.selectedCapacity.toLocaleString()} capacity</span>
+              <span className="text-neon-cyan/90">Selected Venue Size:</span>
+              <span className="font-mono text-neon-cyan">{estimateData.selectedCapacity.toLocaleString()} capacity</span>
             </div>
             {estimateData.pricePerTicket && (
               <div className="flex items-center justify-between text-xs mt-1">
-                <span className="text-blue-400/80">Ticket Price:</span>
-                <span className="font-mono text-blue-200">${estimateData.pricePerTicket}</span>
+                <span className="text-neon-cyan/70">Ticket Price:</span>
+                <span className="font-mono text-money">${estimateData.pricePerTicket}</span>
               </div>
             )}
             {estimateData.playerTier && (
               <div className="flex items-center justify-between text-xs mt-1">
-                <span className="text-blue-400/80">Player Tier:</span>
-                <span className="text-blue-200">{estimateData.playerTier}</span>
+                <span className="text-neon-cyan/70">Player Tier:</span>
+                <span className="text-neon-cyan/90">{estimateData.playerTier}</span>
               </div>
             )}
           </div>
@@ -347,22 +347,22 @@ export default function LivePerformancePage() {
         {/* High-level summary */}
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span className="text-white/70">Estimated Revenue:</span>
-            <span className="font-mono text-green-400">${estimateData.estimatedRevenue.toLocaleString()}</span>
+            <span className="text-text-body">Estimated Revenue:</span>
+            <span className="font-mono text-positive">${estimateData.estimatedRevenue.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/70">Total Costs:</span>
-            <span className="font-mono text-red-400">${estimateData.totalCosts.toLocaleString()}</span>
+            <span className="text-text-body">Total Costs:</span>
+            <span className="font-mono text-text-primary">${estimateData.totalCosts.toLocaleString()}</span>
           </div>
           <div className="flex justify-between font-bold">
-            <span className="text-white">Estimated Profit:</span>
-            <span className={`font-mono ${estimateData.estimatedProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <span className="text-text-primary">Estimated Profit:</span>
+            <span className={`font-mono ${estimateData.estimatedProfit >= 0 ? 'text-positive' : 'text-negative'}`}>
               ${estimateData.estimatedProfit.toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/60">ROI:</span>
-            <span className="font-mono text-white/80">{estimateData.roi.toFixed(1)}%</span>
+            <span className="text-text-muted">ROI:</span>
+            <span className="font-mono text-text-body">{estimateData.roi.toFixed(1)}%</span>
           </div>
         </div>
 
@@ -370,106 +370,103 @@ export default function LivePerformancePage() {
         {hasDetailedData && (
           <>
             {/* Sell-Through Analysis */}
-            <div className="bg-black/20 rounded p-3">
-              <h5 className="font-medium text-white/90 mb-2">Sell-Through Analysis:</h5>
+            <div className="rounded-card bg-surface-inner/60 border border-white/[0.05] p-3">
+              <h5 className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-label mb-2">Sell-Through Analysis</h5>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-white/60">Base Rate:</span>
-                  <span className="font-mono text-white/80">{(estimateData.sellThroughAnalysis!.baseRate * 100).toFixed(1)}%</span>
+                  <span className="text-text-muted">Base Rate:</span>
+                  <span className="font-mono text-text-body">{(estimateData.sellThroughAnalysis!.baseRate * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Reputation Bonus:</span>
-                  <span className="font-mono text-white/80">+{(estimateData.sellThroughAnalysis!.reputationBonus * 100).toFixed(1)}%</span>
+                  <span className="text-text-muted">Reputation Bonus:</span>
+                  <span className="font-mono text-text-body">+{(estimateData.sellThroughAnalysis!.reputationBonus * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Popularity Bonus:</span>
-                  <span className="font-mono text-white/80">+{(estimateData.sellThroughAnalysis!.popularityBonus * 100).toFixed(1)}%</span>
+                  <span className="text-text-muted">Popularity Bonus:</span>
+                  <span className="font-mono text-text-body">+{(estimateData.sellThroughAnalysis!.popularityBonus * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Budget Quality Bonus:</span>
-                  <span className="font-mono text-white/80">+{(estimateData.sellThroughAnalysis!.budgetQualityBonus * 100).toFixed(1)}%</span>
+                  <span className="text-text-muted">Budget Quality Bonus:</span>
+                  <span className="font-mono text-text-body">+{(estimateData.sellThroughAnalysis!.budgetQualityBonus * 100).toFixed(1)}%</span>
                 </div>
-                <div className="flex justify-between border-t border-white/20 pt-1 font-medium">
-                  <span className="text-white/70">Final Sell-Through:</span>
-                  <span className="font-mono text-blue-300">{(estimateData.sellThroughAnalysis!.finalRate * 100).toFixed(1)}%</span>
+                <div className="flex justify-between border-t border-white/[0.08] pt-1 font-medium">
+                  <span className="text-text-body">Final Sell-Through:</span>
+                  <span className="font-mono text-neon-cyan">{(estimateData.sellThroughAnalysis!.finalRate * 100).toFixed(1)}%</span>
                 </div>
               </div>
             </div>
 
             {/* Per City Breakdown */}
-            <div className="bg-black/20 rounded p-3">
-              <h5 className="font-medium text-white/90 mb-2">Per City Performance:</h5>
+            <div className="rounded-card bg-surface-inner/60 border border-white/[0.05] p-3">
+              <h5 className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-label mb-2">Per City Performance</h5>
               {estimateData.cities!.slice(0, 3).map((city, index) => (
-                <div key={city.cityNumber} className="space-y-1 text-xs mb-3">
-                  <div className="font-medium text-white/90">City {city.cityNumber}:</div>
+                <div key={city.cityNumber} className="rounded-chip bg-white/[0.02] border border-white/[0.05] p-2.5 space-y-1 text-xs mb-2">
+                  <div className="font-medium text-text-primary">City {city.cityNumber}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                     <div className="flex justify-between">
-                      <span className="text-white/60">Venue Capacity:</span>
-                      <span className="font-mono text-white/80">{city.venueCapacity.toLocaleString()}</span>
+                      <span className="text-text-muted">Venue Capacity:</span>
+                      <span className="font-mono text-text-body">{city.venueCapacity.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">Ticket Revenue:</span>
-                      <span className="font-mono text-blue-400">${city.ticketRevenue.toLocaleString()}</span>
+                      <span className="text-text-muted">Ticket Revenue:</span>
+                      <span className="font-mono text-positive">${city.ticketRevenue.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">Attendance:</span>
-                      <span className="font-mono text-white/80">{Math.round(city.venueCapacity * city.sellThroughRate).toLocaleString()}</span>
+                      <span className="text-text-muted">Attendance:</span>
+                      <span className="font-mono text-text-body">{Math.round(city.venueCapacity * city.sellThroughRate).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">Merch Revenue:</span>
-                      <span className="font-mono text-blue-400">${city.merchRevenue.toLocaleString()}</span>
+                      <span className="text-text-muted">Merch Revenue:</span>
+                      <span className="font-mono text-positive">${city.merchRevenue.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">Total Costs:</span>
-                      <span className="font-mono text-red-400">${city.totalCosts.toLocaleString()}</span>
+                      <span className="text-text-muted">Total Costs:</span>
+                      <span className="font-mono text-text-primary">${city.totalCosts.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between font-medium">
-                      <span className="text-white/70">City Profit:</span>
-                      <span className={`font-mono ${city.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className="text-text-body">City Profit:</span>
+                      <span className={`font-mono ${city.profit >= 0 ? 'text-positive' : 'text-negative'}`}>
                         ${city.profit.toLocaleString()}
                       </span>
                     </div>
                   </div>
-                  {index < Math.min(2, estimateData.cities!.length - 1) && (
-                    <div className="border-t border-white/10 mt-2"></div>
-                  )}
                 </div>
               ))}
               {estimateData.cities!.length > 3 && (
-                <div className="text-xs text-white/50 text-center mt-2">
+                <div className="text-xs text-text-muted text-center mt-2">
                   ... and {estimateData.cities!.length - 3} more cities with similar performance
                 </div>
               )}
             </div>
 
             {/* Cost Breakdown */}
-            <div className="bg-black/20 rounded p-3">
-              <h5 className="font-medium text-white/90 mb-2">Cost Breakdown:</h5>
+            <div className="rounded-card bg-surface-inner/60 border border-white/[0.05] p-3">
+              <h5 className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-label mb-2">Cost Breakdown</h5>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-white/60">Venue Fees ({cities} cities):</span>
-                  <span className="font-mono text-red-400">${estimateData.breakdown.venueFees.toLocaleString()}</span>
+                  <span className="text-text-muted">Venue Fees ({cities} cities):</span>
+                  <span className="font-mono text-text-primary">${estimateData.breakdown.venueFees.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Production Fees ({cities} cities):</span>
-                  <span className="font-mono text-red-400">${estimateData.breakdown.productionFees.toLocaleString()}</span>
+                  <span className="text-text-muted">Production Fees ({cities} cities):</span>
+                  <span className="font-mono text-text-primary">${estimateData.breakdown.productionFees.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Marketing & Logistics:</span>
-                  <span className="font-mono text-red-400">${estimateData.breakdown.marketingBudget.toLocaleString()}</span>
+                  <span className="text-text-muted">Marketing & Logistics:</span>
+                  <span className="font-mono text-text-primary">${estimateData.breakdown.marketingBudget.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between border-t border-white/20 pt-1 font-medium">
-                  <span className="text-white/70">Total Costs:</span>
-                  <span className="font-mono text-red-300">${estimateData.breakdown.totalCosts.toLocaleString()}</span>
+                <div className="flex justify-between border-t border-white/[0.08] pt-1 font-medium">
+                  <span className="text-text-body">Total Costs:</span>
+                  <span className="font-mono text-money">${estimateData.breakdown.totalCosts.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
             {selectedArtistData && (
-              <div className="text-xs text-white/50 mt-2">
+              <div className="text-xs text-text-muted mt-2">
                 <p>Analysis based on: {selectedArtistData.name}'s popularity ({selectedArtistData.popularity || 0}),
                    venue access ({venueInfo.name}), {gameState?.reputation || 0} reputation, and {cities} {cities === 1 ? 'show' : 'cities'}</p>
-                <p className="text-green-500 mt-1">✅ Comprehensive projections powered by unified calculation engine</p>
+                <p className="text-positive mt-1">✅ Comprehensive projections powered by unified calculation engine</p>
               </div>
             )}
           </>
@@ -522,8 +519,8 @@ export default function LivePerformancePage() {
         icon: apiCategory.riskLevel === 'low' ? Users :
               apiCategory.riskLevel === 'medium' ? Target : TrendingUp,
         advice: apiCategory.advice,
-        color: apiCategory.riskLevel === 'low' ? 'text-green-500' :
-               apiCategory.riskLevel === 'medium' ? 'text-yellow-500' : 'text-red-500'
+        color: apiCategory.riskLevel === 'low' ? 'text-positive' :
+               apiCategory.riskLevel === 'medium' ? 'text-warning' : 'text-negative'
       };
     }
 
@@ -536,7 +533,7 @@ export default function LivePerformancePage() {
       riskLevel: 'medium' as const,
       icon: Target,
       advice: 'Loading venue analysis from server...',
-      color: 'text-gray-400'
+      color: 'text-text-muted'
     };
   };
 
@@ -619,23 +616,27 @@ export default function LivePerformancePage() {
       <div className="container mx-auto p-6 max-w-6xl">
         <header className="mb-6 flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-heading font-bold text-white">Live Performance</h1>
+            <span className="block font-mono text-[10px] uppercase tracking-[0.28em] text-text-label mb-1.5">Bookings</span>
+            <h1 className="font-display text-aberration text-[clamp(20px,2.4vw,28px)] font-normal text-text-primary tracking-tight">
+              Live Performance
+            </h1>
+            <div className="shimmer-bar w-24 mt-2" />
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
+          <div className="inline-flex items-center gap-2 rounded-pill border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-text-muted">
             Tours
           </div>
         </header>
 
         <section
-          className="relative mb-8 overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 min-h-[320px] bg-cover bg-center"
+          className="glass-panel chromatic-hairline hud-ticks relative mb-8 min-h-[320px] bg-cover bg-center"
           style={{ backgroundImage: "url('/live_performance_background.png')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
-          <div className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-brand-burgundy/20 blur-3xl" aria-hidden />
-          <div className="absolute -bottom-32 -left-10 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-transparent to-black/80" aria-hidden />
+          <div className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-neon-magenta/20 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-32 -left-10 h-72 w-72 rounded-full bg-neon-amber/10 blur-3xl" aria-hidden />
           <div className="absolute bottom-6 left-0 right-0 flex justify-center px-6">
-              <Badge variant="outline" className="inline-flex items-center gap-1 px-4 py-2 text-sm font-normal text-white/80 bg-white/10 border-white/30 text-center max-w-full">
-                Big rooms can spark a rush, but the wrong crowd lingers; your artist's <span className="font-semibold text-brand-rose">Mood</span> and <span className="font-semibold text-brand-gold">Popularity</span> tend to bend with each city's turnout.
+              <Badge variant="outline" className="inline-flex items-center gap-1 px-4 py-2 text-sm font-normal text-text-body bg-white/10 border-white/30 text-center max-w-full rounded-pill">
+                Big rooms can spark a rush, but the wrong crowd lingers; your artist's <span className="font-semibold text-neon-lilac">Mood</span> and <span className="font-semibold text-money">Popularity</span> tend to bend with each city's turnout.
               </Badge>
           </div>
         </section>
@@ -643,41 +644,41 @@ export default function LivePerformancePage() {
         {configError ? (
           <div className="flex items-center justify-center p-8">
             <div className="text-center">
-              <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center mx-auto mb-4">
-                <span className="text-white font-bold">!</span>
+              <div className="w-8 h-8 rounded-full bg-negative/20 border border-negative/40 flex items-center justify-center mx-auto mb-4">
+                <span className="text-negative font-bold">!</span>
               </div>
-              <p className="text-red-400 font-semibold mb-2">Configuration Error</p>
-              <p className="text-white/70 mb-4">{configError}</p>
-              <p className="text-xs text-white/50">Check browser console for detailed error information</p>
+              <p className="text-negative font-semibold mb-2">Configuration Error</p>
+              <p className="text-text-body mb-4">{configError}</p>
+              <p className="text-xs text-text-muted">Check browser console for detailed error information</p>
             </div>
           </div>
         ) : !tourConfig || !venueAccessConfig ? (
           <div className="flex items-center justify-center p-8">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-burgundy mx-auto mb-4"></div>
-              <p className="text-white/70">Loading tour and venue configurations...</p>
-              <p className="text-xs text-white/50 mt-2">Game cannot continue without configuration data</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple mx-auto mb-4"></div>
+              <p className="text-text-body">Loading tour and venue configurations...</p>
+              <p className="text-xs text-text-muted mt-2">Game cannot continue without configuration data</p>
             </div>
           </div>
         ) : (
         <div className="space-y-6">
           {/* Current Venue Access Display */}
-          <div className="bg-brand-dark-card/20 rounded-lg p-4 border">
+          <div className="glass-panel chromatic-hairline p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <MapPin className="w-5 h-5 text-brand-burgundy" />
+                <MapPin className="w-5 h-5 text-neon-purple" />
                 <div>
-                  <h4 className="font-semibold text-white">Current Venue Access</h4>
-                  <p className="text-sm text-white/70">Determines available venue capacity</p>
+                  <h4 className="font-semibold text-text-primary">Current Venue Access</h4>
+                  <p className="text-sm text-text-body">Determines available venue capacity</p>
                 </div>
               </div>
               <div className="text-right">
                 <p className={`font-semibold ${venueInfo.color}`}>{venueInfo.name}</p>
-                <p className="text-sm text-white/50">Capacity: {venueInfo.capacity}</p>
+                <p className="text-sm text-text-muted">Capacity: {venueInfo.capacity}</p>
               </div>
             </div>
             {venueInfo.warning && (
-              <div className="mt-2 flex items-center space-x-2 text-amber-600">
+              <div className="mt-2 flex items-center space-x-2 text-warning">
                 <AlertCircle className="w-4 h-4" />
                 <p className="text-sm">{venueInfo.warning}</p>
               </div>
@@ -686,23 +687,23 @@ export default function LivePerformancePage() {
 
           {/* Performance Type Selection */}
           <div>
-            <Label className="text-base font-semibold">Performance Type</Label>
+            <Label className="text-base font-semibold text-text-primary">Performance Type</Label>
             <div className="grid grid-cols-2 gap-4 mt-2">
               {PERFORMANCE_TYPES.map((type) => (
-                <Card 
+                <Card
                   key={type.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedType === type.id ? 'ring-2 ring-brand-burgundy bg-brand-burgundy/10' : ''
+                  className={`cursor-pointer glass-panel transition-all hover:border-neon-purple/40 ${
+                    selectedType === type.id ? 'border-neon-purple/60 shadow-glow-purple' : ''
                   }`}
                   onClick={() => handleTypeSelect(type.id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-3">
-                      <type.icon className="w-6 h-6 text-brand-burgundy" />
+                      <type.icon className="w-6 h-6 text-neon-purple" />
                       <div>
-                        <h3 className="font-semibold">{type.name}</h3>
-                        <p className="text-sm text-white/70">{type.description}</p>
-                        <p className="text-xs text-white/50">Duration: {type.duration}</p>
+                        <h3 className="font-semibold text-text-primary">{type.name}</h3>
+                        <p className="text-sm text-text-body">{type.description}</p>
+                        <p className="text-xs text-text-muted">Duration: {type.duration}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -715,7 +716,7 @@ export default function LivePerformancePage() {
             <>
               {/* Artist Selection */}
               <div>
-                <Label htmlFor="artist">Select Artist</Label>
+                <Label htmlFor="artist" className="text-text-primary">Select Artist</Label>
                 <Select value={selectedArtist} onValueChange={(value) => {
                   setSelectedArtist(value);
                   const artist = artists.find(a => a.id === value);
@@ -747,13 +748,13 @@ export default function LivePerformancePage() {
                       ))
                     ) : (
                       <SelectItem value="none" disabled>
-                        <span className="text-gray-500">No artists available (all are currently on tour)</span>
+                        <span className="text-text-muted">No artists available (all are currently on tour)</span>
                       </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
                 {availableArtists.length === 0 && artists.length > 0 && (
-                  <div className="mt-2 flex items-center space-x-2 text-amber-600">
+                  <div className="mt-2 flex items-center space-x-2 text-warning">
                     <AlertCircle className="w-4 h-4" />
                     <p className="text-sm">All artists are currently on tour. Complete existing tours to book new performances.</p>
                   </div>
@@ -762,7 +763,7 @@ export default function LivePerformancePage() {
 
               {/* Performance Title */}
               <div>
-                <Label htmlFor="title">Performance Title</Label>
+                <Label htmlFor="title" className="text-text-primary">Performance Title</Label>
                 <Input
                   id="title"
                   value={title}
@@ -773,7 +774,7 @@ export default function LivePerformancePage() {
 
               {/* Production Budget Per City */}
               <div>
-                <Label htmlFor="budgetPerCity">Marketing and Logistics Budget Per City</Label>
+                <Label htmlFor="budgetPerCity" className="text-text-primary">Marketing and Logistics Budget Per City</Label>
                 <Input
                   id="budgetPerCity"
                   type="number"
@@ -782,7 +783,7 @@ export default function LivePerformancePage() {
                   placeholder="Marketing and logistics budget for each city"
                   min={500}
                 />
-                <p className="text-sm text-white/50 mt-1">
+                <p className="text-sm text-text-muted mt-1">
                   Marketing and logistics budget per city. Venue fees calculated separately.
                 </p>
               </div>
@@ -790,7 +791,7 @@ export default function LivePerformancePage() {
               {/* Cities (for mini tours) */}
               {selectedType === 'mini_tour' && (
                 <div>
-                  <Label htmlFor="cities">Number of Cities</Label>
+                  <Label htmlFor="cities" className="text-text-primary">Number of Cities</Label>
                   <Input
                     id="cities"
                     type="number"
@@ -803,7 +804,7 @@ export default function LivePerformancePage() {
                     min={selectedPerformanceType?.minCities || 1}
                     max={selectedPerformanceType?.maxCities || 8}
                   />
-                  <p className="text-sm text-white/50 mt-1">
+                  <p className="text-sm text-text-muted mt-1">
                     More cities = higher revenue potential but increased costs
                   </p>
                 </div>
@@ -814,22 +815,22 @@ export default function LivePerformancePage() {
                 try {
                   const capacityRange = getCapacityRange();
                   return (
-                    <div className="bg-purple-500/10 rounded-lg p-4 border">
+                    <div className="glass-panel chromatic-hairline p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h4 className="font-medium text-purple-300 mb-1">Venue Capacity Selection</h4>
-                          <p className="text-xs text-white/60">Choose your target venue size</p>
+                          <h4 className="font-medium text-neon-lilac mb-1">Venue Capacity Selection</h4>
+                          <p className="text-xs text-text-muted">Choose your target venue size</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-white">{selectedCapacity.toLocaleString()}</p>
-                          <p className="text-xs text-white/50">capacity</p>
+                          <p className="font-mono font-semibold text-xl leading-none text-text-primary">{selectedCapacity.toLocaleString()}</p>
+                          <p className="text-[11.5px] text-text-muted mt-1">capacity</p>
                         </div>
                       </div>
 
                       {/* Capacity Slider */}
                       <div className="space-y-4">
                         <div>
-                          <div className="flex justify-between text-xs text-white/50 mb-2">
+                          <div className="flex justify-between font-mono text-xs text-text-muted mb-2">
                             <span>{capacityRange.min}</span>
                             <span>{capacityRange.max}</span>
                           </div>
@@ -866,38 +867,38 @@ export default function LivePerformancePage() {
                           const venueInfo = getVenueCategoryInfo(selectedCapacity);
                           const IconComponent = venueInfo.icon;
                           return (
-                            <div className="bg-black/30 rounded p-3">
+                            <div className="rounded-card bg-surface-inner/60 border border-white/[0.05] p-3">
                               <div className="flex items-center space-x-2 mb-2">
                                 <IconComponent className={`w-4 h-4 ${venueInfo.color}`} />
                                 <span className={`font-medium ${venueInfo.color}`}>{venueInfo.category}</span>
                                 <Badge
                                   variant="outline"
-                                  className={`text-xs ${
-                                    venueInfo.riskLevel === 'low' ? 'border-green-500 text-green-400' :
-                                    venueInfo.riskLevel === 'medium' ? 'border-yellow-500 text-yellow-400' :
-                                    'border-red-500 text-red-400'
+                                  className={`text-xs rounded-pill ${
+                                    venueInfo.riskLevel === 'low' ? 'border-positive/40 text-positive' :
+                                    venueInfo.riskLevel === 'medium' ? 'border-warning/40 text-warning' :
+                                    'border-negative/40 text-negative'
                                   }`}
                                 >
                                   {venueInfo.riskLevel} risk
                                 </Badge>
                               </div>
-                              <p className="text-xs text-white/70 mb-1">{venueInfo.description}</p>
-                              <p className="text-xs text-white/60">{venueInfo.advice}</p>
+                              <p className="text-xs text-text-body mb-1">{venueInfo.description}</p>
+                              <p className="text-xs text-text-muted">{venueInfo.advice}</p>
 
                               {/* Real-time feedback if estimate is available */}
                               {estimateData && estimateData.selectedCapacity && (
                                 <div className="mt-2 pt-2 border-t border-white/10">
                                   <div className="flex items-center justify-between text-xs">
-                                    <span className="text-white/60">Expected attendance:</span>
-                                    <span className="font-mono text-blue-300">
+                                    <span className="text-text-muted">Expected attendance:</span>
+                                    <span className="font-mono text-neon-cyan">
                                       {Math.round(estimateData.selectedCapacity * (estimateData.sellThroughRate || 0.7)).toLocaleString()}
                                     </span>
                                   </div>
                                   <div className="flex items-center justify-between text-xs mt-1">
-                                    <span className="text-white/60">Sell-through rate:</span>
+                                    <span className="text-text-muted">Sell-through rate:</span>
                                     <span className={`font-mono ${
-                                      (estimateData.sellThroughRate || 0) > 0.8 ? 'text-green-400' :
-                                      (estimateData.sellThroughRate || 0) > 0.6 ? 'text-yellow-400' : 'text-red-400'
+                                      (estimateData.sellThroughRate || 0) > 0.8 ? 'text-positive' :
+                                      (estimateData.sellThroughRate || 0) > 0.6 ? 'text-warning' : 'text-negative'
                                     }`}>
                                       {((estimateData.sellThroughRate || 0) * 100).toFixed(1)}%
                                     </span>
@@ -912,15 +913,15 @@ export default function LivePerformancePage() {
                   );
                 } catch (error) {
                   return (
-                    <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
+                    <div className="glass-panel p-4 border-negative/30">
                       <div className="flex items-center space-x-2 mb-2">
-                        <AlertCircle className="w-5 h-5 text-red-400" />
-                        <h4 className="font-medium text-red-400">Venue Capacity Configuration Error</h4>
+                        <AlertCircle className="w-5 h-5 text-negative" />
+                        <h4 className="font-medium text-negative">Venue Capacity Configuration Error</h4>
                       </div>
-                      <p className="text-sm text-red-300 mb-2">
+                      <p className="text-sm text-negative/90 mb-2">
                         {error instanceof Error ? error.message : 'Unknown venue configuration error'}
                       </p>
-                      <p className="text-xs text-red-400/80">
+                      <p className="text-xs text-negative/70">
                         This is a configuration issue that needs to be fixed. Check browser console for details.
                       </p>
                     </div>
@@ -929,24 +930,27 @@ export default function LivePerformancePage() {
               })()}
 
               {/* Comprehensive Tour Analysis - Enhanced API Integration */}
-              <div className="bg-brand-burgundy/10 rounded-lg p-4 border">
-                <h4 className="font-medium text-brand-burgundy mb-3">Comprehensive Tour Analysis</h4>
+              <div className="glass-panel chromatic-hairline hud-ticks p-4">
+                <h4 className="font-medium text-neon-lilac mb-3 flex items-center gap-2">
+                  <Ticket className="w-4 h-4" />
+                  Comprehensive Tour Analysis
+                </h4>
                 {renderEstimate()}
               </div>
 
               {/* Budget Warning */}
               {!canAfford && estimateData && (
-                <div className="p-4 bg-red-100/10 border border-red-300/30 rounded-md">
-                  <p className="text-red-400">
-                    Insufficient funds! Need ${estimateData.totalBudget?.toLocaleString()} but only have ${currentMoney.toLocaleString()}
+                <div className="p-4 glass-panel border-negative/30 rounded-card">
+                  <p className="text-negative">
+                    Insufficient funds! Need <span className="font-mono text-money">${estimateData.totalBudget?.toLocaleString()}</span> but only have <span className="font-mono text-money">${currentMoney.toLocaleString()}</span>
                   </p>
                 </div>
               )}
-              
+
               {/* Creative Capital Warning */}
               {!hasCreativeCapital && (
-                <div className="p-4 bg-red-100/10 border border-red-300/30 rounded-md">
-                  <p className="text-red-400">
+                <div className="p-4 glass-panel border-negative/30 rounded-card">
+                  <p className="text-negative">
                     Insufficient creative capital! You need 1 creative capital to book a performance, but you have {currentCreativeCapital}.
                   </p>
                 </div>
@@ -960,7 +964,7 @@ export default function LivePerformancePage() {
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid || isCreating}
-                  className="bg-brand-burgundy hover:bg-brand-rose text-white"
+                  className="rounded-button bg-gradient-to-br from-action-pink to-action-purple shadow-action text-white font-semibold hover:brightness-110"
                 >
                   {isCreating ? 'Booking...' : `Book ${selectedPerformanceType?.name || 'Performance'}`}
                 </Button>

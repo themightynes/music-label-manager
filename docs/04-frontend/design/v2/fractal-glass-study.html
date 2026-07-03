@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Major+Mono+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:#080409; }
+  @keyframes fg-spin { from{transform:rotate(0);} to{transform:rotate(360deg);} }
+  @keyframes fg-drift { 0%,100%{transform:translate(-2%,-1%) scale(1.05);} 50%{transform:translate(3%,2%) scale(1.15);} }
+  @keyframes fg-sheen { 0%{background-position:0% 50%;} 100%{background-position:200% 50%;} }
+  @keyframes fg-shift { 0%,100%{background-position:0 0;} 50%{background-position:6px 0;} }
+  ::-webkit-scrollbar { width:10px; }
+  ::-webkit-scrollbar-track { background:#080409; }
+  ::-webkit-scrollbar-thumb { background:#4e324c; border-radius:5px; }
+</style>
+</helmet>
+
+<div style="position:relative; min-height:100vh; background:#080409; font-family:'Inter',sans-serif; color:#F7F4F4; overflow:hidden;">
+
+  <!-- SVG filter defs (true fractal refraction) -->
+  <svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+    <defs>
+      <filter id="fg-refract" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.14" numOctaves="2" seed="7" result="n"></feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+      </filter>
+      <filter id="fg-crystal" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="turbulence" baseFrequency="0.03 0.05" numOctaves="2" seed="11" result="n"></feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- ambient bloom -->
+  <div style="position:absolute; top:-12%; left:24%; width:920px; height:920px; filter:blur(96px); opacity:0.38; mix-blend-mode:screen; animation:fg-drift 26s ease-in-out infinite; background: radial-gradient(circle at 40% 40%, #7a3df0 0%, rgba(122,61,240,0) 55%), radial-gradient(circle at 66% 60%, #ff5a5f 0%, rgba(255,90,95,0) 55%), radial-gradient(circle at 54% 30%, #37d6ff 0%, rgba(55,214,255,0) 50%);"></div>
+
+  <div style="position:relative; z-index:2; max-width:1240px; margin:0 auto; padding:60px 40px 100px;">
+
+    <!-- ===== HEADER ===== -->
+    <header style="margin-bottom:34px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.34em; text-transform:uppercase; color:#D4A373; margin-bottom:18px;">Material Study · Art Direction</div>
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:24px;">
+        <h1 style="font-family:'Major Mono Display',monospace; font-weight:400; font-size:clamp(40px,6vw,74px); line-height:0.9; margin:0; color:#FBEFEF; text-shadow: 2px 0 0 rgba(255,90,140,0.5), -2px 0 0 rgba(90,150,255,0.5), 0 0 40px rgba(160,90,240,0.35);">fractal glass</h1>
+        <div style="max-width:360px; font-size:13.5px; line-height:1.65; color:rgba(247,244,244,0.64);">
+          <span style="color:#F7F4F4; font-weight:600;">Light bent through faceted, ribbed and prismatic glass.</span> A refraction language that slots straight into the iridescent / liquid-chrome moodboard — carried on poster moments, kept quiet on functional UI.
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== WHAT IT IS ===== -->
+    <section style="display:grid; grid-template-columns:1.35fr 1fr; gap:20px; margin-bottom:44px;">
+      <div style="border:1px solid #4e324c; border-radius:20px; padding:28px 30px; background:rgba(20,10,20,0.5);">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:#8B6B70; margin-bottom:14px;">What it is</div>
+        <p style="font-size:15px; line-height:1.7; margin:0 0 16px; color:rgba(247,244,244,0.86);">Fractal glass simulates looking at an image through faceted or crystalline glass — producing kaleidoscopic refractions and prism-like distortions. The interplay of soft gradients and sharp refractions reads as futuristic yet dreamlike: a glitch in the system crossed with a hazy late-night cityscape.</p>
+        <p style="font-size:14px; line-height:1.7; margin:0; color:rgba(247,244,244,0.62);">Its natural homes are poster design, album covers and experimental branding — the exact surfaces where our label wants to feel like an object, not an app. We treat it as a <span style="color:#D4A373;">refraction lens laid over the plum backdrop and the neon spectrum</span>, never as a new color.</p>
+      </div>
+      <div style="border:1px solid #4e324c; border-radius:20px; padding:28px 30px; background:rgba(20,10,20,0.5);">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:#8B6B70; margin-bottom:16px;">Also called</div>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <div style="display:flex; align-items:center; gap:11px; font-size:13.5px;"><span style="width:7px; height:7px; border-radius:2px; background:#ff4d8d; flex-shrink:0;"></span>Reeded / fluted glass <span style="color:#8B6B70; font-size:12px;">— vertical ribbed lensing</span></div>
+          <div style="display:flex; align-items:center; gap:11px; font-size:13.5px;"><span style="width:7px; height:7px; border-radius:2px; background:#a05af0; flex-shrink:0;"></span>Prismatic glass <span style="color:#8B6B70; font-size:12px;">— light split into hues</span></div>
+          <div style="display:flex; align-items:center; gap:11px; font-size:13.5px;"><span style="width:7px; height:7px; border-radius:2px; background:#37d6ff; flex-shrink:0;"></span>Faceted / crystal <span style="color:#8B6B70; font-size:12px;">— shattered refraction</span></div>
+          <div style="display:flex; align-items:center; gap:11px; font-size:13.5px;"><span style="width:7px; height:7px; border-radius:2px; background:#D4A373; flex-shrink:0;"></span>Frosted / glassmorphism <span style="color:#8B6B70; font-size:12px;">— soft distortion</span></div>
+        </div>
+        <div style="margin-top:18px; padding-top:15px; border-top:1px solid rgba(78,50,76,0.5); font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.6; color:#D99696;">All five below are built live in CSS + SVG — no image assets.</div>
+      </div>
+    </section>
+
+    <!-- ===== SPECIMENS ===== -->
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:#8B6B70; margin-bottom:10px;">01 — Specimens</div>
+    <h2 style="font-family:'Major Mono Display',monospace; font-weight:400; font-size:30px; margin:0 0 6px;">the refraction family</h2>
+    <p style="font-size:14px; color:rgba(247,244,244,0.6); max-width:640px; margin:0 0 26px;">Each panel refracts the same living plum-and-neon backdrop, so you can read how the technique bends our own palette.</p>
+
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:16px;">
+
+      <!-- Reeded / fluted -->
+      <div style="position:relative; height:280px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">
+        <div style="position:absolute; inset:0; background: conic-gradient(from 200deg at 42% 36%, #ff4d8d, #a05af0, #37d6ff, #4a6bff, #ff8a3d, #ff4d8d); filter:saturate(1.05);"></div>
+        <div style="position:absolute; inset:0; backdrop-filter:blur(1px); background: repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0px, rgba(255,255,255,0.05) 2px, rgba(0,0,0,0.20) 6px, rgba(0,0,0,0.04) 9px, rgba(255,255,255,0.16) 12px);"></div>
+        <div style="position:absolute; inset:0; mix-blend-mode:overlay; background: repeating-linear-gradient(90deg, transparent 0px, rgba(255,255,255,0.28) 3px, transparent 6px, transparent 12px);"></div>
+        <div style="position:absolute; inset:0; box-shadow:inset 0 0 50px rgba(0,0,0,0.45);"></div>
+        <div style="position:absolute; left:16px; bottom:14px; z-index:3;"><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,0.8);">Reeded / fluted</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.62);">repeating-linear-gradient ribs</div></div>
+        <span style="position:absolute; right:14px; top:12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); z-index:3;">a</span>
+      </div>
+
+      <!-- Prismatic -->
+      <div style="position:relative; height:280px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0510; display:flex; align-items:center; justify-content:center;">
+        <div style="position:absolute; inset:-30%; background: repeating-conic-gradient(from 0deg at 50% 50%, #ff3d6e 0deg,#ff9a3d 20deg,#ffe14d 40deg,#57ff8f 64deg,#37d6ff 90deg,#4a6bff 116deg,#b45cff 144deg,#ff3d6e 180deg); filter:blur(2px); opacity:0.9; animation:fg-spin 40s linear infinite;"></div>
+        <div style="position:absolute; inset:0; backdrop-filter:blur(3px); background:rgba(10,5,16,0.15);"></div>
+        <div style="position:relative; z-index:2; font-family:'Major Mono Display',monospace; font-size:44px; color:#f4eef2; text-shadow: 3px 0 0 rgba(255,60,110,0.85), -3px 0 0 rgba(60,150,255,0.85); mix-blend-mode:screen;">nova</div>
+        <div style="position:absolute; inset:0; box-shadow:inset 0 0 60px rgba(0,0,0,0.5);"></div>
+        <div style="position:absolute; left:16px; bottom:14px; z-index:3;"><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,0.8);">Prismatic dispersion</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.62);">conic spectrum + chromatic type</div></div>
+        <span style="position:absolute; right:14px; top:12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); z-index:3;">b</span>
+      </div>
+
+      <!-- Faceted / crystal (SVG displacement) -->
+      <div style="position:relative; height:280px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">
+        <div style="position:absolute; inset:-8%; filter:url(#fg-crystal); background: conic-gradient(from 120deg at 50% 50%, #791014, #A75A5B, #D4A373, #a05af0, #37d6ff, #791014);"></div>
+        <div style="position:absolute; inset:0; mix-blend-mode:screen; background: radial-gradient(circle at 38% 30%, rgba(255,255,255,0.4), transparent 40%);"></div>
+        <div style="position:absolute; inset:0; box-shadow:inset 0 0 50px rgba(0,0,0,0.45);"></div>
+        <div style="position:absolute; left:16px; bottom:14px; z-index:3;"><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,0.8);">Faceted crystal</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.62);">SVG feTurbulence + displace</div></div>
+        <span style="position:absolute; right:14px; top:12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); z-index:3;">c</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:16px; margin-bottom:44px;">
+
+      <!-- True refraction hero (reeded over real content) -->
+      <div style="position:relative; height:260px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0510;">
+        <!-- content behind the glass -->
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:space-between; padding:0 44px;">
+          <div style="font-family:'Major Mono Display',monospace; font-size:60px; line-height:0.9; color:#FBEFEF;">nova<br>records</div>
+          <div style="width:120px; height:120px; border-radius:999px; background: repeating-conic-gradient(from 0deg, #ff3d6e 0deg,#37d6ff 60deg,#b45cff 120deg,#ff3d6e 180deg); filter:saturate(1.1);"></div>
+        </div>
+        <!-- fractal glass overlay -->
+        <div style="position:absolute; inset:0; filter:url(#fg-refract); backdrop-filter:blur(0.5px); background: repeating-linear-gradient(96deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.02) 3px, rgba(0,0,0,0.16) 8px, rgba(0,0,0,0.02) 12px, rgba(255,255,255,0.10) 16px);"></div>
+        <div style="position:absolute; inset:0; mix-blend-mode:overlay; background: repeating-linear-gradient(96deg, transparent 0px, rgba(120,200,255,0.4) 4px, transparent 8px, rgba(255,120,180,0.35) 12px, transparent 16px);"></div>
+        <div style="position:absolute; inset:0; box-shadow:inset 0 0 60px rgba(0,0,0,0.5);"></div>
+        <div style="position:absolute; left:18px; bottom:15px; z-index:3;"><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,0.8);">True refraction — glass over live content</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.62);">displacement warps the type &amp; disc beneath</div></div>
+        <span style="position:absolute; right:14px; top:12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); z-index:3;">d</span>
+      </div>
+
+      <!-- Frosted / glassmorphism -->
+      <div style="position:relative; height:260px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">
+        <div style="position:absolute; inset:0; background: radial-gradient(circle at 30% 30%, #ff6a3d 0%, transparent 46%), radial-gradient(circle at 74% 42%, #a05af0 0%, transparent 48%), radial-gradient(circle at 50% 80%, #37d6ff 0%, transparent 50%), #120910;"></div>
+        <div style="position:absolute; left:26px; right:26px; top:50%; transform:translateY(-50%); height:150px; border-radius:16px; backdrop-filter:blur(14px) saturate(1.2); background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); box-shadow:0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25); display:flex; flex-direction:column; justify-content:center; padding:0 22px;">
+          <div style="font-weight:600; font-size:15px; color:#fff;">Frosted panel</div>
+          <div style="font-size:12.5px; color:rgba(255,255,255,0.72); margin-top:4px;">The calm end — for real UI surfaces.</div>
+        </div>
+        <div style="position:absolute; left:16px; bottom:14px; z-index:3;"><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,0.8);">Frosted glassmorphism</div></div>
+        <span style="position:absolute; right:14px; top:12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.55); z-index:3;">e</span>
+      </div>
+    </div>
+
+    <!-- ===== IN OUR WORLD ===== -->
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:#8B6B70; margin-bottom:10px;">02 — In our world</div>
+    <h2 style="font-family:'Major Mono Display',monospace; font-weight:400; font-size:30px; margin:0 0 6px;">where it lands</h2>
+    <p style="font-size:14px; color:rgba(247,244,244,0.6); max-width:660px; margin:0 0 26px;">Rich on poster moments, quiet on functional screens. Three concrete placements in the label app, tuned to the existing components.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <!-- Splash disc through prism -->
+      <div style="grid-row:span 2; position:relative; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0510; min-height:420px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px;">
+        <div style="position:absolute; inset:-20%; background: repeating-conic-gradient(from 0deg at 50% 50%, #791014 0deg, #A75A5B 40deg, #D4A373 70deg, #a05af0 110deg, #37d6ff 150deg, #791014 180deg); filter:blur(3px) saturate(1.1); opacity:0.85; animation:fg-spin 50s linear infinite;"></div>
+        <div style="position:absolute; inset:0; backdrop-filter:blur(2px); background: repeating-linear-gradient(90deg, rgba(255,255,255,0.10) 0px, rgba(0,0,0,0.14) 5px, rgba(255,255,255,0.10) 10px); box-shadow:inset 0 0 90px rgba(0,0,0,0.6);"></div>
+        <div style="position:relative; z-index:2; width:150px; height:150px; border-radius:999px; background:radial-gradient(circle at 42% 40%, #2a1821, #120910); box-shadow:inset 0 0 0 1px rgba(212,163,115,0.5), 0 0 60px rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
+          <div style="width:26px; height:26px; border-radius:999px; background:#05030a; box-shadow:inset 0 0 0 1px rgba(212,163,115,0.3);"></div>
+        </div>
+        <div style="position:relative; z-index:2; margin-top:26px; text-align:center;">
+          <div style="font-family:'Major Mono Display',monospace; font-size:22px; color:#FBEFEF; text-shadow:2px 0 0 rgba(255,90,140,0.4), -2px 0 0 rgba(90,150,255,0.4);">nova records</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(247,244,244,0.7); margin-top:8px; letter-spacing:0.2em;">SPLASH · LOADING THE LABEL</div>
+        </div>
+        <div style="position:absolute; left:16px; bottom:14px; z-index:3; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.6);">Splash disc — reeded prism, poster tier</div>
+      </div>
+
+      <!-- Fluted nav dock -->
+      <div style="position:relative; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#120910; padding:22px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8B6B70; margin-bottom:16px;">Fluted dock — quiet UI tier</div>
+        <div style="position:relative; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.10); padding:14px;">
+          <div style="position:absolute; inset:0; background: linear-gradient(120deg, rgba(167,90,91,0.28), rgba(78,50,76,0.28));"></div>
+          <div style="position:absolute; inset:0; backdrop-filter:blur(6px); background: repeating-linear-gradient(90deg, rgba(255,255,255,0.09) 0px, rgba(0,0,0,0.12) 4px, rgba(255,255,255,0.09) 8px);"></div>
+          <div style="position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#fff;"><i class="fas fa-compact-disc" style="color:#D4A373;"></i> nova</div>
+            <div style="display:flex; gap:16px; color:rgba(255,255,255,0.82); font-size:13px;"><i class="fas fa-gauge-high"></i><i class="fas fa-users"></i><i class="fas fa-calendar"></i><i class="fas fa-chart-line"></i></div>
+            <div style="width:26px; height:26px; border-radius:999px; background:#A75A5B;"></div>
+          </div>
+        </div>
+        <div style="font-size:12px; color:rgba(247,244,244,0.55); margin-top:14px; line-height:1.6;">Barely-there ribbing over a burgundy tint — reads as glass, still passes contrast for nav.</div>
+      </div>
+
+      <!-- Prismatic tier badge / chip -->
+      <div style="position:relative; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#120910; padding:22px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8B6B70; margin-bottom:16px;">Prismatic accents — highlight tier</div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <span style="position:relative; overflow:hidden; font-size:12px; font-weight:600; padding:7px 15px; border-radius:999px; color:#fff; background:linear-gradient(90deg,#ff4d8d,#a05af0,#37d6ff); background-size:200% 100%; animation:fg-sheen 6s linear infinite;">Platinum</span>
+          <span style="font-size:12px; font-weight:600; padding:7px 15px; border-radius:999px; color:#1f2937; background:#D4A373;">Gold</span>
+          <span style="font-size:12px; font-weight:500; padding:7px 15px; border-radius:999px; color:#fff; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.05); backdrop-filter:blur(4px);">Glass chip</span>
+        </div>
+        <div style="margin-top:16px; position:relative; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.10); padding:14px 16px;">
+          <div style="position:absolute; inset:0; background:linear-gradient(120deg,#ff4d8d,#a05af0,#37d6ff); opacity:0.22;"></div>
+          <div style="position:absolute; inset:0; backdrop-filter:blur(8px); background: repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0px, rgba(0,0,0,0.10) 5px, rgba(255,255,255,0.08) 10px);"></div>
+          <div style="position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between;">
+            <div><div style="font-weight:600; font-size:14px; color:#fff;">Nova Sterling</div><div style="font-size:11.5px; color:rgba(255,255,255,0.72);">Platinum tier · +142% ROI</div></div>
+            <span style="font-size:11px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,0.14); color:#fff;">On Tour</span>
+          </div>
+        </div>
+        <div style="font-size:12px; color:rgba(247,244,244,0.55); margin-top:14px; line-height:1.6;">Prism sheen reserved for the top tier and hero cards — one dispersed accent, not everywhere.</div>
+      </div>
+    </div>
+
+    <!-- ===== RECIPE ===== -->
+    <div style="margin-top:44px; border:1px solid #4e324c; border-radius:20px; padding:28px 30px; background:rgba(20,10,20,0.5);">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:#8B6B70; margin-bottom:18px;">03 — Recipe · the building blocks</div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:22px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#D99696; margin-bottom:8px;">01 · Ribs</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.7; color:rgba(247,244,244,0.7); background:#120910; border:1px solid #2a1821; border-radius:10px; padding:12px;">repeating-linear-gradient(90deg,<br>&nbsp;&nbsp;#fff2 0, #0003 6px, #fff2 12px)</div>
+          <div style="font-size:12.5px; color:rgba(247,244,244,0.6); margin-top:10px; line-height:1.55;">Alternating light/shadow bands read as cylindrical glass reeds.</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#D99696; margin-bottom:8px;">02 · Blur</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.7; color:rgba(247,244,244,0.7); background:#120910; border:1px solid #2a1821; border-radius:10px; padding:12px;">backdrop-filter:<br>&nbsp;&nbsp;blur(6px) saturate(1.2)</div>
+          <div style="font-size:12.5px; color:rgba(247,244,244,0.6); margin-top:10px; line-height:1.55;">Softens whatever sits behind so the ribs feel like real glass.</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#D99696; margin-bottom:8px;">03 · Warp</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.7; color:rgba(247,244,244,0.7); background:#120910; border:1px solid #2a1821; border-radius:10px; padding:12px;">feTurbulence +<br>&nbsp;&nbsp;feDisplacementMap<br>&nbsp;&nbsp;→ filter:url(#fg)</div>
+          <div style="font-size:12.5px; color:rgba(247,244,244,0.6); margin-top:10px; line-height:1.55;">SVG fractal noise displaces pixels for true prismatic distortion.</div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(78,50,76,0.5); font-size:12.5px; line-height:1.6; color:#D4A373;">Rule of restraint — refraction rides the plum &amp; neon palette; it never introduces a new hue. Poster tier gets the full warp; UI tier gets ribs + blur only.</div>
+    </div>
+
+    <footer style="margin-top:40px; padding-top:24px; border-top:1px solid rgba(78,50,76,0.5); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8B6B70;">material study · fractal glass · matched to moodboard</div>
+      <div style="font-family:'Major Mono Display',monospace; font-size:14px; color:#A75A5B;">nova records</div>
+    </footer>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:1600}}"></script>
+</body>
+</html>

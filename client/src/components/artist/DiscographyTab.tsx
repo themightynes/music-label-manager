@@ -37,7 +37,7 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
     <TabsContent value="discography" className="space-y-6 relative z-20">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between text-base">
             <span>Complete Discography</span>
             <Badge variant="outline">{songs.length} Total Songs</Badge>
           </CardTitle>
@@ -54,26 +54,26 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
 
             return (
               <div key={release.id} className="mb-6 last:mb-0">
-                <div className="flex items-center justify-between mb-3 pb-2 border-b">
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/[0.07]">
                   <div className="flex items-center space-x-3">
-                    <h3 className="font-semibold text-lg">{release.title}</h3>
+                    <h3 className="font-semibold text-lg text-text-primary">{release.title}</h3>
                     {getReleaseTypeBadge(release.type)}
                     {getStatusBadge(release.status)}
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="text-sm text-white/70">
+                    <div className="text-sm text-text-body">
                       Week {release.releaseWeek} • {releaseSongs.length} songs
                     </div>
                     <div className="flex items-center space-x-3 text-sm">
                       <div className="flex items-center space-x-1">
-                        <span className="text-white/50">Total:</span>
-                        <span className="font-semibold text-blue-600">
+                        <span className="text-text-muted">Total:</span>
+                        <span className="font-mono font-semibold text-neon-cyan">
                           {(releaseTotalStreams / 1000).toFixed(0)}k streams
                         </span>
                       </div>
-                      <div className="text-white/30">•</div>
+                      <div className="text-text-muted">•</div>
                       <div className="flex items-center space-x-1">
-                        <span className="font-semibold text-green-600">
+                        <span className="font-mono font-semibold text-positive">
                           ${(releaseTotalRevenue / 1000).toFixed(1)}k
                         </span>
                       </div>
@@ -84,7 +84,7 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="text-left text-xs text-white/50 border-b">
+                      <tr className="text-left text-xs font-mono uppercase tracking-[0.16em] text-text-muted border-b border-white/[0.07]">
                         <th className="pb-2">#</th>
                         <th className="pb-2">Title</th>
                         <th className="pb-2">Quality</th>
@@ -96,20 +96,20 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
                     </thead>
                     <tbody>
                       {releaseSongs.map((song, idx) => (
-                        <tr key={song.id} className="border-b last:border-0">
-                          <td className="py-2 text-sm text-white/50">{idx + 1}</td>
-                          <td className="py-2 font-medium">{song.title}</td>
+                        <tr key={song.id} className="border-b border-white/[0.05] last:border-0">
+                          <td className="py-2 text-sm text-text-muted">{idx + 1}</td>
+                          <td className="py-2 font-medium text-text-primary">{song.title}</td>
                           <td className="py-2">
                             <Badge className={getQualityColor(song.quality)}>
                               {song.quality}
                             </Badge>
                           </td>
-                          <td className="py-2 text-sm capitalize">{song.genre}</td>
-                          <td className="py-2 text-sm capitalize">{song.mood}</td>
-                          <td className="py-2 text-sm text-right">
+                          <td className="py-2 text-sm text-text-body capitalize">{song.genre}</td>
+                          <td className="py-2 text-sm text-text-body capitalize">{song.mood}</td>
+                          <td className="py-2 text-sm text-right font-mono text-text-body">
                             {(song.totalStreams || 0).toLocaleString()}
                           </td>
-                          <td className="py-2 text-sm text-right">
+                          <td className="py-2 text-sm text-right font-mono text-text-body">
                             ${(song.totalRevenue || 0).toLocaleString()}
                           </td>
                         </tr>
@@ -123,10 +123,10 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
 
           {/* Unreleased Songs */}
           {unreleasedSongs.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
+            <div className="mt-6 pt-6 border-t border-white/[0.07]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-lg">Unreleased Songs</h3>
-                <Badge variant="outline" className="bg-yellow-500/10">
+                <h3 className="font-semibold text-lg text-text-primary">Unreleased Songs</h3>
+                <Badge variant="outline" className="bg-warning/[0.1] border-warning/30 text-warning">
                   {unreleasedSongs.length} songs
                 </Badge>
               </div>
@@ -134,7 +134,7 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-xs text-white/50 border-b">
+                    <tr className="text-left text-xs font-mono uppercase tracking-[0.16em] text-text-muted border-b border-white/[0.07]">
                       <th className="pb-2">#</th>
                       <th className="pb-2">Title</th>
                       <th className="pb-2">Quality</th>
@@ -146,22 +146,22 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
                   </thead>
                   <tbody>
                     {unreleasedSongs.map((song, idx) => (
-                      <tr key={song.id} className="border-b last:border-0">
-                        <td className="py-2 text-sm text-white/50">{idx + 1}</td>
-                        <td className="py-2 font-medium">{song.title}</td>
+                      <tr key={song.id} className="border-b border-white/[0.05] last:border-0">
+                        <td className="py-2 text-sm text-text-muted">{idx + 1}</td>
+                        <td className="py-2 font-medium text-text-primary">{song.title}</td>
                         <td className="py-2">
                           <Badge className={getQualityColor(song.quality)}>
                             {song.quality}
                           </Badge>
                         </td>
-                        <td className="py-2 text-sm capitalize">{song.genre}</td>
-                        <td className="py-2 text-sm capitalize">{song.mood}</td>
+                        <td className="py-2 text-sm text-text-body capitalize">{song.genre}</td>
+                        <td className="py-2 text-sm text-text-body capitalize">{song.mood}</td>
                         <td className="py-2">
                           <Badge variant="outline" className="text-xs">
                             {song.isRecorded ? 'Ready' : 'Recording'}
                           </Badge>
                         </td>
-                        <td className="py-2 text-sm">Week {song.createdWeek}</td>
+                        <td className="py-2 text-sm text-text-body">Week {song.createdWeek}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -172,40 +172,42 @@ function DiscographyTabComponent({ songs, artistReleases }: DiscographyTabProps)
 
           {songs.length === 0 && (
             <div className="text-center py-8">
-              <Music className="w-12 h-12 text-white/30 mx-auto mb-4" />
-              <p className="text-white/50">No songs recorded yet</p>
+              <div className="w-[54px] h-[54px] rounded-chip bg-neon-purple/10 border border-neon-purple/[0.28] flex items-center justify-center mx-auto mb-4 shadow-glow-purple">
+                <Music className="w-5 h-5 text-neon-lilac" />
+              </div>
+              <p className="text-text-muted text-sm">No songs recorded yet</p>
             </div>
           )}
 
           {/* Overall Summary for all releases */}
           {songs.filter(s => s.isReleased).length > 0 && (
-            <div className="mt-6 pt-4 border-t-2 border-brand-purple/50">
+            <div className="mt-6 pt-4 border-t-2 border-neon-purple/40">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">Career Totals</h3>
+                <h3 className="font-semibold text-lg text-text-primary">Career Totals</h3>
                 <div className="flex items-center space-x-4">
                   <div className="text-center">
-                    <div className="text-xl font-bold text-blue-600">
+                    <div className="font-mono text-xl font-bold text-neon-cyan">
                       {(songs.filter(s => s.isReleased).reduce((sum, s) => sum + (s.totalStreams || 0), 0) / 1000000).toFixed(1)}M
                     </div>
-                    <div className="text-xs text-white/70">Total Streams</div>
+                    <div className="text-xs text-text-muted">Total Streams</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xl font-bold text-green-600">
+                    <div className="font-mono text-xl font-bold text-positive">
                       ${(songs.filter(s => s.isReleased).reduce((sum, s) => sum + (s.totalRevenue || 0), 0) / 1000).toFixed(0)}k
                     </div>
-                    <div className="text-xs text-white/70">Total Revenue</div>
+                    <div className="text-xs text-text-muted">Total Revenue</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xl font-bold text-brand-burgundy-dark">
+                    <div className="font-mono text-xl font-bold text-neon-lilac">
                       {artistReleases.filter(r => r.status === 'released' || r.status === 'catalog').length}
                     </div>
-                    <div className="text-xs text-white/70">Releases</div>
+                    <div className="text-xs text-text-muted">Releases</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xl font-bold text-orange-600">
+                    <div className="font-mono text-xl font-bold text-neon-amber">
                       {songs.filter(s => s.isReleased).length}
                     </div>
-                    <div className="text-xs text-white/70">Released Songs</div>
+                    <div className="text-xs text-text-muted">Released Songs</div>
                   </div>
                 </div>
               </div>

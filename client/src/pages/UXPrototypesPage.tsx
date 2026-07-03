@@ -27,7 +27,7 @@ export default function UXPrototypesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-surface-app text-foreground p-6">
       <div className="container mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -42,7 +42,7 @@ export default function UXPrototypesPage() {
               <Palette className="w-8 h-8 text-brand-rose" />
               UI/UX Prototypes
             </h1>
-            <p className="text-white/70 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               Visual mockups for design review before implementation
             </p>
           </div>
@@ -51,7 +51,7 @@ export default function UXPrototypesPage() {
         {/* Prototypes Grid */}
         <div className="grid gap-4">
           {prototypes.map(prototype => (
-            <Card key={prototype.id} className="bg-sidebar border-white/10 hover:border-white/20 transition-colors">
+            <Card key={prototype.id} className="bg-surface-panel border-border hover:border-border/80 transition-colors">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
                   <prototype.icon className="w-6 h-6 text-brand-gold" />
@@ -62,7 +62,7 @@ export default function UXPrototypesPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-white/70">{prototype.description}</p>
+                <p className="text-muted-foreground">{prototype.description}</p>
 
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-white/50">Tasks:</span>
@@ -84,10 +84,10 @@ export default function UXPrototypesPage() {
         </div>
 
         {/* Info Card */}
-        <Card className="bg-brand-burgundy/10 border-brand-burgundy/30">
+        <Card className="bg-primary/10 border-primary/30">
           <CardContent className="p-4">
-            <h4 className="font-semibold text-white mb-2">About Prototypes</h4>
-            <ul className="text-white/70 text-sm space-y-1 list-disc list-inside">
+            <h4 className="font-semibold text-foreground mb-2">About Prototypes</h4>
+            <ul className="text-muted-foreground text-sm space-y-1 list-disc list-inside">
               <li>All prototypes use dummy/mock data - no backend integration</li>
               <li>Purpose: Validate UI/UX design before implementing functionality</li>
               <li>Feedback welcome via bug reports or team discussion</li>

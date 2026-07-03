@@ -7,7 +7,7 @@ export function FinancialReportEmail({ email }: EmailTemplateProps) {
   const expenseBreakdown = (body?.expenseBreakdown ?? {}) as Record<string, number>;
 
   return (
-    <div className="space-y-4 text-sm text-white/85">
+    <div className="space-y-4 text-sm text-text-body">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <SummaryCard label="Revenue" value={formatCurrency(body?.revenue)} positive />
         <SummaryCard label="Expenses" value={formatCurrency(body?.expenses)} negative />
@@ -16,15 +16,15 @@ export function FinancialReportEmail({ email }: EmailTemplateProps) {
       </div>
 
       {Object.keys(expenseBreakdown).length > 0 && (
-        <div className="rounded-lg border border-white/10 bg-black/30">
-          <div className="border-b border-white/10 px-4 py-2 text-xs uppercase tracking-wide text-white/60">
+        <div className="rounded-xl border border-white/[0.08] bg-surface-inner/60 overflow-hidden">
+          <div className="border-b border-white/[0.08] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">
             Expense Breakdown
           </div>
-          <div className="divide-y divide-white/10">
+          <div className="divide-y divide-white/[0.08]">
             {Object.entries(expenseBreakdown).map(([category, value]) => (
               <div key={category} className="px-4 py-2 flex items-center justify-between text-sm">
-                <span className="capitalize text-white/70">{category.replace(/([A-Z])/g, ' $1')}</span>
-                <span className="text-white font-medium">{formatCurrency(value)}</span>
+                <span className="capitalize text-text-muted">{category.replace(/([A-Z])/g, ' $1')}</span>
+                <span className="font-mono font-medium text-money">{formatCurrency(value)}</span>
               </div>
             ))}
           </div>
@@ -32,7 +32,7 @@ export function FinancialReportEmail({ email }: EmailTemplateProps) {
       )}
 
       {typeof body?.financialBreakdown === 'string' && (
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4 text-white/70 whitespace-pre-wrap text-xs">
+        <div className="rounded-xl border border-white/[0.08] bg-surface-inner/50 p-4 text-text-body whitespace-pre-wrap text-xs">
           {body.financialBreakdown}
         </div>
       )}
@@ -54,9 +54,9 @@ function SummaryCard({
   negative?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border bg-black/40 p-4 ${positive ? 'border-green-500/40' : negative ? 'border-red-500/40' : 'border-white/10'}`}>
-      <div className="text-xs uppercase tracking-wide text-white/60">{label}</div>
-      <div className={`text-lg font-semibold ${positive ? 'text-green-300' : negative ? 'text-red-300' : 'text-white'}`}>{value}</div>
+    <div className={`rounded-xl border bg-surface-inner/60 p-4 ${positive ? 'border-positive/40' : negative ? 'border-negative/40' : 'border-white/[0.08]'}`}>
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">{label}</div>
+      <div className={`font-mono text-lg font-semibold ${positive ? 'text-positive' : negative ? 'text-negative' : 'text-money'}`}>{value}</div>
     </div>
   );
 }

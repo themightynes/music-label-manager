@@ -357,9 +357,9 @@ export default function MarketsEditor() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-plum-900 via-plum-800 to-plum-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-surface-app text-foreground flex items-center justify-center">
         <div className="flex items-center gap-3">
-          <RefreshCw className="h-6 w-6 animate-spin text-burgundy-400" />
+          <RefreshCw className="h-6 w-6 animate-spin text-brand-burgundy" />
           <span className="text-lg">Loading markets configuration...</span>
         </div>
       </div>
@@ -367,28 +367,28 @@ export default function MarketsEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-plum-900 via-plum-800 to-plum-900 text-white p-6">
+    <div className="min-h-screen bg-surface-app text-foreground p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-plum-800/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-burgundy-600/30">
+        <div className="bg-surface-panel backdrop-blur-sm rounded-xl p-6 mb-6 border border-border">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3">
-                <Settings className="h-8 w-8 text-burgundy-400" />
+                <Settings className="h-8 w-8 text-brand-burgundy" />
                 Markets.json Configuration Editor
               </h1>
-              <p className="text-gray-300 mt-2">
+              <p className="text-muted-foreground mt-2">
                 Edit game balance and market formulas in real-time
               </p>
               <div className="mt-4 flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${hasChanges ? 'bg-yellow-400' : 'bg-green-400'}`} />
-                  <span className="text-sm text-gray-400">
+                  <div className={`w-3 h-3 rounded-full ${hasChanges ? 'bg-warning' : 'bg-success'}`} />
+                  <span className="text-sm text-muted-foreground">
                     {hasChanges ? 'Unsaved changes' : 'No changes'}
                   </span>
                 </div>
                 {savedSuccessfully && (
-                  <div className="flex items-center gap-2 text-green-400">
+                  <div className="flex items-center gap-2 text-success">
                     <CheckCircle className="h-4 w-4" />
                     <span className="text-sm">Saved successfully</span>
                   </div>
@@ -406,7 +406,7 @@ export default function MarketsEditor() {
         {/* Main Editor */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Controls Panel */}
-          <div className="lg:col-span-1 bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30">
+          <div className="lg:col-span-1 bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border">
             <h2 className="text-xl font-bold mb-4">Editor Controls</h2>
 
             <div className="space-y-4">
@@ -432,7 +432,7 @@ export default function MarketsEditor() {
                 onClick={handleReset}
                 disabled={!hasChanges}
                 variant="outline"
-                className="w-full border-burgundy-600/50 hover:bg-burgundy-600/20"
+                className="w-full"
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Reset Changes
@@ -441,7 +441,7 @@ export default function MarketsEditor() {
               <Button
                 onClick={formatJSON}
                 variant="outline"
-                className="w-full border-plum-600/50 hover:bg-plum-600/20"
+                className="w-full"
               >
                 <FileCode className="h-4 w-4 mr-2" />
                 Format JSON
@@ -450,7 +450,7 @@ export default function MarketsEditor() {
               <Button
                 onClick={loadMarketsConfig}
                 variant="outline"
-                className="w-full border-gray-600/50 hover:bg-gray-600/20"
+                className="w-full"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Reload from File
@@ -458,28 +458,28 @@ export default function MarketsEditor() {
             </div>
 
             {/* Validation Status */}
-            <div className="mt-6 pt-4 border-t border-burgundy-600/30">
-              <h3 className="text-sm font-semibold mb-3 text-burgundy-300">Validation Status</h3>
+            <div className="mt-6 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold mb-3 text-primary">Validation Status</h3>
               {validationError ? (
-                <div className="flex items-start gap-2 p-3 bg-red-900/30 border border-red-600/30 rounded-lg">
-                  <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-2 p-3 bg-destructive/20 border border-destructive/30 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                   <div>
-                    <div className="text-sm font-medium text-red-400">Invalid JSON</div>
-                    <div className="text-xs text-red-300 mt-1">{validationError}</div>
+                    <div className="text-sm font-medium text-destructive">Invalid JSON</div>
+                    <div className="text-xs text-destructive/80 mt-1">{validationError}</div>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-600/30 rounded-lg">
-                  <CheckCircle className="h-4 w-4 text-green-400" />
-                  <div className="text-sm text-green-400">Valid Configuration</div>
+                <div className="flex items-center gap-2 p-3 bg-success/20 border border-success/30 rounded-lg">
+                  <CheckCircle className="h-4 w-4 text-success" />
+                  <div className="text-sm text-success">Valid Configuration</div>
                 </div>
               )}
             </div>
 
             {/* Quick Reference */}
-            <div className="mt-6 pt-4 border-t border-burgundy-600/30">
-              <h3 className="text-sm font-semibold mb-3 text-burgundy-300">Quick Reference</h3>
-              <div className="space-y-2 text-xs text-gray-400">
+            <div className="mt-6 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold mb-3 text-primary">Quick Reference</h3>
+              <div className="space-y-2 text-xs text-muted-foreground">
                 <div><strong>Streaming:</strong> quality_weight, playlist_weight</div>
                 <div><strong>Marketing:</strong> marketing_channels effectiveness</div>
                 <div><strong>Tours:</strong> sell_through_base, reputation_modifier</div>
@@ -490,10 +490,10 @@ export default function MarketsEditor() {
           </div>
 
           {/* JSON Editor */}
-          <div className="lg:col-span-3 bg-plum-800/30 backdrop-blur-sm rounded-xl p-6 border border-burgundy-600/30">
+          <div className="lg:col-span-3 bg-surface-panel backdrop-blur-sm rounded-xl p-6 border border-border">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">markets.json Content</h2>
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Lines: {configText.split('\n').length} | Characters: {configText.length}
               </div>
             </div>
@@ -505,7 +505,7 @@ export default function MarketsEditor() {
                   setConfigText(e.target.value);
                   validateConfig(e.target.value);
                 }}
-                className="min-h-[600px] font-mono text-sm bg-black/20 border-burgundy-600/50 text-white resize-none"
+                className="min-h-[600px] font-mono text-sm bg-background border-border text-foreground resize-none"
                 placeholder="Loading configuration..."
                 style={{
                   fontSize: '14px',
@@ -519,8 +519,8 @@ export default function MarketsEditor() {
             </div>
 
             {/* File Info */}
-            <div className="mt-4 p-3 bg-plum-900/30 rounded-lg">
-              <div className="text-xs text-gray-400">
+            <div className="mt-4 p-3 bg-surface-inner rounded-lg">
+              <div className="text-xs text-muted-foreground">
                 <div className="mb-1"><strong>File:</strong> /data/balance/markets.json</div>
                 <div><strong>Purpose:</strong> Game balance configuration for streaming, marketing, tours, and chart calculations</div>
               </div>
@@ -529,12 +529,12 @@ export default function MarketsEditor() {
         </div>
 
         {/* Warning Banner */}
-        <div className="mt-6 p-4 bg-yellow-900/30 border border-yellow-600/30 rounded-xl">
+        <div className="mt-6 p-4 bg-warning/20 border border-warning/30 rounded-xl">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-400 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
             <div>
-              <div className="font-semibold text-yellow-400">Developer Tool Warning</div>
-              <div className="text-sm text-yellow-300 mt-1">
+              <div className="font-semibold text-warning">Developer Tool Warning</div>
+              <div className="text-sm text-warning/80 mt-1">
                 This editor directly modifies game balance. Changes affect all aspects of gameplay including streaming revenue,
                 marketing effectiveness, tour profitability, and chart performance. Test changes carefully and backup important configurations.
               </div>

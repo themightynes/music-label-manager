@@ -115,35 +115,38 @@ export function ArtistDialogueModal({
     return labels[key] || key;
   };
 
-  // Helper to get mood badge color
+  // Helper to get mood badge color (v2: hue-tinted chip classes)
   const getMoodColor = (mood: number): string => {
-    if (mood >= 70) return 'bg-green-500';
-    if (mood >= 40) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (mood >= 70) return 'bg-[rgba(55,224,176,0.14)] border-[rgba(55,224,176,0.4)] text-positive';
+    if (mood >= 40) return 'bg-[rgba(245,197,66,0.14)] border-[rgba(245,197,66,0.4)] text-warning';
+    return 'bg-[rgba(255,93,138,0.14)] border-[rgba(255,93,138,0.4)] text-negative';
   };
 
-  // Helper to get energy badge color
+  // Helper to get energy badge color (v2: hue-tinted chip classes)
   const getEnergyColor = (energy: number): string => {
-    if (energy >= 70) return 'bg-blue-500';
-    if (energy >= 40) return 'bg-cyan-500';
-    return 'bg-gray-500';
+    if (energy >= 70) return 'bg-[rgba(55,214,255,0.14)] border-[rgba(55,214,255,0.4)] text-neon-cyan';
+    if (energy >= 40) return 'bg-[rgba(160,90,240,0.14)] border-[rgba(160,90,240,0.4)] text-neon-purple';
+    return 'bg-[rgba(233,230,244,0.1)] border-[rgba(233,230,244,0.3)] text-muted-foreground';
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-brand-burgundy/5 to-brand-rose/5">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-brand-burgundy">
+          <DialogTitle className="text-2xl font-bold text-[#F7F4FB]">
             Conversation with {artist.name}
           </DialogTitle>
-          <DialogDescription className="flex gap-2 items-center">
-            <Badge variant="outline" className={getMoodColor(artist.mood)}>
+          <DialogDescription className="flex gap-2 items-center flex-wrap">
+            <Badge variant="outline" className={`rounded-pill font-mono text-[11px] ${getMoodColor(artist.mood)}`}>
               Mood: {artist.mood}
             </Badge>
-            <Badge variant="outline" className={getEnergyColor(artist.energy)}>
+            <Badge variant="outline" className={`rounded-pill font-mono text-[11px] ${getEnergyColor(artist.energy)}`}>
               Energy: {artist.energy}
             </Badge>
-            <Badge variant="outline">
+            <Badge
+              variant="outline"
+              className="rounded-pill font-mono text-[11px] bg-[rgba(200,166,255,0.14)] border-[rgba(200,166,255,0.4)] text-neon-lilac"
+            >
               {artist.archetype}
             </Badge>
           </DialogDescription>
@@ -153,7 +156,7 @@ export function ArtistDialogueModal({
           {/* Loading State */}
           {state.matches('loading') && (
             <div className="flex flex-col items-center justify-center py-12 space-y-3">
-              <Loader2 className="w-8 h-8 animate-spin text-brand-burgundy" />
+              <Loader2 className="w-8 h-8 animate-spin text-neon-purple" />
               <p className="text-sm text-muted-foreground">Loading dialogue...</p>
             </div>
           )}
@@ -161,8 +164,8 @@ export function ArtistDialogueModal({
           {/* Displaying State */}
           {state.matches('displaying') && context.selectedDialogue && (
             <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-brand-burgundy/10 border border-brand-burgundy/20">
-                <p className="text-sm leading-relaxed">{context.selectedDialogue.prompt}</p>
+              <div className="p-4 rounded-card bg-[rgba(209,74,122,0.1)] border border-[rgba(209,74,122,0.3)]">
+                <p className="text-sm leading-relaxed text-[rgba(233,230,244,0.85)]">{context.selectedDialogue.prompt}</p>
               </div>
 
               <div className="space-y-2">
@@ -171,7 +174,7 @@ export function ArtistDialogueModal({
                   <Button
                     key={choice.id}
                     variant="outline"
-                    className="w-full justify-start text-left h-auto py-3 px-4 hover:bg-brand-burgundy/10 hover:border-brand-burgundy/30"
+                    className="w-full justify-start text-left h-auto py-3 px-4 rounded-button border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.02)] hover:bg-[rgba(160,90,240,0.1)] hover:border-[rgba(160,90,240,0.35)]"
                     onClick={() => handleChoiceSelect(choice.id)}
                   >
                     <span className="text-sm">{choice.label}</span>
@@ -184,7 +187,7 @@ export function ArtistDialogueModal({
           {/* Submitting State */}
           {state.matches('submitting') && (
             <div className="flex flex-col items-center justify-center py-12 space-y-3">
-              <Loader2 className="w-8 h-8 animate-spin text-brand-burgundy" />
+              <Loader2 className="w-8 h-8 animate-spin text-neon-purple" />
               <p className="text-sm text-muted-foreground">Processing...</p>
             </div>
           )}
@@ -192,8 +195,8 @@ export function ArtistDialogueModal({
           {/* Complete State */}
           {state.matches('complete') && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <CheckCircle2 className="w-12 h-12 text-green-500" />
-              <p className="text-lg font-semibold text-brand-burgundy">Conversation Complete!</p>
+              <CheckCircle2 className="w-12 h-12 text-positive drop-shadow-[0_0_16px_rgba(55,224,176,0.4)]" />
+              <p className="text-lg font-semibold text-[#F7F4FB]">Conversation Complete!</p>
 
               {context.appliedEffects && Object.keys(context.appliedEffects).length > 0 && (
                 <div className="w-full space-y-2">
@@ -203,7 +206,11 @@ export function ArtistDialogueModal({
                       <Badge
                         key={key}
                         variant="secondary"
-                        className={value > 0 ? 'bg-green-500/10 text-green-700' : 'bg-red-500/10 text-red-700'}
+                        className={`rounded-pill font-mono text-[11px] ${
+                          value > 0
+                            ? 'bg-[rgba(55,224,176,0.1)] text-positive'
+                            : 'bg-[rgba(255,93,138,0.1)] text-negative'
+                        }`}
                       >
                         {getEffectLabel(key)}: {formatEffect(key, value)}
                       </Badge>
@@ -220,7 +227,11 @@ export function ArtistDialogueModal({
                       <Badge
                         key={key}
                         variant="outline"
-                        className={value > 0 ? 'border-green-500/50 text-green-700' : 'border-red-500/50 text-red-700'}
+                        className={`rounded-pill font-mono text-[11px] ${
+                          value > 0
+                            ? 'border-[rgba(55,224,176,0.5)] text-positive'
+                            : 'border-[rgba(255,93,138,0.5)] text-negative'
+                        }`}
                       >
                         {getEffectLabel(key)}: {formatEffect(key, value)}
                       </Badge>
@@ -234,16 +245,24 @@ export function ArtistDialogueModal({
           {/* Error State */}
           {state.matches('error') && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <AlertCircle className="w-12 h-12 text-red-500" />
-              <p className="text-lg font-semibold text-red-600">Error</p>
+              <AlertCircle className="w-12 h-12 text-negative drop-shadow-[0_0_16px_rgba(255,93,138,0.4)]" />
+              <p className="text-lg font-semibold text-negative">Error</p>
               <p className="text-sm text-muted-foreground text-center">
                 {context.error || 'An unexpected error occurred'}
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleRetry}>
+                <Button
+                  variant="outline"
+                  className="rounded-button text-neon-cyan border-[rgba(55,214,255,0.35)] bg-[rgba(55,214,255,0.06)] hover:bg-[rgba(55,214,255,0.12)]"
+                  onClick={handleRetry}
+                >
                   Retry
                 </Button>
-                <Button variant="ghost" onClick={handleClose}>
+                <Button
+                  variant="ghost"
+                  className="rounded-button text-[rgba(233,230,244,0.75)] border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.02)]"
+                  onClick={handleClose}
+                >
                   Close
                 </Button>
               </div>
@@ -254,7 +273,12 @@ export function ArtistDialogueModal({
         {/* Footer Actions */}
         {!state.matches('complete') && !state.matches('error') && (
           <div className="flex justify-end">
-            <Button variant="ghost" onClick={handleClose} disabled={state.matches('submitting')}>
+            <Button
+              variant="ghost"
+              className="rounded-button text-[rgba(233,230,244,0.75)] border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.02)]"
+              onClick={handleClose}
+              disabled={state.matches('submitting')}
+            >
               Cancel
             </Button>
           </div>

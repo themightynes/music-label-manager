@@ -13,7 +13,7 @@
 - Always update store via store actions, never mutate state directly
 
 ## Page Architecture Patterns
-- All pages wrap content in `<GameLayout>` - provides sidebar and global navigation
+- All pages wrap content in `<GameLayout>` - provides the page backdrop, the GameHeader (balance chip, week/date, Advance Week), and the CommandDock global navigation
 - Pages are lightweight containers - delegate to feature components
 - Use `useGameContext()` for `gameId`, `useGameStore()` for game state
 - Pages handle URL params for pre-selection (e.g., `/live-performance?artistId=123`)
@@ -28,9 +28,11 @@
 - `admin/` - Admin tools gated by `withAdmin` HOC
 - `layouts/` - Layout wrappers (GameLayout)
 
-## GameSidebar Integration
-- Sidebar manages: navigation, week advancement, save game, bug reports, admin access
+## Navigation Shell (v2, July 2026 — GameSidebar is GONE)
+- `components/CommandDock.tsx` — floating bottom-center dock: nav clusters, center HoloDisc = Dashboard/home, "More" overflow menu (Save/Load, Weekly Results, Bug Report, Admin, Main Menu, Live Performance), Clerk UserButton, WeekSummary/BugReport modals, AUTO focus-slot filler
+- `components/GameHeader.tsx` — balance chip + week/date + Advance Week button (handler/disabled logic formerly in the sidebar)
 - Use `onShowSaveModal` prop pattern for triggering modals from layout
+- Design language: see `docs/04-frontend/design/v2/design-system-v2.md` (neo-cyber HUD — glass panels, chromatic hairlines, spectral neon accents; utilities `.glass-panel`, `.chromatic-hairline`, `.hud-ticks`, `.backdrop-*` in `index.css`)
 
 ## Data Flow & Loading
 **Server-Side Authority:**

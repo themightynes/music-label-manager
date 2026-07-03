@@ -91,10 +91,10 @@ export function ChartDataTable<TData>({
   );
 
   return (
-    <div className={cn('rounded-md border border-brand-purple bg-brand-dark-mid/60', className)}>
+    <div className={cn('glass-panel chromatic-hairline rounded-card', className)}>
       <Table>
-        <TableHeader className="bg-black/20">
-          <TableRow className="border-brand-purple">
+        <TableHeader className="bg-white/[0.02]">
+          <TableRow className="border-white/[0.06] hover:bg-transparent">
             {columns.map(column => {
               const direction = sortState?.columnId === column.id ? sortState.direction : null;
 
@@ -102,7 +102,7 @@ export function ChartDataTable<TData>({
                 <TableHead
                   key={column.id}
                   className={cn(
-                    'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white/60',
+                    'px-4 py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-text-label',
                     column.headerClassName
                   )}
                 >
@@ -117,29 +117,36 @@ export function ChartDataTable<TData>({
         </TableHeader>
         <TableBody>
           {sortedData.length ? (
-            sortedData.map((row, index) => (
-              <TableRow
-                key={getRowKey ? getRowKey(row, index) : index}
-                className={cn(
-                  'border-brand-purple transition-colors',
-                  rowHighlight?.(row)
-                    ? 'bg-brand-burgundy/10 hover:bg-brand-burgundy/20'
-                    : 'hover:bg-brand-dark-card/30'
-                )}
-              >
-                {columns.map(column => (
-                  <TableCell
-                    key={column.id}
-                    className={cn('px-4 py-3 text-sm text-white/80', column.cellClassName)}
-                  >
-                    {column.cell(row)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            sortedData.map((row, index) => {
+              const rank = (row as { position?: number }).position;
+              const isTopTen = typeof rank === 'number' && rank >= 1 && rank <= 10;
+
+              return (
+                <TableRow
+                  key={getRowKey ? getRowKey(row, index) : index}
+                  className={cn(
+                    'border-white/[0.06] transition-colors',
+                    rowHighlight?.(row)
+                      ? 'bg-neon-lilac/10 hover:bg-neon-lilac/20'
+                      : isTopTen
+                        ? 'bg-neon-lilac/[0.04] hover:bg-white/[0.045]'
+                        : 'hover:bg-white/[0.045]'
+                  )}
+                >
+                  {columns.map(column => (
+                    <TableCell
+                      key={column.id}
+                      className={cn('px-4 py-3 text-sm text-text-body', column.cellClassName)}
+                    >
+                      {column.cell(row)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })
           ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-sm text-white/60">
+            <TableRow className="border-white/[0.06] hover:bg-transparent">
+              <TableCell colSpan={columns.length} className="h-24 text-center text-sm text-text-muted">
                 {emptyMessage}
               </TableCell>
             </TableRow>

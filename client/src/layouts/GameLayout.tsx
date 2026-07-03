@@ -1,38 +1,40 @@
 import { ReactNode } from 'react';
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger
-} from '@/components/ui/sidebar';
-import { GameSidebar } from '@/components/GameSidebar';
+import { PageBackdrop } from '@/components/ui/page-backdrop';
+import { GameHeader } from '@/components/GameHeader';
+import { CommandDock } from '@/components/CommandDock';
 
 interface GameLayoutProps {
   children: ReactNode;
   onShowSaveModal?: () => void;
 }
 
+/**
+ * GameLayout — v2 app shell (Design System v2 §7/§9).
+ *
+ * Backdrop stack → slim right-aligned header (balance / week / Advance Week) →
+ * page content → floating Command Dock. The old GameSidebar is gone; navigation
+ * lives in the dock, overflow actions in its "More" menu.
+ */
 export default function GameLayout({
   children,
   onShowSaveModal
 }: GameLayoutProps) {
   return (
-    <SidebarProvider defaultOpen={true}>
-      <GameSidebar
-        onShowSaveModal={onShowSaveModal}
-      />
+    <div className="relative min-h-screen">
+      <PageBackdrop />
+
       {/* min-w-0 lets the content pane shrink below its content's intrinsic width —
           without it, wide tables push the whole page past the viewport instead of
-          scrolling inside their overflow-auto wrappers */}
-      <SidebarInset className="bg-transparent min-w-0">
-        <div className="flex-1 p-0 min-h-screen min-w-0 bg-transparent">
-          <div className="flex items-center gap-2 p-4 border-b border-brand-rose/30">
-            <SidebarTrigger className="h-4 w-4 text-white hover:bg-white/10" />
-          </div>
-          <main className="flex-1 bg-transparent">
-            {children}
-          </main>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+          scrolling inside their overflow-auto wrappers.
+          pb-44 keeps the floating dock from covering the end of the page. */}
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-[1600px] px-4 pb-44 pt-6 sm:px-8">
+        <GameHeader />
+        <main className="min-w-0 pt-2">
+          {children}
+        </main>
+      </div>
+
+      <CommandDock onShowSaveModal={onShowSaveModal} />
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, Briefcase } from 'lucide-react';
 import { SelectionSummary } from '../components/SelectionSummary';
 import { ExecutiveMeetings } from '../components/executive-meetings/ExecutiveMeetings';
 import { useGameContext } from '@/contexts/GameContext';
@@ -71,24 +71,33 @@ export default function ExecutiveSuitePage({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <header className="mb-10 flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-white">Week {gameState.currentWeek} Executive Meetings</h1>
-            <p className="mt-2 text-sm md:text-base text-white/70 flex items-center gap-2">
+            <div className="text-label text-[10px] uppercase tracking-[0.24em] text-neon-lilac/60 mb-1 flex items-center gap-2">
+              <Briefcase className="w-3 h-3" />
+              Week {gameState.currentWeek}
+            </div>
+            <h1 className="font-display text-2xl md:text-[28px] text-text-primary text-aberration">Executive Meetings</h1>
+            <div className="shimmer-bar w-40 mt-2" />
+            <p className="mt-3 text-sm md:text-base text-text-body flex items-center gap-2">
               Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
-              {gameState?.focusSlots === 4 && <Badge variant="outline" className="text-green-400 border-green-400/30">4th Slot Unlocked</Badge>}
+              {gameState?.focusSlots === 4 && (
+                <span className="inline-flex items-center gap-1 rounded-pill bg-positive/10 border border-positive/40 text-positive px-3 py-0.5 font-mono text-[11px]">
+                  4th Slot Unlocked
+                </span>
+              )}
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em] text-white/60">
+          <div className="inline-flex items-center gap-2 rounded-pill border border-white/10 bg-white/5 px-4 py-2 text-label text-[10px] font-semibold uppercase tracking-[0.4em] text-text-muted">
             Executive Suite
           </div>
         </header>
 
         <section
-          className="relative overflow-hidden rounded-3xl border border-brand-rose/30 bg-brand-dark/90 p-8 bg-contain bg-top bg-no-repeat min-h-[600px]"
+          className="glass-panel chromatic-hairline hud-ticks relative overflow-hidden p-8 bg-contain bg-top bg-no-repeat min-h-[600px]"
           style={{ backgroundImage: "url('/executivesuite_background.png')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark-card/70 via-transparent to-brand-dark-card/80" aria-hidden />
-          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-brand-burgundy/20 blur-3xl" aria-hidden />
-          <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-br from-surface-panel/70 via-transparent to-surface-panel-alt/80" aria-hidden />
+          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-neon-purple/20 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-neon-amber/10 blur-3xl" aria-hidden />
 
           <div className="relative z-10">
             {/* Two Row Layout - Executive Meetings Top, Focus Slots Bottom */}
@@ -97,13 +106,13 @@ export default function ExecutiveSuitePage({
               <div>
                 {loading ? (
                   <div className="text-center py-8">
-                    <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
-                    <p className="text-white/70">Loading available actions...</p>
+                    <Loader2 className="w-8 h-8 text-neon-purple mx-auto mb-4 animate-spin" />
+                    <p className="text-text-body">Loading available actions...</p>
                   </div>
                 ) : error ? (
                   <div className="text-center py-8">
-                    <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-                    <p className="text-red-600 mb-4">Failed to load actions</p>
+                    <AlertCircle className="w-8 h-8 text-negative mx-auto mb-4" />
+                    <p className="text-negative mb-4">Failed to load actions</p>
                     <Button onClick={() => window.location.reload()} variant="outline" size="sm">
                       Try Again
                     </Button>

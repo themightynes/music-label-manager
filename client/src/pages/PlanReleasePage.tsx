@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star, Award, Play, Check, Loader2, AlertCircle, Edit2, X } from 'lucide-react';
+import {
+  ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star, Award,
+  Play, Check, Loader2, AlertCircle, Edit2, X, Radio, Megaphone, Newspaper,
+  ExternalLink, Sparkles
+} from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
@@ -104,6 +105,20 @@ const getAdjustedBudget = (budgets: Record<string, number>, week: number, balanc
 const getSeasonalAdjustment = (budgets: Record<string, number>, week: number, balanceData: any): number =>
   getTotalChannelBudget(budgets) * (getSeasonalMultiplierValue(week, balanceData) - 1);
 
+// v2 restyle: map the FA icon class strings coming from shared/marketingUtils to lucide icons
+// (spec §10 icon mapping table). MarketingChannel.icon stays a FA string in the shared util —
+// we translate it here rather than touching files outside this page's ownership.
+const CHANNEL_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  radio: Radio,
+  digital: Megaphone,
+  pr: Newspaper,
+  influencer: Users
+};
+const getChannelIcon = (channelId: string) => CHANNEL_ICONS[channelId] || Megaphone;
+
+// v2 chip recipe (spec §6): mono 11-12px, rounded-pill, hue-tinted bg/border/text
+const CHIP_BASE = 'inline-flex items-center rounded-pill font-mono text-[11px] px-2.5 py-1 border';
+
 export default function PlanReleasePage() {
   const [, setLocation] = useLocation();
   const { gameState, loadGame, planRelease } = useGameStore();
@@ -117,15 +132,15 @@ export default function PlanReleasePage() {
   // Data state
   const [artists, setArtists] = useState<Artist[]>([]);
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
-  
+
   // Loading states
   const [loadingArtists, setLoadingArtists] = useState(true);
   const [loadingSongs, setLoadingSongs] = useState(false);
-  
+
   // Error states
   const [artistError, setArtistError] = useState<string | null>(null);
   const [songError, setSongError] = useState<string | null>(null);
-  
+
   // Release planning state
   const [selectedArtist, setSelectedArtist] = useState<string>('');
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
@@ -136,7 +151,7 @@ export default function PlanReleasePage() {
   const [songTitles, setSongTitles] = useState<Record<string, string>>({});
   const [releaseTitle, setReleaseTitle] = useState('');
   const [releaseWeek, setReleaseWeek] = useState(6);
-  
+
   // Marketing budget allocation per channel
   const [channelBudgets, setChannelBudgets] = useState<Record<string, number>>({
     radio: 0,
@@ -144,7 +159,7 @@ export default function PlanReleasePage() {
     pr: 0,
     influencer: 1000
   });
-  
+
   // Lead single timing (for multi-song releases)
   const [leadSingleWeek, setLeadSingleWeek] = useState(5); // Default 1 week before main release
   const [leadSingleBudget, setLeadSingleBudget] = useState<Record<string, number>>({
@@ -153,12 +168,12 @@ export default function PlanReleasePage() {
     pr: 0,
     influencer: 500
   });
-  
+
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showPlanAnotherDialog, setShowPlanAnotherDialog] = useState(false);
-  
+
   // Release preview state
   const [previewData, setPreviewData] = useState<any>(null);
   const [calculatingPreview, setCalculatingPreview] = useState(false);
@@ -194,17 +209,17 @@ export default function PlanReleasePage() {
   useEffect(() => {
     const loadReadyArtists = async () => {
       if (!gameState?.id) return;
-      
+
       setLoadingArtists(true);
       setArtistError(null);
       try {
         const response = await apiRequest('GET', `/api/game/${gameState.id}/artists/ready-for-release`);
         const data = await response.json();
-        
+
         setArtists(data.artists.map(transformArtistData));
       } catch (error: any) {
         console.error('Failed to load ready artists:', error);
-        
+
         // Handle specific error types
         if (error.status === 503 || error.message?.includes('unavailable')) {
           setArtistError('Database temporarily unavailable. Please refresh the page to try again.');
@@ -218,7 +233,7 @@ export default function PlanReleasePage() {
         setLoadingArtists(false);
       }
     };
-    
+
     loadReadyArtists();
   }, [gameState?.id]);
 
@@ -228,19 +243,19 @@ export default function PlanReleasePage() {
       setAvailableSongs([]);
       return;
     }
-    
+
     setLoadingSongs(true);
     setSongError(null);
     try {
-      const response = await apiRequest('GET', 
+      const response = await apiRequest('GET',
         `/api/game/${gameState.id}/artists/${selectedArtist}/songs/ready`);
       const data = await response.json();
-      
+
       const artist = artists.find(a => a.id === selectedArtist);
       setAvailableSongs(data.songs.map((song: any) => transformSongData(song, artist?.name || '')));
     } catch (error: any) {
       console.error('Failed to load artist songs:', error);
-      
+
       // Handle specific error types
       if (error.status === 503 || error.message?.includes('unavailable')) {
         setSongError('Database temporarily unavailable. Please try again in a moment.');
@@ -254,7 +269,7 @@ export default function PlanReleasePage() {
       setLoadingSongs(false);
     }
   };
-  
+
   useEffect(() => {
     loadArtistSongs();
   }, [selectedArtist, gameState?.id, artists]);
@@ -295,10 +310,10 @@ export default function PlanReleasePage() {
       setPreviewData(null);
       return;
     }
-    
+
     setCalculatingPreview(true);
     setPreviewError(null);
-    
+
     try {
       const previewRequest = {
         artistId: selectedArtist,
@@ -314,15 +329,15 @@ export default function PlanReleasePage() {
           totalLeadSingleBudget: getTotalChannelBudget(leadSingleBudget)
         } : null
       };
-      
-      const response = await apiRequest('POST', 
+
+      const response = await apiRequest('POST',
         `/api/game/${gameState.id}/releases/preview`, previewRequest);
       const data = await response.json();
-      
+
       setPreviewData(data.preview);
     } catch (error: any) {
       console.error('Failed to calculate release preview:', error);
-      
+
       // Handle specific error types
       if (error.status === 503 || error.message?.includes('unavailable')) {
         setPreviewError('Database temporarily unavailable. Preview will refresh automatically.');
@@ -346,7 +361,7 @@ export default function PlanReleasePage() {
     const timer = setTimeout(() => {
       calculateReleasePreview();
     }, 500); // Debounce API calls
-    
+
     return () => clearTimeout(timer);
   }, [selectedArtist, selectedSongs, releaseType, channelBudgets, releaseWeek, leadSingle, leadSingleBudget, leadSingleWeek]);
 
@@ -379,14 +394,14 @@ export default function PlanReleasePage() {
     const totalMarketingCost = metrics?.totalMarketingCost || 0;
     const activeChannels = marketingChannels.filter(channel => (channelBudgets[channel.id] || 0) > 0);
     const currentCreativeCapital = gameState?.creativeCapital || 0;
-    
+
     if (!selectedArtist) errors.push('Please select an artist');
     if (selectedSongs.length === 0) errors.push('Please select at least one song');
     if (!releaseTitle.trim()) errors.push('Please enter a release title');
     if (currentCreativeCapital < 1) errors.push('Insufficient creative capital. You need 1 creative capital to plan a release.');
     if (totalMarketingCost > (gameState?.money || 0)) errors.push('Insufficient funds for total marketing budget');
     if (activeChannels.length === 0) errors.push('Please allocate budget to at least one marketing channel');
-    
+
     // Release type validation
     if (releaseType === 'ep' && selectedSongs.length < 3) {
       errors.push('EP requires at least 3 songs');
@@ -394,7 +409,7 @@ export default function PlanReleasePage() {
     if (releaseType === 'album' && selectedSongs.length < 8) {
       errors.push('Album requires at least 8 songs');
     }
-    
+
     // Lead single timing validation
     if (releaseType !== 'single' && leadSingle) {
       if (leadSingleWeek >= releaseWeek) {
@@ -407,7 +422,7 @@ export default function PlanReleasePage() {
         errors.push('Lead single requires marketing budget allocation');
       }
     }
-    
+
     // Channel budget validation
     activeChannels.forEach(channel => {
       const budget = channelBudgets[channel.id];
@@ -418,16 +433,16 @@ export default function PlanReleasePage() {
         errors.push(`${channel.name} budget cannot exceed $${channel.maxBudget.toLocaleString()}`);
       }
     });
-    
+
     setValidationErrors(errors);
     return errors.length === 0;
   };
 
   const handleCreateRelease = async () => {
     if (!validateRelease()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       const releaseData = {
         artistId: selectedArtist,
@@ -457,23 +472,23 @@ export default function PlanReleasePage() {
           marketingBudget: getTotalChannelBudget(channelBudgets)
         }
       };
-      
+
       const result = await planRelease(releaseData);
-      
+
       // Success - clear selected songs and refresh available songs immediately
       setSelectedSongs([]);
       setLeadSingle('');
       setReleaseTitle('');
-      
+
       // Refresh available songs to remove the ones that were just scheduled
       await loadArtistSongs();
-      
+
       // Success message with more detailed feedback
       const scheduledSongTitles = selectedSongs.map(songId => {
         const song = availableSongs.find(s => s.id === songId);
         return song?.title || 'Unknown Song';
       }).join(', ');
-      
+
       toast({
         title: `Release "${releaseData.title}" planned successfully!`,
         description: `Scheduled songs: ${scheduledSongTitles}. These songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`,
@@ -489,7 +504,7 @@ export default function PlanReleasePage() {
 
     } catch (error: any) {
       console.error('Failed to create release:', error);
-      
+
       // Handle specific error types
       if (error.status === 402) {
         // Check if it's a creative capital error or money error
@@ -502,7 +517,7 @@ export default function PlanReleasePage() {
       } else if (error.status === 409) {
         // Song conflict detected - refresh available songs to show current state
         await loadArtistSongs();
-        
+
         const details = error.details || {};
         if (details.conflicts) {
           setValidationErrors(details.conflicts.map((c: any) => c.description));
@@ -562,11 +577,12 @@ export default function PlanReleasePage() {
     }
   };
 
-  const getQualityColor = (quality: number) => {
-    if (quality >= 90) return 'text-green-600';
-    if (quality >= 80) return 'text-brand-burgundy';
-    if (quality >= 70) return 'text-yellow-600';
-    return 'text-red-600';
+  // v2 restyle: quality chip tint (mono stat chip) instead of plain text color
+  const getQualityChipClasses = (quality: number) => {
+    if (quality >= 90) return 'bg-positive/10 border-positive/40 text-positive';
+    if (quality >= 80) return 'bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan';
+    if (quality >= 70) return 'bg-warning/10 border-warning/40 text-warning';
+    return 'bg-negative/10 border-negative/40 text-negative';
   };
 
   // Song title editing functions
@@ -582,13 +598,13 @@ export default function PlanReleasePage() {
 
   const saveSongTitle = async (songId: string) => {
     const trimmedTitle = editedTitle.trim();
-    
+
     // Validation
     if (!trimmedTitle) {
       cancelEditingSong();
       return;
     }
-    
+
     if (trimmedTitle.length > 100) {
       toast({
         title: 'Title too long',
@@ -597,19 +613,19 @@ export default function PlanReleasePage() {
       });
       return;
     }
-    
+
     try {
       await apiRequest('PATCH', `/api/songs/${songId}`, { title: trimmedTitle });
-      
+
       // If we get here without throwing, the update was successful
       // Update local state
       setSongTitles(prev => ({ ...prev, [songId]: trimmedTitle }));
-      
+
       // Update the song in availableSongs if it exists
-      setAvailableSongs(prev => prev.map(song => 
+      setAvailableSongs(prev => prev.map(song =>
         song.id === songId ? { ...song, title: trimmedTitle } : song
       ));
-      
+
       // Close the edit box
       setEditingSongId(null);
       setEditedTitle('');
@@ -634,355 +650,366 @@ export default function PlanReleasePage() {
 
   return (
     <GameLayout>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+        {/* Page header — eyebrow mono label + display title + shimmer underline (spec §4.4) */}
         <div className="mb-8">
-          <h1 className="text-xl md:text-2xl font-heading font-bold text-white">Plan Release</h1>
+          <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[rgba(180,170,220,0.5)] mb-2">
+            Release Operations
+          </div>
+          <h1 className="font-display text-2xl md:text-3xl lowercase text-foreground text-aberration mb-3">
+            plan release
+          </h1>
+          <div className="shimmer-bar w-40" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
           {/* Left Column - Release Planning */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             {/* Artist Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Users className="w-5 h-5" />
-                  <span>Select Artist</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingArtists || !balanceData || marketingChannels.length === 0 || releaseTypes.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
-                    <p className="text-white/70">
-                      {!balanceData ? 'Loading balance data...' :
-                       marketingChannels.length === 0 || releaseTypes.length === 0 ? 'Loading configuration...' :
-                       'Loading available artists...'}
-                    </p>
+            <section className="glass-panel chromatic-hairline p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-4 h-4 text-neon-lilac" />
+                <h2 className="text-[15px] font-semibold text-foreground">Select Artist</h2>
+              </div>
+              {loadingArtists || !balanceData || marketingChannels.length === 0 || releaseTypes.length === 0 ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 text-neon-purple mx-auto mb-4 animate-spin" />
+                  <p className="text-[rgba(233,230,244,0.7)] text-sm">
+                    {!balanceData ? 'Loading balance data...' :
+                     marketingChannels.length === 0 || releaseTypes.length === 0 ? 'Loading configuration...' :
+                     'Loading available artists...'}
+                  </p>
+                </div>
+              ) : artistError ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-8 h-8 text-negative mx-auto mb-4" />
+                  <p className="text-negative text-sm mb-4">{artistError}</p>
+                  <Button onClick={() => window.location.reload()} variant="outline" size="sm"
+                    className="border-neon-cyan/35 text-neon-cyan bg-neon-cyan/[0.06] hover:bg-neon-cyan/10 hover:text-neon-cyan">
+                    Try Again
+                  </Button>
+                </div>
+              ) : artists.length === 0 ? (
+                <div className="text-center py-10">
+                  <div className="w-12 h-12 rounded-[14px] bg-neon-purple/[0.12] border border-neon-purple/30 flex items-center justify-center mx-auto mb-3">
+                    <Users className="w-5 h-5 text-neon-lilac" />
                   </div>
-                ) : artistError ? (
+                  <p className="text-[14px] font-semibold text-foreground">No artists with ready songs found</p>
+                  <p className="text-xs text-[rgba(233,230,244,0.5)] mt-1">Artists need recorded songs to plan releases</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {artists.map(artist => (
+                    <div
+                      key={artist.id}
+                      className={cn(
+                        'p-4 rounded-xl border cursor-pointer transition-all bg-[rgba(30,20,44,0.5)]',
+                        selectedArtist === artist.id
+                          ? 'border-neon-purple/60 bg-neon-purple/[0.1] shadow-[0_0_16px_rgba(160,90,240,0.25)]'
+                          : 'border-white/[0.08] hover:border-white/[0.16]'
+                      )}
+                      onClick={() => {
+                        setSelectedArtist(artist.id);
+                        setSelectedSongs([]);
+                        setLeadSingle('');
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-foreground text-sm">{artist.name}</h3>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/artist/${artist.id}`);
+                            }}
+                            className="text-neon-cyan hover:text-neon-cyan/80"
+                            title="View artist details"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <span className={cn(CHIP_BASE, "bg-neon-purple/[0.12] border-neon-purple/40 text-neon-lilac")}>
+                          {artist.genre}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-xs text-[rgba(233,230,244,0.6)]">
+                        <div className="flex justify-between">
+                          <span>Ready Songs</span>
+                          <span className="font-mono font-semibold text-positive">{artist.readySongs}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Mood</span>
+                          <span className="font-mono font-semibold text-foreground">{artist.mood}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Energy</span>
+                          <span className="font-mono font-semibold text-foreground">{(artist.energy ?? (artist as any).loyalty ?? 0)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Song Selection */}
+            {selectedArtist && (
+              <section className="glass-panel chromatic-hairline p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Music className="w-4 h-4 text-neon-lilac" />
+                    <h2 className="text-[15px] font-semibold text-foreground">Select Songs</h2>
+                    <span className={cn(CHIP_BASE, "bg-white/[0.06] border-white/[0.12] text-[rgba(233,230,244,0.75)]")}>
+                      {selectedSongs.length} selected
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedSongs(availableSongs.map(s => s.id))}
+                    disabled={availableSongs.length === 0 || selectedSongs.length === availableSongs.length}
+                    className="border-neon-cyan/35 text-neon-cyan bg-neon-cyan/[0.06] hover:bg-neon-cyan/10 hover:text-neon-cyan"
+                  >
+                    Select all
+                  </Button>
+                </div>
+                {loadingSongs ? (
                   <div className="text-center py-8">
-                    <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-                    <p className="text-red-600 mb-4">{artistError}</p>
-                    <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                    <Loader2 className="w-8 h-8 text-neon-purple mx-auto mb-4 animate-spin" />
+                    <p className="text-[rgba(233,230,244,0.7)] text-sm">Loading available songs...</p>
+                  </div>
+                ) : songError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-8 h-8 text-negative mx-auto mb-4" />
+                    <p className="text-negative text-sm mb-4">{songError}</p>
+                    <Button onClick={() => {
+                      setSelectedArtist('');
+                      setSelectedArtist(selectedArtist);
+                    }} variant="outline" size="sm"
+                      className="border-neon-cyan/35 text-neon-cyan bg-neon-cyan/[0.06] hover:bg-neon-cyan/10 hover:text-neon-cyan">
                       Try Again
                     </Button>
                   </div>
-                ) : artists.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-8 h-8 text-white/40 mx-auto mb-4" />
-                    <p className="text-white/70">No artists with ready songs found</p>
-                    <p className="text-sm text-white/50 mt-2">Artists need recorded songs to plan releases</p>
+                ) : availableSongs.length === 0 ? (
+                  <div className="text-center py-10">
+                    <div className="w-12 h-12 rounded-[14px] bg-neon-purple/[0.12] border border-neon-purple/30 flex items-center justify-center mx-auto mb-3">
+                      <Music className="w-5 h-5 text-neon-lilac" />
+                    </div>
+                    <p className="text-[14px] font-semibold text-foreground">No ready songs found for this artist</p>
+                    <p className="text-xs text-[rgba(233,230,244,0.5)] mt-1">Songs must be recorded but not yet released</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {artists.map(artist => (
+                  <div className="space-y-2.5">
+                    {availableSongs.map(song => (
                       <div
-                        key={artist.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                          selectedArtist === artist.id 
-                            ? 'border-brand-burgundy bg-brand-burgundy/10' 
-                            : 'border-brand-purple/50 hover:border-brand-purple-light/60'
-                        }`}
-                        onClick={() => {
-                          setSelectedArtist(artist.id);
-                          setSelectedSongs([]);
-                          setLeadSingle('');
-                        }}
+                        key={song.id}
+                        className={cn(
+                          'p-4 rounded-xl border transition-all bg-[rgba(30,20,44,0.5)]',
+                          selectedSongs.includes(song.id)
+                            ? 'border-neon-purple/60 bg-neon-purple/[0.1]'
+                            : 'border-white/[0.08] hover:border-white/[0.16]'
+                        )}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-white">{artist.name}</h3>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setLocation(`/artist/${artist.id}`);
-                              }}
-                              className="text-brand-burgundy hover:text-brand-burgundy text-xs"
-                              title="View artist details"
-                            >
-                              <i className="fas fa-external-link-alt"></i>
-                            </button>
-                          </div>
-                          <Badge variant="outline" className="text-xs">{artist.genre}</Badge>
-                        </div>
-                        <div className="space-y-1 text-sm text-white/70">
-                          <div className="flex justify-between">
-                            <span>Ready Songs:</span>
-                            <span className="font-mono font-semibold text-green-600">{artist.readySongs}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Mood:</span>
-                            <span className="font-mono font-semibold">{artist.mood}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Energy:</span>
-                            <span className="font-mono font-semibold">{(artist.energy ?? (artist as any).loyalty ?? 0)}%</span>
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedSongs.includes(song.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedSongs([...selectedSongs, song.id]);
+                              } else {
+                                setSelectedSongs(selectedSongs.filter(id => id !== song.id));
+                                if (leadSingle === song.id) setLeadSingle('');
+                              }
+                            }}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              {editingSongId === song.id ? (
+                                <div className="flex items-center gap-2 flex-1 mr-2">
+                                  <Input
+                                    value={editedTitle}
+                                    onChange={(e) => setEditedTitle(e.target.value)}
+                                    onKeyDown={(e) => handleTitleKeyPress(e, song.id)}
+                                    onBlur={(e) => {
+                                      // Don't save if clicking on the cancel or save buttons
+                                      const relatedTarget = e.relatedTarget as HTMLElement;
+                                      if (relatedTarget && relatedTarget.closest('.song-edit-buttons')) {
+                                        return;
+                                      }
+                                      saveSongTitle(song.id);
+                                    }}
+                                    className="h-7 text-sm font-semibold"
+                                    maxLength={100}
+                                    autoFocus
+                                  />
+                                  <div className="song-edit-buttons flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => saveSongTitle(song.id)}
+                                      className="h-7 w-7 p-0"
+                                      type="button"
+                                    >
+                                      <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={cancelEditingSong}
+                                      className="h-7 w-7 p-0"
+                                      type="button"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 group">
+                                  <h4 className="font-semibold text-foreground text-sm">
+                                    {songTitles[song.id] || song.title}
+                                  </h4>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => startEditingSong(song.id, songTitles[song.id] || song.title)}
+                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span className={cn(CHIP_BASE, getQualityChipClasses(song.quality))}>
+                                  {song.quality} Quality
+                                </span>
+                                <span className={cn(CHIP_BASE, "bg-white/[0.06] border-white/[0.12] text-[rgba(233,230,244,0.75)]")}>
+                                  {song.mood}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-[rgba(233,230,244,0.5)]">
+                              <span>Created Week {song.createdWeek}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Song Selection */}
-            {selectedArtist && (
-              <Card>
-              <CardHeader className="flex items-start justify-between">
-                <CardTitle className="flex items-center space-x-2">
-                  <Music className="w-5 h-5" />
-                  <span>Select Songs</span>
-                  <Badge variant="secondary">{selectedSongs.length} selected</Badge>
-                </CardTitle>
-                <div className="flex items-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedSongs(availableSongs.map(s => s.id))}
-                    disabled={availableSongs.length === 0 || selectedSongs.length === availableSongs.length}
-                  >
-                    Select all
-                  </Button>
-                </div>
-              </CardHeader>
-                <CardContent>
-                  {loadingSongs ? (
-                    <div className="text-center py-8">
-                      <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
-                      <p className="text-white/70">Loading available songs...</p>
-                    </div>
-                  ) : songError ? (
-                    <div className="text-center py-8">
-                      <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-                      <p className="text-red-600 mb-4">{songError}</p>
-                      <Button onClick={() => {
-                        setSelectedArtist('');
-                        setSelectedArtist(selectedArtist);
-                      }} variant="outline" size="sm">
-                        Try Again
-                      </Button>
-                    </div>
-                  ) : availableSongs.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Music className="w-8 h-8 text-white/40 mx-auto mb-4" />
-                      <p className="text-white/70">No ready songs found for this artist</p>
-                      <p className="text-sm text-white/50 mt-2">Songs must be recorded but not yet released</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {availableSongs.map(song => (
-                        <div
-                          key={song.id}
-                          className={`p-4 border rounded-lg transition-all ${
-                            selectedSongs.includes(song.id)
-                              ? 'border-brand-burgundy bg-brand-burgundy/10'
-                              : 'border-brand-purple/50 hover:border-brand-purple-light/60'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <Checkbox
-                              checked={selectedSongs.includes(song.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedSongs([...selectedSongs, song.id]);
-                                } else {
-                                  setSelectedSongs(selectedSongs.filter(id => id !== song.id));
-                                  if (leadSingle === song.id) setLeadSingle('');
-                                }
-                              }}
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-2">
-                                {editingSongId === song.id ? (
-                                  <div className="flex items-center space-x-2 flex-1 mr-2">
-                                    <Input
-                                      value={editedTitle}
-                                      onChange={(e) => setEditedTitle(e.target.value)}
-                                      onKeyDown={(e) => handleTitleKeyPress(e, song.id)}
-                                      onBlur={(e) => {
-                                        // Don't save if clicking on the cancel or save buttons
-                                        const relatedTarget = e.relatedTarget as HTMLElement;
-                                        if (relatedTarget && relatedTarget.closest('.song-edit-buttons')) {
-                                          return;
-                                        }
-                                        saveSongTitle(song.id);
-                                      }}
-                                      className="h-7 text-sm font-semibold"
-                                      maxLength={100}
-                                      autoFocus
-                                    />
-                                    <div className="song-edit-buttons flex items-center space-x-1">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => saveSongTitle(song.id)}
-                                        className="h-7 w-7 p-0"
-                                        type="button"
-                                      >
-                                        <Check className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={cancelEditingSong}
-                                        className="h-7 w-7 p-0"
-                                        type="button"
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center space-x-2 group">
-                                    <h4 className="font-semibold text-white">
-                                      {songTitles[song.id] || song.title}
-                                    </h4>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => startEditingSong(song.id, songTitles[song.id] || song.title)}
-                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                                <div className="flex items-center space-x-2">
-                                  <Badge className={`text-xs ${getQualityColor(song.quality)}`}>
-                                    {song.quality} Quality
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">{song.mood}</Badge>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-4 text-sm text-white/70">
-                                <span>Created Week {song.createdWeek}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              </section>
             )}
 
             {/* Lead Single Selection (for multi-song releases) */}
             {selectedSongs.length > 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Star className="w-5 h-5" />
-                    <span>Lead Single</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select value={leadSingle} onValueChange={setLeadSingle}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose the lead single for promotion" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSongs
-                        .filter(song => selectedSongs.includes(song.id))
-                        .map(song => (
-                          <SelectItem key={song.id} value={song.id}>
-                            {songTitles[song.id] || song.title} (Quality: {song.quality})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-white/70 mt-2">
-                    The lead single will receive extra promotional focus and affect overall release performance.
-                  </p>
-                </CardContent>
-              </Card>
+              <section className="glass-panel chromatic-hairline p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="w-4 h-4 text-neon-lilac" />
+                  <h2 className="text-[15px] font-semibold text-foreground">Lead Single</h2>
+                </div>
+                <Select value={leadSingle} onValueChange={setLeadSingle}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose the lead single for promotion" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSongs
+                      .filter(song => selectedSongs.includes(song.id))
+                      .map(song => (
+                        <SelectItem key={song.id} value={song.id}>
+                          {songTitles[song.id] || song.title} (Quality: {song.quality})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-[rgba(233,230,244,0.5)] mt-2">
+                  The lead single will receive extra promotional focus and affect overall release performance.
+                </p>
+              </section>
             )}
 
             {/* Lead Single Planning (for multi-song releases) */}
             {releaseType !== 'single' && leadSingle && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Play className="w-5 h-5" />
-                    <span>Lead Single Strategy</span>
-                    <Badge variant="secondary" className="text-xs">Releases First</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-3 bg-brand-burgundy/10 rounded-lg border border-brand-burgundy/30">
-                    <h4 className="text-sm font-semibold text-brand-burgundy mb-2">Selected Lead Single</h4>
-                    <p className="text-sm text-brand-burgundy">
-                      {(() => {
-                        const leadSong = availableSongs.find(s => s.id === leadSingle);
-                        return leadSong ? (songTitles[leadSong.id] || leadSong.title) : 'No lead single selected';
-                      })()}
-                    </p>
-                    <p className="text-xs text-brand-burgundy mt-1">
-                      This single will build momentum for the full {releaseType} release
-                    </p>
-                  </div>
+              <section className="glass-panel chromatic-hairline p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Play className="w-4 h-4 text-neon-lilac" />
+                  <h2 className="text-[15px] font-semibold text-foreground">Lead Single Strategy</h2>
+                  <span className={cn(CHIP_BASE, "bg-neon-cyan/[0.12] border-neon-cyan/40 text-neon-cyan")}>Releases First</span>
+                </div>
 
-                  {/* Timing Summary */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="p-3 bg-brand-burgundy/10 rounded-lg border border-brand-burgundy/30">
-                      <div className="text-xs font-medium text-brand-burgundy mb-1">Lead Single Release</div>
-                      <div className="text-sm font-semibold text-white">Week {leadSingleWeek}</div>
-                      <div className="text-xs text-orange-600">
-                        {getQuarterInfoForWeek(leadSingleWeek).name} - {(() => {
-                          const multiplier = getSeasonalMultiplierValue(leadSingleWeek, balanceData);
-                          const percentage = Math.round((multiplier - 1) * 100);
-                          return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
-                        })()} cost
-                      </div>
-                    </div>
-                    <div className="p-3 bg-brand-dark-card/10 rounded-lg border border-brand-purple/50">
-                      <div className="text-xs font-medium text-white/70 mb-1">Main Release</div>
-                      <div className="text-sm font-semibold text-white">Week {releaseWeek}</div>
-                      <div className="text-xs text-orange-600">
-                        {getQuarterInfoForWeek(releaseWeek).name} - {(() => {
-                          const multiplier = getSeasonalMultiplierValue(releaseWeek, balanceData);
-                          const percentage = Math.round((multiplier - 1) * 100);
-                          return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
-                        })()} cost
-                      </div>
+                <div className="p-3 rounded-lg border border-neon-purple/30 bg-neon-purple/[0.08]">
+                  <h4 className="text-xs font-semibold text-neon-lilac mb-1 uppercase tracking-wide">Selected Lead Single</h4>
+                  <p className="text-sm text-foreground">
+                    {(() => {
+                      const leadSong = availableSongs.find(s => s.id === leadSingle);
+                      return leadSong ? (songTitles[leadSong.id] || leadSong.title) : 'No lead single selected';
+                    })()}
+                  </p>
+                  <p className="text-xs text-[rgba(233,230,244,0.6)] mt-1">
+                    This single will build momentum for the full {releaseType} release
+                  </p>
+                </div>
+
+                {/* Timing Summary */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg border border-neon-purple/30 bg-neon-purple/[0.08]">
+                    <div className="text-[10px] font-mono uppercase tracking-wide text-neon-lilac mb-1">Lead Single Release</div>
+                    <div className="text-sm font-semibold text-foreground">Week {leadSingleWeek}</div>
+                    <div className="text-xs text-warning">
+                      {getQuarterInfoForWeek(leadSingleWeek).name} - {(() => {
+                        const multiplier = getSeasonalMultiplierValue(leadSingleWeek, balanceData);
+                        const percentage = Math.round((multiplier - 1) * 100);
+                        return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+                      })()} cost
                     </div>
                   </div>
-
-                  {/* Lead Single Week Selection */}
-                  <div>
-                    <label className="text-xs text-white/70 mb-2 block">
-                      Select Lead Single Release Week
-                    </label>
-                    <MusicCalendar
-                      selectionMode={true}
-                      selectedWeek={leadSingleWeek}
-                      onWeekSelect={setLeadSingleWeek}
-                      minWeek={gameState ? gameState.currentWeek + 1 : 1}
-                      maxWeek={releaseWeek - 1}
-                      className="max-w-lg"
-                    />
+                  <div className="p-3 rounded-lg border border-white/[0.08] bg-white/[0.03]">
+                    <div className="text-[10px] font-mono uppercase tracking-wide text-[rgba(233,230,244,0.5)] mb-1">Main Release</div>
+                    <div className="text-sm font-semibold text-foreground">Week {releaseWeek}</div>
+                    <div className="text-xs text-warning">
+                      {getQuarterInfoForWeek(releaseWeek).name} - {(() => {
+                        const multiplier = getSeasonalMultiplierValue(releaseWeek, balanceData);
+                        const percentage = Math.round((multiplier - 1) * 100);
+                        return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+                      })()} cost
+                    </div>
                   </div>
+                </div>
 
-                  {/* Lead Single Marketing Budget */}
-                  <div>
-                    <h4 className="text-sm font-medium text-white/90 mb-3">Lead Single Marketing Budget</h4>
-                    <div className="space-y-3">
-                      {marketingChannels.map(channel => (
+                {/* Lead Single Week Selection */}
+                <div>
+                  <label className="text-[10px] font-mono uppercase tracking-wide text-[rgba(233,230,244,0.5)] mb-2 block">
+                    Select Lead Single Release Week
+                  </label>
+                  <MusicCalendar
+                    selectionMode={true}
+                    selectedWeek={leadSingleWeek}
+                    onWeekSelect={setLeadSingleWeek}
+                    minWeek={gameState ? gameState.currentWeek + 1 : 1}
+                    maxWeek={releaseWeek - 1}
+                    className="max-w-lg"
+                  />
+                </div>
+
+                {/* Lead Single Marketing Budget */}
+                <div>
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Lead Single Marketing Budget</h4>
+                  <div className="space-y-3">
+                    {marketingChannels.map(channel => {
+                      const ChannelIcon = getChannelIcon(channel.id);
+                      return (
                         <div key={`lead-${channel.id}`} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <i className={`${channel.icon} text-sm text-white/70`} />
-                            <span className="text-sm text-white/90">{channel.name}</span>
+                          <div className="flex items-center gap-2">
+                            <ChannelIcon className="w-4 h-4 text-[rgba(233,230,244,0.6)]" />
+                            <span className="text-sm text-[rgba(233,230,244,0.85)]">{channel.name}</span>
                           </div>
-                          <div className="flex items-center space-x-3">
-                            <span className="text-xs text-white/50 w-16">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-mono text-[rgba(233,230,244,0.5)] w-16">
                               ${(leadSingleBudget[channel.id] || 0).toLocaleString()}
                             </span>
                             <Slider
                               value={[leadSingleBudget[channel.id] || 0]}
-                              onValueChange={(value) => 
+                              onValueChange={(value) =>
                                 setLeadSingleBudget(prev => ({ ...prev, [channel.id]: value[0] }))
                               }
                               max={channel.maxBudget}
@@ -992,271 +1019,263 @@ export default function PlanReleasePage() {
                             />
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="mt-2 text-xs text-white/50">
-                      <div>Lead Single Total: ${getTotalChannelBudget(leadSingleBudget).toLocaleString()}</div>
-                      {getSeasonalMultiplierValue(leadSingleWeek, balanceData) !== 1 && (
-                        <div className="text-orange-600">
-                          Adjusted for {getQuarterInfoForWeek(leadSingleWeek).name}: ${Math.round(calculateTotalMarketingCost({}, 0, balanceData, leadSingleBudget, leadSingleWeek)).toLocaleString()}
-                        </div>
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="mt-2 text-xs text-[rgba(233,230,244,0.5)] font-mono">
+                    <div>Lead Single Total: ${getTotalChannelBudget(leadSingleBudget).toLocaleString()}</div>
+                    {getSeasonalMultiplierValue(leadSingleWeek, balanceData) !== 1 && (
+                      <div className="text-warning">
+                        Adjusted for {getQuarterInfoForWeek(leadSingleWeek).name}: ${Math.round(calculateTotalMarketingCost({}, 0, balanceData, leadSingleBudget, leadSingleWeek)).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
             )}
 
             {/* Marketing Strategy */}
             {releaseType && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Target className="w-5 h-5" />
-                    <span>{releaseType === 'single' ? 'Marketing Strategy' : 'Main Release Marketing'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  
-                  {/* Marketing Budget Allocation */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-white/90">Budget Allocation</h4>
-                      <span className="text-sm font-mono font-semibold text-brand-burgundy">
-                        Total: ${getTotalChannelBudget(channelBudgets).toLocaleString()}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {marketingChannels.map(channel => {
-                        const budget = channelBudgets[channel.id] || 0;
-                        const isActive = budget > 0;
-                        const effectiveness = metrics?.channelEffectiveness?.[channel.id];
-                        
-                        return (
-                          <div key={channel.id} className={`p-4 border rounded-lg transition-all ${
-                            isActive ? 'border-brand-burgundy bg-brand-burgundy/10' : 'border-brand-purple/50'
-                          }`}>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3">
-                                <i className={`${channel.icon} text-lg ${isActive ? 'text-brand-burgundy' : 'text-white/40'}`} />
-                                <div>
-                                  <h5 className="font-semibold text-white">{channel.name}</h5>
-                                  <p className="text-xs text-white/70">{channel.description}</p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm font-semibold text-white">${budget.toLocaleString()}</div>
-                                <div className="text-xs text-white/50">{effectiveness?.contribution ? effectiveness.contribution.toFixed(1) : 0}% of budget</div>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Slider
-                                value={[budget]}
-                                onValueChange={(value) => 
-                                  setChannelBudgets(prev => ({ ...prev, [channel.id]: value[0] }))
-                                }
-                                max={Math.min(channel.maxBudget, gameState?.money || 0)}
-                                min={0}
-                                step={250}
-                                className="w-full"
-                              />
-                              <div className="flex justify-between text-xs text-white/50">
-                                <span>${channel.minBudget.toLocaleString()} min</span>
-                                <span className="font-semibold">
-                                  {channel.effectiveness}% effectiveness • {channel.targetAudience}
-                                </span>
-                                <span>${channel.maxBudget.toLocaleString()} max</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+              <section className="glass-panel chromatic-hairline p-5 space-y-6">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-neon-lilac" />
+                  <h2 className="text-[15px] font-semibold text-foreground">
+                    {releaseType === 'single' ? 'Marketing Strategy' : 'Main Release Marketing'}
+                  </h2>
+                </div>
+
+                {/* Marketing Budget Allocation */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xs font-semibold text-[rgba(233,230,244,0.75)] uppercase tracking-wide">Budget Allocation</h4>
+                    <span className="text-sm font-mono font-semibold text-money">
+                      Total: ${getTotalChannelBudget(channelBudgets).toLocaleString()}
+                    </span>
                   </div>
 
-                  {/* Release Timing */}
-                  <div>
-                    <h4 className="text-sm font-medium text-white/90 mb-3">Release Timing</h4>
-                    <div>
-                      <div>
-                        <label className="text-xs text-white/70 mb-1 block">
-                          Target Week
-                          <span className="ml-2 text-orange-600">
-                            ({getQuarterInfoForWeek(releaseWeek).name} - {(() => {
-                              const multiplier = getSeasonalMultiplierValue(releaseWeek, balanceData);
-                              const percentage = Math.round((multiplier - 1) * 100);
-                              return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
-                            })()} cost)
-                          </span>
-                        </label>
-<MusicCalendar
-                          selectionMode={true}
-                          selectedWeek={releaseWeek}
-                          onWeekSelect={setReleaseWeek}
-                          minWeek={gameState ? gameState.currentWeek + 1 : 1}
-                          className="max-w-lg"
-                        />
-                      </div>
-                    </div>
+                  <div className="space-y-3">
+                    {marketingChannels.map(channel => {
+                      const budget = channelBudgets[channel.id] || 0;
+                      const isActive = budget > 0;
+                      const effectiveness = metrics?.channelEffectiveness?.[channel.id];
+                      const ChannelIcon = getChannelIcon(channel.id);
+
+                      return (
+                        <div key={channel.id} className={cn(
+                          'p-4 rounded-xl border transition-all',
+                          isActive ? 'border-neon-purple/50 bg-neon-purple/[0.08]' : 'border-white/[0.08] bg-white/[0.02]'
+                        )}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <ChannelIcon className={cn('w-4 h-4', isActive ? 'text-neon-lilac' : 'text-[rgba(233,230,244,0.35)]')} />
+                              <div>
+                                <h5 className="font-semibold text-foreground text-sm">{channel.name}</h5>
+                                <p className="text-xs text-[rgba(233,230,244,0.5)]">{channel.description}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-mono font-semibold text-money">${budget.toLocaleString()}</div>
+                              <div className="text-xs text-[rgba(233,230,244,0.5)]">{effectiveness?.contribution ? effectiveness.contribution.toFixed(1) : 0}% of budget</div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Slider
+                              value={[budget]}
+                              onValueChange={(value) =>
+                                setChannelBudgets(prev => ({ ...prev, [channel.id]: value[0] }))
+                              }
+                              max={Math.min(channel.maxBudget, gameState?.money || 0)}
+                              min={0}
+                              step={250}
+                              className="w-full"
+                            />
+                            <div className="flex justify-between text-xs text-[rgba(233,230,244,0.5)]">
+                              <span className="font-mono">${channel.minBudget.toLocaleString()} min</span>
+                              <span className="font-semibold">
+                                {channel.effectiveness}% effectiveness &bull; {channel.targetAudience}
+                              </span>
+                              <span className="font-mono">${channel.maxBudget.toLocaleString()} max</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                {/* Release Timing */}
+                <div>
+                  <h4 className="text-xs font-semibold text-[rgba(233,230,244,0.75)] uppercase tracking-wide mb-3">Release Timing</h4>
+                  <label className="text-[10px] font-mono uppercase tracking-wide text-[rgba(233,230,244,0.5)] mb-1 block">
+                    Target Week
+                    <span className="ml-2 text-warning normal-case tracking-normal">
+                      ({getQuarterInfoForWeek(releaseWeek).name} - {(() => {
+                        const multiplier = getSeasonalMultiplierValue(releaseWeek, balanceData);
+                        const percentage = Math.round((multiplier - 1) * 100);
+                        return percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+                      })()} cost)
+                    </span>
+                  </label>
+                  <MusicCalendar
+                    selectionMode={true}
+                    selectedWeek={releaseWeek}
+                    onWeekSelect={setReleaseWeek}
+                    minWeek={gameState ? gameState.currentWeek + 1 : 1}
+                    className="max-w-lg"
+                  />
+                </div>
+              </section>
             )}
           </div>
 
           {/* Right Column - Release Preview */}
           <div className="lg:col-span-1 space-y-6">
-            
+
             {/* Release Type & Preview */}
             {releaseType && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    {(() => {
-                      const IconComponent = releaseTypes.find(rt => rt.id === releaseType)?.icon || Music;
-                      return <IconComponent className="w-5 h-5" />;
-                    })()}
-                    <span>{releaseTypes.find(rt => rt.id === releaseType)?.name} Release</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-white/90 mb-1 block">Release Title</label>
-                      <Input
-                        type="text"
-                        value={releaseTitle}
-                        onChange={(e) => setReleaseTitle(e.target.value)}
-                        placeholder="Enter release title"
-                      />
-                    </div>
-                    
-                    <div className="p-3 bg-brand-dark-card/5 rounded-lg">
-                      <h4 className="text-sm font-semibold text-white/90 mb-2">Release Type Benefits</h4>
-                      {(() => {
-                        const selectedType = releaseTypes.find(rt => rt.id === releaseType);
-                        if (!selectedType) return null;
-
-                        const revenueBonus = Math.round((selectedType.revenueMultiplier - 1) * 100);
-
-                        return (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-white/70">Revenue Bonus:</span>
-                              <span className="text-sm font-semibold text-green-600">
-                                +{revenueBonus}%
-                              </span>
-                            </div>
-                            <p className="text-xs text-white/50 pt-1 border-t border-white/10">
-                              <span className="font-medium text-brand-burgundy">{selectedType.bonusType}:</span> {selectedType.description}
-                            </p>
-                          </div>
-                        );
-                      })()}
-                    </div>
+              <section className="glass-panel chromatic-hairline p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  {(() => {
+                    const IconComponent = releaseTypes.find(rt => rt.id === releaseType)?.icon || Music;
+                    return <IconComponent className="w-4 h-4 text-neon-lilac" />;
+                  })()}
+                  <h2 className="text-[15px] font-semibold text-foreground">{releaseTypes.find(rt => rt.id === releaseType)?.name} Release</h2>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-wide text-[rgba(233,230,244,0.5)] mb-1 block">Release Title</label>
+                    <Input
+                      type="text"
+                      value={releaseTitle}
+                      onChange={(e) => setReleaseTitle(e.target.value)}
+                      placeholder="Enter release title"
+                    />
                   </div>
-                </CardContent>
-              </Card>
+
+                  <div className="p-3 rounded-lg border border-white/[0.08] bg-white/[0.03]">
+                    <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2">Release Type Benefits</h4>
+                    {(() => {
+                      const selectedType = releaseTypes.find(rt => rt.id === releaseType);
+                      if (!selectedType) return null;
+
+                      const revenueBonus = Math.round((selectedType.revenueMultiplier - 1) * 100);
+
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-[rgba(233,230,244,0.7)]">Revenue Bonus:</span>
+                            <span className="text-sm font-mono font-semibold text-positive">
+                              +{revenueBonus}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-[rgba(233,230,244,0.5)] pt-1 border-t border-white/[0.08]">
+                            <span className="font-medium text-neon-lilac">{selectedType.bonusType}:</span> {selectedType.description}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </section>
             )}
 
             {/* Performance Preview */}
             {selectedSongs.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5" />
-                    <span>Performance Preview</span>
-                    {calculatingPreview && <Loader2 className="w-4 h-4 animate-spin text-brand-burgundy" />}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {previewError ? (
-                    <div className="text-center py-4">
-                      <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
-                      <p className="text-red-600 text-sm">{previewError}</p>
-                      <Button onClick={calculateReleasePreview} variant="outline" size="sm" className="mt-2">
-                        Retry Calculation
-                      </Button>
-                    </div>
-                  ) : calculatingPreview && !previewData ? (
-                    <div className="text-center py-8">
-                      <Loader2 className="w-8 h-8 text-brand-burgundy mx-auto mb-4 animate-spin" />
-                      <p className="text-white/70">Calculating release metrics...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="text-center p-3 bg-brand-dark-card/5 rounded-lg">
-                        <div className="text-xl font-bold text-white">{metrics?.songCount || 0}</div>
-                        <div className="text-white/70">Songs</div>
+              <section className="glass-panel chromatic-hairline hud-ticks p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="w-4 h-4 text-neon-lilac" />
+                  <h2 className="text-[15px] font-semibold text-foreground">Performance Preview</h2>
+                  {calculatingPreview && <Loader2 className="w-4 h-4 animate-spin text-neon-purple" />}
+                </div>
+                {previewError ? (
+                  <div className="text-center py-4">
+                    <AlertCircle className="w-6 h-6 text-negative mx-auto mb-2" />
+                    <p className="text-negative text-sm">{previewError}</p>
+                    <Button onClick={calculateReleasePreview} variant="outline" size="sm"
+                      className="mt-2 border-neon-cyan/35 text-neon-cyan bg-neon-cyan/[0.06] hover:bg-neon-cyan/10 hover:text-neon-cyan">
+                      Retry Calculation
+                    </Button>
+                  </div>
+                ) : calculatingPreview && !previewData ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 text-neon-purple mx-auto mb-4 animate-spin" />
+                    <p className="text-[rgba(233,230,244,0.7)] text-sm">Calculating release metrics...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Stat blocks (spec §6) */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                        <div className="text-2xl font-mono font-semibold text-foreground">{metrics?.songCount || 0}</div>
+                        <div className="text-[11px] text-[rgba(233,230,244,0.5)] mt-0.5">Songs</div>
                       </div>
-                      <div className="text-center p-3 bg-brand-dark-card/5 rounded-lg">
-                        <div className="text-xl font-bold text-white">{metrics?.averageQuality || 0}</div>
-                        <div className="text-white/70">Avg Quality</div>
+                      <div className="text-center p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                        <div className="text-2xl font-mono font-semibold text-foreground">{metrics?.averageQuality || 0}</div>
+                        <div className="text-[11px] text-[rgba(233,230,244,0.5)] mt-0.5">Avg Quality</div>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-white/70">Estimated Streams:</span>
-                        <span className="font-mono font-semibold text-brand-burgundy">
+                        <span className="text-sm text-[rgba(233,230,244,0.7)]">Estimated Streams</span>
+                        <span className="font-mono font-semibold text-foreground">
                           {metrics?.estimatedStreams?.toLocaleString() || '0'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-white/70">Estimated Revenue:</span>
-                        <span className="font-mono font-semibold text-green-600">
+                        <span className="text-sm text-[rgba(233,230,244,0.7)]">Estimated Revenue</span>
+                        <span className="font-mono font-semibold text-money">
                           ${metrics?.estimatedRevenue?.toLocaleString() || '0'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-white/70">Marketing Cost:</span>
-                        <span className="font-mono font-semibold text-red-600">
+                        <span className="text-sm text-[rgba(233,230,244,0.7)]">Marketing Cost</span>
+                        <span className="font-mono font-semibold text-negative">
                           -${metrics?.totalMarketingCost.toLocaleString()}
                         </span>
                       </div>
-                      <div className="border-t pt-3 flex justify-between items-center">
-                        <span className="text-sm font-semibold text-white/90">Projected ROI:</span>
-                        <span className={`font-mono font-bold ${
-                          metrics?.projectedROI > 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                      <div className="border-t border-white/[0.08] pt-2.5 flex justify-between items-center">
+                        <span className="text-sm font-semibold text-[rgba(233,230,244,0.9)]">Projected ROI</span>
+                        <span className={cn(
+                          'font-mono font-bold',
+                          metrics?.projectedROI > 0 ? 'text-positive' : 'text-negative'
+                        )}>
                           {metrics?.projectedROI > 0 ? '+' : ''}{metrics?.projectedROI}%
                         </span>
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t space-y-3">
+                    <div className="pt-3 border-t border-white/[0.08] space-y-3">
                       <div>
-                        <h4 className="text-sm font-semibold text-white/90 mb-2">Multipliers Applied</h4>
+                        <h4 className="text-xs font-semibold text-[rgba(233,230,244,0.75)] uppercase tracking-wide mb-2">Multipliers Applied</h4>
                         <div className="space-y-1 text-xs">
                           <div className="flex justify-between">
-                            <span className="text-white/70">Release Bonus:</span>
-                            <span className="font-mono">+{metrics?.releaseBonus}%</span>
+                            <span className="text-[rgba(233,230,244,0.6)]">Release Bonus</span>
+                            <span className="font-mono text-foreground">+{metrics?.releaseBonus}%</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-white/70">Seasonal Revenue:</span>
-                            <span className="font-mono">
+                            <span className="text-[rgba(233,230,244,0.6)]">Seasonal Revenue</span>
+                            <span className="font-mono text-foreground">
                               {metrics?.seasonalMultiplier > 1 ? '+' : ''}{Math.round((metrics?.seasonalMultiplier - 1) * 100)}%
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-white/70">Marketing:</span>
-                            <span className="font-mono">
+                            <span className="text-[rgba(233,230,244,0.6)]">Marketing</span>
+                            <span className="font-mono text-foreground">
                               +{Math.round((metrics?.marketingMultiplier - 1) * 100)}%
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-white/70">Channel Diversity:</span>
-                            <span className="font-mono text-brand-burgundy">
+                            <span className="text-[rgba(233,230,244,0.6)]">Channel Diversity</span>
+                            <span className="font-mono text-neon-lilac">
                               +{Math.round((metrics?.diversityBonus - 1) * 100)}% ({metrics?.activeChannelCount} channels)
                             </span>
                           </div>
                           {releaseType !== 'single' && leadSingle && metrics?.leadSingleBoost > 1 && (
                             <div className="flex justify-between">
-                              <span className="text-white/70">Lead Single Boost:</span>
-                              <span className="font-mono text-brand-burgundy-dark">
+                              <span className="text-[rgba(233,230,244,0.6)]">Lead Single Boost</span>
+                              <span className="font-mono text-neon-lilac">
                                 +{Math.round((metrics?.leadSingleBoost - 1) * 100)}%
                               </span>
                             </div>
@@ -1266,24 +1285,25 @@ export default function PlanReleasePage() {
 
                       {/* Marketing Channel Breakdown */}
                       <div>
-                        <h4 className="text-sm font-semibold text-white/90 mb-2">Marketing Breakdown</h4>
+                        <h4 className="text-xs font-semibold text-[rgba(233,230,244,0.75)] uppercase tracking-wide mb-2">Marketing Breakdown</h4>
                         <div className="space-y-1 text-xs">
                           {marketingChannels.map(channel => {
                             const budget = channelBudgets[channel.id] || 0;
                             const effectiveness = metrics?.channelEffectiveness?.[channel.id];
                             const adjustedBudget = effectiveness?.adjustedBudget || budget;
                             const seasonalCostChange = adjustedBudget - budget;
-                            
+                            const ChannelIcon = getChannelIcon(channel.id);
+
                             return budget > 0 ? (
                               <div key={channel.id} className="flex justify-between">
-                                <span className="text-white/70 flex items-center space-x-1">
-                                  <i className={`${channel.icon} text-xs`} />
+                                <span className="text-[rgba(233,230,244,0.6)] flex items-center gap-1">
+                                  <ChannelIcon className="w-3 h-3" />
                                   <span>{channel.name}:</span>
                                 </span>
-                                <div className="text-right font-mono">
+                                <div className="text-right font-mono text-foreground">
                                   <div>${adjustedBudget.toLocaleString()} {effectiveness?.contribution ? `(${effectiveness.contribution.toFixed(1)}%)` : ''}</div>
                                   {seasonalCostChange !== 0 && (
-                                    <div className="text-xs text-orange-600">
+                                    <div className="text-[11px] text-warning">
                                       {seasonalCostChange > 0 ? '+' : ''}${seasonalCostChange.toLocaleString()} seasonal
                                     </div>
                                   )}
@@ -1292,12 +1312,12 @@ export default function PlanReleasePage() {
                             ) : null;
                           })}
                           {releaseType !== 'single' && leadSingle && getTotalChannelBudget(leadSingleBudget) > 0 && (
-                            <div className="flex justify-between border-t pt-1">
-                              <span className="text-white/70">Lead Single Budget:</span>
-                              <div className="text-right font-mono text-brand-burgundy-dark">
+                            <div className="flex justify-between border-t border-white/[0.08] pt-1">
+                              <span className="text-[rgba(233,230,244,0.6)]">Lead Single Budget:</span>
+                              <div className="text-right font-mono text-neon-lilac">
                                 <div>${Math.round(getAdjustedBudget(leadSingleBudget, leadSingleWeek, balanceData)).toLocaleString()}</div>
                                 {getSeasonalMultiplierValue(leadSingleWeek, balanceData) !== 1 && (
-                                  <div className="text-xs text-orange-600">
+                                  <div className="text-[11px] text-warning">
                                     +${Math.round(getSeasonalAdjustment(leadSingleBudget, leadSingleWeek, balanceData)).toLocaleString()} seasonal
                                   </div>
                                 )}
@@ -1308,49 +1328,51 @@ export default function PlanReleasePage() {
                       </div>
                     </div>
                   </div>
-                  )}
-                </CardContent>
-              </Card>
+                )}
+              </section>
             )}
 
             {/* Validation & Submit */}
-            <Card>
-              <CardContent className="pt-6">
-                {validationErrors.length > 0 && (
-                  <div className="mb-4 p-3 bg-red-500/10 border border-red-200 rounded-lg">
-                    <h4 className="text-sm font-semibold text-red-700 mb-1">Please fix the following:</h4>
-                    <ul className="text-xs text-red-600 space-y-1">
-                      {validationErrors.map((error, index) => (
-                        <li key={index}>• {error}</li>
-                      ))}
-                    </ul>
+            <section className="glass-panel chromatic-hairline p-5">
+              {validationErrors.length > 0 && (
+                <div className="mb-4 p-3 rounded-lg border border-negative/40 bg-negative/10">
+                  <h4 className="text-xs font-semibold text-negative uppercase tracking-wide mb-1">Please fix the following:</h4>
+                  <ul className="text-xs text-negative/90 space-y-1">
+                    {validationErrors.map((error, index) => (
+                      <li key={index}>&bull; {error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <Button
+                onClick={handleCreateRelease}
+                disabled={isLoading || selectedSongs.length === 0}
+                className={cn(
+                  'w-full rounded-[13px] text-white font-semibold text-sm h-11',
+                  'bg-gradient-to-br from-action-pink to-action-purple',
+                  'shadow-[0_6px_26px_rgba(140,60,200,0.5),inset_0_1px_0_rgba(255,255,255,0.25)]',
+                  'hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+                size="lg"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Planning Release...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Plan Release</span>
                   </div>
                 )}
+              </Button>
 
-                <Button
-                  onClick={handleCreateRelease}
-                  disabled={isLoading || selectedSongs.length === 0}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Planning Release...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>Plan Release</span>
-                    </div>
-                  )}
-                </Button>
-
-                <p className="text-xs text-white/50 text-center mt-2">
-                  This will schedule the release and deduct the marketing budget from your funds.
-                </p>
-              </CardContent>
-            </Card>
+              <p className="text-xs text-[rgba(233,230,244,0.5)] text-center mt-2">
+                This will schedule the release and deduct the marketing budget from your funds.
+              </p>
+            </section>
           </div>
         </div>
       </main>

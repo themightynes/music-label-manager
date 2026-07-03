@@ -37,9 +37,9 @@ export function Top100ChartDisplay() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-center py-8">
-          <RefreshCw className="w-6 h-6 animate-spin text-white/50" />
-          <span className="ml-2 text-white/70">Loading chart data...</span>
+        <div className="glass-panel chromatic-hairline flex items-center justify-center py-8">
+          <RefreshCw className="w-6 h-6 animate-spin text-neon-lilac" />
+          <span className="ml-2 text-text-body">Loading chart data...</span>
         </div>
       </div>
     );
@@ -48,13 +48,14 @@ export function Top100ChartDisplay() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-8">
-          <div className="text-red-400 mb-4">{error}</div>
+        <div className="glass-panel chromatic-hairline text-center py-8">
+          <div className="mb-4 text-negative">{error}</div>
           <Button
             variant="outline"
             size="sm"
             onClick={handleRefresh}
             disabled={refreshing}
+            className="rounded-button border-neon-cyan/35 bg-neon-cyan/[0.06] text-neon-cyan hover:bg-neon-cyan/[0.12] hover:text-neon-cyan"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Retry
@@ -67,14 +68,14 @@ export function Top100ChartDisplay() {
   if (!chartData || chartData.top100.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-8">
-          <BarChart3 className="w-10 h-10 text-white/50 mx-auto mb-4" />
-          <h3 className="text-sm font-semibold text-white/70 mb-2">No Chart Data</h3>
-          <p className="text-xs text-white/50">No songs are currently charting in the Top 100</p>
+        <div className="glass-panel chromatic-hairline text-center py-8">
+          <BarChart3 className="w-10 h-10 text-text-muted mx-auto mb-4" />
+          <h3 className="text-sm font-semibold text-text-body mb-2">No Chart Data</h3>
+          <p className="text-xs text-text-muted">No songs are currently charting in the Top 100</p>
           <Button
             variant="outline"
             size="sm"
-            className="mt-4"
+            className="mt-4 rounded-button border-neon-cyan/35 bg-neon-cyan/[0.06] text-neon-cyan hover:bg-neon-cyan/[0.12] hover:text-neon-cyan"
             onClick={handleRefresh}
             disabled={refreshing}
           >
@@ -93,15 +94,15 @@ export function Top100ChartDisplay() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="mb-8">
+      <div className="glass-panel chromatic-hairline hud-ticks mb-8 p-4">
         <div className="flex items-center justify-between mb-6">
           <div></div>
 
           <div className="flex items-center space-x-4">
             {playerSongs.length > 0 && (
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-brand-burgundy rounded-full"></div>
-                <span className="text-xs text-white/70">
+                <div className="w-2 h-2 rounded-full bg-neon-lilac shadow-glow-lilac"></div>
+                <span className="text-xs text-text-body">
                   {playerSongs.length} Your Song{playerSongs.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -112,7 +113,7 @@ export function Top100ChartDisplay() {
               size="sm"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="text-white/70 hover:text-white"
+              className="text-text-body hover:text-text-primary hover:bg-white/[0.045]"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
@@ -121,14 +122,17 @@ export function Top100ChartDisplay() {
 
         {debuts.length > 0 && (
           <div className="mb-4">
-            <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+            <Badge
+              variant="secondary"
+              className="rounded-chip border border-positive/40 bg-positive/[0.14] text-xs text-positive"
+            >
               {debuts.length} New Debut{debuts.length !== 1 ? 's' : ''}
             </Badge>
           </div>
         )}
 
         <div className="flex items-center justify-between">
-          <div className="text-sm text-white/70">
+          <div className="text-sm text-text-body">
             Showing {displayEntries.length} of {chartData.top100.length} songs
           </div>
           {chartData.top100.length > 25 && (
@@ -136,7 +140,7 @@ export function Top100ChartDisplay() {
               variant="outline"
               size="sm"
               onClick={() => setShowAll(!showAll)}
-              className="text-white/70 hover:text-white"
+              className="rounded-button border-white/[0.09] bg-white/[0.02] text-text-body hover:text-text-primary hover:bg-white/[0.045]"
             >
               {showAll ? 'Show Top 25' : `Show All ${chartData.top100.length}`}
             </Button>
@@ -155,27 +159,27 @@ export function Top100ChartDisplay() {
         />
 
         {chartData.top100.length > 0 && (
-          <div className="pt-4 border-t border-brand-purple">
+          <div className="glass-panel chromatic-hairline p-4">
             <div className="grid grid-cols-4 gap-4 text-center text-xs">
               <div>
-                <div className="font-semibold text-white/90">{playerSongs.length}</div>
-                <div className="text-white/50">Your Songs</div>
+                <div className="font-mono font-semibold text-text-primary">{playerSongs.length}</div>
+                <div className="text-text-muted">Your Songs</div>
               </div>
               <div>
-                <div className="font-semibold text-white/90">{debuts.length}</div>
-                <div className="text-white/50">New This Week</div>
+                <div className="font-mono font-semibold text-text-primary">{debuts.length}</div>
+                <div className="text-text-muted">New This Week</div>
               </div>
               <div>
-                <div className="font-semibold text-white/90">
+                <div className="font-mono font-semibold text-positive">
                   {chartData.top100.filter(e => e.movement > 0).length}
                 </div>
-                <div className="text-white/50">Climbing</div>
+                <div className="text-text-muted">Climbing</div>
               </div>
               <div>
-                <div className="font-semibold text-white/90">
+                <div className="font-mono font-semibold text-neon-lilac">
                   {chartData.top100.filter(e => e.position <= 10).length}
                 </div>
-                <div className="text-white/50">Top 10</div>
+                <div className="text-text-muted">Top 10</div>
               </div>
             </div>
           </div>

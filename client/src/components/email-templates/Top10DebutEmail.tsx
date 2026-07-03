@@ -6,9 +6,9 @@ export function Top10DebutEmail({ email }: EmailTemplateProps) {
   const body = email.body as Record<string, any>;
 
   return (
-    <div className="space-y-4 text-sm text-white/80">
+    <div className="space-y-4 text-sm text-text-body">
       <div>
-        <p className="text-white font-semibold">Your marketing blitz is paying off.</p>
+        <p className="text-text-primary font-semibold">Your marketing blitz is paying off.</p>
         <p>
           "{body?.songTitle ?? 'The single'}" debuted in the Top 10 with
           {' '}#{body?.position ?? '?'} on the national charts.
@@ -21,11 +21,11 @@ export function Top10DebutEmail({ email }: EmailTemplateProps) {
         <Stat label="Weeks on Chart" value={formatNumber(body?.weeksOnChart)} />
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-black/30 p-4">
-        <div className="text-xs uppercase tracking-wide text-white/50">Artist</div>
-        <div className="text-white font-medium">{body?.artistName ?? 'Artist'}</div>
+      <div className="rounded-xl border border-white/[0.08] bg-surface-inner/60 p-4">
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">Artist</div>
+        <div className="text-text-primary font-medium">{body?.artistName ?? 'Artist'}</div>
         {body?.peakPosition && (
-          <div className="text-xs text-white/60 mt-1">
+          <div className="text-xs text-text-muted mt-1">
             Peak position to date: #{body.peakPosition}
           </div>
         )}
@@ -38,9 +38,9 @@ export function Top10DebutEmail({ email }: EmailTemplateProps) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
-      <div className="text-white/60 text-xs uppercase tracking-wide">{label}</div>
-      <div className="text-lg font-semibold text-white">{value}</div>
+    <div className="rounded-xl border border-white/[0.08] bg-surface-inner/50 p-4">
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">{label}</div>
+      <div className="font-mono text-lg font-semibold text-text-primary mt-1">{value}</div>
     </div>
   );
 }

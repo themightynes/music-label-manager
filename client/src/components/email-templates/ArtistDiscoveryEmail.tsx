@@ -23,15 +23,15 @@ export function ArtistDiscoveryEmail({ email }: EmailTemplateProps) {
   };
 
   return (
-    <div className="space-y-4 text-sm text-white/85">
+    <div className="space-y-4 text-sm text-text-body">
       <div>
-        <p className="text-white font-semibold">Mac has a new talent recommendation.</p>
+        <p className="text-text-primary font-semibold">Mac has a new talent recommendation.</p>
         <p>{body?.bio ?? 'This artist fits the A&R brief you set this week.'}</p>
       </div>
 
       <div className="flex items-start gap-4">
         {/* Avatar Box */}
-        <div className="flex-shrink-0 w-24 h-36 bg-brand-mauve border border-brand-purple-light rounded-lg overflow-hidden relative">
+        <div className="flex-shrink-0 w-24 h-36 bg-surface-inner border border-white/[0.08] rounded-xl overflow-hidden relative">
           <img
             src={getAvatarUrl(body?.name ?? '')}
             alt={`${body?.name ?? 'Artist'} avatar`}
@@ -54,19 +54,19 @@ export function ArtistDiscoveryEmail({ email }: EmailTemplateProps) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-black/30 p-4 space-y-2">
-        <div className="text-xs uppercase tracking-wide text-white/60">Financials</div>
+      <div className="rounded-xl border border-white/[0.08] bg-surface-inner/60 p-4 space-y-2">
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">Financials</div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-white/60">Signing Bonus</span>
-          <span className="text-white font-semibold">{formatCurrency(body?.signingCost)}</span>
+          <span className="text-text-muted">Signing Bonus</span>
+          <span className="font-mono font-semibold text-money">{formatCurrency(body?.signingCost)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-white/60">Weekly Cost</span>
-          <span className="text-white font-semibold">
+          <span className="text-text-muted">Weekly Cost</span>
+          <span className="font-mono font-semibold text-money">
             {body?.weeklyCost != null ? formatCurrency(body.weeklyCost) : 'TBD'}
           </span>
         </div>
-        <div className="text-xs text-white/50">
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-label">
           Scouted via {body?.sourcingType ?? 'A&R initiative'}
         </div>
       </div>
@@ -78,9 +78,9 @@ export function ArtistDiscoveryEmail({ email }: EmailTemplateProps) {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
-      <div className="text-xs uppercase tracking-wide text-white/60">{label}</div>
-      <div className="text-white font-semibold">{value}</div>
+    <div className="rounded-xl border border-white/[0.08] bg-surface-inner/60 p-4">
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">{label}</div>
+      <div className="text-text-primary font-semibold">{value}</div>
     </div>
   );
 }

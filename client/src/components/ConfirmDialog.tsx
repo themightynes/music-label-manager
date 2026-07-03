@@ -39,8 +39,8 @@ export function ConfirmDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-brand-dark-card border border-brand-purple rounded-lg p-6 max-w-md w-full mx-4 relative">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+      <div className="glass-panel chromatic-hairline p-6 max-w-md w-full mx-4 relative text-white">
         {/* X button in top-right corner */}
         <button
           onClick={onClose}
@@ -51,14 +51,14 @@ export function ConfirmDialog({
         </button>
         <div className="text-center">
           <div className="text-4xl mb-4">{emoji}</div>
-          <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+          <h3 className="text-lg font-semibold text-text-primary mb-2">{title}</h3>
           <div className="text-sm text-white/70 mb-6">
             {description.split('\n').map((line, index) => (
               <p key={index} className={index > 0 ? 'mt-1' : ''}>
                 {line.includes('Week') && currentWeek ? (
                   <>
                     {line.split('Week')[0]}
-                    <span className="font-medium text-brand-burgundy">Week {currentWeek}</span>
+                    <span className="font-medium font-mono text-neon-lilac">Week {currentWeek}</span>
                     {line.split('Week')[1]?.replace(/\d+/, '')}
                   </>
                 ) : (
@@ -71,17 +71,17 @@ export function ConfirmDialog({
             <Button
               variant="outline"
               onClick={handleCancel}
-              className="flex-1 bg-brand-dark-card border border-brand-purple text-white hover:bg-brand-purple"
+              className="flex-1 rounded-button border-white/[0.09] bg-white/[0.02] text-white/75 hover:bg-white/[0.06] hover:text-white"
             >
               {cancelText}
             </Button>
             <Button
               variant={variant}
               onClick={onConfirm}
-              className={`flex-1 text-white border-0 ${
+              className={`flex-1 text-white border-0 rounded-button ${
                 variant === 'destructive'
-                  ? 'bg-brand-burgundy hover:bg-brand-rose'
-                  : 'bg-[#teal-600] hover:bg-[teal-500]'
+                  ? 'bg-negative/90 hover:bg-negative shadow-glow-negative'
+                  : 'bg-gradient-to-br from-action-pink to-action-purple shadow-action hover:opacity-95'
               }`}
             >
               {confirmText}

@@ -16,7 +16,7 @@ import { ArtistDiscoveryModal } from './ArtistDiscoveryModal';
 import { ArtistDashboardCard } from './ArtistDashboardCard';
 import { ArtistDialogueModal } from './artist-dialogue/ArtistDialogueModal';
 import { SyntheticEvent, useMemo, useState } from 'react';
-import { CalendarDays, Disc3, Mic, Rocket } from 'lucide-react';
+import { CalendarDays, Disc3, Mic, Rocket, Users, Search, Plus } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { generateArtistSlug } from '@/utils/artistSlug';
 import type { GameArtist } from '@shared/types/gameTypes';
@@ -211,14 +211,14 @@ export function ArtistRoster() {
 
 
   return (
-    <Card className="shadow-sm h-full">
+    <Card className="glass-panel chromatic-hairline h-full">
       <CardContent className="p-4 flex flex-col h-full">
-        <h3 className="text-base font-semibold text-white mb-3 flex items-center justify-between">
-          <div className="flex items-center">
-            <i className="fas fa-microphone text-secondary mr-2"></i>
+        <h3 className="text-base font-semibold text-text-primary mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-text-accent" />
             Artist Roster
           </div>
-          <Badge variant="secondary" className="text-xs">
+          <Badge className="font-mono text-xs bg-white/[0.04] text-text-muted border border-white/[0.08] rounded-pill">
             {sortedArtists.length}/3
           </Badge>
         </h3>
@@ -227,16 +227,19 @@ export function ArtistRoster() {
 
           {/* Empty state when no artists */}
           {sortedArtists.length === 0 && (
-            <div className="flex h-full flex-col items-center justify-center text-center text-white/50">
-              <i className="fas fa-microphone text-white/30 text-3xl mb-3"></i>
-              <p className="text-sm font-medium text-white/70 mb-2">No Artists Signed</p>
-              <p className="text-xs text-white/50 mb-4">Scout talent to build your roster</p>
+            <div className="flex h-full flex-col items-center justify-center text-center text-text-muted">
+              <div className="w-[52px] h-[52px] rounded-[14px] bg-neon-purple/[0.12] border border-neon-purple/[0.32] flex items-center justify-center mb-3 shadow-glow-purple">
+                <Mic className="w-5 h-5 text-text-accent" />
+              </div>
+              <p className="text-sm font-medium text-text-primary mb-2">No Artists Signed</p>
+              <p className="text-xs text-text-muted mb-4">Scout talent to build your roster</p>
               <Button
                 onClick={() => setShowDiscoveryModal(true)}
                 size="sm"
-                className="bg-brand-burgundy-dark text-white hover:bg-brand-burgundy transition-colors"
+                variant="outline"
+                className="w-full justify-center gap-2 font-semibold rounded-button"
               >
-                <i className="fas fa-search mr-1"></i>
+                <Search className="w-4 h-4" />
                 Scouted Artists
               </Button>
             </div>
@@ -253,11 +256,11 @@ export function ArtistRoster() {
                   return (
                     <div
                       key={artist.id}
-                      className="flex w-max items-start gap-4 rounded-lg border border-brand-purple-light bg-brand-dark-card/40 p-3"
+                      className="flex w-max items-start gap-4 rounded-[14px] border border-white/[0.08] bg-surface-inner/50 p-3"
                     >
                       <div className="flex w-24 flex-shrink-0 flex-col items-center justify-center space-y-2">
                         <div
-                          className="relative h-32 w-24 cursor-pointer overflow-hidden rounded-lg border border-brand-purple-light bg-brand-mauve"
+                          className="relative h-32 w-24 cursor-pointer overflow-hidden rounded-[13px] border border-white/[0.08] bg-surface-inner"
                           onClick={() => handleNavigateToArtist(artist)}
                         >
                           <img
@@ -269,38 +272,38 @@ export function ArtistRoster() {
                           />
                         </div>
 
-                        <Menubar className="h-8 w-full rounded-lg border-brand-purple-light bg-brand-burgundy p-0">
+                        <Menubar className="h-8 w-full rounded-button border-0 bg-gradient-to-br from-action-pink to-action-purple p-0 shadow-action">
                           <MenubarMenu>
-                            <MenubarTrigger className="h-full w-full justify-center rounded-lg px-2 py-1 text-xs text-white hover:bg-brand-burgundy-light data-[state=open]:bg-brand-burgundy-light data-[state=open]:text-white">
+                            <MenubarTrigger className="h-full w-full justify-center rounded-button px-2 py-1 text-xs text-white data-[state=open]:bg-white/10 data-[state=open]:text-white">
                               Actions
                             </MenubarTrigger>
-                            <MenubarContent className="border-brand-purple bg-brand-dark-card text-white">
+                            <MenubarContent className="border-white/[0.08] bg-surface-tooltip text-text-primary">
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-neon-purple/20 hover:text-text-primary focus:bg-neon-purple/20 focus:text-text-primary"
                                 onClick={() => handleArtistMeeting(artist)}
                               >
-                                <CalendarDays className="mr-2 h-4 w-4 text-gray-300" />
+                                <CalendarDays className="mr-2 h-4 w-4 text-text-body" />
                                 Meet
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-neon-purple/20 hover:text-text-primary focus:bg-neon-purple/20 focus:text-text-primary"
                                 onClick={() => handlePlanTour(artist.id)}
                               >
-                                <Mic className="mr-2 h-4 w-4 text-gray-300" />
+                                <Mic className="mr-2 h-4 w-4 text-text-body" />
                                 Tour
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-neon-purple/20 hover:text-text-primary focus:bg-neon-purple/20 focus:text-text-primary"
                                 onClick={() => handleStartRecording(artist.id)}
                               >
-                                <Disc3 className="mr-2 h-4 w-4 text-gray-300" />
+                                <Disc3 className="mr-2 h-4 w-4 text-text-body" />
                                 Record
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-neon-purple/20 hover:text-text-primary focus:bg-neon-purple/20 focus:text-text-primary"
                                 onClick={() => handlePlanRelease(artist.id)}
                               >
-                                <Rocket className="mr-2 h-4 w-4 text-gray-300" />
+                                <Rocket className="mr-2 h-4 w-4 text-text-body" />
                                 Release
                               </MenubarItem>
                             </MenubarContent>
@@ -325,13 +328,14 @@ export function ArtistRoster() {
               
               {/* Discover More Artists Button - shown when roster is not full */}
               {sortedArtists.length < 3 && (
-                <div className="mt-3 text-center">
+                <div className="mt-3">
                   <Button
                     onClick={() => setShowDiscoveryModal(true)}
                     size="sm"
-                    className="bg-brand-burgundy-dark text-white hover:bg-brand-burgundy transition-colors"
+                    variant="outline"
+                    className="w-full justify-center gap-2 font-semibold rounded-button"
                   >
-                    <i className="fas fa-plus mr-1"></i>
+                    <Plus className="w-4 h-4" />
                     Scouted Artists ({3 - artists.length} slots available)
                   </Button>
                 </div>

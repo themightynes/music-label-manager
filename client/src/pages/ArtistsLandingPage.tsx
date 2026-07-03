@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, TrendingUp, Star, DollarSign, Music, Eye, UserPlus, CalendarDays, Mic, Disc3, Rocket } from 'lucide-react';
+import { Users, TrendingUp, Star, DollarSign, UserPlus, CalendarDays, Mic, Disc3, Rocket } from 'lucide-react';
 import { useLocation } from 'wouter';
 import type { Artist } from '@shared/schema';
 import type { GameArtist } from '@shared/types/gameTypes';
@@ -184,27 +184,22 @@ const ArtistsLandingPage: React.FC = () => {
   return (
     <GameLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6 mt-12">
-          <div className="flex items-center mb-4">
-            <img
-              src="/avatars/artists.png"
-              alt="Artists"
-              className="w-auto mr-4"
-              style={{ width: '459px', height: '135px' }}
-            />
-          </div>
-        </div>
-
         <div className="space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-end flex-wrap gap-4">
             <div>
-              <p className="text-gray-300">Manage your roster and discover new talent</p>
+              <div className="text-label text-[10px] uppercase tracking-[0.24em] text-neon-lilac/60 mb-1 flex items-center gap-2">
+                <Users className="w-3 h-3" />
+                Roster
+              </div>
+              <h1 className="font-display text-2xl md:text-[28px] text-text-primary text-aberration">Artists</h1>
+              <div className="shimmer-bar w-40 mt-2" />
+              <p className="text-text-body mt-3">Manage your roster and discover new talent</p>
             </div>
             {availableSlots > 0 && (
               <button
                 onClick={handleDiscoverArtists}
-                className="bg-brand-burgundy hover:bg-brand-burgundy-light text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
+                className="rounded-button px-6 py-3 font-medium text-white flex items-center gap-2 bg-gradient-to-br from-action-pink to-action-purple shadow-action border-t border-white/25 hover:brightness-110 transition-all"
               >
                 <UserPlus className="w-5 h-5" />
                 Scouted Artists
@@ -216,63 +211,63 @@ const ArtistsLandingPage: React.FC = () => {
         <Card>
           <CardContent className="p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
+          <div className="relative border border-white/[0.08] rounded-card p-6 bg-surface-inner/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-300 text-sm font-medium">Total Artists</p>
-                <p className="text-2xl font-bold text-white">{signedArtists.length}</p>
-                <p className="text-sm text-gray-400">{availableSlots} slots available</p>
+                <p className="text-text-muted text-sm font-medium">Total Artists</p>
+                <p className="text-2xl font-bold font-mono text-text-primary">{signedArtists.length}</p>
+                <p className="text-sm text-text-muted">{availableSlots} slots available</p>
               </div>
-              <Users className="w-8 h-8 text-gray-400" />
+              <Users className="w-8 h-8 text-text-muted" />
             </div>
           </div>
 
-          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
+          <div className="relative border border-white/[0.08] rounded-card p-6 bg-surface-inner/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-300 text-sm font-medium">Portfolio Revenue</p>
+                <p className="text-text-muted text-sm font-medium">Portfolio Revenue</p>
                 {portfolioLoading ? (
-                  <p className="text-2xl font-bold text-white">Loading...</p>
+                  <p className="text-2xl font-bold text-text-primary">Loading...</p>
                 ) : portfolioError ? (
-                  <p className="text-2xl font-bold text-red-400">Error</p>
+                  <p className="text-2xl font-bold text-negative">Error</p>
                 ) : (
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold font-mono text-money">
                     ${portfolioROI?.totalRevenue?.toLocaleString() || '0'}
                   </p>
                 )}
-                <p className="text-sm text-gray-400">All-time earnings</p>
+                <p className="text-sm text-text-muted">All-time earnings</p>
               </div>
-              <DollarSign className="w-8 h-8 text-green-400" />
+              <DollarSign className="w-8 h-8 text-positive" />
             </div>
           </div>
 
-          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
+          <div className="relative border border-white/[0.08] rounded-card p-6 bg-surface-inner/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-300 text-sm font-medium">Average ROI</p>
+                <p className="text-text-muted text-sm font-medium">Average ROI</p>
                 {portfolioLoading ? (
-                  <p className="text-2xl font-bold text-white">Loading...</p>
+                  <p className="text-2xl font-bold text-text-primary">Loading...</p>
                 ) : portfolioError ? (
-                  <p className="text-2xl font-bold text-red-400">Error</p>
+                  <p className="text-2xl font-bold text-negative">Error</p>
                 ) : (
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold font-mono text-text-primary">
                     {portfolioROI?.averageROI ? `${portfolioROI.averageROI.toFixed(1)}%` : '0%'}
                   </p>
                 )}
-                <p className="text-sm text-gray-400">Return on investment</p>
+                <p className="text-sm text-text-muted">Return on investment</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-400" />
+              <TrendingUp className="w-8 h-8 text-neon-cyan" />
             </div>
           </div>
 
-          <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-6">
+          <div className="relative border border-white/[0.08] rounded-card p-6 bg-surface-inner/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-300 text-sm font-medium">Success Rate</p>
-                <p className="text-2xl font-bold text-white">{successRate.toFixed(0)}%</p>
-                <p className="text-sm text-gray-400">{successfulArtists} of {signedArtists.length} artists</p>
+                <p className="text-text-muted text-sm font-medium">Success Rate</p>
+                <p className="text-2xl font-bold font-mono text-text-primary">{successRate.toFixed(0)}%</p>
+                <p className="text-sm text-text-muted">{successfulArtists} of {signedArtists.length} artists</p>
               </div>
-              <Star className="w-8 h-8 text-yellow-400" />
+              <Star className="w-8 h-8 text-neon-yellow" />
             </div>
           </div>
           </div>
@@ -283,18 +278,20 @@ const ArtistsLandingPage: React.FC = () => {
         <Card>
           <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">Signed Artists</h2>
-            <p className="text-gray-400">{signedArtists.length} of {maxArtists} artists signed</p>
+            <h2 className="text-2xl font-bold text-text-primary">Signed Artists</h2>
+            <p className="text-text-muted">{signedArtists.length} of {maxArtists} artists signed</p>
           </div>
 
           {signedArtists.length === 0 ? (
-            <div className="bg-brand-dark-card/[0.66] border border-brand-purple-light rounded-lg p-12 text-center">
-              <Users className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">No Artists Signed</h3>
-              <p className="text-gray-400 mb-6">Start building your roster by scouting talent</p>
+            <div className="border border-dashed border-white/[0.12] rounded-card p-12 text-center">
+              <div className="w-[52px] h-[52px] rounded-chip bg-neon-cyan/[0.12] border border-neon-cyan/32 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-6 h-6 text-neon-cyan" />
+              </div>
+              <h3 className="text-xl font-semibold text-text-primary mb-2">No Artists Signed</h3>
+              <p className="text-text-muted mb-6">Start building your roster by scouting talent</p>
               <button
                 onClick={handleDiscoverArtists}
-                className="bg-brand-burgundy hover:bg-brand-burgundy-light text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="rounded-button px-6 py-3 font-medium text-white transition-all bg-gradient-to-br from-action-pink to-action-purple shadow-action border-t border-white/25 hover:brightness-110"
               >
                 Scouted Artists
               </button>
@@ -314,7 +311,7 @@ const ArtistsLandingPage: React.FC = () => {
                       <div className="flex-shrink-0 flex flex-col items-center justify-center space-y-2">
                         {/* Avatar Box */}
                         <div
-                          className="w-24 h-32 bg-brand-mauve border border-brand-purple-light rounded-lg overflow-hidden relative cursor-pointer hover:bg-brand-mauve-light transition-colors"
+                          className="w-24 h-32 bg-surface-inner border border-white/[0.08] rounded-chip overflow-hidden relative cursor-pointer hover:border-white/[0.16] transition-colors"
                           onClick={() => handleNavigateToArtist(artist)}
                         >
                           <img
@@ -331,38 +328,38 @@ const ArtistsLandingPage: React.FC = () => {
                         </div>
 
                         {/* Artist Actions Menubar */}
-                        <Menubar className="w-24 h-8 p-0 bg-brand-burgundy border-brand-purple-light rounded-lg">
+                        <Menubar className="w-24 h-8 p-0 rounded-chip border-none bg-gradient-to-br from-action-pink to-action-purple shadow-action">
                           <MenubarMenu>
-                            <MenubarTrigger className="w-full h-full text-xs text-white px-2 py-1 hover:bg-brand-burgundy-light data-[state=open]:bg-brand-burgundy-light data-[state=open]:text-white justify-center rounded-lg">
+                            <MenubarTrigger className="w-full h-full text-xs text-white px-2 py-1 hover:brightness-110 data-[state=open]:brightness-110 data-[state=open]:text-white justify-center rounded-chip">
                               Actions
                             </MenubarTrigger>
-                            <MenubarContent className="bg-brand-dark-card border-brand-purple text-white">
+                            <MenubarContent className="glass-panel chromatic-hairline text-text-primary border-white/[0.08]">
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-white/[0.06] hover:text-text-primary cursor-pointer focus:bg-white/[0.06] focus:text-text-primary"
                                 onClick={() => handleMeetArtist(artist)}
                               >
-                                <CalendarDays className="w-4 h-4 mr-2 text-gray-300" />
+                                <CalendarDays className="w-4 h-4 mr-2 text-text-body" />
                                 Meet
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-white/[0.06] hover:text-text-primary cursor-pointer focus:bg-white/[0.06] focus:text-text-primary"
                                 onClick={() => handlePlanTour(artist)}
                               >
-                                <Mic className="w-4 h-4 mr-2 text-gray-300" />
+                                <Mic className="w-4 h-4 mr-2 text-text-body" />
                                 Tour
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-white/[0.06] hover:text-text-primary cursor-pointer focus:bg-white/[0.06] focus:text-text-primary"
                                 onClick={() => handleStartRecording(artist)}
                               >
-                                <Disc3 className="w-4 h-4 mr-2 text-gray-300" />
+                                <Disc3 className="w-4 h-4 mr-2 text-text-body" />
                                 Record
                               </MenubarItem>
                               <MenubarItem
-                                className="text-gray-300 hover:bg-brand-burgundy hover:text-white cursor-pointer focus:bg-brand-burgundy focus:text-white"
+                                className="text-text-body hover:bg-white/[0.06] hover:text-text-primary cursor-pointer focus:bg-white/[0.06] focus:text-text-primary"
                                 onClick={() => handlePlanRelease(artist)}
                               >
-                                <Rocket className="w-4 h-4 mr-2 text-gray-300" />
+                                <Rocket className="w-4 h-4 mr-2 text-text-body" />
                                 Release
                               </MenubarItem>
                             </MenubarContent>

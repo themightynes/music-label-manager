@@ -33,26 +33,26 @@ export function EmailSignature({ sender, senderRoleId }: EmailSignatureProps) {
   const profile = senderRoleId ? EXECUTIVE_PROFILES[senderRoleId] : null;
 
   return (
-    <div className="mt-6 pt-4 border-t border-white/10">
+    <div className="mt-6 pt-4 border-t border-white/[0.08]">
       <div className="flex items-center gap-3">
         {profile ? (
-          <Avatar className="h-10 w-10 ring-2 ring-brand-purple/50">
+          <Avatar className="h-10 w-10 ring-2 ring-neon-purple/50">
             <AvatarImage src={profile.image} alt={sender} />
-            <AvatarFallback className="bg-brand-mauve text-white text-sm font-semibold">
+            <AvatarFallback className="bg-surface-inner text-text-primary text-sm font-semibold">
               {profile.initials}
             </AvatarFallback>
           </Avatar>
         ) : (
           <Avatar className="h-10 w-10 ring-2 ring-white/20">
-            <AvatarFallback className="bg-brand-dark-mid text-white/60 text-sm font-semibold">
+            <AvatarFallback className="bg-surface-inner text-text-muted text-sm font-semibold">
               {sender.charAt(0)}
             </AvatarFallback>
           </Avatar>
         )}
         <div>
-          <p className="text-sm font-semibold text-white">{sender}</p>
+          <p className="text-sm font-semibold text-text-primary">{sender}</p>
           {profile && (
-            <p className="text-xs text-white/60">{profile.title}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-label">{profile.title}</p>
           )}
         </div>
       </div>

@@ -10,8 +10,8 @@ import { ArrowLeft } from 'lucide-react';
  */
 export default function MoodSystemPrototypePage() {
   return (
-    <div className="min-h-screen bg-black">
-      <div className="sticky top-0 z-10 bg-black/95 border-b border-white/10 p-4">
+    <div className="min-h-screen bg-surface-app">
+      <div className="sticky top-0 z-10 bg-surface-app/95 border-b border-border p-4">
         <div className="container mx-auto">
           <Link href="/prototypes">
             <Button variant="ghost" size="sm">
