@@ -11,7 +11,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -19,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Inbox, MailOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEmails, useMarkEmailRead, useDeleteEmail, useUnreadEmailCount } from '@/hooks/useEmails';
 import { EMAIL_CATEGORIES, EMAIL_CATEGORY_LABELS, type EmailCategory } from '@shared/types/emailTypes';
@@ -255,17 +254,20 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
       <DialogContent
         id={contentId}
         aria-describedby={descriptionId}
-        className="max-w-5xl border border-brand-purple bg-brand-dark/90 text-white backdrop-blur-sm"
+        className="max-w-5xl border-white/[0.08] bg-surface-panel/95 text-text-primary backdrop-blur-sm"
       >
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {liveRegionMessage}
         </div>
-        <DialogHeader className="border-b border-brand-purple pb-4">
-          <DialogTitle className="flex items-center justify-between text-lg font-semibold text-white">
-            <span>Inbox</span>
-            <Badge variant="secondary" className="bg-brand-burgundy text-white">
+        <DialogHeader className="border-b border-white/[0.08] pb-4">
+          <DialogTitle className="flex items-center justify-between text-lg font-semibold text-text-primary">
+            <span className="flex items-center gap-2">
+              <Inbox className="h-4 w-4 text-neon-lilac" />
+              Inbox
+            </span>
+            <span className="rounded-pill border border-white/[0.08] bg-white/[0.04] px-3 py-1 font-mono text-[11px] text-text-muted">
               {unreadCount} unread
-            </Badge>
+            </span>
           </DialogTitle>
           <DialogDescription id={descriptionId} className="sr-only">
             Review inbox messages and manage read status.
@@ -274,15 +276,15 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
 
         <div className="mt-4 flex h-[70vh] flex-col gap-4 lg:flex-row">
           <aside className="w-full flex-shrink-0 lg:w-72">
-            <div className="flex h-full flex-col rounded-xl border border-brand-purple bg-brand-dark">
-              <div className="space-y-4 border-b border-brand-purple p-4">
+            <div className="glass-panel chromatic-hairline flex h-full flex-col rounded-card">
+              <div className="space-y-4 border-b border-white/[0.06] p-4">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wide text-white/60">Category</Label>
+                  <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">Category</Label>
                   <Select value={category} onValueChange={(value) => setCategory(value as 'all' | EmailCategory)}>
-                    <SelectTrigger className="h-9 border-brand-purple bg-black/40 text-white">
+                    <SelectTrigger className="h-9 border-white/[0.09] bg-black/20 text-text-primary">
                       <SelectValue placeholder="All categories" />
                     </SelectTrigger>
-                    <SelectContent className="border-brand-purple bg-brand-dark text-white">
+                    <SelectContent className="border-white/[0.09] bg-surface-panel text-text-primary">
                       {CATEGORY_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value} className="text-sm">
                           {option.label}
@@ -299,14 +301,14 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
                       checked={showUnreadOnly}
                       onCheckedChange={(checked) => setShowUnreadOnly(checked)}
                     />
-                    <Label htmlFor="unread-only" className="text-xs text-white/70">
+                    <Label htmlFor="unread-only" className="text-xs text-text-body">
                       Unread only
                     </Label>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs text-white/70 hover:text-white"
+                    className="text-xs text-text-body hover:text-text-primary"
                     onClick={() => {
                       if (!isFetching) {
                         refetch();
@@ -331,8 +333,14 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
                   {isLoading ? (
                     <LoadingList />
                   ) : emails.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-white/20 bg-black/20 p-6 text-center text-sm text-white/60">
-                      No emails yet. Advance the week to generate updates.
+                    <div className="flex flex-col items-center justify-center px-4 py-9 text-center">
+                      <div className="mb-4 flex h-[52px] w-[52px] items-center justify-center rounded-[14px] border border-neon-purple/[0.32] bg-neon-purple/[0.12] shadow-glow-purple">
+                        <MailOpen className="h-[18px] w-[18px] text-neon-lilac" />
+                      </div>
+                      <div className="text-sm font-semibold text-text-primary/85">No messages yet</div>
+                      <div className="mt-1 max-w-[230px] text-[12.5px] text-text-muted">
+                        Advance the week to generate updates.
+                      </div>
                     </div>
                   ) : (
                     emails.map((email, index) => (
@@ -345,27 +353,31 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
                         aria-selected={selectedEmailId === email.id}
                         onKeyDown={(event) => handleEmailKeyDown(event, index)}
                         className={cn(
-                          'w-full rounded-lg border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-brand-burgundy',
+                          'w-full rounded-[12px] border px-3 py-2.5 text-left transition focus:outline-none focus:ring-2 focus:ring-neon-lilac/60',
                           selectedEmailId === email.id
-                            ? 'border-brand-burgundy bg-brand-burgundy/20'
-                            : 'border-transparent bg-black/20 hover:border-brand-purple hover:bg-black/30'
+                            ? 'border-neon-purple/[0.5] bg-neon-purple/[0.14]'
+                            : 'border-white/[0.08] bg-surface-inner/50 hover:border-white/[0.16] hover:bg-white/[0.045]'
                         )}
                         onClick={() => setSelectedEmailId(email.id)}
                       >
                         <div className="flex items-center gap-2">
-                          {!email.isRead && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
-                          <span className="text-sm font-semibold text-white">{email.subject}</span>
+                          {!email.isRead && (
+                            <span className="rounded-pill border border-positive/40 bg-positive/[0.14] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-positive">
+                              Unread
+                            </span>
+                          )}
+                          <span className="text-sm font-semibold text-text-primary">{email.subject}</span>
                         </div>
-                        <div className="mt-1 text-xs text-white/60">
+                        <div className="mt-1 font-mono text-[11px] text-text-muted">
                           From: {email.sender}
                         </div>
                         <div className="mt-1.5 flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs text-white/70">
+                          <span className="rounded-pill border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 font-mono text-[10.5px] text-text-muted">
                             Week {email.week}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs text-white/70">
+                          </span>
+                          <span className="rounded-pill border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10.5px] text-text-muted">
                             {CATEGORY_LABELS[email.category]}
-                          </Badge>
+                          </span>
                         </div>
                       </button>
                     ))
@@ -375,27 +387,27 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
             </div>
           </aside>
 
-          <section className="flex-1 rounded-xl border border-brand-purple bg-brand-dark">
+          <section className="glass-panel chromatic-hairline flex-1 rounded-card">
             {selectedEmail && TemplateComponent ? (
               <div className="flex h-full flex-col">
-                <div className="space-y-3 border-b border-brand-purple p-4">
+                <div className="space-y-3 border-b border-white/[0.06] p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary" className="bg-white/10 text-white/80">
+                    <span className="rounded-pill border border-white/[0.08] bg-white/[0.06] px-3 py-1 font-mono text-[11px] text-text-body">
                       Week {selectedEmail.week}
-                    </Badge>
-                    <Badge variant="outline" className="border-brand-burgundy text-brand-pink">
+                    </span>
+                    <span className="rounded-pill border border-neon-pink/40 bg-neon-pink/[0.1] px-3 py-1 text-[11px] text-neon-pink">
                       {CATEGORY_LABELS[selectedEmail.category]}
-                    </Badge>
+                    </span>
                     {!selectedEmail.isRead && (
-                      <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-200">
+                      <span className="rounded-pill border border-positive/40 bg-positive/[0.14] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-positive">
                         Unread
-                      </Badge>
+                      </span>
                     )}
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-semibold text-white">{selectedEmail.subject}</h3>
-                    <p className="text-xs text-white/60">
+                    <h3 className="text-xl font-semibold text-text-primary">{selectedEmail.subject}</h3>
+                    <p className="font-mono text-xs text-text-muted">
                       {selectedEmail.sender} - {formatTimestamp(selectedEmail.createdAt)}
                     </p>
                   </div>
@@ -406,14 +418,14 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
                       size="sm"
                       onClick={handleToggleRead}
                       disabled={markEmailRead.isPending}
-                      className="border-brand-purple text-xs text-white hover:border-brand-burgundy hover:text-white"
+                      className="border-white/[0.12] text-xs text-text-primary hover:border-neon-lilac/50 hover:text-text-primary"
                     >
                       {selectedEmail.isRead ? 'Mark unread' : 'Mark as read'}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-white/70 hover:text-white"
+                      className="text-xs text-text-body hover:text-text-primary"
                       onClick={() => {
                         setShowUnreadOnly(false);
                         setCategory('all');
@@ -436,13 +448,13 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
 
                 <ScrollArea className="flex-1">
                   <div className="space-y-4 p-4">
-                    <Separator className="border-brand-purple" />
+                    <Separator className="border-white/[0.08]" />
                     <TemplateComponent email={selectedEmail as EmailTemplateData} />
                   </div>
                 </ScrollArea>
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-white/60">
+              <div className="flex h-full items-center justify-center text-sm text-text-muted">
                 Select an email to read the details.
               </div>
             )}
@@ -451,21 +463,21 @@ export function InboxModal({ open, onOpenChange, initialEmailId, contentId }: In
       </DialogContent>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="border-brand-purple bg-brand-dark text-white">
+        <AlertDialogContent className="border-white/[0.08] bg-surface-panel text-text-primary">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete this email?</AlertDialogTitle>
-            <AlertDialogDescription className="text-white/70">
+            <AlertDialogTitle className="text-text-primary">Delete this email?</AlertDialogTitle>
+            <AlertDialogDescription className="text-text-body">
               This action cannot be undone. This will permanently delete this email from your inbox.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-brand-purple text-white hover:bg-white/10">
+            <AlertDialogCancel className="border-white/[0.09] text-text-primary hover:bg-white/[0.08]">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteEmail}
               disabled={deleteEmail.isPending}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-negative text-white hover:bg-negative/80"
             >
               {deleteEmail.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
@@ -480,7 +492,7 @@ function LoadingList() {
   return (
     <div className="space-y-2">
       {Array.from({ length: 5 }).map((_, index) => (
-        <Skeleton key={index} className="h-16 w-full rounded-lg bg-white/5" />
+        <Skeleton key={index} className="h-16 w-full rounded-[12px] bg-white/5" />
       ))}
     </div>
   );
@@ -488,7 +500,7 @@ function LoadingList() {
 
 function DefaultEmailTemplate({ email }: EmailTemplateProps) {
   return (
-    <pre className="overflow-x-auto rounded-lg border border-white/10 bg-black/30 p-4 text-xs text-white/70">
+    <pre className="overflow-x-auto rounded-[12px] border border-white/[0.08] bg-black/20 p-4 font-mono text-xs text-text-body">
       {JSON.stringify(email.body, null, 2)}
     </pre>
   );

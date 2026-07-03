@@ -23,15 +23,15 @@ export function ArtistSigningEmail({ email }: EmailTemplateProps) {
   };
 
   return (
-    <div className="space-y-4 text-sm text-white/85">
+    <div className="space-y-4 text-sm text-text-body">
       <div>
-        <p className="text-white font-semibold">Congratulations! Your new artist is officially on the roster.</p>
+        <p className="text-text-primary font-semibold">Congratulations! Your new artist is officially on the roster.</p>
         <p>The contracts have been signed and {body?.name ?? 'your new artist'} is ready to start creating.</p>
       </div>
 
       <div className="flex items-start gap-4">
         {/* Avatar Box */}
-        <div className="flex-shrink-0 w-24 h-36 bg-brand-mauve border border-brand-purple-light rounded-lg overflow-hidden relative">
+        <div className="flex-shrink-0 w-24 h-36 bg-surface-inner border border-white/[0.08] rounded-xl overflow-hidden relative">
           <img
             src={getAvatarUrl(body?.name ?? '')}
             alt={`${body?.name ?? 'Artist'} avatar`}
@@ -54,23 +54,23 @@ export function ArtistSigningEmail({ email }: EmailTemplateProps) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-4 space-y-2">
-        <div className="text-xs uppercase tracking-wide text-green-200/80">Contract Terms</div>
+      <div className="rounded-xl border border-positive/40 bg-positive/10 p-4 space-y-2">
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-positive/80">Contract Terms</div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-white/60">Signing Bonus Paid</span>
-          <span className="text-white font-semibold">{formatCurrency(body?.signingCost)}</span>
+          <span className="text-text-muted">Signing Bonus Paid</span>
+          <span className="font-mono font-semibold text-money">{formatCurrency(body?.signingCost)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-white/60">Weekly Salary</span>
-          <span className="text-white font-semibold">
+          <span className="text-text-muted">Weekly Salary</span>
+          <span className="font-mono font-semibold text-money">
             {body?.weeklyCost != null ? formatCurrency(body.weeklyCost) : 'TBD'}
           </span>
         </div>
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-        <p className="text-xs text-white/70">
-          💡 <span className="font-semibold">Next Steps:</span> Head to the Recording Session or Plan Release to start working on {body?.name ?? 'their'} first project.
+      <div className="rounded-xl border border-white/[0.08] bg-surface-inner/50 p-3">
+        <p className="text-xs text-text-body">
+          💡 <span className="font-semibold text-text-primary">Next Steps:</span> Head to the Recording Session or Plan Release to start working on {body?.name ?? 'their'} first project.
         </p>
       </div>
 
@@ -81,9 +81,9 @@ export function ArtistSigningEmail({ email }: EmailTemplateProps) {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
-      <div className="text-xs uppercase tracking-wide text-white/60">{label}</div>
-      <div className="text-white font-semibold">{value}</div>
+    <div className="rounded-xl border border-white/[0.08] bg-surface-inner/60 p-4">
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-label">{label}</div>
+      <div className="text-text-primary font-semibold">{value}</div>
     </div>
   );
 }

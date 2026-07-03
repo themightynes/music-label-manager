@@ -25,6 +25,7 @@ import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { projectsQueryKey } from '@/hooks/useProjects';
 import { artistsQueryKey } from '@/hooks/useArtists';
 import { useToast } from '@/hooks/use-toast';
+import { Save, Copy, Trash2, Plus, Download, Upload } from 'lucide-react';
 
 type SaveSummary = {
   id: string;
@@ -426,38 +427,43 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader className="border-b border-brand-purple pb-4">
-            <DialogTitle className="text-lg font-semibold text-white">Save & Load Game</DialogTitle>
+          <DialogHeader className="border-b border-white/[0.06] pb-4">
+            <DialogTitle className="text-lg font-semibold text-[#F7F4FB]">Save &amp; Load Game</DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
             {/* Manual saves */}
             {manualSaves.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-xs uppercase tracking-wide text-white/60">Manual Saves</h3>
+                <h3 className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(180,170,220,0.5)]">Manual Saves</h3>
                 {manualSaves.map(save => {
                   const detail = saveDetails[save.id];
                   const money = save.money ?? detail?.gameState?.money ?? null;
                   const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
                   return (
-                    <div key={save.id} className="border border-brand-purple rounded-lg p-4 hover:bg-brand-burgundy/10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium text-white">{save.name}</div>
-                          <div className="text-xs text-white/70">
-                            Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
+                    <div key={save.id} className="rounded-xl border border-white/[0.06] bg-surface-inner/50 p-4 transition-colors hover:bg-white/[0.045]">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-[#F7F4FB]">{save.name}</span>
+                            <span className="font-mono text-[11px] px-[11px] py-[4px] rounded-pill bg-[rgba(160,90,240,0.14)] border border-[rgba(160,90,240,0.4)] text-neon-lilac">
+                              Manual
+                            </span>
                           </div>
-                          <div className="text-xs text-white/50">
+                          <div className="text-xs text-white/70 mt-1">
+                            Week {save.week} | <span className="font-mono text-money">${typeof money === 'number' ? money.toLocaleString() : '--'}</span> | Rep {typeof reputation === 'number' ? reputation : '--'}
+                          </div>
+                          <div className="font-mono text-[11px] text-white/50 mt-1">
                             Saved {formatDate(save.updatedAt)}
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 shrink-0">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleLoad(save.id)}
                             disabled={loading || deleting === save.id}
-                            className="text-xs"
+                            className="text-xs rounded-button border-[rgba(55,214,255,0.35)] bg-[rgba(55,214,255,0.06)] text-neon-cyan hover:bg-[rgba(55,214,255,0.12)] hover:text-neon-cyan"
                           >
                             {loading ? 'Loading...' : 'Load'}
                           </Button>
@@ -466,8 +472,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                             variant="outline"
                             onClick={() => handleLoad(save.id, 'fork')}
                             disabled={loading || deleting === save.id}
-                            className="text-xs"
+                            className="text-xs rounded-button border-white/[0.09] bg-white/[0.02] text-white/75 hover:bg-white/[0.06] hover:text-white"
                           >
+                            <Copy className="h-3 w-3 mr-1" />
                             Copy
                           </Button>
                           <Button
@@ -475,8 +482,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                             variant="outline"
                             onClick={() => requestDelete(save.id, save.name)}
                             disabled={loading || deleting === save.id}
-                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-xs rounded-button border-negative/40 bg-negative/[0.08] text-negative hover:bg-negative/[0.16] hover:text-negative"
                           >
+                            <Trash2 className="h-3 w-3 mr-1" />
                             {deleting === save.id ? 'Deleting...' : 'Delete'}
                           </Button>
                         </div>
@@ -490,30 +498,35 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
             {/* Autosaves */}
             {autosaveSaves.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-xs uppercase tracking-wide text-white/60">Autosaves</h3>
+                <h3 className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(180,170,220,0.5)]">Autosaves</h3>
                 {autosaveSaves.map(save => {
                   const detail = saveDetails[save.id];
                   const money = save.money ?? detail?.gameState?.money ?? null;
                   const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
                   return (
-                    <div key={save.id} className="border border-brand-purple/60 rounded-lg p-4 hover:bg-brand-burgundy/10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium text-white">{save.name}</div>
-                          <div className="text-xs text-white/70">
-                            Week {save.week} | ${typeof money === 'number' ? money.toLocaleString() : '--'} | Rep {typeof reputation === 'number' ? reputation : '--'}
+                    <div key={save.id} className="rounded-xl border border-white/[0.06] bg-surface-inner/50 p-4 transition-colors hover:bg-white/[0.045]">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-[#F7F4FB]">{save.name}</span>
+                            <span className="font-mono text-[11px] px-[11px] py-[4px] rounded-pill bg-[rgba(55,214,255,0.1)] border border-[rgba(55,214,255,0.35)] text-neon-cyan">
+                              Autosave
+                            </span>
                           </div>
-                          <div className="text-xs text-white/50">
+                          <div className="text-xs text-white/70 mt-1">
+                            Week {save.week} | <span className="font-mono text-money">${typeof money === 'number' ? money.toLocaleString() : '--'}</span> | Rep {typeof reputation === 'number' ? reputation : '--'}
+                          </div>
+                          <div className="font-mono text-[11px] text-white/50 mt-1">
                             Saved {formatDate(save.updatedAt)}
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 shrink-0">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleLoad(save.id)}
                             disabled={loading || deleting === save.id}
-                            className="text-xs"
+                            className="text-xs rounded-button border-[rgba(55,214,255,0.35)] bg-[rgba(55,214,255,0.06)] text-neon-cyan hover:bg-[rgba(55,214,255,0.12)] hover:text-neon-cyan"
                           >
                             {loading ? 'Loading...' : 'Load'}
                           </Button>
@@ -522,8 +535,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                             variant="outline"
                             onClick={() => handleLoad(save.id, 'fork')}
                             disabled={loading || deleting === save.id}
-                            className="text-xs"
+                            className="text-xs rounded-button border-white/[0.09] bg-white/[0.02] text-white/75 hover:bg-white/[0.06] hover:text-white"
                           >
+                            <Copy className="h-3 w-3 mr-1" />
                             Copy
                           </Button>
                           <Button
@@ -531,8 +545,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                             variant="outline"
                             onClick={() => requestDelete(save.id, save.name)}
                             disabled={loading || deleting === save.id}
-                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-xs rounded-button border-negative/40 bg-negative/[0.08] text-negative hover:bg-negative/[0.16] hover:text-negative"
                           >
+                            <Trash2 className="h-3 w-3 mr-1" />
                             {deleting === save.id ? 'Deleting...' : 'Delete'}
                           </Button>
                         </div>
@@ -545,15 +560,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
 
             {/* Empty slots */}
             {Array.from({ length: Math.max(0, 3 - manualSaves.length) }).map((_, index) => (
-              <div key={`empty-${index}`} className="border-2 border-dashed border-brand-purple rounded-lg p-4 text-center">
-                <i className="fas fa-plus text-white/50 text-xl mb-2"></i>
+              <div key={`empty-${index}`} className="rounded-xl border-2 border-dashed border-white/[0.09] p-4 text-center">
+                <Plus className="h-5 w-5 text-white/50 mx-auto mb-2" />
                 <p className="text-sm text-white/50">Empty Slot</p>
               </div>
             ))}
           </div>
 
           {/* New save input — pinned below the scrolling list */}
-          <div className="px-6 pt-4 space-y-2 border-t border-brand-purple">
+          <div className="px-6 pt-4 space-y-2 border-t border-white/[0.06]">
             <Input
               placeholder="Enter save name..."
               value={newSaveName}
@@ -563,27 +578,30 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
             <Button
               onClick={handleSave}
               disabled={!newSaveName.trim() || saving}
-              className="w-full bg-brand-burgundy text-white hover:bg-brand-burgundy"
+              className="w-full rounded-button bg-[linear-gradient(135deg,#d14a7a,#7a2fb0)] text-white shadow-action hover:opacity-95 disabled:opacity-50"
             >
+              <Save className="h-4 w-4 mr-2" />
               {saving ? 'Saving...' : 'Save Game'}
             </Button>
           </div>
 
-          <div className="p-6 border-t border-brand-purple flex justify-between">
+          <div className="p-6 border-t border-white/[0.06] flex justify-between">
             <div className="flex space-x-3">
               <Button
                 variant="ghost"
                 onClick={handleExport}
-                className="text-brand-burgundy hover:text-brand-burgundy font-medium"
+                className="text-neon-lilac hover:text-neon-lilac hover:bg-white/[0.045] font-medium"
               >
+                <Download className="h-4 w-4 mr-2" />
                 Export JSON
               </Button>
               <Button
                 variant="ghost"
                 onClick={handleImport}
                 disabled={importing}
-                className="text-white/70 hover:text-white font-medium"
+                className="text-white/70 hover:text-white hover:bg-white/[0.045] font-medium"
               >
+                <Upload className="h-4 w-4 mr-2" />
                 {importing ? 'Processing...' : 'Import JSON'}
               </Button>
             </div>
@@ -591,7 +609,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
               <Button
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="text-white/70 hover:text-white"
+                className="text-white/70 hover:text-white hover:bg-white/[0.045]"
               >
                 Cancel
               </Button>
@@ -608,9 +626,9 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           }
         }}
       >
-        <AlertDialogContent className="border-brand-purple bg-brand-dark text-white">
+        <AlertDialogContent className="border-white/[0.06] bg-surface-panel text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete this save?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[#F7F4FB]">Delete this save?</AlertDialogTitle>
             <AlertDialogDescription className="text-white/70">
               {pendingDelete
                 ? `This will permanently remove "${pendingDelete.name}" from your save slots.`
@@ -620,14 +638,14 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           <AlertDialogFooter>
             <AlertDialogCancel
               disabled={deleting !== null}
-              className="border-brand-purple text-white hover:bg-white/10"
+              className="rounded-button border-white/[0.09] text-white hover:bg-white/[0.08]"
             >
               Cancel
             </AlertDialogCancel>
             <Button
               onClick={() => confirmDelete()}
               disabled={deleting !== null}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="rounded-button bg-negative text-white hover:bg-negative/90"
             >
               {deleting !== null && pendingDelete && deleting === pendingDelete.id ? 'Deleting...' : 'Delete'}
             </Button>
@@ -643,16 +661,16 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           }
         }}
       >
-        <AlertDialogContent className="border-brand-purple bg-brand-dark text-white">
+        <AlertDialogContent className="border-white/[0.06] bg-surface-panel text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Import save file</AlertDialogTitle>
+            <AlertDialogTitle className="text-[#F7F4FB]">Import save file</AlertDialogTitle>
             <AlertDialogDescription className="text-white/70">
               Choose how you want to apply the imported snapshot.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           {pendingImport && (
-            <div className="space-y-2 rounded-lg border border-brand-purple/40 bg-black/30 p-4 text-sm text-white/80">
+            <div className="space-y-2 rounded-xl border border-white/[0.06] bg-surface-inner/50 p-4 text-sm text-white/80">
               <div>
                 <span className="font-semibold text-white/90">File:</span> {pendingImport.fileName}
               </div>
@@ -669,21 +687,21 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           <AlertDialogFooter className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             <AlertDialogCancel
               disabled={importing}
-              className="border-brand-purple text-white hover:bg-white/10"
+              className="rounded-button border-white/[0.09] text-white hover:bg-white/[0.08]"
             >
               Cancel
             </AlertDialogCancel>
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <Button
                 variant="outline"
-                className="border-brand-purple text-white hover:border-brand-burgundy hover:text-white"
+                className="rounded-button border-[rgba(55,214,255,0.35)] bg-[rgba(55,214,255,0.06)] text-neon-cyan hover:bg-[rgba(55,214,255,0.12)] hover:text-neon-cyan"
                 disabled={importing}
                 onClick={() => finalizeImport('fork')}
               >
                 {importing ? 'Importing...' : 'Import as copy'}
               </Button>
               <Button
-                className="bg-brand-burgundy text-white hover:bg-brand-burgundy-light"
+                className="rounded-button bg-[linear-gradient(135deg,#d14a7a,#7a2fb0)] text-white shadow-action hover:opacity-95"
                 disabled={importing}
                 onClick={() => finalizeImport('overwrite')}
               >
