@@ -668,10 +668,10 @@ export class ServerGameData {
   getProducerTierSystemSync() {
     if (!this.balanceData) {
       return {
-        local: { multiplier: 1.0, unlock_rep: 0, quality_bonus: 0, description: "Local producers" },
-        regional: { multiplier: 1.8, unlock_rep: 15, quality_bonus: 5, description: "Regional producers" },
-        national: { multiplier: 3.2, unlock_rep: 35, quality_bonus: 12, description: "National producers" },
-        legendary: { multiplier: 5.5, unlock_rep: 60, quality_bonus: 20, description: "Legendary producers" }
+        local: { multiplier: 1.0, unlock_rep: 0, description: "Local producers" },
+        regional: { multiplier: 1.8, unlock_rep: 15, description: "Regional producers" },
+        national: { multiplier: 3.2, unlock_rep: 35, description: "National producers" },
+        legendary: { multiplier: 5.5, unlock_rep: 60, description: "Legendary producers" }
       };
     }
     
@@ -682,10 +682,10 @@ export class ServerGameData {
   getTimeInvestmentSystemSync() {
     if (!this.balanceData) {
       return {
-        rushed: { multiplier: 0.7, duration_modifier: 0.8, quality_bonus: -10, description: "Rushed production" },
-        standard: { multiplier: 1.0, duration_modifier: 1.0, quality_bonus: 0, description: "Standard production" },
-        extended: { multiplier: 1.4, duration_modifier: 1.3, quality_bonus: 8, description: "Extended production" },
-        perfectionist: { multiplier: 2.1, duration_modifier: 1.6, quality_bonus: 15, description: "Perfectionist production" }
+        rushed: { multiplier: 0.7, duration_modifier: 0.8, description: "Rushed production" },
+        standard: { multiplier: 1.0, duration_modifier: 1.0, description: "Standard production" },
+        extended: { multiplier: 1.4, duration_modifier: 1.3, description: "Extended production" },
+        perfectionist: { multiplier: 2.1, duration_modifier: 1.6, description: "Perfectionist production" }
       };
     }
     

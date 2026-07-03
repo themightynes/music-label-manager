@@ -49,12 +49,6 @@
         "medium_project": 4,
         "large_project": 7
       }
-    },
-    "quality_per_song_impact": {
-      "enabled": true,
-      "base_quality_per_song": 0.95,
-      "min_quality_multiplier": 0.85,
-      "description": "More songs slightly reduce individual song quality due to divided attention"
     }
   },
   

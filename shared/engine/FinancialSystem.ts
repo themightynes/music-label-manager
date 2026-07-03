@@ -1382,24 +1382,6 @@ export class FinancialSystem {
   }
   
   /**
-   * Legacy method for backward compatibility - redirects to new multiplier method
-   * @deprecated Use calculateBudgetQualityMultiplier instead
-   */
-  calculateBudgetQualityBonus(
-    budgetPerSong: number,
-    projectType: string,
-    producerTier: string,
-    timeInvestment: string,
-    songCount: number = 1
-  ): number {
-    // Convert multiplier back to additive bonus for legacy callers
-    const multiplier = this.calculateBudgetQualityMultiplier(budgetPerSong, projectType, producerTier, timeInvestment, songCount);
-    const neutralMult = this.gameData.getBalanceConfigSync().quality_system.budget_quality_system.neutral_multiplier || 1.0;
-    // Convert from multiplier to percentage bonus
-    return Math.round((multiplier - neutralMult) * 100);
-  }
-
-  /**
    * Calculates economies of scale multiplier for cost reduction
    * Helper method used by dynamic minimum viable cost calculation
    */
@@ -1490,38 +1472,6 @@ export class FinancialSystem {
     }
     
     return { rating, description, efficiencyRatio };
-  }
-
-  /**
-   * Calculates song count impact on individual song quality
-   * Originally from game-engine.ts line 1534-1560
-   */
-  calculateSongCountQualityImpact(songCount: number): number {
-    const balance = this.gameData.getBalanceConfigSync();
-    const songCountSystem = balance.economy.song_count_cost_system?.quality_per_song_impact;
-    
-    if (!songCountSystem?.enabled || songCount <= 1) {
-      return 1.0; // No impact for single songs
-    }
-    
-    // Quality decreases slightly for each additional song due to divided attention
-    const baseQualityPerSong = songCountSystem.base_quality_per_song;
-    const minMultiplier = songCountSystem.min_quality_multiplier;
-    
-    // Exponential decay: quality = baseQualityPerSong^(songCount-1)
-    const qualityImpact = Math.pow(baseQualityPerSong, songCount - 1);
-    
-    // Ensure it doesn't go below minimum
-    const finalImpact = Math.max(minMultiplier, qualityImpact);
-    
-    // console.log(`[SONG COUNT IMPACT] Quality impact calculation:`, {
-    //   songCount,
-    //   baseQualityPerSong,
-    //   qualityImpact: qualityImpact.toFixed(3),
-    //   finalImpact: finalImpact.toFixed(3)
-    // });
-    
-    return finalImpact;
   }
 
   /**
