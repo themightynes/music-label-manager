@@ -85,16 +85,16 @@ const router = Router();
       // There is no duplicated assembly to extract: each caller only sources the
       // same `TourCalculationParams` fields from its own context (estimate = request
       // body / current gameState pre-tour; engine = stored project metadata post-
-      // creation). `artistPopularity` defaults to 50 to match the engine's
-      // execution path (C47 — TourProcessor.processUnifiedTourRevenue uses
-      // `artist.popularity || 50`), so preview and executed tour agree for
+      // creation). `artistPopularity` floors zero/unset to 1, in lockstep with
+      // the engine's execution path (C47 — TourProcessor.processUnifiedTourRevenue
+      // uses `artist.popularity || 1`), so preview and executed tour agree for
       // artists with unset/zero popularity. The happy-path response is pinned by
       // tests/endpoints/tour-estimate.characterization.test.ts.
       // ENHANCED: Calculate detailed breakdown with specific capacity or tier fallback
       const detailedBreakdown = financialSystem.calculateDetailedTourBreakdown({
         venueCapacity: venueCapacity || 0, // Use provided capacity or fallback to tier
         venueTier: venueAccess, // Keep for backward compatibility and fallback
-        artistPopularity: artist.popularity || 50,
+        artistPopularity: artist.popularity || 1,
         localReputation: gameState.reputation || 0,
         cities,
         marketingBudget: totalMarketingBudget

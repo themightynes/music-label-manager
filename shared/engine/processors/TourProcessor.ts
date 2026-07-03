@@ -21,6 +21,12 @@
  * NOTE: `processUnifiedTourRevenue` is still called from
  * `GameEngine.advanceProjectStages` (which stays in the engine until PR-9); the
  * engine's same-signature delegate keeps that call site working.
+ *
+ * POST-EXTRACTION CHANGE (July 3, 2026, backlog C47): the `artistPopularity`
+ * fallback changed from `|| 50` to `|| 1` — a zero/unset-popularity artist now
+ * tours as an unknown instead of a mid-tier act. Sanctioned behavior change;
+ * kept in lockstep with the estimate route (server/routes/tour.ts). No RNG-
+ * stream impact (popularity affects magnitudes, not the number of draws).
  */
 import type { WeekContext } from './types';
 
@@ -56,7 +62,11 @@ export class TourProcessor {
       // ENHANCED: Extract parameters for FinancialSystem with capacity support
       const venueAccess = currentMetadata.venueAccess || 'none';
       const storedVenueCapacity = currentMetadata.venueCapacity; // New: stored capacity from tour creation
-      const artistPopularity = artist.popularity || 50;
+      // Zero/unset popularity floors to 1 (a true unknown draws like a nobody,
+      // not a mid-tier act). MUST stay in lockstep with the estimate route's
+      // default (server/routes/tour.ts, backlog C47) or preview diverges from
+      // execution.
+      const artistPopularity = artist.popularity || 1;
       const reputation = ctx.gameState.reputation || 0;
       const totalCities = currentMetadata.cities || 1;
 

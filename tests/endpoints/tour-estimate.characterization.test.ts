@@ -25,10 +25,11 @@
  * on every call and varied run-to-run even for identical inputs — and the
  * client passes it back as the tour's charged totalCost at creation.)
  *
- * C47 is pinned by the second test: the route defaults `artistPopularity` to 50
- * (matching TourProcessor's execution-path `artist.popularity || 50`), so an
- * artist with unset/zero popularity estimates identically to a popularity-50
- * artist instead of diverging from the executed tour.
+ * C47 is pinned by the second test: the route floors `artistPopularity` to 1
+ * for zero/unset (matching TourProcessor's execution-path
+ * `artist.popularity || 1`), so an artist with unset/zero popularity estimates
+ * identically to a popularity-1 artist — touring as an unknown, not a
+ * mid-tier act — and never diverges from the executed tour.
  *
  * Harness mirrors projects-create.characterization.test.ts: real tour router over
  * supertest against the Docker test Postgres (localhost:5433), server/db mocked to
@@ -185,14 +186,16 @@ describe('POST /api/tour/estimate (characterization)', () => {
     expect(res.body).toMatchSnapshot();
   });
 
-  it('C47: an artist with zero/unset popularity estimates identically to a popularity-50 artist (engine default parity)', async () => {
+  it('C47: an artist with zero/unset popularity estimates identically to a popularity-1 artist (engine default parity)', async () => {
     const { gameId } = await seedGame();
 
     const zeroPopArtistId = crypto.randomUUID();
+    const onePopArtistId = crypto.randomUUID();
     const fiftyPopArtistId = crypto.randomUUID();
     await db.insert(artists).values([
       { id: zeroPopArtistId, gameId, name: 'Unknown Artist', archetype: 'Visionary', popularity: 0 },
-      { id: fiftyPopArtistId, gameId, name: 'Baseline Artist', archetype: 'Visionary', popularity: 50 },
+      { id: onePopArtistId, gameId, name: 'Floor Artist', archetype: 'Visionary', popularity: 1 },
+      { id: fiftyPopArtistId, gameId, name: 'Mid-Tier Artist', archetype: 'Visionary', popularity: 50 },
     ]);
 
     const estimateFor = async (artistId: string) => {
@@ -204,11 +207,16 @@ describe('POST /api/tour/estimate (characterization)', () => {
     };
 
     const zeroPop = await estimateFor(zeroPopArtistId);
+    const onePop = await estimateFor(onePopArtistId);
     const fiftyPop = await estimateFor(fiftyPopArtistId);
 
-    // TourProcessor.processUnifiedTourRevenue uses `artist.popularity || 50` at
-    // execution; the estimate route must assume the same default or the preview
+    // TourProcessor.processUnifiedTourRevenue uses `artist.popularity || 1` at
+    // execution; the estimate route must assume the same floor or the preview
     // diverges from the executed tour for the same artist.
-    expect(zeroPop).toEqual(fiftyPop);
+    expect(zeroPop).toEqual(onePop);
+
+    // And the floor must NOT be the old mid-tier default — a true unknown
+    // draws less than a popularity-50 act (guards against `|| 50` regressing).
+    expect(zeroPop.estimatedRevenue).toBeLessThan(fiftyPop.estimatedRevenue);
   });
 });
