@@ -2,6 +2,9 @@
 **Date**: July 2, 2026 · **Reviewer**: Claude (read-only session) · **Branch reviewed**: `claude/onboarding-jira33`
 **Scope**: Every HTTP route across all 16 feature routers + the `server/routes.ts` registry (84 handlers total). Verdict per route on whether it enforces that the caller owns the game/entity it touches. Prompted by finding B1 of the recording-session review (projects router had zero ownership checks). Findings below were located by audit agents and the high-severity ones independently re-verified in source.
 
+## Resolution status (2026-07-02, same day)
+All buckets below closed same day: CRITICAL (no-auth routes) → fixed in **#62**. HIGH mutations → releases in **#63**, artists in **#64**, projects in **#66**/**#68**, all remaining routers (gameLoop/games/executives/arOffice/analytics/tour/devTools) in **#69**. MEDIUM unowned reads → **#63**/**#69**. The two "correctly owned" reference patterns cited below are now unified behind the shared `requireGameOwner` middleware rather than ad hoc per-router checks.
+
 ## Executive summary
 This is a **systemic broken-object-level-authorization (IDOR) problem, not an isolated bug.** `requireClerkUser` proves the caller is *a* logged-in user but performs **no game-ownership check**; there is **no shared ownership helper**; each router re-implements the check inline, and roughly half forget it. **~35 of 84 routes that touch game-scoped data do not verify ownership.** An authenticated attacker who knows (or guesses — they're UUIDs, but they leak via the client, saves, and error messages) another player's `gameId` can read and mutate that player's entire game: money, reputation, artists, projects, releases, executives, focus slots. Two routes need no authentication at all.
 
