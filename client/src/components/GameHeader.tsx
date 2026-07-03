@@ -125,21 +125,48 @@ export function GameHeader() {
       aria-label="Label vitals"
       className="flex flex-wrap items-center justify-end gap-4"
     >
-      {/* AUTO focus-slot filler — shown while executives still need attention */}
-      {freeFocusSlots > 0 && (
+      {/* Week number + date range — leftmost of the vitals group */}
+      <div className="text-right">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">
+          Week {week}
+        </div>
+        <div className="mt-0.5 text-[13px] text-text-body">{dateRange}</div>
+      </div>
+
+      {/* Actions — AUTO stacked on Advance Week, identical treatment */}
+      <div className="flex w-[180px] flex-col gap-1.5">
+        {freeFocusSlots > 0 && (
+          <button
+            type="button"
+            onClick={handleAutoSelect}
+            disabled={isAutoSelecting}
+            title={`Smart-fills ${freeFocusSlots} slot${freeFocusSlots !== 1 ? 's' : ''} with executives who need attention`}
+            className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-button bg-gradient-to-br from-action-pink to-action-purple px-4 py-1.5 text-[13px] font-semibold text-white shadow-action transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3.5 right-3.5 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
+            />
+            <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+            {isAutoSelecting ? 'Auto-selecting…' : 'AUTO'}
+          </button>
+        )}
         <button
           type="button"
-          onClick={handleAutoSelect}
-          disabled={isAutoSelecting}
-          title={`Smart-fills ${freeFocusSlots} slot${freeFocusSlots !== 1 ? 's' : ''} with executives who need attention`}
-          className="flex items-center gap-2 rounded-button border border-neon-cyan/40 bg-neon-cyan/[0.08] px-4 py-2.5 text-sm font-semibold text-neon-cyan transition-colors hover:bg-neon-cyan/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={handleAdvanceWeek}
+          disabled={selectedActions.length === 0 || isAdvancingWeek}
+          className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-button bg-gradient-to-br from-action-pink to-action-purple px-4 py-1.5 text-[13px] font-semibold text-white shadow-action transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Zap className="h-4 w-4" aria-hidden="true" />
-          {isAutoSelecting ? 'Auto-selecting…' : 'AUTO'}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3.5 right-3.5 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
+          />
+          {isAdvancingWeek ? 'Processing…' : 'Advance Week'}
+          <ChevronsRight className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
-      )}
+      </div>
 
-      {/* Balance chip — glass chip w/ hairline, gold mono amount */}
+      {/* Balance chip — rightmost */}
       <div
         className="relative flex items-center gap-3 overflow-hidden rounded-button border border-white/[0.09] px-4 py-2.5"
         style={{
@@ -162,29 +189,6 @@ export function GameHeader() {
           </div>
         </div>
       </div>
-
-      {/* Week number + date range */}
-      <div className="text-right">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-label">
-          Week {week}
-        </div>
-        <div className="mt-0.5 text-[13px] text-text-body">{dateRange}</div>
-      </div>
-
-      {/* Advance Week — primary gradient action (behavior migrated from GameSidebar) */}
-      <button
-        type="button"
-        onClick={handleAdvanceWeek}
-        disabled={selectedActions.length === 0 || isAdvancingWeek}
-        className="relative flex items-center gap-2.5 overflow-hidden rounded-button bg-gradient-to-br from-action-pink to-action-purple px-6 py-3.5 text-sm font-semibold text-white shadow-action transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3.5 right-3.5 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
-        />
-        {isAdvancingWeek ? 'Processing…' : 'Advance Week'}
-        <ChevronsRight className="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
     </header>
   );
 }
