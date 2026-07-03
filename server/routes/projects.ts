@@ -205,10 +205,8 @@ router.post("/api/budget-calculation", requireClerkUser, async (req, res) => {
   router.delete("/api/projects/:id/cancel", requireClerkUser, async (req, res) => {
     try {
       const projectId = req.params.id;
-      // TODO(C40): refund amount is client-supplied — recompute server-side (standalone PR after Phase 1 move)
-      const { refundAmount } = req.body;
 
-      console.log(`[CANCEL PROJECT] Cancelling project ${projectId} with refund $${refundAmount}`);
+      console.log(`[CANCEL PROJECT] Cancelling project ${projectId}`);
 
       // Get the project details before deletion
       const project = await storage.getProject(projectId);
@@ -228,9 +226,32 @@ router.post("/api/budget-calculation", requireClerkUser, async (req, res) => {
         return res.status(404).json({ message: "Game state not found" });
       }
 
+      // Ownership check (entity-walk: project -> gameId -> game.userId).
+      // 404 (not 403) so we don't leak the existence of other users' projects.
+      if (gameState.userId !== req.userId) {
+        return res.status(404).json({
+          error: 'PROJECT_NOT_FOUND',
+          message: 'Project not found or does not belong to this user'
+        });
+      }
+
+      // C40: recompute the refund SERVER-SIDE from the STORED project row.
+      // Mirrors the legitimate client formula (client/src/components/ActiveTours.tsx):
+      //   refund = round(remainingCities * (totalCost / plannedCities) * 0.6)
+      // body.refundAmount is IGNORED so a tampered client cannot mint money.
+      // HARDCODED: 0.6 refund rate — move to balance config with the rest of the
+      // tour economy (tracked in C40's backlog note).
+      const metadata = (project.metadata as any) || {};
+      const plannedCities = metadata.cities || 1;
+      const completedCities = metadata.tourStats?.cities?.length || 0;
+      const remainingCities = Math.max(0, plannedCities - completedCities);
+      const totalCost = project.totalCost ?? 0;
+      const costPerCity = totalCost / plannedCities;
+      const refundAmount = Math.round(remainingCities * costPerCity * 0.6);
+
       // Update project with cancellation data (keep for ROI tracking)
       await storage.updateProject(projectId, {
-        totalRevenue: -((project.totalCost ?? 0) - refundAmount), // Loss = total cost minus refund
+        totalRevenue: -(totalCost - refundAmount), // Loss = total cost minus refund
         completionStatus: 'cancelled',
         stage: 'cancelled' // Mark as cancelled instead of deleting
       });
