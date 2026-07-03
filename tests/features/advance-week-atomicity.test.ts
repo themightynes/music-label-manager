@@ -1,38 +1,33 @@
 // @vitest-environment node
 /**
- * D6 PR-1 — Failure-injection characterization net for POST /api/advance-week.
+ * D6 — Whole-week transaction atomicity net for POST /api/advance-week.
  *
- * These tests PIN THE CURRENT (BROKEN) transaction behavior of
- * `AdvanceWeekService.advanceWeek` so the D6 atomicity work (PR-2 / PR-3) can be
- * proven to change it. Today the week advance is NOT atomic:
+ * As of D6 PR-3 the ENTIRE week advance runs in ONE PostgreSQL transaction
+ * (`AdvanceWeekService.advanceWeek`). The former split — TX 1 (engine run) and
+ * TX 2 (gameStates UPDATE + weekly_actions INSERT + debug read-backs) — was
+ * merged into a single `db.transaction`, so a crash ANYWHERE mid-advance rolls
+ * the whole week back: all-or-nothing.
  *
- *   TX 1 (advanceWeekService.ts:50-254): loads state, runs the whole GameEngine
- *         (song creation, emails, charts, project stage advance) — committed as a
- *         unit... EXCEPT for a set of "escaping" writes that go through storage
- *         methods with no tx param (e.g. `updateArtist`, storage.ts:348) and thus
- *         run on the GLOBAL pool connection, autocommitting independently of tx1.
- *   TX 2 (advanceWeekService.ts:267-378): persists the advanced gameState
- *         (currentWeek/money/...) and inserts weekly_actions.
+ *   SINGLE TX (advanceWeekService.ts): SELECT ... FOR UPDATE on the game row,
+ *         loads state, runs the whole GameEngine (song creation, emails, charts,
+ *         project stage advance, tour city writes, planned-release marketing
+ *         idempotency flags), THEN persists the advanced gameState
+ *         (currentWeek/money/...) + inserts weekly_actions + reads back the debug
+ *         envelope. All bound to the same `tx`.
  *
- * Because tx1 and tx2 are SEPARATE transactions, a crash between them leaves a
- * half-applied week: the engine's rows are committed but the week/money never
- * advance (Test A — still pinned; flips in PR-3).
- *
- * Test B was updated by D6 PR-2: the artist mood/energy/popularity writes that
- * previously escaped tx1 (via storage.updateArtist, which had no tx param) now
- * honor the threaded dbTransaction and roll back WITH tx1. Its assertion is
- * inverted accordingly.
- *
- * Each assertion tagged `// PINS CURRENT BROKEN BEHAVIOR (D6):` deliberately pins
- * today's broken behavior:
- *   - Test A stays pinned; it flips in PR-3 (single transaction): a crash leaves
- *     the game exactly at week N — the engine rows must ALSO roll back.
- *   - Test B was FLIPPED in PR-2 (tx threaded through the escaping writes): the
- *     artist mood write now rolls back with tx1 (assertion inverted below).
+ * History of these tests:
+ *   - Test A previously PINNED the broken two-tx behavior (a crash between tx1
+ *     and tx2 left a half-applied week: engine rows committed, week/money not
+ *     advanced). D6 PR-3 FLIPPED it: a crash at the persistence step now rolls
+ *     back the engine writes too — no orphaned songs/tour writes/planned-release
+ *     flags, week unchanged, weekly_actions empty. All-or-nothing.
+ *   - Test B was FLIPPED in D6 PR-2: the artist mood/energy writes that once
+ *     escaped tx1 (via storage.updateArtist, which had no tx param) now honor the
+ *     threaded dbTransaction and roll back WITH the transaction.
  *
  * Harness: constructs `AdvanceWeekService` with INJECTED deps (test-DB-backed
- * `DatabaseStorage`, a `db` proxy that can inject a tx failure, and a gameData
- * bridge reusing the golden-master fixture). NEVER imports `server/db`.
+ * `DatabaseStorage`, a `db` proxy that can inject a mid-transaction failure, and
+ * a gameData bridge reusing the golden-master fixture). NEVER imports `server/db`.
  */
 
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
@@ -67,8 +62,9 @@ import { createGameData, type TestDb } from '../engine/golden-master-fixtures';
 
 // Fixed, human-readable-ish UUIDs per scenario for stability.
 const IDS = {
-  crashBetween: '00000000-0000-4000-8000-0000000000d1',
+  crashPersist: '00000000-0000-4000-8000-0000000000d1',
   escapeInTx1: '00000000-0000-4000-8000-0000000000d2',
+  concurrentA: '00000000-0000-4000-8000-0000000000d3',
 };
 
 let db: TestDb;
@@ -82,7 +78,7 @@ let db: TestDb;
  * server/db for its engine-bridge methods, so we inject a test-DB-backed
  * equivalent: reuse the golden-master `createGameData` (real balance JSON + row
  * reads/writes delegated to the test-DB storage) and add the two service-only
- * methods.
+ * methods plus the tx-honoring createSong/updateSong bridges.
  */
 function makeServiceGameData(storage: DatabaseStorage) {
   const gameData = createGameData(storage);
@@ -93,7 +89,7 @@ function makeServiceGameData(storage: DatabaseStorage) {
     // Mirror production ServerGameData.createSong (server/data/gameData.ts:827):
     // honor the passed transaction so song creation is tx-BOUND (as it is in
     // production). The golden-master bridge deliberately drops the tx (it never
-    // exercises rollback), which would make Test B's "songs roll back" assertion
+    // exercises rollback), which would make the "songs roll back" assertions
     // false-green; here we must match production so the pin is faithful.
     createSong: async (song: any, tx?: any) => {
       if (tx) {
@@ -102,6 +98,10 @@ function makeServiceGameData(storage: DatabaseStorage) {
       }
       return storage.createSong(song);
     },
+    // Mirror production ServerGameData.updateSong (server/data/gameData.ts:1080):
+    // honor the passed transaction (ReleaseProcessor.processSongRelease threads
+    // ctx.dbTransaction as of D6 PR-3) so song-release writes are tx-BOUND.
+    updateSong: async (songId: string, updates: any, tx?: any) => storage.updateSong(songId, updates, tx),
   };
 }
 
@@ -156,7 +156,79 @@ async function seedRecordingProject(gameId: string, artistId: string, startWeek:
   });
 }
 
-describe('D6 PR-1 — advance-week failure-injection characterization (pins broken behavior)', () => {
+/**
+ * Seeds an active Mini-Tour in production stage. With game at week 3 and
+ * startWeek 2, the week advances to 4 -> weeksElapsed=2 -> weeksInProduction=1 ->
+ * TourProcessor processes city 1 and writes `metadata.tourStats` via
+ * storage.updateProject(..., dbTransaction) (D6 PR-2 threaded the tx through it).
+ * Fixture mirrors golden-master-advance-week.test.ts's tour-week scenario.
+ */
+async function seedTourProject(gameId: string, artistId: string) {
+  const id = crypto.randomUUID();
+  await db.insert(schema.projects).values({
+    id,
+    gameId,
+    artistId,
+    title: 'D6 World Tour',
+    type: 'Mini-Tour',
+    stage: 'production',
+    startWeek: 2,
+    totalCost: 30000,
+    quality: 50,
+    metadata: {
+      cities: 3,
+      venueAccess: 'clubs',
+      venueCapacity: 500,
+    },
+  });
+  return id;
+}
+
+/**
+ * Seeds a planned release scheduled for the current week with a recorded (not yet
+ * released) song and a marketing budget. When the engine's processPlannedReleases
+ * runs, FinancialSystem.allocateMarketingInvestment flips the release's
+ * `metadata.baseMarketingAllocated` idempotency flag via
+ * storage.updateRelease(..., dbTransaction) (D6 PR-2 threaded the tx through it).
+ * On rollback, that flag must NOT be set.
+ */
+async function seedPlannedRelease(gameId: string, artistId: string, week: number) {
+  const releaseId = crypto.randomUUID();
+  const songId = crypto.randomUUID();
+  await db.insert(schema.songs).values({
+    id: songId,
+    title: 'D6 Planned Track',
+    artistId,
+    gameId,
+    quality: 60,
+    isRecorded: true,
+    isReleased: false,
+    productionBudget: 5000,
+  });
+  await db.insert(schema.releases).values({
+    id: releaseId,
+    title: 'D6 Planned Single',
+    type: 'single',
+    artistId,
+    gameId,
+    releaseWeek: week,
+    status: 'planned',
+    marketingBudget: 10000,
+    metadata: {
+      totalInvestment: 10000,
+      marketingBudget: { radio: 10000 },
+    },
+  });
+  await db.insert(schema.releaseSongs).values({
+    releaseId,
+    songId,
+    trackNumber: 1,
+    isSingle: false,
+  });
+  return { releaseId, songId };
+}
+
+describe('D6 — advance-week whole-week transaction atomicity', () => {
   beforeAll(async () => {
     await setupDatabase();
   });
@@ -166,35 +238,57 @@ describe('D6 PR-1 — advance-week failure-injection characterization (pins brok
     await clearDatabase(db);
   });
 
-  it('Test A — a crash BETWEEN tx1 and tx2 leaves a HALF-APPLIED week', async () => {
-    const gameId = IDS.crashBetween;
-    await seedGame(gameId, 2);
-    const artistId = await seedArtist(gameId, { name: 'Recorder' });
-    // A production Single with no songs yet generates songs this week (tx1-bound).
-    await seedRecordingProject(gameId, artistId, 2);
+  it('Test A — a crash at the persistence step rolls back the ENTIRE week (all-or-nothing)', async () => {
+    const gameId = IDS.crashPersist;
+    // Week 3 so the tour (startWeek 2) processes city 1 this advance.
+    await seedGame(gameId, 3);
+    // Mood 70 (>55) => -3 natural drift applied via storage.updateArtist (tx-bound
+    // as of D6 PR-2). Must NOT persist after rollback.
+    const artistId = await seedArtist(gameId, { name: 'Recorder', mood: 70 });
+    // (1) A production Single with no songs yet generates songs this week (tx-bound).
+    await seedRecordingProject(gameId, artistId, 3);
+    // (2) An active Mini-Tour writes project.metadata.tourStats this week (tx-bound
+    //     via ProjectStageProcessor/TourProcessor).
+    const tourId = await seedTourProject(gameId, artistId);
+    // (3) A planned release scheduled for this week flips its
+    //     metadata.baseMarketingAllocated idempotency flag (tx-bound via
+    //     FinancialSystem InvestmentTracker -> storage.updateRelease).
+    const { releaseId } = await seedPlannedRelease(gameId, artistId, 3);
 
     const storage = new DatabaseStorage(db);
     const gameData = makeServiceGameData(storage);
 
-    // db proxy: pass through the FIRST transaction (tx1 — the engine run), then
-    // simulate a crash BEFORE the SECOND transaction (tx2 — gameState/actions
-    // persistence) by throwing before its callback runs.
-    let txCall = 0;
+    // db proxy: run the REAL single transaction, but wrap the `tx` passed to the
+    // callback so the FIRST `update(gameStates)` call — the very first statement of
+    // the merged persistence block (the former tx1/tx2 boundary, now inside one
+    // tx) — throws. This models "the process crashes at the final persistence step"
+    // AFTER the engine fully ran and staged all its writes. Because it is one
+    // transaction, that crash must roll back everything the engine wrote.
     const dbProxy: any = {
-      transaction: (cb: any, ...rest: any[]) => {
-        txCall += 1;
-        if (txCall === 1) {
-          return (db as any).transaction(cb, ...rest);
-        }
-        // txCall === 2: crash between the two transactions.
-        throw new Error('[D6 TEST] injected crash between tx1 and tx2');
+      transaction: async (cb: any) => {
+        return (db as any).transaction(async (tx: any) => {
+          const wrapped = new Proxy(tx, {
+            get(target, prop, receiver) {
+              if (prop === 'update') {
+                return (table: any) => {
+                  if (table === schema.gameStates) {
+                    throw new Error('[D6 TEST] injected crash at persistence step');
+                  }
+                  return (target as any).update(table);
+                };
+              }
+              return Reflect.get(target, prop, receiver);
+            },
+          });
+          return cb(wrapped);
+        });
       },
     };
 
     const service = new AdvanceWeekService(storage as any, dbProxy, gameData as any);
 
     await expect(service.advanceWeek(gameId, [])).rejects.toThrow(
-      /injected crash between tx1 and tx2/,
+      /injected crash at persistence step/,
     );
 
     const [gsAfter] = await db
@@ -209,49 +303,76 @@ describe('D6 PR-1 — advance-week failure-injection characterization (pins brok
       .select()
       .from(schema.weeklyActions)
       .where(eq(schema.weeklyActions.gameId, gameId));
+    const emailsAfter = await db
+      .select()
+      .from(schema.emails)
+      .where(eq(schema.emails.gameId, gameId));
+    const [artistAfter] = await db
+      .select()
+      .from(schema.artists)
+      .where(eq(schema.artists.id, artistId));
+    const [tourAfter] = await db
+      .select()
+      .from(schema.projects)
+      .where(eq(schema.projects.id, tourId));
+    const [releaseAfter] = await db
+      .select()
+      .from(schema.releases)
+      .where(eq(schema.releases.id, releaseId));
 
-    // PINS CURRENT BROKEN BEHAVIOR (D6): tx1's engine writes are already COMMITTED
-    // even though the week never finished advancing — the song-generation rows
-    // survive the crash. PR-3 (single tx) flips this: these rows must roll back.
-    expect(songsAfter.length).toBeGreaterThan(0);
+    // D6 PR-3 GUARANTEE (flipped from the pinned broken two-tx behavior): the whole
+    // week advance is ONE transaction, so a crash at the persistence step rolls back
+    // EVERYTHING the engine wrote. There must be NO committed engine rows and NO
+    // week/money change — the game is left exactly at week N.
 
-    // PINS CURRENT BROKEN BEHAVIOR (D6): tx2 never ran, so the week/money were NOT
-    // advanced despite tx1's writes being committed — the classic half-applied
-    // week. Replaying the week would DOUBLE-apply the committed engine effects.
-    // PR-3 flips this into an all-or-nothing outcome (week stays exactly at N with
-    // no orphaned engine rows).
-    expect(gsAfter.currentWeek).toBe(2); // NOT advanced to 3
-    expect(gsAfter.money).toBe(500000); // NOT burned down by tx2's UPDATE
+    // Only the planned-release's pre-seeded song remains; no engine-created
+    // recording songs survived the rollback.
+    expect(songsAfter.length).toBe(1);
+    // No engine-generated emails survived.
+    expect(emailsAfter.length).toBe(0);
 
-    // PINS CURRENT BROKEN BEHAVIOR (D6): weekly_actions is written in tx2, which
-    // never ran — so it is empty here. (No actions were passed, but the row-count
-    // assertion still documents that tx2's INSERT did not run.)
+    // Week/money NOT advanced — exactly at week N.
+    expect(gsAfter.currentWeek).toBe(3);
+    expect(gsAfter.money).toBe(500000);
+
+    // weekly_actions never written (persistence rolled back).
     expect(actionsAfter.length).toBe(0);
+
+    // Escaping-writes-now-tx-bound (PR-2) roll back with the tx: mood stays seeded 70.
+    expect(artistAfter.mood).toBe(70);
+
+    // Tour project write rolled back: metadata.tourStats was never committed.
+    expect((tourAfter.metadata as any)?.tourStats).toBeUndefined();
+
+    // Planned-release marketing idempotency flag rolled back: NOT set.
+    expect((releaseAfter.metadata as any)?.baseMarketingAllocated).toBeUndefined();
+    // Release still 'planned' (updateReleaseStatus rolled back too).
+    expect(releaseAfter.status).toBe('planned');
   });
 
-  it('Test B — an error DURING tx1 rolls back tx-bound writes but LEAKS escaping artist writes', async () => {
+  it('Test B — an error DURING the engine run rolls back tx-bound AND formerly-escaping writes', async () => {
     const gameId = IDS.escapeInTx1;
     await seedGame(gameId, 2);
     // Mood 70 (>55) => natural drift of -3 in processWeeklyMoodChanges, applied via
-    // storage.updateArtist(...) which has NO tx param => it commits on the GLOBAL
-    // pool connection, escaping tx1.
+    // storage.updateArtist(...). As of D6 PR-2 that write honors the threaded
+    // dbTransaction, so it rolls back WITH the transaction (it no longer escapes on
+    // the global connection).
     const artistId = await seedArtist(gameId, { name: 'Escaper', mood: 70 });
-    // Recording project so tx1 ALSO produces tx-bound song writes we can assert
-    // roll back.
+    // Recording project so the engine ALSO produces tx-bound song writes we can
+    // assert roll back.
     await seedRecordingProject(gameId, artistId, 2);
 
     const storage = new DatabaseStorage(db);
     const gameData = makeServiceGameData(storage);
 
-    // db proxy: run the REAL tx1 callback (so all engine writes execute — the
-    // escaping artist mood write autocommits on the global connection, and the
-    // tx-bound writes stage inside tx1), then throw BEFORE tx1 commits so drizzle
-    // rolls tx1 back. This faithfully models "an error occurred during tx1".
+    // db proxy: run the REAL callback (so all engine writes execute and stage inside
+    // the tx), then throw BEFORE the tx commits so drizzle rolls it back. This
+    // faithfully models "an error occurred during the engine run".
     const dbProxy: any = {
       transaction: async (cb: any) => {
         return (db as any).transaction(async (tx: any) => {
           await cb(tx);
-          throw new Error('[D6 TEST] injected error during tx1 (post-engine, pre-commit)');
+          throw new Error('[D6 TEST] injected error during engine run (pre-commit)');
         });
       },
     };
@@ -259,7 +380,7 @@ describe('D6 PR-1 — advance-week failure-injection characterization (pins brok
     const service = new AdvanceWeekService(storage as any, dbProxy, gameData as any);
 
     await expect(service.advanceWeek(gameId, [])).rejects.toThrow(
-      /injected error during tx1/,
+      /injected error during engine run/,
     );
 
     const [artistAfter] = await db
@@ -279,16 +400,49 @@ describe('D6 PR-1 — advance-week failure-injection characterization (pins brok
       .from(schema.chartEntries)
       .where(eq(schema.chartEntries.gameId, gameId));
 
-    // tx-bound writes correctly rolled back with tx1.
+    // tx-bound writes correctly rolled back.
     expect(songsAfter.length).toBe(0);
     expect(emailsAfter.length).toBe(0);
     expect(chartsAfter.length).toBe(0);
 
-    // D6 PR-2 GUARANTEE (flipped from the pinned broken behavior): the artist mood
-    // write is now tx-BOUND. storage.updateArtist honors the dbTransaction threaded
-    // through ArtistStateProcessor, so when tx1 rolls back the mood write rolls back
-    // WITH it — no longer escaping on the global connection. mood stays at its
-    // seeded 70 instead of drifting to 67.
+    // D6 PR-2 GUARANTEE: the artist mood write is tx-BOUND. storage.updateArtist
+    // honors the dbTransaction threaded through ArtistStateProcessor, so when the
+    // tx rolls back the mood write rolls back WITH it — no longer escaping on the
+    // global connection. mood stays at its seeded 70 instead of drifting to 67.
     expect(artistAfter.mood).toBe(70);
+  });
+
+  it('Concurrency smoke — two concurrent advances for the same game serialize (FOR UPDATE), advancing exactly once each', async () => {
+    const gameId = IDS.concurrentA;
+    await seedGame(gameId, 5);
+    await seedArtist(gameId, { name: 'Concurrent' });
+
+    // Two services sharing the SAME underlying test DB (separate DatabaseStorage
+    // instances, real db.transaction — no failure injection). The initial
+    // SELECT ... FOR UPDATE serializes them: the second blocks until the first
+    // commits week 6, then advances 6 -> 7. Final week must be start+2 with no
+    // deadlock and no double-apply of a single week.
+    const storageA = new DatabaseStorage(db);
+    const storageB = new DatabaseStorage(db);
+    const serviceA = new AdvanceWeekService(storageA as any, db as any, makeServiceGameData(storageA) as any);
+    const serviceB = new AdvanceWeekService(storageB as any, db as any, makeServiceGameData(storageB) as any);
+
+    const [resA, resB] = await Promise.all([
+      serviceA.advanceWeek(gameId, []),
+      serviceB.advanceWeek(gameId, []),
+    ]);
+
+    // Each call advanced the week by exactly one; the two results are weeks 6 and 7
+    // in some order (whichever acquired the row lock first).
+    const weeks = [resA.gameState.currentWeek, resB.gameState.currentWeek].sort();
+    expect(weeks).toEqual([6, 7]);
+
+    // Final persisted week is start+2 — each request applied exactly one week, no
+    // double-apply of a single week, no deadlock.
+    const [gsAfter] = await db
+      .select()
+      .from(schema.gameStates)
+      .where(eq(schema.gameStates.id, gameId));
+    expect(gsAfter.currentWeek).toBe(7);
   });
 });
