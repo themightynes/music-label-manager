@@ -22,8 +22,12 @@
  * first's committed week N+1 state, then advances once more) instead of both
  * reading week N and double-applying. (Reject-on-stale-week is a follow-up.)
  *
+ * Balance-config loads (getStartingValues + serverGameData.initialize — fs reads
+ * + Zod, no DB) run BEFORE the transaction so the row lock is never held across
+ * disk I/O.
+ *
  * SINGLE TX: locks + loads gameState + artists, checks campaign completion
- *       (early return — read-only), initializes serverGameData, loads released
+ *       (early return — read-only), loads released
  *       projects, builds the engine, runs engine.advanceWeek(actions, tx),
  *       persists the updated gameState, saves weekly actions, reads back
  *       projects/songs for the debug envelope, and assembles the response.
@@ -56,6 +60,17 @@ export class AdvanceWeekService {
    * original handler returned ({ gameState, summary, campaignResults, debug }).
    */
   async advanceWeek(gameId: string, selectedActions: any[]) {
+    // D6 PR-3 review fix: load balance config BEFORE the transaction so the
+    // FOR UPDATE row lock is never held across disk I/O. Neither call touches
+    // the DB or depends on tx: getStartingValues() reads balance JSON, and
+    // initialize() clears + reloads the JSON data files (fs.readFile + Zod).
+    // Get starting values from balance configuration
+    const startingValues = await this.serverGameData.getStartingValues();
+    // Initialize game data to load balance configuration
+    console.log('[DEBUG] Initializing serverGameData...');
+    await this.serverGameData.initialize();
+    console.log('[DEBUG] ServerGameData initialized successfully');
+
     // Wrap everything in a database transaction
     const finalResult = await this.db.transaction(async (tx) => {
       // Get current game state. FOR UPDATE (D6 PR-3): lock this game's row for the
@@ -78,9 +93,6 @@ export class AdvanceWeekService {
         .select()
         .from(artists)
         .where(eq(artists.gameId, gameId));
-
-      // Get starting values from balance configuration
-      const startingValues = await this.serverGameData.getStartingValues();
 
       // Convert database gameState to proper GameState type
       const gameStateForEngine = {
@@ -164,10 +176,7 @@ export class AdvanceWeekService {
         return await this.persistAndAssemble(tx, gameId, weekResult, selectedActions);
       }
 
-      // Initialize game data to load balance configuration
-      console.log('[DEBUG] Initializing serverGameData...');
-      await this.serverGameData.initialize();
-      console.log('[DEBUG] ServerGameData initialized successfully');
+      // (serverGameData.initialize() hoisted above the transaction — see top of method)
 
       // Query released projects for ongoing revenue calculation
       const releasedProjects = await tx
