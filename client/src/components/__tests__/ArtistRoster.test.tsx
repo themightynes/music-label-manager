@@ -87,11 +87,17 @@ describe('ArtistRoster', () => {
       ],
     });
 
-    mockUseGameStore.mockReturnValue({
+    // The store mock must honor zustand's selector-style calls: useGameState()
+    // (the spine facade) calls useGameStore((s) => s.gameState), while the
+    // component's action destructure calls useGameStore() with no selector.
+    const fakeState = {
       gameState: { id: 'game-1', currentWeek: 12 },
       signArtist: vi.fn(),
       loadGame: vi.fn().mockResolvedValue(undefined),
-    });
+    };
+    mockUseGameStore.mockImplementation((selector?: (state: typeof fakeState) => unknown) =>
+      selector ? selector(fakeState) : fakeState,
+    );
   });
 
   it('opens the artist dialogue modal when selecting the meet action', async () => {
