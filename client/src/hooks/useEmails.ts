@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useGameStore } from '@/store/gameStore';
+import { useGameId } from '@/hooks/useGameState';
 import { apiRequest } from '@/lib/queryClient';
 import { apiPaths, type EmailListQueryParams } from '@/lib/apiPaths';
 import logger from '@/lib/logger';
@@ -59,7 +59,7 @@ function normalizeEmail(email: any): EmailRecord<Record<string, unknown>> {
 }
 
 export function useEmails(params: EmailListQuery = {}) {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const limitFilter = typeof params.limit === 'number' ? params.limit : null;
   const offsetFilter = typeof params.offset === 'number' ? params.offset : null;
@@ -125,7 +125,7 @@ export function useEmails(params: EmailListQuery = {}) {
 }
 
 export function useUnreadEmailCount() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const queryKey = useMemo(
     () => [EMAIL_UNREAD_SCOPE, gameId ?? null] as const,
@@ -150,7 +150,7 @@ export function useUnreadEmailCount() {
 }
 
 export function useMarkEmailRead() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -184,7 +184,7 @@ export function useMarkEmailRead() {
 }
 
 export function useDeleteEmail() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
   const queryClient = useQueryClient();
 
   return useMutation({

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Trophy, BarChart3 } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useTop100Chart } from '@/hooks/useCharts';
 import { ChartDataTable } from '@/components/chart/ChartDataTable';
 import { ChartEntry, chartColumns } from '@/components/chart/chartColumns';
@@ -14,7 +14,7 @@ type Top100Entry = ChartEntry;
 export function Top100ChartDisplay() {
   console.log('🚀 Top100ChartDisplay component rendering...');
 
-  const { gameState } = useGameStore();
+  const gameState = useGameState();
   console.log('🎮 GameState from store:', { id: gameState?.id, currentWeek: gameState?.currentWeek });
 
   const [showAll, setShowAll] = useState(false);

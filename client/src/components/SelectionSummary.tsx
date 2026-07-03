@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3, X, Rocket, Loader2, Search, Crown, Music, Megaphone, Palette, Truck, type LucideIcon } from 'lucide-react';
 import logger from '@/lib/logger';
 
@@ -86,7 +87,8 @@ export function SelectionSummary({
   isAdvancing,
   impactPreview
 }: SelectionSummaryProps) {
-  const { gameState, cancelAROfficeOperation } = useGameStore();
+  const { cancelAROfficeOperation } = useGameStore();
+  const gameState = useGameState();
   const totalSlots = gameState?.focusSlots || 3;
   const usedSlots = gameState?.usedFocusSlots || 0;
   const availableSlots = totalSlots - usedSlots;

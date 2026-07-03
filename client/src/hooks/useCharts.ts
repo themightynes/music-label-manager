@@ -7,7 +7,7 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useGameStore } from '@/store/gameStore';
+import { useGameId } from '@/hooks/useGameState';
 import { apiRequest } from '@/lib/queryClient';
 import type { ChartEntry } from '@/components/chart/chartColumns';
 
@@ -27,7 +27,7 @@ export interface Top100ChartData {
 }
 
 export function useTop10Chart() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const queryKey = useMemo(
     () => [CHART_TOP10_SCOPE, gameId ?? null] as const,
@@ -45,7 +45,7 @@ export function useTop10Chart() {
 }
 
 export function useTop100Chart() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const queryKey = useMemo(
     () => [CHART_TOP100_SCOPE, gameId ?? null] as const,

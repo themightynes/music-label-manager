@@ -6,15 +6,14 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useGameStore } from '@/store/gameStore';
+import { useGameId } from '@/hooks/useGameState';
 import { apiPaths } from '@/lib/apiPaths';
 
 /**
  * Hook to fetch ROI metrics for a specific artist
  */
 export function useArtistROI(artistId: string | undefined) {
-  const gameState = useGameStore((state) => state.gameState);
-  const gameId = gameState?.id ?? null;
+  const gameId = useGameId();
   const url = gameId && artistId
     ? apiPaths.analytics.artistRoi(gameId, artistId)
     : null;
@@ -34,8 +33,7 @@ export function useArtistROI(artistId: string | undefined) {
  * Hook to fetch ROI metrics for a specific project
  */
 export function useProjectROI(projectId: string | undefined) {
-  const gameState = useGameStore((state) => state.gameState);
-  const gameId = gameState?.id ?? null;
+  const gameId = useGameId();
   const url = gameId && projectId
     ? apiPaths.analytics.projectRoi(gameId, projectId)
     : null;
@@ -55,8 +53,7 @@ export function useProjectROI(projectId: string | undefined) {
  * Hook to fetch ROI metrics for a specific release
  */
 export function useReleaseROI(releaseId: string | undefined) {
-  const gameState = useGameStore((state) => state.gameState);
-  const gameId = gameState?.id ?? null;
+  const gameId = useGameId();
   const url = gameId && releaseId
     ? apiPaths.analytics.releaseRoi(gameId, releaseId)
     : null;
@@ -76,8 +73,7 @@ export function useReleaseROI(releaseId: string | undefined) {
  * Hook to fetch portfolio-wide ROI metrics
  */
 export function usePortfolioROI() {
-  const gameState = useGameStore((state) => state.gameState);
-  const gameId = gameState?.id ?? null;
+  const gameId = useGameId();
   const url = gameId ? apiPaths.analytics.portfolioRoi(gameId) : null;
 
   return useQuery<PortfolioROIMetrics>({

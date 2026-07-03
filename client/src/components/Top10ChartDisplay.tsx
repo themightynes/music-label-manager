@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Trophy, BarChart3 } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useTop10Chart } from '@/hooks/useCharts';
 import { ChartDataTable } from '@/components/chart/ChartDataTable';
 import { ChartEntry, chartColumns } from '@/components/chart/chartColumns';
@@ -15,7 +15,7 @@ type Top10Entry = ChartEntry;
 export function Top10ChartDisplay() {
   logger.debug('🚀 Top10ChartDisplay component rendering...');
 
-  const { gameState } = useGameStore();
+  const gameState = useGameState();
   logger.debug('🎮 GameState from store:', { id: gameState?.id, currentWeek: gameState?.currentWeek });
 
   const {

@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useReleases } from '@/hooks/useReleases';
 import { useSongs } from '@/hooks/useSongs';
 import { useArtists } from '@/hooks/useArtists';
@@ -16,7 +16,7 @@ import {
 } from '../../../shared/utils/chartUtils';
 
 export function ActiveReleases() {
-  const { gameState } = useGameStore();
+  const gameState = useGameState();
   // Phase 3 PR-6/PR-9: releases / songs / artists read from the TanStack Query
   // cache, not Zustand.
   const { data: releases = [] } = useReleases();
