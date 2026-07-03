@@ -21,14 +21,6 @@ import { HoloDisc } from '@/components/ui/holo-disc';
 import { Button } from '@/components/ui/button';
 import { WeekSummary } from './WeekSummary';
 import { BugReportModal } from './BugReportModal';
-import { fetchExecutives, fetchRoleMeetings } from '@/services/executiveService';
-import {
-  prepareAutoSelectOptions,
-  selectTopOptions,
-  optionToActionData,
-} from '@/services/executiveAutoSelect';
-import { toast } from '@/hooks/use-toast';
-import logger from '@/lib/logger';
 import {
   UserRound,
   Building2,
@@ -44,7 +36,6 @@ import {
   Save,
   Bug,
   Shield,
-  Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -119,14 +110,13 @@ function DockItem({
  */
 export function CommandDock({ onShowSaveModal }: CommandDockProps) {
   const [location, setLocation] = useLocation();
-  const { gameState, weeklyOutcome, selectAction } = useGameStore();
+  const { gameState, weeklyOutcome } = useGameStore();
   const { gameId } = useGameContext();
   const { user } = useUser();
   const { isAdmin } = useIsAdmin();
 
   const [showWeekSummary, setShowWeekSummary] = useState(false);
   const [showBugReportModal, setShowBugReportModal] = useState(false);
-  const [isAutoSelecting, setIsAutoSelecting] = useState(false);
 
   const displayName =
     user?.username || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
@@ -135,68 +125,6 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
 
   const freeFocusSlots =
     (gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0);
-
-  // AUTO focus-slot filler (migrated verbatim from GameSidebar, using shared service)
-  const handleAutoSelect = async () => {
-    if (!gameId || isAutoSelecting) return;
-
-    setIsAutoSelecting(true);
-    try {
-      logger.debug('[DOCK AUTO] Starting auto-selection...');
-
-      const executives = await fetchExecutives(gameId);
-      const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
-      const meetingsByRole: Record<string, any[]> = {};
-      const currentWeek = gameState?.currentWeek || 1;
-
-      for (const role of roles) {
-        try {
-          meetingsByRole[role] = await fetchRoleMeetings(role, gameId, currentWeek);
-        } catch (error) {
-          meetingsByRole[role] = [];
-        }
-      }
-
-      const options = prepareAutoSelectOptions(executives, meetingsByRole);
-      const topOptions = selectTopOptions(options, freeFocusSlots);
-
-      for (const option of topOptions) {
-        const actionData = optionToActionData(option);
-        await selectAction(JSON.stringify(actionData));
-      }
-
-      logger.debug(`[DOCK AUTO] Selected ${topOptions.length} actions`);
-
-      if (topOptions.length > 0) {
-        toast({
-          title: 'Auto-select complete',
-          description: `Selected ${topOptions.length} meeting${topOptions.length !== 1 ? 's' : ''} for executives who need attention.`,
-          duration: 3000,
-        });
-      } else {
-        toast({
-          title: 'No meetings available',
-          description:
-            'All eligible executives have been assigned or no meetings are available.',
-          variant: 'default',
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      logger.error('[DOCK AUTO] Error:', error);
-      toast({
-        title: 'Auto-select failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Failed to auto-select executive meetings. Please try again.',
-        variant: 'destructive',
-        duration: 5000,
-      });
-    } finally {
-      setIsAutoSelecting(false);
-    }
-  };
 
   const leftItems: DockNavItem[] = [
     {
@@ -226,6 +154,12 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
       path: '/ar-office',
       isActive: (p) => p === '/ar-office' || p.startsWith('/ar-office/'),
     },
+    {
+      label: 'Live Performance',
+      icon: Mic,
+      path: '/live-performance',
+      isActive: (p) => p === '/live-performance',
+    },
   ];
 
   const rightItems: DockNavItem[] = [
@@ -249,10 +183,7 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
     },
   ];
 
-  const moreIsActive =
-    location === '/live-performance' ||
-    location === '/admin' ||
-    location.startsWith('/admin/');
+  const moreIsActive = location === '/admin' || location.startsWith('/admin/');
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -394,28 +325,6 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
                   )}
                 </span>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation('/live-performance')}>
-                <Mic className="mr-2 h-4 w-4" aria-hidden="true" />
-                Live Performance
-              </DropdownMenuItem>
-              {freeFocusSlots > 0 && (
-                <DropdownMenuItem
-                  disabled={isAutoSelecting}
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    handleAutoSelect();
-                  }}
-                >
-                  <Zap className="mr-2 h-4 w-4 text-neon-yellow" aria-hidden="true" />
-                  <span>
-                    {isAutoSelecting ? 'Auto-selecting…' : 'AUTO: Fill Focus Slots'}
-                    <span className="block text-[11px] text-text-muted">
-                      Smart-fills {freeFocusSlots} slot{freeFocusSlots !== 1 ? 's' : ''} with
-                      executives who need attention
-                    </span>
-                  </span>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator className="bg-white/[0.08]" />
               <DropdownMenuItem onSelect={() => setLocation('/')}>
                 <Play className="mr-2 h-4 w-4" aria-hidden="true" />

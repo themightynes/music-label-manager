@@ -1,8 +1,16 @@
+import { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
+import { useGameContext } from '@/contexts/GameContext';
+import { fetchExecutives, fetchRoleMeetings } from '@/services/executiveService';
+import {
+  prepareAutoSelectOptions,
+  selectTopOptions,
+  optionToActionData,
+} from '@/services/executiveAutoSelect';
 import { toast } from '@/hooks/use-toast';
 import logger from '@/lib/logger';
 import { getWeekDateRange } from '@shared/utils/seasonalCalculations';
-import { Coins, ChevronsRight } from 'lucide-react';
+import { Coins, ChevronsRight, Zap } from 'lucide-react';
 
 /**
  * GameHeader — slim right-aligned v2 page header (Design System v2 §7).
@@ -13,11 +21,79 @@ import { Coins, ChevronsRight } from 'lucide-react';
  * (migrated from the old GameSidebar).
  */
 export function GameHeader() {
-  const { gameState, selectedActions, isAdvancingWeek, advanceWeek } = useGameStore();
+  const { gameState, selectedActions, isAdvancingWeek, advanceWeek, selectAction } =
+    useGameStore();
+  const { gameId } = useGameContext();
+  const [isAutoSelecting, setIsAutoSelecting] = useState(false);
 
   if (!gameState) {
     return null;
   }
+
+  const freeFocusSlots =
+    (gameState.focusSlots || 3) - (gameState.usedFocusSlots || 0);
+
+  // AUTO focus-slot filler (shared service; formerly in the dock's More menu)
+  const handleAutoSelect = async () => {
+    if (!gameId || isAutoSelecting) return;
+
+    setIsAutoSelecting(true);
+    try {
+      logger.debug('[HEADER AUTO] Starting auto-selection...');
+
+      const executives = await fetchExecutives(gameId);
+      const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
+      const meetingsByRole: Record<string, any[]> = {};
+      const currentWeek = gameState.currentWeek || 1;
+
+      for (const role of roles) {
+        try {
+          meetingsByRole[role] = await fetchRoleMeetings(role, gameId, currentWeek);
+        } catch (error) {
+          meetingsByRole[role] = [];
+        }
+      }
+
+      const options = prepareAutoSelectOptions(executives, meetingsByRole);
+      const topOptions = selectTopOptions(options, freeFocusSlots);
+
+      for (const option of topOptions) {
+        const actionData = optionToActionData(option);
+        await selectAction(JSON.stringify(actionData));
+      }
+
+      logger.debug(`[HEADER AUTO] Selected ${topOptions.length} actions`);
+
+      if (topOptions.length > 0) {
+        toast({
+          title: 'Auto-select complete',
+          description: `Selected ${topOptions.length} meeting${topOptions.length !== 1 ? 's' : ''} for executives who need attention.`,
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: 'No meetings available',
+          description:
+            'All eligible executives have been assigned or no meetings are available.',
+          variant: 'default',
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      logger.error('[HEADER AUTO] Error:', error);
+      toast({
+        title: 'Auto-select failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to auto-select executive meetings. Please try again.',
+        variant: 'destructive',
+        duration: 5000,
+      });
+    } finally {
+      setIsAutoSelecting(false);
+    }
+  };
 
   const week = gameState.currentWeek || 1;
   const startYear =
@@ -49,6 +125,20 @@ export function GameHeader() {
       aria-label="Label vitals"
       className="flex flex-wrap items-center justify-end gap-4"
     >
+      {/* AUTO focus-slot filler — shown while executives still need attention */}
+      {freeFocusSlots > 0 && (
+        <button
+          type="button"
+          onClick={handleAutoSelect}
+          disabled={isAutoSelecting}
+          title={`Smart-fills ${freeFocusSlots} slot${freeFocusSlots !== 1 ? 's' : ''} with executives who need attention`}
+          className="flex items-center gap-2 rounded-button border border-neon-cyan/40 bg-neon-cyan/[0.08] px-4 py-2.5 text-sm font-semibold text-neon-cyan transition-colors hover:bg-neon-cyan/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Zap className="h-4 w-4" aria-hidden="true" />
+          {isAutoSelecting ? 'Auto-selecting…' : 'AUTO'}
+        </button>
+      )}
+
       {/* Balance chip — glass chip w/ hairline, gold mono amount */}
       <div
         className="relative flex items-center gap-3 overflow-hidden rounded-button border border-white/[0.09] px-4 py-2.5"

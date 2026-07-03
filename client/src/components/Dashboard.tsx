@@ -61,8 +61,11 @@ export function Dashboard({
 
   return (
     <>
-      {/* Page frame header — eyebrow + display title + shimmer underline (v2 §4) */}
-      <header className="pb-6 pt-2">
+      {/* Page frame header — eyebrow + display title + shimmer underline (v2 §4).
+          On lg+ it rises onto the GameHeader vitals row (balance/week/Advance Week),
+          matching the dashboard-dock.html single-row header; width is capped so the
+          title never runs under (or blocks clicks to) the right-aligned vitals. */}
+      <header className="pb-6 pt-2 lg:-mt-[60px] lg:w-[calc(100%-640px)]">
         <div className="mb-3 flex items-center gap-3">
           <span className="font-mono text-[11px] uppercase tracking-[0.28em] text-neon-cyan">
             Studio Dashboard
