@@ -10,6 +10,7 @@ import {
   MenubarTrigger,
 } from '@/components/ui/menubar';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useProjects } from '@/hooks/useProjects';
 import { useArtists } from '@/hooks/useArtists';
 import { ArtistDiscoveryModal } from './ArtistDiscoveryModal';
@@ -47,7 +48,8 @@ const toGameArtist = (artist: DbArtist | (DbArtist & { loyalty?: number | null }
 };
 
 export function ArtistRoster() {
-  const { gameState, signArtist, loadGame } = useGameStore();
+  const gameState = useGameState();
+  const { signArtist, loadGame } = useGameStore();
   // Phase 3 PR-7/PR-9: projects and artists are cache-owned; read via hooks.
   const { data: projects = [] } = useProjects();
   const { data: artists = [] } = useArtists();

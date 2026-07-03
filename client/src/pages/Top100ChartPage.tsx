@@ -1,11 +1,11 @@
 import React from 'react';
 import { Top100ChartDisplay } from '../components/Top100ChartDisplay';
 import GameLayout from '@/layouts/GameLayout';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { Badge } from '@/components/ui/badge';
 
 export function Top100ChartPage() {
-  const { gameState } = useGameStore();
+  const gameState = useGameState();
 
   return (
     <GameLayout>

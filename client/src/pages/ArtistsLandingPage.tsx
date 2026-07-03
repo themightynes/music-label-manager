@@ -8,6 +8,7 @@ import { ArtistDiscoveryModal } from '../components/ArtistDiscoveryModal';
 import { ArtistDialogueModal } from '../components/artist-dialogue/ArtistDialogueModal';
 import { ArtistCard as RichArtistCard, getArchetypeInfo, getRelationshipStatus } from '../components/ArtistCard';
 import { useGameStore } from '../store/gameStore';
+import { useGameState } from '../hooks/useGameState';
 import { useProjects } from '../hooks/useProjects';
 import { useArtists } from '../hooks/useArtists';
 import { usePortfolioROI, useArtistROI } from '../hooks/useAnalytics';
@@ -51,7 +52,8 @@ const ArtistsLandingPage: React.FC = () => {
   const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
   const [isDialogueModalOpen, setIsDialogueModalOpen] = useState(false);
   const [selectedArtistForDialogue, setSelectedArtistForDialogue] = useState<Artist | null>(null);
-  const { gameState, signArtist, loadGame } = useGameStore();
+  const gameState = useGameState();
+  const { signArtist, loadGame } = useGameStore();
   // Phase 3 PR-7/PR-9: projects and artists are cache-owned; read via hooks.
   const { data: projects = [] } = useProjects();
   const { data: artists = [] } = useArtists();

@@ -10,6 +10,7 @@ import {
   ExternalLink, Sparkles
 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import GameLayout from '@/layouts/GameLayout';
@@ -121,7 +122,8 @@ const CHIP_BASE = 'inline-flex items-center rounded-pill font-mono text-[11px] p
 
 export default function PlanReleasePage() {
   const [, setLocation] = useLocation();
-  const { gameState, loadGame, planRelease } = useGameStore();
+  const gameState = useGameState();
+  const { loadGame, planRelease } = useGameStore();
   const { toast } = useToast();
 
   // Dynamic data state (loaded from balance config)

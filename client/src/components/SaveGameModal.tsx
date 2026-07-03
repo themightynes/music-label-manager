@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
@@ -50,7 +51,8 @@ interface SaveGameModalProps {
 }
 
 export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
-  const { gameState, saveGame, loadGameFromSave } = useGameStore();
+  const gameState = useGameState();
+  const { saveGame, loadGameFromSave } = useGameStore();
   const { setGameId } = useGameContext();
   const [newSaveName, setNewSaveName] = useState('');
   const [saving, setSaving] = useState(false);

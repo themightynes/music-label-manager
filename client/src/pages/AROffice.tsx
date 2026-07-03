@@ -2,13 +2,15 @@ import React from 'react';
 import GameLayout from '@/layouts/GameLayout';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useArtists } from '@/hooks/useArtists';
 import { AROffice as AROfficeComponent } from '@/components/ar-office/AROffice';
 import type { GameState, Artist } from '@shared/schema';
 
 export default function AROffice() {
   const { gameId } = useGameContext();
-  const { gameState, signArtist } = useGameStore();
+  const gameState = useGameState();
+  const { signArtist } = useGameStore();
   // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
   const { data: artists = [] } = useArtists();
 
