@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { useIsAdmin } from '@/auth/useCurrentUser';
@@ -117,13 +117,61 @@ function DockItem({
 export function CommandDock({ onShowSaveModal }: CommandDockProps) {
   const [location, setLocation] = useLocation();
   const gameState = useGameState();
-  const { weeklyOutcome } = useGameStore();
+  const { weeklyOutcome, selectedActions } = useGameStore();
   const { gameId } = useGameContext();
   const { user } = useUser();
   const { isAdmin } = useIsAdmin();
 
   const [showWeekSummary, setShowWeekSummary] = useState(false);
   const [showBugReportModal, setShowBugReportModal] = useState(false);
+
+  // Phase 4 PR-7: ambient HoloDisc pulse — pure garnish, no gameplay effect.
+  // Two independent triggers, each a simple on/~duration/off timer:
+  //  (1) a NEW weeklyOutcome lands (tracked by week number) carrying a
+  //      hero/notable change or chart update -> pulse for ~6s.
+  //  (2) the player grows their selectedActions -> a brief ~1s acknowledgment
+  //      pulse. Both share one `pulse` boolean; whichever fires last wins the
+  //      dock's visual state (deliberately simple).
+  const [pulse, setPulse] = useState(false);
+  const lastPulsedWeekRef = useRef<number | null>(null);
+  const prevSelectedCountRef = useRef(selectedActions.length);
+  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const firePulse = (durationMs: number) => {
+    if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    setPulse(true);
+    pulseTimeoutRef.current = setTimeout(() => {
+      setPulse(false);
+      pulseTimeoutRef.current = null;
+    }, durationMs);
+  };
+
+  useEffect(() => {
+    const week = weeklyOutcome?.week;
+    if (typeof week !== 'number' || week === lastPulsedWeekRef.current) return;
+    lastPulsedWeekRef.current = week;
+
+    const changes = Array.isArray(weeklyOutcome?.changes) ? weeklyOutcome.changes : [];
+    const chartUpdates = Array.isArray(weeklyOutcome?.chartUpdates) ? weeklyOutcome.chartUpdates : [];
+    const isNotable = (entry: any) =>
+      entry?.importance === 'hero'
+      || entry?.importance === 'notable'
+      || (entry?.importance === undefined && entry?.type === 'unlock');
+
+    const hasNotableMoment = changes.some(isNotable) || chartUpdates.some(isNotable);
+    if (hasNotableMoment) firePulse(6000);
+  }, [weeklyOutcome]);
+
+  useEffect(() => {
+    if (selectedActions.length > prevSelectedCountRef.current) {
+      firePulse(1000);
+    }
+    prevSelectedCountRef.current = selectedActions.length;
+  }, [selectedActions.length]);
+
+  useEffect(() => () => {
+    if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+  }, []);
 
   // Phase 4 PR-6: sound settings (mute + volume), independent of the motion
   // preference. Local state mirrors the audio manager's persisted settings so
@@ -265,6 +313,7 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
                 <HoloDisc
                   size={60}
                   spinSeconds={12}
+                  pulse={pulse}
                   className="relative"
                   style={{
                     boxShadow:
