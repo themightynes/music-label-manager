@@ -346,19 +346,19 @@ export function MetricsDashboard() {
               </div>
               <div className="flex gap-8">
                 <div>
-                  <div className="font-mono font-semibold text-[26px] leading-none text-text-primary">{gameState.reputation || 0}</div>
+                  <div className="font-mono font-semibold text-xl leading-none text-text-primary">{gameState.reputation || 0}</div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">
                     Reputation <span className={reputationChange >= 0 ? 'text-positive' : 'text-negative'}>{reputationChange >= 0 ? '+' : ''}{reputationChange}</span>
                   </div>
                 </div>
                 <div>
-                  <div className="font-mono font-semibold text-[26px] leading-none text-text-primary">
-                    {gameState.usedFocusSlots || 0}<span className="text-text-muted text-[18px]">/{gameState.focusSlots || 3}</span>
+                  <div className="font-mono font-semibold text-xl leading-none text-text-primary">
+                    {gameState.usedFocusSlots || 0}<span className="text-text-muted text-sm">/{gameState.focusSlots || 3}</span>
                   </div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">Focus Slots</div>
                 </div>
                 <div>
-                  <div className="font-mono font-semibold text-[26px] leading-none text-text-accent">{gameState.creativeCapital || 0}</div>
+                  <div className="font-mono font-semibold text-xl leading-none text-text-accent">{gameState.creativeCapital || 0}</div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">Creative Capital</div>
                 </div>
               </div>
@@ -373,18 +373,18 @@ export function MetricsDashboard() {
               </div>
               <div className="flex flex-wrap gap-7">
                 <div>
-                  <div className="font-mono font-semibold text-[26px] leading-none text-text-primary">{stats.streams.toLocaleString()}</div>
+                  <div className="font-mono font-semibold text-xl leading-none text-text-primary">{stats.streams.toLocaleString()}</div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">Total Plays</div>
                 </div>
                 <div>
-                  <div className="font-mono font-semibold text-[26px] leading-none text-text-primary">{stats.pressMentions}</div>
+                  <div className="font-mono font-semibold text-xl leading-none text-text-primary">{stats.pressMentions}</div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">Mentions</div>
                 </div>
                 <div>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="cursor-help">
-                        <div className="font-mono font-semibold text-[26px] leading-none text-positive">{formatMoney(stats.revenue)}</div>
+                        <div className="font-mono font-semibold text-xl leading-none text-positive">{formatMoney(stats.revenue)}</div>
                         <div className="text-[11.5px] text-text-muted mt-1.5">Earned</div>
                       </div>
                     </TooltipTrigger>
@@ -397,7 +397,7 @@ export function MetricsDashboard() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="cursor-help">
-                        <div className="font-mono font-semibold text-[26px] leading-none text-money">{formatMoney(stats.expenses)}</div>
+                        <div className="font-mono font-semibold text-xl leading-none text-money">{formatMoney(stats.expenses)}</div>
                         <div className="text-[11.5px] text-text-muted mt-1.5">Spent</div>
                       </div>
                     </TooltipTrigger>
@@ -407,7 +407,7 @@ export function MetricsDashboard() {
                   </Tooltip>
                 </div>
                 <div>
-                  <div className={`font-mono font-semibold text-[26px] leading-none ${netProfitLoss >= 0 ? 'text-positive' : 'text-negative'}`}>
+                  <div className={`font-mono font-semibold text-xl leading-none ${netProfitLoss >= 0 ? 'text-positive' : 'text-negative'}`}>
                     {formatSignedMoney(netProfitLoss)}
                   </div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">{netProfitLoss >= 0 ? 'Profit' : 'Loss'}</div>
