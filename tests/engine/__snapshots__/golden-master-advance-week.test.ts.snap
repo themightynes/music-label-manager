@@ -428,14 +428,6 @@ exports[`GameEngine.advanceWeek — golden master > ar-office-week: sourcing slo
     },
     "flags": {
       "after": {
-        "ar_office_discovered_artist_id": "<id>",
-        "ar_office_discovered_artist_info": {
-          "archetype": "Visionary",
-          "genre": "pop",
-          "name": "Discovery One",
-          "popularity": 40,
-          "talent": 85,
-        },
         "ar_office_discovered_artists": [
           {
             "archetype": "Visionary",

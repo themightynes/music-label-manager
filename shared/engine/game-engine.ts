@@ -475,10 +475,15 @@ export class GameEngine {
       console.log('[EMAIL GENERATION] Checking for discovered artist:', summary.arOffice?.discoveredArtistId);
 
       // BUGFIX: Artist IDs from JSON files are strings (e.g., "art_3"), not UUIDs
-      // We already have the artist data cached in gameState.flags, so use that instead of database lookup
+      // We already have the artist data cached in gameState.flags, so use that instead of database lookup.
+      // Sourced from the canonical ar_office_discovered_artists array (the legacy
+      // singular ar_office_discovered_artist_info flag was retired in Phase 2 PR-12).
       let discoveredArtist = null;
       if (summary.arOffice?.discoveredArtistId) {
-        const artistInfo = (this.gameState.flags as any)?.ar_office_discovered_artist_info;
+        const discoveredArtists = (this.gameState.flags as any)?.ar_office_discovered_artists;
+        const artistInfo = Array.isArray(discoveredArtists)
+          ? discoveredArtists.find((a: any) => a?.id === summary.arOffice?.discoveredArtistId)
+          : undefined;
         if (artistInfo) {
           // Use cached artist info from flags (already populated by processAROfficeWeekly)
           discoveredArtist = {

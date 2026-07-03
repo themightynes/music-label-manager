@@ -3,8 +3,7 @@
  *
  * First extraction of the Phase 2 engine-seams plan (§2 row 1). The body below
  * is a VERBATIM move of `GameEngine.processAROfficeWeekly`: every log line,
- * branch, flag write (discovered-artists array + legacy singular keys), and the
- * passive-mode `getRandom` draw are preserved character-for-character, with only
+ * branch, and the passive-mode `getRandom` draw are preserved, with only
  * `this.` rebound to the injected `WeekContext` (`this.gameState` → `ctx.gameState`,
  * `this.gameData` → `ctx.gameData`, `this.storage` → `ctx.storage`,
  * `this.getRandom` → `ctx.getRandom`). The `selectBestArtist` helper is a local
@@ -48,6 +47,14 @@ export class AROfficeProcessor {
           gameState.flags = flags;
         }
 
+        // Carry the discovered artist across the inner try/catch scope. The legacy
+        // singular flags (ar_office_discovered_artist_id / _info) are no longer
+        // written (Phase 2 PR-12): the ar_office_discovered_artists array is the
+        // canonical write. These locals reproduce the exact summary/description
+        // values the old legacy-flag reads produced.
+        let discoveredArtistId: string | null = null;
+        let discoveredArtistName: string | undefined;
+
         // Clear start-week flag used by server validation
         if ('ar_office_start_week' in flags) {
           delete flags.ar_office_start_week;
@@ -64,7 +71,6 @@ export class AROfficeProcessor {
 
           if (!allArtists || allArtists.length === 0) {
             console.error('[A&R DEBUG] No artists available in game data');
-            flags.ar_office_discovered_artist_id = null;
             flags.ar_office_error = 'No artists available in game data';
           } else {
             let unsigned = [...allArtists];
@@ -216,15 +222,10 @@ export class AROfficeProcessor {
                 console.log('[A&R DEBUG] Genre filter result:', genreUsed);
               }
 
-              // Keep legacy fields for backwards compatibility
-              flags.ar_office_discovered_artist_id = picked.id;
-              flags.ar_office_discovered_artist_info = {
-                name: picked.name,
-                archetype: picked.archetype,
-                talent: picked.talent || 0,
-                popularity: picked.popularity || 0,
-                genre: picked.genre || null
-              };
+              // Track discovery for summary/description (replaces the retired legacy
+              // ar_office_discovered_artist_id / _info flag reads — Phase 2 PR-12).
+              discoveredArtistId = picked.id;
+              discoveredArtistName = picked.name;
 
               // Populate week summary A&R section with discovered artist id
               // NOTE: This ID may differ from what /ar-office/artists returns if fallback logic is triggered
@@ -235,7 +236,6 @@ export class AROfficeProcessor {
               };
             } else {
               console.log('[A&R DEBUG] No artist selected - no unsigned artists available');
-              flags.ar_office_discovered_artist_id = null;
               flags.ar_office_error = 'No unsigned artists available';
 
               // Create synthetic "no artists available" flag for better client handling
@@ -259,7 +259,6 @@ export class AROfficeProcessor {
 
         } catch (selectErr) {
           console.error('[A&R] Failed to select/persist discovered artist:', selectErr);
-          flags.ar_office_discovered_artist_id = null;
           flags.ar_office_error = selectErr instanceof Error ? selectErr.message : 'Artist selection failed';
           gameState.flags = flags;
         }
@@ -269,12 +268,11 @@ export class AROfficeProcessor {
           summary.arOffice = {
             completed: true,
             sourcingType: sourcingType ?? null,
-            discoveredArtistId: flags.ar_office_discovered_artist_id || null
+            discoveredArtistId: discoveredArtistId || null
           } as any;
         }
 
         // Add comprehensive change description
-        const discoveredArtistName = flags.ar_office_discovered_artist_info?.name;
         let description;
         if (discoveredArtistName) {
           description = `A&R sourcing (${sourcingType || 'active'}) completed. Discovered ${discoveredArtistName}.`;
