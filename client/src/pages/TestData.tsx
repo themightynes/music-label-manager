@@ -49,29 +49,29 @@ export default function TestDataPage() {
       </CardHeader>
       <CardContent>
         {data?.error ? (
-          <div className="text-red-600 p-4 bg-red-500/10 rounded">
+          <div className="text-destructive p-4 bg-destructive/20 rounded">
             Error: {data.error}
           </div>
         ) : (
-          <pre className="whitespace-pre-wrap text-sm bg-gray-500/10 p-4 rounded overflow-auto">
+          <pre className="whitespace-pre-wrap text-sm bg-muted/20 p-4 rounded overflow-auto">
             {JSON.stringify(data, null, 2)}
           </pre>
         )}
-        
+
         {expectedCounts && data?.counts && (
-          <div className="mt-4 p-4 bg-blue-500/10 rounded">
+          <div className="mt-4 p-4 bg-primary/20 rounded">
             <h4 className="font-medium mb-2">Verification Checklist:</h4>
             <ul className="space-y-1 text-sm">
-              <li className={data.counts.roles === expectedCounts.roles ? "text-green-600" : "text-red-600"}>
-                {data.counts.roles === expectedCounts.roles ? "✓" : "✗"} 
+              <li className={data.counts.roles === expectedCounts.roles ? "text-success" : "text-destructive"}>
+                {data.counts.roles === expectedCounts.roles ? "✓" : "✗"}
                 Roles: {data.counts.roles} (expected {expectedCounts.roles})
               </li>
-              <li className={data.counts.artists === expectedCounts.artists ? "text-green-600" : "text-red-600"}>
-                {data.counts.artists === expectedCounts.artists ? "✓" : "✗"} 
+              <li className={data.counts.artists === expectedCounts.artists ? "text-success" : "text-destructive"}>
+                {data.counts.artists === expectedCounts.artists ? "✓" : "✗"}
                 Artists: {data.counts.artists} (expected {expectedCounts.artists})
               </li>
-              <li className={data.counts.events === expectedCounts.events ? "text-green-600" : "text-red-600"}>
-                {data.counts.events === expectedCounts.events ? "✓" : "✗"} 
+              <li className={data.counts.events === expectedCounts.events ? "text-success" : "text-destructive"}>
+                {data.counts.events === expectedCounts.events ? "✓" : "✗"}
                 Events: {data.counts.events} (expected {expectedCounts.events})
               </li>
             </ul>

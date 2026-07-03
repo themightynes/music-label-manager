@@ -620,7 +620,7 @@ export default function StreamingDecayTester() {
                         <span className="text-white/70">With Marketing & Awareness</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-gray-500 rounded"></div>
+                        <div className="w-3 h-3 bg-muted-foreground rounded"></div>
                         <span className="text-white/70">Without Marketing</span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -644,7 +644,7 @@ export default function StreamingDecayTester() {
                             <div className="flex-1 relative h-8 bg-brand-dark-card rounded">
                               {/* Without Marketing Bar (Gray) */}
                               <div
-                                className="absolute left-0 top-0 h-full bg-gray-500/60 rounded transition-all"
+                                className="absolute left-0 top-0 h-full bg-muted-foreground/60 rounded transition-all"
                                 style={{ width: `${withoutMarketingHeight}%` }}
                               />
                               {/* With Marketing Bar (Blue) */}
@@ -701,7 +701,7 @@ export default function StreamingDecayTester() {
                         </div>
                         <div>
                           <div className="text-white/70 mb-1">Total Streams (Without Marketing)</div>
-                          <div className="font-mono font-semibold text-gray-400">
+                          <div className="font-mono font-semibold text-muted-foreground">
                             {testResults.reduce((sum, r) => sum + r.withoutMarketing, 0).toLocaleString()}
                           </div>
                         </div>
@@ -800,7 +800,7 @@ export default function StreamingDecayTester() {
                         <div key={index} className="grid grid-cols-9 gap-2 text-xs py-1 min-w-max">
                           <div className="text-white/90 font-medium">{result.week}</div>
                           <div className="font-mono text-blue-400">{result.withMarketing.toLocaleString()}</div>
-                          <div className="font-mono text-gray-400">{result.withoutMarketing.toLocaleString()}</div>
+                          <div className="font-mono text-muted-foreground">{result.withoutMarketing.toLocaleString()}</div>
                           <div className={`font-mono ${isMarketingActive ? 'text-yellow-400' : 'text-white/50'}`}>
                             {isMarketingActive ? `+${marketingBoostPercent}%` : '--'}
                           </div>
