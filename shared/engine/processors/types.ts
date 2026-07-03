@@ -25,6 +25,7 @@
 import type { GameState } from '../../schema';
 import type { WeekSummary } from '../../types/gameTypes';
 import type { ServerGameData } from '../../../server/data/gameData';
+import type { FinancialSystem } from '../FinancialSystem';
 
 export interface WeekContext {
   /** Live game state, mutated in place (flags, arOffice columns, money, etc.). */
@@ -35,6 +36,14 @@ export interface WeekContext {
   gameData: ServerGameData;
   /** Storage interface for DB reads/writes. Optional, mirroring GameEngine. */
   storage: any;
+  /**
+   * The engine's FinancialSystem instance (shares the engine's seeded RNG).
+   * WeeklyFinancesProcessor delegates burn/financials calculations to it exactly
+   * as the pre-extraction GameEngine methods did (`this.financialSystem.*`).
+   * Money is still mutated ONLY at the single `[FINAL MONEY]` point in
+   * `GameEngine.advanceWeek` — processors compute breakdowns, never mutate money.
+   */
+  financialSystem: FinancialSystem;
   /**
    * The engine's single seeded RNG draw — `min + rng() * (max - min)`.
    * MUST be bound from GameEngine so the one seeded stream and its draw order
