@@ -319,8 +319,6 @@ export default function ArtistPage() {
                   top offset (160px) + tab bar (40px) + space-y-6 gap (24px) so the
                   image crops exactly at the translucent card's top edge below */}
               <div className="absolute -top-40 -right-20 z-10 h-56 overflow-hidden">
-                {/* Purple bloom glow behind the avatar, matching the reference's character-art slot treatment */}
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[360px] h-[360px] rounded-full bg-neon-purple/50 blur-[70px] opacity-60 pointer-events-none" />
                 <img
                   src={getAvatarUrl(artist.name)}
                   alt={`${artist.name} avatar`}
