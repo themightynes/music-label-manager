@@ -9,6 +9,7 @@ import { fetchSnapshotCollections, fetchEmailSnapshot } from '@/utils/emailSnaps
 import { buildGameSnapshot } from '@/utils/buildGameSnapshot';
 import { formatAutosaveName } from '@shared/utils/saveName';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
+import { executivesQueryKey } from '@/hooks/useExecutives';
 
 // Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
 // identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
@@ -807,7 +808,12 @@ export const useGameStore = create<GameStore>()(
               ROI_ANALYTICS_SCOPES.has(query.queryKey[1] as string) &&
               (query.queryKey[2] as { gameId?: string } | undefined)?.gameId === syncedGameState.id,
           });
-          // TODO(phase-3 PR-8): executives not in TanStack yet; invalidate ['executives', gameId] once useExecutives exists
+          // Phase 3 PR-8: refetch executives so post-week mood/loyalty changes
+          // show. useExecutives + the meeting machine share the ['executives',
+          // gameId] cache; invalidating it here is the weekly-refresh hook.
+          await queryClient.invalidateQueries({
+            queryKey: executivesQueryKey(syncedGameState.id),
+          });
           // Invalidate emails cache to refresh inbox with new week's emails
           await queryClient.invalidateQueries({
             predicate: (query) =>

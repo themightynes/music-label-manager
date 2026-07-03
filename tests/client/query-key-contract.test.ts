@@ -21,6 +21,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
+import { EXECUTIVES_SCOPE, executivesQueryKey } from '@/hooks/useExecutives';
 
 const GAME_ID = 'game-1';
 const ARTIST_ID = 'artist-1';
@@ -40,6 +41,8 @@ const REAL_QUERY_KEYS: readonly unknown[][] = [
   [`/api/analytics/${GAME_ID}/release/${RELEASE_ID}/roi`, 'analytics:release-roi', { gameId: GAME_ID, releaseId: RELEASE_ID }],
   [EMAIL_LIST_SCOPE, GAME_ID, null, null, null, null, null],
   [EMAIL_UNREAD_SCOPE, GAME_ID],
+  // Executives (useExecutives.ts, PR-8): [EXECUTIVES_SCOPE, gameId]
+  [...executivesQueryKey(GAME_ID)],
   ['api', 'saves'],
 ];
 
@@ -103,9 +106,20 @@ describe('query-key contract: advanceWeek invalidations (PR-3 fixed)', () => {
     expect(someRealKeyMatchesPredicate(roiPredicate('some-other-game'))).toBe(false);
   });
 
-  it('advanceWeek no longer emits a dead ["executives"] invalidation (not in TanStack yet)', () => {
-    // No hook produces an ["executives"] query key today — asserting this stays
-    // false documents that gameStore.ts must not reintroduce that dead key.
-    expect(someRealKeyMatchesInvalidationKey(['executives'])).toBe(false);
+  it('advanceWeek executives invalidation matches the useExecutives hook key (PR-8)', () => {
+    // PR-8 wired executives into TanStack: useExecutives keys on
+    // [EXECUTIVES_SCOPE, gameId] and advanceWeek invalidates the same key via
+    // executivesQueryKey(gameId). The invalidation must now match the hook.
+    expect(someRealKeyMatchesInvalidationKey(executivesQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('advanceWeek executives invalidation does NOT match a different game', () => {
+    expect(someRealKeyMatchesInvalidationKey(executivesQueryKey('some-other-game'))).toBe(false);
+  });
+
+  it('the executives scope invalidation and hook key agree element-for-element', () => {
+    // Guards against drift: the store invalidation and the hook must produce the
+    // byte-identical key shape [EXECUTIVES_SCOPE, gameId].
+    expect(executivesQueryKey(GAME_ID)).toEqual([EXECUTIVES_SCOPE, GAME_ID]);
   });
 });
