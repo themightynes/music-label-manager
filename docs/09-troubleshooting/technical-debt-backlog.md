@@ -548,17 +548,14 @@ The save snapshot (`{snapshotVersion, gameState, musicLabel, artists, projects, 
 
 ## 🔵 **Low Priority Items**
 
-### [ ] Comment 26: ArtistPage is monolithic
-**Priority**: 🔵 Low
-**Impact**: Code organization
-**Effort**: High
+### ~~Comment 26: ArtistPage is monolithic~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026, PR #89)
 
-ArtistPage is very large and monolithic; split into subcomponents and memoize heavy sections.
-
-**Action**: Refactor by extracting tabs (Overview, Discography, Releases, Analytics, Management) into separate memoized components.
+**Resolution**: `ArtistPage.tsx` went **1,180 → 361 lines**. The five tabs (Overview, Discography, Releases, Analytics, Management) plus `PerformanceMetrics` are now `React.memo`-wrapped components under `client/src/components/artist/`, with shared pure helpers in `artistPageUtils.tsx` and deduplicated local types in `types.ts`. The page shell keeps the data-loading effects, `useMemo`d derived values, `useCallback`d child callbacks, and — untouched verbatim — the coupled avatar-crop block (`-top-40`/`h-56` math). Dead code deleted along the way: `analytics`/`qualityFilter`/`sortBy` state, `getTotalMarketingCost`, and the never-read `totalStreams`/`totalRevenue`/`releasedSongs` locals (all verified dead against pre-refactor `main` by an independent review pass, which also confirmed the extracted JSX byte-identical). First-ever test coverage added: 12 render smoke tests across the five tabs (`client/src/components/artist/__tests__/`). Follow-ups noted in the PR: swap the local types for `shared/schema.ts` types; remove pre-existing dead `songFilter` state.
 
 **Relevant Files**:
 - [client/src/pages/ArtistPage.tsx](client/src/pages/ArtistPage.tsx)
+- [client/src/components/artist/](client/src/components/artist/)
 
 ---
 
@@ -806,11 +803,11 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026)
-- 🔵 Low: 1 in progress (C26 — refactor PR in flight), 1 deferred (C32 — cap unreachable; surfacing fixed)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed)
 
 ### By Status
-- ✅ Completed: 45 items (91.8%)
-- 🚧 In Progress: 1 item (C26)
+- ✅ Completed: 46 items (93.9%)
+- 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
 - 📋 Pending: 0 items
 
