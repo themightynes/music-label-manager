@@ -94,6 +94,9 @@ export class SongGenerationProcessor {
       const songsPerWeek = this.getSongsPerWeek(project.type);
       const songsToGenerate = Math.min(remainingSongs, songsPerWeek);
 
+      // Track songs generated in this batch so B6 (below) can fire the
+      // per-song "ready for release" notification for the completing batch.
+      const songsGeneratedThisWeek: any[] = [];
 
       for (let i = 0; i < songsToGenerate; i++) {
         const song = this.generateSong(ctx, project, artist);
@@ -112,6 +115,7 @@ export class SongGenerationProcessor {
 
         // Update project progress
         project.songsCreated = (project.songsCreated || 0) + 1;
+        songsGeneratedThisWeek.push(song);
 
         // Enhanced summary with economic insights
         const economicInsight = this.generateSongEconomicInsight(song, project);
@@ -133,6 +137,21 @@ export class SongGenerationProcessor {
 
       // Check if project completed all songs
       if (project.songsCreated >= project.songCount) {
+        // B6 (Phase 2 engine-seams PR-9, decision D3): the deleted no-op
+        // processNewlyRecordedProjects pass was SUPPOSED to fire a per-song
+        // "recording completed - ready for release" notification once a project
+        // finished recording. Songs are born isRecorded:true, so that pass never
+        // ran. Fire the notification here, at the moment the project's last song
+        // is generated — one per song completed in this final batch, matching the
+        // dead pass's { type: 'unlock', description, amount: 0 } shape.
+        for (const song of songsGeneratedThisWeek) {
+          summary.changes.push({
+            type: 'unlock',
+            description: `🎵 "${song.title}" recording completed - ready for release`,
+            amount: 0
+          });
+        }
+
         // Calculate project completion economic summary
         const completionSummary = this.generateProjectCompletionSummary(project);
 
@@ -263,6 +282,11 @@ export class SongGenerationProcessor {
       producerTier: producerTier,
       timeInvestment: timeInvestment,
       isRecorded: true,
+      // Songs are born recorded (B6/D3): stamp recordedAt at creation. The deleted
+      // processProjectSongRecording pass used to set this when it flipped songs to
+      // recorded; now creation is the single point of truth. Wall-clock metadata —
+      // the golden-master normalizer strips recordedAt.
+      recordedAt: new Date(),
       isReleased: false,
       releaseId: null,
       // Direct foreign key and investment tracking

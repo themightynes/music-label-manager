@@ -24,6 +24,7 @@ import { ProgressionProcessor } from './processors/ProgressionProcessor';
 import { WeeklyFinancesProcessor } from './processors/WeeklyFinancesProcessor';
 import { TourProcessor } from './processors/TourProcessor';
 import { SongGenerationProcessor } from './processors/SongGenerationProcessor';
+import { ProjectStageProcessor } from './processors/ProjectStageProcessor';
 import type { WeekContext } from './processors/types';
 
 // Re-export WeekSummary for backward compatibility
@@ -192,10 +193,13 @@ export class GameEngine {
 
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary);
-    
-    // Process newly recorded projects (projects that became "recorded" this week)
-    await this.processNewlyRecordedProjects(summary, dbTransaction);
-    
+
+    // B6 (Phase 2 D3): the no-op processNewlyRecordedProjects pass was removed —
+    // songs are born isRecorded:true, so its !isRecorded filter always matched
+    // zero. The "recording completed — ready for release" notification it was
+    // meant to fire now emits from SongGenerationProcessor.generateWeeklyProjectSongs
+    // when a project's last song is generated (below).
+
     // Process song generation for recording projects
     await this.processRecordingProjects(summary, dbTransaction);
 
@@ -1935,100 +1939,15 @@ export class GameEngine {
   
   // REMOVED: getSeasonalMultiplier() - now using shared utility
 
-  /**
-   * Processes newly recorded projects - projects that became "recorded" this week
-   * This marks songs as recorded but does not release them (no revenue yet)
-   */
-  private async processNewlyRecordedProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    
-    try {
-      // Check if we have a method to get newly released projects
-      if (!this.gameData.getNewlyReleasedProjects && !this.gameData.getProjectsByStage) {
-        // Check if there are released projects in gameState flags that need processing
-        const releasedProjects = (this.gameState.flags as any)?.['released_projects'] || [];
-        
-        for (const project of releasedProjects) {
-          await this.processProjectSongRecording(project, summary, dbTransaction);
-        }
-        return;
-      }
-      
-      // Get all projects in "recorded" stage  
-      let recordedProjects: any[] = [];
-      if (this.gameData.getProjectsByStage) {
-        recordedProjects = await this.gameData.getProjectsByStage(this.gameState.id || '', 'recorded', dbTransaction);
-      } else if (this.gameData.getNewlyReleasedProjects) {
-        // Note: This method name should be updated to getNewlyRecordedProjects in future
-        recordedProjects = await this.gameData.getNewlyReleasedProjects(this.gameState.id || '', this.gameState.currentWeek || 1, dbTransaction);
-      }
-      
-      if (recordedProjects.length === 0) {
-        return;
-      }
-      
-      // Process song recording completion for each project
-      for (const project of recordedProjects) {
-        await this.processProjectSongRecording(project, summary, dbTransaction);
-      }
-      
-    } catch (error) {
-      console.error('[NEWLY RECORDED] Error processing newly recorded projects:', error);
-    }
-    
-  }
-
-  /**
-   * Process song recording completion for a specific project
-   * This marks all songs from a completed recording project as recorded (but not released)
-   */
-  private async processProjectSongRecording(project: any, summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    console.log(`[PROJECT SONG RECORDING] Processing project "${project.title}" (ID: ${project.id})`);
-    
-    try {
-      // Get songs for this project
-      const projectSongs = await this.gameData.getSongsByProject(project.id) || [];
-      console.log(`[PROJECT SONG RECORDING] Found ${projectSongs.length} songs for project`);
-      
-      // Filter to only unrecorded songs (songs that haven't completed recording)
-      const unrecordedSongs = projectSongs.filter((song: any) => !song.isRecorded);
-      console.log(`[PROJECT SONG RECORDING] ${unrecordedSongs.length} songs need recording completion`);
-      
-      if (unrecordedSongs.length === 0) {
-        console.log(`[PROJECT SONG RECORDING] All songs already recorded for project "${project.title}"`);
-        return;
-      }
-      
-      // Process each unrecorded song - mark as recorded but NOT released
-      for (const song of unrecordedSongs) {
-        console.log(`[PROJECT SONG RECORDING] Completing recording for song "${song.title}" (quality: ${song.quality})`);
-        
-        // Update song in database - only mark as recorded
-        if (this.gameData.updateSong) {
-          const songUpdate = {
-            isRecorded: true,
-            isReleased: false, // Keep as false - will be set by Plan Release feature
-            recordedAt: new Date(), // Track when recording completed
-            updatedAt: new Date()
-          };
-          
-          await this.gameData.updateSong(song.id, songUpdate, dbTransaction);
-          console.log(`[PROJECT SONG RECORDING] ✅ Song "${song.title}" marked as recorded`);
-        }
-        
-        // Add to summary - recording completion notification (no revenue yet)
-        summary.changes.push({
-          type: 'unlock',
-          description: `🎵 "${song.title}" recording completed - ready for release`,
-          amount: 0
-        });
-        
-        console.log(`[PROJECT SONG RECORDING] Song "${song.title}" ready for release via Plan Release feature`);
-      }
-      
-    } catch (error) {
-      console.error(`[PROJECT SONG RECORDING] Error processing project "${project.title}":`, error);
-    }
-  }
+  // B6 (Phase 2 engine-seams PR-9, decision D3): DELETED the no-op
+  // processNewlyRecordedProjects / processProjectSongRecording pass (~95 lines).
+  // Songs are born isRecorded:true in SongGenerationProcessor.generateSong, so the
+  // pass's `!song.isRecorded` filter always matched zero songs and its
+  // "recording completed — ready for release" notification never fired. That
+  // notification is now emitted from SongGenerationProcessor.generateWeeklyProjectSongs
+  // at the moment a project's last song is generated (matching the dead pass's
+  // { type: 'unlock', description: '🎵 "<title>" recording completed - ready for
+  // release', amount: 0 } shape).
 
   /**
    * Processes song generation for recording projects
@@ -3322,185 +3241,16 @@ export class GameEngine {
    * PHASE 1 MIGRATION: Moved from routes.ts
    * Handles all project stage advancement logic within GameEngine
    */
+  // DELEGATED TO ProjectStageProcessor (Phase 2 engine-seams PR-9). Same-signature
+  // wrapper; still called from advanceWeek. The processor calls TourProcessor
+  // directly for mid-tour city revenue (same behavior as the old inline
+  // this.processUnifiedTourRevenue delegate call).
   private async advanceProjectStages(summary: WeekSummary, dbTransaction?: any): Promise<void> {
-    if (!dbTransaction) {
-      console.warn('[PROJECT ADVANCEMENT] No database transaction provided - cannot advance project stages');
-      return;
-    }
-
-    console.log(`[PROJECT ADVANCEMENT] Current month: ${this.gameState.currentWeek}`);
-    
-    try {
-      // Import the required modules dynamically to avoid circular dependencies
-      const { projects } = await import('../schema');
-      const { eq } = await import('drizzle-orm');
-      
-      // Get all projects for this game
-      const projectList = await dbTransaction
-        .select()
-        .from(projects)
-        .where(eq(projects.gameId, this.gameState.id));
-
-      console.log(`[PROJECT ADVANCEMENT] Found ${projectList.length} projects to evaluate`);
-
-      for (const project of projectList) {
-        const stages = ['planning', 'production', 'recorded'];
-        const currentStageIndex = stages.indexOf(project.stage || 'planning');
-        const weeksElapsed = (this.gameState.currentWeek || 1) - (project.startWeek || 1);
-        const isRecordingProject = ['Single', 'EP'].includes(project.type || '');
-        const songCount = project.songCount || 1;
-        const songsCreated = project.songsCreated || 0;
-        const allSongsCreated = songsCreated >= songCount;
-        
-        console.log(`[PROJECT ADVANCEMENT] Evaluating ${project.title}:`, {
-          currentStage: project.stage,
-          currentStageIndex,
-          weeksElapsed,
-          isRecordingProject,
-          songCount,
-          songsCreated,
-          allSongsCreated
-        });
-
-        let newStageIndex = currentStageIndex;
-        let advancementReason = '';
-
-        // Stage advancement logic
-        if (currentStageIndex === 0 && weeksElapsed >= 0) {
-          // planning -> production (simple time-based)
-          newStageIndex = 1;
-          advancementReason = `Planning complete after ${weeksElapsed} week${weeksElapsed > 1 ? 's' : ''}`;
-          
-          // NOTE: Project costs are now deducted immediately upon creation (see routes.ts)
-          // This prevents timing exploits where users cancel before week advance
-          // We track the expense for weekly reporting but DON'T deduct money again
-          if (project.totalCost) {
-            // DO NOT add to summary.expenses - money already deducted at creation!
-            // summary.expenses += project.totalCost; // <-- REMOVED to fix double-charging bug
-
-            if (!summary.expenseBreakdown) {
-              summary.expenseBreakdown = {
-                weeklyOperations: 0,
-                artistSalaries: 0,
-                executiveSalaries: 0,
-                signingBonuses: 0,
-                projectCosts: 0,
-                marketingCosts: 0,
-                roleMeetingCosts: 0
-              };
-            }
-            // Track for reporting but don't affect final money calculation
-            summary.expenseBreakdown!.projectCosts += project.totalCost;
-
-            summary.changes.push({
-              type: 'expense_tracking',
-              description: `${project.title} production started (cost previously deducted at creation)`,
-              amount: -project.totalCost,
-              projectId: project.id
-            });
-          }
-        } else if (currentStageIndex === 1) {
-          // production -> marketing/completed
-          if (!isRecordingProject && project.type === 'Mini-Tour') {
-            // Enhanced tour logic: 1 week per city + planning week
-            const citiesPlanned = project.metadata?.cities || 1;
-            const weeksInProduction = weeksElapsed - 1; // Subtract planning week
-            
-            if (weeksInProduction > citiesPlanned) {
-              // Tour complete - skip marketing, go directly to completed
-              newStageIndex = 2; // Go directly to 'recorded' which acts as 'completed' for tours
-              advancementReason = `Tour completed after ${citiesPlanned} cities (${weeksElapsed} total weeks)`;
-              
-              // Generate final tour completion summary
-              const tourStats = project.metadata?.tourStats;
-              if (tourStats && tourStats.cities) {
-                const totalRevenue = tourStats.cities.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0);
-                const avgAttendance = Math.round(tourStats.cities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / tourStats.cities.length);
-                
-                // Save total revenue for ROI calculation
-                if (this.storage?.updateProject) {
-                  await this.storage.updateProject(project.id, { 
-                    totalRevenue,
-                    completionStatus: 'completed'
-                  }, dbTransaction);
-                }
-                
-                summary.changes.push({
-                  type: 'project_complete',
-                  description: `${project.title} tour completed - ${tourStats.cities.length} cities, ${avgAttendance}% avg attendance, $${totalRevenue.toLocaleString()} total revenue`,
-                  amount: 0, // Revenue already counted weekly
-                  projectId: project.id,
-                  grossRevenue: totalRevenue
-                });
-              }
-            } else if (weeksInProduction > 0) {
-              // Process this week's city performance using unified system
-              await this.processUnifiedTourRevenue(project, weeksInProduction, summary, dbTransaction);
-            }
-          } else if (!isRecordingProject) {
-            // Other non-recording projects - simple time-based
-            if (weeksElapsed >= 2) {
-              newStageIndex = 2;
-              advancementReason = `Production complete after ${weeksElapsed} weeks`;
-            }
-          } else {
-            // Recording projects - need all songs OR max 4 weeks
-            if (allSongsCreated && weeksElapsed >= 2) {
-              newStageIndex = 2;
-              advancementReason = `All ${songsCreated} songs completed after ${weeksElapsed} weeks`;
-            } else if (weeksElapsed >= 4) {
-              newStageIndex = 2;
-              advancementReason = `Maximum production time reached (${weeksElapsed} weeks, ${songsCreated}/${songCount} songs)`;
-            }
-          }
-        }
-
-        // Advance stage if needed
-        if (newStageIndex > currentStageIndex) {
-          const newStage = stages[newStageIndex];
-          console.log(`[PROJECT ADVANCEMENT] Advancing ${project.title}: ${project.stage} -> ${newStage} (${advancementReason})`);
-          
-          // Prepare update data
-          const updateData: any = { 
-            stage: newStage,
-            quality: Math.min(100, (project.quality || 0) + 25)
-          };
-          
-          // If advancing to recorded stage, track recording completion metadata
-          if (newStage === 'recorded') {
-            const existingMetadata = project.metadata || {};
-            updateData.metadata = {
-              ...existingMetadata,
-              recordingCompletedWeek: this.gameState.currentWeek,
-              recordedAt: new Date().toISOString(),
-              advancementReason
-            };
-            console.log(`[PROJECT ADVANCEMENT] Marking project "${project.title}" as recording completed in week ${this.gameState.currentWeek}`);
-          }
-          
-          // Update project in database
-          await dbTransaction
-            .update(projects)
-            .set(updateData)
-            .where(eq(projects.id, project.id));
-          
-          // Add to summary
-          summary.changes.push({
-            type: 'unlock',
-            description: `📈 ${project.title} advanced to ${newStage} stage: ${advancementReason}`,
-            amount: 0
-          });
-          
-          console.log(`[PROJECT ADVANCEMENT] Successfully advanced "${project.title}" to ${newStage}`);
-        } else {
-          console.log(`[PROJECT ADVANCEMENT] ${project.title} staying in ${project.stage} (${weeksElapsed} weeks elapsed)`);
-        }
-      }
-      
-    } catch (error) {
-      console.error('[PROJECT ADVANCEMENT] Error during project advancement:', error);
-      throw new Error(`Project advancement failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return new ProjectStageProcessor().advanceProjectStages(
+      this.weekContext(summary, dbTransaction),
+      summary,
+      dbTransaction
+    );
   }
 
   /**
