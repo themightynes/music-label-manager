@@ -9,7 +9,7 @@
 - **PR-1 ✅ MERGED** — #100 (`89d3f89`): `AnimatedNumber` primitive + MetricsDashboard net-income adoption; 8 new jsdom tests, client suite 75/75.
 - **PR-2 ✅ MERGED** — #102 (`d177cd8`): `shared/utils/changeImportance.ts` classifier (exhaustive over all 19 `GameChange` types, `assertNever` compile guard); optional additive `importance` on `GameChange`/`ChartUpdate`; single engine call site at WeekSummary assembly. Golden-master diff audited: 67 added lines, all `importance`, zero deletions (26 hero / 12 notable / 29 routine); run-twice stable. 30 classifier unit tests.
 - **PR-3..5, 7** — gated on Phase 3.5 (in flight, separate session).
-- **PR-6 (sound)** — awaiting user decision on asset sourcing (licensed pack vs. generated vs. commissioned).
+- **PR-6 (sound)** — asset gate CLEARED 2026-07-03: 6 stings generated via ElevenLabs (user-auditioned favorites), landed in `client/public/audio/` with `CREDITS.md` provenance. PR-6 implementation (audio manager + settings + wiring) can start any time.
 
 ## 0. Ground truth (verified against the working tree)
 
