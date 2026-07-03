@@ -4,6 +4,29 @@
 
 ---
 
+## 📅 Session Log — July 3, 2026 (PR #86 merged, manual smoke pass, native-dialog UX sweep, C49)
+
+**Picked up the previous session's unmerged remote work, ran the manual authenticated smoke pass that's been owed since Phase 1, found and fixed a real UX bug it surfaced, then swept the whole client for the same bug class.** Everything below is merged to `main` (`612bb88`), pushed directly per user instruction (no PR).
+
+**Done this session:**
+- **Found and merged PR #86** — the prior session's tour/press tech-debt sweep (C41, C44–C48) had been committed and pushed to `origin/claude/onboarding-08l2x6` but never opened as a PR or merged; `main` itself was up to date with `origin/main` so `git pull` reported nothing, which is what surfaced the gap. Verified locally (`tsc` clean, 696/696 tests passing, 0 skipped) before opening and merging **PR #86** (`themightynes/music-label-manager#86`).
+- **Ran the manual authenticated smoke pass** owed since Phase 1: signed in, backed up the existing "Sonic Boom Entertainment" save, created a new game ("Midnight Records"), ran an A&R op → discovered and signed an artist, created a Single project, planned its release, advanced through week 4→6, and watched the release execute live — **145,286 plays, 8 press mentions (live proof the C45 fix works), $8,264 earned, reputation 5→22**. Also exercised save/restore: manual save → loaded an older autosave → confirmed state correctly reverted (money/reputation/access tiers) → restored forward to the newer checkpoint → survived a full reload.
+- **Found a real bug during the smoke test**: the release-planning success flow used native `alert()`/`confirm()` (Windows-native popups) instead of in-app UI — this also explained why browser automation hung mid-flow (native dialogs block the page and aren't part of the DOM). Fixed `PlanReleasePage.tsx`'s two calls (success → `toast()`, "plan another?" → the existing `ConfirmDialog`), then **swept the entire `client/src` tree** for the same anti-pattern: `FocusSlotStatus.tsx` (A&R cancel-operation → `ConfirmDialog`), `ArtistDiscoveryTable.tsx` (dev-only debug dump → console.log + toast), `ActionsViewer.tsx` admin tool (discard-unsaved-changes → the file's existing `AlertDialog` save-confirmation pattern), plus two more `alert()`s in `PlanReleasePage.tsx` (song-title validation/save-failure → toast). Zero native `alert`/`confirm`/`prompt` calls remain in `client/src`. `tsc` clean.
+- **Logged Comment 49** (tech-debt backlog): after a save/load restore, the inbox briefly shows stale pre-restore emails until a full page reload. Traced the actual cause — `loadGameFromSave` (`gameStore.ts`) writes `emails` straight into Zustand but never invalidates the `useEmails` TanStack Query cache (`EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE`), same family as the previously-fixed week-advance email-invalidation gap. Underlying data is correct immediately; this is a display-only cache-invalidation gap. Refreshed the backlog's summary stats while in there (44 completed / 5 pending / 49 total, up from a stale 47/38/9).
+- **Committed and pushed directly to `main`** (`612bb88`) per explicit user instruction — no PR for this batch (UX fix + docs).
+
+**Decisions made:**
+- User confirmed: skip the PR/review flow for this batch, commit straight to `main`.
+- Smoke test used a fresh new game rather than the existing save, after backing the existing save up first — avoids risk to real progress while still exercising the full new-game → release → restore path.
+
+**Open threads / next steps:**
+- **Comment 49 fix itself is NOT done** — only logged. The actual fix (invalidate `EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE` after `loadGameFromSave`) is still open.
+- **Backlog remaining (5)**: C49 (new, above), C42 (awareness dead bookkeeping — product decision), C43 (planned releases can't be cancelled/edited), C26 (ArtistPage refactor), C32 (email snapshot cap).
+- **Phase 3 (client state ownership) planning** still queued; D6 whole-week transaction atomicity still a filed idea; difficulty UI still unexposed.
+- Two untracked local scratch files remain in the working tree (`.claude/launch.json`, `tests/endpoints/_tmp-advance-week-timing.test.ts`) — left alone, not part of any commit this session.
+
+---
+
 ## 📅 Session Log — July 3, 2026 (Tech-debt sweep: tour & release preview↔execution parity, C41–C48)
 
 **Cleared every remaining Critical/High/tour-family backlog item in one session — backlog now 44/48 done (0 Critical, 0 High).** All work is on branch **`claude/onboarding-08l2x6`** (5 commits, pushed, **no PR opened yet** — that's the first next step). Remote-container session: no Docker available, so the vitest suite ran against a native PostgreSQL 16 cluster stood up on port 5433 (same `postgres:postgres@localhost:5433/music_label_test` contract as CI).

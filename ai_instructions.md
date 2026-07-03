@@ -5,11 +5,11 @@ You're working on **Top Roles: Music Label Manager**, a browser-based music indu
 
 > ⚠️ **Parts of this document below this section are stale (Aug 2025, Neon/Replit era).** `../DEVELOPMENT_STATUS.md` is the single source of truth for current status; root `CLAUDE.md` has the current commands and conventions. A full reconciliation of this file is pending.
 
-## Current State (Updated: July 3, 2026 — Phases 1 & 2 complete, tech-debt sweep done)
-**Latest Session**: Tech-debt sweep (C41–C48) — tour estimate/execution parity, legacy-tour crash fallback, marketing-budget RNG drift, press mentions surfaced, and the C44 wrong-artist release bug; backlog at 44/48 done (0 Critical, 0 High). Work on branch `claude/onboarding-08l2x6`, PR pending.
+## Current State (Updated: July 3, 2026 — Phases 1 & 2 complete, PR #86 merged, manual smoke pass done, native-dialog UX sweep done)
+**Latest Session**: Merged PR #86 (C41–C48 tour/press tech-debt sweep, previously unmerged), ran the manual authenticated smoke pass (new game → A&R → sign artist → project → release → advance week → release execution → save/restore, all verified working), fixed a real UX bug found along the way (native `alert()`/`confirm()` dialogs swept across `client/src` and replaced with in-app `toast()`/`ConfirmDialog`/`AlertDialog`), and logged Comment 49 (inbox shows stale emails after restore until reload — cache-invalidation gap, not yet fixed). Backlog at 44/49 done (0 Critical, 0 High). Committed directly to `main` (`612bb88`), no PR.
 - **Tech Stack**: React 18 + Vite, Express, PostgreSQL (Railway), Clerk auth, TypeScript, Zustand, React Query, XState
 - **Architecture**: `routes.ts` is a thin ~121-line registry mounting 16 feature routers (`server/routes/`) with extracted services (**Phase 1 complete**, incl. PR-15..18 service extractions + security hardening). The engine is decomposed: `shared/engine/game-engine.ts` (~1,136 lines) orchestrates 8 processor modules in `shared/engine/processors/` (**Phase 2 complete**), fully seeded-RNG deterministic and covered by a golden-master harness (`tests/engine/`)
-- **CI**: vitest suite (~695 tests, 0 skipped) + Playwright in `.github/workflows/playwright.yml`
+- **CI**: vitest suite (696 tests, 0 skipped) + Playwright in `.github/workflows/playwright.yml`
 - **Current Phase**: between phases — Phase 3 (client state ownership) planning is next; Phase 4 (game feel) has no tickets yet
 
 ## Completed Major Systems ✅
