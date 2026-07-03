@@ -214,7 +214,12 @@ class AudioManager {
 
 export const audioManager = new AudioManager();
 
-// TODO(phase4): wire notable-chime/warning in PR-3 reveal sequence.
+// Phase 4 PR-5: `notable-chime` is wired in WeekSummary's staged reveal — it
+// plays once when the NOTABLE stage reveals with notable content (chart
+// highlights / non-unlock achievements), suppressed under reduced-motion/skip.
+// `warning` remains intentionally unwired: there is no clean, non-noisy trigger
+// for it in the current reveal flow (a "bad week" has no single hero-style
+// beat), so leaving it silent is deliberate rather than an oversight.
 
 /** Convenience free function mirroring `audioManager.playSound`. */
 export function playSound(key: SoundKey): void {

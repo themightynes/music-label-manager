@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,9 @@ import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3,
 import { ChartPerformanceCard } from './ChartPerformanceCard';
 import { AnimatedNumber } from './motion-primitives/animated-number';
 import { GlowEffect } from './motion-primitives/glow-effect';
+import { ParticleBurst } from './motion-primitives/particle-burst';
 import { useStagedReveal } from '@/hooks/useStagedReveal';
+import { playSound } from '@/lib/audio';
 import { classifyChartUpdate } from '@shared/utils/changeImportance';
 import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate } from '../../../shared/types/gameTypes';
 
@@ -230,6 +232,36 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     instant,
   });
 
+  // --- Celebration tier (Phase 4 PR-5) -------------------------------------
+  // The hero stage gets a distinct fanfare when a No. 1 chart update lands:
+  // a single ParticleBurst over the Milestone Moments card. The store already
+  // plays the week's priority sting (hero-fanfare / campaign-end / etc.) once
+  // per advance, so we DO NOT add sound to the hero stage here (that would
+  // double up). The two previously-unwired stage stings are handled below.
+  const hasNo1 = heroChartUpdates.length > 0;
+  // Fire particles once the hero stage reveals, only when there's a No. 1 and
+  // we're not in instant/skip mode. `heroStageRevealed` flips true exactly once
+  // and never back, so ParticleBurst emits a single burst.
+  const heroStageRevealed = !instant && currentStage >= STAGE_HERO;
+  const fireHeroParticles = heroStageRevealed && hasNo1;
+
+  // Notable-stage sting: when the NOTABLE stage reveals with notable content
+  // (chart highlights or non-unlock achievements), play the notable-chime once.
+  // Suppressed under instant/reduced-motion and when skipped (the reveal jumps
+  // straight to complete, so the staged chime is intentionally silent). The
+  // audio manager itself de-dupes to the highest-priority sound; notable-chime
+  // is not one the store fires, so there is no conflict with the week sting.
+  const hasNotableContent = playerChartUpdates.length > 0 || nonUnlockAchievements.length > 0;
+  const notableChimePlayed = useRef(false);
+  useEffect(() => {
+    if (instant) return; // reduced-motion / skip toggle → no stage chime
+    if (notableChimePlayed.current) return;
+    if (currentStage >= STAGE_NOTABLE && !isComplete && hasNotableContent) {
+      notableChimePlayed.current = true;
+      playSound('notable-chime');
+    }
+  }, [currentStage, isComplete, instant, hasNotableContent]);
+
   // Net-income hero count-up. AnimatedNumber renders STATICALLY on first mount
   // (by PR-1 design) and only animates on value CHANGES — so mounting with
   // netIncome already final meant the count-up never played. Instead, start a
@@ -307,6 +339,13 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                 blur="stronger"
                 colors={['#ff4fd8', '#a855f7', '#22d3ee']}
                 className="opacity-[0.18]"
+              />
+              {/* Celebration particles: one burst when the hero stage reveals a
+                  No. 1 chart update. Self-gated on reduced motion. */}
+              <ParticleBurst
+                trigger={fireHeroParticles}
+                colors={['#ff4fd8', '#a855f7', '#22d3ee', '#fbbf24']}
+                particleCount={26}
               />
               <CardHeader className="relative">
                 <CardTitle className="flex items-center space-x-2 text-sm">
