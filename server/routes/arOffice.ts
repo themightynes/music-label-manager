@@ -2,15 +2,17 @@ import { Router } from 'express';
 import { storage } from '../storage';
 import { serverGameData } from '../data/gameData';
 import { requireClerkUser } from '../auth';
+import { requireGameOwner } from '../middleware/requireGameOwner';
 
 const router = Router();
 
-  router.post('/api/game/:gameId/ar-office/start', requireClerkUser, async (req, res) => {
+  router.post('/api/game/:gameId/ar-office/start', requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
       const { sourcingType, primaryGenre, secondaryGenre } = req.body || {};
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) return res.status(404).json({ message: 'Game not found' });
+      // Ownership + existence verified by requireGameOwner (404 GAME_NOT_FOUND
+      // replaces the previous inline 'Game not found' 404).
+      const gameState = req.gameState!;
 
       // Validate sourcingType
       const validSourcingTypes = ['active', 'passive', 'specialized'];
@@ -71,11 +73,11 @@ const router = Router();
 
 
   // Cancel an A&R sourcing operation
-  router.post('/api/game/:gameId/ar-office/cancel', requireClerkUser, async (req, res) => {
+  router.post('/api/game/:gameId/ar-office/cancel', requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) return res.status(404).json({ message: 'Game not found' });
+      // Ownership + existence verified by requireGameOwner.
+      const gameState = req.gameState!;
 
       const used = gameState.usedFocusSlots || 0;
       const newUsed = gameState.arOfficeSlotUsed ? Math.max(0, used - 1) : used;
@@ -108,11 +110,10 @@ const router = Router();
   });
 
   // Get current A&R status
-  router.get('/api/game/:gameId/ar-office/status', requireClerkUser, async (req, res) => {
+  router.get('/api/game/:gameId/ar-office/status', requireClerkUser, requireGameOwner, async (req, res) => {
     try {
-      const { gameId } = req.params;
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) return res.status(404).json({ message: 'Game not found' });
+      // Ownership + existence verified by requireGameOwner.
+      const gameState = req.gameState!;
 
       return res.json({
         arOfficeSlotUsed: gameState.arOfficeSlotUsed || false,
@@ -126,15 +127,12 @@ const router = Router();
   });
 
   // Get discovered artists for A&R (returns the persisted pick when operation is complete)
-  router.get('/api/game/:gameId/ar-office/artists', requireClerkUser, async (req, res) => {
+  router.get('/api/game/:gameId/ar-office/artists', requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
       console.log('[A&R DEBUG] Backend: Getting discovered artists for game:', gameId);
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        console.log('[A&R DEBUG] Backend: Game not found');
-        return res.status(404).json({ message: 'Game not found' });
-      }
+      // Ownership + existence verified by requireGameOwner.
+      const gameState = req.gameState!;
 
       // Initialize game data - if this fails, return empty list instead of 500 error
       try {

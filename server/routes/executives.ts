@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { serverGameData } from '../data/gameData';
 import { storage } from '../storage';
 import { requireClerkUser } from '../auth';
+import { requireGameOwner } from '../middleware/requireGameOwner';
 import { seededRandomPick, generateMeetingSeed } from '@shared/utils/seededRandom';
 import { gameDataLoader } from '@shared/utils/dataLoader';
 
@@ -101,7 +102,7 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
   });
 
   // Get executives for a game
-  router.get("/api/game/:gameId/executives", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/executives", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
       console.log('[ROUTES] Fetching executives for game:', gameId);
@@ -117,15 +118,23 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
   });
 
   // Process executive action/decision (Week 2 Task)
-  router.post("/api/game/:gameId/executive/:execId/action", requireClerkUser, async (req, res) => {
+  router.post("/api/game/:gameId/executive/:execId/action", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId, execId } = req.params;
       const { actionId, meetingId, choiceId, metadata } = req.body;
 
-      // Get the game state
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        return res.status(404).json({ message: "Game not found" });
+      // Ownership + existence verified by requireGameOwner; reuse its row.
+      const gameState = req.gameState!;
+
+      // HARDENING: validate the executive belongs to THIS game. Previously
+      // execId was used raw as targetId with no check, so any authenticated
+      // owner could pass an arbitrary/other-game execId.
+      const executive = await storage.getExecutive(execId);
+      if (!executive || executive.gameId !== gameId) {
+        return res.status(404).json({
+          error: 'EXECUTIVE_NOT_FOUND',
+          message: 'Executive not found for this game',
+        });
       }
 
       // Store the executive action as a selected action for the week

@@ -53,27 +53,36 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/advance-week",
   },
   {
     "method": "GET",
-    "middleware": [],
+    "middleware": [
+      "requireGameOwner",
+    ],
     "path": "/api/analytics/artist/:artistId/roi",
   },
   {
     "method": "GET",
-    "middleware": [],
+    "middleware": [
+      "requireGameOwner",
+    ],
     "path": "/api/analytics/portfolio/roi",
   },
   {
     "method": "GET",
-    "middleware": [],
+    "middleware": [
+      "requireGameOwner",
+    ],
     "path": "/api/analytics/project/:projectId/roi",
   },
   {
     "method": "GET",
-    "middleware": [],
+    "middleware": [
+      "requireGameOwner",
+    ],
     "path": "/api/analytics/release/:releaseId/roi",
   },
   {
@@ -209,6 +218,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/actions",
   },
@@ -216,6 +226,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/ar-office/artists",
   },
@@ -223,6 +234,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/ar-office/cancel",
   },
@@ -230,6 +242,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/ar-office/start",
   },
@@ -237,6 +250,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/ar-office/status",
   },
@@ -333,6 +347,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/executive/:execId/action",
   },
@@ -340,6 +355,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/executives",
   },
@@ -347,6 +363,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/label",
   },
@@ -441,6 +458,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/test/streaming-decay",
   },
@@ -448,6 +466,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwnerForParam",
     ],
     "path": "/api/game/:id",
   },
@@ -455,6 +474,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "PATCH",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwnerForParam",
     ],
     "path": "/api/game/:id",
   },
@@ -563,6 +583,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/tour/estimate",
   },
