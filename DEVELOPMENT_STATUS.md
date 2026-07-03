@@ -1,6 +1,33 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 2, 2026*
+*Updated: July 3, 2026*
+
+---
+
+## 📅 Session Log — July 3, 2026 (Tech-debt sweep: tour & release preview↔execution parity, C41–C48)
+
+**Cleared every remaining Critical/High/tour-family backlog item in one session — backlog now 44/48 done (0 Critical, 0 High).** All work is on branch **`claude/onboarding-08l2x6`** (5 commits, pushed, **no PR opened yet** — that's the first next step). Remote-container session: no Docker available, so the vitest suite ran against a native PostgreSQL 16 cluster stood up on port 5433 (same `postgres:postgres@localhost:5433/music_label_test` contract as CI).
+
+**Done this session:**
+- **C46 ✅** — `POST /api/tour/estimate` now honors an explicit `venueCapacity` for `totalBudget` (via `calculateTourCostsWithCapacity`); tier-RNG draw only as no-capacity fallback. Found the ticket's "display-only" framing was wrong: `LivePerformancePage` passes `totalBudget` back as the tour's charged `totalCost`, so the random draw was leaking into what the player pays. Estimate characterization test now pins `totalBudget`/`canAfford` exactly (old `<rng-derived>` normalization gone).
+- **C47 ✅ (two steps)** — first aligned the estimate route's `artistPopularity` default to the engine's `|| 50`; then per product decision changed **both** sides to floor zero/unset popularity to **1** (`artist.popularity || 1`) — a true unknown tours as a nobody, not a mid-tier act. No RNG-stream impact; golden master unaffected (fixture artist is popularity 60). Parity test: popularity-0 ≡ popularity-1 estimates, and popularity-0 revenue < popularity-50 (guards the old default from regressing).
+- **C41 ✅** — a tour missing `metadata.venueCapacity` (legacy/imported save) no longer throws in `TourProcessor` and bricks week advancement; falls back to the **deterministic midpoint** of the stored tier's range (clubs → 275). New golden-master scenario `legacy-tour-week` pins it.
+- **C48 ✅ (new entry, found+fixed same day)** — `TourProcessor` back-derived the marketing budget via `calculateTourCosts`' hidden random tier-capacity draw, so executed marketing spend drifted from the `budgetPerCity × cities` the player paid. Now extracted against the tour's actual capacity. Removes one RNG draw per tour → golden-master `tour-week` snapshot regenerated (fixture marketing now exactly $6,650/city; was $8,619.80 inflated by a random ~206 capacity). Only the tour scenario shifted; all others byte-identical.
+- **C45 ✅** — the backlog's `star_power_amplification`-is-dead claim was **wrong**: it's live in `FinancialSystem.calculateStreamingOutcome` (every release's initial streams) with unit-test coverage — backlog corrected, config kept. The real fix: `weeklyStats.pressMentions` was hardcoded 0 (standing TODO) while MetricsDashboard displays it in 3 places; `WeekSummary.pressMentions` now accumulates pickups from release press coverage (`ReleaseProcessor`) + PR campaigns (`ActionProcessor`). Release-week golden master gained only the new `pressMentions: 8` field.
+- **C44 ✅ (was the last High)** — the "two independent calculation paths" premise was **stale**: since Phase 2, `calculateSophisticatedReleaseOutcome` is a thin adapter delegating to `calculateReleasePreview` (one multiplier chain; metadata field names verified write↔read). The real residual divergence: `processPlannedReleases` fetched **the first artist in the game** (`getArtistsByGame(...)[0]`) instead of the release's artist — on multi-artist rosters, execution used the wrong artist's popularity while the preview used the right one. Fixed to `getArtist(release.artistId)`. New golden-master scenario `multi-artist-release-week` pins it (popularity-90 release artist → 232,553 streams vs 156,368 for the popularity-50 fixture); single-artist `release-week` snapshot stayed byte-identical. Accepted inherent preview/execution deltas (RNG draw position, state drift between plan and release week, lead-single split) documented in the backlog resolution.
+- **Deleted the 3 skipped pre-flip characterization pins** (A&R pre-pure-read block ×2, artists-PATCH pre-hardening baseline) — their keep-visible-in-the-diff purpose expired when the Phase 2 PRs merged. Suite now **695 passed, 0 skipped**; `tsc` clean.
+
+**Decisions made:**
+- Zero/unset artist popularity floors to **1** in tour math, both estimate and engine (`|| 1`, so a genuine popularity-0 artist is no longer silently treated as 50). Sanctioned behavior change, scoped to zero/unset only.
+- C41 fallback uses the tier-range **midpoint, not an RNG draw**, so legacy tours can't perturb the seeded stream for other systems.
+- `TourProcessor`'s header now carries a POST-EXTRACTION CHANGES log (C47/C41/C48) since the file is no longer character-identical to the extracted original.
+- `star_power_amplification` stays — it's live config; the backlog claim was corrected rather than the config deleted.
+
+**Open threads / next steps:**
+- **Open a PR for `claude/onboarding-08l2x6`** (5 commits: C46+C47 estimate fixes, popularity floor, C41/C48/C45 batch, C44, skipped-test cleanup) and merge; then resync `main`.
+- **Manual authenticated smoke pass STILL owed** (fourth session running): new game → sign artist → create project → plan release → A&R op → advance week → save/restore.
+- **Backlog remaining (4)**: C42 (awareness is dead bookkeeping — product decision: wire into streaming multiplier or stop celebrating it), C43 (planned releases can't be cancelled/edited — feature + partial-refund design), C26 (ArtistPage refactor), C32 (email snapshot cap).
+- **Phase 3 (client state ownership) planning** still queued; D6 whole-week transaction atomicity still a filed idea; difficulty UI still unexposed.
 
 ---
 
