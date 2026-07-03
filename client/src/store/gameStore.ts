@@ -10,6 +10,7 @@ import { buildGameSnapshot } from '@/utils/buildGameSnapshot';
 import { formatAutosaveName } from '@shared/utils/saveName';
 import { EMAIL_LIST_SCOPE, EMAIL_UNREAD_SCOPE } from '@/hooks/useEmails';
 import { executivesQueryKey } from '@/hooks/useExecutives';
+import { CHART_TOP10_SCOPE, CHART_TOP100_SCOPE } from '@/hooks/useCharts';
 
 // Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
 // identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
@@ -818,6 +819,12 @@ export const useGameStore = create<GameStore>()(
           await queryClient.invalidateQueries({
             predicate: (query) =>
               (query.queryKey[0] === EMAIL_LIST_SCOPE || query.queryKey[0] === EMAIL_UNREAD_SCOPE) &&
+              query.queryKey[1] === syncedGameState.id,
+          });
+          // Invalidate chart caches so Top 10 / Top 100 reflect the new week
+          await queryClient.invalidateQueries({
+            predicate: (query) =>
+              (query.queryKey[0] === CHART_TOP10_SCOPE || query.queryKey[0] === CHART_TOP100_SCOPE) &&
               query.queryKey[1] === syncedGameState.id,
           });
         } catch (error) {
