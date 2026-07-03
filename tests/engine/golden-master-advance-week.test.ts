@@ -50,6 +50,7 @@ const IDS = {
   catalog: '00000000-0000-4000-8000-000000000007',
   actions: '00000000-0000-4000-8000-000000000008',
   tourLegacy: '00000000-0000-4000-8000-000000000009',
+  multiArtistRelease: '00000000-0000-4000-8000-00000000000a',
 };
 
 let db: TestDb;
@@ -197,6 +198,51 @@ describe('GameEngine.advanceWeek — golden master', () => {
     });
 
     const snap = await runScenario(IDS.release, { id: IDS.release, currentWeek: 4 });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('multi-artist-release-week: release outcome uses the RELEASE artist, not the first artist in the game (C44)', async () => {
+    // Pre-C44 fix, processPlannedReleases fetched `getArtistsByGame(...)[0]` —
+    // with a multi-artist roster the outcome used the FIRST artist's popularity
+    // instead of the release artist's, so preview (correct artist) and
+    // execution diverged. Seed a low-popularity bystander FIRST and give the
+    // release to a high-popularity artist: streams in this snapshot are only
+    // reproducible if the release artist's popularity (90) drives the math.
+    await seedGame(IDS.multiArtistRelease, 4);
+    await seedArtist(IDS.multiArtistRelease, { name: 'Bystander Act', popularity: 5 });
+    const starArtistId = await seedArtist(IDS.multiArtistRelease, { name: 'Star Releaser', popularity: 90 });
+
+    const releaseId = crypto.randomUUID();
+    const songId = crypto.randomUUID();
+    await db.insert(schema.songs).values({
+      id: songId,
+      gameId: IDS.multiArtistRelease,
+      artistId: starArtistId,
+      title: 'Star Track',
+      quality: 75,
+      genre: 'pop',
+      isRecorded: true,
+      isReleased: false,
+    });
+    await db.insert(schema.releases).values({
+      id: releaseId,
+      gameId: IDS.multiArtistRelease,
+      artistId: starArtistId,
+      title: 'Star Single',
+      type: 'single',
+      status: 'planned',
+      releaseWeek: 5,
+      marketingBudget: 5000,
+      metadata: { marketingBudget: 5000, totalInvestment: 5000 },
+    });
+    await db.insert(schema.releaseSongs).values({
+      releaseId,
+      songId,
+      trackNumber: 1,
+      isSingle: true,
+    });
+
+    const snap = await runScenario(IDS.multiArtistRelease, { id: IDS.multiArtistRelease, currentWeek: 4 });
     expect(snap).toMatchSnapshot();
   });
 

@@ -701,15 +701,17 @@ The song awareness system (`shared/engine/game-engine.ts:1617-1750`) runs every 
 
 ---
 
-### Comment 44: Release preview and execution are separate calculation code paths 🟡
-**Status**: 📋 **PENDING**
+### ~~Comment 44: Release preview and execution are separate calculation code paths~~ ✅
+**Status**: ✅ **COMPLETED** (July 3, 2026)
 
-The planning preview uses `GameEngine.calculateReleasePreview()` (`shared/engine/game-engine.ts:4692-4941`) while release-week execution uses `calculateSophisticatedReleaseOutcome()` — two independent implementations of the same multiplier chain (release type, seasonal, marketing synergy/diversity, lead-single boost). Any change to one that misses the other silently makes the preview lie to the player. Same divergence pathology as C35 (snapshot built in two places), which already shipped a real bug once.
+**Resolution**: The "two independent implementations" claim was **already stale** — since the Phase 2 `ReleaseProcessor` extraction, `calculateSophisticatedReleaseOutcome` is a thin adapter that reconstructs a release config from stored metadata and **delegates to `calculateReleasePreview`**; the multiplier chain (release type, seasonal, marketing synergy/diversity, lead-single boost) exists in exactly one place, and the preview endpoint (`POST /releases/preview`) calls the same method. The stored-metadata field names (`marketingBudgetBreakdown`, `leadSingleBudgetBreakdown`) were verified to line up between `releasePlanningService` (write) and the adapter (read).
 
-**Action**: Extract one shared calculation used by both the preview endpoint and week-advance execution. Natural fit for the PR-17 releasePlanningService extraction or immediately after it.
+**One real residual divergence was found and fixed**: `processPlannedReleases` fetched `getArtistsByGame(...)[0]` — the **first artist in the game** — and only fell back to `getArtist(release.artistId)` on an empty roster. On any multi-artist roster, execution computed the outcome with the wrong artist's popularity while the preview used the correct one. Now fetches the release's artist directly. Pinned by a new golden-master scenario (`multi-artist-release-week`: low-popularity bystander seeded first, release owned by a popularity-90 artist → 232,553 streams, vs 156,368 for the popularity-50 single-artist fixture with identical quality/marketing). The single-artist `release-week` snapshot stayed byte-identical, confirming no behavior change for single-artist games.
+
+**Accepted (inherent) preview/execution differences, documented here deliberately**: (1) RNG variance — the preview endpoint draws from a fresh engine seeded at the planning week; execution draws mid-stream during the release week's `advanceWeek`, so exact numbers differ (the preview is an estimate, not a quote); (2) game state evolves between plan time and release week (reputation, playlist access, artist popularity all legitimately move); (3) for EPs with a lead single, the preview estimates the whole campaign while execution splits it into the lead-single week and the main-release week (already-released songs are excluded from the main drop).
 
 **Relevant Files**:
-- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+- [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts)
 - [server/routes/releases.ts](server/routes/releases.ts)
 
 *Identified July 2, 2026 during the release-experience code trace.*
@@ -781,14 +783,14 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 1 item (C44)
+- 🟡 High: 0 items (all completed! 🎉)
 - 🟢 Medium: 2 items (C42, C43)
 - 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 43 items (89.6%)
+- ✅ Completed: 44 items (91.7%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 5 items (10.4%)
+- 📋 Pending: 4 items (8.3%)
 
 ---
 
