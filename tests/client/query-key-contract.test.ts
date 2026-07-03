@@ -36,6 +36,7 @@ import {
   DISCOVERED_ARTISTS_SCOPE,
   discoveredArtistsQueryKey,
 } from '@/hooks/useDiscoveredArtists';
+import { GAME_STATE_SCOPE, gameStateQueryKey } from '@/hooks/useGameState';
 
 const GAME_ID = 'game-1';
 const ARTIST_ID = 'artist-1';
@@ -70,6 +71,8 @@ const REAL_QUERY_KEYS: readonly unknown[][] = [
   // [SCOPE, gameId]
   [...artistsQueryKey(GAME_ID)],
   [...discoveredArtistsQueryKey(GAME_ID)],
+  // gameState spine record (useGameState.ts, Phase 3.5 PR-4): [SCOPE, gameId]
+  [...gameStateQueryKey(GAME_ID)],
   ['api', 'saves'],
 ];
 
@@ -191,6 +194,31 @@ describe('query-key contract: artist mutation invalidations (PR-9)', () => {
   it('the artist scope constants and hook keys agree element-for-element', () => {
     expect(artistsQueryKey(GAME_ID)).toEqual([ARTISTS_SCOPE, GAME_ID]);
     expect(discoveredArtistsQueryKey(GAME_ID)).toEqual([DISCOVERED_ARTISTS_SCOPE, GAME_ID]);
+  });
+});
+
+describe('query-key contract: gameState record key (Phase 3.5 PR-4)', () => {
+  // The dual-write funnel (commitGameState) writes the spine to the query cache
+  // at gameStateQueryKey(gameId) == [GAME_STATE_SCOPE, gameId]. It's a
+  // client-committed record written via setQueryData (not invalidated), but the
+  // key must still be a real, uniquely-scoped shape that matches nothing else.
+  it('the gameState record key is [GAME_STATE_SCOPE, gameId]', () => {
+    expect(gameStateQueryKey(GAME_ID)).toEqual([GAME_STATE_SCOPE, GAME_ID]);
+    expect(GAME_STATE_SCOPE).toBe('gameState:record');
+  });
+
+  it('a gameState-key write targets exactly one game (no cross-game bleed)', () => {
+    expect(someRealKeyMatchesInvalidationKey(gameStateQueryKey(GAME_ID))).toBe(true);
+    expect(someRealKeyMatchesInvalidationKey(gameStateQueryKey('other'))).toBe(false);
+  });
+
+  it('the gameState scope does not collide with any other hook scope', () => {
+    // No OTHER real query key starts with GAME_STATE_SCOPE — the record key is
+    // its own namespace, so a spine commit can never clobber a collection cache.
+    const collisions = REAL_QUERY_KEYS.filter(
+      (real) => real[0] === GAME_STATE_SCOPE && real[1] !== GAME_ID,
+    );
+    expect(collisions).toHaveLength(0);
   });
 });
 

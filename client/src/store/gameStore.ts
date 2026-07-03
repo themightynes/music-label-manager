@@ -19,6 +19,7 @@ import {
   discoveredArtistsQueryKey,
   fetchDiscoveredArtists,
 } from '@/hooks/useDiscoveredArtists';
+import { gameStateQueryKey } from '@/hooks/useGameState';
 
 // Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
 // identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
@@ -173,6 +174,52 @@ async function refetchDiscoveredArtistsCache(gameState: GameState | null) {
   }
 }
 
+// Phase 3.5 PR-4: THE dual-write commit funnel for the gameState spine.
+//
+// Every gameState write in the store flows through here. It (a) writes Zustand
+// exactly as before — `set({ gameState: next })`, same shallow-merge semantics,
+// byte-for-byte identical resulting store state — and (b) synchronously mirrors
+// the same object into the TanStack Query cache at `gameStateQueryKey(next.id)`.
+// The cache is a CLIENT-COMMITTED RECORD: this funnel is its only writer, so the
+// two sources can never diverge. `useGameState()` still READS Zustand until PR-5
+// flips it; the cache write here is a no-op for readers this PR but lets PR-5 be
+// a one-file change.
+//
+// `previousGameId` handles the game-SWITCH writers (loadGame / loadGameFromSave /
+// createNewGame): when the committed game's id differs from the game we were on,
+// the stale prior key is removed so a switched-away game never lingers in cache.
+// The new key is always seeded BEFORE any gameId flip is observable (the write
+// is synchronous and precedes the return), satisfying the PR-4 ordering pin.
+//
+// The `set` parameter is the Zustand setter (the store closure's `set`, or a
+// `set`-compatible shim over `useGameStore.setState` for helpers outside the
+// closure like `adoptServerBalances`).
+type ZustandSet = (partial: Partial<GameStore>) => void;
+
+function commitGameState(
+  set: ZustandSet,
+  next: GameState,
+  previousGameId?: string | null,
+) {
+  // (a) Zustand write — unchanged semantics.
+  set({ gameState: next });
+  // (b) Cache mirror. Drop the stale key first on a game switch so a
+  // switched-away game never lingers in the cache. `removeQueries` is guarded
+  // for the mocked queryClient in the characterization harness (which stubs only
+  // invalidate/set/getQueryData) — its absence must not break the Zustand write.
+  if (
+    previousGameId &&
+    next.id &&
+    previousGameId !== next.id &&
+    typeof queryClient.removeQueries === 'function'
+  ) {
+    queryClient.removeQueries({ queryKey: gameStateQueryKey(previousGameId) });
+  }
+  if (next.id) {
+    queryClient.setQueryData(gameStateQueryKey(next.id), next);
+  }
+}
+
 // Phase 3 PR-10: adopt the SERVER-CANONICAL money + creativeCapital after a
 // mutation instead of doing optimistic client-side arithmetic on gameState.
 // signArtist / createProject / planRelease all recompute cost server-side (Phase
@@ -199,12 +246,13 @@ async function adoptServerBalances(get: () => GameStore, gameId: string) {
     if (!serverGameState) return;
     const current = get().gameState;
     if (!current) return;
-    useGameStore.setState({
-      gameState: {
-        ...current,
-        money: serverGameState.money,
-        creativeCapital: serverGameState.creativeCapital,
-      },
+    // Phase 3.5 PR-4: route the two-field merge through the dual-write funnel so
+    // the cache mirror stays in lock-step. Same-game write (id unchanged), so no
+    // previous-key removal. `useGameStore.setState` is the setter here.
+    commitGameState((partial) => useGameStore.setState(partial), {
+      ...current,
+      money: serverGameState.money,
+      creativeCapital: serverGameState.creativeCapital,
     });
   } catch (error) {
     console.error('[PR-10] Failed to adopt server balances:', error);
@@ -309,6 +357,7 @@ export const useGameStore = create<GameStore>()(
 
       // Load existing game
       loadGame: async (gameId: string) => {
+        const previousGameId = get().gameState?.id ?? null;
         try {
           const {
             gameData: data,
@@ -348,8 +397,11 @@ export const useGameStore = create<GameStore>()(
           // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /
           // artists are seeded into the TanStack Query cache by fetchGameBundle —
           // no longer written here.
+          // Phase 3.5 PR-4: gameState flows through the dual-write funnel (Zustand
+          // + cache); the remaining store fields keep their plain `set`. Game
+          // switch → the funnel removes the previous game's stale record key.
+          commitGameState(set, gameStateWithLabel, previousGameId);
           set({
-            gameState: gameStateWithLabel,
             roles: data.roles,
             weeklyActions: data.weeklyActions,
             emails: emailList,
@@ -372,6 +424,7 @@ export const useGameStore = create<GameStore>()(
 
       // Load game from save
       loadGameFromSave: async (saveId: string, snapshot: GameSaveSnapshot, mode: 'overwrite' | 'fork' = 'overwrite') => {
+        const previousGameId = get().gameState?.id ?? null;
         try {
           if (!snapshot?.gameState?.id) {
             throw new Error('Invalid save data format');
@@ -421,8 +474,12 @@ export const useGameStore = create<GameStore>()(
           // with the server's authoritative copy.
           seedArtistsCache(baseGameState.id, snapshot.artists || []);
 
+          // Phase 3.5 PR-4: commit the interim gameState through the funnel
+          // (Zustand + cache). Game switch from `previousGameId` → its stale
+          // record key is removed; the new interim key is seeded here BEFORE any
+          // downstream gameId flip is observable.
+          commitGameState(set, interimGameState, previousGameId);
           set({
-            gameState: interimGameState,
             roles: (snapshot.roles || []) as unknown as Role[],
             emails: snapshot.emails || [],
             executives: snapshot.executives || [],
@@ -460,8 +517,11 @@ export const useGameStore = create<GameStore>()(
           // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /
           // artists seeded into the query cache by fetchGameBundle above — no
           // longer written into the store.
+          // Phase 3.5 PR-4: commit the post-restore gameState through the funnel.
+          // On a FORK the restored id differs from the interim id — pass the
+          // interim id as `previousGameId` so the interim key is cleared.
+          commitGameState(set, syncedGameState, interimGameState.id);
           set({
-            gameState: syncedGameState,
             roles: gameData.roles || [],
             weeklyActions: gameData.weeklyActions || [],
             emails: emailList || [],
@@ -505,6 +565,7 @@ export const useGameStore = create<GameStore>()(
           // ============================================================================
 
           const currentGame = get().gameState;
+          const previousGameId = currentGame?.id ?? null;
           if (currentGame?.id) {
             console.log(`[ORPHANED GAME CLEANUP] Checking if current game ${currentGame.id} (Week ${currentGame.currentWeek}) has saves...`);
 
@@ -614,9 +675,12 @@ export const useGameStore = create<GameStore>()(
           seedArtistsCache(gameState.id, []);
           queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), []);
 
-          // Clear campaign results and set new state
+          // Clear campaign results and set new state.
+          // Phase 3.5 PR-4: commit the new game's gameState through the funnel.
+          // The new id differs from `previousGameId` (or there was none) → the
+          // funnel removes the old game's stale record key and seeds the new one.
+          commitGameState(set, syncedGameState, previousGameId);
           set({
-            gameState: syncedGameState,
             roles: [],
             weeklyActions: [],
             emails: [],
@@ -655,11 +719,10 @@ export const useGameStore = create<GameStore>()(
           const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
           const newUsedSlots = newSelectedActions.length + arUsed;
           
-          // Update local state
-          set({
-            selectedActions: newSelectedActions,
-            gameState: { ...gameState, usedFocusSlots: newUsedSlots }
-          });
+          // Update local state. Phase 3.5 PR-4: gameState → dual-write funnel
+          // (same game, no key removal); selectedActions keeps its plain `set`.
+          set({ selectedActions: newSelectedActions });
+          commitGameState(set, { ...gameState, usedFocusSlots: newUsedSlots });
 
           await syncSlotsPatch(gameState.id, {
             usedFocusSlots: newUsedSlots,
@@ -676,11 +739,10 @@ export const useGameStore = create<GameStore>()(
           const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
           const newUsedSlots = newSelectedActions.length + arUsed;
           
-          // Update local state
-          set({
-            selectedActions: newSelectedActions,
-            gameState: { ...gameState, usedFocusSlots: newUsedSlots }
-          });
+          // Update local state. Phase 3.5 PR-4: gameState → dual-write funnel
+          // (same game, no key removal); selectedActions keeps its plain `set`.
+          set({ selectedActions: newSelectedActions });
+          commitGameState(set, { ...gameState, usedFocusSlots: newUsedSlots });
 
           // Sync focus slots and A&R status to server to prevent desync issues
           await syncSlotsPatch(gameState.id, {
@@ -702,10 +764,13 @@ export const useGameStore = create<GameStore>()(
       clearActions: () => {
         const { gameState } = get();
         const arUsed = gameState?.arOfficeSlotUsed ? 1 : 0;
-        set({ 
-          selectedActions: [],
-          gameState: gameState ? { ...gameState, usedFocusSlots: arUsed } : gameState
-        });
+        // Phase 3.5 PR-4: selectedActions keeps its plain `set`; gameState (when
+        // present) flows through the dual-write funnel. When gameState is null it
+        // stays null (no funnel write) — same as the prior conditional.
+        set({ selectedActions: [] });
+        if (gameState) {
+          commitGameState(set, { ...gameState, usedFocusSlots: arUsed });
+        }
       },
 
       // Advance week
@@ -817,8 +882,10 @@ export const useGameStore = create<GameStore>()(
           // artists seeded into the query cache by fetchGameBundle — no longer
           // written into the store. The artists seed reflects post-week mood
           // changes (formerly `artists: gameData.artists`).
+          // Phase 3.5 PR-4: gameState → dual-write funnel (same game, no key
+          // removal); the session/UI fields keep their plain `set`.
+          commitGameState(set, syncedGameState);
           set({
-            gameState: syncedGameState,
             emails: emailList || [],
             executives: Array.isArray(executivesData) ? executivesData : [],
             moodEvents: Array.isArray(moodEventsData) ? moodEventsData : [],
@@ -1089,7 +1156,8 @@ export const useGameStore = create<GameStore>()(
             ...gameState,
             money: result.newBalance
           };
-          set({ gameState: updatedGameState });
+          // Phase 3.5 PR-4: dual-write funnel (same game).
+          commitGameState(set, updatedGameState);
 
           // Phase 3 PR-7: projects are cache-owned now. Invalidate the projects
           // key so useProjects drops the cancelled project instead of filtering
@@ -1152,7 +1220,8 @@ export const useGameStore = create<GameStore>()(
           usedFocusSlots: selectedActions.length + 1,
         } as GameState;
 
-        set({ gameState: updated });
+        // Phase 3.5 PR-4: dual-write funnel (same game).
+        commitGameState(set, updated);
 
         await syncSlotsPatch(gameState.id, {
           usedFocusSlots: updated.usedFocusSlots,
@@ -1172,7 +1241,8 @@ export const useGameStore = create<GameStore>()(
           usedFocusSlots: selectedActions.length,
         } as GameState;
 
-        set({ gameState: updated });
+        // Phase 3.5 PR-4: dual-write funnel (same game).
+        commitGameState(set, updated);
 
         await syncSlotsPatch(gameState.id, {
           usedFocusSlots: updated.usedFocusSlots,
