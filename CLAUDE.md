@@ -63,7 +63,7 @@ npm run db:studio     # Verify in database
 
 ## 💾 Save/Load Snapshots
 - **Snapshot shape**: a save snapshot is `{ snapshotVersion, gameState: <inner game state>, musicLabel, artists, projects, roles, songs, releases, emails, emailMetadata, releaseSongs, executives, moodEvents, weeklyActions, weeklyOutcome }`. `musicLabel` and all collections are **siblings of `gameState`**, NOT nested inside it (`saveGame`/`handleExport` strip `musicLabel` out of `gameState`). Server JSON-path queries must read `game_state->'musicLabel'`, not `game_state->'gameState'->'musicLabel'`.
-- **Built in two places**: `client/src/components/SaveGameModal.tsx` (`handleExport`) and `client/src/store/gameStore.ts` (`saveGame`) assemble the snapshot independently — keep them in sync (they have already drifted on `emailMetadata.truncated`).
+- **Built via a shared helper**: `client/src/components/SaveGameModal.tsx` (`handleExport`) and `client/src/store/gameStore.ts` (`saveGame`) both call `buildGameSnapshot()` (`client/src/utils/buildGameSnapshot.ts`) to assemble the snapshot, so the two call sites can no longer drift on field shape (e.g. `emailMetadata.truncated`) the way they once did — the assembly logic lives in exactly one place. Both call sites source the five migrated collections (`songs`, `releases`, `releaseSongs`, `projects`, `artists`) AND the `gameState` spine itself from the TanStack Query cache (`getQueryData`/`useGameState()`), not from a Zustand-held copy (see `client/CLAUDE.md` State Management, Phase 3.5).
 - **`SNAPSHOT_VERSION`** lives in `shared/schema.ts`; restore rejects mismatched versions. Bump it and add migration logic when the shape changes.
 
 ## 🎨 Color System — v2 "Neo-Cyber HUD" (July 2026)

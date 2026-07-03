@@ -1,6 +1,6 @@
 /**
  * Helper functions for enhanced release details and analytics
- * Uses existing data from useGameStore without requiring backend changes
+ * Uses existing data from the releases/projects query cache without requiring backend changes
  */
 
 export interface CampaignData {
