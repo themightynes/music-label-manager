@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { useGameContext } from '@/contexts/GameContext';
@@ -12,6 +12,8 @@ import { toast } from '@/hooks/use-toast';
 import logger from '@/lib/logger';
 import { getWeekDateRange } from '@shared/utils/seasonalCalculations';
 import { Coins, ChevronsRight, Zap } from 'lucide-react';
+import { useReducedMotion } from 'motion/react';
+import { WeekTransition } from '@/components/WeekTransition';
 
 /**
  * GameHeader — slim right-aligned v2 page header (Design System v2 §7).
@@ -27,6 +29,7 @@ export function GameHeader() {
     useGameStore();
   const { gameId } = useGameContext();
   const [isAutoSelecting, setIsAutoSelecting] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   if (!gameState) {
     return null;
@@ -122,7 +125,12 @@ export function GameHeader() {
     }
   };
 
+  // Charging treatment while the advance is in flight (Phase 4 PR-4).
+  // Reduced motion keeps the plain "Processing…" text with no shimmer/pulse.
+  const isCharging = isAdvancingWeek && !prefersReducedMotion;
+
   return (
+    <>
     <header
       aria-label="Label vitals"
       className="flex flex-wrap items-center justify-end gap-4"
@@ -157,12 +165,33 @@ export function GameHeader() {
           type="button"
           onClick={handleAdvanceWeek}
           disabled={selectedActions.length === 0 || isAdvancingWeek}
-          className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-button bg-gradient-to-br from-action-pink to-action-purple px-4 py-1.5 text-[13px] font-semibold text-white shadow-action transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          className={`relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-button bg-gradient-to-br from-action-pink to-action-purple px-4 py-1.5 text-[13px] font-semibold text-white shadow-action transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50${
+            isCharging ? ' animate-pulse [animation-duration:1.6s]' : ''
+          }`}
+          // Charging: lift the disabled dim + add a soft glow so the pulse reads
+          // as energy, not a dead button. Inline style so it deterministically
+          // wins over the disabled:opacity-50 utility.
+          style={
+            isCharging
+              ? {
+                  opacity: 0.95,
+                  boxShadow: '0 0 18px rgba(255, 77, 141, 0.45)',
+                }
+              : undefined
+          }
         >
           <span
             aria-hidden="true"
             className="pointer-events-none absolute left-3.5 right-3.5 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
           />
+          {/* charging shimmer sweep while the week advance is in flight */}
+          {isCharging && (
+            <span
+              aria-hidden="true"
+              data-testid="advance-week-charging"
+              className="animate-ds-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent bg-[length:200%_100%] [animation-duration:1.2s]"
+            />
+          )}
           {isAdvancingWeek ? 'Processing…' : 'Advance Week'}
           <ChevronsRight className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -192,5 +221,9 @@ export function GameHeader() {
         </div>
       </div>
     </header>
+
+    {/* Week-transition interstitial — purely visual, never gates data flow */}
+    <WeekTransition isAdvancing={isAdvancingWeek} />
+    </>
   );
 }
