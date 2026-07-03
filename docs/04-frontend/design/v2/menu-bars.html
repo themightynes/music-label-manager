@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Major+Mono+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:#06050e; }
+  @keyframes discSpin { from{transform:rotate(0);} to{transform:rotate(360deg);} }
+  @keyframes shimmer { 0%{background-position:0% 0;} 100%{background-position:200% 0;} }
+  .mi { display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:10px; font-size:13px; font-weight:500; color:rgba(233,230,244,0.5); cursor:pointer; }
+  .mi:hover { background:rgba(255,255,255,0.05); color:#F3F1F9; }
+  .mi i { width:16px; text-align:center; font-size:13px; opacity:0.7; }
+  .ic { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:rgba(233,230,244,0.55); cursor:pointer; font-size:15px; }
+  .ic:hover { background:rgba(255,255,255,0.06); color:#fff; }
+  .badge { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; padding:3px 9px; border-radius:7px; color:#fff; background:linear-gradient(135deg,#ff4d8d,#a05af0); }
+  .gcap { font-size:13px; color:rgba(233,230,244,0.55); max-width:280px; line-height:1.5; margin-top:8px; }
+  .gtitle { font-size:16px; font-weight:600; color:#F3F1F9; }
+</style>
+</helmet>
+
+<div style="position:relative; min-width:2200px; background:#06050e; font-family:'Inter',sans-serif; color:#F3F1F9; padding:64px 72px 120px;">
+
+  <!-- ambient -->
+  <div style="position:absolute; top:-160px; left:40%; width:1100px; height:700px; filter:blur(120px); opacity:0.4; pointer-events:none; background:radial-gradient(circle at 40% 50%,#6a2fd0 0%,rgba(106,47,208,0) 60%),radial-gradient(circle at 70% 40%,#2f8fff 0%,rgba(47,143,255,0) 55%),radial-gradient(circle at 55% 60%,#ff2f7a 0%,rgba(255,47,122,0) 52%);"></div>
+
+  <!-- header -->
+  <div style="position:relative; z-index:1; margin-bottom:50px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:#37d6ff; margin-bottom:14px;">Music Label Manager · Navigation Studies</div>
+    <h1 style="font-family:'Major Mono Display',monospace; font-weight:400; font-size:52px; line-height:0.92; margin:0; color:#F7F4FB; text-shadow:2px 0 0 rgba(255,77,141,0.4),-2px 0 0 rgba(55,180,255,0.45);">menu bars</h1>
+    <p style="font-size:14px; color:rgba(233,230,244,0.6); max-width:560px; margin:14px 0 0; line-height:1.6;">Five ways to carry the spinning disc as the hero mark. Reference any by its id badge (e.g. 1c) in chat.</p>
+  </div>
+
+  <!-- ===== TURN 1 : options row ===== -->
+  <section style="position:relative; z-index:1; display:flex; flex-wrap:wrap; gap:48px; align-items:flex-start;">
+
+    <!-- ---------- 1A CONSOLE RAIL ---------- -->
+    <div id="1a">
+      <div style="display:flex; align-items:center; gap:10px;"><span class="badge">1A</span><span class="gtitle">Console Rail</span></div>
+      <div class="gcap">The workhorse. Full labelled rail, grouped sections, disc + wordmark lockup. Best for depth of navigation.</div>
+      <div style="position:relative; width:640px; height:560px; margin-top:18px; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0814; box-shadow:0 30px 70px rgba(0,0,0,0.5);">
+        <div style="position:absolute; top:-120px; right:-80px; width:420px; height:360px; filter:blur(80px); opacity:0.4; background:radial-gradient(circle,#6a2fd0,rgba(106,47,208,0));"></div>
+        <div style="position:relative; display:flex; height:100%;">
+          <aside style="width:230px; flex-shrink:0; background:rgba(9,8,18,0.82); backdrop-filter:blur(10px); border-right:1px solid rgba(255,255,255,0.06); padding:18px 12px; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; gap:11px; padding:2px 6px 16px; border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div style="position:relative; width:38px; height:38px; border-radius:999px; overflow:hidden; flex-shrink:0; box-shadow:0 0 0 1px rgba(160,90,240,0.4);"><div style="position:absolute; inset:0; animation:discSpin 14s linear infinite; background:repeating-conic-gradient(from 0deg,#ff3d6e 0deg,#ff9a3d 22deg,#ffe14d 42deg,#57ff8f 66deg,#37d6ff 92deg,#4a6bff 118deg,#b45cff 146deg,#ff3d6e 180deg);"></div><div style="position:absolute; top:50%; left:50%; width:34%; height:34%; margin:-17% 0 0 -17%; border-radius:999px; background:#0a0814;"></div></div>
+              <div><div style="font-family:'Major Mono Display',monospace; font-size:12px;">velvet sound</div><div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.14em; color:rgba(180,170,220,0.5); text-transform:uppercase; margin-top:2px;">studios</div></div>
+            </div>
+            <div style="margin-top:12px;">
+              <div class="mi" style="position:relative; background:linear-gradient(90deg,rgba(160,90,240,0.22),transparent); color:#F3F1F9;"><span style="position:absolute; left:0; top:8px; bottom:8px; width:2.5px; border-radius:2px; background:linear-gradient(180deg,#ff4d8d,#a05af0,#37d6ff);"></span><i class="fas fa-gauge-high" style="opacity:1; color:#c8a6ff;"></i>Dashboard</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.22em; text-transform:uppercase; color:rgba(233,230,244,0.28); padding:0 12px; margin:16px 0 6px;">Workspace</div>
+              <div class="mi"><i class="fas fa-building"></i>The Office</div>
+              <div class="mi"><i class="fas fa-users"></i>Artists</div>
+              <div class="mi"><i class="fas fa-compact-disc"></i>A&amp;R Office</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.22em; text-transform:uppercase; color:rgba(233,230,244,0.28); padding:0 12px; margin:16px 0 6px;">Actions</div>
+              <div class="mi"><i class="fas fa-rocket"></i>Plan Release</div>
+              <div class="mi"><i class="fas fa-trophy"></i>Top 100 Chart</div>
+            </div>
+          </aside>
+          <div style="flex:1; padding:24px; display:flex; flex-direction:column; gap:14px; opacity:0.4;"><div style="height:20px; width:50%; border-radius:6px; background:rgba(255,255,255,0.07);"></div><div style="height:80px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="display:flex; gap:14px;"><div style="flex:1; height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="flex:1; height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- 1B ICON DOCK ---------- -->
+    <div id="1b">
+      <div style="display:flex; align-items:center; gap:10px;"><span class="badge">1B</span><span class="gtitle">Icon Dock</span></div>
+      <div class="gcap">Ultra-compact icon rail with hover tooltips. Maximizes screen for the game; disc anchors the top.</div>
+      <div style="position:relative; width:520px; height:560px; margin-top:18px; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0814; box-shadow:0 30px 70px rgba(0,0,0,0.5);">
+        <div style="position:absolute; top:-120px; right:-80px; width:420px; height:360px; filter:blur(80px); opacity:0.4; background:radial-gradient(circle,#2f8fff,rgba(47,143,255,0));"></div>
+        <div style="position:relative; display:flex; height:100%;">
+          <aside style="width:76px; flex-shrink:0; background:rgba(9,8,18,0.85); backdrop-filter:blur(10px); border-right:1px solid rgba(255,255,255,0.06); padding:16px 0; display:flex; flex-direction:column; align-items:center; gap:6px;">
+            <div style="position:relative; width:42px; height:42px; border-radius:999px; overflow:hidden; margin-bottom:12px; box-shadow:0 0 0 1px rgba(160,90,240,0.4), 0 0 18px rgba(106,47,208,0.5);"><div style="position:absolute; inset:0; animation:discSpin 14s linear infinite; background:repeating-conic-gradient(from 0deg,#ff3d6e 0deg,#ff9a3d 22deg,#ffe14d 42deg,#57ff8f 66deg,#37d6ff 92deg,#4a6bff 118deg,#b45cff 146deg,#ff3d6e 180deg);"></div><div style="position:absolute; top:50%; left:50%; width:34%; height:34%; margin:-17% 0 0 -17%; border-radius:999px; background:#0a0814;"></div></div>
+            <div style="position:relative;">
+              <div class="ic" style="background:linear-gradient(135deg,rgba(160,90,240,0.28),rgba(55,214,255,0.14)); color:#fff; box-shadow:0 0 16px rgba(160,90,240,0.4);"><i class="fas fa-gauge-high"></i></div>
+              <div style="position:absolute; left:56px; top:50%; transform:translateY(-50%); white-space:nowrap; font-size:12px; padding:5px 10px; border-radius:8px; background:#1a1330; border:1px solid rgba(255,255,255,0.1); box-shadow:0 6px 18px rgba(0,0,0,0.5);">Dashboard</div>
+            </div>
+            <div class="ic"><i class="fas fa-building"></i></div>
+            <div class="ic"><i class="fas fa-users"></i></div>
+            <div class="ic"><i class="fas fa-compact-disc"></i></div>
+            <div class="ic"><i class="fas fa-rocket"></i></div>
+            <div class="ic"><i class="fas fa-trophy"></i></div>
+            <div style="flex:1;"></div>
+            <div style="width:34px; height:34px; border-radius:999px; background:linear-gradient(135deg,#a05af0,#2f8fff); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600;">TM</div>
+          </aside>
+          <div style="flex:1; padding:24px; display:flex; flex-direction:column; gap:14px; opacity:0.4;"><div style="height:20px; width:50%; border-radius:6px; background:rgba(255,255,255,0.07);"></div><div style="height:80px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="display:flex; gap:14px;"><div style="flex:1; height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="flex:1; height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- 1C TOP HUD BAR ---------- -->
+    <div id="1c">
+      <div style="display:flex; align-items:center; gap:10px;"><span class="badge">1C</span><span class="gtitle">Top HUD Bar</span></div>
+      <div class="gcap">Horizontal command bar. Disc + wordmark left, inline tabs, vitals + Advance Week right. Frees vertical space.</div>
+      <div style="position:relative; width:820px; height:480px; margin-top:18px; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0814; box-shadow:0 30px 70px rgba(0,0,0,0.5);">
+        <div style="position:absolute; top:-140px; left:30%; width:520px; height:380px; filter:blur(90px); opacity:0.4; background:radial-gradient(circle,#6a2fd0,rgba(106,47,208,0));"></div>
+        <div style="position:relative; display:flex; align-items:center; justify-content:space-between; gap:16px; height:64px; padding:0 20px; background:rgba(9,8,18,0.85); backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,0.07);">
+          <div style="position:absolute; bottom:0; left:20px; right:20px; height:1px; background:linear-gradient(90deg,transparent,rgba(255,77,141,0.4),rgba(160,90,240,0.5),rgba(55,214,255,0.4),transparent);"></div>
+          <div style="display:flex; align-items:center; gap:11px; flex-shrink:0;">
+            <div style="position:relative; width:34px; height:34px; border-radius:999px; overflow:hidden; box-shadow:0 0 0 1px rgba(160,90,240,0.4);"><div style="position:absolute; inset:0; animation:discSpin 14s linear infinite; background:repeating-conic-gradient(from 0deg,#ff3d6e 0deg,#ff9a3d 22deg,#ffe14d 42deg,#57ff8f 66deg,#37d6ff 92deg,#4a6bff 118deg,#b45cff 146deg,#ff3d6e 180deg);"></div><div style="position:absolute; top:50%; left:50%; width:34%; height:34%; margin:-17% 0 0 -17%; border-radius:999px; background:#0a0814;"></div></div>
+            <span style="font-family:'Major Mono Display',monospace; font-size:13px;">velvet sound</span>
+          </div>
+          <div style="display:flex; gap:2px;">
+            <div style="position:relative; padding:8px 13px; font-size:12.5px; color:#fff; cursor:pointer;">Dashboard<span style="position:absolute; left:13px; right:13px; bottom:-2px; height:2px; border-radius:2px; background:linear-gradient(90deg,#ff4d8d,#a05af0,#37d6ff);"></span></div>
+            <div style="padding:8px 13px; font-size:12.5px; color:rgba(233,230,244,0.55); cursor:pointer;">Office</div>
+            <div style="padding:8px 13px; font-size:12.5px; color:rgba(233,230,244,0.55); cursor:pointer;">Artists</div>
+            <div style="padding:8px 13px; font-size:12.5px; color:rgba(233,230,244,0.55); cursor:pointer;">A&amp;R</div>
+            <div style="padding:8px 13px; font-size:12.5px; color:rgba(233,230,244,0.55); cursor:pointer;">Charts</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#F0C98A;">$478,922</span>
+            <button style="font-size:12px; font-weight:600; color:#fff; padding:8px 14px; border:none; border-radius:10px; cursor:pointer; background:linear-gradient(135deg,#d14a7a,#7a2fb0); box-shadow:0 4px 16px rgba(140,60,200,0.4);">Advance ▸</button>
+          </div>
+        </div>
+        <div style="padding:26px; display:flex; flex-direction:column; gap:16px; opacity:0.4;"><div style="height:22px; width:36%; border-radius:6px; background:rgba(255,255,255,0.07);"></div><div style="display:flex; gap:16px;"><div style="flex:1; height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="flex:1; height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="flex:1; height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div></div><div style="height:140px; border-radius:12px; background:rgba(255,255,255,0.04);"></div></div>
+      </div>
+    </div>
+
+    <!-- ---------- 1D FLOATING CAPSULE ---------- -->
+    <div id="1d">
+      <div style="display:flex; align-items:center; gap:10px;"><span class="badge">1D</span><span class="gtitle">Command Dock</span></div>
+      <div class="gcap">Floating frosted capsule with the disc elevated at center — most game-like. Great for a focused, cinematic mode.</div>
+      <div style="position:relative; width:640px; height:480px; margin-top:18px; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0814; box-shadow:0 30px 70px rgba(0,0,0,0.5);">
+        <div style="position:absolute; bottom:-120px; left:50%; transform:translateX(-50%); width:520px; height:360px; filter:blur(90px); opacity:0.45; background:radial-gradient(circle,#a05af0,rgba(160,90,240,0));"></div>
+        <div style="padding:26px; display:flex; flex-direction:column; gap:16px; opacity:0.35;"><div style="height:22px; width:40%; border-radius:6px; background:rgba(255,255,255,0.07);"></div><div style="display:flex; gap:16px;"><div style="flex:1; height:110px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="flex:1; height:110px; border-radius:12px; background:rgba(255,255,255,0.04);"></div></div><div style="height:120px; border-radius:12px; background:rgba(255,255,255,0.04);"></div></div>
+        <div style="position:absolute; left:50%; bottom:28px; transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:999px; background:rgba(20,16,36,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.12); box-shadow:0 24px 54px rgba(106,47,208,0.4), inset 0 1px 0 rgba(255,255,255,0.12);">
+          <div class="ic"><i class="fas fa-building"></i></div>
+          <div class="ic"><i class="fas fa-users"></i></div>
+          <div style="position:relative; width:56px; height:56px; margin:-22px 6px 0; border-radius:999px; overflow:hidden; box-shadow:0 0 0 2px rgba(160,90,240,0.6), 0 8px 28px rgba(160,90,240,0.6);"><div style="position:absolute; inset:0; animation:discSpin 12s linear infinite; background:repeating-conic-gradient(from 0deg,#ff3d6e 0deg,#ff9a3d 22deg,#ffe14d 42deg,#57ff8f 66deg,#37d6ff 92deg,#4a6bff 118deg,#b45cff 146deg,#ff3d6e 180deg);"></div><div style="position:absolute; top:50%; left:50%; width:32%; height:32%; margin:-16% 0 0 -16%; border-radius:999px; background:#0a0814; box-shadow:inset 0 0 0 1px rgba(160,90,240,0.5);"></div></div>
+          <div class="ic"><i class="fas fa-rocket"></i></div>
+          <div class="ic"><i class="fas fa-trophy"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- 1E HERO BRAND RAIL ---------- -->
+    <div id="1e">
+      <div style="display:flex; align-items:center; gap:10px;"><span class="badge">1E</span><span class="gtitle">Hero Brand Rail</span></div>
+      <div class="gcap">Cinematic in-world rail — oversized disc as a focal brand moment with a big glow, minimal nav beneath.</div>
+      <div style="position:relative; width:600px; height:560px; margin-top:18px; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#0a0814; box-shadow:0 30px 70px rgba(0,0,0,0.5);">
+        <div style="position:absolute; top:-100px; left:-60px; width:420px; height:420px; filter:blur(90px); opacity:0.45; background:radial-gradient(circle,#ff2f7a,rgba(255,47,122,0));"></div>
+        <div style="position:relative; display:flex; height:100%;">
+          <aside style="width:236px; flex-shrink:0; background:rgba(9,8,18,0.82); backdrop-filter:blur(10px); border-right:1px solid rgba(255,255,255,0.06); padding:28px 16px; display:flex; flex-direction:column; align-items:center;">
+            <div style="position:relative; width:96px; height:96px; border-radius:999px; overflow:hidden; box-shadow:0 0 0 1px rgba(160,90,240,0.5), 0 0 40px rgba(160,90,240,0.55);"><div style="position:absolute; inset:0; animation:discSpin 16s linear infinite; background:repeating-conic-gradient(from 0deg,#ff3d6e 0deg,#ff9a3d 22deg,#ffe14d 42deg,#57ff8f 66deg,#37d6ff 92deg,#4a6bff 118deg,#b45cff 146deg,#ff3d6e 180deg);"></div><div style="position:absolute; top:50%; left:50%; width:30%; height:30%; margin:-15% 0 0 -15%; border-radius:999px; background:#0a0814; box-shadow:inset 0 0 0 1px rgba(160,90,240,0.5);"></div></div>
+            <div style="font-family:'Major Mono Display',monospace; font-size:15px; margin-top:18px; text-align:center; line-height:1.2;">velvet<br>sound</div>
+            <div style="height:1px; width:60%; margin:20px 0; background:linear-gradient(90deg,transparent,rgba(160,90,240,0.6),transparent);"></div>
+            <div style="width:100%; display:flex; flex-direction:column; gap:4px;">
+              <div class="mi" style="justify-content:center; background:linear-gradient(90deg,transparent,rgba(160,90,240,0.2),transparent); color:#fff;">Dashboard</div>
+              <div class="mi" style="justify-content:center;">Artists</div>
+              <div class="mi" style="justify-content:center;">A&amp;R Office</div>
+              <div class="mi" style="justify-content:center;">Releases</div>
+              <div class="mi" style="justify-content:center;">Charts</div>
+            </div>
+            <div style="flex:1;"></div>
+            <button style="width:100%; font-size:13px; font-weight:600; color:#fff; padding:12px; border:none; border-radius:12px; cursor:pointer; background:linear-gradient(135deg,#d14a7a,#7a2fb0); box-shadow:0 6px 22px rgba(140,60,200,0.45);">Advance Week ▸</button>
+          </aside>
+          <div style="flex:1; padding:24px; display:flex; flex-direction:column; gap:14px; opacity:0.4;"><div style="height:20px; width:50%; border-radius:6px; background:rgba(255,255,255,0.07);"></div><div style="height:80px; border-radius:12px; background:rgba(255,255,255,0.04);"></div><div style="flex:1; border-radius:12px; background:rgba(255,255,255,0.04);"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Major+Mono+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="./client/public/image-slot.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:#070610; }
+  @keyframes discSpin { from{transform:rotate(0);} to{transform:rotate(360deg);} }
+  @keyframes shimmer { 0%{background-position:0% 0;} 100%{background-position:200% 0;} }
+  @keyframes bloomDrift { 0%,100%{transform:translate(-3%,-2%) scale(1.05);} 50%{transform:translate(4%,3%) scale(1.16);} }
+  @keyframes grainShift { 0%{transform:translate(0,0);}25%{transform:translate(-3%,2%);}50%{transform:translate(2%,-3%);}75%{transform:translate(-2%,2%);}100%{transform:translate(0,0);} }
+  @keyframes ringPulse { 0%,100%{opacity:0.6; transform:scale(1);} 50%{opacity:1; transform:scale(1.08);} }
+  .tab { position:relative; display:flex; align-items:center; gap:8px; padding:10px 16px; font-size:13.5px; font-weight:500; color:rgba(233,230,244,0.5); cursor:pointer; border-radius:10px; }
+  .tab:hover { color:#F3F1F9; background:rgba(255,255,255,0.04); }
+  .dock-item { position:relative; display:flex; flex-direction:column; align-items:center; }
+  .dock-ic { width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; color:rgba(233,230,244,0.6); font-size:16px; cursor:pointer; transition:all .15s; }
+  .dock-item:hover .dock-ic { background:rgba(255,255,255,0.08); color:#fff; }
+  .tip { position:absolute; bottom:100%; left:50%; transform:translate(-50%,4px); margin-bottom:14px; opacity:0; pointer-events:none; transition:all .15s; white-space:nowrap; font-size:11.5px; font-weight:500; padding:5px 10px; border-radius:8px; background:#180f2e; border:1px solid rgba(255,255,255,0.12); box-shadow:0 8px 22px rgba(0,0,0,0.55); color:#F3F1F9; }
+  .dock-item:hover .tip { opacity:1; transform:translate(-50%,0); }
+</style>
+</helmet>
+
+<div style="position:relative; width:1600px; min-height:1040px; background:#070610; font-family:'Inter',sans-serif; color:#F3F1F9; overflow:hidden;">
+
+  <!-- backdrop -->
+  <div style="position:absolute; inset:0; pointer-events:none; background:url('client/public/liquid-chrome-bg.jpg') center/cover no-repeat; opacity:0.4; filter:saturate(1.1) brightness(0.95); animation:bloomDrift 48s ease-in-out infinite;"></div>
+  <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(7,6,16,0.5), rgba(7,6,16,0.4));"></div>
+  <sc-if value="{{ glowOn }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; top:-260px; right:-120px; width:900px; height:760px; filter:blur(100px); opacity:0.4; pointer-events:none; background: radial-gradient(circle at 46% 46%, #6a2fd0 0%, rgba(106,47,208,0) 60%), radial-gradient(circle at 70% 40%, #ff2f7a 0%, rgba(255,47,122,0) 52%);"></div>
+  </sc-if>
+  <div style="position:absolute; inset:0; pointer-events:none; opacity:0.5; background-image: radial-gradient(rgba(180,170,220,0.05) 1px, transparent 1px); background-size:26px 26px;"></div>
+
+  <main style="position:relative; z-index:1; padding:34px 56px 170px; display:flex; flex-direction:column; gap:24px;">
+
+    <!-- ===== HERO ===== -->
+    <div style="position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:24px; min-height:300px;">
+      <div style="flex:1; padding-top:8px;">
+        <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:rgba(233,230,244,0.45); margin-bottom:18px;"><i class="fas fa-users" style="font-size:11px;"></i> Artists <i class="fas fa-chevron-right" style="font-size:9px; opacity:0.5;"></i> <span style="color:rgba(233,230,244,0.75);">Diego Morales</span></div>
+
+        <div style="display:flex; align-items:center; gap:18px;">
+          <div style="position:relative; width:74px; height:74px; border-radius:20px; overflow:hidden; flex-shrink:0; background:linear-gradient(150deg,#a05af0,#2f8fff); display:flex; align-items:center; justify-content:center; font-family:'Major Mono Display',monospace; font-size:24px; color:rgba(255,255,255,0.92); box-shadow:0 0 0 1px rgba(255,255,255,0.14), 0 0 26px rgba(160,90,240,0.45);">dm</div>
+          <div>
+            <h1 style="font-family:'Inter'; font-weight:700; font-size:40px; line-height:1; margin:0; letter-spacing:-0.02em; color:#F7F4FB;">Diego Morales</h1>
+            <div style="display:flex; gap:9px; margin-top:12px;">
+              <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:5px 12px; border-radius:999px; background:rgba(160,90,240,0.18); color:#c8a6ff; border:1px solid rgba(160,90,240,0.4);"><i class="fas fa-star" style="font-size:10px;"></i> Visionary</span>
+              <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:5px 12px; border-radius:999px; background:rgba(55,224,176,0.16); color:#37e0b0; border:1px solid rgba(55,224,176,0.4);"><i class="fas fa-circle-check" style="font-size:10px;"></i> Signed</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- tabs -->
+        <div style="display:flex; gap:4px; margin-top:26px; padding:6px; border-radius:14px; background:rgba(20,15,34,0.6); border:1px solid rgba(255,255,255,0.06); width:fit-content;">
+          <div class="tab" style="color:#fff; background:linear-gradient(135deg,rgba(160,90,240,0.3),rgba(55,214,255,0.14));"><i class="fas fa-eye" style="font-size:12px;"></i> Overview<span style="position:absolute; left:16px; right:16px; bottom:-6px; height:2px; border-radius:2px; background:linear-gradient(90deg,#ff4d8d,#a05af0,#37d6ff);"></span></div>
+          <div class="tab"><i class="fas fa-music" style="font-size:12px;"></i> Discography</div>
+          <div class="tab"><i class="fas fa-play" style="font-size:12px;"></i> Releases</div>
+          <div class="tab"><i class="fas fa-chart-line" style="font-size:12px;"></i> Analytics</div>
+          <div class="tab"><i class="fas fa-gear" style="font-size:12px;"></i> Manage</div>
+        </div>
+      </div>
+
+      <!-- character art -->
+      <div style="position:relative; width:320px; flex-shrink:0;">
+        <div style="position:absolute; top:-40px; left:50%; transform:translateX(-50%); width:360px; height:360px; filter:blur(70px); opacity:0.5; pointer-events:none; background:radial-gradient(circle,#a05af0 0%,rgba(160,90,240,0) 68%);"></div>
+        <image-slot id="diego-art" src="avatars/diego_morales_full.png" shape="rect" placeholder="diego_morales_full.png" fit="contain" position="50% 100%" style="position:relative; display:block; width:320px; height:440px; filter:drop-shadow(0 18px 40px rgba(0,0,0,0.5));"></image-slot>
+      </div>
+    </div>
+
+    <!-- ===== OVERVIEW PANEL ===== -->
+    <div style="position:relative; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(24,18,40,0.7), rgba(12,10,24,0.7)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 16px 40px rgba(0,0,0,0.4); padding:24px 26px; overflow:hidden;">
+      <div style="position:absolute; top:0; left:18px; right:18px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,77,141,0.4), rgba(160,90,240,0.5), rgba(55,214,255,0.4), transparent);"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:16px; font-weight:600;">Diego Morales <i class="fas fa-heart" style="color:#ff5d8a; font-size:12px;"></i></div>
+            <div style="font-size:12.5px; color:rgba(233,230,244,0.55); margin-top:3px;">Visionary · <span style="color:#37e0b0;">Stable</span> · <span style="font-family:'JetBrains Mono',monospace; color:#F0C98A;">$0</span></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:12px; font-weight:600; padding:6px 13px; border-radius:999px; background:linear-gradient(135deg,#d14a7a,#7a2fb0); color:#fff; box-shadow:0 0 16px rgba(140,60,200,0.4);">● Recording</span>
+          <button style="width:30px; height:30px; border-radius:9px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(233,230,244,0.5); cursor:pointer;"><i class="fas fa-info" style="font-size:12px;"></i></button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); margin-bottom:16px;">
+        <div style="flex:1; padding:16px 20px; text-align:center; background:rgba(255,255,255,0.015);"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:24px;">1</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:5px;">Projects</div></div>
+        <div style="width:1px; background:rgba(255,255,255,0.06);"></div>
+        <div style="flex:1; padding:16px 20px; text-align:center; background:rgba(255,255,255,0.015);"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:24px; color:rgba(233,230,244,0.4);">—</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:5px;">ROI</div></div>
+        <div style="width:1px; background:rgba(255,255,255,0.06);"></div>
+        <div style="flex:1; padding:16px 20px; text-align:center; background:rgba(255,255,255,0.015);"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:24px; color:#f5c542;">50%</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:5px;">Mood</div></div>
+        <div style="width:1px; background:rgba(255,255,255,0.06);"></div>
+        <div style="flex:1; padding:16px 20px; text-align:center; background:rgba(255,255,255,0.015);"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:24px; color:#f5c542;">50%</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:5px;">Energy</div></div>
+        <div style="width:1px; background:rgba(255,255,255,0.06);"></div>
+        <div style="flex:1; padding:16px 20px; text-align:center; background:rgba(255,255,255,0.015);"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:24px; color:#ff5d8a;">15%</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:5px;">Popularity</div></div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; padding:13px 16px; border-radius:12px; background:rgba(209,74,122,0.1); border:1px solid rgba(209,74,122,0.3);">
+        <i class="fas fa-handshake" style="color:#ff8ab0;"></i>
+        <span style="font-size:13px; color:rgba(233,230,244,0.85);">Schedule a meeting to address Diego Morales's concerns</span>
+        <button style="margin-left:auto; font-size:12px; font-weight:600; color:#fff; padding:7px 14px; border-radius:9px; border:none; cursor:pointer; background:linear-gradient(135deg,#d14a7a,#7a2fb0);">Schedule</button>
+      </div>
+    </div>
+
+    <!-- ===== THREE COLUMNS ===== -->
+    <div style="display:grid; grid-template-columns:1fr 1.15fr 1fr; gap:24px;">
+
+      <!-- Artist Stats -->
+      <div style="position:relative; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(22,16,36,0.68), rgba(11,9,22,0.68)); padding:24px; overflow:hidden;">
+        <div style="position:absolute; top:0; left:18px; right:18px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,77,141,0.4), rgba(160,90,240,0.5), rgba(55,214,255,0.4), transparent);"></div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:22px;"><i class="fas fa-user" style="color:#c8a6ff;"></i><span style="font-size:16px; font-weight:600;">Artist Stats</span></div>
+        <div style="display:flex; flex-direction:column; gap:18px;">
+          <div><div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:7px;"><span style="color:rgba(233,230,244,0.7);">Mood</span><span style="font-family:'JetBrains Mono',monospace; color:#f5c542;">50%</span></div><div style="height:6px; border-radius:999px; background:rgba(255,255,255,0.08);"><div style="width:50%; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5c542,#ffb15c);"></div></div></div>
+          <div><div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:7px;"><span style="color:rgba(233,230,244,0.7);">Energy</span><span style="font-family:'JetBrains Mono',monospace; color:#f5c542;">50%</span></div><div style="height:6px; border-radius:999px; background:rgba(255,255,255,0.08);"><div style="width:50%; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5c542,#ffb15c);"></div></div></div>
+          <div><div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:7px;"><span style="color:rgba(233,230,244,0.7);">Talent</span><span style="font-family:'JetBrains Mono',monospace; color:#37e0b0;">90%</span></div><div style="height:6px; border-radius:999px; background:rgba(255,255,255,0.08);"><div style="width:90%; height:100%; border-radius:999px; background:linear-gradient(90deg,#37e0b0,#2fb0ff);"></div></div></div>
+          <div><div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:7px;"><span style="color:rgba(233,230,244,0.7);">Work Ethic</span><span style="font-family:'JetBrains Mono',monospace; color:#f5c542;">50%</span></div><div style="height:6px; border-radius:999px; background:rgba(255,255,255,0.08);"><div style="width:50%; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5c542,#ffb15c);"></div></div></div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div style="position:relative; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(22,16,36,0.68), rgba(11,9,22,0.68)); padding:24px; overflow:hidden;">
+        <div style="position:absolute; top:0; left:18px; right:18px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,77,141,0.4), rgba(160,90,240,0.5), rgba(55,214,255,0.4), transparent);"></div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;"><i class="fas fa-chart-column" style="color:#c8a6ff;"></i><span style="font-size:16px; font-weight:600;">Performance</span></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:11px;">
+          <div style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:22px;">0</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Avg Quality</div></div>
+          <div style="padding:14px; border-radius:12px; background:rgba(160,90,240,0.08); border:1px solid rgba(160,90,240,0.25); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:22px; color:#c8a6ff;">1</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Projects</div></div>
+          <div style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:22px;">0</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Ready Songs</div></div>
+          <div style="padding:14px; border-radius:12px; background:rgba(255,93,138,0.08); border:1px solid rgba(255,93,138,0.25); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:22px; color:#ff5d8a;">15</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Popularity</div></div>
+          <div style="padding:14px; border-radius:12px; background:rgba(55,224,176,0.08); border:1px solid rgba(55,224,176,0.22); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:19px; color:#37e0b0;">$0.0k</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Total Revenue</div></div>
+          <div style="padding:14px; border-radius:12px; background:rgba(55,180,255,0.08); border:1px solid rgba(55,180,255,0.22); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:19px; color:#37d6ff;">0k</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Total Streams</div></div>
+          <div style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:19px; color:rgba(233,230,244,0.8);">$0.0k</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Recording Costs</div></div>
+          <div style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); text-align:center;"><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:19px; color:rgba(233,230,244,0.8);">$0.0k</div><div style="font-size:11px; color:rgba(233,230,244,0.5); margin-top:4px;">Marketing Costs</div></div>
+        </div>
+        <div style="margin-top:11px; padding:14px 16px; border-radius:12px; background:rgba(55,224,176,0.08); border:1px solid rgba(55,224,176,0.22); display:flex; align-items:center; justify-content:space-between;"><span style="font-size:12px; color:rgba(233,230,244,0.6);">Return on Investment</span><span style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:20px; color:#37e0b0;">0%</span></div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div style="position:relative; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(22,16,36,0.68), rgba(11,9,22,0.68)); padding:24px; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="position:absolute; top:0; left:18px; right:18px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,77,141,0.4), rgba(160,90,240,0.5), rgba(55,214,255,0.4), transparent);"></div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;"><i class="fas fa-wave-square" style="color:#c8a6ff;"></i><span style="font-size:16px; font-weight:600;">Recent Activity</span></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:200px;">
+          <div style="width:54px; height:54px; border-radius:15px; background:rgba(160,90,240,0.1); border:1px solid rgba(160,90,240,0.28); display:flex; align-items:center; justify-content:center; margin-bottom:16px; box-shadow:0 0 22px rgba(160,90,240,0.2);"><i class="fas fa-music" style="color:#c8a6ff; font-size:19px;"></i></div>
+          <div style="font-size:14px; font-weight:600; color:rgba(233,230,244,0.82);">No activity yet</div>
+          <div style="font-size:12px; color:rgba(233,230,244,0.42); margin-top:5px; max-width:190px;">Book a session or plan a release to get things moving.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== COMMAND DOCK ===== -->
+  <div style="position:fixed; left:50%; bottom:28px; transform:translateX(-50%); z-index:20;">
+    <div style="position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); width:560px; height:120px; filter:blur(50px); opacity:0.5; pointer-events:none; background:radial-gradient(circle at 50% 60%, #a05af0 0%, rgba(160,90,240,0) 70%);"></div>
+    <div style="position:relative; display:flex; align-items:center; gap:8px; padding:11px 18px; border-radius:999px; background:rgba(18,14,32,0.72); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.12); box-shadow:0 26px 60px rgba(0,0,0,0.55), 0 10px 34px rgba(106,47,208,0.35), inset 0 1px 0 rgba(255,255,255,0.14);">
+      <div style="position:absolute; top:0; left:24px; right:24px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,77,141,0.5), rgba(160,90,240,0.6), rgba(55,214,255,0.5), transparent);"></div>
+
+      <div class="dock-item"><span class="tip">Executive Suite</span><div class="dock-ic"><i class="fas fa-user-tie"></i></div><span style="position:absolute; top:5px; right:8px; width:7px; height:7px; border-radius:999px; background:#37d6ff; box-shadow:0 0 8px 1px rgba(55,214,255,0.9);"></span></div>
+      <div class="dock-item"><span class="tip">The Office</span><div class="dock-ic"><i class="fas fa-building"></i></div></div>
+      <!-- Artists active -->
+      <div class="dock-item"><span class="tip">Artists</span><div class="dock-ic" style="background:linear-gradient(135deg,rgba(160,90,240,0.32),rgba(55,214,255,0.16)); color:#fff; box-shadow:0 0 16px rgba(160,90,240,0.45);"><i class="fas fa-users"></i></div><span style="position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:999px; background:#c8a6ff;"></span></div>
+      <div class="dock-item"><span class="tip">A&amp;R Office</span><div class="dock-ic"><i class="fas fa-compact-disc"></i></div></div>
+
+      <!-- center disc = home -->
+      <div class="dock-item" style="margin:0 8px;">
+        <span class="tip" style="margin-bottom:22px;">Dashboard · Home</span>
+        <div style="position:absolute; top:-30px; left:50%; transform:translate(-50%,-50%); width:82px; height:82px; border-radius:999px; pointer-events:none; background:radial-gradient(circle, rgba(160,90,240,0.5), rgba(160,90,240,0)); animation:ringPulse 4s ease-in-out infinite;"></div>
+        <div style="position:relative; width:60px; height:60px; margin-top:-26px; border-radius:999px; overflow:hidden; cursor:pointer; box-shadow:0 0 0 2px rgba(160,90,240,0.65), 0 10px 30px rgba(160,90,240,0.55);">
+          <div style="position:absolute; inset:0; animation:discSpin 12s linear infinite; background:repeating-conic-gradient(from 0deg,#ff3d6e 0deg,#ff9a3d 22deg,#ffe14d 42deg,#57ff8f 66deg,#37d6ff 92deg,#4a6bff 118deg,#b45cff 146deg,#ff3d6e 180deg);"></div>
+          <div style="position:absolute; inset:0; mix-blend-mode:soft-light; animation:discSpin 12s linear infinite; background:repeating-conic-gradient(from 20deg,rgba(255,255,255,0.3) 0deg,rgba(255,255,255,0) 8deg,rgba(0,0,0,0.22) 16deg,rgba(0,0,0,0) 26deg);"></div>
+          <div style="position:absolute; top:50%; left:50%; width:30%; height:30%; margin:-15% 0 0 -15%; border-radius:999px; background:#0a0814; box-shadow:inset 0 0 0 1px rgba(160,90,240,0.6);"></div>
+        </div>
+      </div>
+
+      <div class="dock-item"><span class="tip">Plan Release</span><div class="dock-ic"><i class="fas fa-rocket"></i></div></div>
+      <div class="dock-item"><span class="tip">Recording Session</span><div class="dock-ic"><i class="fas fa-sliders"></i></div></div>
+      <div class="dock-item"><span class="tip">Top 100 Chart</span><div class="dock-ic"><i class="fas fa-trophy"></i></div></div>
+      <div class="dock-item"><span class="tip">More</span><div class="dock-ic"><i class="fas fa-ellipsis"></i></div></div>
+
+      <div style="width:1px; height:30px; background:rgba(255,255,255,0.12); margin:0 4px;"></div>
+      <div class="dock-item"><span class="tip">themightynes</span><div style="width:38px; height:38px; border-radius:999px; background:linear-gradient(135deg,#a05af0,#2f8fff); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:#fff; cursor:pointer; box-shadow:0 0 0 1px rgba(255,255,255,0.15);">TM</div></div>
+    </div>
+  </div>
+
+  <sc-if value="{{ grainOn }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; inset:-20%; opacity:0.07; mix-blend-mode:overlay; pointer-events:none; z-index:3; animation:grainShift 3s steps(6) infinite; background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:1040},&quot;glowOn&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Atmosphere&quot;},&quot;grainOn&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Atmosphere&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { glowOn: this.props.glowOn ?? true, grainOn: this.props.grainOn ?? true };
+  }
+}
+</script>
+</body>
+</html>

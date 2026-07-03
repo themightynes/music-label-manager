@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Major+Mono+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:#070610; }
+  @keyframes discSpin { from{transform:rotate(0);} to{transform:rotate(360deg);} }
+  @keyframes shimmer { 0%{background-position:0% 0;} 100%{background-position:200% 0;} }
+  @keyframes bloomDrift { 0%,100%{transform:translate(-3%,-2%) scale(1.05);} 50%{transform:translate(4%,3%) scale(1.16);} }
+  @keyframes grainShift { 0%{transform:translate(0,0);}25%{transform:translate(-3%,2%);}50%{transform:translate(2%,-3%);}75%{transform:translate(-2%,2%);}100%{transform:translate(0,0);} }
+  .nav { position:relative; display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:10px; font-size:13.5px; font-weight:500; color:rgba(233,230,244,0.55); text-decoration:none; cursor:pointer; transition:all .15s; }
+  .nav:hover { background:rgba(255,255,255,0.045); color:#F3F1F9; }
+  .nav i { width:16px; text-align:center; font-size:13px; opacity:0.7; }
+  .seclabel { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.24em; text-transform:uppercase; color:rgba(233,230,244,0.28); padding:0 12px; margin:20px 0 7px; }
+  .hair { position:absolute; top:0; left:18px; right:18px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,77,141,0.4), rgba(160,90,240,0.5), rgba(55,214,255,0.4), transparent); }
+</style>
+</helmet>
+
+<div style="position:relative; display:flex; width:1600px; min-height:1000px; background:#070610; font-family:'Inter',sans-serif; color:#F3F1F9; overflow:hidden;">
+
+  <!-- liquid gradient backdrop (dimmed) -->
+  <div style="position:absolute; inset:0; pointer-events:none; background:url('client/public/liquid-chrome-bg.jpg') center/cover no-repeat; opacity:0.42; filter:saturate(1.1) brightness(0.95); animation:bloomDrift 48s ease-in-out infinite;"></div>
+  <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(7,6,16,0.4), rgba(7,6,16,0.28));"></div>
+
+  <!-- spectral ambient light -->
+  <sc-if value="{{ glowOn }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; top:-320px; right:-160px; width:1000px; height:860px; filter:blur(100px); opacity:0.55; pointer-events:none; background: radial-gradient(circle at 42% 46%, #6a2fd0 0%, rgba(106,47,208,0) 60%), radial-gradient(circle at 70% 34%, #2f8fff 0%, rgba(47,143,255,0) 55%), radial-gradient(circle at 58% 68%, #ff2f7a 0%, rgba(255,47,122,0) 52%);"></div>
+    <div style="position:absolute; bottom:-260px; left:60px; width:640px; height:560px; filter:blur(96px); opacity:0.32; pointer-events:none; background: radial-gradient(circle at 50% 50%, #a7343f 0%, rgba(167,52,63,0) 62%);"></div>
+  </sc-if>
+
+  <!-- HUD dot grid -->
+  <div style="position:absolute; inset:0; pointer-events:none; opacity:0.5; background-image: radial-gradient(rgba(180,170,220,0.05) 1px, transparent 1px); background-size:26px 26px;"></div>
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside style="position:relative; z-index:2; width:266px; flex-shrink:0; background:rgba(9,8,18,0.8); backdrop-filter:blur(10px); border-right:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; padding:20px 14px;">
+
+    <!-- brand -->
+    <div style="display:flex; align-items:center; gap:12px; padding:4px 8px 18px; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="position:relative; width:40px; height:40px; border-radius:999px; overflow:hidden; flex-shrink:0; box-shadow:0 0 0 1px rgba(160,90,240,0.4), 0 4px 16px rgba(106,47,208,0.4);">
+        <div style="position:absolute; inset:0; animation:discSpin 14s linear infinite; background:repeating-conic-gradient(from 0deg at 50% 50%, #ff3d6e 0deg,#ff9a3d 22deg,#ffe14d 42deg,#57ff8f 66deg,#37d6ff 92deg,#4a6bff 118deg,#b45cff 146deg,#ff3d6e 180deg);"></div>
+        <div style="position:absolute; top:50%; left:50%; width:34%; height:34%; margin:-17% 0 0 -17%; border-radius:999px; background:#0a0814; box-shadow:inset 0 0 0 1px rgba(160,90,240,0.5);"></div>
+      </div>
+      <div style="min-width:0;">
+        <div style="font-family:'Major Mono Display',monospace; font-size:13px; line-height:1.15; color:#F3F1F9; letter-spacing:-0.01em;">velvet sound</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; color:rgba(180,170,220,0.5); text-transform:uppercase; margin-top:3px;">studios · 01/11/25</div>
+      </div>
+    </div>
+
+    <!-- balance chip -->
+    <div style="position:relative; display:flex; align-items:center; justify-content:space-between; margin:14px 4px 4px; padding:12px 15px; border-radius:13px; overflow:hidden; background:linear-gradient(135deg, rgba(160,90,240,0.16), rgba(47,143,255,0.1)); border:1px solid rgba(255,255,255,0.09);">
+      <div class="hair" style="left:12px; right:12px;"></div>
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(180,170,220,0.6);">Balance</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:18px; color:#F0C98A; margin-top:3px;">$478,922</div>
+      </div>
+      <i class="fas fa-coins" style="color:#F0C98A; opacity:0.7;"></i>
+    </div>
+
+    <!-- nav -->
+    <div style="overflow-y:auto; margin-top:6px; flex:1; min-height:0;">
+      <a class="nav" style="background:linear-gradient(90deg, rgba(160,90,240,0.22), rgba(55,214,255,0.03)); color:#F3F1F9;">
+        <span style="position:absolute; left:0; top:8px; bottom:8px; width:2.5px; border-radius:2px; background:linear-gradient(180deg,#ff4d8d,#a05af0,#37d6ff);"></span>
+        <i class="fas fa-gauge-high" style="opacity:1; color:#c8a6ff;"></i><span>Dashboard</span>
+      </a>
+
+      <div class="seclabel">Workspace</div>
+      <a class="nav"><i class="fas fa-building"></i><span>The Office</span></a>
+      <a class="nav"><i class="fas fa-user-tie"></i><span>Executive Suite</span><i class="fas fa-bolt" style="margin-left:auto; color:#37d6ff; font-size:11px; opacity:1;"></i></a>
+      <a class="nav"><i class="fas fa-users"></i><span>Artists</span></a>
+      <a class="nav"><i class="fas fa-compact-disc"></i><span>A&amp;R Office</span></a>
+
+      <div class="seclabel">Actions</div>
+      <a class="nav"><i class="fas fa-rocket"></i><span>Plan Release</span></a>
+      <a class="nav"><i class="fas fa-sliders"></i><span>Recording Session</span></a>
+      <a class="nav"><i class="fas fa-microphone-lines"></i><span>Live Performance</span></a>
+
+      <div class="seclabel">Intel</div>
+      <a class="nav"><i class="fas fa-chart-line"></i><span>Weekly Results</span></a>
+      <a class="nav"><i class="fas fa-trophy"></i><span>Top 100 Chart</span></a>
+
+      <div class="seclabel">System</div>
+      <a class="nav"><i class="fas fa-floppy-disk"></i><span>Save / Load Game</span></a>
+      <a class="nav"><i class="fas fa-bug"></i><span>Report a Bug</span></a>
+      <a class="nav"><i class="fas fa-shield-halved"></i><span>Admin</span></a>
+    </div>
+
+    <!-- user -->
+    <div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding:12px 8px 4px; border-top:1px solid rgba(255,255,255,0.06);">
+      <div style="width:34px; height:34px; border-radius:999px; background:linear-gradient(135deg,#a05af0,#2f8fff); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:#fff; flex-shrink:0;">TM</div>
+      <div style="min-width:0;">
+        <div style="font-size:13px; font-weight:600;">themightynes</div>
+        <div style="font-size:11px; color:rgba(180,170,220,0.4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">ernesto.chapa@gmail.com</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main style="position:relative; z-index:1; flex:1; min-width:0; padding:28px 40px 60px; display:flex; flex-direction:column; gap:22px;">
+
+    <!-- header -->
+    <header style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+      <div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.28em; text-transform:uppercase; color:#37d6ff;">Studio Dashboard</span>
+          <span style="width:5px; height:5px; border-radius:999px; background:#57ff8f; box-shadow:0 0 8px 1px rgba(87,255,143,0.8);"></span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(180,170,220,0.4);">sys · online</span>
+        </div>
+        <h1 style="font-family:'Major Mono Display',monospace; font-weight:400; font-size:44px; line-height:0.92; margin:0; color:#F7F4FB; letter-spacing:-0.01em; text-shadow:2px 0 0 rgba(255,77,141,0.4), -2px 0 0 rgba(55,180,255,0.45), 0 0 40px rgba(160,90,240,0.3);">velvet sound studios</h1>
+        <div style="height:2px; width:340px; margin-top:14px; border-radius:2px; background:linear-gradient(90deg,#ff4d8d,#a05af0,#37d6ff,#ff4d8d); background-size:200% 100%; animation:shimmer 6s linear infinite;"></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="text-align:right;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(180,170,220,0.5);">Week 2</div>
+          <div style="font-size:13px; color:rgba(233,230,244,0.7); margin-top:2px;">Jan 5 – Jan 11, 2025</div>
+        </div>
+        <button style="position:relative; overflow:hidden; display:flex; align-items:center; gap:10px; font-family:'Inter'; font-weight:600; font-size:14px; color:#fff; padding:13px 24px; border:none; border-radius:13px; cursor:pointer; background:linear-gradient(135deg,#d14a7a,#7a2fb0); box-shadow:0 6px 26px rgba(140,60,200,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">
+          <span style="position:absolute; top:0; left:14px; right:14px; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.7),transparent);"></span>
+          Advance Week <i class="fas fa-angles-right" style="font-size:12px;"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- status rail -->
+    <div style="position:relative; display:flex; align-items:stretch; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(24,18,40,0.72), rgba(12,10,24,0.72)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 16px 40px rgba(0,0,0,0.4); overflow:hidden;">
+      <div class="hair"></div>
+      <!-- corner ticks -->
+      <div style="position:absolute; top:9px; left:9px; width:12px; height:12px; border-top:1px solid rgba(160,90,240,0.5); border-left:1px solid rgba(160,90,240,0.5);"></div>
+      <div style="position:absolute; bottom:9px; right:9px; width:12px; height:12px; border-bottom:1px solid rgba(55,214,255,0.5); border-right:1px solid rgba(55,214,255,0.5);"></div>
+
+      <div style="flex:1; padding:22px 26px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(180,170,220,0.5); margin-bottom:18px;">Core Status</div>
+        <div style="display:flex; gap:30px;">
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1;">5</div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Reputation <span style="color:rgba(180,170,220,0.5);">+0</span></div></div>
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1;">0<span style="color:rgba(233,230,244,0.35); font-size:18px;">/3</span></div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Focus Slots</div></div>
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1; color:#c8a6ff;">10</div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Creative Capital</div></div>
+        </div>
+      </div>
+
+      <div style="width:1px; background:rgba(255,255,255,0.07);"></div>
+
+      <div style="flex:1.5; padding:22px 26px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(180,170,220,0.5); margin-bottom:18px;">Weekly Performance</div>
+        <div style="display:flex; gap:28px;">
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1;">0</div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Total Plays</div></div>
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1;">0</div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Mentions</div></div>
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1; color:#37e0b0;">+$1,000</div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Earned</div></div>
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1; color:rgba(233,230,244,0.85);">$7,078</div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Spent</div></div>
+          <div><div style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:26px; line-height:1; color:#ff5d8a;">–$6,078</div><div style="font-size:11.5px; color:rgba(233,230,244,0.5); margin-top:6px;">Net</div></div>
+        </div>
+      </div>
+
+      <div style="width:1px; background:rgba(255,255,255,0.07);"></div>
+
+      <div style="flex:1; padding:22px 26px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(180,170,220,0.5); margin-bottom:18px;">Access Tiers</div>
+        <div style="display:flex; gap:12px;">
+          <div style="text-align:center;"><div style="font-size:12px; font-weight:600; padding:6px 12px; border-radius:9px; background:rgba(255,255,255,0.04); color:rgba(233,230,244,0.45); border:1px solid rgba(255,255,255,0.08);">None</div><div style="font-size:10.5px; color:rgba(233,230,244,0.42); margin-top:7px;">Playlist</div></div>
+          <div style="text-align:center;"><div style="font-size:12px; font-weight:600; padding:6px 12px; border-radius:9px; background:rgba(255,255,255,0.04); color:rgba(233,230,244,0.45); border:1px solid rgba(255,255,255,0.08);">None</div><div style="font-size:10.5px; color:rgba(233,230,244,0.42); margin-top:7px;">Press</div></div>
+          <div style="text-align:center;"><div style="font-size:12px; font-weight:600; padding:6px 12px; border-radius:9px; background:linear-gradient(135deg,#37e0b0,#2fb0ff); color:#04121a; box-shadow:0 0 16px rgba(55,224,176,0.4);">Clubs</div><div style="font-size:10.5px; color:rgba(233,230,244,0.42); margin-top:7px;">Venue</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- inbox + calendar -->
+    <div style="display:grid; grid-template-columns:1fr 1.05fr; gap:22px;">
+
+      <div style="position:relative; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(22,16,36,0.7), rgba(11,9,22,0.7)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); padding:24px; display:flex; flex-direction:column; overflow:hidden;">
+        <div class="hair"></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:11px;"><i class="fas fa-inbox" style="color:#c8a6ff;"></i><span style="font-size:17px; font-weight:600;">Inbox</span></div>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:4px 11px; border-radius:999px; background:rgba(255,255,255,0.04); color:rgba(233,230,244,0.5); border:1px solid rgba(255,255,255,0.08);">0 unread</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:36px 0; min-height:190px;">
+          <div style="width:52px; height:52px; border-radius:14px; background:rgba(160,90,240,0.12); border:1px solid rgba(160,90,240,0.32); display:flex; align-items:center; justify-content:center; margin-bottom:16px; box-shadow:0 0 22px rgba(160,90,240,0.2);"><i class="fas fa-envelope-open" style="color:#c8a6ff; font-size:18px;"></i></div>
+          <div style="font-size:14px; font-weight:600; color:rgba(233,230,244,0.85);">No messages yet</div>
+          <div style="font-size:12.5px; color:rgba(233,230,244,0.45); margin-top:5px; max-width:230px;">Advance the week to receive updates from your team.</div>
+        </div>
+        <button style="width:100%; font-family:'Inter'; font-weight:500; font-size:13.5px; color:rgba(233,230,244,0.75); padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.09); background:rgba(255,255,255,0.02); cursor:pointer;">Open inbox</button>
+      </div>
+
+      <div style="position:relative; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(22,16,36,0.7), rgba(11,9,22,0.7)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); padding:24px; overflow:hidden;">
+        <div class="hair"></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button style="width:28px; height:28px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(233,230,244,0.6); cursor:pointer;"><i class="fas fa-chevron-left" style="font-size:11px;"></i></button>
+            <span style="font-size:15px; font-weight:600;">January 2025</span>
+            <button style="width:28px; height:28px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(233,230,244,0.6); cursor:pointer;"><i class="fas fa-chevron-right" style="font-size:11px;"></i></button>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#c8a6ff;">Week 2</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px; text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(180,170,220,0.5); padding-bottom:6px;">Su</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(180,170,220,0.5); padding-bottom:6px;">Mo</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(180,170,220,0.5); padding-bottom:6px;">Tu</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(180,170,220,0.5); padding-bottom:6px;">We</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(180,170,220,0.5); padding-bottom:6px;">Th</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(180,170,220,0.5); padding-bottom:6px;">Fr</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(180,170,220,0.5); padding-bottom:6px;">Sa</div>
+
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="35">
+            <div style="aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:12.5px; border-radius:9px; background:{{ d.bg }}; color:{{ d.color }}; border:{{ d.border }};">{{ d.n }}</div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.06);">
+          <div>
+            <div style="font-size:13px; font-weight:600;">Jan 5 – Jan 11</div>
+            <div style="font-size:12px; color:rgba(233,230,244,0.45); margin-top:2px;">No events planned this week</div>
+          </div>
+          <button style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:500; color:#37d6ff; padding:8px 14px; border-radius:10px; border:1px solid rgba(55,214,255,0.4); background:rgba(55,214,255,0.08); cursor:pointer;"><i class="fas fa-plus" style="font-size:11px;"></i> Plan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- artist roster -->
+    <div style="position:relative; border:1px solid rgba(255,255,255,0.06); border-radius:16px; background:linear-gradient(180deg, rgba(22,16,36,0.7), rgba(11,9,22,0.7)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); padding:24px; overflow:hidden;">
+      <div class="hair"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:11px;"><i class="fas fa-users" style="color:#c8a6ff;"></i><span style="font-size:17px; font-weight:600;">Artist Roster</span></div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(233,230,244,0.5);">1 / 3</span>
+          <button style="width:28px; height:28px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(233,230,244,0.5); cursor:pointer;"><i class="fas fa-chevron-left" style="font-size:11px;"></i></button>
+          <button style="width:28px; height:28px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(233,230,244,0.5); cursor:pointer;"><i class="fas fa-chevron-right" style="font-size:11px;"></i></button>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+        <div style="border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; background:rgba(30,20,44,0.5); display:flex; gap:16px;">
+          <div style="width:92px; height:92px; border-radius:13px; flex-shrink:0; background:linear-gradient(150deg,#a05af0,#2f8fff); display:flex; align-items:center; justify-content:center; font-family:'Major Mono Display',monospace; font-size:26px; color:rgba(255,255,255,0.92); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12);">dm</div>
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div style="font-size:15px; font-weight:600;">Diego Morales</div>
+              <span style="font-size:10.5px; padding:3px 9px; border-radius:999px; background:rgba(255,255,255,0.06); color:rgba(233,230,244,0.55); border:1px solid rgba(255,255,255,0.08);">Idle</span>
+            </div>
+            <div style="font-size:12px; color:#c8a6ff; margin:3px 0 12px;">Visionary</div>
+            <div style="display:flex; flex-direction:column; gap:7px;">
+              <div><div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;"><span style="color:rgba(233,230,244,0.6);">Mood</span><span style="font-family:'JetBrains Mono',monospace; color:#f5c542;">65%</span></div><div style="height:5px; border-radius:999px; background:rgba(255,255,255,0.08);"><div style="width:65%; height:100%; border-radius:999px; background:#f5c542;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;"><span style="color:rgba(233,230,244,0.6);">Energy</span><span style="font-family:'JetBrains Mono',monospace; color:#37e0b0;">70%</span></div><div style="height:5px; border-radius:999px; background:rgba(255,255,255,0.08);"><div style="width:70%; height:100%; border-radius:999px; background:#37e0b0;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;"><span style="color:rgba(233,230,244,0.6);">Popularity</span><span style="font-family:'JetBrains Mono',monospace; color:#ff5d8a;">15%</span></div><div style="height:5px; border-radius:999px; background:rgba(255,255,255,0.08);"><div style="width:15%; height:100%; border-radius:999px; background:#ff5d8a;"></div></div></div>
+            </div>
+            <button style="width:100%; margin-top:13px; font-size:12.5px; font-weight:500; color:#fff; padding:9px; border-radius:10px; border:none; cursor:pointer; background:linear-gradient(135deg,#d14a7a,#7a2fb0);">Actions</button>
+          </div>
+        </div>
+
+        <div style="border:1px dashed rgba(255,255,255,0.12); border-radius:14px; padding:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:126px; cursor:pointer;">
+          <div style="width:44px; height:44px; border-radius:12px; background:rgba(55,214,255,0.08); border:1px solid rgba(55,214,255,0.28); display:flex; align-items:center; justify-content:center; margin-bottom:12px;"><i class="fas fa-plus" style="color:#37d6ff;"></i></div>
+          <div style="font-size:13px; font-weight:600; color:rgba(233,230,244,0.75);">Open Slot</div>
+          <div style="font-size:11.5px; color:rgba(233,230,244,0.4); margin-top:3px;">Sign or scout an artist</div>
+        </div>
+        <div style="border:1px dashed rgba(255,255,255,0.12); border-radius:14px; padding:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:126px; cursor:pointer;">
+          <div style="width:44px; height:44px; border-radius:12px; background:rgba(55,214,255,0.08); border:1px solid rgba(55,214,255,0.28); display:flex; align-items:center; justify-content:center; margin-bottom:12px;"><i class="fas fa-plus" style="color:#37d6ff;"></i></div>
+          <div style="font-size:13px; font-weight:600; color:rgba(233,230,244,0.75);">Open Slot</div>
+          <div style="font-size:11.5px; color:rgba(233,230,244,0.4); margin-top:3px;">Sign or scout an artist</div>
+        </div>
+      </div>
+
+      <button style="width:100%; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:10px; font-size:13.5px; font-weight:600; color:#37d6ff; padding:13px; border-radius:13px; border:1px solid rgba(55,214,255,0.35); background:rgba(55,214,255,0.06); cursor:pointer;"><i class="fas fa-magnifying-glass" style="font-size:12px;"></i> Scouted Artists — 2 slots available</button>
+    </div>
+
+  </main>
+
+  <!-- grain -->
+  <sc-if value="{{ grainOn }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; inset:-20%; opacity:0.07; mix-blend-mode:overlay; pointer-events:none; z-index:3; animation:grainShift 3s steps(6) infinite; background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:1000},&quot;glowOn&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Atmosphere&quot;},&quot;grainOn&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Atmosphere&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const active = { 5:1,6:1,7:1,8:1,9:1,10:1,11:1 };
+    const days = [];
+    [29,30,31].forEach(n => days.push({ n, bg:'transparent', color:'rgba(233,230,244,0.22)', border:'1px solid transparent' }));
+    for (let n = 1; n <= 31; n++) {
+      if (active[n]) {
+        days.push({ n, bg:'rgba(160,90,240,0.26)', color:'#F7F4FB', border:'1px solid rgba(160,90,240,0.55)' });
+      } else {
+        days.push({ n, bg:'rgba(255,255,255,0.02)', color:'rgba(233,230,244,0.72)', border:'1px solid transparent' });
+      }
+    }
+    days.push({ n:1, bg:'transparent', color:'rgba(233,230,244,0.22)', border:'1px solid transparent' });
+    return {
+      days,
+      glowOn: this.props.glowOn ?? true,
+      grainOn: this.props.grainOn ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
