@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Music, TrendingUp, Zap, Heart, Star, MapPin, Globe } from 'lucide-react';
 import type { GameState } from '@shared/types/gameTypes';
 import type { Artist as SharedArtist } from '@shared/schema';
@@ -52,6 +53,8 @@ export function ArtistDiscoveryTable({
   onSearchChange,
   onArchetypeChange,
 }: ArtistDiscoveryTableProps) {
+  const { toast } = useToast();
+
   const getArchetypeIcon = (archetype?: string) => {
     switch (archetype) {
       case 'Visionary': return <Zap className="w-4 h-4" />;
@@ -154,17 +157,12 @@ export function ArtistDiscoveryTable({
                       currentWeek: gameState.currentWeek,
                       flags: (gameState as any).flags
                     };
-                    // Show alert with key info
-                    alert(
-                      `A&R Debug Info:\n\n` +
-                      `Error: ${error}\n` +
-                      `Sourcing Mode: ${sourcingMode || 'none'}\n` +
-                      `Slot Used: ${gameState.arOfficeSlotUsed || false}\n` +
-                      `Sourcing Type: ${(gameState as any).arOfficeSourcingType || 'none'}\n` +
-                      `Game ID: ${gameState.id}\n` +
-                      `Week: ${gameState.currentWeek}\n\n` +
-                      `Full details: ${JSON.stringify(debugInfo, null, 2)}`
-                    );
+                    // Log full details to console and surface a toast (no blocking native dialog)
+                    console.log('[A&R Debug Info]', debugInfo);
+                    toast({
+                      title: 'A&R Debug Info',
+                      description: `Error: ${error || 'none'} · Sourcing: ${sourcingMode || 'none'} · Slot used: ${gameState.arOfficeSlotUsed || false}. Full details logged to console.`,
+                    });
                   }}
                   variant="ghost"
                   size="sm"

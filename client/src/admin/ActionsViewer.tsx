@@ -112,6 +112,7 @@ export default function ActionsViewer() {
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [deleteConfirmActionId, setDeleteConfirmActionId] = useState<string | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const { toast} = useToast();
 
   // Get unique roles from actions
@@ -565,15 +566,17 @@ export default function ActionsViewer() {
     const totalChanges = modifiedActions.size + newActions.length + deletedActionIds.size;
     if (editMode && totalChanges > 0) {
       // Warn about unsaved changes
-      if (confirm(`You have ${totalChanges} unsaved change(s). Discard them?`)) {
-        setEditMode(false);
-        setModifiedActions(new Map());
-        setNewActions([]);
-        setDeletedActionIds(new Set());
-      }
+      setShowDiscardConfirm(true);
     } else {
       setEditMode(!editMode);
     }
+  };
+
+  const confirmDiscardAndExitEditMode = () => {
+    setEditMode(false);
+    setModifiedActions(new Map());
+    setNewActions([]);
+    setDeletedActionIds(new Set());
   };
 
   // Save all changes to the backend
@@ -1653,6 +1656,30 @@ export default function ActionsViewer() {
               className="bg-green-600 hover:bg-green-700"
             >
               Confirm & Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Discard Unsaved Changes Confirmation Dialog */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have {modifiedActions.size + newActions.length + deletedActionIds.size} unsaved change{modifiedActions.size + newActions.length + deletedActionIds.size !== 1 ? 's' : ''}. Exiting edit mode will discard them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowDiscardConfirm(false);
+                confirmDiscardAndExitEditMode();
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Discard Changes
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

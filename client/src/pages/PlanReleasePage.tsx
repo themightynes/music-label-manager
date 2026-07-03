@@ -13,6 +13,8 @@ import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import GameLayout from '@/layouts/GameLayout';
 import { MusicCalendar } from '@/components/MusicCalendar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
   getSeasonFromWeek,
@@ -105,6 +107,7 @@ const getSeasonalAdjustment = (budgets: Record<string, number>, week: number, ba
 export default function PlanReleasePage() {
   const [, setLocation] = useLocation();
   const { gameState, loadGame, planRelease } = useGameStore();
+  const { toast } = useToast();
 
   // Dynamic data state (loaded from balance config)
   const [marketingChannels, setMarketingChannels] = useState<MarketingChannel[]>([]);
@@ -154,6 +157,7 @@ export default function PlanReleasePage() {
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showPlanAnotherDialog, setShowPlanAnotherDialog] = useState(false);
   
   // Release preview state
   const [previewData, setPreviewData] = useState<any>(null);
@@ -470,20 +474,19 @@ export default function PlanReleasePage() {
         return song?.title || 'Unknown Song';
       }).join(', ');
       
-      alert(`Release "${releaseData.title}" planned successfully!\n\nScheduled songs: ${scheduledSongTitles}\n\nThese songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`);
-      
+      toast({
+        title: `Release "${releaseData.title}" planned successfully!`,
+        description: `Scheduled songs: ${scheduledSongTitles}. These songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`,
+      });
+
       // Refresh game data to load the new planned release
       if (gameState?.id) {
         await loadGame(gameState.id);
       }
-      
-      // Offer to plan another release or go to dashboard
-      const planAnother = confirm('Would you like to plan another release? Click OK to stay on this page, or Cancel to go to the dashboard.');
 
-      if (!planAnother) {
-        setLocation('/game');
-      }
-      
+      // Offer to plan another release or go to dashboard
+      setShowPlanAnotherDialog(true);
+
     } catch (error: any) {
       console.error('Failed to create release:', error);
       
@@ -587,7 +590,11 @@ export default function PlanReleasePage() {
     }
     
     if (trimmedTitle.length > 100) {
-      alert('Song title must be 100 characters or less');
+      toast({
+        title: 'Title too long',
+        description: 'Song title must be 100 characters or less',
+        variant: 'destructive',
+      });
       return;
     }
     
@@ -609,7 +616,11 @@ export default function PlanReleasePage() {
     } catch (error: any) {
       console.error('Failed to update song title:', error);
       const errorMessage = error?.message || error?.details || 'Unknown error';
-      alert(`Failed to update song title: ${errorMessage}`);
+      toast({
+        title: 'Failed to update song title',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -1343,6 +1354,18 @@ export default function PlanReleasePage() {
           </div>
         </div>
       </main>
+
+      <ConfirmDialog
+        isOpen={showPlanAnotherDialog}
+        onClose={() => { setShowPlanAnotherDialog(false); setLocation('/game'); }}
+        onConfirm={() => setShowPlanAnotherDialog(false)}
+        title="Plan Another Release?"
+        description="Your release has been scheduled. Stay here to plan another release, or head back to the dashboard."
+        confirmText="Plan Another"
+        cancelText="Go to Dashboard"
+        variant="default"
+        emoji="🎵"
+      />
     </GameLayout>
   );
 }

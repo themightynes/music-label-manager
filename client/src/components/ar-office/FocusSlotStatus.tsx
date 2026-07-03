@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Progress } from '../ui/progress';
 import { Button } from '../ui/button';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 interface FocusSlotStatusProps {
   focusSlotsUsed: number;
@@ -13,6 +14,7 @@ export function FocusSlotStatus({
   focusSlotsTotal,
   onCancelOperation,
 }: FocusSlotStatusProps) {
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const value = focusSlotsTotal > 0 ? (focusSlotsUsed / focusSlotsTotal) * 100 : 0;
   const remaining = Math.max(0, focusSlotsTotal - focusSlotsUsed);
 
@@ -29,11 +31,22 @@ export function FocusSlotStatus({
         <div className={`font-medium ${statusColor}`}>{focusSlotsUsed}/{focusSlotsTotal} Focus Slots Used</div>
       </div>
       {onCancelOperation && (
-        <Button size="sm" variant="outline" onClick={() => {
-          if (window.confirm('Cancel A&R operation? You will lose this week\'s progress.')) {
-            onCancelOperation();
-          }
-        }}>Cancel</Button>
+        <>
+          <Button size="sm" variant="outline" onClick={() => setShowCancelConfirm(true)}>Cancel</Button>
+          <ConfirmDialog
+            isOpen={showCancelConfirm}
+            onClose={() => setShowCancelConfirm(false)}
+            onConfirm={() => {
+              setShowCancelConfirm(false);
+              onCancelOperation();
+            }}
+            title="Cancel A&R Operation?"
+            description="You will lose this week's progress."
+            confirmText="Cancel Operation"
+            cancelText="Keep Sourcing"
+            variant="destructive"
+          />
+        </>
       )}
     </div>
   );

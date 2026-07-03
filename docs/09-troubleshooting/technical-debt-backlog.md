@@ -8,11 +8,11 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: July 2, 2026
-- **Total Items**: 47
-- **Completed**: 38
+- **Last Updated**: July 3, 2026
+- **Total Items**: 49
+- **Completed**: 44
 - **In Progress**: 0
-- **Pending**: 9
+- **Pending**: 5
 
 ---
 
@@ -779,18 +779,34 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
+### Comment 49: Inbox shows stale (pre-restore) emails until a full page reload after save/load restore 🟢
+**Status**: 📋 **PENDING**
+
+`loadGameFromSave` (`client/src/store/gameStore.ts:200`) restores a save by writing the snapshot's `emails` array directly into the Zustand store (`set({ emails: snapshot.emails || [], ... })`) and re-fetching related collections via direct `apiRequest` calls into local state — but it never invalidates the TanStack Query cache. `InboxWidget.tsx` and `InboxModal.tsx` read emails through `useEmails` (`client/src/hooks/useEmails.ts`), which is keyed on the scoped `EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE` query keys. After a restore, the dashboard inbox panel keeps rendering whatever was cached from before the restore (verified during the 2026-07-03 manual smoke test: restoring a Week 4 save while sitting on Week 6 briefly showed the Week 6 inbox entries) until a full page reload forces a refetch. The underlying game/email data in the store and database is correct immediately — this is purely a stale read from the query cache, same family as the week-advance email-invalidation gap fixed during the PR #29 review (`['emails']` not matching the scoped `emails:list`/`emails:unread-count` keys — see the Cache Management note in `client/CLAUDE.md`).
+
+**Action**: After `loadGameFromSave` (and any other place that writes `emails` into the Zustand store directly) completes, invalidate the email queries the same way `client/CLAUDE.md`'s Cache Management section prescribes — a predicate matching `EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE` for the restored `gameId`, not a raw `['emails']` key.
+
+**Relevant Files**:
+- [client/src/store/gameStore.ts](client/src/store/gameStore.ts) (`loadGameFromSave`, ~line 200)
+- [client/src/hooks/useEmails.ts](client/src/hooks/useEmails.ts) (`EMAIL_LIST_SCOPE`/`EMAIL_UNREAD_SCOPE`, ~lines 16-17)
+- [client/src/components/InboxWidget.tsx](client/src/components/InboxWidget.tsx)
+
+*Identified July 3, 2026 during the post-PR #86 manual smoke test (save/restore round-trip).*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 0 items (all completed! 🎉)
-- 🟢 Medium: 2 items (C42, C43)
+- 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
+- 🟢 Medium: 3 items (C42, C43, C49)
 - 🔵 Low: 2 items (C26, C32)
 
 ### By Status
-- ✅ Completed: 44 items (91.7%)
+- ✅ Completed: 44 items (89.8%)
 - 🚧 In Progress: 0 items (0%)
-- 📋 Pending: 4 items (8.3%)
+- 📋 Pending: 5 items (10.2%)
 
 ---
 
