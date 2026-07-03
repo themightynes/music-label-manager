@@ -33,15 +33,19 @@ vi.mock('@/lib/queryClient', () => ({
       return value;
     }),
     getQueryData: vi.fn((key: unknown) => queryCache.get(JSON.stringify(key))),
+    removeQueries: vi.fn(({ queryKey }: { queryKey: unknown }) => {
+      queryCache.delete(JSON.stringify(queryKey));
+    }),
   },
 }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { songsQueryKey } from '@/hooks/useSongs';
 import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { projectsQueryKey } from '@/hooks/useProjects';
 import { artistsQueryKey } from '@/hooks/useArtists';
+import { gameStateQueryKey } from '@/hooks/useGameState';
 import { useGameStore } from '@/store/gameStore';
 import {
   routeApiRequest as routeApiRequestImpl,
@@ -54,6 +58,21 @@ const mockedApiRequest = apiRequest as unknown as ReturnType<typeof vi.fn>;
 const routeApiRequest = (routes: Array<{ match: (url: string) => boolean; body: unknown }>) =>
   routeApiRequestImpl(mockedApiRequest, routes);
 const resetGameStore = () => resetGameStoreImpl(useGameStore);
+
+/**
+ * Phase 3.5 PR-6: the store's actions read the spine record from its SINGLE
+ * owner (the query cache) via `readGameState`, and Zustand keeps only a `{ id }`
+ * session pointer. So a test seed must write BOTH the pointer and the cache
+ * record, and post-action pins read the record back from the cache.
+ */
+function seedGameState(gs: any) {
+  useGameStore.setState({ gameState: { id: gs.id } as any });
+  queryClient.setQueryData(gameStateQueryKey(gs.id), gs);
+}
+/** The committed spine record for a game (its single owner is the cache). */
+function record(gameId = 'game-1'): any {
+  return queryClient.getQueryData(gameStateQueryKey(gameId));
+}
 
 /** Grab every PATCH /api/game/:id payload the store fired at syncSlotsPatch. */
 function slotPatchCalls() {
@@ -76,29 +95,25 @@ beforeEach(() => {
 
 describe('selectAction focus-slot math', () => {
   it('increments usedFocusSlots synchronously and is visible on the SAME tick', () => {
-    useGameStore.setState({
-      gameState: baseGameState({ focusSlots: 3, usedFocusSlots: 0, arOfficeSlotUsed: false }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({ focusSlots: 3, usedFocusSlots: 0, arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: [] });
 
     // Do NOT await: the local set() is synchronous; only syncSlotsPatch is async.
     void useGameStore.getState().selectAction('action-A');
 
     const state = useGameStore.getState();
     expect(state.selectedActions).toEqual(['action-A']);
-    expect(state.gameState!.usedFocusSlots).toBe(1);
+    expect(record().usedFocusSlots).toBe(1);
   });
 
   it('fires syncSlotsPatch with the new usedFocusSlots + A&R fields', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 3,
-        usedFocusSlots: 0,
-        arOfficeSlotUsed: false,
-        arOfficeSourcingType: null,
-      }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 3,
+      usedFocusSlots: 0,
+      arOfficeSlotUsed: false,
+      arOfficeSourcingType: null,
+    }));
+    useGameStore.setState({ selectedActions: [] });
 
     await useGameStore.getState().selectAction('action-A');
 
@@ -110,21 +125,18 @@ describe('selectAction focus-slot math', () => {
   });
 
   it('adds the A&R-consumed slot on top of selected actions in usedFocusSlots', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 3,
-        usedFocusSlots: 1,
-        arOfficeSlotUsed: true,
-        arOfficeSourcingType: 'active',
-      }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 3,
+      usedFocusSlots: 1,
+      arOfficeSlotUsed: true,
+      arOfficeSourcingType: 'active',
+    }));
+    useGameStore.setState({ selectedActions: [] });
 
     await useGameStore.getState().selectAction('action-A');
 
-    const state = useGameStore.getState();
     // 1 selected action + 1 A&R slot = 2.
-    expect(state.gameState!.usedFocusSlots).toBe(2);
+    expect(record().usedFocusSlots).toBe(2);
     expect(slotPatchCalls()).toContainEqual({
       usedFocusSlots: 2,
       arOfficeSlotUsed: true,
@@ -134,36 +146,32 @@ describe('selectAction focus-slot math', () => {
 
   it('does NOT select past the available slots (focusSlots minus A&R slot)', async () => {
     // focusSlots 2, A&R slot used → only 1 action slot available.
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 2,
-        usedFocusSlots: 1,
-        arOfficeSlotUsed: true,
-        arOfficeSourcingType: 'active',
-      }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 2,
+      usedFocusSlots: 1,
+      arOfficeSlotUsed: true,
+      arOfficeSourcingType: 'active',
+    }));
+    useGameStore.setState({ selectedActions: [] });
 
     await useGameStore.getState().selectAction('action-A'); // fills the last slot
     await useGameStore.getState().selectAction('action-B'); // should be rejected
 
     const state = useGameStore.getState();
     expect(state.selectedActions).toEqual(['action-A']);
-    expect(state.gameState!.usedFocusSlots).toBe(2);
+    expect(record().usedFocusSlots).toBe(2);
   });
 
   it('ignores a duplicate action id (no double-count)', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ focusSlots: 3, usedFocusSlots: 0, arOfficeSlotUsed: false }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({ focusSlots: 3, usedFocusSlots: 0, arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: [] });
 
     await useGameStore.getState().selectAction('action-A');
     await useGameStore.getState().selectAction('action-A');
 
     const state = useGameStore.getState();
     expect(state.selectedActions).toEqual(['action-A']);
-    expect(state.gameState!.usedFocusSlots).toBe(1);
+    expect(record().usedFocusSlots).toBe(1);
   });
 
   it('is a no-op when gameState is null', async () => {
@@ -175,21 +183,19 @@ describe('selectAction focus-slot math', () => {
 
 describe('removeAction focus-slot math', () => {
   it('decrements usedFocusSlots synchronously and syncs the new count', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 3,
-        usedFocusSlots: 2,
-        arOfficeSlotUsed: false,
-        arOfficeSourcingType: null,
-      }),
-      selectedActions: ['action-A', 'action-B'],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 3,
+      usedFocusSlots: 2,
+      arOfficeSlotUsed: false,
+      arOfficeSourcingType: null,
+    }));
+    useGameStore.setState({ selectedActions: ['action-A', 'action-B'] });
 
     await useGameStore.getState().removeAction('action-A');
 
     const state = useGameStore.getState();
     expect(state.selectedActions).toEqual(['action-B']);
-    expect(state.gameState!.usedFocusSlots).toBe(1);
+    expect(record().usedFocusSlots).toBe(1);
     expect(slotPatchCalls()).toContainEqual({
       usedFocusSlots: 1,
       arOfficeSlotUsed: false,
@@ -198,27 +204,23 @@ describe('removeAction focus-slot math', () => {
   });
 
   it('keeps the A&R slot counted when removing an action', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 3,
-        usedFocusSlots: 2,
-        arOfficeSlotUsed: true,
-        arOfficeSourcingType: 'active',
-      }),
-      selectedActions: ['action-A'],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 3,
+      usedFocusSlots: 2,
+      arOfficeSlotUsed: true,
+      arOfficeSourcingType: 'active',
+    }));
+    useGameStore.setState({ selectedActions: ['action-A'] });
 
     await useGameStore.getState().removeAction('action-A');
 
     // 0 actions + 1 A&R slot = 1.
-    expect(useGameStore.getState().gameState!.usedFocusSlots).toBe(1);
+    expect(record().usedFocusSlots).toBe(1);
   });
 
   it('is a no-op for an action id that is not selected', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ usedFocusSlots: 1 }),
-      selectedActions: ['action-A'],
-    });
+    seedGameState(baseGameState({ usedFocusSlots: 1 }));
+    useGameStore.setState({ selectedActions: ['action-A'] });
 
     await useGameStore.getState().removeAction('not-selected');
 
@@ -229,36 +231,30 @@ describe('removeAction focus-slot math', () => {
 
 describe('clearActions focus-slot math', () => {
   it('clears selectedActions and resets usedFocusSlots to the A&R slot count (no A&R)', () => {
-    useGameStore.setState({
-      gameState: baseGameState({ usedFocusSlots: 2, arOfficeSlotUsed: false }),
-      selectedActions: ['action-A', 'action-B'],
-    });
+    seedGameState(baseGameState({ usedFocusSlots: 2, arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: ['action-A', 'action-B'] });
 
     useGameStore.getState().clearActions();
 
     const state = useGameStore.getState();
     expect(state.selectedActions).toEqual([]);
-    expect(state.gameState!.usedFocusSlots).toBe(0);
+    expect(record().usedFocusSlots).toBe(0);
   });
 
   it('preserves the A&R-consumed slot in usedFocusSlots after clearing', () => {
-    useGameStore.setState({
-      gameState: baseGameState({ usedFocusSlots: 3, arOfficeSlotUsed: true }),
-      selectedActions: ['action-A', 'action-B'],
-    });
+    seedGameState(baseGameState({ usedFocusSlots: 3, arOfficeSlotUsed: true }));
+    useGameStore.setState({ selectedActions: ['action-A', 'action-B'] });
 
     useGameStore.getState().clearActions();
 
     const state = useGameStore.getState();
     expect(state.selectedActions).toEqual([]);
-    expect(state.gameState!.usedFocusSlots).toBe(1); // A&R slot only
+    expect(record().usedFocusSlots).toBe(1); // A&R slot only
   });
 
   it('does NOT fire a syncSlotsPatch (purely local reset)', () => {
-    useGameStore.setState({
-      gameState: baseGameState({ usedFocusSlots: 2 }),
-      selectedActions: ['action-A'],
-    });
+    seedGameState(baseGameState({ usedFocusSlots: 2 }));
+    useGameStore.setState({ selectedActions: ['action-A'] });
 
     useGameStore.getState().clearActions();
 
@@ -268,22 +264,19 @@ describe('clearActions focus-slot math', () => {
 
 describe('consumeAROfficeSlot focus-slot math', () => {
   it('marks the A&R slot used and sets usedFocusSlots to selectedActions.length + 1', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 3,
-        usedFocusSlots: 1,
-        arOfficeSlotUsed: false,
-        arOfficeSourcingType: null,
-      }),
-      selectedActions: ['action-A'],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 3,
+      usedFocusSlots: 1,
+      arOfficeSlotUsed: false,
+      arOfficeSourcingType: null,
+    }));
+    useGameStore.setState({ selectedActions: ['action-A'] });
 
     await useGameStore.getState().consumeAROfficeSlot('active');
 
-    const state = useGameStore.getState();
-    expect(state.gameState!.arOfficeSlotUsed).toBe(true);
-    expect(state.gameState!.arOfficeSourcingType).toBe('active');
-    expect(state.gameState!.usedFocusSlots).toBe(2); // 1 action + 1 A&R
+    expect(record().arOfficeSlotUsed).toBe(true);
+    expect(record().arOfficeSourcingType).toBe('active');
+    expect(record().usedFocusSlots).toBe(2); // 1 action + 1 A&R
     expect(slotPatchCalls()).toContainEqual({
       usedFocusSlots: 2,
       arOfficeSlotUsed: true,
@@ -292,59 +285,52 @@ describe('consumeAROfficeSlot focus-slot math', () => {
   });
 
   it('is a no-op when the A&R slot is already used', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 3,
-        usedFocusSlots: 1,
-        arOfficeSlotUsed: true,
-        arOfficeSourcingType: 'passive',
-      }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 3,
+      usedFocusSlots: 1,
+      arOfficeSlotUsed: true,
+      arOfficeSourcingType: 'passive',
+    }));
+    useGameStore.setState({ selectedActions: [] });
 
     await useGameStore.getState().consumeAROfficeSlot('active');
 
     // sourcingType unchanged, no PATCH fired.
-    expect(useGameStore.getState().gameState!.arOfficeSourcingType).toBe('passive');
+    expect(record().arOfficeSourcingType).toBe('passive');
     expect(slotPatchCalls()).toHaveLength(0);
   });
 
   it('is a no-op when all focus slots are already consumed', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 2,
-        usedFocusSlots: 2,
-        arOfficeSlotUsed: false,
-        arOfficeSourcingType: null,
-      }),
-      selectedActions: ['action-A', 'action-B'],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 2,
+      usedFocusSlots: 2,
+      arOfficeSlotUsed: false,
+      arOfficeSourcingType: null,
+    }));
+    useGameStore.setState({ selectedActions: ['action-A', 'action-B'] });
 
     await useGameStore.getState().consumeAROfficeSlot('active');
 
-    expect(useGameStore.getState().gameState!.arOfficeSlotUsed).toBe(false);
+    expect(record().arOfficeSlotUsed).toBe(false);
     expect(slotPatchCalls()).toHaveLength(0);
   });
 });
 
 describe('releaseAROfficeSlot focus-slot math', () => {
   it('clears the A&R slot and sets usedFocusSlots to selectedActions.length', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        focusSlots: 3,
-        usedFocusSlots: 2,
-        arOfficeSlotUsed: true,
-        arOfficeSourcingType: 'active',
-      }),
-      selectedActions: ['action-A'],
-    });
+    seedGameState(baseGameState({
+      focusSlots: 3,
+      usedFocusSlots: 2,
+      arOfficeSlotUsed: true,
+      arOfficeSourcingType: 'active',
+    }));
+    useGameStore.setState({ selectedActions: ['action-A'] });
 
     await useGameStore.getState().releaseAROfficeSlot();
 
-    const state = useGameStore.getState();
-    expect(state.gameState!.arOfficeSlotUsed).toBe(false);
-    expect(state.gameState!.arOfficeSourcingType).toBeNull();
-    expect(state.gameState!.usedFocusSlots).toBe(1); // just the 1 action
+    expect(record().arOfficeSlotUsed).toBe(false);
+    expect(record().arOfficeSourcingType).toBeNull();
+    expect(record().usedFocusSlots).toBe(1); // just the 1 action
     expect(slotPatchCalls()).toContainEqual({
       usedFocusSlots: 1,
       arOfficeSlotUsed: false,
@@ -353,10 +339,8 @@ describe('releaseAROfficeSlot focus-slot math', () => {
   });
 
   it('is a no-op when no A&R slot is in use', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ arOfficeSlotUsed: false }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({ arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: [] });
 
     await useGameStore.getState().releaseAROfficeSlot();
 
@@ -388,8 +372,8 @@ describe('advanceWeek gameState merge precedence', () => {
   }
 
   it('lets the refetch (serverGameState) WIN over the advance-week response on conflicting fields', async () => {
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: false }));
     useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: false }),
       selectedActions: ['{"roleId":"ceo","actionId":"a1","choiceId":"c1"}'],
     });
 
@@ -403,15 +387,15 @@ describe('advanceWeek gameState merge precedence', () => {
 
     await useGameStore.getState().advanceWeek();
 
-    const gs = useGameStore.getState().gameState as any;
+    const gs = record('game-1');
     expect(gs.money).toBe(12345); // refetch wins over the advance-week 9000
     // A field present ONLY in the advance-week response survives (not overwritten).
     expect(gs.reputation).toBe(50);
   });
 
   it('hardcodes usedFocusSlots to (arOfficeSlotUsed ? 1 : 0) — 0 when no A&R slot', async () => {
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 5 }));
     useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 5 }),
       selectedActions: ['{"roleId":"ceo","actionId":"a1","choiceId":"c1"}'],
     });
     routeAdvance(
@@ -422,14 +406,12 @@ describe('advanceWeek gameState merge precedence', () => {
 
     await useGameStore.getState().advanceWeek();
 
-    expect((useGameStore.getState().gameState as any).usedFocusSlots).toBe(0);
+    expect(record('game-1').usedFocusSlots).toBe(0);
   });
 
   it('resets usedFocusSlots to 1 when the advance response reports an A&R slot in use', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: true }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: true }));
+    useGameStore.setState({ selectedActions: [] });
     routeAdvance(
       { id: 'game-1', currentWeek: 6, arOfficeSlotUsed: true, arOfficeSourcingType: 'active' },
       { id: 'game-1', currentWeek: 6 }, // refetch omits the A&R fields
@@ -438,7 +420,7 @@ describe('advanceWeek gameState merge precedence', () => {
 
     await useGameStore.getState().advanceWeek();
 
-    const gs = useGameStore.getState().gameState as any;
+    const gs = record('game-1');
     expect(gs.usedFocusSlots).toBe(1);
     // arOfficeSlotUsed/SourcingType are coalesced result ?? server.
     expect(gs.arOfficeSlotUsed).toBe(true);
@@ -446,8 +428,8 @@ describe('advanceWeek gameState merge precedence', () => {
   });
 
   it('sources musicLabel from the reload (gameData.musicLabel), embedded into gameState', async () => {
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 5 }));
     useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 5 }),
       selectedActions: ['{"roleId":"ceo","actionId":"a1","choiceId":"c1"}'],
     });
     routeAdvance(
@@ -458,26 +440,24 @@ describe('advanceWeek gameState merge precedence', () => {
 
     await useGameStore.getState().advanceWeek();
 
-    expect((useGameStore.getState().gameState as any).musicLabel).toEqual({ name: 'Reloaded Label' });
+    expect(record('game-1').musicLabel).toEqual({ name: 'Reloaded Label' });
   });
 
   it('falls back to null musicLabel when neither reload nor advance response carries one', async () => {
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 5 }));
     useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 5 }),
       selectedActions: ['{"roleId":"ceo","actionId":"a1","choiceId":"c1"}'],
     });
     routeAdvance({ id: 'game-1', currentWeek: 6 }, { id: 'game-1', currentWeek: 6 }, null);
 
     await useGameStore.getState().advanceWeek();
 
-    expect((useGameStore.getState().gameState as any).musicLabel).toBeNull();
+    expect(record('game-1').musicLabel).toBeNull();
   });
 
   it('is a no-op (never sets isAdvancingWeek) when there are no actions and no A&R slot', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', arOfficeSlotUsed: false }),
-      selectedActions: [],
-    });
+    seedGameState(baseGameState({ id: 'game-1', arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: [] });
 
     await useGameStore.getState().advanceWeek();
 
@@ -494,17 +474,15 @@ describe('advanceWeek gameState merge precedence', () => {
 
 describe('adoptServerBalances two-field merge (via planRelease)', () => {
   it('overwrites ONLY money + creativeCapital, preserving A&R fields and musicLabel', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        id: 'game-1',
-        money: 100000,
-        creativeCapital: 4,
-        arOfficeSlotUsed: true,
-        arOfficeSourcingType: 'active',
-        usedFocusSlots: 2,
-        musicLabel: { name: 'Preserve Me' },
-      }),
-    });
+    seedGameState(baseGameState({
+      id: 'game-1',
+      money: 100000,
+      creativeCapital: 4,
+      arOfficeSlotUsed: true,
+      arOfficeSourcingType: 'active',
+      usedFocusSlots: 2,
+      musicLabel: { name: 'Preserve Me' },
+    }));
     routeApiRequest([
       // GET /api/game/:id refetch carries a DIFFERENT musicLabel + A&R fields, none
       // of which must leak into the store (only money + creativeCapital merge).
@@ -526,7 +504,7 @@ describe('adoptServerBalances two-field merge (via planRelease)', () => {
 
     await useGameStore.getState().planRelease({ metadata: { totalInvestment: 1000 } });
 
-    const gs = useGameStore.getState().gameState as any;
+    const gs = record('game-1');
     expect(gs.money).toBe(55000); // adopted
     expect(gs.creativeCapital).toBe(1); // adopted
     // Everything else is the PRE-EXISTING store value, NOT the server refetch's.
@@ -544,22 +522,20 @@ describe('adoptServerBalances two-field merge (via planRelease)', () => {
 
 describe('cancelProject balance adoption preserves the rest of the spine', () => {
   it('sets money to result.newBalance while leaving other spine fields intact', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({
-        id: 'game-1',
-        money: 20000,
-        creativeCapital: 3,
-        reputation: 12,
-        musicLabel: { name: 'Keep' },
-      }),
-    });
+    seedGameState(baseGameState({
+      id: 'game-1',
+      money: 20000,
+      creativeCapital: 3,
+      reputation: 12,
+      musicLabel: { name: 'Keep' },
+    }));
     routeApiRequest([
       { match: (u) => u.includes('/cancel'), body: { newBalance: 27500, refundAmount: 7500 } },
     ]);
 
     await useGameStore.getState().cancelProject('proj-1', { refundAmount: 7500 });
 
-    const gs = useGameStore.getState().gameState as any;
+    const gs = record('game-1');
     expect(gs.money).toBe(27500);
     // creativeCapital is NOT touched by cancelProject (only money).
     expect(gs.creativeCapital).toBe(3);
@@ -601,7 +577,7 @@ describe('loadGame gameStateWithLabel assembly', () => {
 
     await useGameStore.getState().loadGame('game-1');
 
-    const gs = useGameStore.getState().gameState as any;
+    const gs = record('game-1');
     expect(gs.musicLabel).toEqual({ name: 'Loaded Label' });
     expect(gs.usedFocusSlots).toBe(0);
     expect(gs.arOfficeSlotUsed).toBe(false);
@@ -616,7 +592,7 @@ describe('loadGame gameStateWithLabel assembly', () => {
 
     await useGameStore.getState().loadGame('game-1');
 
-    const gs = useGameStore.getState().gameState as any;
+    const gs = record('game-1');
     expect(gs.usedFocusSlots).toBe(1);
     expect(gs.arOfficeSlotUsed).toBe(true);
     expect(gs.arOfficeSourcingType).toBe('active');
@@ -627,7 +603,7 @@ describe('loadGame gameStateWithLabel assembly', () => {
 
     await useGameStore.getState().loadGame('game-1');
 
-    expect((useGameStore.getState().gameState as any).musicLabel).toBeNull();
+    expect(record('game-1').musicLabel).toBeNull();
   });
 });
 
@@ -652,7 +628,7 @@ describe('createNewGame orphan-cleanup', () => {
   }
 
   it('issues GET /api/saves then DELETE /api/game/:id for an unsaved current game', async () => {
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', currentWeek: 4 }) });
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 4 }));
     routeCreate([]); // no saves belong to game-1 → orphaned
 
     await useGameStore.getState().createNewGame('Balanced');
@@ -663,7 +639,7 @@ describe('createNewGame orphan-cleanup', () => {
   });
 
   it('does NOT delete the current game when it has saves', async () => {
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', currentWeek: 4 }) });
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 4 }));
     routeCreate([{ gameId: 'game-1', name: 'a save' }]);
 
     await useGameStore.getState().createNewGame('Balanced');
@@ -675,7 +651,7 @@ describe('createNewGame orphan-cleanup', () => {
   });
 
   it('filters saves by gameId — saves for OTHER games do not protect the current one', async () => {
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', currentWeek: 4 }) });
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 4 }));
     routeCreate([{ gameId: 'some-other-game', name: 'unrelated save' }]);
 
     await useGameStore.getState().createNewGame('Balanced');
@@ -695,7 +671,7 @@ describe('createNewGame orphan-cleanup', () => {
   });
 
   it('still creates the new game when the DELETE cleanup fails (non-fatal)', async () => {
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', currentWeek: 4 }) });
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 4 }));
     mockedApiRequest.mockImplementation(async (method: string, url: string) => {
       if (method === 'GET' && url.endsWith('/api/saves')) return jsonResponse([]);
       if (method === 'DELETE' && /\/api\/game\/[^/]+$/.test(url)) throw new Error('delete failed');
@@ -709,7 +685,7 @@ describe('createNewGame orphan-cleanup', () => {
     const result = await useGameStore.getState().createNewGame('Balanced');
 
     expect(result.id).toBe('game-2');
-    expect((useGameStore.getState().gameState as any).id).toBe('game-2');
+    expect(record('game-2').id).toBe('game-2');
   });
 });
 
@@ -739,13 +715,13 @@ describe('saveGame snapshot-assembly input', () => {
   }
 
   it('feeds gameState verbatim into buildGameSnapshot — musicLabel ends up a SIBLING, not nested', async () => {
+    seedGameState(baseGameState({
+      id: 'game-1',
+      currentWeek: 7,
+      money: 42000,
+      musicLabel: { name: 'Snapshot Label' },
+    }));
     useGameStore.setState({
-      gameState: baseGameState({
-        id: 'game-1',
-        currentWeek: 7,
-        money: 42000,
-        musicLabel: { name: 'Snapshot Label' },
-      }),
       roles: [{ id: 'role1' } as any],
       weeklyActions: [{ id: 'wa1' } as any],
       weeklyOutcome: { week: 7 },
@@ -769,8 +745,8 @@ describe('saveGame snapshot-assembly input', () => {
   });
 
   it('sources songs/releases/projects/artists from the query cache, not the store', async () => {
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 2, musicLabel: null }));
     useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 2, musicLabel: null }),
       roles: [],
       weeklyActions: [],
       weeklyOutcome: null,

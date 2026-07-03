@@ -174,16 +174,20 @@ async function refetchDiscoveredArtistsCache(gameState: GameState | null) {
   }
 }
 
-// Phase 3.5 PR-4: THE dual-write commit funnel for the gameState spine.
+// Phase 3.5 PR-6: THE commit funnel for the gameState spine — cache is now the
+// SINGLE owner of the record.
 //
-// Every gameState write in the store flows through here. It (a) writes Zustand
-// exactly as before — `set({ gameState: next })`, same shallow-merge semantics,
-// byte-for-byte identical resulting store state — and (b) synchronously mirrors
-// the same object into the TanStack Query cache at `gameStateQueryKey(next.id)`.
-// The cache is a CLIENT-COMMITTED RECORD: this funnel is its only writer, so the
-// two sources can never diverge. `useGameState()` still READS Zustand until PR-5
-// flips it; the cache write here is a no-op for readers this PR but lets PR-5 be
-// a one-file change.
+// Through PR-4/PR-5 this funnel dual-wrote Zustand (`set({ gameState: next })`)
+// AND the TanStack Query cache. PR-6 retires the Zustand copy: the full spine
+// record now lives ONLY in the query cache at `gameStateQueryKey(next.id)`. The
+// funnel is still its ONLY writer, so the record is a CLIENT-COMMITTED RECORD
+// (staleTime/gcTime Infinity, no background refetch — see hooks/useGameState.ts).
+//
+// Zustand retains a MINIMAL SESSION POINTER only: `gameState = { id }` (or null).
+// That pointer is what `useGameId` / `useGameState`'s gameId bootstrap /
+// `partialize` read (`state.gameState?.id`) — the on-disk localStorage shape
+// `{ gameState: { id } | null, ... }` is therefore unchanged. The full record is
+// never in Zustand again; internal store reads go through `readGameState(get)`.
 //
 // `previousGameId` handles the game-SWITCH writers (loadGame / loadGameFromSave /
 // createNewGame): when the committed game's id differs from the game we were on,
@@ -196,17 +200,22 @@ async function refetchDiscoveredArtistsCache(gameState: GameState | null) {
 // closure like `adoptServerBalances`).
 type ZustandSet = (partial: Partial<GameStore>) => void;
 
+/** The minimal Zustand session pointer that survives PR-6 (id only). */
+type GameStatePointer = Pick<GameState, 'id'>;
+
 function commitGameState(
   set: ZustandSet,
   next: GameState,
   previousGameId?: string | null,
 ) {
-  // (a) Zustand write — unchanged semantics.
-  set({ gameState: next });
-  // (b) Cache mirror. Drop the stale key first on a game switch so a
-  // switched-away game never lingers in the cache. `removeQueries` is guarded
-  // for the mocked queryClient in the characterization harness (which stubs only
-  // invalidate/set/getQueryData) — its absence must not break the Zustand write.
+  // (a) Zustand write — now the SESSION POINTER only (`{ id }`), not the record.
+  // This keeps `useGameId` / persist / the useGameState bootstrap working off
+  // `state.gameState?.id` with the exact same on-disk shape as before.
+  set({ gameState: next.id ? ({ id: next.id } as GameStatePointer) : null });
+  // (b) Cache — the SINGLE owner of the full record. Drop the stale key first on
+  // a game switch so a switched-away game never lingers in the cache.
+  // `removeQueries` is guarded for the mocked queryClient in the characterization
+  // harness (which may stub only invalidate/set/getQueryData).
   if (
     previousGameId &&
     next.id &&
@@ -218,6 +227,17 @@ function commitGameState(
   if (next.id) {
     queryClient.setQueryData(gameStateQueryKey(next.id), next);
   }
+}
+
+// Phase 3.5 PR-6: read the full spine record from its single owner, the query
+// cache. The current game id comes from the Zustand session pointer
+// (`get().gameState?.id`) — the only spine field Zustand still holds. Returns
+// null when there is no current game or the record has not been committed yet,
+// matching the old `get().gameState` null semantics exactly.
+function readGameState(get: () => GameStore): GameState | null {
+  const gameId = get().gameState?.id;
+  if (!gameId) return null;
+  return queryClient.getQueryData<GameState>(gameStateQueryKey(gameId)) ?? null;
 }
 
 // Phase 3 PR-10: adopt the SERVER-CANONICAL money + creativeCapital after a
@@ -244,7 +264,9 @@ async function adoptServerBalances(get: () => GameStore, gameId: string) {
     const data = await response.json();
     const serverGameState = data?.gameState;
     if (!serverGameState) return;
-    const current = get().gameState;
+    // Phase 3.5 PR-6: read the current record from the cache (its single owner),
+    // not the Zustand pointer.
+    const current = readGameState(get);
     if (!current) return;
     // Phase 3.5 PR-4: route the two-field merge through the dual-write funnel so
     // the cache mirror stays in lock-step. Same-game write (id unchanged), so no
@@ -276,8 +298,11 @@ async function syncSlotsPatch(
 }
 
 interface GameStore {
-  // Game state
-  gameState: GameState | null;
+  // Phase 3.5 PR-6: `gameState` is now a MINIMAL SESSION POINTER (`{ id }` or
+  // null), NOT the full spine record. The record is cache-owned
+  // (gameStateQueryKey) and read via useGameState() / readGameState(). Only the
+  // id survives in Zustand — it's the bootstrap handle for the cache + persist.
+  gameState: GameStatePointer | null;
   roles: Role[];
   weeklyActions: WeeklyAction[];
   // Phase 3 PR-6: songs / releases / releaseSongs are no longer owned by the
@@ -564,7 +589,9 @@ export const useGameStore = create<GameStore>()(
           // This is the PRIMARY prevention mechanism for orphaned games.
           // ============================================================================
 
-          const currentGame = get().gameState;
+          // Phase 3.5 PR-6: orphan-cleanup reads id/currentWeek from the cache
+          // record (single owner), not the Zustand pointer.
+          const currentGame = readGameState(get);
           const previousGameId = currentGame?.id ?? null;
           if (currentGame?.id) {
             console.log(`[ORPHANED GAME CLEANUP] Checking if current game ${currentGame.id} (Week ${currentGame.currentWeek}) has saves...`);
@@ -701,9 +728,10 @@ export const useGameStore = create<GameStore>()(
 
       // Weekly action selection
       selectAction: async (actionId: string) => {
-        const { selectedActions, gameState } = get();
-        const availableSlots = gameState?.focusSlots || 3;
-        
+        const { selectedActions } = get();
+        // Phase 3.5 PR-6: read the record from the cache (single owner).
+        const gameState = readGameState(get);
+
         if (
           gameState &&
           selectedActions.length < ((gameState.focusSlots || 0) - ((gameState.arOfficeSlotUsed) ? 1 : 0)) &&
@@ -733,7 +761,8 @@ export const useGameStore = create<GameStore>()(
       },
 
       removeAction: async (actionId: string) => {
-        const { selectedActions, gameState } = get();
+        const { selectedActions } = get();
+        const gameState = readGameState(get);
         if (selectedActions.includes(actionId) && gameState) {
           const newSelectedActions = selectedActions.filter(id => id !== actionId);
           const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
@@ -762,7 +791,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       clearActions: () => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
         const arUsed = gameState?.arOfficeSlotUsed ? 1 : 0;
         // Phase 3.5 PR-4: selectedActions keeps its plain `set`; gameState (when
         // present) flows through the dual-write funnel. When gameState is null it
@@ -775,7 +804,8 @@ export const useGameStore = create<GameStore>()(
 
       // Advance week
       advanceWeek: async () => {
-        const { gameState, selectedActions } = get();
+        const { selectedActions } = get();
+        const gameState = readGameState(get);
         // Allow advancing the week if either there are selected actions OR an A&R operation is consuming a slot
         if (!gameState || (selectedActions.length === 0 && !gameState.arOfficeSlotUsed)) return;
 
@@ -923,7 +953,7 @@ export const useGameStore = create<GameStore>()(
             // Enhanced retry logic with exponential backoff
             const loadWithRetry = async (attempt = 1): Promise<void> => {
               try {
-                await refetchDiscoveredArtistsCache(get().gameState);
+                await refetchDiscoveredArtistsCache(readGameState(get));
                 console.log(`[A&R] Successfully loaded discovered artists (attempt ${attempt})`);
               } catch (error) {
                 console.error(`[A&R] Failed to load discovered artists (attempt ${attempt}):`, error);
@@ -1030,7 +1060,7 @@ export const useGameStore = create<GameStore>()(
 
       // Artist management
       signArtist: async (artistData: any) => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
         if (!gameState) return;
 
         try {
@@ -1069,7 +1099,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       updateArtist: async (artistId: string, updates: any) => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
 
         try {
           await apiRequest('PATCH', `/api/artists/${artistId}`, updates);
@@ -1087,7 +1117,7 @@ export const useGameStore = create<GameStore>()(
 
       // Project management
       createProject: async (projectData: any) => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
         if (!gameState) return;
 
         try {
@@ -1119,7 +1149,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       updateProject: async (projectId: string, updates: any) => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
 
         try {
           const response = await apiRequest('PATCH', `/api/projects/${projectId}`, updates);
@@ -1138,7 +1168,7 @@ export const useGameStore = create<GameStore>()(
 
       // Cancel project with refund calculation
       cancelProject: async (projectId: string, cancellationData: { refundAmount: number }) => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
         if (!gameState) return;
 
         try {
@@ -1175,7 +1205,7 @@ export const useGameStore = create<GameStore>()(
 
       // Release management
       planRelease: async (releaseData: any) => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
         if (!gameState) return;
 
         try {
@@ -1207,7 +1237,8 @@ export const useGameStore = create<GameStore>()(
 
       // A&R Office operations
       consumeAROfficeSlot: async (sourcingType: SourcingTypeString) => {
-        const { gameState, selectedActions } = get();
+        const { selectedActions } = get();
+        const gameState = readGameState(get);
         if (!gameState) return;
         const arUsed = gameState.arOfficeSlotUsed ? 1 : 0;
         const totalUsed = selectedActions.length + arUsed;
@@ -1231,7 +1262,8 @@ export const useGameStore = create<GameStore>()(
       },
 
       releaseAROfficeSlot: async () => {
-        const { gameState, selectedActions } = get();
+        const { selectedActions } = get();
+        const gameState = readGameState(get);
         if (!gameState || !gameState.arOfficeSlotUsed) return;
 
         const updated: GameState = {
@@ -1252,7 +1284,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       getAROfficeStatus: () => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
         return {
           arOfficeSlotUsed: !!gameState?.arOfficeSlotUsed,
           arOfficeSourcingType: (gameState?.arOfficeSourcingType as SourcingTypeString | null) ?? null,
@@ -1261,7 +1293,8 @@ export const useGameStore = create<GameStore>()(
       },
 
       startAROfficeOperation: async (sourcingType: SourcingTypeString, primaryGenre?: string, secondaryGenre?: string) => {
-        const { gameState, consumeAROfficeSlot } = get();
+        const { consumeAROfficeSlot } = get();
+        const gameState = readGameState(get);
         if (!gameState) return;
         console.log('[A&R CLIENT] Starting A&R operation:', { sourcingType, primaryGenre, secondaryGenre });
         try {
@@ -1283,7 +1316,7 @@ export const useGameStore = create<GameStore>()(
 
 
       cancelAROfficeOperation: async () => {
-        const { gameState } = get();
+        const gameState = readGameState(get);
         if (!gameState) return;
         try {
           const { cancelAROfficeOperation } = await import('../services/arOfficeService');
@@ -1309,13 +1342,17 @@ export const useGameStore = create<GameStore>()(
       // persistence was load-bearing (they were never in the persist partialize).
       saveGame: async (name: string, options?: { isAutosave?: boolean }) => {
         const {
-          gameState,
           roles,
           executives,
           moodEvents,
           weeklyActions,
           weeklyOutcome
         } = get();
+        // Phase 3.5 PR-6: the spine record (with embedded musicLabel) comes from
+        // the cache — its single owner — exactly as the five collections already
+        // do below. Autosave runs right after advanceWeek's commit, so the cache
+        // is freshly written here (same-tick, safe).
+        const gameState = readGameState(get);
         if (!gameState) return;
 
         // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /

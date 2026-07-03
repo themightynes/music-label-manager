@@ -1,14 +1,14 @@
 /**
- * gameStore dual-write funnel characterization tests (Phase 3.5 PR-4).
+ * gameStore commit-funnel characterization tests (Phase 3.5 PR-4 → PR-6).
  *
- * PR-4 routes every gameState write in the store through a single
- * `commitGameState()` funnel that dual-writes: the Zustand `set({ gameState })`
- * (unchanged) PLUS `queryClient.setQueryData(gameStateQueryKey(id), next)`. This
- * suite asserts the INVARIANT that makes PR-5's reader flip safe: after every
- * store action, the cache record at `gameStateQueryKey(id)` deep-equals the
- * Zustand `gameState`. The Zustand side itself is pinned unchanged by
- * gameStore-spine.characterization.test.ts (the PR-1 net) — this file adds the
- * cache-equivalence half.
+ * PR-4 routed every gameState write through a single `commitGameState()` funnel
+ * that dual-wrote Zustand + the query cache. PR-6 RETIRES the Zustand record:
+ * the funnel now writes the full spine ONLY to the cache at
+ * `gameStateQueryKey(id)` and keeps just a `{ id }` SESSION POINTER in Zustand.
+ * This suite therefore asserts the cache — the single owner — carries the
+ * committed record after every store action, and that the Zustand pointer tracks
+ * the current game id. (The former "cache deep-equals the Zustand record"
+ * invariant no longer applies: Zustand holds no record.)
  *
  * The mocked queryClient here exposes `removeQueries` in addition to
  * set/get/invalidate because the game-SWITCH writers (loadGame /
@@ -50,11 +50,24 @@ const routeApiRequest = (routes: Array<{ match: (url: string) => boolean; body: 
   routeApiRequestImpl(mockedApiRequest, routes);
 const resetGameStore = () => resetGameStoreImpl(useGameStore);
 
-/** The single invariant this whole suite exists to prove. */
-function cacheEqualsStore(gameId: string) {
-  const store = useGameStore.getState().gameState;
-  const cached = queryClient.getQueryData(gameStateQueryKey(gameId));
-  expect(cached).toEqual(store);
+/** Read the committed spine record from its single owner (the cache). */
+function readRecord(gameId: string): any {
+  return queryClient.getQueryData(gameStateQueryKey(gameId));
+}
+
+/**
+ * Seed a game the way a real load does after PR-6: the Zustand SESSION POINTER
+ * (`{ id }`) plus the full record in the cache. Store actions read the record
+ * via `readGameState` (cache), so the cache MUST be seeded, not just the pointer.
+ */
+function seedGame(gs: any) {
+  useGameStore.setState({ gameState: { id: gs.id } as any });
+  queryClient.setQueryData(gameStateQueryKey(gs.id), gs);
+}
+
+/** After a commit, the Zustand pointer tracks the current game id. */
+function pointerId(): string | null {
+  return useGameStore.getState().gameState?.id ?? null;
 }
 
 beforeEach(() => {
@@ -64,96 +77,68 @@ beforeEach(() => {
   mockedApiRequest.mockResolvedValue(jsonResponse({}));
 });
 
-describe('dual-write funnel: same-game slot writers', () => {
-  it('selectAction mirrors the new gameState into the cache', () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', focusSlots: 3, usedFocusSlots: 0, arOfficeSlotUsed: false }),
-      selectedActions: [],
-    });
+describe('commit funnel: same-game slot writers', () => {
+  it('selectAction commits the new gameState to the cache (single owner)', () => {
+    seedGame(baseGameState({ id: 'game-1', focusSlots: 3, usedFocusSlots: 0, arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: [] });
 
     void useGameStore.getState().selectAction('action-A');
 
-    expect(useGameStore.getState().gameState!.usedFocusSlots).toBe(1);
-    cacheEqualsStore('game-1');
-    expect(
-      (queryClient.getQueryData(gameStateQueryKey('game-1')) as any).usedFocusSlots,
-    ).toBe(1);
+    expect(readRecord('game-1').usedFocusSlots).toBe(1);
+    expect(pointerId()).toBe('game-1'); // pointer still tracks the game
   });
 
-  it('removeAction mirrors the decremented gameState into the cache', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', usedFocusSlots: 2, arOfficeSlotUsed: false }),
-      selectedActions: ['action-A', 'action-B'],
-    });
+  it('removeAction commits the decremented gameState to the cache', async () => {
+    seedGame(baseGameState({ id: 'game-1', usedFocusSlots: 2, arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: ['action-A', 'action-B'] });
 
     await useGameStore.getState().removeAction('action-A');
 
-    cacheEqualsStore('game-1');
-    expect(
-      (queryClient.getQueryData(gameStateQueryKey('game-1')) as any).usedFocusSlots,
-    ).toBe(1);
+    expect(readRecord('game-1').usedFocusSlots).toBe(1);
   });
 
-  it('clearActions mirrors the reset gameState into the cache', () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', usedFocusSlots: 2, arOfficeSlotUsed: false }),
-      selectedActions: ['action-A', 'action-B'],
-    });
+  it('clearActions commits the reset gameState to the cache', () => {
+    seedGame(baseGameState({ id: 'game-1', usedFocusSlots: 2, arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: ['action-A', 'action-B'] });
 
     useGameStore.getState().clearActions();
 
-    cacheEqualsStore('game-1');
-    expect(
-      (queryClient.getQueryData(gameStateQueryKey('game-1')) as any).usedFocusSlots,
-    ).toBe(0);
+    expect(readRecord('game-1').usedFocusSlots).toBe(0);
   });
 
-  it('consumeAROfficeSlot mirrors the A&R gameState into the cache', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', focusSlots: 3, usedFocusSlots: 1, arOfficeSlotUsed: false }),
-      selectedActions: ['action-A'],
-    });
+  it('consumeAROfficeSlot commits the A&R gameState to the cache', async () => {
+    seedGame(baseGameState({ id: 'game-1', focusSlots: 3, usedFocusSlots: 1, arOfficeSlotUsed: false }));
+    useGameStore.setState({ selectedActions: ['action-A'] });
 
     await useGameStore.getState().consumeAROfficeSlot('active');
 
-    cacheEqualsStore('game-1');
-    expect(
-      (queryClient.getQueryData(gameStateQueryKey('game-1')) as any).arOfficeSlotUsed,
-    ).toBe(true);
+    expect(readRecord('game-1').arOfficeSlotUsed).toBe(true);
   });
 
-  it('releaseAROfficeSlot mirrors the cleared A&R gameState into the cache', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', focusSlots: 3, usedFocusSlots: 2, arOfficeSlotUsed: true, arOfficeSourcingType: 'active' }),
-      selectedActions: ['action-A'],
-    });
+  it('releaseAROfficeSlot commits the cleared A&R gameState to the cache', async () => {
+    seedGame(baseGameState({ id: 'game-1', focusSlots: 3, usedFocusSlots: 2, arOfficeSlotUsed: true, arOfficeSourcingType: 'active' }));
+    useGameStore.setState({ selectedActions: ['action-A'] });
 
     await useGameStore.getState().releaseAROfficeSlot();
 
-    cacheEqualsStore('game-1');
-    expect(
-      (queryClient.getQueryData(gameStateQueryKey('game-1')) as any).arOfficeSlotUsed,
-    ).toBe(false);
+    expect(readRecord('game-1').arOfficeSlotUsed).toBe(false);
   });
 });
 
-describe('dual-write funnel: balance-adopting writers', () => {
-  it('cancelProject mirrors result.newBalance into the cache', async () => {
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', money: 20000 }) });
+describe('commit funnel: balance-adopting writers', () => {
+  it('cancelProject commits result.newBalance to the cache', async () => {
+    seedGame(baseGameState({ id: 'game-1', money: 20000 }));
     routeApiRequest([
       { match: (u) => u.includes('/cancel'), body: { newBalance: 27500, refundAmount: 7500 } },
     ]);
 
     await useGameStore.getState().cancelProject('proj-1', { refundAmount: 7500 });
 
-    cacheEqualsStore('game-1');
-    expect((queryClient.getQueryData(gameStateQueryKey('game-1')) as any).money).toBe(27500);
+    expect(readRecord('game-1').money).toBe(27500);
   });
 
-  it('adoptServerBalances (via planRelease) mirrors the two-field merge into the cache', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4, musicLabel: { name: 'Keep' } }),
-    });
+  it('adoptServerBalances (via planRelease) commits the two-field merge to the cache', async () => {
+    seedGame(baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4, musicLabel: { name: 'Keep' } }));
     routeApiRequest([
       { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 55000, creativeCapital: 1 } } },
       { match: (u) => u.includes('/releases/plan'), body: { ok: true } },
@@ -161,8 +146,7 @@ describe('dual-write funnel: balance-adopting writers', () => {
 
     await useGameStore.getState().planRelease({ metadata: { totalInvestment: 1000 } });
 
-    cacheEqualsStore('game-1');
-    const cached = queryClient.getQueryData(gameStateQueryKey('game-1')) as any;
+    const cached = readRecord('game-1');
     expect(cached.money).toBe(55000);
     expect(cached.creativeCapital).toBe(1);
     expect(cached.musicLabel).toEqual({ name: 'Keep' }); // preserved, not clobbered
@@ -190,36 +174,33 @@ describe('dual-write funnel: game-switch writers seed the new key + drop the old
     });
   }
 
-  it('loadGame seeds the loaded game key equal to the store gameState', async () => {
+  it('loadGame seeds the loaded game key and the pointer tracks it', async () => {
     routeLoad('game-1', { name: 'Loaded Label' });
 
     await useGameStore.getState().loadGame('game-1');
 
-    cacheEqualsStore('game-1');
-    expect((queryClient.getQueryData(gameStateQueryKey('game-1')) as any).musicLabel).toEqual({
-      name: 'Loaded Label',
-    });
+    expect(pointerId()).toBe('game-1');
+    expect(readRecord('game-1').musicLabel).toEqual({ name: 'Loaded Label' });
   });
 
   it('switching games via loadGame drops the previous game key and seeds the new one', async () => {
-    // Start on game-A with a seeded record.
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-A' }) });
-    queryClient.setQueryData(gameStateQueryKey('game-A'), baseGameState({ id: 'game-A' }));
+    // Start on game-A with a seeded record + pointer.
+    seedGame(baseGameState({ id: 'game-A' }));
 
     routeLoad('game-B', { name: 'B Label' });
     await useGameStore.getState().loadGame('game-B');
 
-    // Old key removed, new key seeded and equal to the store.
+    // Old key removed, new key seeded, pointer flipped to the new game.
     expect(queryClient.getQueryData(gameStateQueryKey('game-A'))).toBeUndefined();
-    cacheEqualsStore('game-B');
+    expect(pointerId()).toBe('game-B');
+    expect(readRecord('game-B')).toBeTruthy();
     expect(queryClient.removeQueries).toHaveBeenCalledWith({
       queryKey: gameStateQueryKey('game-A'),
     });
   });
 
   it('createNewGame drops the previous (orphaned) game key and seeds the new game', async () => {
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', currentWeek: 4 }) });
-    queryClient.setQueryData(gameStateQueryKey('game-1'), baseGameState({ id: 'game-1' }));
+    seedGame(baseGameState({ id: 'game-1', currentWeek: 4 }));
 
     mockedApiRequest.mockImplementation(async (method: string, url: string) => {
       if (method === 'GET' && url.endsWith('/api/saves')) return jsonResponse([]); // orphaned
@@ -234,15 +215,15 @@ describe('dual-write funnel: game-switch writers seed the new key + drop the old
     await useGameStore.getState().createNewGame('Balanced');
 
     expect(queryClient.getQueryData(gameStateQueryKey('game-1'))).toBeUndefined();
-    cacheEqualsStore('game-2');
-    expect((queryClient.getQueryData(gameStateQueryKey('game-2')) as any).id).toBe('game-2');
+    expect(pointerId()).toBe('game-2');
+    expect(readRecord('game-2').id).toBe('game-2');
   });
 });
 
-describe('dual-write funnel: advanceWeek commits the merged gameState to the cache', () => {
-  it('mirrors the post-advance gameState (refetch-wins merge) into the cache', async () => {
+describe('commit funnel: advanceWeek commits the merged gameState to the cache', () => {
+  it('commits the post-advance gameState (refetch-wins merge) to the cache', async () => {
+    seedGame(baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: false }));
     useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: false }),
       selectedActions: ['{"roleId":"ceo","actionId":"a1","choiceId":"c1"}'],
     });
 
@@ -264,10 +245,10 @@ describe('dual-write funnel: advanceWeek commits the merged gameState to the cac
 
     await useGameStore.getState().advanceWeek();
 
-    cacheEqualsStore('game-1');
-    const cached = queryClient.getQueryData(gameStateQueryKey('game-1')) as any;
+    const cached = readRecord('game-1');
     expect(cached.currentWeek).toBe(6);
-    expect(cached.money).toBe(12345); // refetch-wins, mirrored to cache
+    expect(cached.money).toBe(12345); // refetch-wins, committed to cache
     expect(cached.usedFocusSlots).toBe(0);
+    expect(pointerId()).toBe('game-1');
   });
 });

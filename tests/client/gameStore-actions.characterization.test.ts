@@ -26,6 +26,9 @@ vi.mock('@/lib/queryClient', () => ({
       return value;
     }),
     getQueryData: vi.fn((key: unknown) => queryCache.get(JSON.stringify(key))),
+    removeQueries: vi.fn(({ queryKey }: { queryKey: unknown }) => {
+      queryCache.delete(JSON.stringify(queryKey));
+    }),
   },
 }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
@@ -36,6 +39,7 @@ import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { projectsQueryKey } from '@/hooks/useProjects';
 import { artistsQueryKey } from '@/hooks/useArtists';
 import { discoveredArtistsQueryKey } from '@/hooks/useDiscoveredArtists';
+import { gameStateQueryKey } from '@/hooks/useGameState';
 import { useGameStore } from '@/store/gameStore';
 import {
   routeApiRequest as routeApiRequestImpl,
@@ -48,6 +52,21 @@ const mockedApiRequest = apiRequest as unknown as ReturnType<typeof vi.fn>;
 const routeApiRequest = (routes: Array<{ match: (url: string) => boolean; body: unknown }>) =>
   routeApiRequestImpl(mockedApiRequest, routes);
 const resetGameStore = () => resetGameStoreImpl(useGameStore);
+
+/**
+ * Phase 3.5 PR-6: the store's actions read the spine record from its SINGLE
+ * owner (the query cache) via `readGameState`, and Zustand keeps only a `{ id }`
+ * session pointer. So a test seed must write BOTH the pointer and the cache
+ * record, and post-action pins read the record back from the cache.
+ */
+function seedGameState(gs: any) {
+  useGameStore.setState({ gameState: { id: gs.id } as any });
+  queryClient.setQueryData(gameStateQueryKey(gs.id), gs);
+}
+/** The committed spine record for a game (its single owner is the cache). */
+function record(gameId = 'game-1'): any {
+  return queryClient.getQueryData(gameStateQueryKey(gameId));
+}
 
 beforeEach(() => {
   mockedApiRequest.mockReset();
@@ -66,7 +85,7 @@ describe('signArtist adopts server-canonical money', () => {
   // 83000 and the store must show 83000. (Phase 3 PR-9 pins for the artists +
   // discovered cache invalidations are unchanged.)
   it('adopts the server balance from the refetch (NOT a client 100000-15000 delta)', async () => {
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', money: 100000 }) });
+    seedGameState(baseGameState({ id: 'game-1', money: 100000 }));
     const newArtist = { id: 'artist-99', name: 'Signed One' };
     routeApiRequest([
       // GET /api/game/:id refetch — server is canonical (83000 != client's 85000).
@@ -77,7 +96,7 @@ describe('signArtist adopts server-canonical money', () => {
     await useGameStore.getState().signArtist({ name: 'Signed One', signingCost: 15000 });
 
     const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(83000); // server-canonical, not 85000
+    expect(record().money).toBe(83000); // server-canonical, not 85000
     // Roster no longer lives in the store; the mutation invalidates the cache.
     expect((state as any).artists).toBeUndefined();
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
@@ -96,7 +115,7 @@ describe('signArtist adopts server-canonical money', () => {
     // balance must still be exactly the server's number, never 100000 - 15000 -
     // 15000. The GET always returns 83000 here, so after two signs the store
     // shows 83000, not a doubly-subtracted 70000.
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', money: 100000 }) });
+    seedGameState(baseGameState({ id: 'game-1', money: 100000 }));
     routeApiRequest([
       { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 4 } } },
       { match: (u) => u.includes('/artists'), body: { id: 'a1' } },
@@ -107,13 +126,13 @@ describe('signArtist adopts server-canonical money', () => {
       useGameStore.getState().signArtist({ signingCost: 15000 }),
     ]);
 
-    expect(useGameStore.getState().gameState!.money).toBe(83000); // not 70000
+    expect(record().money).toBe(83000); // not 70000
   });
 
   it('leaves money unchanged when the refetch yields no gameState (transient GET failure)', async () => {
     // adoptServerBalances returns silently if the GET has no gameState; the store
     // keeps its prior balance rather than throwing or zeroing out.
-    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', money: 42000 }) });
+    seedGameState(baseGameState({ id: 'game-1', money: 42000 }));
     routeApiRequest([
       { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: {} }, // no gameState field
       { match: (u) => u.includes('/artists'), body: { id: 'a1' } },
@@ -121,7 +140,7 @@ describe('signArtist adopts server-canonical money', () => {
 
     await useGameStore.getState().signArtist({ name: 'No Cost' });
 
-    expect(useGameStore.getState().gameState!.money).toBe(42000);
+    expect(record().money).toBe(42000);
   });
 });
 
@@ -136,9 +155,7 @@ describe('createProject adopts server-canonical money + creativeCapital', () => 
   // server says 83000 / 2 and the store must show 83000 / 2. (Phase 3 PR-7 pin
   // for the projects cache invalidation is unchanged.)
   it('adopts server money + cc from the refetch (NOT client 80000/3 deltas)', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }),
-    });
+    seedGameState(baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }));
     const newProject = { id: 'proj-1', title: 'EP' };
     routeApiRequest([
       // GET /api/game/:id refetch — server canonical (83000/2 != client 80000/3).
@@ -149,8 +166,8 @@ describe('createProject adopts server-canonical money + creativeCapital', () => 
     await useGameStore.getState().createProject({ totalCost: 20000 });
 
     const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(83000); // server-canonical, not 80000
-    expect((state.gameState as any).creativeCapital).toBe(2); // server-canonical, not 3
+    expect(record().money).toBe(83000); // server-canonical, not 80000
+    expect(record().creativeCapital).toBe(2); // server-canonical, not 3
     // Projects no longer live in the store; the mutation invalidates the cache.
     expect((state as any).projects).toBeUndefined();
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
@@ -164,9 +181,7 @@ describe('createProject adopts server-canonical money + creativeCapital', () => 
     // (a double-fire is two real server mutations — out of scope); the point is
     // the displayed balances equal the server's numbers, never a doubly-
     // subtracted 60000 / cc 2.
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }),
-    });
+    seedGameState(baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }));
     routeApiRequest([
       { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 2 } } },
       { match: (u) => u.includes('/projects'), body: { id: 'p1' } },
@@ -177,9 +192,8 @@ describe('createProject adopts server-canonical money + creativeCapital', () => 
       useGameStore.getState().createProject({ totalCost: 20000 }),
     ]);
 
-    const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(83000); // not 60000
-    expect((state.gameState as any).creativeCapital).toBe(2); // not a compounded value
+    expect(record().money).toBe(83000); // not 60000
+    expect(record().creativeCapital).toBe(2); // not a compounded value
   });
 });
 
@@ -193,9 +207,7 @@ describe('planRelease adopts server-canonical money + creativeCapital', () => {
   // would say money 88000 / cc 3, but the server says 83000 / 2 and the store
   // must show 83000 / 2.
   it('adopts server money + cc from the refetch (NOT client 88000/3 deltas)', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }),
-    });
+    seedGameState(baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }));
     routeApiRequest([
       // GET /api/game/:id refetch — server canonical (83000/2 != client 88000/3).
       { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 2 } } },
@@ -204,15 +216,12 @@ describe('planRelease adopts server-canonical money + creativeCapital', () => {
 
     await useGameStore.getState().planRelease({ metadata: { totalInvestment: 12000 } });
 
-    const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(83000); // server-canonical, not 88000
-    expect((state.gameState as any).creativeCapital).toBe(2); // server-canonical, not 3
+    expect(record().money).toBe(83000); // server-canonical, not 88000
+    expect(record().creativeCapital).toBe(2); // server-canonical, not 3
   });
 
   it('leaves balances unchanged when the refetch yields no gameState (transient GET failure)', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', money: 60000, creativeCapital: 2 }),
-    });
+    seedGameState(baseGameState({ id: 'game-1', money: 60000, creativeCapital: 2 }));
     routeApiRequest([
       { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: {} }, // no gameState field
       { match: (u) => u.includes('/releases/plan'), body: {} },
@@ -220,8 +229,8 @@ describe('planRelease adopts server-canonical money + creativeCapital', () => {
 
     await useGameStore.getState().planRelease({});
 
-    expect(useGameStore.getState().gameState!.money).toBe(60000);
-    expect((useGameStore.getState().gameState as any).creativeCapital).toBe(2);
+    expect(record().money).toBe(60000);
+    expect(record().creativeCapital).toBe(2);
   });
 });
 
@@ -231,9 +240,7 @@ describe('cancelProject adopts server balance', () => {
   // invalidates the projects query key so useProjects refetches. The money
   // pin (adopts server newBalance verbatim) is UNTOUCHED.
   it('sets money to result.newBalance (NOT a local delta) and invalidates projects', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', money: 20000 }),
-    });
+    seedGameState(baseGameState({ id: 'game-1', money: 20000 }));
     routeApiRequest([
       {
         match: (u) => u.includes('/cancel'),
@@ -244,7 +251,7 @@ describe('cancelProject adopts server balance', () => {
     await useGameStore.getState().cancelProject('proj-1', { refundAmount: 7500 });
 
     const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(27500); // adopts server newBalance verbatim
+    expect(record().money).toBe(27500); // adopts server newBalance verbatim
     // Projects no longer live in the store; the mutation invalidates the cache.
     expect((state as any).projects).toBeUndefined();
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
@@ -285,9 +292,9 @@ describe('loadGame set(...) state shape', () => {
 
     const state = useGameStore.getState();
     // gameState carries musicLabel nested in (loadGame's shape), plus synced AR fields.
-    expect(state.gameState!.id).toBe('game-1');
-    expect((state.gameState as any).musicLabel).toEqual({ name: 'Loaded Label' });
-    expect((state.gameState as any).usedFocusSlots).toBe(0);
+    expect(record('game-1').id).toBe('game-1');
+    expect(record('game-1').musicLabel).toEqual({ name: 'Loaded Label' });
+    expect(record('game-1').usedFocusSlots).toBe(0);
     // PR-9: artists are seeded into the query cache, not the store.
     expect((state as any).artists).toBeUndefined();
     expect(state.roles).toEqual([{ id: 'role1' }]);
@@ -317,8 +324,8 @@ describe('loadGame set(...) state shape', () => {
 
 describe('advanceWeek set(...) state shape', () => {
   it('writes the post-advance collections, weeklyOutcome/campaignResults, and clears flags', async () => {
+    seedGameState(baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: false }));
     useGameStore.setState({
-      gameState: baseGameState({ id: 'game-1', currentWeek: 5, arOfficeSlotUsed: false }),
       selectedActions: ['{"roleId":"ceo","actionId":"a1","choiceId":"c1"}'],
     });
 
@@ -350,7 +357,7 @@ describe('advanceWeek set(...) state shape', () => {
     await useGameStore.getState().advanceWeek();
 
     const state = useGameStore.getState();
-    expect((state.gameState as any).currentWeek).toBe(6);
+    expect(record('game-1').currentWeek).toBe(6);
     // PR-9: artists are seeded into the query cache, not the store.
     expect((state as any).artists).toBeUndefined();
     expect(state.emails).toEqual([{ id: 'em1' }]);

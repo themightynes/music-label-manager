@@ -126,9 +126,10 @@ describe('useGameState PR-5 flip: SAME-TICK slot math visibility', () => {
     // Asserted synchronously — NO waitFor/findBy. setQueryData notified the
     // useQuery subscriber synchronously, so the new value is on this render.
     expect(screen.getByTestId('slots').textContent).toBe('1');
-    // Cache and store agree (dual-write still active in PR-5).
+    // Phase 3.5 PR-6: the cache is the SINGLE owner of the record; Zustand keeps
+    // only the `{ id }` session pointer.
     expect((queryClient.getQueryData(gameStateQueryKey('game-1')) as any).usedFocusSlots).toBe(1);
-    expect(useGameStore.getState().gameState!.usedFocusSlots).toBe(1);
+    expect(useGameStore.getState().gameState!.id).toBe('game-1');
   });
 
   it('sees removeAction\'s decrement on the next render', () => {
