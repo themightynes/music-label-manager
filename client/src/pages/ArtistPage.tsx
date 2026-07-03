@@ -21,6 +21,7 @@ import { useGameStore } from '@/store/gameStore';
 import { useReleases } from '@/hooks/useReleases';
 import { useSongs } from '@/hooks/useSongs';
 import { useProjects } from '@/hooks/useProjects';
+import { useArtists } from '@/hooks/useArtists';
 import { useLocation, useParams } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { useArtistROI } from '@/hooks/useAnalytics';
@@ -36,12 +37,13 @@ export default function ArtistPage() {
   const params = useParams();
   const artistParam = params.artistParam; // Can be either ID or slug
   const [, setLocation] = useLocation();
-  const { gameState, artists } = useGameStore();
-  // Phase 3 PR-6/PR-7: releases / songs / projects read from the TanStack Query
-  // cache, not Zustand.
+  const { gameState } = useGameStore();
+  // Phase 3 PR-6/PR-7/PR-9: releases / songs / projects / artists read from the
+  // TanStack Query cache, not Zustand.
   const { data: releases = [] } = useReleases();
   const { data: storeSongs = [] } = useSongs();
   const { data: projects = [] } = useProjects();
+  const { data: artists = [] } = useArtists();
 
   // Find the actual artist first to get ID for ROI
   const foundArtist = artists ? findArtistBySlugOrId(artists, artistParam || '') : null;

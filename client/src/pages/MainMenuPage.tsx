@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { useGameStore } from '@/store/gameStore';
+import { useArtists } from '@/hooks/useArtists';
 import { useGameContext } from '@/contexts/GameContext';
 import { LabelCreationModal } from '@/components/LabelCreationModal';
 import { SaveGameModal } from '@/components/SaveGameModal';
@@ -15,7 +16,9 @@ export default function MainMenuPage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { gameId, setGameId } = useGameContext();
-  const { gameState, createNewGame, artists } = useGameStore();
+  const { gameState, createNewGame } = useGameStore();
+  // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
+  const { data: artists = [] } = useArtists();
   const { isAdmin } = useIsAdmin();
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [showLoadGameModal, setShowLoadGameModal] = useState(false);

@@ -19,6 +19,13 @@ vi.mock('@/hooks/useProjects', () => ({
   useProjects: () => ({ data: [] }),
 }));
 
+// Phase 3 PR-9: ArtistRoster now reads the roster via useArtists (TanStack).
+// Mock it so this component test stays store-only and needs no QueryClient.
+const { mockUseArtists } = vi.hoisted(() => ({ mockUseArtists: vi.fn() }));
+vi.mock('@/hooks/useArtists', () => ({
+  useArtists: mockUseArtists,
+}));
+
 vi.mock('wouter', () => ({
   useLocation: () => [null, setLocationMock],
 }));
@@ -63,10 +70,10 @@ describe('ArtistRoster', () => {
     modalRenderSpy.mockClear();
     setLocationMock.mockClear();
     mockUseGameStore.mockReset();
+    mockUseArtists.mockReset();
 
-    mockUseGameStore.mockReturnValue({
-      gameState: { id: 'game-1', currentWeek: 12 },
-      artists: [
+    mockUseArtists.mockReturnValue({
+      data: [
         {
           id: 'artist-1',
           name: 'Nova Sterling',
@@ -78,8 +85,11 @@ describe('ArtistRoster', () => {
           workEthic: 75,
         },
       ],
+    });
+
+    mockUseGameStore.mockReturnValue({
+      gameState: { id: 'game-1', currentWeek: 12 },
       signArtist: vi.fn(),
-      projects: [],
       loadGame: vi.fn().mockResolvedValue(undefined),
     });
   });

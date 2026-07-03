@@ -10,6 +10,7 @@ import { Plus, Music, Disc, MapPin, Star, Clock, Zap, Award, Loader2, AlertCircl
 import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
+import { useArtists } from '@/hooks/useArtists';
 import GameLayout from '@/layouts/GameLayout';
 
 
@@ -137,7 +138,9 @@ interface ProjectTypeAPI {
 
 export default function RecordingSessionPage() {
   const [, setLocation] = useLocation();
-  const { gameState, artists, createProject } = useGameStore();
+  const { gameState, createProject } = useGameStore();
+  // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
+  const { data: artists = [] } = useArtists();
   const [isCreating, setIsCreating] = useState(false);
   const [selectedType, setSelectedType] = useState<'Single' | 'EP' | null>(null);
 

@@ -31,6 +31,11 @@ import {
 } from '@/hooks/useReleases';
 import { SONGS_SCOPE, songsQueryKey } from '@/hooks/useSongs';
 import { PROJECTS_SCOPE, projectsQueryKey } from '@/hooks/useProjects';
+import { ARTISTS_SCOPE, artistsQueryKey } from '@/hooks/useArtists';
+import {
+  DISCOVERED_ARTISTS_SCOPE,
+  discoveredArtistsQueryKey,
+} from '@/hooks/useDiscoveredArtists';
 
 const GAME_ID = 'game-1';
 const ARTIST_ID = 'artist-1';
@@ -61,6 +66,10 @@ const REAL_QUERY_KEYS: readonly unknown[][] = [
   [...songsQueryKey(GAME_ID)],
   // Projects (useProjects.ts, PR-7): [SCOPE, gameId]
   [...projectsQueryKey(GAME_ID)],
+  // Artists / discovered artists (useArtists.ts, useDiscoveredArtists.ts, PR-9):
+  // [SCOPE, gameId]
+  [...artistsQueryKey(GAME_ID)],
+  [...discoveredArtistsQueryKey(GAME_ID)],
   ['api', 'saves'],
 ];
 
@@ -157,6 +166,31 @@ describe('query-key contract: project mutation invalidations (PR-7)', () => {
 
   it('the projects scope constant and hook key agree element-for-element', () => {
     expect(projectsQueryKey(GAME_ID)).toEqual([PROJECTS_SCOPE, GAME_ID]);
+  });
+});
+
+describe('query-key contract: artist mutation invalidations (PR-9)', () => {
+  // signArtist / updateArtist invalidate the artists cache with the EXACT scoped
+  // key (client/src/store/gameStore.ts): artistsQueryKey == [ARTISTS_SCOPE,
+  // gameId]. signArtist additionally invalidates the discovered-artists cache
+  // (discoveredArtistsQueryKey == [DISCOVERED_ARTISTS_SCOPE, gameId]) so the
+  // signed artist drops out of the discovered list. Assert each matches its hook.
+  it('artist mutation invalidation matches the useArtists hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(artistsQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('signArtist discovered invalidation matches the useDiscoveredArtists hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(discoveredArtistsQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('the artist invalidations do NOT match a different game', () => {
+    expect(someRealKeyMatchesInvalidationKey(artistsQueryKey('other'))).toBe(false);
+    expect(someRealKeyMatchesInvalidationKey(discoveredArtistsQueryKey('other'))).toBe(false);
+  });
+
+  it('the artist scope constants and hook keys agree element-for-element', () => {
+    expect(artistsQueryKey(GAME_ID)).toEqual([ARTISTS_SCOPE, GAME_ID]);
+    expect(discoveredArtistsQueryKey(GAME_ID)).toEqual([DISCOVERED_ARTISTS_SCOPE, GAME_ID]);
   });
 });
 

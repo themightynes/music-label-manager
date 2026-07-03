@@ -9,6 +9,7 @@ import { ArtistDialogueModal } from '../components/artist-dialogue/ArtistDialogu
 import { ArtistCard as RichArtistCard, getArchetypeInfo, getRelationshipStatus } from '../components/ArtistCard';
 import { useGameStore } from '../store/gameStore';
 import { useProjects } from '../hooks/useProjects';
+import { useArtists } from '../hooks/useArtists';
 import { usePortfolioROI, useArtistROI } from '../hooks/useAnalytics';
 import { generateArtistSlug } from '../utils/artistSlug';
 import { Card, CardContent } from '../components/ui/card';
@@ -50,9 +51,10 @@ const ArtistsLandingPage: React.FC = () => {
   const [expandedArtist, setExpandedArtist] = useState<string | null>(null);
   const [isDialogueModalOpen, setIsDialogueModalOpen] = useState(false);
   const [selectedArtistForDialogue, setSelectedArtistForDialogue] = useState<Artist | null>(null);
-  const { gameState, artists, signArtist, loadGame } = useGameStore();
-  // Phase 3 PR-7: projects are cache-owned; read via useProjects.
+  const { gameState, signArtist, loadGame } = useGameStore();
+  // Phase 3 PR-7/PR-9: projects and artists are cache-owned; read via hooks.
   const { data: projects = [] } = useProjects();
+  const { data: artists = [] } = useArtists();
   const { data: portfolioROI, isLoading: portfolioLoading, error: portfolioError } = usePortfolioROI();
 
   const signedArtists = artists || [];

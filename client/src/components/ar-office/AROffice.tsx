@@ -7,6 +7,8 @@ import { Music } from 'lucide-react';
 import type { Artist as SharedArtist } from '@shared/schema';
 import type { GameState } from '@shared/types/gameTypes';
 import { useGameStore } from '@/store/gameStore';
+import { useDiscoveredArtists, discoveredArtistsQueryKey } from '@/hooks/useDiscoveredArtists';
+import { useQueryClient } from '@tanstack/react-query';
 import type { SourcingTypeString } from '@shared/types/gameTypes';
 import { SourcingModeSelector } from './SourcingModeSelector';
 import { ArtistDiscoveryTable, type UIArtist } from './ArtistDiscoveryTable';
@@ -113,7 +115,22 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
   const [sourcingMode, setSourcingMode] = useState<SourcingType | null>(null);
 
   // Store methods to manage A&R slot usage
-  const { startAROfficeOperation, cancelAROfficeOperation, discoveredArtists, loadDiscoveredArtists } = useGameStore();
+  const { startAROfficeOperation, cancelAROfficeOperation } = useGameStore();
+
+  // Phase 3 PR-9: discovered artists are cache-owned (useDiscoveredArtists). The
+  // hook fetches + synthesizes the same list the store action used to. We keep a
+  // `loadDiscoveredArtists` shim that force-refetches through the hook and THROWS
+  // on error so the existing retry-with-backoff / mount / onRetry call sites work
+  // byte-for-byte (they expect a rejected promise to drive retries).
+  const queryClient = useQueryClient();
+  const { data: discoveredArtists = [], refetch: refetchDiscoveredArtists } = useDiscoveredArtists();
+  const loadDiscoveredArtists = useMemo(
+    () => async () => {
+      const result = await refetchDiscoveredArtists({ throwOnError: true });
+      if (result.error) throw result.error;
+    },
+    [refetchDiscoveredArtists],
+  );
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArchetype, setSelectedArchetype] = useState<string>('All');
@@ -362,8 +379,12 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
     setSigningArtist(artist.id || artist.name);
     try {
       await onSignArtist(artist);
-      // Optimistically remove from local discovered list and refresh from server
-      try { useGameStore.getState().removeDiscoveredArtist(artist.id as string); } catch {}
+      // Phase 3 PR-9: signArtist already invalidates the discovered-artists cache
+      // (the server's A&R read filters signed-by-name), so refetch to reflect the
+      // reduced list. Invalidate first as a belt-and-suspenders against staleTime.
+      await queryClient.invalidateQueries({
+        queryKey: discoveredArtistsQueryKey(gameId),
+      });
       loadDiscoveredArtists();
       toast({
         title: "Artist signed successfully",

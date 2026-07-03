@@ -43,22 +43,19 @@ export function routeApiRequest(
 export function resetGameStore(useGameStore: Store) {
   useGameStore.setState({
     gameState: null,
-    artists: [],
     roles: [],
     weeklyActions: [],
-    // Phase 3 PR-6/PR-7: songs / releases / releaseSongs / projects are no
-    // longer store-owned (they live in the TanStack Query cache), so they are
-    // not reset here.
+    // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects / artists
+    // / discoveredArtists are no longer store-owned (they live in the TanStack
+    // Query cache), so they are not reset here.
     emails: [],
     executives: [],
     moodEvents: [],
-    discoveredArtists: [],
-    loadingDiscoveredArtists: false,
     selectedActions: [],
     isAdvancingWeek: false,
     weeklyOutcome: null,
     campaignResults: null,
-  });
+  } as any);
 }
 
 /** A representative full-ish GameState fixture for optimistic-delta pins. */

@@ -23,6 +23,7 @@ import { buildGameSnapshot } from '@/utils/buildGameSnapshot';
 import { songsQueryKey } from '@/hooks/useSongs';
 import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { projectsQueryKey } from '@/hooks/useProjects';
+import { artistsQueryKey } from '@/hooks/useArtists';
 import { useToast } from '@/hooks/use-toast';
 
 type SaveSummary = {
@@ -218,7 +219,6 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       // list (and emailMetadata shape, incl. `truncated`) stays identical to
       // manual saves / autosaves and validates against gameSaveSnapshotSchema.
       const {
-        artists,
         roles,
         executives,
         moodEvents,
@@ -226,13 +226,15 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
         weeklyOutcome
       } = useGameStore.getState();
 
-      // Phase 3 PR-6/PR-7: songs / releases / releaseSongs / projects are no
-      // longer store-owned. Source them from the TanStack Query cache so the
-      // export snapshot shape stays byte-identical to manual saves / autosaves.
+      // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /
+      // artists are no longer store-owned. Source them from the TanStack Query
+      // cache so the export snapshot shape stays byte-identical to manual saves /
+      // autosaves.
       const songs = queryClient.getQueryData<any[]>(songsQueryKey(gameState.id)) ?? [];
       const releases = queryClient.getQueryData<any[]>(releasesQueryKey(gameState.id)) ?? [];
       const releaseSongs = queryClient.getQueryData<any[]>(releaseSongsQueryKey(gameState.id)) ?? [];
       const projects = queryClient.getQueryData<any[]>(projectsQueryKey(gameState.id)) ?? [];
+      const artists = queryClient.getQueryData<any[]>(artistsQueryKey(gameState.id)) ?? [];
 
       const snapshotCandidate = buildGameSnapshot({
         gameState,

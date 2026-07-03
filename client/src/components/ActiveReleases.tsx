@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
 import { useReleases } from '@/hooks/useReleases';
 import { useSongs } from '@/hooks/useSongs';
+import { useArtists } from '@/hooks/useArtists';
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, CheckCircle, BarChart3 } from 'lucide-react';
 import { ReleaseWorkflowCard } from './ReleaseWorkflowCard';
@@ -15,10 +16,12 @@ import {
 } from '../../../shared/utils/chartUtils';
 
 export function ActiveReleases() {
-  const { artists, gameState } = useGameStore();
-  // Phase 3 PR-6: releases / songs read from the TanStack Query cache, not Zustand.
+  const { gameState } = useGameStore();
+  // Phase 3 PR-6/PR-9: releases / songs / artists read from the TanStack Query
+  // cache, not Zustand.
   const { data: releases = [] } = useReleases();
   const { data: songs = [] } = useSongs();
+  const { data: artists = [] } = useArtists();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'released'>('upcoming');
   const [stateSync, setStateSync] = useState<'synced' | 'syncing' | 'error'>('synced');
   
