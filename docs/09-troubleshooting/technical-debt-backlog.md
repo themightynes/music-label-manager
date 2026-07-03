@@ -797,19 +797,36 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
+### [ ] Comment 50: DB-free client tests still require the Docker test database via shared tests/setup.ts 🔵
+**Priority**: 🔵 Low
+**Impact**: Test ergonomics (client tests can't run without Docker Postgres)
+**Effort**: Low-Medium
+
+The Phase 3 client characterization tests (`tests/client/` — gameStore actions, query-key contracts, snapshot shape, hook tests) are pure jsdom/mock tests with zero database usage, but the global `tests/setup.ts` `beforeAll` connects to the Docker Postgres on `localhost:5433` unconditionally, so they fail on a machine without the container running. CI is unaffected (the postgres service is always provisioned).
+
+**Action**: Split vitest setup by project/environment (e.g. a vitest `projects`/workspace config where `tests/client/**` uses a DB-free setup file) or make the DB connection in `tests/setup.ts` lazy/conditional on the test file needing it.
+
+**Relevant Files**:
+- [tests/setup.ts](tests/setup.ts)
+- [tests/client/](tests/client/)
+
+*Identified July 3, 2026 during Phase 3 PR-1 (client characterization net).*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 1 pending (C50 — client tests' incidental DB dependency)
 
 ### By Status
-- ✅ Completed: 46 items (93.9%)
+- ✅ Completed: 46 items (92.0%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 0 items
+- 📋 Pending: 1 item (C50 — logged July 3, 2026; low, not scheduled)
 
 ---
 
