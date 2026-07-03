@@ -4,6 +4,31 @@
 
 ---
 
+## 📅 Session Log — July 3, 2026 (Full v2 website redesign: "Neo-Cyber HUD", 10 packages, LOCAL ONLY)
+
+**The entire client was redesigned to the Design System v2 ("neo-cyber HUD": dark indigo #070610, glass panels, chromatic hairlines, spectral neon accents, glow-based depth) imported from the user's claude.ai/design project.** Everything lives on worktree branch `claude/adoring-solomon-db2391` — **NOT pushed, NOT merged to main; user approves the move to GitHub.** Ran as orchestrator + 9 concurrent package agents (Fable/Opus/Sonnet/Haiku) with strict disjoint file ownership in one shared worktree; every package audited against tool evidence before its commit.
+
+**Commits (in order):** `472c640` design refs/spec/inventory docs → `e30395f` Phase 1 token foundation → `29d5754` D splash/menu → `330d397` A Command Dock shell → `281f690` E2a Plan Release → `868ad36` C artist surfaces → `c1a2d2c` G admin pass → `db81644` E2b sessions/tours/charts → `23120d7` E1 exec+A&R → `6bf39bf` F modals/emails → `5dfbe4e` B dashboard widgets → `f41f725` gradient token normalization → (this docs commit).
+
+**What changed:**
+- **Phase 1 foundation**: `tailwind.config.ts` v2 palette (`surface-*`, `neon-*`, `positive/negative/warning/money`, radii 16/13/9, glow shadows, `ds-*` keyframes; legacy `brand-*` remapped to v2 hues), `index.css` CSS vars + `.glass-panel`/`.chromatic-hairline`/`.hud-ticks`/`.backdrop-*`/`.text-aberration`/`.shimmer-bar` + reduced-motion support, fonts trimmed to Inter/JetBrains Mono/Major Mono Display, 14 shadcn primitives restyled, new `HoloDisc` + `PageBackdrop` primitives.
+- **Navigation replaced**: `GameSidebar.tsx` DELETED → floating `CommandDock.tsx` (center holo-disc home, More overflow, Clerk UserButton, migrated modals + AUTO focus filler) + `GameHeader.tsx` (balance/week/Advance Week). Full feature-mapping table in the Package A agent report; one dead-code deletion (unreachable sidebar New Game flow).
+- **All player surfaces restyled** (directional fidelity, zero logic changes): dashboard widgets, artist pages/tabs/cards/dialogue, exec suite + A&R, Plan Release, Recording, Live Performance, Top 100 charts, Office empty state, splash/landing/menu, all modals + 9 email templates. Admin/dev pages got a mechanical dark-theme token pass.
+- **Design references archived**: `docs/04-frontend/design/v2/` (8 HTML comps + distilled `design-system-v2.md` spec + `redesign-inventory.md`). CLAUDE.md color section + client/CLAUDE.md nav section updated.
+
+**Verification (evidence in-session):** `npm run check` clean at every package commit and at the end; **full vitest 774/774 passing** (68 files, Docker test DB); live visual smoke on the dev server — MainMenu, Dashboard, Artists, Plan Release, Executive Suite all render v2 with **zero console errors**; SaveGameModal export logic verified byte-untouched via diff-hunk audit; test-pinned strings/classes (access-tier tests, ArtistSelector `text-green-500` helpers, export toasts) preserved.
+
+**Decisions made:**
+- User pre-answers: tokens-first approach; ADOPT the Command Dock nav (replacing sidebar); directional fidelity; ALL surfaces in scope; worktree-local only, no GitHub until approval.
+- `liquid-chrome-bg.jpg` could not be imported (claude.ai/design API 256KB cap) — `PageBackdrop` ships a CSS bloom approximation and auto-upgrades if the file is dropped into `client/public/` (logged as C51).
+
+**Open threads / next steps:**
+- **User to review the running app and approve push/PR to GitHub.**
+- New backlog items C51 (bg asset drop-in), C52 (chartUtils/marketingUtils still emit v1 classes/FA strings), C53 (redesign leftovers: ChartPerformanceCard light variant, dead widget code, double `max-w` containers).
+- Deferred by design: mobile/responsive polish of the dock on narrow screens was styled per mockup (desktop-first) — worth a hands-on pass on small viewports.
+
+---
+
 ## 📅 Session Log — July 3, 2026 (Phase 3 COMPLETE + backlog cleared: PRs #87–#96, C26/C49 fixed, C32/C42/C43 dispositioned)
 
 **Phase 3 (client state ownership) planned AND executed in one orchestrated session, plus the tech-debt backlog fully dispositioned.** Ran as orchestrator + subagent factory (one Opus/Sonnet agent per PR in isolated worktrees, adversarial reviewer subagent on every med-high-risk PR before merge, fresh-context verifier at the end). Merge policy this session: user-granted self-merge on green CI. Everything below is merged to `main` (final: `0885ff0` + docs commits); full suite **774/774** (was 696), `tsc` clean, CI green on `main`'s own push runs.

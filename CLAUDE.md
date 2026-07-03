@@ -66,11 +66,12 @@ npm run db:studio     # Verify in database
 - **Built in two places**: `client/src/components/SaveGameModal.tsx` (`handleExport`) and `client/src/store/gameStore.ts` (`saveGame`) assemble the snapshot independently — keep them in sync (they have already drifted on `emailMetadata.truncated`).
 - **`SNAPSHOT_VERSION`** lives in `shared/schema.ts`; restore rejects mismatched versions. Bump it and add migration logic when the shape changes.
 
-## 🎨 Color System
-- **Brand Colors**: Use `brand-*` Tailwind classes for game-specific UI (e.g., `bg-brand-burgundy`, `text-brand-rose`)
-- **Semantic Colors**: Use semantic classes for generic UI (e.g., `bg-success`, `text-warning`, `bg-sidebar`)
-- **Documentation**: See the comprehensive color system documentation in `tailwind.config.ts` header comments
-- **Tier Badges**: Bronze (amber), Silver (gray), Gold (brand-gold), Platinum (purple)
+## 🎨 Color System — v2 "Neo-Cyber HUD" (July 2026)
+- **v2 tokens (preferred)**: `surface-*` (app/panel/inner/tooltip), `neon-*` spectral accents (magenta/cyan/purple/lilac/…), semantic `positive`/`negative`/`warning`, and `money` — money values are ALWAYS `font-mono text-money` (gold)
+- **Utilities**: `.glass-panel`, `.chromatic-hairline`, `.hud-ticks`, `.backdrop-*`, `.text-aberration`, `.shimmer-bar` (defined in `client/src/index.css`)
+- **Legacy `brand-*` classes** still compile — remapped to v2 hues in `tailwind.config.ts` — but prefer v2 tokens in new code
+- **Documentation**: `docs/04-frontend/design/v2/design-system-v2.md` (distilled spec) + `tailwind.config.ts` header comments
+- **Tier/access badges**: locked = ghost chip; unlocked = gradient fill + neon glow (see spec §6)
 - **Never use inline hex colors** - all colors must use Tailwind utility classes
 
 ## 🔐 Authentication & API Integration

@@ -815,19 +815,60 @@ The Phase 3 client characterization tests (`tests/client/` — gameStore actions
 
 ---
 
+### [ ] Comment 51: liquid-chrome-bg.jpg design asset not importable (256KB API cap)
+**Priority**: 🔵 Low
+**Impact**: Visual richness of the v2 backdrop (cosmetic)
+**Effort**: Trivial (manual file drop)
+**Status**: 📋 Pending — needs a human with the file
+
+The Design System v2 comps layer a liquid-chrome photograph under every page at 0.3–0.42 opacity. The claude.ai/design API truncates file transfers at 256KB, so the asset could not be imported during the July 3, 2026 redesign. `PageBackdrop` (client/src/components/ui/page-backdrop.tsx) renders a CSS bloom approximation and already tolerates/uses `/liquid-chrome-bg.jpg` if present — **drop the real file into `client/public/` and the backdrop upgrades automatically**, no code change needed.
+
+**Relevant Files**:
+- [client/src/components/ui/page-backdrop.tsx](client/src/components/ui/page-backdrop.tsx)
+
+*Identified July 3, 2026 during the v2 redesign import.*
+
+---
+
+### [ ] Comment 52: shared/utils chartUtils + marketingUtils still emit v1 styling primitives
+**Priority**: 🔵 Low
+**Impact**: Theme consistency drift risk for remaining consumers
+**Effort**: Small
+
+`shared/utils/chartUtils.ts` helpers (`getChartPositionColor`, `getMovementColor`, `getChartExitRiskBgColor`) still return v1 legacy Tailwind classes; the v2-redesigned chart components stopped calling them and style inline instead, but other consumers may still use them. Similarly `shared/utils/marketingUtils.ts` exposes Font Awesome icon-class strings that `PlanReleasePage` and `SelectionSummary` now each map to lucide locally (duplicated maps). Consolidate: migrate the helpers to v2 tokens (or delete if unconsumed) and centralize one FA→lucide map.
+
+**Relevant Files**:
+- [shared/utils/chartUtils.ts](shared/utils/chartUtils.ts)
+- [shared/utils/marketingUtils.ts](shared/utils/marketingUtils.ts)
+
+*Identified July 3, 2026 during the v2 redesign (Package B/E2a/E2b agent reports).*
+
+---
+
+### [ ] Comment 53: v2 redesign leftovers — ChartPerformanceCard light variant, dead widget code, double page containers
+**Priority**: 🔵 Low
+**Impact**: Dead code / minor layout polish
+**Effort**: Small
+
+Grab-bag from the July 3, 2026 redesign agent reports: (1) `ChartPerformanceCard.tsx` retains its v1 light variant (`bg-white`, gray text) behind `isDark` — audit whether any caller still passes light; (2) pre-existing dead code left in place to keep the restyle scoped: `formatTimestamp` in `InboxWidget.tsx`, `getReleaseTypeBadge`/`getStatusBadge` + unused icon imports in `ActiveReleases.tsx`; (3) some pages still carry their own `max-w-7xl` containers nested inside GameLayout's `max-w-[1600px]` container (double horizontal padding on wide screens); (4) `executiveAutoSelect.ts` comment still references the deleted `GameSidebar`.
+
+*Identified July 3, 2026 during the v2 redesign.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 1 pending (C50 — client tests' incidental DB dependency)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 4 pending (C50 — client tests' incidental DB dependency; C51–C53 — v2 redesign follow-ups, July 3, 2026)
 
 ### By Status
-- ✅ Completed: 46 items (92.0%)
+- ✅ Completed: 46 items (86.8%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 1 item (C50 — logged July 3, 2026; low, not scheduled)
+- 📋 Pending: 4 items (C50 — logged July 3, 2026; C51, C52, C53 — v2 redesign follow-ups, July 3, 2026; all low, not scheduled)
 
 ---
 
