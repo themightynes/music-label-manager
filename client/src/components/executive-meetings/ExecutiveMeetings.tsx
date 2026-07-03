@@ -12,6 +12,7 @@ import { Badge } from '../ui/badge';
 import { ArrowLeft, Loader2, Zap } from 'lucide-react';
 import { fetchRoleMeetings, fetchMeetingDialogue, fetchAllRoles } from '../../services/executiveService';
 import { useGameStore } from '../../store/gameStore';
+import { useArtists } from '../../hooks/useArtists';
 
 interface ExecutiveMeetingsProps {
   gameId: string;
@@ -49,7 +50,9 @@ export function ExecutiveMeetings({
 }: ExecutiveMeetingsProps) {
   const [roleSalaries, setRoleSalaries] = useState<Record<string, number>>({});
 
-  const { getAROfficeStatus, selectedActions, artists } = useGameStore();
+  const { getAROfficeStatus, selectedActions } = useGameStore();
+  // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
+  const { data: artists = [] } = useArtists();
 
   // Phase 3 PR-8: route the machine's executives fetch through the TanStack
   // Query cache (key ['executives', gameId]) so the meeting flow and any

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useGameStore } from '@/store/gameStore';
 import { useProjects } from '@/hooks/useProjects';
+import { useArtists } from '@/hooks/useArtists';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, DollarSign, Users, Calculator } from 'lucide-react';
@@ -261,9 +262,10 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
 }
 
 export function ActiveTours() {
-  const { artists, cancelProject, gameState } = useGameStore();
-  // Phase 3 PR-7: projects are cache-owned; read via useProjects.
+  const { cancelProject, gameState } = useGameStore();
+  // Phase 3 PR-7/PR-9: projects and artists are cache-owned; read via hooks.
   const { data: projects = [] } = useProjects();
+  const { data: artists = [] } = useArtists();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [showCancelModal, setShowCancelModal] = useState(false);

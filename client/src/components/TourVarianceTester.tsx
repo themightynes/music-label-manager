@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
+import { useArtists } from '@/hooks/useArtists';
 import { apiRequest } from '@/lib/queryClient';
 import { Calculator, TrendingUp, TrendingDown, Target } from 'lucide-react';
 
@@ -43,7 +44,9 @@ interface ActualResult {
 }
 
 export function TourVarianceTester() {
-  const { gameState, artists } = useGameStore();
+  const { gameState } = useGameStore();
+  // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
+  const { data: artists = [] } = useArtists();
   const [selectedArtist, setSelectedArtist] = useState<string>('');
   const [cities, setCities] = useState(3);
   const [budgetPerCity, setBudgetPerCity] = useState(2000);

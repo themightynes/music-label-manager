@@ -12,6 +12,7 @@ import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
 import { useProjects } from '@/hooks/useProjects';
+import { useArtists } from '@/hooks/useArtists';
 import GameLayout from '@/layouts/GameLayout';
 
 
@@ -111,9 +112,10 @@ const PERFORMANCE_TYPES = [
 
 export default function LivePerformancePage() {
   const [, setLocation] = useLocation();
-  const { gameState, artists, createProject } = useGameStore();
-  // Phase 3 PR-7: projects are cache-owned; read via useProjects.
+  const { gameState, createProject } = useGameStore();
+  // Phase 3 PR-7/PR-9: projects and artists are cache-owned; read via hooks.
   const { data: projects = [] } = useProjects();
+  const { data: artists = [] } = useArtists();
   const [isCreating, setIsCreating] = useState(false);
 
   const [selectedType, setSelectedType] = useState<'single_show' | 'mini_tour' | null>(null);

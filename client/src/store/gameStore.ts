@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Artist, Role, WeeklyAction, MusicLabel, GameSaveSnapshot } from '@shared/schema';
+import type { Role, WeeklyAction, MusicLabel, GameSaveSnapshot } from '@shared/schema';
 import type { GameState, LabelData, SourcingTypeString } from '@shared/types/gameTypes';
 // Game engine moved to shared - client no longer calculates outcomes
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -14,6 +14,11 @@ import { CHART_TOP10_SCOPE, CHART_TOP100_SCOPE } from '@/hooks/useCharts';
 import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { songsQueryKey } from '@/hooks/useSongs';
 import { projectsQueryKey } from '@/hooks/useProjects';
+import { artistsQueryKey } from '@/hooks/useArtists';
+import {
+  discoveredArtistsQueryKey,
+  fetchDiscoveredArtists,
+} from '@/hooks/useDiscoveredArtists';
 
 // Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
 // identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
@@ -71,6 +76,12 @@ async function fetchGameBundle(gameId: string): Promise<GameBundle> {
   // reads this key; callers no longer write `projects` into the store.
   seedProjectsCache(gameId, gameData?.projects);
 
+  // Phase 3 PR-9: the artists roster is cache-owned too. Like projects, there is
+  // no dedicated artists endpoint — artists arrive inside the base game payload
+  // (`gameData.artists`), so seed from there (zero extra GETs). useArtists reads
+  // this key; callers no longer write `artists` into the store.
+  seedArtistsCache(gameId, gameData?.artists);
+
   return { gameData, songs, releases, releaseSongs, executives, moodEvents, emails };
 }
 
@@ -106,6 +117,62 @@ function seedProjectsCache(gameId: string, projects: unknown) {
   );
 }
 
+// Phase 3 PR-9: seed the artists query cache from an already-fetched game
+// payload (or a save snapshot) so useArtists reads fresh data with no extra
+// round-trip. Coerced to [] to match the hook's queryFn contract (it always
+// resolves an array).
+function seedArtistsCache(gameId: string, artists: unknown) {
+  queryClient.setQueryData(
+    artistsQueryKey(gameId),
+    Array.isArray(artists) ? artists : [],
+  );
+}
+
+// Phase 3 PR-9: prime the discovered-artists query cache through the same
+// fetch+synthesis code path useDiscoveredArtists uses. Replaces the former
+// gameStore.loadDiscoveredArtists store write — the read path now lives entirely
+// in the query cache (hooks/useDiscoveredArtists.ts). Best-effort: on failure it
+// seeds [] (mirroring the old action's catch-and-empty for 404s) so a transient
+// A&R read error never surfaces stale data. Errors are swallowed here because
+// UI-driven retries (AROffice) invalidate the key and let the hook refetch.
+async function primeDiscoveredArtistsCache(gameState: GameState | null) {
+  if (!gameState?.id) return;
+  const flags = (gameState as any)?.flags;
+  try {
+    const artists = await fetchDiscoveredArtists(gameState.id, flags);
+    queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), artists);
+  } catch (error) {
+    console.error('[A&R] Failed to prime discovered artists cache:', error);
+    queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), []);
+  }
+}
+
+// Phase 3 PR-9: throwing variant used by advanceWeek's retry-with-backoff loop
+// (which relies on a rejected promise to trigger the next attempt). Seeds the
+// cache on success and RE-THROWS on failure so the retry logic is preserved
+// byte-for-byte from the former gameStore.loadDiscoveredArtists behavior —
+// including its 404 short-circuit: a 404 is an immediately-accepted empty
+// result (seed [], no throw, no retries), matching the old
+// `if (status === 404) { set({ discoveredArtists: [] }); return; }` branch.
+// Any other failure seeds [] and re-throws so the backoff loop retries.
+async function refetchDiscoveredArtistsCache(gameState: GameState | null) {
+  if (!gameState?.id) return;
+  const flags = (gameState as any)?.flags;
+  try {
+    const artists = await fetchDiscoveredArtists(gameState.id, flags);
+    queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), artists);
+  } catch (error) {
+    const status = (error as any)?.status;
+    if (status === 404) {
+      console.warn('[A&R] No discovered artists found (404) - treating as empty result');
+      queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), []);
+      return;
+    }
+    queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), []);
+    throw error; // Re-throw to allow retry logic to handle it
+  }
+}
+
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
   gameId: string,
@@ -125,7 +192,6 @@ async function syncSlotsPatch(
 interface GameStore {
   // Game state
   gameState: GameState | null;
-  artists: Artist[];
   roles: Role[];
   weeklyActions: WeeklyAction[];
   // Phase 3 PR-6: songs / releases / releaseSongs are no longer owned by the
@@ -135,13 +201,13 @@ interface GameStore {
   // Phase 3 PR-7: `projects` is likewise cache-owned (hooks/useProjects.ts).
   // Consumers read it via useProjects; the fan-out seeds the cache and the
   // createProject/updateProject/cancelProject mutations invalidate it.
+  // Phase 3 PR-9: `artists` (roster) and `discoveredArtists` are cache-owned too
+  // (hooks/useArtists.ts, hooks/useDiscoveredArtists.ts). Consumers read them via
+  // useArtists / useDiscoveredArtists; the fan-out seeds the artists cache and
+  // signArtist/updateArtist invalidate it.
   emails: any[]; // Email system support
   executives: any[];
   moodEvents: any[];
-
-  // Discovered A&R artists (persisted client-side)
-  discoveredArtists: Artist[];
-  loadingDiscoveredArtists?: boolean;
 
   // UI state
   selectedActions: string[];
@@ -173,11 +239,6 @@ interface GameStore {
   startAROfficeOperation: (sourcingType: SourcingTypeString, primaryGenre?: string, secondaryGenre?: string) => Promise<void>;
   cancelAROfficeOperation: () => Promise<void>;
 
-  // Discovered artists lifecycle
-  loadDiscoveredArtists: () => Promise<void>;
-  clearDiscoveredArtists: () => void;
-  removeDiscoveredArtist: (artistId: string) => void;
-  
   // Artist management
   signArtist: (artistData: any) => Promise<void>;
   updateArtist: (artistId: string, updates: any) => Promise<void>;
@@ -199,13 +260,11 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       // Initial state
       gameState: null,
-      artists: [],
       roles: [],
       weeklyActions: [],
       emails: [],
       executives: [],
       moodEvents: [],
-      discoveredArtists: [],
       selectedActions: [],
       isAdvancingWeek: false,
       weeklyOutcome: null,
@@ -249,12 +308,11 @@ export const useGameStore = create<GameStore>()(
             musicLabel: data.musicLabel || null
           };
 
-          // Phase 3 PR-6/PR-7: songs / releases / releaseSongs / projects are
-          // seeded into the TanStack Query cache by fetchGameBundle — no longer
-          // written here.
+          // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /
+          // artists are seeded into the TanStack Query cache by fetchGameBundle —
+          // no longer written here.
           set({
             gameState: gameStateWithLabel,
-            artists: data.artists,
             roles: data.roles,
             weeklyActions: data.weeklyActions,
             emails: emailList,
@@ -263,9 +321,11 @@ export const useGameStore = create<GameStore>()(
             selectedActions: []
           });
 
-          // After loading game, try to load discovered artists if no active operation
+          // Phase 3 PR-9: discovered artists are cache-owned (useDiscoveredArtists).
+          // After loading game, prime the discovered-artists cache if no active
+          // operation, so consumers see them without a separate store load.
           if (!arOfficeSlotUsed) {
-            await get().loadDiscoveredArtists();
+            await primeDiscoveredArtistsCache(gameStateWithLabel);
           }
         } catch (error) {
           console.error('Failed to load game:', error);
@@ -319,10 +379,13 @@ export const useGameStore = create<GameStore>()(
           // projects show immediately; the post-restore fetchGameBundle below
           // re-seeds with the server's authoritative copy.
           seedProjectsCache(baseGameState.id, snapshot.projects || []);
+          // Phase 3 PR-9: seed the artists cache from the snapshot so the restored
+          // roster shows immediately; the post-restore fetchGameBundle re-seeds
+          // with the server's authoritative copy.
+          seedArtistsCache(baseGameState.id, snapshot.artists || []);
 
           set({
             gameState: interimGameState,
-            artists: (snapshot.artists || []) as unknown as Artist[],
             roles: (snapshot.roles || []) as unknown as Role[],
             emails: snapshot.emails || [],
             executives: snapshot.executives || [],
@@ -357,12 +420,11 @@ export const useGameStore = create<GameStore>()(
             arOfficeSourcingType: gameData.gameState?.arOfficeSourcingType ?? null,
           };
 
-          // Phase 3 PR-6/PR-7: songs / releases / releaseSongs / projects seeded
-          // into the query cache by fetchGameBundle above — no longer written
-          // into the store.
+          // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /
+          // artists seeded into the query cache by fetchGameBundle above — no
+          // longer written into the store.
           set({
             gameState: syncedGameState,
-            artists: gameData.artists || [],
             roles: gameData.roles || [],
             weeklyActions: gameData.weeklyActions || [],
             emails: emailList || [],
@@ -374,7 +436,7 @@ export const useGameStore = create<GameStore>()(
           });
 
           if (!syncedGameState.arOfficeSlotUsed) {
-            await get().loadDiscoveredArtists();
+            await primeDiscoveredArtistsCache(syncedGameState);
           }
 
           // Invalidate email cache so the inbox reflects the restored save immediately
@@ -510,11 +572,14 @@ export const useGameStore = create<GameStore>()(
           seedReleaseAndSongCache(gameState.id, { songs: [], releases: [], releaseSongs: [] });
           // Phase 3 PR-7: seed the new game's projects cache empty too.
           seedProjectsCache(gameState.id, []);
+          // Phase 3 PR-9: seed the new game's artists + discovered-artists caches
+          // empty so the hooks read [] rather than any stale prior-game data.
+          seedArtistsCache(gameState.id, []);
+          queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), []);
 
           // Clear campaign results and set new state
           set({
             gameState: syncedGameState,
-            artists: [],
             roles: [],
             weeklyActions: [],
             emails: [],
@@ -775,12 +840,12 @@ export const useGameStore = create<GameStore>()(
             musicLabel: gameData.musicLabel || (resultGameState as any)?.musicLabel || null,
           } as GameState;
 
-          // Phase 3 PR-6/PR-7: songs / releases / releaseSongs / projects seeded
-          // into the query cache by fetchGameBundle — no longer written into the
-          // store.
+          // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /
+          // artists seeded into the query cache by fetchGameBundle — no longer
+          // written into the store. The artists seed reflects post-week mood
+          // changes (formerly `artists: gameData.artists`).
           set({
             gameState: syncedGameState,
-            artists: gameData.artists || [], // Update artists to reflect mood changes
             emails: emailList || [],
             executives: Array.isArray(executivesData) ? executivesData : [],
             moodEvents: Array.isArray(moodEventsData) ? moodEventsData : [],
@@ -818,7 +883,7 @@ export const useGameStore = create<GameStore>()(
             // Enhanced retry logic with exponential backoff
             const loadWithRetry = async (attempt = 1): Promise<void> => {
               try {
-                await get().loadDiscoveredArtists();
+                await refetchDiscoveredArtistsCache(get().gameState);
                 console.log(`[A&R] Successfully loaded discovered artists (attempt ${attempt})`);
               } catch (error) {
                 console.error(`[A&R] Failed to load discovered artists (attempt ${attempt}):`, error);
@@ -925,36 +990,40 @@ export const useGameStore = create<GameStore>()(
 
       // Artist management
       signArtist: async (artistData: any) => {
-        const { gameState, artists, removeDiscoveredArtist } = get();
+        const { gameState } = get();
         if (!gameState) return;
 
         try {
-          const response = await apiRequest('POST', `/api/game/${gameState.id}/artists`, {
+          await apiRequest('POST', `/api/game/${gameState.id}/artists`, {
             ...artistData,
             signedWeek: gameState.currentWeek,
             signed: true
           });
-          const newArtist = await response.json();
-          
-          // Update both artists and game state (to reflect money deduction)
+
+          // Phase 3 PR-9: the roster is cache-owned now. Invalidate the artists
+          // key so useArtists refetches the authoritative roster (which includes
+          // the just-signed artist) instead of hand-appending to a store array.
+          // The money optimistic delta is UNTOUCHED (that's PR-10) — it stays as
+          // a client-side subtraction against gameState.money.
           const signingCost = artistData.signingCost || 0;
-          set({ 
-            artists: [...artists, newArtist],
+          set({
             gameState: {
               ...gameState,
               money: Math.max(0, (gameState.money || 0) - signingCost)
             }
           });
+          await queryClient.invalidateQueries({
+            queryKey: artistsQueryKey(gameState.id),
+          });
 
-          // If this artist was in discovered list, remove using the discovered (content) ID or name
-          if (artistData?.id) {
-            removeDiscoveredArtist(artistData.id);
-          } else if (artistData?.name) {
-            // Fallback: remove by name match if ID is unavailable
-            const current = get().discoveredArtists;
-            const toRemove = current.find(a => (a as any).name?.toLowerCase() === String(artistData.name).toLowerCase());
-            if (toRemove?.id) removeDiscoveredArtist(toRemove.id);
-          }
+          // Phase 3 PR-9: the discovered-artists list is cache-owned too. The
+          // signed artist should drop out of it; the server's A&R read already
+          // filters signed-by-name, so invalidating the discovered key refetches
+          // the correct (reduced) list. Replaces the former removeDiscoveredArtist
+          // splice by id/name.
+          await queryClient.invalidateQueries({
+            queryKey: discoveredArtistsQueryKey(gameState.id),
+          });
         } catch (error) {
           console.error('Failed to sign artist:', error);
           throw error;
@@ -962,14 +1031,15 @@ export const useGameStore = create<GameStore>()(
       },
 
       updateArtist: async (artistId: string, updates: any) => {
-        const { artists } = get();
+        const { gameState } = get();
 
         try {
-          const response = await apiRequest('PATCH', `/api/artists/${artistId}`, updates);
-          const updatedArtist = await response.json();
-          
-          set({
-            artists: artists.map(a => a.id === artistId ? updatedArtist : a)
+          await apiRequest('PATCH', `/api/artists/${artistId}`, updates);
+
+          // Phase 3 PR-9: invalidate the artists cache so useArtists refetches the
+          // updated artist instead of mapping over a store-owned array.
+          await queryClient.invalidateQueries({
+            queryKey: artistsQueryKey(gameState?.id),
           });
         } catch (error) {
           console.error('Failed to update artist:', error);
@@ -1200,85 +1270,19 @@ export const useGameStore = create<GameStore>()(
       },
 
       // Save game
-      // Discovered artists lifecycle
-      loadDiscoveredArtists: async () => {
-        const { gameState } = get();
-        if (!gameState) {
-          console.warn('[A&R] No game state available for loading discovered artists');
-          return;
-        }
-
-        // Check if already loading to prevent concurrent requests
-        const loadingFlag = get().loadingDiscoveredArtists;
-        if (loadingFlag) {
-          console.log('[A&R] Already loading discovered artists, skipping duplicate request');
-          return;
-        }
-
-        try {
-          // Set loading flag
-          set({ loadingDiscoveredArtists: true });
-
-          const res = await apiRequest('GET', `/api/game/${gameState.id}/ar-office/artists`);
-          const data = await res.json();
-
-          let artists = Array.isArray(data.artists) ? data.artists : [];
-
-          // Enhanced fallback with better error messages
-          if ((!artists || artists.length === 0) && (gameState as any)?.flags) {
-            const flags: any = (gameState as any).flags;
-            const discoveredId = flags?.ar_office_discovered_artist_id;
-            const info = flags?.ar_office_discovered_artist_info || {};
-            if (discoveredId) {
-              const synthesized = {
-                id: discoveredId,
-                name: info.name ?? 'Unknown Artist',
-                archetype: info.archetype ?? 'Unknown',
-                talent: info.talent ?? 0,
-                popularity: info.popularity ?? 0,
-                genre: info.genre ?? null,
-                signed: false,
-              } as any;
-              artists = [synthesized];
-            }
-          }
-
-          set({ discoveredArtists: artists });
-        } catch (error) {
-          console.error('[A&R] Failed to load discovered artists:', error);
-
-          // Provide more specific error information
-          const status = (error as any)?.status;
-          if (status === 404) {
-            console.warn('[A&R] No discovered artists found (404) - treating as empty result');
-            set({ discoveredArtists: [] });
-            return;
-          }
-
-          if (error instanceof Error && error.message.includes('500')) {
-            console.error('[A&R] Server error while loading discovered artists');
-          }
-
-          set({ discoveredArtists: [] });
-          throw error; // Re-throw to allow retry logic to handle it
-        } finally {
-          // Clear loading flag
-          set({ loadingDiscoveredArtists: false });
-        }
-      },
-      clearDiscoveredArtists: () => {
-        console.log('[A&R] Clearing discovered artists list');
-        set({ discoveredArtists: [] });
-      },
-      removeDiscoveredArtist: (artistId: string) => {
-        const { discoveredArtists } = get();
-        set({ discoveredArtists: discoveredArtists.filter((a: any) => a.id !== artistId) });
-      },
-
+      //
+      // Phase 3 PR-9: the discovered-artists lifecycle (loadDiscoveredArtists /
+      // clearDiscoveredArtists / removeDiscoveredArtist) was removed from the
+      // store. The READ path now lives in the TanStack Query cache via
+      // hooks/useDiscoveredArtists.ts. loadGame/loadGameFromSave prime the cache
+      // (primeDiscoveredArtistsCache); advanceWeek refetches it on A&R completion
+      // (refetchDiscoveredArtistsCache); signArtist invalidates the discovered key
+      // so a signed artist drops out. The A&R server GET is a pure read (Phase 2),
+      // so discovered artists survive a reload via the server — no client-side
+      // persistence was load-bearing (they were never in the persist partialize).
       saveGame: async (name: string, options?: { isAutosave?: boolean }) => {
         const {
           gameState,
-          artists,
           roles,
           executives,
           moodEvents,
@@ -1287,16 +1291,17 @@ export const useGameStore = create<GameStore>()(
         } = get();
         if (!gameState) return;
 
-        // Phase 3 PR-6/PR-7: songs / releases / releaseSongs / projects are no
-        // longer store-owned. Source them from the TanStack Query cache (seeded
-        // by the fan-out) so the snapshot shape is byte-identical to before.
-        // Autosave runs right after advanceWeek's fan-out, so the cache is
+        // Phase 3 PR-6/PR-7/PR-9: songs / releases / releaseSongs / projects /
+        // artists are no longer store-owned. Source them from the TanStack Query
+        // cache (seeded by the fan-out) so the snapshot shape is byte-identical to
+        // before. Autosave runs right after advanceWeek's fan-out, so the cache is
         // freshly populated here.
         const songs = queryClient.getQueryData<any[]>(songsQueryKey(gameState.id)) ?? [];
         const releases = queryClient.getQueryData<any[]>(releasesQueryKey(gameState.id)) ?? [];
         const releaseSongs =
           queryClient.getQueryData<any[]>(releaseSongsQueryKey(gameState.id)) ?? [];
         const projects = queryClient.getQueryData<any[]>(projectsQueryKey(gameState.id)) ?? [];
+        const artists = queryClient.getQueryData<any[]>(artistsQueryKey(gameState.id)) ?? [];
 
         try {
           const { emailSnapshot, releaseSongs: releaseSongsSnapshot, executives: executivesSnapshot, moodEvents: moodEventsSnapshot } =
