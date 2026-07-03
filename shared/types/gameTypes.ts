@@ -320,6 +320,15 @@ export interface SongPerformance {
 }
 
 // Game Engine types - unified location for shared interfaces
+
+/**
+ * Change-importance classification (Phase 4 PR-2).
+ * Drives the staged WeekSummary reveal: hero moments get fanfare, routine
+ * changes stay quiet. Assigned by the deterministic classifier in
+ * `shared/utils/changeImportance.ts` at WeekSummary-assembly time.
+ */
+export type ChangeImportance = 'hero' | 'notable' | 'routine';
+
 export interface ChartUpdate {
   songTitle: string;
   artistName: string;
@@ -329,6 +338,9 @@ export interface ChartUpdate {
   weeksOnChart?: number;
   peakPosition?: number | null;
   isCompetitorSong?: boolean;
+  // Phase 4 PR-2: optional additive importance classification. Old saves without
+  // this field remain valid; no SNAPSHOT_VERSION bump.
+  importance?: ChangeImportance;
 }
 
 export interface GameChange {
@@ -346,6 +358,9 @@ export interface GameChange {
   newLoyalty?: number; // For executive loyalty tracking
   source?: string;
   artistId?: string;
+  // Phase 4 PR-2: optional additive importance classification. Old saves without
+  // this field remain valid; no SNAPSHOT_VERSION bump.
+  importance?: ChangeImportance;
 }
 
 export interface EventOccurrence {
