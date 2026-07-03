@@ -578,7 +578,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
             <Button
               onClick={handleSave}
               disabled={!newSaveName.trim() || saving}
-              className="w-full rounded-button bg-[linear-gradient(135deg,#d14a7a,#7a2fb0)] text-white shadow-action hover:opacity-95 disabled:opacity-50"
+              className="w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-95 disabled:opacity-50"
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Saving...' : 'Save Game'}
@@ -701,7 +701,7 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
                 {importing ? 'Importing...' : 'Import as copy'}
               </Button>
               <Button
-                className="rounded-button bg-[linear-gradient(135deg,#d14a7a,#7a2fb0)] text-white shadow-action hover:opacity-95"
+                className="rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-95"
                 disabled={importing}
                 onClick={() => finalizeImport('overwrite')}
               >

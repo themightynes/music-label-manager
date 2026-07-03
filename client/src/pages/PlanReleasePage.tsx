@@ -1350,7 +1350,7 @@ export default function PlanReleasePage() {
                 disabled={isLoading || selectedSongs.length === 0}
                 className={cn(
                   'w-full rounded-[13px] text-white font-semibold text-sm h-11',
-                  'bg-[linear-gradient(135deg,#d14a7a,#7a2fb0)]',
+                  'bg-gradient-to-br from-action-pink to-action-purple',
                   'shadow-[0_6px_26px_rgba(140,60,200,0.5),inset_0_1px_0_rgba(255,255,255,0.25)]',
                   'hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
