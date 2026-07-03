@@ -42,73 +42,7 @@ import { useLocation, useParams } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { useArtistROI } from '@/hooks/useAnalytics';
 import { findArtistBySlugOrId, generateArtistSlug } from '@/utils/artistSlug';
-
-// Types based on existing patterns
-interface Artist {
-  id: string;
-  name: string;
-  archetype: string;
-  talent?: number | null;
-  workEthic?: number | null;
-  popularity?: number | null;
-  temperament?: number | null;
-  energy: number | null;
-  mood: number | null;
-  signed?: boolean | null;
-  signingCost?: number | null;
-  weeklyCost?: number | null;
-  bio?: string;
-  genre?: string;
-  age?: number | null;
-}
-
-interface Song {
-  id: string;
-  title: string;
-  quality: number;
-  genre: string;
-  mood: string;
-  artistId: string;
-  artistName: string;
-  createdWeek: number;
-  isRecorded: boolean;
-  isReleased: boolean;
-  releaseId?: string | null;
-  totalStreams?: number;
-  totalRevenue?: number;
-  weeklyStreams?: number;
-  lastWeekRevenue?: number;
-  releaseWeek?: number;
-  metadata?: any;
-}
-
-interface Project {
-  id: string;
-  title: string;
-  type: 'Single' | 'EP' | 'Mini-Tour';
-  artistId: string;
-  stage: 'planning' | 'production' | 'released';
-  quality: number;
-  budget: number;
-  budgetUsed: number;
-  dueWeek: number;
-  startWeek: number;
-  metadata?: Record<string, any>;
-}
-
-interface Release {
-  id: string;
-  title: string;
-  type: 'single' | 'ep' | 'album';
-  artistId: string;
-  status: 'planned' | 'released' | 'catalog';
-  releaseWeek?: number;
-  songIds: string[];
-  streamsGenerated: number;
-  revenueGenerated: number;
-  marketingBudget?: number;
-  metadata?: Record<string, any>;
-}
+import type { Artist, Song, Project, Release } from '@/components/artist/types';
 
 export default function ArtistPage() {
   const params = useParams();
