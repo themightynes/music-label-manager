@@ -260,7 +260,7 @@ export default function MainMenuPage() {
       <div className="pointer-events-none absolute bottom-6 right-6 h-8 w-8 border-b-[1.5px] border-r-[1.5px] border-[rgba(212,163,115,0.55)]" />
 
       {/* Header — top HUD strip */}
-      <header className="relative z-10 flex items-center justify-between px-8 pt-14 pb-4">
+      <header className="relative z-10 flex items-center justify-between px-12 pt-10 pb-4">
         <div className="flex items-center gap-3">
           <HoloDisc size={34} spinSeconds={20} />
           <span className="font-display text-sm lowercase text-text-primary">music label manager</span>
@@ -365,7 +365,7 @@ export default function MainMenuPage() {
       </main>
 
       {/* Footer — bottom HUD strip */}
-      <footer className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-2 px-8 pt-4 pb-14 font-mono text-[11px] uppercase tracking-[0.24em] text-text-muted">
+      <footer className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-2 px-12 pt-4 pb-10 font-mono text-[11px] uppercase tracking-[0.24em] text-text-muted">
         <span className="normal-case tracking-[0.06em] font-sans">
           Secure authentication provided by Clerk. Gameplay data is stored privately per account.
         </span>
