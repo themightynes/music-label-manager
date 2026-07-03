@@ -34,8 +34,10 @@ function EffectBadge({
 }) {
   const isPositive = value > 0;
   const Icon = isDelayed ? Clock : (isPositive ? TrendingUp : TrendingDown);
-  const colorClass = isPositive ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200';
-  const delayedClass = isDelayed ? 'border-blue-200 bg-blue-50 text-blue-700' : '';
+  const colorClass = isPositive
+    ? 'text-positive bg-positive/10 border-positive/40'
+    : 'text-negative bg-negative/10 border-negative/40';
+  const delayedClass = isDelayed ? 'border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac' : '';
 
   const formatEffect = (key: string, val: number) => {
     switch (key) {
@@ -81,7 +83,7 @@ function EffectBadge({
   return (
     <Badge
       variant="outline"
-      className={`text-xs flex items-center gap-1 ${isDelayed ? delayedClass : colorClass}`}
+      className={`text-xs font-mono rounded-pill flex items-center gap-1 ${isDelayed ? delayedClass : colorClass}`}
     >
       <Icon className="h-3 w-3" />
       {formatEffect(effect, value)}
@@ -103,7 +105,7 @@ function ChoiceEffects({
 
   if (!hasImmediate && !hasDelayed) {
     return (
-      <div className="text-xs text-white/50 italic">
+      <div className="text-xs text-text-muted italic">
         No direct effects
       </div>
     );
@@ -114,8 +116,8 @@ function ChoiceEffects({
       {hasImmediate && (
         <div>
           <div className="flex items-center gap-1 mb-1">
-            <Zap className="h-3 w-3 text-orange-300" />
-            <span className="text-xs font-medium text-white/70">Immediate</span>
+            <Zap className="h-3 w-3 text-neon-amber" />
+            <span className="text-xs font-medium text-text-body">Immediate</span>
           </div>
           <div className="flex flex-wrap gap-1">
             {Object.entries(choice.effects_immediate).map(([effect, value]) =>
@@ -136,8 +138,8 @@ function ChoiceEffects({
       {hasDelayed && (
         <div>
           <div className="flex items-center gap-1 mb-1">
-            <Clock className="h-3 w-3 text-blue-300" />
-            <span className="text-xs font-medium text-white/70">Next Week</span>
+            <Clock className="h-3 w-3 text-neon-cyan" />
+            <span className="text-xs font-medium text-text-body">Next Week</span>
           </div>
           <div className="flex flex-wrap gap-1">
             {Object.entries(choice.effects_delayed).map(([effect, value]) =>
@@ -173,14 +175,14 @@ export function DialogueInterface({
 
   return (
     <div className="space-y-6">
-      <Card className="relative overflow-hidden w-full max-w-md mx-auto">
+      <Card className="glass-panel chromatic-hairline relative overflow-hidden w-full max-w-md mx-auto border-0">
         <GlowEffect
           mode="static"
-          colors={['#4e324c', '#65557c', '#8B6B70', '#9B7B80']}
+          colors={['#a05af0', '#4a6bff', '#c8a6ff', '#ff4d8d']}
           blur="medium"
         />
         <CardContent className="p-4 relative z-10">
-          <p className="text-base italic leading-relaxed text-white">
+          <p className="text-base italic leading-relaxed text-text-primary">
             "{displayPrompt}"
           </p>
         </CardContent>
@@ -197,10 +199,10 @@ export function DialogueInterface({
           <CarouselContent>
             {dialogue.choices.map((choice) => (
               <CarouselItem key={choice.id}>
-                <Card className="relative hover:shadow-md transition-all duration-200">
+                <Card className="glass-panel chromatic-hairline relative border-0 transition-all duration-200 hover:shadow-glow-lilac">
                   <BorderTrail
                     size={180}
-                    className="bg-gradient-to-l from-brand-burgundy via-brand-gold to-brand-rose"
+                    className="bg-gradient-to-l from-action-pink via-money to-neon-lilac"
                     transition={{
                       repeat: Infinity,
                       duration: 4,
@@ -209,7 +211,7 @@ export function DialogueInterface({
                   />
                   <CardContent className="p-4">
                     <div className="space-y-3">
-                      <div className="font-medium text-sm leading-relaxed text-white">
+                      <div className="font-medium text-sm leading-relaxed text-text-primary">
                         {choice.label}
                       </div>
 
@@ -221,7 +223,7 @@ export function DialogueInterface({
 
                       <Button
                         onClick={() => onSelectChoice(choice)}
-                        className="w-full"
+                        className="w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90"
                         size="sm"
                       >
                         Choose This Response
@@ -232,8 +234,8 @@ export function DialogueInterface({
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
-          <CarouselNext className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
+          <CarouselPrevious className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
+          <CarouselNext className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
         </Carousel>
       </div>
     </div>

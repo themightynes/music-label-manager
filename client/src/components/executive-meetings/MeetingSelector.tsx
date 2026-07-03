@@ -17,7 +17,9 @@ interface MeetingSelectorProps {
 function EffectBadge({ effect, value }: { effect: string; value: number }) {
   const isPositive = value > 0;
   const Icon = isPositive ? TrendingUp : TrendingDown;
-  const colorClass = isPositive ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
+  const colorClass = isPositive
+    ? 'text-positive bg-positive/10 border border-positive/40'
+    : 'text-negative bg-negative/10 border border-negative/40';
 
   const formatEffect = (key: string, val: number) => {
     switch (key) {
@@ -37,7 +39,7 @@ function EffectBadge({ effect, value }: { effect: string; value: number }) {
   };
 
   return (
-    <Badge variant="secondary" className={`text-xs ${colorClass} flex items-center gap-1`}>
+    <Badge variant="secondary" className={`text-xs font-mono rounded-pill ${colorClass} flex items-center gap-1`}>
       <Icon className="h-3 w-3" />
       {formatEffect(effect, value)}
     </Badge>
@@ -54,16 +56,16 @@ function ChoicePreview({ choices }: { choices: RoleMeeting['choices'] }) {
   );
 
   return (
-    <div className="flex items-center gap-2 text-sm text-white/50">
+    <div className="flex items-center gap-2 text-sm text-text-muted">
       <span>{totalChoices} choices</span>
       {hasImmediateEffects && (
-        <Badge variant="outline" className="text-xs border-white/30 text-white/70">
+        <Badge variant="outline" className="text-xs font-mono rounded-pill border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac">
           <Zap className="h-3 w-3 mr-1" />
           Immediate
         </Badge>
       )}
       {hasDelayedEffects && (
-        <Badge variant="outline" className="text-xs border-white/30 text-white/70">
+        <Badge variant="outline" className="text-xs font-mono rounded-pill border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac">
           <Clock className="h-3 w-3 mr-1" />
           Delayed
         </Badge>
@@ -83,7 +85,7 @@ function MeetingCostEstimate({ choices }: { choices: RoleMeeting['choices'] }) {
   const maxCost = Math.max(...costs);
 
   return (
-    <div className="flex items-center gap-1 text-sm text-white/50">
+    <div className="flex items-center gap-1 text-sm text-money font-mono">
       <DollarSign className="h-3 w-3" />
       {minCost === maxCost ? (
         <span>Cost: ${Math.abs(minCost).toLocaleString()}</span>
@@ -99,17 +101,17 @@ function ScopeBadge({ scope }: { scope: string }) {
     global: {
       icon: Globe,
       label: 'All Artists',
-      color: 'text-blue-400 bg-blue-500/20 border-blue-500/30',
+      color: 'text-neon-cyan bg-neon-cyan/10 border-neon-cyan/40',
     },
     predetermined: {
       icon: Star,
       label: 'Top Artist',
-      color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30',
+      color: 'text-warning bg-warning/10 border-warning/40',
     },
     user_selected: {
       icon: User,
       label: 'Your Choice',
-      color: 'text-purple-400 bg-purple-500/20 border-purple-500/30',
+      color: 'text-neon-purple bg-neon-purple/10 border-neon-purple/40',
     },
   };
 
@@ -117,7 +119,7 @@ function ScopeBadge({ scope }: { scope: string }) {
   const Icon = config.icon;
 
   return (
-    <Badge variant="outline" className={`text-xs ${config.color} flex items-center gap-1`}>
+    <Badge variant="outline" className={`text-xs font-mono rounded-pill ${config.color} flex items-center gap-1`}>
       <Icon className="h-3 w-3" />
       {config.label}
     </Badge>
@@ -136,9 +138,9 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
   if (filteredMeetings.length === 0) {
     return (
       <div className="text-center p-8">
-        <div className="text-white/70">
+        <div className="text-text-body">
           <p className="text-lg font-medium">No meetings available</p>
-          <p className="text-sm mt-1 text-white/50">This executive doesn't have any available meetings right now.</p>
+          <p className="text-sm mt-1 text-text-muted">This executive doesn't have any available meetings right now.</p>
         </div>
         <Button onClick={onBack} className="mt-4" variant="outline">
           Back to Executives
@@ -184,10 +186,10 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
 
     return (
       <div className="w-full max-w-md mx-auto space-y-4">
-        <Card>
+        <Card className="glass-panel chromatic-hairline border-0">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+              <CardTitle className="text-lg text-text-primary">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
               <ScopeBadge scope={meeting.target_scope} />
             </div>
           </CardHeader>
@@ -200,8 +202,8 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
             />
 
             {selectedArtistId && (
-              <div className="p-3 bg-brand-burgundy/20 border border-brand-rose/30 rounded-md">
-                <p className="text-sm text-white/70 italic">
+              <div className="p-3 bg-neon-lilac/10 border border-neon-lilac/30 rounded-card">
+                <p className="text-sm text-text-body italic">
                   "{displayPrompt}"
                 </p>
               </div>
@@ -211,14 +213,14 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
               <Button
                 onClick={handleBackFromArtistSelection}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 rounded-button border border-white/10 bg-white/[0.02] text-text-body hover:bg-white/5"
               >
                 Back
               </Button>
               <Button
                 onClick={handleConfirmMeeting}
                 disabled={!selectedArtistId}
-                className="flex-1"
+                className="flex-1 rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90"
               >
                 Start Meeting
               </Button>
@@ -240,15 +242,15 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
       <CarouselContent>
         {filteredMeetings.map((meeting, index) => (
           <CarouselItem key={meeting.id}>
-            <Card className="hover:shadow-md transition-all duration-200">
+            <Card className="glass-panel chromatic-hairline border-0 transition-all duration-200 hover:shadow-glow-lilac">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+                  <CardTitle className="text-lg text-text-primary">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
                   <ScopeBadge scope={meeting.target_scope} />
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-white/70 italic">
+                <p className="text-sm text-text-body italic">
                   "{meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
                     ? meeting.prompt_before_selection
                     : meeting.prompt}"
@@ -256,7 +258,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
                 <Button
                   onClick={() => handleSelectMeeting(meeting, index)}
                   size="sm"
-                  className="w-full"
+                  className="w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90"
                 >
                   {meeting.target_scope === 'user_selected' ? 'Select Artist' : 'Start Meeting'}
                 </Button>
@@ -265,8 +267,8 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselPrevious className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
-      <CarouselNext className="bg-brand-mauve/80 hover:bg-brand-mauve border-brand-purple-light text-white" />
+      <CarouselPrevious className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
+      <CarouselNext className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
     </Carousel>
   );
 }

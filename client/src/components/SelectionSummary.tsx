@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useGameStore } from '@/store/gameStore';
-import { TrendingUp, TrendingDown, Clock, Zap, BarChart3, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Zap, BarChart3, X, Rocket, Loader2, Search, Crown, Music, Megaphone, Palette, Truck, type LucideIcon } from 'lucide-react';
 import logger from '@/lib/logger';
 
 interface ExecutiveAction {
@@ -17,6 +17,16 @@ interface ExecutiveAction {
   icon: string;
   color: string;
 }
+
+// Maps the legacy FontAwesome icon class (data-only field, see `icon` above) to a lucide-react
+// component for rendering — no Font Awesome markup renders in the DOM.
+const FA_ICON_MAP: Record<string, LucideIcon> = {
+  'fas fa-crown': Crown,
+  'fas fa-music': Music,
+  'fas fa-bullhorn': Megaphone,
+  'fas fa-palette': Palette,
+  'fas fa-truck': Truck,
+};
 
 interface SelectionSummaryProps {
   selectedActions: string[];
@@ -226,13 +236,13 @@ export function SelectionSummary({
   };
 
   return (
-    <Card className="h-full bg-brand-dark-card/50 backdrop-blur-sm border-white/10">
+    <Card className="h-full glass-panel chromatic-hairline border-0">
       {/* Horizontal Focus Slots at Top */}
-      <CardHeader className="p-4 border-b border-white/10">
+      <CardHeader className="p-4 border-b border-white/[0.07]">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Focus Slots</h3>
-            <Badge variant="secondary" className="text-sm bg-brand-burgundy text-white">
+            <h3 className="text-lg font-display text-text-primary">Focus Slots</h3>
+            <Badge variant="secondary" className="text-sm font-mono rounded-pill bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40">
               {usedSlots}/{totalSlots} Used
             </Badge>
           </div>
@@ -244,8 +254,8 @@ export function SelectionSummary({
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className={`flex gap-3 p-3 rounded-lg border-2 border-dashed transition-colors ${
-                    snapshot.isDraggingOver ? 'border-brand-burgundy/40 bg-brand-burgundy/10' : 'border-brand-purple'
+                  className={`flex gap-3 p-3 rounded-card border-2 border-dashed transition-colors ${
+                    snapshot.isDraggingOver ? 'border-neon-lilac/40 bg-neon-lilac/10' : 'border-white/15'
                   }`}
                 >
                   {selectedActionObjects.map((action, index) => (
@@ -254,27 +264,30 @@ export function SelectionSummary({
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`flex-1 bg-brand-dark-card/66 border border-brand-purple-light rounded-lg p-3 shadow-sm transition-all ${
-                            snapshot.isDragging ? 'shadow-lg rotate-2' : 'hover:shadow-md'
+                          className={`flex-1 bg-surface-inner/60 border border-white/10 rounded-card p-3 transition-all ${
+                            snapshot.isDragging ? 'shadow-glow-lilac rotate-2' : 'hover:bg-surface-inner/80'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
                             <div
                               {...provided.dragHandleProps}
-                              className="w-8 h-8 bg-gradient-to-br from-brand-burgundy to-brand-burgundy text-white rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing"
+                              className="w-8 h-8 bg-gradient-to-br from-action-pink to-action-purple text-white rounded-button flex items-center justify-center cursor-grab active:cursor-grabbing"
                             >
-                              <span className="text-sm font-bold">{index + 1}</span>
+                              <span className="text-sm font-bold font-mono">{index + 1}</span>
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <i className={`${action.icon} text-sm`} style={{ color: action.color }}></i>
-                                <h4 className="font-medium text-sm text-white truncate">{action.executiveName}</h4>
+                                {(() => {
+                                  const ActionIcon = FA_ICON_MAP[action.icon] || Music;
+                                  return <ActionIcon className="h-3.5 w-3.5 text-neon-lilac" />;
+                                })()}
+                                <h4 className="font-medium text-sm text-text-primary truncate">{action.executiveName}</h4>
                               </div>
-                              <p className="text-xs text-white/50 truncate">{action.meetingName}</p>
+                              <p className="text-xs text-text-muted truncate">{action.meetingName}</p>
                             </div>
                             <button
                               onClick={() => onRemoveAction(action.id)}
-                              className="w-6 h-6 flex items-center justify-center rounded-full bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all"
+                              className="w-6 h-6 flex items-center justify-center rounded-full bg-negative/20 border border-negative/40 text-negative hover:bg-negative/30 transition-all"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -286,24 +299,24 @@ export function SelectionSummary({
 
                   {arOfficeActive && (
                     <div
-                      className="flex-1 bg-brand-dark-card/66 border border-brand-purple-light rounded-lg p-3 shadow-sm"
+                      className="flex-1 bg-surface-inner/60 border border-white/10 rounded-card p-3"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-brand-purple-light to-brand-burgundy text-white rounded-lg flex items-center justify-center">
-                          <span className="text-sm font-bold">{selectedActionObjects.length + 1}</span>
+                        <div className="w-8 h-8 bg-gradient-to-br from-neon-purple to-action-pink text-white rounded-button flex items-center justify-center">
+                          <span className="text-sm font-bold font-mono">{selectedActionObjects.length + 1}</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2">
-                            <i className="fas fa-search text-sm text-brand-gold" />
-                            <h4 className="font-medium text-sm text-white truncate">A&amp;R Scouting</h4>
+                            <Search className="h-3.5 w-3.5 text-money" />
+                            <h4 className="font-medium text-sm text-text-primary truncate">A&amp;R Scouting</h4>
                           </div>
-                          <p className="text-xs text-white/50 truncate">
+                          <p className="text-xs text-text-muted truncate">
                             {arOfficeSourcingType ? arOfficeSourcingType.replace(/_/g, ' ') : 'Operation active'}
                           </p>
                         </div>
                         <button
                           onClick={() => cancelAROfficeOperation()}
-                          className="w-6 h-6 flex items-center justify-center rounded-full bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all"
+                          className="w-6 h-6 flex items-center justify-center rounded-full bg-negative/20 border border-negative/40 text-negative hover:bg-negative/30 transition-all"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -315,10 +328,10 @@ export function SelectionSummary({
                   {Array.from({ length: Math.max(0, totalSlots - filledSlotsCount) }).map((_, index) => (
                     <div
                       key={`empty-${index}`}
-                      className="flex-1 bg-brand-dark-card/66 border border-brand-purple-light rounded-lg p-3 shadow-sm opacity-50"
+                      className="flex-1 bg-surface-inner/40 border border-white/10 rounded-card p-3 opacity-50"
                     >
                       <div className="flex items-center justify-center h-8">
-                        <span className="text-xs text-white/40">Slot {filledSlotsCount + index + 1}</span>
+                        <span className="text-xs font-mono text-text-muted">Slot {filledSlotsCount + index + 1}</span>
                       </div>
                     </div>
                   ))}
@@ -332,9 +345,9 @@ export function SelectionSummary({
 
       <CardContent className="p-4 pt-0 space-y-4 mt-4">
         {/* Impact Preview - Horizontal Layout like Dashboard */}
-        <div className="bg-brand-dark-card/[0.66] rounded-lg p-4 border border-brand-purple-light">
-          <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 flex items-center">
-            <BarChart3 className="h-3.5 w-3.5 mr-2 text-brand-gold" />
+        <div className="bg-surface-inner/40 rounded-card p-4 border border-white/10">
+          <h3 className="text-xs font-mono font-semibold text-text-label uppercase tracking-wider mb-3 flex items-center">
+            <BarChart3 className="h-3.5 w-3.5 mr-2 text-money" />
             Impact Preview
           </h3>
 
@@ -343,17 +356,17 @@ export function SelectionSummary({
               {/* This Week */}
               <div>
                 <div className="flex items-center gap-1 mb-1">
-                  <Zap className="h-3 w-3 text-orange-300" />
-                  <span className="text-xs font-medium text-white/70">This Week</span>
+                  <Zap className="h-3 w-3 text-neon-amber" />
+                  <span className="text-xs font-medium text-text-body">This Week</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {Object.entries(impactPreview?.immediate || {}).map(([effect, value]) => (
-                    <Badge key={effect} variant="outline" className={`text-xs ${value > 0 ? 'text-green-400 border-green-400/30' : 'text-red-400 border-red-400/30'}`}>
+                    <Badge key={effect} variant="outline" className={`text-xs font-mono rounded-pill ${value > 0 ? 'text-positive border-positive/40 bg-positive/10' : 'text-negative border-negative/40 bg-negative/10'}`}>
                       {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
                     </Badge>
                   ))}
                   {Object.keys(impactPreview?.immediate || {}).length === 0 && (
-                    <span className="text-xs text-white/40">No immediate effects</span>
+                    <span className="text-xs text-text-muted">No immediate effects</span>
                   )}
                 </div>
               </div>
@@ -361,23 +374,23 @@ export function SelectionSummary({
               {/* Delayed Effects */}
               <div>
                 <div className="flex items-center gap-1 mb-1">
-                  <Clock className="h-3 w-3 text-blue-300" />
-                  <span className="text-xs font-medium text-white/70">Delayed Effects</span>
+                  <Clock className="h-3 w-3 text-neon-cyan" />
+                  <span className="text-xs font-medium text-text-body">Delayed Effects</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {Object.entries(impactPreview?.delayed || {}).map(([effect, value]) => (
-                    <Badge key={effect} variant="outline" className="text-xs border-blue-400/30 bg-blue-400/10 text-blue-300">
+                    <Badge key={effect} variant="outline" className="text-xs font-mono rounded-pill border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac">
                       {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
                     </Badge>
                   ))}
                   {Object.keys(impactPreview?.delayed || {}).length === 0 && (
-                    <span className="text-xs text-white/40">No delayed effects</span>
+                    <span className="text-xs text-text-muted">No delayed effects</span>
                   )}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="text-center py-2 text-white/40">
+            <div className="text-center py-2 text-text-muted">
               <p className="text-xs">No executive meeting choices made</p>
             </div>
           )}
@@ -388,17 +401,18 @@ export function SelectionSummary({
           <Button
             onClick={onAdvanceWeek}
             disabled={(selectedActions.length === 0 && !arOfficeActive) || isAdvancing}
-            className="w-full bg-gradient-to-r from-brand-burgundy to-brand-burgundy text-white hover:from-brand-burgundy/80 hover:to-brand-purple-light py-3 font-medium shadow-lg"
+            className="relative overflow-hidden w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white hover:opacity-90 py-3 font-semibold shadow-action"
             size="lg"
           >
+            <span className="pointer-events-none absolute top-0 left-3.5 right-3.5 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" aria-hidden />
             {isAdvancing ? (
               <>
-                <i className="fas fa-spinner fa-spin mr-2"></i>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Processing Week...
               </>
             ) : (
               <>
-                <i className="fas fa-rocket mr-2"></i>
+                <Rocket className="h-4 w-4 mr-2" />
                 Advance to Next Week
               </>
             )}

@@ -101,34 +101,34 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
   const badgeStackSideClass = shouldCompact ? badgeOffsetCompact : badgeOffsetDefault;
   const badgeStackAlignment = badgesOnLeft ? 'items-end' : 'items-start';
   const badgeStackGapClass = shouldCompact ? 'gap-0.5' : 'gap-1';
-  const neutralBadgeClass = 'bg-brand-mauve/60 text-white border-brand-purple-light';
+  const neutralBadgeClass = 'font-mono bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill';
 
   const loyaltyClass = shouldCompact
     ? neutralBadgeClass
     : loyaltyValue >= 70
-      ? 'bg-green-500/90 text-green-400 border-green-400/30'
+      ? 'font-mono bg-positive/10 text-positive border border-positive/40 rounded-pill'
       : loyaltyValue >= 40
-        ? 'bg-yellow-500/90 text-yellow-400 border-yellow-400/30'
-        : 'bg-red-500/90 text-red-400 border-red-400/30';
+        ? 'font-mono bg-warning/10 text-warning border border-warning/40 rounded-pill'
+        : 'font-mono bg-negative/10 text-negative border border-negative/40 rounded-pill';
 
   const moodClass = shouldCompact
     ? neutralBadgeClass
     : moodValue >= 70
-      ? 'bg-green-500/90 text-green-400 border-green-400/30'
+      ? 'font-mono bg-positive/10 text-positive border border-positive/40 rounded-pill'
       : moodValue >= 40
-        ? 'bg-yellow-500/90 text-yellow-400 border-yellow-400/30'
-        : 'bg-red-500/90 text-red-400 border-red-400/30';
+        ? 'font-mono bg-warning/10 text-warning border border-warning/40 rounded-pill'
+        : 'font-mono bg-negative/10 text-negative border border-negative/40 rounded-pill';
 
-  const levelClass = shouldCompact ? neutralBadgeClass : 'bg-blue-500/90 text-blue-300 border-blue-300/30';
-  const salaryClass = shouldCompact ? neutralBadgeClass : 'bg-purple-500/90 text-purple-200 border-purple-300/30';
+  const levelClass = shouldCompact ? neutralBadgeClass : 'font-mono bg-neon-blue/10 text-neon-blue border border-neon-blue/40 rounded-pill';
+  const salaryClass = shouldCompact ? neutralBadgeClass : 'font-mono bg-money/10 text-money border border-money/40 rounded-pill';
 
   // CEO only shows badge, no avatar
   if (isCEO) {
     return (
       <Badge
         variant="secondary"
-        className={`text-xs px-3 py-1 bg-brand-mauve/60 text-white border-brand-purple-light ${
-          effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-brand-mauve/80 transition-colors'
+        className={`text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill ${
+          effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-neon-lilac/20 transition-colors'
         }`}
         onClick={effectiveDisabled ? undefined : onSelect}
       >
@@ -142,7 +142,7 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
     <div className={`flex-shrink-0 flex flex-col ${alignmentClass} justify-center gap-2`}>
       <div className="relative">
         {/* Avatar/Icon Box */}
-        <div className="w-36 h-36 bg-brand-mauve/30 border border-brand-purple-light rounded-lg overflow-hidden relative">
+        <div className="w-36 h-36 bg-gradient-to-br from-neon-purple to-neon-blue border border-white/10 rounded-card overflow-hidden relative shadow-panel">
           {config.avatar ? (
             <img
               src={config.avatar}
@@ -155,8 +155,8 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
               }}
             />
           ) : (
-            <div className={`w-full h-full bg-brand-dark-card/50 flex items-center justify-center`}>
-              <div className={`p-3 rounded-lg ${config.color} text-white`}>
+            <div className={`w-full h-full flex items-center justify-center`}>
+              <div className="p-3 rounded-card bg-white/10 text-white">
                 <IconComponent className="h-12 w-12" />
               </div>
             </div>
@@ -192,8 +192,8 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
       {/* Title - Name Badge - Clickable */}
       <Badge
         variant="secondary"
-        className={`text-xs px-3 py-1 bg-brand-mauve/60 text-white border-brand-purple-light ${
-          effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-brand-mauve/80 transition-colors'
+        className={`text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill ${
+          effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-neon-lilac/20 transition-colors'
         }`}
         onClick={effectiveDisabled ? undefined : onSelect}
       >

@@ -33,6 +33,13 @@ export default function AROffice() {
     <GameLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6 mt-12">
+          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-text-label mb-2">
+            A&amp;R Office
+          </div>
+          <h1 className="font-display text-text-primary text-2xl sm:text-3xl lowercase mb-3">
+            talent discovery
+          </h1>
+          <div className="shimmer-bar w-40 mb-6" />
           <div className="flex items-center mb-4">
             <img
               src="/avatars/AR_Office.png"

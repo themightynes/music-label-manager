@@ -38,10 +38,10 @@ export function ArtistSelector({ artists, selectedArtistId, onSelectArtist, prom
           return (
             <Card
               key={artist.id}
-              className={`cursor-pointer transition-all ${
+              className={`cursor-pointer transition-all rounded-card ${
                 isSelected
-                  ? 'bg-brand-burgundy/30 border-brand-rose ring-2 ring-brand-rose'
-                  : 'bg-sidebar-accent hover:bg-sidebar-accent/70 border-sidebar-border'
+                  ? 'bg-brand-burgundy/30 border-brand-rose ring-2 ring-brand-rose shadow-glow-lilac'
+                  : 'bg-surface-inner/60 hover:bg-surface-inner/80 border-white/10'
               }`}
               onClick={() => onSelectArtist(artist.id)}
             >
@@ -49,7 +49,7 @@ export function ArtistSelector({ artists, selectedArtistId, onSelectArtist, prom
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-white font-semibold">{artist.name}</h4>
+                      <h4 className="text-text-primary font-semibold">{artist.name}</h4>
                       {isSelected && (
                         <div className="h-5 w-5 rounded-full bg-brand-rose flex items-center justify-center">
                           <Check className="h-3 w-3 text-white" />
@@ -58,11 +58,11 @@ export function ArtistSelector({ artists, selectedArtistId, onSelectArtist, prom
                     </div>
 
                     <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs font-mono rounded-pill bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40">
                         {artist.archetype}
                       </Badge>
                       {artist.signed && (
-                        <Badge variant="default" className="text-xs bg-brand-gold/20 text-brand-gold border-brand-gold/30">
+                        <Badge variant="default" className="text-xs font-mono rounded-pill bg-money/20 text-money border-money/40">
                           Signed
                         </Badge>
                       )}
@@ -70,26 +70,26 @@ export function ArtistSelector({ artists, selectedArtistId, onSelectArtist, prom
 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-white/60">Mood:</span>
-                        <span className={`font-medium ${getMoodColor(artist.mood || 50)}`}>
+                        <span className="text-text-muted">Mood:</span>
+                        <span className={`font-medium font-mono ${getMoodColor(artist.mood || 50)}`}>
                           {artist.mood || 50}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-white/60">Energy:</span>
-                        <span className={`font-medium ${getEnergyColor(artist.energy || 75)}`}>
+                        <span className="text-text-muted">Energy:</span>
+                        <span className={`font-medium font-mono ${getEnergyColor(artist.energy || 75)}`}>
                           {artist.energy || 75}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-white/60">Popularity:</span>
-                        <span className="text-white font-medium">
+                        <span className="text-text-muted">Popularity:</span>
+                        <span className="text-text-primary font-medium font-mono">
                           {artist.popularity || 0}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-white/60">Talent:</span>
-                        <span className="text-white font-medium">
+                        <span className="text-text-muted">Talent:</span>
+                        <span className="text-text-primary font-medium font-mono">
                           {artist.talent}
                         </span>
                       </div>

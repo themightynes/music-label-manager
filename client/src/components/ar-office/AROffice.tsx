@@ -405,12 +405,12 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full glass-panel chromatic-hairline border-0">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Music className="w-5 h-5 text-brand-burgundy" />
-            A&R Office
+          <span className="flex items-center gap-2 text-text-primary">
+            <Music className="w-5 h-5 text-neon-lilac" />
+            A&amp;R Office
           </span>
           <FocusSlotStatus
             focusSlotsUsed={context.focusSlotsUsed}
@@ -439,9 +439,16 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
           />
 
           {state.matches('noSlotsAvailable') && (
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-yellow-300">No focus slots available</div>
-              <Button size="sm" variant="outline" onClick={() => send({ type: 'RETRY' })}>Retry</Button>
+            <div className="flex items-center gap-3 rounded-chip border border-warning/35 bg-warning/10 px-3 py-2">
+              <div className="text-sm text-warning">No focus slots available</div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-neon-cyan/35 bg-neon-cyan/6 text-neon-cyan hover:bg-neon-cyan/10 hover:text-neon-cyan"
+                onClick={() => send({ type: 'RETRY' })}
+              >
+                Retry
+              </Button>
             </div>
           )}
 
@@ -463,7 +470,13 @@ export function AROffice({ gameId, gameState, signedArtists, focusSlots, onSignA
 
           {isOperationActive && (
             <div className="flex items-center justify-end gap-2">
-              <Button variant="secondary" onClick={cancelOperation}>Cancel Operation</Button>
+              <Button
+                variant="outline"
+                className="border-white/9 bg-white/[0.02] text-text-body hover:bg-white/[0.045] hover:text-text-primary"
+                onClick={cancelOperation}
+              >
+                Cancel Operation
+              </Button>
             </div>
           )}
         </div>
