@@ -12,7 +12,7 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useGameStore } from '@/store/gameStore';
+import { useGameId } from '@/hooks/useGameState';
 import { apiRequest } from '@/lib/queryClient';
 
 export const SONGS_SCOPE = 'songs:list';
@@ -22,7 +22,7 @@ export function songsQueryKey(gameId: string | null | undefined) {
 }
 
 export function useSongs() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const queryKey = useMemo(() => songsQueryKey(gameId), [gameId]);
 

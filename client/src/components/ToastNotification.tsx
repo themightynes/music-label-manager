@@ -2,11 +2,13 @@ import { Toaster } from '@/components/ui/toaster';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useEffect, useRef, useState } from 'react';
 
 export function ToastNotification() {
   const { toast, dismiss } = useToast();
-  const { gameState, weeklyOutcome } = useGameStore();
+  const gameState = useGameState();
+  const { weeklyOutcome } = useGameStore();
   const prevGameState = useRef(gameState);
   const prevWeeklyOutcome = useRef(weeklyOutcome);
   const [recentToasts, setRecentToasts] = useState<Set<string>>(new Set());

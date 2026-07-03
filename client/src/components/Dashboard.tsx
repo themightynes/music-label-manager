@@ -11,6 +11,7 @@ import { MusicCalendar } from './MusicCalendar';
 import { InboxWidget } from './InboxWidget';
 import { TextScramble } from './motion-primitives/text-scramble';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
@@ -23,7 +24,8 @@ export function Dashboard({
   showSaveModal = false,
   setShowSaveModal = () => {}
 }: DashboardProps) {
-  const { gameState, isAdvancingWeek, advanceWeek, weeklyOutcome, createProject } = useGameStore();
+  const gameState = useGameState();
+  const { isAdvancingWeek, advanceWeek, weeklyOutcome, createProject } = useGameStore();
   const [, setLocation] = useLocation();
   const [showWeekSummary, setShowWeekSummary] = useState(false);
   const [lastProcessedWeek, setLastProcessedWeek] = useState<number | null>(null);

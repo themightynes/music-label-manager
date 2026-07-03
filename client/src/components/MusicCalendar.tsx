@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Music, Mic2, Clock } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useReleases } from '@/hooks/useReleases';
 import { useProjects } from '@/hooks/useProjects';
 import { useArtists } from '@/hooks/useArtists';
@@ -45,7 +45,7 @@ export function MusicCalendar({
   minWeek = 1,
   weekPickerMode = false
 }: MusicCalendarProps) {
-  const { gameState } = useGameStore();
+  const gameState = useGameState();
   // Phase 3 PR-6/PR-7/PR-9: releases / projects / artists read from the TanStack
   // Query cache, not Zustand.
   const { data: artists = [] } = useArtists();

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useGameStore } from '@/store/gameStore';
+import { useGameId } from '@/hooks/useGameState';
 import { fetchExecutives } from '@/services/executiveService';
 import type { Executive } from '@shared/types/gameTypes';
 
@@ -49,7 +49,7 @@ export function makeCachedFetchExecutives(
 }
 
 export function useExecutives() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const queryKey = useMemo(() => executivesQueryKey(gameId), [gameId]);
 

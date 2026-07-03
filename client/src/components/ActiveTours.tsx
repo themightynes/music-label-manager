@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
 import { useProjects } from '@/hooks/useProjects';
 import { useArtists } from '@/hooks/useArtists';
 import { useLocation } from 'wouter';
@@ -262,7 +263,8 @@ function CompletedToursTable({ completedTours, getArtistName }: { completedTours
 }
 
 export function ActiveTours() {
-  const { cancelProject, gameState } = useGameStore();
+  const { cancelProject } = useGameStore();
+  const gameState = useGameState();
   // Phase 3 PR-7/PR-9: projects and artists are cache-owned; read via hooks.
   const { data: projects = [] } = useProjects();
   const { data: artists = [] } = useArtists();

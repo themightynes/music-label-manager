@@ -14,7 +14,7 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useGameStore } from '@/store/gameStore';
+import { useGameId } from '@/hooks/useGameState';
 import { apiRequest } from '@/lib/queryClient';
 
 export const RELEASES_SCOPE = 'releases:list';
@@ -29,7 +29,7 @@ export function releaseSongsQueryKey(gameId: string | null | undefined) {
 }
 
 export function useReleases() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const queryKey = useMemo(() => releasesQueryKey(gameId), [gameId]);
 
@@ -47,7 +47,7 @@ export function useReleases() {
 }
 
 export function useReleaseSongs() {
-  const gameId = useGameStore((state) => state.gameState?.id);
+  const gameId = useGameId();
 
   const queryKey = useMemo(() => releaseSongsQueryKey(gameId), [gameId]);
 
