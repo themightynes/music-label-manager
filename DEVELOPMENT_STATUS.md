@@ -4,7 +4,7 @@
 
 ---
 
-## 📅 Session Log — July 3, 2026 (Phase 3 COMPLETE + backlog cleared: PRs #87–#96, C26/C49 fixed, C32/C42/C43 dispositioned)
+## 📅 Session Log — July 3, 2026 (Phase 3 COMPLETE + backlog cleared: PRs #87–#96, C26/C49 fixed, C32/C42/C43 dispositioned, show-booking regression fixed live)
 
 **Phase 3 (client state ownership) planned AND executed in one orchestrated session, plus the tech-debt backlog fully dispositioned.** Ran as orchestrator + subagent factory (one Opus/Sonnet agent per PR in isolated worktrees, adversarial reviewer subagent on every med-high-risk PR before merge, fresh-context verifier at the end). Merge policy this session: user-granted self-merge on green CI. Everything below is merged to `main` (final: `0885ff0` + docs commits); full suite **774/774** (was 696), `tsc` clean, CI green on `main`'s own push runs.
 
@@ -30,12 +30,14 @@
 - Session grants (via AskUserQuestion at start): self-merge on green CI; plan-and-execute Phase 3 continuously; C42 + C43 deferred.
 - `client/CLAUDE.md` State Management + Cache Management sections rewritten to describe the Phase 3 ownership model (the "Persisted" list had never matched the actual partialize).
 
+**Post-wrap live smoke (same day, user at the keyboard):** started the dev server and played the game hands-on. Found a real regression — **booking a show/tour had been silently broken since PR #68** (July 2): the create-project hardening schema required `songCount > 0`, but `LivePerformancePage` has always sent `songCount: 0` for tours, so every booking 400'd with "Invalid project data". NOT a Phase 3 regression (client payload unchanged; the earlier smoke pass created a Single, never a tour, so it slipped through). Fixed server-side (`4b07e07`): `songCount` is now `nonnegative` with a refine keeping the ≥1 requirement for Single/EP; two regression tests added (the real tour payload → 200 + correct charge; Single with 0 → still 400); projects-create suite 13/13. **User confirmed booking works live.** Also found during play: the "On Tour" artist badge lags the tour's COMPLETE status by exactly one week (engine advances tour stage with `>` not `>=` on cities played; badge reads `stage === 'production'`) — logged as **C51** with root-cause file refs and two fix options, not fixed.
+
 **Open threads / next steps:**
 - **Deferred from Phase 3** (plan §3 footnote): full `gameState`→TanStack migration (the spine, read in ~30 files) — a "Phase 3.5" candidate; `updateGameState` three-way fallback; orphan-cleanup path.
 - **Phase 4 (game feel)** still has no tickets; first candidate remains the staged WeekSummary reveal.
 - **D6** whole-week transaction atomicity — still a filed idea.
-- **Manual smoke of the Phase 3 surface** — the vitest net + reviewers covered it this session; a hands-on pass (plan→release→execute, A&R sign, save/restore, balance display after purchases) is cheap insurance next session.
-- Backlog: 46/50 completed, 3 deferred by decision, 1 pending (C50, low).
+- ~~Manual smoke of the Phase 3 surface~~ — **done live same day** (see post-wrap smoke above): booking, week advance, tour completion all exercised; found the pre-existing booking bug + C51.
+- Backlog: 51 items — 46 completed, 3 deferred by decision (C32/C42/C43), 2 pending (C50 client-test DB coupling, C51 On-Tour badge lag; both low).
 
 ---
 
