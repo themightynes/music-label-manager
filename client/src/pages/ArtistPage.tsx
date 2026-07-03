@@ -43,6 +43,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { useArtistROI } from '@/hooks/useAnalytics';
 import { findArtistBySlugOrId, generateArtistSlug } from '@/utils/artistSlug';
 import type { Artist, Song, Project, Release } from '@/components/artist/types';
+import { getQualityColor, getReleaseTypeBadge, getStatusBadge } from '@/components/artist/artistPageUtils';
+import { AnalyticsTab } from '@/components/artist/AnalyticsTab';
 
 export default function ArtistPage() {
   const params = useParams();
@@ -158,42 +160,6 @@ export default function ArtistPage() {
     
     loadSongsData();
   }, [actualArtistId, gameState?.id]);
-  
-  // Helper functions
-  const getQualityColor = (quality: number) => {
-    if (quality >= 90) return 'bg-green-500/20 text-green-800';
-    if (quality >= 80) return 'bg-blue-500/20 text-blue-800';
-    if (quality >= 70) return 'bg-yellow-500/20 text-yellow-800';
-    return 'bg-red-500/20 text-red-800';
-  };
-  
-  const getReleaseTypeBadge = (type: string) => {
-    const typeConfig = {
-      single: { label: 'Single', color: 'bg-blue-500/20 text-blue-800' },
-      ep: { label: 'EP', color: 'bg-brand-burgundy-dark/20 text-brand-burgundy-dark' },
-      album: { label: 'Album', color: 'bg-green-500/20 text-green-800' }
-    };
-    
-    const config = typeConfig[type as keyof typeof typeConfig] || typeConfig.single;
-    return <Badge className={config.color}>{config.label}</Badge>;
-  };
-  
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      planned: { label: 'Planned', color: 'bg-yellow-500/20 text-yellow-800', icon: Clock },
-      released: { label: 'Released', color: 'bg-green-500/20 text-green-800', icon: PlayCircle },
-      catalog: { label: 'Catalog', color: 'bg-gray-500/20 text-white', icon: Disc }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || 
-                   { label: status, color: 'bg-gray-500/20 text-white', icon: Music };
-    return (
-      <Badge className={`${config.color} flex items-center space-x-1`}>
-        <config.icon className="w-3 h-3" />
-        <span>{config.label}</span>
-      </Badge>
-    );
-  };
   
   // Group songs by release
   const getSongsByRelease = () => {
@@ -778,147 +744,7 @@ export default function ArtistPage() {
           </TabsContent>
           
           {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6 relative z-20">
-            <div className="space-y-6">
-              {/* Total Streams Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Radio className="w-5 h-5" />
-                    <span>Total Streams by Song</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {songs.filter(s => s.isReleased).length === 0 ? (
-                    <div className="text-center py-8">
-                      <Radio className="w-8 h-8 text-white/30 mx-auto mb-3" />
-                      <p className="text-white/50">No released songs to analyze</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-left text-xs text-white/50 border-b">
-                            <th className="pb-2">Rank</th>
-                            <th className="pb-2">Song Title</th>
-                            <th className="pb-2">Release</th>
-                            <th className="pb-2 text-right">Total Streams</th>
-                            <th className="pb-2 text-right">Revenue</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {songs
-                            .filter(s => s.isReleased)
-                            .sort((a, b) => (b.totalStreams || 0) - (a.totalStreams || 0))
-                            .slice(0, 10)
-                            .map((song, idx) => {
-                              const release = artistReleases.find(r => r.id === song.releaseId);
-                              return (
-                                <tr key={song.id} className="border-b last:border-0">
-                                  <td className="py-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                      idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
-                                      idx === 1 ? 'bg-gray-500/20 text-white/90' :
-                                      idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                      'bg-brand-purple-light/10 text-white/70'
-                                    }`}>
-                                      {idx + 1}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 font-medium">{song.title}</td>
-                                  <td className="py-3 text-sm text-white/70">
-                                    {release?.title || 'Unknown'}
-                                  </td>
-                                  <td className="py-3 text-right font-mono font-semibold">
-                                    {(song.totalStreams || 0).toLocaleString()}
-                                  </td>
-                                  <td className="py-3 text-right font-mono text-green-600">
-                                    ${(song.totalRevenue || 0).toLocaleString()}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {/* Last Week Streams Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5" />
-                    <span>Last Week Streams</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {songs.filter(s => s.isReleased && s.weeklyStreams).length === 0 ? (
-                    <div className="text-center py-8">
-                      <TrendingUp className="w-8 h-8 text-white/30 mx-auto mb-3" />
-                      <p className="text-white/50">No streaming data for last week</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-left text-xs text-white/50 border-b">
-                            <th className="pb-2">Rank</th>
-                            <th className="pb-2">Song Title</th>
-                            <th className="pb-2">Quality</th>
-                            <th className="pb-2 text-right">Weekly Streams</th>
-                            <th className="pb-2 text-right">Growth</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {songs
-                            .filter(s => s.isReleased)
-                            .sort((a, b) => (b.weeklyStreams || 0) - (a.weeklyStreams || 0))
-                            .slice(0, 10)
-                            .map((song, idx) => {
-                              const growth = song.totalStreams && song.weeklyStreams 
-                                ? ((song.weeklyStreams / Math.max(1, song.totalStreams - song.weeklyStreams)) * 100).toFixed(1)
-                                : '0.0';
-                              return (
-                                <tr key={song.id} className="border-b last:border-0">
-                                  <td className="py-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                      idx === 0 ? 'bg-yellow-500/20 text-yellow-700' :
-                                      idx === 1 ? 'bg-gray-500/20 text-white/90' :
-                                      idx === 2 ? 'bg-orange-500/20 text-orange-700' :
-                                      'bg-brand-purple-light/10 text-white/70'
-                                    }`}>
-                                      {idx + 1}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 font-medium">{song.title}</td>
-                                  <td className="py-3">
-                                    <Badge className={getQualityColor(song.quality)}>
-                                      {song.quality}
-                                    </Badge>
-                                  </td>
-                                  <td className="py-3 text-right font-mono font-semibold">
-                                    {(song.weeklyStreams || 0).toLocaleString()}
-                                  </td>
-                                  <td className="py-3 text-right">
-                                    <span className={`font-semibold ${
-                                      parseFloat(growth) > 0 ? 'text-green-600' : 'text-white/40'
-                                    }`}>
-                                      {parseFloat(growth) > 0 ? '+' : ''}{growth}%
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+          <AnalyticsTab songs={songs} artistReleases={artistReleases} />
           
           {/* Management Tab */}
           <TabsContent value="management" className="space-y-6 relative z-20">
