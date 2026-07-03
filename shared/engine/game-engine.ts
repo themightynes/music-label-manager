@@ -20,6 +20,8 @@ import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist 
 import { ArtistChangeHelpers } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
+import { ProgressionProcessor } from './processors/ProgressionProcessor';
+import { WeeklyFinancesProcessor } from './processors/WeeklyFinancesProcessor';
 import type { WeekContext } from './processors/types';
 
 // Re-export WeekSummary for backward compatibility
@@ -563,6 +565,7 @@ export class GameEngine {
       summary,
       gameData: this.gameData,
       storage: this.storage,
+      financialSystem: this.financialSystem,
       getRandom: (min: number, max: number) => this.getRandom(min, max),
       dbTransaction
     };
@@ -1222,8 +1225,9 @@ export class GameEngine {
    * Calculates weekly operational costs including artist payments
    */
   private async calculateWeeklyBurn(): Promise<number> {
-    const result = await this.calculateWeeklyBurnWithBreakdown();
-    return result.total;
+    return new WeeklyFinancesProcessor().calculateWeeklyBurn(
+      this.weekContext({ changes: [] } as unknown as WeekSummary)
+    );
   }
 
   /**
@@ -1236,9 +1240,8 @@ export class GameEngine {
     artistCosts: number;
     artistDetails: Array<{name: string, weeklyCost: number}>;
   }> {
-    return this.financialSystem.calculateWeeklyBurnWithBreakdown(
-      this.gameState.id || '',
-      this.storage
+    return new WeeklyFinancesProcessor().calculateWeeklyBurnWithBreakdown(
+      this.weekContext({ changes: [] } as unknown as WeekSummary)
     );
   }
 
@@ -3201,167 +3204,25 @@ export class GameEngine {
    * Checks and applies progression gates
    */
   private async checkProgressionGates(summary: WeekSummary): Promise<void> {
-    const thresholds = this.gameData.getProgressionThresholdsSync();
-    
-    // Slot unlock functionality has been removed - these were non-functional placeholders
+    return new ProgressionProcessor().checkProgressionGates(this.weekContext(summary));
   }
 
   /**
    * Updates access tiers based on current reputation and returns tier upgrade notifications
    */
   private updateAccessTiers(): GameChange[] {
-    const tiers = this.gameData.getAccessTiersSync();
-    const reputation = this.gameState.reputation || 0;
-    const tierChanges: GameChange[] = [];
-
-    // Initialize tier unlock history if missing (Task 2.2)
-    const gs: any = this.gameState as any;
-    if (!gs.tierUnlockHistory) {
-      gs.tierUnlockHistory = {};
-    }
-    
-    // Store previous values to detect changes
-    const previousPlaylist = this.gameState.playlistAccess;
-    const previousPress = this.gameState.pressAccess;
-    const previousVenue = this.gameState.venueAccess;
-    
-    // Update playlist access
-    const playlistTiers = Object.entries(tiers.playlist_access)
-      .sort(([,a], [,b]) => b.threshold - a.threshold); // Sort by threshold descending
-    
-    for (const [tierName, config] of playlistTiers) {
-      if (reputation >= config.threshold) {
-        if (this.gameState.playlistAccess !== tierName) {
-          this.gameState.playlistAccess = tierName;
-        }
-        break;
-      }
-    }
-    
-    // Update press access
-    const pressTiers = Object.entries(tiers.press_access)
-      .sort(([,a], [,b]) => b.threshold - a.threshold);
-    
-    for (const [tierName, config] of pressTiers) {
-      if (reputation >= config.threshold) {
-        if (this.gameState.pressAccess !== tierName) {
-          this.gameState.pressAccess = tierName;
-        }
-        break;
-      }
-    }
-    
-    // Update venue access
-    const venueTiers = Object.entries(tiers.venue_access)
-      .sort(([,a], [,b]) => b.threshold - a.threshold);
-    
-    for (const [tierName, config] of venueTiers) {
-      if (reputation >= config.threshold) {
-        if (this.gameState.venueAccess !== tierName) {
-          this.gameState.venueAccess = tierName;
-        }
-        break;
-      }
-    }
-    
-    // Generate notifications for tier upgrades
-    if (previousPlaylist !== this.gameState.playlistAccess && this.gameState.playlistAccess !== 'none') {
-      const tierDisplay = this.gameState.playlistAccess === 'niche' ? 'Niche' :
-                         this.gameState.playlistAccess === 'mid' ? 'Mid-Tier' :
-                         this.gameState.playlistAccess === 'flagship' ? 'Flagship' : this.gameState.playlistAccess;
-      tierChanges.push({
-        type: 'unlock',
-        description: `🎵 Playlist Access Upgraded: ${tierDisplay} playlists unlocked! Your releases can now reach wider audiences.`,
-        amount: 0
-      });
-
-      // Task 2.3: Track unlock week in tierUnlockHistory for playlist
-      if (!gs.tierUnlockHistory.playlist) gs.tierUnlockHistory.playlist = {};
-      const tierKey = this.gameState.playlistAccess;
-      if (tierKey && !gs.tierUnlockHistory.playlist[tierKey]) {
-        gs.tierUnlockHistory.playlist[tierKey] = this.gameState.currentWeek || 0;
-      }
-    }
-    
-    if (previousPress !== this.gameState.pressAccess && this.gameState.pressAccess !== 'none') {
-      const tierDisplay = this.gameState.pressAccess === 'blogs' ? 'Music Blogs' :
-                         this.gameState.pressAccess === 'mid_tier' ? 'Mid-Tier Press' :
-                         this.gameState.pressAccess === 'national' ? 'National Media' : this.gameState.pressAccess;
-      tierChanges.push({
-        type: 'unlock',
-        description: `📰 Press Access Upgraded: ${tierDisplay} coverage unlocked! Your projects will get better media attention.`,
-        amount: 0
-      });
-
-      // Task 2.4: Track unlock week in tierUnlockHistory for press
-      if (!gs.tierUnlockHistory.press) gs.tierUnlockHistory.press = {};
-      const tierKey = this.gameState.pressAccess;
-      if (tierKey && !gs.tierUnlockHistory.press[tierKey]) {
-        gs.tierUnlockHistory.press[tierKey] = this.gameState.currentWeek || 0;
-      }
-    }
-    
-    if (previousVenue !== this.gameState.venueAccess && this.gameState.venueAccess !== 'none') {
-      const tierDisplay = this.gameState.venueAccess === 'clubs' ? 'Club Venues' :
-                         this.gameState.venueAccess === 'theaters' ? 'Theater Venues' :
-                         this.gameState.venueAccess === 'arenas' ? 'Arena Venues' : this.gameState.venueAccess;
-      tierChanges.push({
-        type: 'unlock',
-        description: `🎭 Venue Access Upgraded: ${tierDisplay} unlocked! Your artists can now perform at larger venues.`,
-        amount: 0
-      });
-
-      // Task 2.6: Track unlock week in tierUnlockHistory for venue
-      if (!gs.tierUnlockHistory.venue) gs.tierUnlockHistory.venue = {};
-      const tierKey = this.gameState.venueAccess;
-      if (tierKey && !gs.tierUnlockHistory.venue[tierKey]) {
-        gs.tierUnlockHistory.venue[tierKey] = this.gameState.currentWeek || 0;
-      }
-    }
-    
-    return tierChanges;
+    // updateAccessTiers returns its notifications (it does not read ctx.summary),
+    // so a throwaway summary is passed only to satisfy the WeekContext shape.
+    return new ProgressionProcessor().updateAccessTiers(
+      this.weekContext({ changes: [] } as unknown as WeekSummary)
+    );
   }
 
   /**
    * Checks for producer tier unlocks and adds progression notifications
    */
   private checkProducerTierUnlocks(summary: WeekSummary): void {
-    const reputation = this.gameState.reputation || 0;
-    const producerSystem = this.gameData.getProducerTierSystemSync();
-    
-    // Track which tiers were previously unlocked - properly handle flags
-    const flags = this.gameState.flags || {};
-    let unlockedTiers = (flags as any)['unlocked_producer_tiers'];
-    
-    // Initialize unlockedTiers if it doesn't exist yet
-    if (!unlockedTiers) {
-      unlockedTiers = ['local']; // Start with local tier
-      (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
-      this.gameState.flags = flags;
-    }
-    
-    let newUnlocks = false;
-    const availableTiers = this.gameData.getAvailableProducerTiers(reputation);
-    
-    for (const tierName of availableTiers) {
-      if (!unlockedTiers.includes(tierName)) {
-        unlockedTiers.push(tierName);
-        newUnlocks = true;
-        
-        const tierData = producerSystem[tierName];
-        summary.changes.push({
-          type: 'unlock',
-          description: `🎛️ Producer Tier Unlocked: ${tierName.charAt(0).toUpperCase() + tierName.slice(1)} - ${tierData.description}`,
-          amount: 0
-        });
-        
-        console.log(`[PROGRESSION] Producer tier unlocked: ${tierName} (reputation: ${reputation})`);
-      }
-    }
-    
-    // Always update the flags to ensure persistence
-    (flags as any)['unlocked_producer_tiers'] = unlockedTiers;
-    this.gameState.flags = flags;
+    return new ProgressionProcessor().checkProducerTierUnlocks(this.weekContext(summary));
   }
 
   // REMOVED: processProjectStart method is redundant
@@ -3849,29 +3710,7 @@ export class GameEngine {
    * Check if the 52-week campaign has been completed and calculate final results
    */
   private async checkCampaignCompletion(summary: WeekSummary): Promise<CampaignResults | undefined> {
-    const currentWeek = this.gameState.currentWeek || 0;
-    const balanceConfig = await this.gameData.getBalanceConfig();
-    const campaignLength = balanceConfig.time_progression.campaign_length_weeks;
-    
-    // Only complete campaign if we've reached the final week
-    if (currentWeek < campaignLength) {
-      return undefined;
-    }
-
-    // Mark campaign as completed
-    this.gameState.campaignCompleted = true;
-
-    // Calculate complete campaign results
-    const campaignResults = AchievementsEngine.calculateCampaignResults(this.gameState);
-
-    // Add campaign completion to summary
-    summary.changes.push({
-      type: 'unlock',
-      description: `🎉 Campaign Completed! Final Score: ${campaignResults.finalScore}`,
-      amount: campaignResults.finalScore
-    });
-
-    return campaignResults;
+    return new ProgressionProcessor().checkCampaignCompletion(this.weekContext(summary));
   }
 
 
@@ -4112,38 +3951,7 @@ export class GameEngine {
    * Enhanced weekly summary generation with economic insights
    */
   private generateEconomicInsights(summary: WeekSummary): void {
-    // Track budget efficiency and strategic decisions for the week
-    const projectStartChanges = summary.changes.filter(change => 
-      change.type === 'project_complete' && change.description.includes('Started')
-    );
-    
-    if (projectStartChanges.length > 0) {
-      const totalProjectSpend = projectStartChanges.reduce((total, change) => 
-        total + Math.abs(change.amount || 0), 0
-      );
-      
-      summary.changes.push({
-        type: 'unlock',
-        description: `💰 Weekly project investment: $${totalProjectSpend.toLocaleString()} across ${projectStartChanges.length} project${projectStartChanges.length > 1 ? 's' : ''}`,
-        amount: 0
-      });
-    }
-    
-    // Add economic efficiency reporting for ongoing projects
-    const ongoingRevenue = summary.changes.filter(change => 
-      change.type === 'ongoing_revenue'
-    ).reduce((total, change) => total + (change.amount || 0), 0);
-    
-    if (ongoingRevenue > 0) {
-      summary.changes.push({
-        type: 'unlock',
-        description: `📈 Catalog revenue efficiency: $${ongoingRevenue.toLocaleString()} from released content`,
-        amount: 0
-      });
-    }
-    
-    // Note: Removed efficiency achievement as it serves no gameplay purpose
-    // Instead, track reputation gains per release/activity in their respective sections
+    return new WeeklyFinancesProcessor().generateEconomicInsights(this.weekContext(summary));
   }
 
   /**
@@ -4377,42 +4185,10 @@ export class GameEngine {
    * Generates human-readable financial breakdown string
    */
   private generateFinancialBreakdown(f: WeeklyFinancials): string {
-    const parts: string[] = [`$${f.startingBalance.toLocaleString()}`];
-    
-    if (f.operations.base > 0) {
-      parts.push(`- $${f.operations.base.toLocaleString()} (operations)`);
-    }
-    if (f.operations.artists > 0) {
-      parts.push(`- $${f.operations.artists.toLocaleString()} (artists)`);
-    }
-    if (f.operations.executives > 0) {
-      parts.push(`- $${f.operations.executives.toLocaleString()} (executives)`);
-    }
-    if (f.operations.signingBonuses > 0) {
-      parts.push(`- $${f.operations.signingBonuses.toLocaleString()} (signing bonuses)`);
-    }
-    if (f.projects.costs > 0) {
-      parts.push(`- $${f.projects.costs.toLocaleString()} (projects)`);
-    }
-    if (f.projects.revenue > 0) {
-      parts.push(`+ $${f.projects.revenue.toLocaleString()} (project revenue)`);
-    }
-    if (f.marketing.costs > 0) {
-      parts.push(`- $${f.marketing.costs.toLocaleString()} (marketing)`);
-    }
-    if (f.roleEffects.costs > 0) {
-      parts.push(`- $${f.roleEffects.costs.toLocaleString()} (role costs)`);
-    }
-    if (f.roleEffects.revenue > 0) {
-      parts.push(`+ $${f.roleEffects.revenue.toLocaleString()} (role benefits)`);
-    }
-    if (f.streamingRevenue > 0) {
-      parts.push(`+ $${f.streamingRevenue.toLocaleString()} (streaming)`);
-    }
-    
-    parts.push(`= $${f.endingBalance.toLocaleString()}`);
-    
-    return parts.join(' ');
+    return new WeeklyFinancesProcessor().generateFinancialBreakdown(
+      this.weekContext({ changes: [] } as unknown as WeekSummary),
+      f
+    );
   }
 
   /**
@@ -4421,9 +4197,9 @@ export class GameEngine {
    */
   // DELEGATED TO FinancialSystem (originally lines 3126-3172)
   async calculateWeeklyFinancials(summary: WeekSummary): Promise<WeeklyFinancials> {
-    return this.financialSystem.calculateWeeklyFinancials(
-      summary,
-      this.gameState.money || 0
+    return new WeeklyFinancesProcessor().calculateWeeklyFinancials(
+      this.weekContext(summary),
+      summary
     );
   }
 
