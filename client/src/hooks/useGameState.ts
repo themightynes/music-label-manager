@@ -23,6 +23,26 @@
 import { useGameStore } from '@/store/gameStore';
 import type { GameState } from '@shared/types/gameTypes';
 
+/**
+ * Query-key scope for the gameState spine record (Phase 3.5 PR-4).
+ *
+ * The spine (week, money, reputation, creativeCapital, focusSlots, access
+ * tiers, flags, A&R fields, embedded `musicLabel`) is a CLIENT-COMMITTED RECORD
+ * in the TanStack Query cache — the store's `commitGameState` funnel is the ONLY
+ * writer (fan-out seed, advance-week commit, slot math, `adoptServerBalances`).
+ * PR-4 makes the store dual-write Zustand + this cache key; `useGameState()`
+ * still reads Zustand until PR-5 flips it. Client-committed-record semantics
+ * (staleTime/gcTime Infinity, no focus/reconnect refetch) belong to the hook
+ * that reads this key in PR-5 — a background refetch here would race the
+ * synchronous slot math (see plan §0.6).
+ */
+export const GAME_STATE_SCOPE = 'gameState:record' as const;
+
+/** The gameState-record cache key for a game: `['gameState:record', gameId]`. */
+export function gameStateQueryKey(gameId: string): readonly [string, string] {
+  return [GAME_STATE_SCOPE, gameId];
+}
+
 export function useGameState(): GameState | null;
 export function useGameState<T>(selector: (gameState: GameState | null) => T): T;
 export function useGameState<T>(
