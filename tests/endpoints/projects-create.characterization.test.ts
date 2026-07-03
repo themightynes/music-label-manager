@@ -197,24 +197,46 @@ describe('POST /api/game/:gameId/projects (characterization)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Pre-fix exploitable behavior. Commit 1 pins these GREEN on today's code;
-// Commit 2 FLIPS each of them (see the (post-fix) block below).
+// Post-fix hardening (B1-B4). These FLIP the pre-fix exploits and assert the
+// new ownership / entity-scoping / bounds checks. They only pass after the fix.
 // ---------------------------------------------------------------------------
-describe('POST /api/game/:gameId/projects (pre-fix exploits)', () => {
-  it('B2 PIN: totalCost:1 with a high budgetPerSong is charged only $1', async () => {
+describe('POST /api/game/:gameId/projects (post-fix hardening)', () => {
+  it('B2 FLIP: server-computed cost is charged; client totalCost:1 is ignored', async () => {
     const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
 
     const res = await request(app)
       .post(`/api/game/${gameId}/projects`)
+      // budgetPerSong 8000 (max in-bounds for Single 1-song) with totalCost:1.
       .send(clientPayload({ artistId, budgetPerSong: 8000, totalCost: 1 }));
 
     expect(res.status).toBe(200);
+    // Server recomputes: 8000 * 1 song * local(1.0) * standard(1.0) = 8000.
+    expect(res.body.totalCost).toBe(8000);
     const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-    // Only $1 deducted despite budgetPerSong 8000 (drives quality) -> exploit.
-    expect(gs.money).toBe(500000 - 1);
+    expect(gs.money).toBe(500000 - 8000); // NOT 500000 - 1
   });
 
-  it("B3 PIN: client-supplied stage:'production' is accepted verbatim", async () => {
+  it('B2: producer/time multipliers are applied to the server cost', async () => {
+    const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/projects`)
+      // regional(1.8) * extended(1.4) = 2.52; 5000 * 1 * 2.52 = 12600.
+      .send(clientPayload({
+        artistId,
+        budgetPerSong: 5000,
+        totalCost: 1,
+        producerTier: 'regional',
+        timeInvestment: 'extended',
+      }));
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalCost).toBe(12600);
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(500000 - 12600);
+  });
+
+  it("B3 FLIP: client-supplied stage:'production' is ignored; project is 'planning'", async () => {
     const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
 
     const res = await request(app)
@@ -222,10 +244,74 @@ describe('POST /api/game/:gameId/projects (pre-fix exploits)', () => {
       .send(clientPayload({ artistId, stage: 'production' }));
 
     expect(res.status).toBe(200);
-    expect(res.body.stage).toBe('production'); // skips the planning week -> exploit
+    expect(res.body.stage).toBe('planning'); // server-owned, not skippable
   });
 
-  it('B1 PIN: PATCH applies raw body to any project, even cross-tenant', async () => {
+  it('B3 FLIP: an unknown/forbidden field (quality) is rejected with 400', async () => {
+    const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/projects`)
+      .send(clientPayload({ artistId, quality: 98 })); // mass-assignment attempt
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Invalid project data');
+    const rows = await db.select().from(projects).where(eq(projects.gameId, gameId));
+    expect(rows.length).toBe(0);
+  });
+
+  it('B3: songCount out of bounds (EP with 10 songs) is rejected with 400', async () => {
+    const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/projects`)
+      .send(clientPayload({
+        artistId,
+        type: 'EP',
+        songCount: 10, // legit range is 3-5
+        budgetPerSong: 5000,
+        totalCost: 1,
+      }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('INVALID_SONG_COUNT');
+    const rows = await db.select().from(projects).where(eq(projects.gameId, gameId));
+    expect(rows.length).toBe(0);
+  });
+
+  it('B1: cross-tenant create returns 404 GAME_NOT_FOUND; victim game untouched', async () => {
+    const { gameId, artistId } = await seedGame({ ownerId: OTHER_USER_ID, money: 500000, creativeCapital: 5 });
+    currentUserId = TEST_USER_ID; // attacker != owner
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/projects`)
+      .send(clientPayload({ artistId }));
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('GAME_NOT_FOUND');
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(500000); // untouched
+    const rows = await db.select().from(projects).where(eq(projects.gameId, gameId));
+    expect(rows.length).toBe(0);
+  });
+
+  it('entity-scoping: artistId from a different game returns 400; no project created', async () => {
+    const mine = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
+    const other = await seedGame({ ownerId: OTHER_USER_ID });
+
+    const res = await request(app)
+      .post(`/api/game/${mine.gameId}/projects`)
+      .send(clientPayload({ artistId: other.artistId })); // artist from another game
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('ARTIST_NOT_IN_GAME');
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, mine.gameId));
+    expect(gs.money).toBe(500000);
+    const rows = await db.select().from(projects).where(eq(projects.gameId, mine.gameId));
+    expect(rows.length).toBe(0);
+  });
+
+  it('B1 FLIP: PATCH cross-tenant returns 404 PROJECT_NOT_FOUND; project unchanged', async () => {
     // Victim owns the game/project; attacker (TEST_USER_ID) patches it.
     const { gameId, artistId } = await seedGame({ ownerId: OTHER_USER_ID, money: 500000, creativeCapital: 5 });
     const projectId = crypto.randomUUID();
@@ -241,10 +327,37 @@ describe('POST /api/game/:gameId/projects (pre-fix exploits)', () => {
     currentUserId = TEST_USER_ID; // attacker != owner
     const res = await request(app)
       .patch(`/api/projects/${projectId}`)
-      .send({ stage: 'recorded', quality: 98 });
+      .send({ stage: 'recorded' });
 
-    expect(res.status).toBe(200);
-    expect(res.body.stage).toBe('recorded');
-    expect(res.body.quality).toBe(98);
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('PROJECT_NOT_FOUND');
+    const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
+    expect(proj.stage).toBe('planning'); // unchanged
+  });
+
+  it('B3: PATCH by the owner with a whitelisted field succeeds; unknown field 400s', async () => {
+    const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
+    const projectId = crypto.randomUUID();
+    await db.insert(projects).values({
+      id: projectId,
+      gameId,
+      artistId,
+      title: 'My Project',
+      type: 'Single',
+      stage: 'planning',
+    });
+
+    const ok = await request(app)
+      .patch(`/api/projects/${projectId}`)
+      .send({ stage: 'production' });
+    expect(ok.status).toBe(200);
+    expect(ok.body.stage).toBe('production');
+
+    const bad = await request(app)
+      .patch(`/api/projects/${projectId}`)
+      .send({ quality: 98 }); // mass-assignment attempt
+    expect(bad.status).toBe(400);
+    const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
+    expect(proj.quality).toBe(0); // unchanged
   });
 });
