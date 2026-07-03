@@ -284,18 +284,18 @@ export class InvestmentTracker {
     dbTransaction?: any
   ): Promise<{ allocations: Array<{ songId: string; delta: number }>; skipped: boolean }> {
     // Idempotency: check release metadata flag and set it within the same transaction
-    const release = await this.storage.getRelease(releaseId);
+    const release = await this.storage.getRelease(releaseId, dbTransaction);
     const releaseMeta = (release?.metadata as any) || {};
     if (releaseMeta.baseMarketingAllocated) {
       return { allocations: [], skipped: true };
     }
-    
+
     const releaseSongs = await this.storage.getSongsByRelease(releaseId, dbTransaction);
     if (releaseSongs.length === 0 || totalMarketingBudget <= 0) {
       // Still set flag to avoid re-entry with zero budget
       await this.storage.updateRelease(releaseId, {
         metadata: { ...(releaseMeta || {}), baseMarketingAllocated: true }
-      });
+      }, dbTransaction);
       return { allocations: [], skipped: true };
     }
     
@@ -318,8 +318,8 @@ export class InvestmentTracker {
     // Mark idempotency flag
     await this.storage.updateRelease(releaseId, {
       metadata: { ...(releaseMeta || {}), baseMarketingAllocated: true }
-    });
-    
+    }, dbTransaction);
+
     return { allocations, skipped: false };
   }
 
@@ -333,28 +333,28 @@ export class InvestmentTracker {
     amount: number,
     dbTransaction?: any
   ): Promise<{ allocations: Array<{ songId: string; delta: number }>; skipped: boolean }> {
-    const release = await this.storage.getRelease(releaseId);
+    const release = await this.storage.getRelease(releaseId, dbTransaction);
     const releaseMeta = (release?.metadata as any) || {};
     if (releaseMeta.leadMarketingAllocated || amount <= 0) {
       if (!releaseMeta.leadMarketingAllocated) {
         // Set flag even if amount <= 0 to keep logic idempotent for this phase
         await this.storage.updateRelease(releaseId, {
           metadata: { ...(releaseMeta || {}), leadMarketingAllocated: true }
-        });
+        }, dbTransaction);
       }
       return { allocations: [], skipped: true };
     }
-    
-    const song = await this.storage.getSong(songId);
+
+    const song = await this.storage.getSong(songId, dbTransaction);
     if (!song) {
       return { allocations: [], skipped: true };
     }
-    
+
     const newAllocation = (song.marketingAllocation || 0) + amount;
     await this.storage.updateSong(songId, { marketingAllocation: newAllocation }, dbTransaction);
     await this.storage.updateRelease(releaseId, {
       metadata: { ...(releaseMeta || {}), leadMarketingAllocated: true }
-    });
+    }, dbTransaction);
     
     return { allocations: [{ songId, delta: amount }], skipped: false };
   }
@@ -362,7 +362,7 @@ export class InvestmentTracker {
   /**
    * Gets comprehensive investment metrics for an artist
    */
-  async getArtistInvestmentMetrics(artistId: string, gameId: string): Promise<{
+  async getArtistInvestmentMetrics(artistId: string, gameId: string, dbTransaction?: any): Promise<{
     totalProductionInvestment: number;
     totalMarketingInvestment: number;
     totalInvestment: number;
@@ -370,7 +370,7 @@ export class InvestmentTracker {
     overallROI: number;
     songCount: number;
   }> {
-    const songs = await this.storage.getSongsByArtist(artistId, gameId);
+    const songs = await this.storage.getSongsByArtist(artistId, gameId, dbTransaction);
     
     const metrics = songs.reduce((acc: any, song: any) => ({
       totalProductionInvestment: acc.totalProductionInvestment + (song.productionBudget || 0),
