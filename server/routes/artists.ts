@@ -15,6 +15,22 @@ import {
 
 const router = Router();
 
+// HARDENING (PR-13): whitelist the fields the client is actually allowed to
+// PATCH on an artist. PATCH /api/artists/:id previously passed raw req.body
+// straight to storage.updateArtist — a mass-assignment hole. The only client
+// caller is gameStore.updateArtist (client/src/store/gameStore.ts), which has
+// no live callers today, so this locks the route down to the minimal safe set
+// of genuinely user-mutable runtime-state fields. mood/energy carry DB CHECK
+// constraints (0-100) mirrored here. .strict() rejects any other key so
+// identity (id, gameId) and server-computed fields (talent, popularity,
+// signingCost, weeklyCost, signed, signedWeek, ...) can never be mass-assigned.
+const patchArtistSchema = z
+  .object({
+    mood: z.number().int().min(0).max(100).optional(),
+    energy: z.number().int().min(0).max(100).optional(),
+  })
+  .strict();
+
 // ========================================
 // Artist Dialogue Endpoint
 // ========================================
@@ -209,8 +225,18 @@ router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, requireGameOw
         return res.status(404).json({ error: 'ARTIST_NOT_FOUND', message: 'Artist not found' });
       }
 
-      // TODO(phase-2): whitelist mutable artist fields — raw body pass-through is mass-assignment
-      const updated = await storage.updateArtist(req.params.id, req.body);
+      // HARDENING (PR-13): reject unknown / identity / server-computed fields
+      // (mass-assignment). Mirrors INVALID_GAME_FIELDS in games.ts.
+      const parsed = patchArtistSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: 'INVALID_ARTIST_FIELDS',
+          message: 'Artist update payload contains unexpected fields',
+          details: parsed.error.errors,
+        });
+      }
+
+      const updated = await storage.updateArtist(req.params.id, parsed.data);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ message: "Failed to update artist" });
