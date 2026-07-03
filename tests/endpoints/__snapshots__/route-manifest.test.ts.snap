@@ -156,11 +156,6 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
   },
   {
     "method": "GET",
-    "middleware": [],
-    "path": "/api/debug/game/:gameId/revenue",
-  },
-  {
-    "method": "GET",
     "middleware": [
       "requireClerkUser",
     ],
@@ -170,6 +165,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireAdmin",
     ],
     "path": "/api/dev/markets-config",
   },
@@ -533,11 +529,6 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
       "requireClerkUser",
     ],
     "path": "/api/saves/:saveId/restore",
-  },
-  {
-    "method": "POST",
-    "middleware": [],
-    "path": "/api/select-actions",
   },
   {
     "method": "PATCH",

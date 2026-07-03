@@ -4,9 +4,9 @@ import path from 'path';
 import { serverGameData } from '../data/gameData';
 import { gameDataLoader } from '@shared/utils/dataLoader';
 import { db } from '../db';
-import { gameStates, projects, songs } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
-import { requireClerkUser } from '../auth';
+import { gameStates } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+import { requireClerkUser, requireAdmin } from '../auth';
 
 const router = Router();
 
@@ -164,66 +164,6 @@ router.get("/api/validate-types", requireClerkUser, async (req, res) => {
     }
   });
 
-  // DEBUG: Check project and song revenue status
-  // TODO(phase-1): this endpoint has NO auth middleware (no requireClerkUser) and
-  // exposes game data by gameId. Preserved as-is during the Phase 1 pure move; auth
-  // hardening is a deliberate, separately-reviewed change (see plan §6).
-  router.get("/api/debug/game/:gameId/revenue", async (req, res) => {
-    try {
-      const gameId = req.params.gameId;
-
-      // Get all projects for this game
-      const allProjects = await db.select().from(projects).where(eq(projects.gameId, gameId));
-
-      // Get all songs for this game
-      const allSongs = await db.select().from(songs).where(eq(songs.gameId, gameId));
-
-      // Get released projects specifically
-      const releasedProjects = await db.select().from(projects)
-        .where(and(eq(projects.gameId, gameId), eq(projects.stage, 'released')));
-
-      res.json({
-        summary: {
-          totalProjects: allProjects.length,
-          releasedProjects: releasedProjects.length,
-          totalSongs: allSongs.length,
-          releasedSongs: allSongs.filter(s => s.isReleased).length
-        },
-        projects: allProjects.map(p => ({
-          id: p.id,
-          title: p.title,
-          type: p.type,
-          stage: p.stage,
-          artistId: p.artistId,
-          songCount: p.songCount,
-          songsCreated: p.songsCreated,
-          startWeek: p.startWeek,
-          metadata: p.metadata
-        })),
-        songs: allSongs.map(s => ({
-          id: s.id,
-          title: s.title,
-          artistId: s.artistId,
-          quality: s.quality,
-          isRecorded: s.isRecorded,
-          isReleased: s.isReleased,
-          createdWeek: s.createdWeek,
-          metadata: s.metadata
-        })),
-        releasedProjects: releasedProjects.map(p => ({
-          id: p.id,
-          title: p.title,
-          metadata: p.metadata,
-          hasRevenue: !!(p.metadata as any)?.revenue,
-          hasStreams: !!(p.metadata as any)?.streams
-        }))
-      });
-    } catch (error) {
-      console.error('[DEBUG] Error fetching revenue debug status:', error);
-      res.status(500).json({ message: "Failed to fetch revenue debug status" });
-    }
-  });
-
   // Developer tools endpoints
   router.get('/api/dev/markets-config', requireClerkUser, async (req, res) => {
     try {
@@ -237,11 +177,8 @@ router.get("/api/validate-types", requireClerkUser, async (req, res) => {
     }
   });
 
-  // TODO(phase-1): this write endpoint uses requireClerkUser (any authenticated
-  // user), NOT requireAdmin — it likely should be admin-gated since it writes to
-  // data/balance/markets.json. Preserved as-is during the Phase 1 pure move; auth
-  // hardening is a deliberate, separately-reviewed change (see plan §6).
-  router.post('/api/dev/markets-config', requireClerkUser, async (req, res) => {
+  // Admin-gated: writes to data/balance/markets.json (global economy config).
+  router.post('/api/dev/markets-config', requireClerkUser, requireAdmin, async (req, res) => {
     try {
       const { config } = req.body;
 

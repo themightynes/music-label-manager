@@ -8,7 +8,6 @@ import { serverGameData } from '../data/gameData';
 import { GameEngine } from '../../shared/engine/game-engine';
 import {
   AdvanceWeekRequest,
-  SelectActionsRequest,
   validateRequest,
   createErrorResponse,
 } from '@shared/api/contracts';
@@ -397,87 +396,6 @@ const router = Router();
       res.status(500).json(createErrorResponse(
         'ADVANCE_WEEK_ERROR',
         errorMessage
-      ));
-    }
-  });
-
-  // TODO(phase-2): orphaned endpoint, no client callers, no auth — delete
-  // Save player action selections with transactions
-  router.post("/api/select-actions", async (req, res) => {
-    try {
-      // Validate request using shared contract
-      const request = validateRequest(SelectActionsRequest, req.body);
-      const { gameId, selectedActions } = request;
-
-      // Wrap in transaction
-      const result = await db.transaction(async (tx) => {
-        // Get current game state
-        const [gameState] = await tx
-          .select()
-          .from(gameStates)
-          .where(eq(gameStates.id, gameId));
-
-        if (!gameState) {
-          throw new Error('Game not found');
-        }
-
-        // Get starting values from balance configuration
-        const startingValues = await serverGameData.getStartingValues();
-
-        // Convert database gameState to proper GameState type
-        const gameStateForEngine = {
-          ...gameState,
-          currentWeek: gameState.currentWeek || 1,
-          money: gameState.money ?? startingValues.money,
-          reputation: gameState.reputation ?? startingValues.reputation,
-          creativeCapital: gameState.creativeCapital ?? startingValues.creativeCapital,
-          focusSlots: gameState.focusSlots ?? 3,
-          usedFocusSlots: gameState.usedFocusSlots ?? 0,
-          // A&R Office fields
-          arOfficeSlotUsed: (gameState as any).arOfficeSlotUsed || false,
-          arOfficeSourcingType: (gameState as any).arOfficeSourcingType || null,
-          playlistAccess: gameState.playlistAccess ?? 'none',
-          pressAccess: gameState.pressAccess ?? 'none',
-          venueAccess: gameState.venueAccess ?? 'none',
-          campaignType: gameState.campaignType ?? 'standard',
-          rngSeed: gameState.rngSeed ?? Math.random().toString(36).substring(7),
-          flags: gameState.flags ?? {},
-          weeklyStats: gameState.weeklyStats ?? {}
-        };
-
-        // Create GameEngine instance and update action selection
-        const gameEngine = new GameEngine(gameStateForEngine, serverGameData, storage);
-        const updatedGameState = gameStateForEngine; // For now, just return current state
-
-        // Update in database
-        await tx
-          .update(gameStates)
-          .set({
-            usedFocusSlots: updatedGameState.usedFocusSlots,
-            flags: updatedGameState.flags,
-            updatedAt: new Date()
-          })
-          .where(eq(gameStates.id, gameId));
-
-        return {
-          success: true,
-          gameState: updatedGameState
-        };
-      });
-
-      res.json(result);
-    } catch (error) {
-      console.error('Select actions error:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json(createErrorResponse(
-          'VALIDATION_ERROR',
-          'Invalid request data',
-          error.errors
-        ));
-      }
-      res.status(500).json(createErrorResponse(
-        'SELECT_ACTIONS_ERROR',
-        error instanceof Error ? error.message : 'Failed to save action selection'
       ));
     }
   });
