@@ -72,6 +72,13 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     },
     market_formulas: marketFormulas,
     time_investment_system: quality.time_investment_system,
+    // The multiplicative song-quality path (calculateBudgetQualityMultiplier)
+    // reads these from quality.json in production. The fixtures previously
+    // omitted them, so the budget-quality multiplier threw and the recording
+    // scenario generated ZERO songs (a pinned no-op). Wiring the real config in
+    // lets the recording-week scenario actually exercise the quality path.
+    quality_system: quality.quality_system,
+    producer_tier_system: quality.producer_tier_system,
     ...config,
   };
   const streaming = marketFormulas?.streaming_calculation;
