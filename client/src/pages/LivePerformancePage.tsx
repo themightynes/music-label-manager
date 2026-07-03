@@ -822,7 +822,7 @@ export default function LivePerformancePage() {
                           <p className="text-xs text-text-muted">Choose your target venue size</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-mono font-semibold text-[26px] leading-none text-text-primary">{selectedCapacity.toLocaleString()}</p>
+                          <p className="font-mono font-semibold text-xl leading-none text-text-primary">{selectedCapacity.toLocaleString()}</p>
                           <p className="text-[11.5px] text-text-muted mt-1">capacity</p>
                         </div>
                       </div>

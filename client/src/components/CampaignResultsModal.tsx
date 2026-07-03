@@ -106,31 +106,31 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
             <CardContent>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                 <div className="text-center">
-                  <div className="font-mono text-[26px] font-semibold leading-none text-money">
+                  <div className="font-mono text-xl font-semibold leading-none text-money">
                     {campaignResults.scoreBreakdown.money}
                   </div>
                   <div className="mt-1.5 text-[11.5px] text-white/50">Money</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-mono text-[26px] font-semibold leading-none text-neon-lilac">
+                  <div className="font-mono text-xl font-semibold leading-none text-neon-lilac">
                     {campaignResults.scoreBreakdown.reputation}
                   </div>
                   <div className="mt-1.5 text-[11.5px] text-white/50">Reputation</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-mono text-[26px] font-semibold leading-none text-positive">
+                  <div className="font-mono text-xl font-semibold leading-none text-positive">
                     {campaignResults.scoreBreakdown.artistsSuccessful}
                   </div>
                   <div className="mt-1.5 text-[11.5px] text-white/50">Artist Success</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-mono text-[26px] font-semibold leading-none text-neon-amber">
+                  <div className="font-mono text-xl font-semibold leading-none text-neon-amber">
                     {campaignResults.scoreBreakdown.projectsCompleted}
                   </div>
                   <div className="mt-1.5 text-[11.5px] text-white/50">Projects</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-mono text-[26px] font-semibold leading-none text-neon-cyan">
+                  <div className="font-mono text-xl font-semibold leading-none text-neon-cyan">
                     {campaignResults.scoreBreakdown.accessTierBonus}
                   </div>
                   <div className="mt-1.5 text-[11.5px] text-white/50">Access Bonus</div>
