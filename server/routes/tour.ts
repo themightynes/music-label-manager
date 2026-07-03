@@ -69,6 +69,18 @@ const router = Router();
       const totalMarketingBudget = budgetPerCity * cities;
       const totalBudget = baseCosts.totalCosts + totalMarketingBudget;
 
+      // UNIFIED TOUR MATH (Phase 2 engine-seams PR-7 investigation): this estimate
+      // route and the engine's live tour path (TourProcessor.processUnifiedTourRevenue,
+      // shared/engine/processors/TourProcessor.ts) both funnel through this SINGLE
+      // FinancialSystem entry point — `calculateDetailedTourBreakdown` — which owns
+      // ALL tour math (costs, sell-through, per-city economics, scarcity pricing).
+      // There is no duplicated assembly to extract: each caller only sources the
+      // same `TourCalculationParams` fields from its own context (estimate = request
+      // body / current gameState pre-tour; engine = stored project metadata post-
+      // creation). The one honest divergence is `artistPopularity` defaulting (|| 0
+      // here vs || 50 in the engine); changing it would be a behavior change and is
+      // intentionally left. The happy-path response is pinned by
+      // tests/endpoints/tour-estimate.characterization.test.ts.
       // ENHANCED: Calculate detailed breakdown with specific capacity or tier fallback
       const detailedBreakdown = financialSystem.calculateDetailedTourBreakdown({
         venueCapacity: venueCapacity || 0, // Use provided capacity or fallback to tier
