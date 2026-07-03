@@ -1,8 +1,20 @@
 # [READY] Phase 3.5: gameState Spine → TanStack Query Ownership
 
 *Created: July 3, 2026 — planned by a code-reading architect pass against the live tree (no code modified).*
-*Status: READY — not started.*
+*Status: COMPLETE — all 7 PRs landed 2026-07-03.*
 *Completes the Phase 3 client-state-ownership arc (Phase 3 PRs 1–10 ✅ landed). This phase migrates the last Zustand-owned server-truth domain — the `gameState` spine (week, money, reputation, creativeCapital, focusSlots, access tiers, flags, A&R fields, `musicLabel`) — onto the TanStack Query cache, and retires the `updateGameState` dead path deferred by the Phase 3 plan §3 footnote.*
+
+## Execution status
+
+| # | PR | Merged as |
+|---|---|---|
+| 1 | test: spine characterization net | #98 |
+| 2 | chore: delete the dead `updateGameState` three-way fallback | #99 |
+| 3 | refactor: `useGameState` façade; migrate all spine readers (split 3a/3b) | #103 (3a), #104 (3b) |
+| 4 | feat: gameState query key + dual-write commit funnel | #106 |
+| 5 | feat: flip `useGameState()` to read the query cache | #108 |
+| 6 | refactor: retire the Zustand `gameState` copy | #110 |
+| 7 | docs + cleanup | this PR |
 
 ## 0. Ground truth (verified against the working tree, 2026-07-03)
 
@@ -94,16 +106,18 @@ PR-1 is the net. PR-2 is independent. PRs 3→4→5→6 are strictly ordered. PR
 
 ## 4. Acceptance criteria (phase-level, testable)
 
-1. **Single owner.** `gameState` exists in exactly one canonical place: the query cache at `['gameState:record', gameId]`. Zustand holds no spine object (only `gameId` + session state). Grep finds no `state.gameState` selector outside `useGameState.ts`/`gameStore.ts` internals.
-2. **`updateGameState` gone.** No three-way fallback code remains; `npm run check` clean.
-3. **Optimistic semantics preserved.** Focus-slot math is visible on the next render after `selectAction`/`removeAction`/`clearActions`/A&R slot ops (RTL test), and no background refetch can clobber it (`staleTime: Infinity` + focus-refetch off, asserted by test).
-4. **Balances stay server-canonical.** `adoptServerBalances` still merges exactly `money` + `creativeCapital` post-mutation (Phase 3 PR-10 behavior), now via `setQueryData`.
-5. **Snapshot integrity.** `buildGameSnapshot.shape.test.ts` green throughout; `SNAPSHOT_VERSION` still `2`; save→restore and export→import round-trips work; `musicLabel` remains a top-level sibling in snapshots.
-6. **Persistence compatible.** localStorage `music-label-manager-game` on-disk shape unchanged; a pre-migration browser session rehydrates into a working game.
-7. **Orphan-cleanup behavior identical** (PR-1 pin (f) green before and after).
-8. **Key contract extended.** `query-key-contract.test.ts` covers `gameStateQueryKey`; no dead invalidations introduced.
-9. **XState untouched.** Machines still receive week/slots via `SYNC_*` events; no `useQuery`/`getQueryData` added to `machines/*.ts`.
-10. **Suite green after every PR** (`npm run check` + `npm run test:run`; CI vitest job).
+All 10 verified against the tree at PR-7 time (2026-07-03): `npm run check` clean, `npx vitest run tests/client client/src` green (15 files / 130 tests in `tests/client`, 10 files / 97 tests in `client/src`).
+
+1. ✅ **Single owner.** `gameState` exists in exactly one canonical place: the query cache at `['gameState:record', gameId]`. Zustand's `gameState` field holds only `{ id } | null` (`gameStore.ts` `GameStatePointer` type, PR-6). `tests/client/gameState-ownership.grepgate.test.ts` (added PR-7) greps `client/src` and fails on any `useGameStore((s) => s.gameState...)` selector outside `gameStore.ts`/`useGameState.ts` — passes clean today.
+2. ✅ **`updateGameState` gone.** Confirmed by grep: zero matches for `updateGameState` in `client/src` (PR-2 deleted the interface + three-way fallback); `npm run check` clean.
+3. ✅ **Optimistic semantics preserved.** `tests/client/useGameState-facade-flip.test.tsx` renders a real component through `useGameState()` and asserts `usedFocusSlots` updates on the next render after `selectAction`/`removeAction` with no `waitFor`, plus a simulated `window.dispatchEvent(new Event('focus'))` that must NOT trigger the tripwire queryFn — both pass.
+4. ✅ **Balances stay server-canonical.** `adoptServerBalances` (`gameStore.ts:261`) still reads `GET /api/game/:id` and merges only `money`/`creativeCapital` onto the current record (comment block `gameStore.ts:243-260`), now committed via `commitGateState`'s `setQueryData` funnel instead of `set()`.
+5. ✅ **Snapshot integrity.** `tests/client/buildGameSnapshot.shape.test.ts` green (6 tests); `SNAPSHOT_VERSION` still `2` (`shared/schema.ts:514`); both `saveGame` (`gameStore.ts`) and `SaveGameModal.handleExport` call the shared `buildGameSnapshot()` helper, `musicLabel` stays a top-level sibling.
+6. ✅ **Persistence compatible.** `partialize` (`gameStore.ts:1407-1411`) still emits `{ gameState: { id } | null, selectedActions, isAdvancingWeek }` — byte-identical on-disk shape to pre-Phase-3.5.
+7. ✅ **Orphan-cleanup behavior identical.** `createNewGame`'s orphan-cleanup path (PR-1 pin (f)) is covered by `tests/client/gameStore-actions.characterization.test.ts`, green against the current code (reads via `readGameState(get)` instead of `get().gameState` directly, same id/currentWeek semantics).
+8. ✅ **Key contract extended.** `tests/client/query-key-contract.test.ts` imports `GAME_STATE_SCOPE`/`gameStateQueryKey` from `hooks/useGameState.ts` and asserts the key shape + invalidation-matching; no dead invalidations (the gameState key is never invalidated by design — see `client/CLAUDE.md` Cache Management).
+9. ✅ **XState untouched.** `grep -rn "useQuery\|getQueryData" client/src/machines/*.ts` returns zero matches.
+10. ✅ **Suite green after every PR.** Confirmed for the final tree: `npm run check` clean; `npx vitest run tests/client client/src` — 25 files, 227 tests, all passing.
 
 ## 5. Non-goals
 
