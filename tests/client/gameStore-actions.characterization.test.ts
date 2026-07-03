@@ -55,22 +55,29 @@ beforeEach(() => {
   resetGameStore();
 });
 
-describe('signArtist optimistic delta', () => {
-  // Phase 3 PR-9 CHANGE: the roster is cache-owned now. signArtist no longer
-  // appends the returned artist into a store `artists` array; it invalidates the
-  // artists query key (so useArtists refetches the authoritative roster) AND the
-  // discovered-artists key (so the signed artist drops out of the discovered
-  // list). The money optimistic math is UNTOUCHED (that's PR-10), so those pins
-  // stay identical — only the array-append pin becomes invalidation pins.
-  it('deducts signingCost from money and invalidates the artists + discovered caches', async () => {
+describe('signArtist adopts server-canonical money', () => {
+  // Phase 3 PR-10 CHANGE (drift fix): signArtist no longer does optimistic
+  // client-side `money -= signingCost` arithmetic. The POST .../artists response
+  // is just the created artist row (no money field) and the signing cost is
+  // derived server-side (artistService), so the displayed balance is adopted
+  // from a refetch of GET /api/game/:id. The mocked GET below returns a balance
+  // DIFFERENT from what client math would produce, proving no client arithmetic
+  // remains: client math on 100000 - 15000 would say 85000, but the server says
+  // 83000 and the store must show 83000. (Phase 3 PR-9 pins for the artists +
+  // discovered cache invalidations are unchanged.)
+  it('adopts the server balance from the refetch (NOT a client 100000-15000 delta)', async () => {
     useGameStore.setState({ gameState: baseGameState({ id: 'game-1', money: 100000 }) });
     const newArtist = { id: 'artist-99', name: 'Signed One' };
-    routeApiRequest([{ match: (u) => u.includes('/artists'), body: newArtist }]);
+    routeApiRequest([
+      // GET /api/game/:id refetch — server is canonical (83000 != client's 85000).
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 4 } } },
+      { match: (u) => u.includes('/artists'), body: newArtist },
+    ]);
 
     await useGameStore.getState().signArtist({ name: 'Signed One', signingCost: 15000 });
 
     const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(85000); // 100000 - 15000
+    expect(state.gameState!.money).toBe(83000); // server-canonical, not 85000
     // Roster no longer lives in the store; the mutation invalidates the cache.
     expect((state as any).artists).toBeUndefined();
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
@@ -81,18 +88,36 @@ describe('signArtist optimistic delta', () => {
     });
   });
 
-  it('clamps money at 0 (Math.max floor) when signingCost exceeds balance', async () => {
-    useGameStore.setState({ gameState: baseGameState({ money: 5000 }) });
-    routeApiRequest([{ match: (u) => u.includes('/artists'), body: { id: 'a1' } }]);
+  it('double-firing signArtist cannot compound the balance (server number wins)', async () => {
+    // Guard the plan requires: two rapid calls must leave the displayed balance
+    // equal to the mocked server's LAST response, with no client arithmetic
+    // compounding. There is no in-flight guard in the store (a double-fire is two
+    // real server mutations — a server concern, out of scope), but the displayed
+    // balance must still be exactly the server's number, never 100000 - 15000 -
+    // 15000. The GET always returns 83000 here, so after two signs the store
+    // shows 83000, not a doubly-subtracted 70000.
+    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', money: 100000 }) });
+    routeApiRequest([
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 4 } } },
+      { match: (u) => u.includes('/artists'), body: { id: 'a1' } },
+    ]);
 
-    await useGameStore.getState().signArtist({ signingCost: 15000 });
+    await Promise.all([
+      useGameStore.getState().signArtist({ signingCost: 15000 }),
+      useGameStore.getState().signArtist({ signingCost: 15000 }),
+    ]);
 
-    expect(useGameStore.getState().gameState!.money).toBe(0);
+    expect(useGameStore.getState().gameState!.money).toBe(83000); // not 70000
   });
 
-  it('treats a missing signingCost as 0 (no money change)', async () => {
-    useGameStore.setState({ gameState: baseGameState({ money: 42000 }) });
-    routeApiRequest([{ match: (u) => u.includes('/artists'), body: { id: 'a1' } }]);
+  it('leaves money unchanged when the refetch yields no gameState (transient GET failure)', async () => {
+    // adoptServerBalances returns silently if the GET has no gameState; the store
+    // keeps its prior balance rather than throwing or zeroing out.
+    useGameStore.setState({ gameState: baseGameState({ id: 'game-1', money: 42000 }) });
+    routeApiRequest([
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: {} }, // no gameState field
+      { match: (u) => u.includes('/artists'), body: { id: 'a1' } },
+    ]);
 
     await useGameStore.getState().signArtist({ name: 'No Cost' });
 
@@ -100,24 +125,32 @@ describe('signArtist optimistic delta', () => {
   });
 });
 
-describe('createProject optimistic delta', () => {
-  // Phase 3 PR-7 CHANGE: projects are cache-owned now. createProject no longer
-  // splices the returned project into a store `projects` array; it invalidates
-  // the projects query key so useProjects refetches the authoritative list. The
-  // money/creativeCapital optimistic math is UNTOUCHED (that's PR-10), so those
-  // pins stay identical — only the array-splice pin becomes an invalidation pin.
-  it('deducts totalCost from money and 1 from creativeCapital, invalidates projects', async () => {
+describe('createProject adopts server-canonical money + creativeCapital', () => {
+  // Phase 3 PR-10 CHANGE (drift fix): createProject no longer does optimistic
+  // client-side `money -= projectCost; creativeCapital -= 1` arithmetic. The
+  // POST .../projects response is just the created project row (no money/cc) and
+  // the cost is recomputed server-side (projects.ts recomputes totalCost), so
+  // BOTH balances are adopted from a refetch of GET /api/game/:id. The mocked GET
+  // returns numbers DIFFERENT from what client math would produce, proving no
+  // client arithmetic remains: client math would say money 80000 / cc 3, but the
+  // server says 83000 / 2 and the store must show 83000 / 2. (Phase 3 PR-7 pin
+  // for the projects cache invalidation is unchanged.)
+  it('adopts server money + cc from the refetch (NOT client 80000/3 deltas)', async () => {
     useGameStore.setState({
       gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }),
     });
     const newProject = { id: 'proj-1', title: 'EP' };
-    routeApiRequest([{ match: (u) => u.includes('/projects'), body: newProject }]);
+    routeApiRequest([
+      // GET /api/game/:id refetch — server canonical (83000/2 != client 80000/3).
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 2 } } },
+      { match: (u) => u.includes('/projects'), body: newProject },
+    ]);
 
     await useGameStore.getState().createProject({ totalCost: 20000 });
 
     const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(80000); // 100000 - 20000
-    expect((state.gameState as any).creativeCapital).toBe(3); // 4 - 1
+    expect(state.gameState!.money).toBe(83000); // server-canonical, not 80000
+    expect((state.gameState as any).creativeCapital).toBe(2); // server-canonical, not 3
     // Projects no longer live in the store; the mutation invalidates the cache.
     expect((state as any).projects).toBeUndefined();
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
@@ -125,55 +158,70 @@ describe('createProject optimistic delta', () => {
     });
   });
 
-  it('falls back to budgetPerSong when totalCost is absent', async () => {
+  it('double-firing createProject cannot compound the balances (server numbers win)', async () => {
+    // Two rapid creates leave the displayed balances equal to the mocked server's
+    // response, with no client arithmetic compounding. No in-flight guard exists
+    // (a double-fire is two real server mutations — out of scope); the point is
+    // the displayed balances equal the server's numbers, never a doubly-
+    // subtracted 60000 / cc 2.
     useGameStore.setState({
-      gameState: baseGameState({ money: 50000, creativeCapital: 2 }),
+      gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }),
     });
-    routeApiRequest([{ match: (u) => u.includes('/projects'), body: { id: 'p2' } }]);
+    routeApiRequest([
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 2 } } },
+      { match: (u) => u.includes('/projects'), body: { id: 'p1' } },
+    ]);
 
-    await useGameStore.getState().createProject({ budgetPerSong: 8000 });
+    await Promise.all([
+      useGameStore.getState().createProject({ totalCost: 20000 }),
+      useGameStore.getState().createProject({ totalCost: 20000 }),
+    ]);
 
-    expect(useGameStore.getState().gameState!.money).toBe(42000); // 50000 - 8000
-    expect((useGameStore.getState().gameState as any).creativeCapital).toBe(1);
-  });
-
-  it('deducts creative capital even when cost is 0', async () => {
-    useGameStore.setState({
-      gameState: baseGameState({ money: 30000, creativeCapital: 3 }),
-    });
-    routeApiRequest([{ match: (u) => u.includes('/projects'), body: { id: 'p3' } }]);
-
-    await useGameStore.getState().createProject({});
-
-    expect(useGameStore.getState().gameState!.money).toBe(30000);
-    expect((useGameStore.getState().gameState as any).creativeCapital).toBe(2);
+    const state = useGameStore.getState();
+    expect(state.gameState!.money).toBe(83000); // not 60000
+    expect((state.gameState as any).creativeCapital).toBe(2); // not a compounded value
   });
 });
 
-describe('planRelease optimistic delta', () => {
-  it('deducts metadata.totalInvestment from money and 1 from creativeCapital', async () => {
+describe('planRelease adopts server-canonical money + creativeCapital', () => {
+  // Phase 3 PR-10 CHANGE (drift fix): planRelease no longer does optimistic
+  // client-side `money -= totalInvestment; creativeCapital -= 1` arithmetic. The
+  // POST .../releases/plan response carries `updatedGameState.money` but NOT
+  // creativeCapital, so a single refetch of GET /api/game/:id is the one correct
+  // source for BOTH fields. The mocked GET returns numbers DIFFERENT from what
+  // client math would produce, proving no client arithmetic remains: client math
+  // would say money 88000 / cc 3, but the server says 83000 / 2 and the store
+  // must show 83000 / 2.
+  it('adopts server money + cc from the refetch (NOT client 88000/3 deltas)', async () => {
     useGameStore.setState({
-      gameState: baseGameState({ money: 100000, creativeCapital: 4 }),
+      gameState: baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4 }),
     });
-    routeApiRequest([{ match: (u) => u.includes('/releases/plan'), body: { ok: true } }]);
+    routeApiRequest([
+      // GET /api/game/:id refetch — server canonical (83000/2 != client 88000/3).
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 83000, creativeCapital: 2 } } },
+      { match: (u) => u.includes('/releases/plan'), body: { ok: true } },
+    ]);
 
     await useGameStore.getState().planRelease({ metadata: { totalInvestment: 12000 } });
 
     const state = useGameStore.getState();
-    expect(state.gameState!.money).toBe(88000); // 100000 - 12000
-    expect((state.gameState as any).creativeCapital).toBe(3);
+    expect(state.gameState!.money).toBe(83000); // server-canonical, not 88000
+    expect((state.gameState as any).creativeCapital).toBe(2); // server-canonical, not 3
   });
 
-  it('treats a missing totalInvestment as 0 for money but still deducts creative capital', async () => {
+  it('leaves balances unchanged when the refetch yields no gameState (transient GET failure)', async () => {
     useGameStore.setState({
-      gameState: baseGameState({ money: 60000, creativeCapital: 2 }),
+      gameState: baseGameState({ id: 'game-1', money: 60000, creativeCapital: 2 }),
     });
-    routeApiRequest([{ match: (u) => u.includes('/releases/plan'), body: {} }]);
+    routeApiRequest([
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: {} }, // no gameState field
+      { match: (u) => u.includes('/releases/plan'), body: {} },
+    ]);
 
     await useGameStore.getState().planRelease({});
 
     expect(useGameStore.getState().gameState!.money).toBe(60000);
-    expect((useGameStore.getState().gameState as any).creativeCapital).toBe(1);
+    expect((useGameStore.getState().gameState as any).creativeCapital).toBe(2);
   });
 });
 
