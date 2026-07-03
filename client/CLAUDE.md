@@ -5,10 +5,10 @@
 - Never manually add Authorization headers - `apiRequest()` handles it
 - All backend calls must route through `apiRequest()` or TanStack Query's `queryClient`
 
-## State Management
-- **Zustand Store**: `store/gameStore.ts` - Single source of truth for game state
-- **Persisted**: gameState, artists, projects, roles, songs, releases, discoveredArtists, selectedActions
-- **Not Persisted**: isAdvancingWeek, weeklyOutcome, campaignResults
+## State Management (Phase 3 ownership model)
+- **TanStack Query owns server collections**: `songs`, `releases`, `releaseSongs`, `projects`, `artists`, `discoveredArtists`, `executives`, `charts`, `emails`, analytics — read via the domain hooks in `hooks/` (`useSongs`, `useReleases`, `useProjects`, `useArtists`, `useDiscoveredArtists`, `useExecutives`, `useCharts`, `useEmails`, `useAnalytics`). The store fan-out seeds these caches (`setQueryData`, zero extra requests); mutations invalidate them. Do NOT add these arrays back onto the Zustand store.
+- **Zustand Store** (`store/gameStore.ts`): owns `gameState` (the spine: money, week, flags…), session/UI state (`selectedActions`, `isAdvancingWeek`, `weeklyOutcome`, `campaignResults`), and the mutation actions.
+- **Persisted** (zustand `partialize` — the actual list, do not trust older docs): `gameState.id`, `selectedActions`, `isAdvancingWeek` only. Discovered artists survive reloads via the SERVER (`flags.ar_office_discovered_artists`), not client persistence.
 - **GameContext**: Minimal - only stores `gameId` and syncs with localStorage
 - Always update store via store actions, never mutate state directly
 
