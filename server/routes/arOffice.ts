@@ -126,7 +126,27 @@ const router = Router();
     }
   });
 
-  // Get discovered artists for A&R (returns the persisted pick when operation is complete)
+  // Get discovered artists for A&R.
+  //
+  // PURE READ (Phase 2 PR-4): this endpoint reads the canonical
+  // `flags.ar_office_discovered_artists` array, enriches each entry from the
+  // game-data artist catalog, filters out artists already signed to this game
+  // by name, and returns the result. It performs NO storage writes and uses no
+  // RNG.
+  //
+  // Removed in PR-4 (were a GET with side effects, breaking save
+  // reproducibility): the in-GET migration write that copied the legacy
+  // singular flags into the array, the legacy singular-key response branch, and
+  // the `Math.random()` fallback that persisted a random artist back to flags.
+  //
+  // TODO(PR-12): the engine still writes the legacy singular keys
+  // (ar_office_discovered_artist_id / _info, game-engine.ts ~:748) and
+  // artistService still cleans them up on sign. They are now write-only cruft
+  // as far as this endpoint is concerned; the dead-code sweep removes the
+  // engine writes + the client fallback reader. Until then a legacy-only save
+  // (singular keys set, array absent) returns an empty list here — the client's
+  // own flag fallback (gameStore.loadDiscoveredArtists) still surfaces the
+  // singular artist locally, so no user-visible regression.
   router.get('/api/game/:gameId/ar-office/artists', requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
@@ -163,233 +183,89 @@ const router = Router();
         });
       }
 
-      // Enhanced flags reading and validation
       const flags = (gameState.flags || {}) as any;
-      console.log('[A&R DEBUG] Backend: Full flags object:', JSON.stringify(flags, null, 2));
 
-      // Check for new discovered artists array (preferred method)
-      let discoveredArtistsArray = flags.ar_office_discovered_artists || [];
-      const legacyArtistId = flags.ar_office_discovered_artist_id; // backwards compatibility
-      const legacyArtistInfo = flags.ar_office_discovered_artist_info;
-
+      // Canonical source of truth: the discovered-artists array.
+      const discoveredArtistsArray = flags.ar_office_discovered_artists || [];
       console.log('[A&R DEBUG] Backend: Discovered artists array:', discoveredArtistsArray.length, 'artists');
-      console.log('[A&R DEBUG] Backend: Legacy artist ID:', legacyArtistId);
 
-      // Migrate legacy format to new array format if needed
-      if (legacyArtistId && legacyArtistInfo && discoveredArtistsArray.length === 0) {
-        console.log('[A&R DEBUG] Backend: Migrating legacy artist to array format');
-        discoveredArtistsArray = [{
-          id: legacyArtistId,
-          name: legacyArtistInfo.name,
-          archetype: legacyArtistInfo.archetype,
-          talent: legacyArtistInfo.talent,
-          popularity: legacyArtistInfo.popularity,
-          genre: legacyArtistInfo.genre,
-          discoveryTime: flags.ar_office_discovery_time,
-          sourcingType: flags.ar_office_sourcing_type
-        }];
-
-        // Update flags with migrated data
-        flags.ar_office_discovered_artists = discoveredArtistsArray;
-        await storage.updateGameState(gameId, { flags });
-        console.log('[A&R DEBUG] Backend: Migration complete, saved to database');
-      }
-
-      if (discoveredArtistsArray.length > 0) {
-        // Return all discovered artists
-        let allGameArtists;
-        try {
-          allGameArtists = await serverGameData.getAllArtists();
-          console.log('[A&R DEBUG] Backend: Loaded', allGameArtists?.length, 'total game artists');
-        } catch (artistLoadError) {
-          console.error('[A&R] Failed to load game artists:', artistLoadError);
-          // Return the discovered artist data we have in flags without enrichment
-          return res.json({
-            artists: discoveredArtistsArray.map((a: any) => ({
-              ...a,
-              isFallback: true,
-              loadError: 'Could not enrich with full artist data'
-            })),
-            metadata: {
-              totalDiscovered: discoveredArtistsArray.length,
-              isDiscoveredCollection: true,
-              enrichmentFailed: true,
-              discoveryTime: flags.ar_office_discovery_time,
-              sourcingType: flags.ar_office_sourcing_type
-            }
-          });
-        }
-
-        // Filter out artists already signed to this game by name
-        const signedForGame = await storage.getArtistsByGame(gameId);
-        const signedNames = new Set((signedForGame || []).map(a => String(a.name || '').toLowerCase()))
-        const filteredDiscovered = discoveredArtistsArray.filter((a: any) => !signedNames.has(String(a?.name || '').toLowerCase()));
-
-        const discoveredArtists = filteredDiscovered.map((discoveredArtist: any) => {
-          // First try to find the full artist data
-          const fullArtist = allGameArtists.find((a: any) => a.id === discoveredArtist.id);
-
-          if (fullArtist) {
-            // Return full artist data with discovery metadata
-            return {
-              ...fullArtist,
-              discoveryTime: discoveredArtist.discoveryTime,
-              discoveredVia: discoveredArtist.sourcingType
-            };
-          } else {
-            // Fallback to stored artist info if full data not found
-            return {
-              id: discoveredArtist.id,
-              name: discoveredArtist.name || 'Unknown Artist',
-              archetype: discoveredArtist.archetype || 'Unknown',
-              talent: discoveredArtist.talent || 0,
-              popularity: discoveredArtist.popularity || 0,
-              genre: discoveredArtist.genre || null,
-              discoveryTime: discoveredArtist.discoveryTime,
-              discoveredVia: discoveredArtist.sourcingType,
-              isFallback: true
-            };
+      // No discovered artists -> empty list (no legacy branch, no random write).
+      if (discoveredArtistsArray.length === 0) {
+        console.log('[A&R DEBUG] Backend: No discovered artists, returning empty list');
+        return res.json({
+          artists: [],
+          metadata: {
+            noPersistedResult: true,
+            hasFlags: Object.keys(flags).length > 0
           }
         });
+      }
 
-        console.log('[A&R DEBUG] Backend: Returning', discoveredArtists.length, 'discovered artists');
-
+      // Enrich each discovered record from the game-data catalog.
+      let allGameArtists;
+      try {
+        allGameArtists = await serverGameData.getAllArtists();
+        console.log('[A&R DEBUG] Backend: Loaded', allGameArtists?.length, 'total game artists');
+      } catch (artistLoadError) {
+        console.error('[A&R] Failed to load game artists:', artistLoadError);
+        // Return the discovered artist data we have in flags without enrichment
         return res.json({
-          artists: discoveredArtists,
+          artists: discoveredArtistsArray.map((a: any) => ({
+            ...a,
+            isFallback: true,
+            loadError: 'Could not enrich with full artist data'
+          })),
           metadata: {
-            totalDiscovered: discoveredArtists.length,
+            totalDiscovered: discoveredArtistsArray.length,
             isDiscoveredCollection: true,
+            enrichmentFailed: true,
             discoveryTime: flags.ar_office_discovery_time,
             sourcingType: flags.ar_office_sourcing_type
           }
         });
-      } else if (legacyArtistId) {
-        // Backwards compatibility: handle single legacy artist
-        let allArtists;
-        try {
-          allArtists = await serverGameData.getAllArtists();
-          console.log('[A&R DEBUG] Backend: Loaded', allArtists?.length, 'total artists for legacy mode');
-        } catch (artistLoadError) {
-          console.error('[A&R] Failed to load game artists for legacy mode:', artistLoadError);
-          // Return fallback artist info if we can't load full data
-          if (legacyArtistInfo) {
-            return res.json({
-              artists: [{
-                id: legacyArtistId,
-                name: legacyArtistInfo.name || 'Unknown Artist',
-                archetype: legacyArtistInfo.archetype || 'Unknown',
-                talent: legacyArtistInfo.talent || 50,
-                popularity: legacyArtistInfo.popularity || 0,
-                genre: legacyArtistInfo.genre || null,
-                isFallback: true,
-                loadError: 'Could not load full artist data'
-              }],
-              metadata: {
-                isLegacyFallback: true,
-                enrichmentFailed: true,
-                discoveryTime: flags.ar_office_discovery_time,
-                sourcingType: flags.ar_office_sourcing_type
-              }
-            });
-          }
-          // If no legacy info available, return empty
-          return res.json({
-            artists: [],
-            metadata: {
-              error: 'Could not load artist data',
-              enrichmentFailed: true
-            }
-          });
-        }
-
-        const artist = (allArtists || []).find((a: any) => a.id === legacyArtistId);
-        console.log('[A&R DEBUG] Backend: Found legacy artist for ID:', artist?.name || 'none');
-
-        if (artist) {
-          // Validate artist has all required fields
-          const requiredFields = ['id', 'name', 'archetype', 'talent', 'popularity'];
-          const missingFields = requiredFields.filter(field => (artist as any)[field] === undefined || (artist as any)[field] === null);
-
-          if (missingFields.length > 0) {
-            console.warn('[A&R DEBUG] Backend: Artist missing required fields:', missingFields);
-            // Add fallback values for missing fields
-            const enrichedArtist = {
-              ...artist,
-              talent: artist.talent ?? 50,
-              popularity: artist.popularity ?? 0,
-              archetype: artist.archetype ?? 'Unknown'
-            };
-            return res.json({
-              artists: [enrichedArtist],
-              metadata: {
-                missingFields,
-                enriched: true,
-                discoveryTime: flags.ar_office_discovery_time
-              }
-            });
-          }
-
-          return res.json({
-            artists: [artist],
-            metadata: {
-              discoveryTime: flags.ar_office_discovery_time,
-              sourcingType: flags.ar_office_sourcing_type,
-              isOriginalDiscovery: true,
-              discoveredArtistId: legacyArtistId
-            }
-          });
-        } else {
-          // Artist ID not found in current data - fallback mechanism
-          console.warn('[A&R DEBUG] Backend: Artist ID not found in current data, generating fallback');
-
-          // Select a new random artist as fallback
-          const unsignedArtists = (allArtists || []).filter((a: any) => !a.signed);
-          if (unsignedArtists.length > 0) {
-            const fallbackArtist = unsignedArtists[Math.floor(Math.random() * unsignedArtists.length)];
-
-            // Update flags with new artist ID
-            const updatedFlags = { ...flags, ar_office_discovered_artist_id: fallbackArtist.id };
-            await storage.updateGameState(gameId, { flags: updatedFlags });
-
-            console.log('[A&R DEBUG] Backend: Updated flags with fallback artist:', fallbackArtist.id);
-
-            return res.json({
-              artists: [fallbackArtist],
-              metadata: {
-                isFallback: true,
-                isOriginalDiscovery: false,
-                originalDiscoveredArtistId: legacyArtistId,
-                discoveredArtistId: fallbackArtist.id,
-                fallbackReason: 'Original artist not found in current data',
-                discoveryTime: flags.ar_office_discovery_time,
-                sourcingType: flags.ar_office_sourcing_type,
-                warning: 'The artist shown differs from the one in the weekly summary due to data changes'
-              }
-            });
-          }
-
-          console.warn('[A&R DEBUG] Backend: No unsigned artists available for fallback');
-          return res.json({
-            artists: [],
-            metadata: {
-              error: 'Artist not found and no fallback available',
-              isOriginalDiscovery: false,
-              originalDiscoveredArtistId: legacyArtistId,
-              discoveredArtistId: null,
-              fallbackReason: 'Original artist not found and no unsigned artists available',
-              warning: 'No artist available - the weekly summary may show a different result'
-            }
-          });
-        }
       }
 
-      // No persisted result yet (operation not completed properly) - return empty list
-      console.log('[A&R DEBUG] Backend: No persisted artist, returning empty list');
+      // Filter out artists already signed to this game by name
+      const signedForGame = await storage.getArtistsByGame(gameId);
+      const signedNames = new Set((signedForGame || []).map(a => String(a.name || '').toLowerCase()))
+      const filteredDiscovered = discoveredArtistsArray.filter((a: any) => !signedNames.has(String(a?.name || '').toLowerCase()));
+
+      const discoveredArtists = filteredDiscovered.map((discoveredArtist: any) => {
+        // First try to find the full artist data
+        const fullArtist = allGameArtists.find((a: any) => a.id === discoveredArtist.id);
+
+        if (fullArtist) {
+          // Return full artist data with discovery metadata
+          return {
+            ...fullArtist,
+            discoveryTime: discoveredArtist.discoveryTime,
+            discoveredVia: discoveredArtist.sourcingType
+          };
+        } else {
+          // Fallback to stored artist info if full data not found
+          return {
+            id: discoveredArtist.id,
+            name: discoveredArtist.name || 'Unknown Artist',
+            archetype: discoveredArtist.archetype || 'Unknown',
+            talent: discoveredArtist.talent || 0,
+            popularity: discoveredArtist.popularity || 0,
+            genre: discoveredArtist.genre || null,
+            discoveryTime: discoveredArtist.discoveryTime,
+            discoveredVia: discoveredArtist.sourcingType,
+            isFallback: true
+          };
+        }
+      });
+
+      console.log('[A&R DEBUG] Backend: Returning', discoveredArtists.length, 'discovered artists');
+
       return res.json({
-        artists: [],
+        artists: discoveredArtists,
         metadata: {
-          noPersistedResult: true,
-          hasFlags: Object.keys(flags).length > 0
+          totalDiscovered: discoveredArtists.length,
+          isDiscoveredCollection: true,
+          discoveryTime: flags.ar_office_discovery_time,
+          sourcingType: flags.ar_office_sourcing_type
         }
       });
     } catch (error) {

@@ -250,7 +250,7 @@ describe('GET /api/game/:gameId/ar-office/artists — stable behavior', () => {
 // "(post-pure-read)" block below. Kept commented (not deleted) so the
 // sanctioned behavior change is explicit in the diff.
 // ===========================================================================
-describe('LEGACY paths — CURRENT behavior (pre-pure-read; flipped by Commit 2)', () => {
+describe.skip('LEGACY paths — CURRENT behavior (pre-pure-read; flipped by Commit 2)', () => {
   it('(c) legacy-only flags: migrates singular keys into the array, persists, and returns the enriched artist', async () => {
     const gameId = await seedGame({
       ownerId: TEST_USER_ID,
@@ -313,7 +313,7 @@ describe('LEGACY paths — CURRENT behavior (pre-pure-read; flipped by Commit 2)
 // handler: legacy singular keys are IGNORED (no migration, no random write),
 // and a GET never mutates flags.
 // ===========================================================================
-describe.skip('LEGACY paths — pure-read behavior (post-pure-read)', () => {
+describe('LEGACY paths — pure-read behavior (post-pure-read)', () => {
   it('(c) legacy-only flags: singular keys are IGNORED → empty list, flags UNCHANGED', async () => {
     const legacyFlags = {
       ar_office_discovered_artist_id: KNOWN_JSON_ID,
