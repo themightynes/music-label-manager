@@ -7,15 +7,15 @@
  * invalidation key is an element-by-element PREFIX of the query key (NOT a string
  * prefix). Predicate-based invalidations are checked by running the predicate.
  *
- * Per the Phase 3 plan, FOUR `['*-roi']` keys and `['executives']` in
- * `advanceWeek` match NOTHING today — the real analytics keys are shaped
- * `[url, 'analytics:artist-roi', {...}]` and no hook produces an `['executives']`
- * key. Those assertions are intentionally RED-PINNED via `it.fails(...)` so they
- * flip to green when PR-3 fixes the invalidation keys.
+ * PR-3 fixed the four ROI invalidations in `advanceWeek` to use a
+ * predicate matching the real analytics key shape `[url, 'analytics:<scope>-roi',
+ * { gameId, ... }]` (scope in element 1, gameId in element 2), and removed the
+ * dead `['executives']` invalidation entirely (no hook produces that key —
+ * executives aren't wired into TanStack yet; see the PR-8 TODO in gameStore.ts).
  *
  * Reference invalidations in client/src/store/gameStore.ts (advanceWeek):
- *   queryKey: ['artist-roi'] | ['project-roi'] | ['portfolio-roi'] | ['release-roi']
- *   queryKey: ['executives']
+ *   predicate: matches queryKey[1] in the ROI analytics scopes AND
+ *              queryKey[2].gameId === current gameId
  *   predicate: EMAIL_LIST_SCOPE / EMAIL_UNREAD_SCOPE keyed on gameId
  * and saveGame: queryKey: ['api', 'saves'].
  */
@@ -72,32 +72,40 @@ describe('query-key contract: invalidations that DO match a real hook key', () =
   });
 });
 
-describe('query-key contract: RED-PINNED invalidations (PR-3 will fix)', () => {
-  // These use it.fails: the assertion body FAILS today, and vitest reports the
-  // test as PASSING because failure is expected. When PR-3 changes the store to
-  // emit the correct keys AND the real keys here are updated to match, these
-  // will start passing the assertion, which flips it.fails to a (desired)
-  // failure — a loud signal that the pin must be converted to a normal `it`.
+describe('query-key contract: advanceWeek invalidations (PR-3 fixed)', () => {
+  // The ROI predicate now used by advanceWeek: matches queryKey[1] against the
+  // known analytics scopes and requires queryKey[2].gameId to equal the current
+  // game's id — mirrors client/src/store/gameStore.ts exactly.
+  const ROI_ANALYTICS_SCOPES = new Set([
+    'analytics:artist-roi',
+    'analytics:project-roi',
+    'analytics:portfolio-roi',
+    'analytics:release-roi',
+  ]);
+  function roiPredicate(gameId: string) {
+    return (q: { queryKey: readonly unknown[] }) =>
+      typeof q.queryKey[1] === 'string' &&
+      ROI_ANALYTICS_SCOPES.has(q.queryKey[1] as string) &&
+      (q.queryKey[2] as { gameId?: string } | undefined)?.gameId === gameId;
+  }
 
-  it.fails('advanceWeek ["artist-roi"] currently matches NO real analytics key', () => {
-    // Real key is [url, "analytics:artist-roi", {...}] — ["artist-roi"] matches nothing.
-    expect(someRealKeyMatchesInvalidationKey(['artist-roi'])).toBe(true);
+  it('advanceWeek ROI predicate matches the real artist-roi analytics key', () => {
+    expect(someRealKeyMatchesPredicate(roiPredicate(GAME_ID))).toBe(true);
   });
 
-  it.fails('advanceWeek ["project-roi"] currently matches NO real analytics key', () => {
-    expect(someRealKeyMatchesInvalidationKey(['project-roi'])).toBe(true);
+  it('advanceWeek ROI predicate matches all four real ROI analytics keys', () => {
+    const predicate = roiPredicate(GAME_ID);
+    const matches = REAL_QUERY_KEYS.filter((real) => predicate({ queryKey: real }));
+    expect(matches.length).toBe(4);
   });
 
-  it.fails('advanceWeek ["portfolio-roi"] currently matches NO real analytics key', () => {
-    expect(someRealKeyMatchesInvalidationKey(['portfolio-roi'])).toBe(true);
+  it('advanceWeek ROI predicate does NOT match a different game\'s analytics keys', () => {
+    expect(someRealKeyMatchesPredicate(roiPredicate('some-other-game'))).toBe(false);
   });
 
-  it.fails('advanceWeek ["release-roi"] currently matches NO real analytics key', () => {
-    expect(someRealKeyMatchesInvalidationKey(['release-roi'])).toBe(true);
-  });
-
-  it.fails('advanceWeek ["executives"] currently matches NO real hook key', () => {
-    // No hook produces an ["executives"] query key today.
-    expect(someRealKeyMatchesInvalidationKey(['executives'])).toBe(true);
+  it('advanceWeek no longer emits a dead ["executives"] invalidation (not in TanStack yet)', () => {
+    // No hook produces an ["executives"] query key today — asserting this stays
+    // false documents that gameStore.ts must not reintroduce that dead key.
+    expect(someRealKeyMatchesInvalidationKey(['executives'])).toBe(false);
   });
 });

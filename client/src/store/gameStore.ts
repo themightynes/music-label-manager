@@ -791,13 +791,24 @@ export const useGameStore = create<GameStore>()(
             }
           }
           
-          // Invalidate React Query caches to refresh UI components
-          await queryClient.invalidateQueries({ queryKey: ['artist-roi'] });
-          await queryClient.invalidateQueries({ queryKey: ['project-roi'] });
-          await queryClient.invalidateQueries({ queryKey: ['portfolio-roi'] });
-          await queryClient.invalidateQueries({ queryKey: ['release-roi'] });
-          // CRITICAL: Invalidate executives cache to refresh mood/loyalty after meetings
-          await queryClient.invalidateQueries({ queryKey: ['executives'] });
+          // Invalidate React Query caches to refresh UI components.
+          // Real analytics keys are shaped [url, 'analytics:<scope>-roi', { gameId, ... }]
+          // (see client/src/hooks/useAnalytics.ts) — the scope string lives at
+          // queryKey[1], not queryKey[0], so match it there and scope to the
+          // current game via the params object at queryKey[2].
+          const ROI_ANALYTICS_SCOPES = new Set([
+            'analytics:artist-roi',
+            'analytics:project-roi',
+            'analytics:portfolio-roi',
+            'analytics:release-roi',
+          ]);
+          await queryClient.invalidateQueries({
+            predicate: (query) =>
+              typeof query.queryKey[1] === 'string' &&
+              ROI_ANALYTICS_SCOPES.has(query.queryKey[1] as string) &&
+              (query.queryKey[2] as { gameId?: string } | undefined)?.gameId === syncedGameState.id,
+          });
+          // TODO(phase-3 PR-8): executives not in TanStack yet; invalidate ['executives', gameId] once useExecutives exists
           // Invalidate emails cache to refresh inbox with new week's emails
           await queryClient.invalidateQueries({
             predicate: (query) =>
