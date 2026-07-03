@@ -310,6 +310,14 @@ export const useGameStore = create<GameStore>()(
             await get().loadDiscoveredArtists();
           }
 
+          // Invalidate email cache so the inbox reflects the restored save immediately
+          // instead of showing stale pre-restore emails until a full page reload (C49).
+          await queryClient.invalidateQueries({
+            predicate: (query) =>
+              (query.queryKey[0] === EMAIL_LIST_SCOPE || query.queryKey[0] === EMAIL_UNREAD_SCOPE) &&
+              query.queryKey[1] === restoredGameId,
+          });
+
           return restoredGameId;
         } catch (error) {
           console.error('Failed to load game from save:', error);
