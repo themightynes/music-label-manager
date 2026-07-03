@@ -22,10 +22,10 @@
 - ✅ PR-12 — `releases.ts` router (#53)
 - ✅ PR-13 — `games.ts` router (#54)
 - ✅ PR-14 — `saves.ts` + `gameLoop.ts` routers (#55)
-- ⏳ PR-15 — `gameCreationService` extraction (pending)
-- ⏳ PR-16 — `saveService` extraction (pending)
-- ⏳ PR-17 — `releasePlanningService` extraction (pending)
-- ⏳ PR-18 — `artistService` extraction (pending)
+- ✅ PR-15 — `gameCreationService` extraction (#57, merged)
+- ⏳ PR-16 — `saveService` extraction (#61, complete — pending merge)
+- ⏳ PR-17 — `releasePlanningService` extraction (#63, complete — pending merge)
+- ⏳ PR-18 — `artistService` extraction (#64, stacked on #63, complete — pending merge)
 
 ## 0. Ground truth (verified against the working tree)
 

@@ -4,6 +4,26 @@
 
 ---
 
+## 📅 Session Log — July 2, 2026 Evening (PR-16..18 services + security hardening wave)
+
+**Continued the Phase 1 service-extraction sequence (PR-16, PR-17, PR-18) and, in parallel, ran a security-focused wave off this morning's three `docs/98-research` reviews (RECORDING_SESSION, OWNERSHIP_AUTHORIZATION_SWEEP, AR_OFFICE).** Same orchestrator pattern as the day session: parallel scout subagents plus one mutating agent per checkout, worktree-isolated, characterization-test-first for every behavior-touching PR. **PRs open/green at time of writing, merges pending** — nothing below is claimed as merged.
+
+**Done this session:**
+- **PR-16 saveService extraction (#61)**: `server/routes/saves.ts` **629 → 139 lines**. New `server/services/saveService.ts` (`createSave`/`restoreOverwrite`/`restoreFork`/`deleteSave`) follows the `AnalyticsService` convention. Characterization-first: `tests/endpoints/save-restore.characterization.test.ts` (11 tests, committed green against the old handler before the swap).
+- **Security wave, PR #62**: deleted the two zero-auth routes found by the reviews — `GET /api/debug/game/:gameId/revenue` and `POST /api/select-actions` (the latter already flagged as orphaned/dead in a July 1 follow-up note) — and admin-gated `POST /api/dev/markets-config`.
+- **PR-17 releasePlanningService extraction (#63)**: new `server/services/releasePlanningService.ts`; introduced a shared `server/middleware/requireGameOwner.ts` applied to all 12 `:gameId` releases routes; fixed a **live negative-marketing-budget money-credit exploit** in the release-plan handler; added a field whitelist on release create. `server/routes/releases.ts` **908 → 685 lines**.
+- **PR-18 artistService extraction (#64, stacked on #63)**: new `server/services/artistService.ts`. `sign-artist` now derives `signingCost`/stats server-side from `data/artists.json` + the discovered pool instead of trusting client-supplied values (closes A&R review finding **B1**); the sign flow is now one atomic transaction (**B2**); roster cap is enforced server-side (**B5**); the dead `signed_artists_count` flags write was deleted (**B6**); ownership checks added on sign/dialogue/mood-events/PATCH artist routes. `server/routes/artists.ts` **317 → 233 lines**.
+- **C40 fix in flight**: server-side tour-refund recompute underway on `fix/c40-tour-refund-server-side` (not part of this session's merges).
+
+**Decisions made:**
+- Orchestration: parallel subagents — read-only scouts for each research review plus one mutating agent per checkout/worktree — feeding a single orchestrator that reviews before merge, same as the day-session pattern.
+- Every behavior-touching PR (16, 17, 18) gets a characterization test committed green against the OLD code first, matching the PR-15 precedent.
+
+**Open threads / next steps:**
+- Confirm PR-16/#61, PR #62 (security deletions), PR-17/#63, and PR-18/#64 all go green in CI and merge; none are merged as of this entry.
+- Land `fix/c40-tour-refund-server-side` (Comment 40) as its own PR once the stacked PR-17/PR-18 chain clears.
+- After PR-18 merges: move the Phase 1 plan doc to COMPLETED per its own next-steps note, then start Phase 2 (engine seams) planning.
+
 ## 📅 Session Log — July 2, 2026 (Phase 1 executed: PRs 2–15, orchestrator + Opus subagent factory)
 
 **Phase 1's entire pure-move sequence is DONE and merged, plus the first service extraction.** Ran as an orchestrator/subagent pipeline: one Opus agent per PR (Sonnet for the CI tweak), each reviewed by the orchestrator before merge. `server/routes.ts`: **5,341 → 121 lines**.

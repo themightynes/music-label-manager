@@ -643,7 +643,7 @@ The `"{label} - Week {n}"` format is constructed independently in `client/src/st
 ---
 
 ### Comment 40: Tour cancellation trusts client-supplied refundAmount 🟡
-**Status**: 📋 **PENDING**
+**Status**: 📋 **PENDING** (fix in flight)
 
 The 60% tour-cancellation refund is computed entirely client-side (`client/src/components/ActiveTours.tsx`, `refundPercentage = 0.6`) and sent in the request body of `DELETE /api/projects/:id/cancel`. The server (`server/routes/projects.ts:205` since the Phase 1 route moves) applies the client's `refundAmount` to the player's money without recomputing or capping it — any refund amount can be submitted.
 
