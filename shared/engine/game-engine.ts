@@ -19,6 +19,7 @@ import { AchievementsEngine } from './AchievementsEngine';
 import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
 import { ArtistChangeHelpers } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
+import { classifyChange, classifyChartUpdate } from '../utils/changeImportance';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
 import { ProgressionProcessor } from './processors/ProgressionProcessor';
 import { WeeklyFinancesProcessor } from './processors/WeeklyFinancesProcessor';
@@ -397,6 +398,21 @@ export class GameEngine {
       }
     }
     
+    // Phase 4 PR-2: classify change importance once, at WeekSummary assembly.
+    // Pure/deterministic (no RNG, no Date) additive tagging — this must be the
+    // SINGLE call site so hierarchy is derived consistently and processors stay
+    // ignorant of presentation. Runs after every change/chartUpdate is finalized
+    // and does not reorder or mutate any other field.
+    const importanceContext = { campaignCompleted: !!campaignResults };
+    for (const change of summary.changes) {
+      change.importance = classifyChange(change, importanceContext);
+    }
+    if (summary.chartUpdates) {
+      for (const update of summary.chartUpdates) {
+        update.importance = classifyChartUpdate(update);
+      }
+    }
+
     const result = {
       gameState: this.gameState,
       summary,
