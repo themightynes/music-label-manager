@@ -248,6 +248,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/artist-dialogue",
   },
@@ -255,6 +256,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "POST",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/artists",
   },
@@ -356,6 +358,7 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "method": "GET",
     "middleware": [
       "requireClerkUser",
+      "requireGameOwner",
     ],
     "path": "/api/game/:gameId/mood-events",
   },

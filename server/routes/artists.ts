@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { and, eq } from 'drizzle-orm';
+import { db } from '../db';
 import { storage } from '../storage';
 import { requireClerkUser } from '../auth';
+import { requireGameOwner } from '../middleware/requireGameOwner';
 import { serverGameData } from '../data/gameData';
-import { insertArtistSchema } from '@shared/schema';
+import { artists, gameStates } from '@shared/schema';
+import { artistService, ArtistServiceError } from '../services/artistService';
 import {
   ArtistDialogueRequestSchema,
   ArtistDialogueResponse,
@@ -15,7 +19,7 @@ const router = Router();
 // Artist Dialogue Endpoint
 // ========================================
 
-router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, async (req, res) => {
+router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       // 1. Extract and validate request data
       const { gameId } = req.params;
@@ -34,14 +38,9 @@ router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, async (req, r
       const { artistId, sceneId, choiceId } = validationResult.data;
       console.log(`Processing artist dialogue - Game: ${gameId}, Artist: ${artistId}, Scene: ${sceneId}, Choice: ${choiceId}`);
 
-      // 2. Validate game and artist
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        return res.status(404).json({
-          success: false,
-          message: "Game not found"
-        });
-      }
+      // 2. Validate game and artist. Game ownership is verified by
+      //    requireGameOwner; gameState is available on req.gameState.
+      const gameState = req.gameState!;
 
       const artist = await storage.getArtist(artistId);
       if (!artist) {
@@ -161,151 +160,68 @@ router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, async (req, r
     }
   });
 
-  // Artist routes
-  router.post("/api/game/:gameId/artists", requireClerkUser, async (req, res) => {
+  // Sign an artist to the roster. Thin route: ownership + validation are the
+  // middleware's job; all economic derivation, guards, atomicity, and flags
+  // bookkeeping live in artistService.signArtist (PR-18). Status mapping stays
+  // here via ArtistServiceError.
+  router.post("/api/game/:gameId/artists", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const gameId = req.params.gameId;
-      const signingCost = req.body.signingCost || 0;
-
-      // Get current game state to check money
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState) {
-        return res.status(404).json({ message: "Game not found" });
-      }
-
-      // Check if player has enough money
-      if ((gameState.money || 0) < signingCost) {
-        return res.status(400).json({ message: "Insufficient funds to sign artist" });
-      }
-
-      // Prevent duplicate signings by name (case-insensitive) within the same game
-      const existing = await storage.getArtistsByGame(gameId);
-      const incomingName = String(req.body?.name || '').toLowerCase();
-      if (incomingName && existing.some(a => (a.name || '').toLowerCase() === incomingName)) {
-        return res.status(409).json({ code: 'DUPLICATE_ARTIST', message: 'This artist is already signed to your roster.' });
-      }
-
-      // Prepare artist data
-      const validatedData = insertArtistSchema.parse({
-        ...req.body,
-        gameId: gameId,
-        weeklyCost: req.body.weeklyCost || 1200 // Store weekly cost from JSON data
-      });
-
-      // Create artist and deduct money in a transaction-like operation
-      const artist = await storage.createArtist(validatedData);
-
-      // Update game state to deduct signing cost and track artist count
-      if (signingCost > 0) {
-        await storage.updateGameState(gameId, {
-          money: Math.max(0, (gameState.money || 0) - signingCost)
-        });
-      }
-
-      // Update artist count flag for GameEngine weekly costs
-      const currentArtists = await storage.getArtistsByGame(gameId);
-      const flags = (gameState.flags || {}) as any;
-      (flags as any)['signed_artists_count'] = currentArtists.length + 1; // +1 for the new artist
-
-      if (signingCost > 0) {
-        const signingEvent = {
-          artistId: artist.id,
-          name: artist.name,
-          amount: signingCost,
-          week: gameState.currentWeek || 1,
-          recordedAt: new Date().toISOString(),
-        };
-
-        if (!Array.isArray(flags.pending_signing_fees)) {
-          flags.pending_signing_fees = [];
-        }
-        flags.pending_signing_fees.push(signingEvent);
-      }
-
-      // Remove this artist from discovered collections using discovered (content) ID or name
-      if (flags.ar_office_discovered_artists) {
-        const discoveredId = req.body?.id;
-        const signedNameLc = String(artist.name || '').toLowerCase();
-        flags.ar_office_discovered_artists = flags.ar_office_discovered_artists.filter((a: any) => {
-          const aNameLc = String(a?.name || '').toLowerCase();
-          return (discoveredId ? a.id !== discoveredId : true) && aNameLc !== signedNameLc;
-        });
-        console.log('[A&R DEBUG] Removed signed artist from discovered collection. Remaining:', flags.ar_office_discovered_artists.length);
-      }
-
-      // Legacy cleanup: If this artist is the persisted discovered one, clear it now
-      if ((flags as any).ar_office_discovered_artist_id) {
-        const discoveredId = req.body?.id;
-        if ((flags as any).ar_office_discovered_artist_id === discoveredId) {
-          delete flags.ar_office_discovered_artist_id;
-          delete flags.ar_office_discovered_artist_info;
-        }
-      }
-
-      await storage.updateGameState(gameId, { flags });
-
-      // Generate welcome email for signed artist
-      try {
-        const labelDisplay = ((gameState as any).labelName) || ((gameState as any).musicLabel?.name) || 'your label';
-        const emailBody = {
-          artistId: artist.id,
-          name: artist.name,
-          archetype: artist.archetype ?? 'Unknown',
-          talent: artist.talent ?? 0,
-          genre: artist.genre ?? null,
-          signingCost: signingCost,
-          weeklyCost: artist.weeklyCost ?? null,
-        };
-
-        await storage.createEmail({
-          gameId: gameId,
-          week: gameState.currentWeek ?? 1,
-          category: 'ar',
-          sender: 'Marcus "Mac" Rodriguez',
-          senderRoleId: 'head_ar',
-          subject: `Artist Signed – ${artist.name}`,
-          preview: `${artist.name} has officially signed with ${labelDisplay}!`,
-          body: emailBody,
-          metadata: emailBody,
-          isRead: false,
-        });
-        console.log(`[ARTIST SIGNING] Generated welcome email for ${artist.name}`);
-      } catch (emailError) {
-        console.error('[ARTIST SIGNING] Failed to generate welcome email:', emailError);
-        // Don't fail the signing if email generation fails
-      }
-
+      const artist = await artistService.signArtist(req.userId, gameId, req.gameState!, req.body);
       res.json(artist);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid artist data", errors: error.errors });
-      } else {
-        console.error('Artist signing error:', error);
-        res.status(500).json({ message: "Failed to sign artist" });
+      if (error instanceof ArtistServiceError) {
+        return res.status(error.status).json(error.body);
       }
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid artist data", errors: error.errors });
+      }
+      console.error('Artist signing error:', error);
+      res.status(500).json({ message: "Failed to sign artist" });
     }
   });
 
   router.patch("/api/artists/:id", requireClerkUser, async (req, res) => {
     try {
-      const artist = await storage.updateArtist(req.params.id, req.body);
-      res.json(artist);
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'UNAUTHORIZED', message: 'User authentication required' });
+      }
+
+      // Entity-walk ownership check (mirrors PATCH /api/songs/:songId in
+      // releases.ts): artist → gameId → game.userId; 404 if not owned so we
+      // don't leak existence to a non-owner.
+      const [artist] = await db.select({ id: artists.id, gameId: artists.gameId })
+        .from(artists)
+        .where(eq(artists.id, req.params.id))
+        .limit(1);
+
+      if (!artist) {
+        return res.status(404).json({ error: 'ARTIST_NOT_FOUND', message: 'Artist not found' });
+      }
+
+      const [game] = await db.select()
+        .from(gameStates)
+        .where(and(eq(gameStates.id, artist.gameId), eq(gameStates.userId, userId)))
+        .limit(1);
+
+      if (!game) {
+        return res.status(404).json({ error: 'ARTIST_NOT_FOUND', message: 'Artist not found' });
+      }
+
+      // TODO(phase-2): whitelist mutable artist fields — raw body pass-through is mass-assignment
+      const updated = await storage.updateArtist(req.params.id, req.body);
+      res.json(updated);
     } catch (error) {
       res.status(500).json({ message: "Failed to update artist" });
     }
   });
 
-  router.get("/api/game/:gameId/mood-events", requireClerkUser, async (req, res) => {
+  router.get("/api/game/:gameId/mood-events", requireClerkUser, requireGameOwner, async (req, res) => {
     try {
       const { gameId } = req.params;
-      const gameState = await storage.getGameState(gameId);
-      if (!gameState || gameState.userId !== req.userId) {
-        return res.status(403).json({
-          error: 'UNAUTHORIZED',
-          message: 'You do not have permission to access this game'
-        });
-      }
-
+      // Ownership verified by requireGameOwner (its 404 replaces the previous
+      // inline 403 UNAUTHORIZED check).
       const events = await storage.getMoodEventsByGame(gameId);
       res.json(events);
     } catch (error) {
