@@ -23,7 +23,10 @@ const createProjectInputSchema = z
     artistId: z.string().uuid().optional(),
     budgetPerSong: z.number().int().nonnegative().optional(),
     totalCost: z.number().int().nonnegative().optional(),
-    songCount: z.number().int().positive().optional(),
+    // Nonnegative, not positive: tours have zero songs and the live client
+    // (LivePerformancePage) explicitly sends songCount: 0 for Mini-Tour.
+    // Recording projects must still be >= 1 — enforced by the refine below.
+    songCount: z.number().int().nonnegative().optional(),
     producerTier: z.enum(['local', 'regional', 'national', 'legendary']).optional(),
     timeInvestment: z.enum(['rushed', 'standard', 'extended', 'perfectionist']).optional(),
     metadata: z.any().optional(),
@@ -31,7 +34,11 @@ const createProjectInputSchema = z
     stage: z.any().optional(),
     startWeek: z.any().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (input) => input.type === 'Mini-Tour' || input.songCount === undefined || input.songCount >= 1,
+    { message: 'Number must be greater than 0', path: ['songCount'] },
+  );
 
 // B3/B1: strict whitelist for PATCH. Only stage progression is a legitimate
 // client-driven update on an existing project; everything cost/quality-bearing

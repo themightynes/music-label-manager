@@ -4,9 +4,9 @@
 
 ---
 
-## 📅 Session Log — July 3, 2026 (Full v2 website redesign: "Neo-Cyber HUD", 10 packages, LOCAL ONLY)
+## 📅 Session Log — July 3, 2026 (Full v2 website redesign: "Neo-Cyber HUD", 10 packages → PR #97)
 
-**The entire client was redesigned to the Design System v2 ("neo-cyber HUD": dark indigo #070610, glass panels, chromatic hairlines, spectral neon accents, glow-based depth) imported from the user's claude.ai/design project.** Everything lives on worktree branch `claude/adoring-solomon-db2391` — **NOT pushed, NOT merged to main; user approves the move to GitHub.** Ran as orchestrator + 9 concurrent package agents (Fable/Opus/Sonnet/Haiku) with strict disjoint file ownership in one shared worktree; every package audited against tool evidence before its commit.
+**The entire client was redesigned to the Design System v2 ("neo-cyber HUD": dark indigo #070610, glass panels, chromatic hairlines, spectral neon accents, glow-based depth) imported from the user's claude.ai/design project.** Developed locally on worktree branch `claude/adoring-solomon-db2391`, then pushed as **PR #97** on user approval (merge on green CI granted). Ran as orchestrator + 9 concurrent package agents (Fable/Opus/Sonnet/Haiku) with strict disjoint file ownership in one shared worktree; every package audited against tool evidence before its commit. Post-review live-feedback rounds folded in: stat scale 26→20px, outline-button variant fix, chart row glow removal, dock rebalance + reorder, header declutter (stacked AUTO/Advance Week), true radial splash menu with grooved vinyl, and the real `liquid-chrome-bg.jpg` asset (user-supplied) committed.
 
 **Commits (in order):** `472c640` design refs/spec/inventory docs → `e30395f` Phase 1 token foundation → `29d5754` D splash/menu → `330d397` A Command Dock shell → `281f690` E2a Plan Release → `868ad36` C artist surfaces → `c1a2d2c` G admin pass → `db81644` E2b sessions/tours/charts → `23120d7` E1 exec+A&R → `6bf39bf` F modals/emails → `5dfbe4e` B dashboard widgets → `f41f725` gradient token normalization → (this docs commit).
 
@@ -19,17 +19,16 @@
 **Verification (evidence in-session):** `npm run check` clean at every package commit and at the end; **full vitest 774/774 passing** (68 files, Docker test DB); live visual smoke on the dev server — MainMenu, Dashboard, Artists, Plan Release, Executive Suite all render v2 with **zero console errors**; SaveGameModal export logic verified byte-untouched via diff-hunk audit; test-pinned strings/classes (access-tier tests, ArtistSelector `text-green-500` helpers, export toasts) preserved.
 
 **Decisions made:**
-- User pre-answers: tokens-first approach; ADOPT the Command Dock nav (replacing sidebar); directional fidelity; ALL surfaces in scope; worktree-local only, no GitHub until approval.
-- `liquid-chrome-bg.jpg` could not be imported (claude.ai/design API 256KB cap) — `PageBackdrop` ships a CSS bloom approximation and auto-upgrades if the file is dropped into `client/public/` (logged as C51).
+- User pre-answers: tokens-first approach; ADOPT the Command Dock nav (replacing sidebar); directional fidelity; ALL surfaces in scope; worktree-local first, GitHub push + merge-on-green-CI granted later in session.
+- `liquid-chrome-bg.jpg` could not be imported (claude.ai/design API 256KB cap; file is 425KB) — user supplied it; committed to `client/public/`, all backdrop layers pick it up automatically. Logged as **C54** (resolved same-day; appears as "C51" in earlier commit messages — renumbered when main's own C51 landed in parallel).
 
 **Open threads / next steps:**
-- **User to review the running app and approve push/PR to GitHub.**
-- New backlog items C51 (bg asset drop-in), C52 (chartUtils/marketingUtils still emit v1 classes/FA strings), C53 (redesign leftovers: ChartPerformanceCard light variant, dead widget code, double `max-w` containers).
+- New backlog items C52 (chartUtils/marketingUtils still emit v1 classes/FA strings), C53 (redesign leftovers: ChartPerformanceCard light variant, dead widget code, double `max-w` containers).
 - Deferred by design: mobile/responsive polish of the dock on narrow screens was styled per mockup (desktop-first) — worth a hands-on pass on small viewports.
 
 ---
 
-## 📅 Session Log — July 3, 2026 (Phase 3 COMPLETE + backlog cleared: PRs #87–#96, C26/C49 fixed, C32/C42/C43 dispositioned)
+## 📅 Session Log — July 3, 2026 (Phase 3 COMPLETE + backlog cleared: PRs #87–#96, C26/C49 fixed, C32/C42/C43 dispositioned, show-booking regression fixed live)
 
 **Phase 3 (client state ownership) planned AND executed in one orchestrated session, plus the tech-debt backlog fully dispositioned.** Ran as orchestrator + subagent factory (one Opus/Sonnet agent per PR in isolated worktrees, adversarial reviewer subagent on every med-high-risk PR before merge, fresh-context verifier at the end). Merge policy this session: user-granted self-merge on green CI. Everything below is merged to `main` (final: `0885ff0` + docs commits); full suite **774/774** (was 696), `tsc` clean, CI green on `main`'s own push runs.
 
@@ -55,12 +54,14 @@
 - Session grants (via AskUserQuestion at start): self-merge on green CI; plan-and-execute Phase 3 continuously; C42 + C43 deferred.
 - `client/CLAUDE.md` State Management + Cache Management sections rewritten to describe the Phase 3 ownership model (the "Persisted" list had never matched the actual partialize).
 
+**Post-wrap live smoke (same day, user at the keyboard):** started the dev server and played the game hands-on. Found a real regression — **booking a show/tour had been silently broken since PR #68** (July 2): the create-project hardening schema required `songCount > 0`, but `LivePerformancePage` has always sent `songCount: 0` for tours, so every booking 400'd with "Invalid project data". NOT a Phase 3 regression (client payload unchanged; the earlier smoke pass created a Single, never a tour, so it slipped through). Fixed server-side (`4b07e07`): `songCount` is now `nonnegative` with a refine keeping the ≥1 requirement for Single/EP; two regression tests added (the real tour payload → 200 + correct charge; Single with 0 → still 400); projects-create suite 13/13. **User confirmed booking works live.** Also found during play: the "On Tour" artist badge lags the tour's COMPLETE status by exactly one week (engine advances tour stage with `>` not `>=` on cities played; badge reads `stage === 'production'`) — logged as **C51** with root-cause file refs and two fix options, not fixed.
+
 **Open threads / next steps:**
 - **Deferred from Phase 3** (plan §3 footnote): full `gameState`→TanStack migration (the spine, read in ~30 files) — a "Phase 3.5" candidate; `updateGameState` three-way fallback; orphan-cleanup path.
 - **Phase 4 (game feel)** still has no tickets; first candidate remains the staged WeekSummary reveal.
 - **D6** whole-week transaction atomicity — still a filed idea.
-- **Manual smoke of the Phase 3 surface** — the vitest net + reviewers covered it this session; a hands-on pass (plan→release→execute, A&R sign, save/restore, balance display after purchases) is cheap insurance next session.
-- Backlog: 46/50 completed, 3 deferred by decision, 1 pending (C50, low).
+- ~~Manual smoke of the Phase 3 surface~~ — **done live same day** (see post-wrap smoke above): booking, week advance, tour completion all exercised; found the pre-existing booking bug + C51.
+- Backlog: 51 items — 46 completed, 3 deferred by decision (C32/C42/C43), 2 pending (C50 client-test DB coupling, C51 On-Tour badge lag; both low).
 
 ---
 

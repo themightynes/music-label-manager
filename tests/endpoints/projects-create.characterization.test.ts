@@ -194,6 +194,48 @@ describe('POST /api/game/:gameId/projects (characterization)', () => {
     const rows = await db.select().from(projects).where(eq(projects.gameId, gameId));
     expect(rows.length).toBe(0);
   });
+
+  it('Mini-Tour with songCount 0 (the real LivePerformancePage payload) is accepted', async () => {
+    // Regression: the B3 whitelist originally required songCount to be POSITIVE,
+    // but LivePerformancePage.handleSubmit has always sent songCount: 0 for
+    // tours ("Tours don't have songs") — every show/tour booking 400'd with
+    // "Invalid project data" (found live 2026-07-03). Tours must accept 0.
+    const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/projects`)
+      .send(clientPayload({
+        title: 'Test Artist Tour',
+        type: 'Mini-Tour',
+        artistId,
+        totalCost: 10000,
+        budgetPerSong: 0,
+        songCount: 0,
+        metadata: { performanceType: 'mini_tour', cities: 1, venueAccess: 'clubs' },
+      }));
+
+    expect(res.status).toBe(200);
+    expect(res.body.type).toBe('Mini-Tour');
+    // The stored row defaults the (meaningless-for-tours) songCount to 1
+    // downstream — pinned as observed; the schema-level acceptance of 0 is
+    // what this test guards.
+    expect(res.body.songCount).toBe(1);
+
+    // Tour path charges the validated client totalCost (C40-scoped behavior).
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(500000 - 10000);
+  });
+
+  it('recording projects still reject songCount 0 (guard preserved for Single/EP)', async () => {
+    const { gameId, artistId } = await seedGame({ ownerId: TEST_USER_ID, money: 500000, creativeCapital: 5 });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/projects`)
+      .send(clientPayload({ artistId, songCount: 0 }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Invalid project data');
+  });
 });
 
 // ---------------------------------------------------------------------------
