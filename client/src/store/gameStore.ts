@@ -150,12 +150,27 @@ async function primeDiscoveredArtistsCache(gameState: GameState | null) {
 // Phase 3 PR-9: throwing variant used by advanceWeek's retry-with-backoff loop
 // (which relies on a rejected promise to trigger the next attempt). Seeds the
 // cache on success and RE-THROWS on failure so the retry logic is preserved
-// byte-for-byte from the former gameStore.loadDiscoveredArtists behavior.
+// byte-for-byte from the former gameStore.loadDiscoveredArtists behavior —
+// including its 404 short-circuit: a 404 is an immediately-accepted empty
+// result (seed [], no throw, no retries), matching the old
+// `if (status === 404) { set({ discoveredArtists: [] }); return; }` branch.
+// Any other failure seeds [] and re-throws so the backoff loop retries.
 async function refetchDiscoveredArtistsCache(gameState: GameState | null) {
   if (!gameState?.id) return;
   const flags = (gameState as any)?.flags;
-  const artists = await fetchDiscoveredArtists(gameState.id, flags);
-  queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), artists);
+  try {
+    const artists = await fetchDiscoveredArtists(gameState.id, flags);
+    queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), artists);
+  } catch (error) {
+    const status = (error as any)?.status;
+    if (status === 404) {
+      console.warn('[A&R] No discovered artists found (404) - treating as empty result');
+      queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), []);
+      return;
+    }
+    queryClient.setQueryData(discoveredArtistsQueryKey(gameState.id), []);
+    throw error; // Re-throw to allow retry logic to handle it
+  }
 }
 
 // Internal helper to sync focus slots and A&R operation status to the server
