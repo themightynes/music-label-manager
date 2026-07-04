@@ -13,7 +13,7 @@
 - **Completed**: 47
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 18 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66, C67, C69) — C68 resolved July 4, 2026 (commit `5b44d9e`)
+- **Pending**: 17 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66, C67) — C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1084,7 +1084,7 @@ Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTE
 
 ---
 
-### [ ] Comment 69 (C69): `calculateAwarenessGain` calls a non-existent `getArtistSync`, silently zeroing marketing awareness gain 🟢
+### [x] ~~Comment 69 (C69): `calculateAwarenessGain` calls a non-existent `getArtistSync`, silently zeroing marketing awareness gain~~ ✅ RESOLVED
 **Priority**: 🟢 Medium
 **Impact**: Silent runtime no-op in a "live" system. `FinancialSystem.calculateAwarenessGain` (`shared/engine/FinancialSystem.ts:1184`) calls `this.gameData.getArtistSync(song.artistId)` to apply an artist-popularity bonus — but **`getArtistSync` is defined nowhere** (`serverGameData` only exposes an async `getArtistById`, `server/data/gameData.ts:1120`). The call throws `getArtistSync is not a function`, which the method's own `try/catch` (FinancialSystem.ts:1191-1194) swallows with a `console.warn` and `return 0`. So the ENTIRE computed awareness gain for that song (quality multiplier + PR/influencer channel contributions + the intended popularity bonus) is discarded and returns 0 every time this path runs during advance-week. The marketing-driven awareness contribution has effectively been dead at runtime since it shipped.
 **Effort**: Small–Medium (touches the sync/async boundary)
@@ -1093,9 +1093,9 @@ Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTE
 
 **Relevant Files**: `shared/engine/FinancialSystem.ts:1184` (call site) + `:1191-1194` (the swallowing catch); `server/data/gameData.ts:1120` (the real async `getArtistById`).
 
-**Likely fix**: make `calculateAwarenessGain` async and `await this.gameData.getArtistById(song.artistId)`, threading the change through its caller(s); OR pass the artist's popularity in from the caller (which usually already has the artist loaded). Add a test asserting a non-zero awareness gain with a real popularity bonus so the silent-zero can't recur. Consider narrowing the catch so a genuinely-missing method surfaces instead of being swallowed.
+**✅ FIXED (commit `1db5c39`, July 4, 2026, on `feat/exec-meetings-revival`/PR #119):** made `calculateAwarenessGain` async and `await this.gameData.getArtistById(song.artistId)` (the real accessor), GUARDED — a gameData without `getArtistById` (client/test contexts) now degrades to no popularity bonus (×1.0) and logs distinctly, instead of the missing-method throw nuking the whole gain to 0. Updated the sole live caller (`ReleaseProcessor.processPlannedReleases` awareness-building path) to `await`; removed a dead second call in `calculateMarketingFactor` (result was assigned and never used). Golden master unaffected (its scenarios don't exercise the weeks-1-4 marketing-awareness path). Regression coverage in `tests/engine/awareness-gain-c69.test.ts` (4 tests): non-zero gain, popularity bonus applied, graceful degradation without the accessor, disabled-config returns 0.
 
-*Identified July 4, 2026 during exec-meetings-revival playtest (logged, not fixed, per decision — out of playtest scope).*
+*Identified July 4, 2026 during exec-meetings-revival playtest; fixed same day (initially logged not-fixed, then fixed on request).*
 
 ---
 
@@ -1104,14 +1104,14 @@ Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTE
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 5 pending (C58 — advance-week idempotency guard; C60 — delayed effects hit whole roster; C62 — AchievementsEngine zeroed components; C67 — venue capacity tier-lock; C69 — getArtistSync silently zeroes awareness gain) — C68 (Milestone Moments tour mislabel) resolved July 4, 2026
+- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 4 pending (C58 — advance-week idempotency guard; C60 — delayed effects hit whole roster; C62 — AchievementsEngine zeroed components; C67 — venue capacity tier-lock) — C68 (tour mislabel) + C69 (getArtistSync awareness zero) resolved July 4, 2026
 - 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 12 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026)
 
 ### By Status
 - ✅ Completed: 47 items (69.1%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 17 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings; C60–C65 — interactivity-gap analysis, July 3, 2026; C67, C69 — exec-meetings-revival playtest, July 4, 2026; all low except C58/C60/C62/C67/C69 medium, not scheduled). C68 resolved July 4, 2026 (commit `5b44d9e`)
+- 📋 Pending: 16 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings; C60–C65 — interactivity-gap analysis, July 3, 2026; C67 — exec-meetings-revival playtest, July 4, 2026; all low except C58/C60/C62/C67 medium, not scheduled). C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026
 
 ---
 
