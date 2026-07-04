@@ -1,7 +1,7 @@
 # [FUTURE] Executive Meeting — Relevance & Reactivity
 
 > **Status:** FUTURE / seed planning doc — problem framing + directions, NOT a chosen design or build plan. This one has a **large scope fork** that needs a product decision before any planning pass.
-> **Created:** 2026-07-04 (elevated from the design-discussion section of `docs/98-research/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md`)
+> **Created:** 2026-07-04 (elevated from the design-discussion section of `docs/99-legacy/superseded-2026-07/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md`)
 > **Origin:** exec-meetings-revival playtest walkthrough (Nes + Claude), post-PR #119.
 > **Related:** [REFERENCE] executive-meetings-system-complete-reference.md (canonical as-built — meeting selection mechanism), [READY] executive-meetings-revival-plan.md, [FUTURE] executive-meeting-effect-legibility.md (the sibling problem), docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md.
 

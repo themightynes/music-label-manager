@@ -73,11 +73,10 @@
 
 ### **98-Research** - Dated Research & Audits
 - Dated case files and adversarially-verified system audits (e.g. gap analyses, code reviews). Point-in-time snapshots, not living docs.
-- [Executive Meetings System - Complete Reference](./01-planning/implementation-specs/REFERENCES%20AND%20ANALYSIS/%5BREFERENCE%5D%20executive-meetings-system-complete-reference.md) - Canonical as-built reference for the executive meetings system (see `docs/CLAUDE.md` for the full doc constellation: vision doc, playtest notes, backlog)
-- [Playtest Notes - Executive Meetings Revival (2026-07-04)](./98-research/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md) - Live playtest findings + design-discussion threads (effect-key legibility, meeting relevance) ahead of PR #119 merge
+- [Executive Meetings System - Complete Reference](./01-planning/implementation-specs/REFERENCES%20AND%20ANALYSIS/%5BREFERENCE%5D%20executive-meetings-system-complete-reference.md) - Canonical as-built reference for the executive meetings system (see `docs/CLAUDE.md` for the full doc constellation: vision doc, backlog)
 
 ### **99-Legacy** - Archived Content
-- `99-legacy/superseded-2026-07/` - Docs archived July 4, 2026 during the Phase 0-4 staleness cleanup (pre-refactor API design, music creation architecture, frontend architecture, and plan-release API spec)
+- `99-legacy/superseded-2026-07/` - Docs archived July 4, 2026: (1) during the Phase 0-4 staleness cleanup (pre-refactor API design, music creation architecture, frontend architecture, plan-release API spec); (2) the exec-meetings-revival playtest notes (`PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md`), closed once all findings were fixed (commits on PR #119), logged (C67/C68/C69), or elevated to `[FUTURE]` planning docs (effect-legibility, relevance-and-reactivity)
 
 ---
 

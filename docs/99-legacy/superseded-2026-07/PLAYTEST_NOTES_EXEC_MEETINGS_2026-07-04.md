@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 4, 2026 — playtest tracker for the exec-meetings-revival (PR #119); all findings resolved or elevated, so the doc is closed. Superseded by: the fix commits on `feat/exec-meetings-revival` (see the "Fixes landed" tables below for the per-finding commit refs), `docs/09-troubleshooting/technical-debt-backlog.md` (C67 open; C68/C69 resolved), and the two elevated design docs `docs/01-planning/implementation-specs/[FUTURE] executive-meeting-effect-legibility.md` + `docs/01-planning/implementation-specs/[FUTURE] executive-meeting-relevance-and-reactivity.md`. Any NEW findings from continued playtesting belong in a fresh dated doc, not here. Kept for historical reference.
+
 # Playtest Notes — Executive Meetings Revival (2026-07-04)
 
 Live notes captured while playtesting `feat/exec-meetings-revival` (post-PR #119, unmerged). Raw observations first, triage/follow-ups at the end.

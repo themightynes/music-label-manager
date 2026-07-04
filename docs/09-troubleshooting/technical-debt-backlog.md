@@ -1061,7 +1061,7 @@ Found during the exec-meetings revival Phase A verification (July 3, 2026), out 
 **Impact**: Blocks legitimate small-capacity bookings once a higher venue-access tier unlocks — a label at Theater access can't book a small club-sized show for a new artist, forcing every artist into an oversized venue regardless of fit
 **Effort**: Medium
 
-Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` #8, July 4, 2026). `data/balance/progression.json`'s `venue_access` tiers are `none` [0,50], `clubs` [50,500], `theaters` [500,2000], `arenas` [2000,20000]; the slider locks to exactly the current tier's band rather than `[0 or lowest-unlocked-tier-min, current-tier-max]`. Design expectation: unlocking a tier should raise the ceiling, not move the floor. Related but distinct from the separate venue-capacity/server-validation collision noted in the same playtest (#6, not yet promoted here).
+Found during the exec-meetings-revival playtest (`docs/99-legacy/superseded-2026-07/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` #8, July 4, 2026). `data/balance/progression.json`'s `venue_access` tiers are `none` [0,50], `clubs` [50,500], `theaters` [500,2000], `arenas` [2000,20000]; the slider locks to exactly the current tier's band rather than `[0 or lowest-unlocked-tier-min, current-tier-max]`. Design expectation: unlocking a tier should raise the ceiling, not move the floor. Related but distinct from the separate venue-capacity/server-validation collision noted in the same playtest (#6, not yet promoted here).
 
 **Relevant Files**:
 - [client/src/pages/LivePerformancePage.tsx](client/src/pages/LivePerformancePage.tsx)
@@ -1076,7 +1076,7 @@ Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTE
 **Impact**: Player-facing copy bug — breaks narrative coherence in the Milestone Moments hero card (a tour event reads "Advanced to Recorded Stage," a recording-project concept, not a touring one)
 **Effort**: Small
 
-Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` #9, July 4, 2026). For a tour "Quantum Leap Showcase," milestone entries read "Advanced to Recorded Stage" / "Tour Completed After One City" — the milestone-moments generator reused a generic project-stage-progression enum/message for tour milestones instead of tour-specific labels.
+Found during the exec-meetings-revival playtest (`docs/99-legacy/superseded-2026-07/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` #9, July 4, 2026). For a tour "Quantum Leap Showcase," milestone entries read "Advanced to Recorded Stage" / "Tour Completed After One City" — the milestone-moments generator reused a generic project-stage-progression enum/message for tour milestones instead of tour-specific labels.
 
 **✅ FIXED (commit `5b44d9e`, July 4, 2026, on `feat/exec-meetings-revival`/PR #119):** root-caused to `ProjectStageProcessor.ts` — tours reuse the recording stage machine internally (their "completed" state IS the `recorded` stage index), so the recording pipeline's stage NAME leaked into the milestone `unlock` change description. Fixed by branching the player-facing label on `project.type === 'Mini-Tour'`: tours read Planned → On Tour → Tour Completed; recording projects keep the pipeline names. Internal DB stage value untouched. Regression coverage in `tests/engine/tour-completion.test.ts` (asserts a completed tour's label does not contain "recorded stage", and a real recording project still does).
 
