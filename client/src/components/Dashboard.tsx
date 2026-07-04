@@ -33,7 +33,12 @@ export function Dashboard({
   useEffect(() => {
     // Only auto-show if this is a fresh weekly outcome (not from page refresh)
     if (weeklyOutcome && !isAdvancingWeek && gameState) {
-      const isCurrentWeekResult = weeklyOutcome.week === (gameState.currentWeek ?? 1) - 1;
+      // The engine stamps summary.week with the week being advanced TO and then
+      // increments currentWeek to that same value (game-engine.ts:156,172), so a
+      // fresh outcome satisfies week === currentWeek. The previous `- 1`
+      // comparison (carried over from the 2025 month->week conversion) could
+      // never be true, so this auto-open had been silently dead.
+      const isCurrentWeekResult = weeklyOutcome.week === (gameState.currentWeek ?? 1);
       const isNewResult = lastProcessedWeek !== weeklyOutcome.week;
 
       if (isCurrentWeekResult && isNewResult) {
