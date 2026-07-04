@@ -350,6 +350,11 @@ export interface GameChange {
   roleId?: string;
   projectId?: string;
   grossRevenue?: number;
+  // #12: tour-completion economics. `totalCosts` = summed per-city tour costs
+  // (venue + production + marketing); `netProfit` = grossRevenue − totalCosts.
+  // Optional/additive — old saves without these fields remain valid.
+  totalCosts?: number;
+  netProfit?: number;
   moodChange?: number;
   newMood?: number;
   energyBoost?: number;
