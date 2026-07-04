@@ -99,9 +99,22 @@ Five findings fixed and committed on the branch this session (orchestrator + sub
 
 Regression coverage added in `69a7bcf` (`tests/engine/meeting-change-dedup.test.ts`, 5 tests): pins single-`meeting`-row + folded deltas (#1), CEO relabel + no exec deltas (#7), and `describeDelayedEffect` labeling with fallbacks (#3).
 
-**#4 resolved (investigation, no fix yet):** "Artist Hats" is NOT a real component/tab — it's the **Overview tab** (`ArtistPage.tsx` tabs: Overview / Discography / Releases / Analytics / Manage). Talent DOES render in `OverviewTab.tsx:132-135` and 3 discovery/selector surfaces, confirming the player's "only visible there" for the profile view. Genuinely MISSING from `ArtistDashboardCard.tsx` (roster cards, highest impact), `ArtistCard.tsx` (expanded header 5-col grid), `artist-dialogue/ArtistDialogueModal.tsx` (badge row), `artist/ManagementTab.tsx` (relationship card). Display-only, no conflicts — ranked scope ready if greenlit.
+### Batch 2 — no-decision fixes (2026-07-04, second orchestrated wave)
 
-**Still open from this playtest:** #2 (popup skip), #8/C67, #9/C68, #11 (auto-select CC overdraw), #12 (tour email net), plus the two design-discussion sections. #11/#12 were queued behind #1/#3/#7 (meetings-subsystem + golden-master contention) and are now unblocked.
+Four more agents in parallel (client-disjoint + one isolated engine agent for the golden-master-touching tour work). Full suite green at **1,177 tests** after the batch; tsc clean.
+
+| # | Fix | Commit | Notes |
+|---|-----|--------|-------|
+| **#4** (roster/profile) | Talent surfaced on `ArtistDashboardCard` (roster), `ArtistCard` (profile grid 5→6 col), `ArtistDialogueModal` (badge), `ManagementTab` (relationship card) | `4bcfc26` | Prop threaded via `ArtistRoster` caller. Display-only, v2 tokens. |
+| **#4** (dropdowns) | Talent badge added to Live Performance + Recording Session artist-picker dropdowns | `537983a` | Follow-up; mirrors existing Pop/Mood/Energy chips. |
+| **#2** | Weekly Results popup now auto-opens from ANY route — consumer relocated from Dashboard (home-only) to `CommandDock` (mounted on every route via GameLayout) | `52dd7be` | One-shot semantics preserved; removes a latent double-consume. +4 tests. |
+| **#9** (C68) | Tour milestones read Planned / On Tour / Tour Completed instead of the recording pipeline's "advanced to recorded stage" — branched on `project.type === 'Mini-Tour'` in `ProjectStageProcessor` | `5b44d9e` | Internal DB stage value unchanged; golden master zero-delta. |
+| **#12** | Tour-completion email headline now shows NET profit/loss (gross alongside); `ProjectStageProcessor` sums per-city costs, `GameChange` gains additive `totalCosts`/`netProfit` | `5b44d9e` | Bundled with #9 (same file/snapshot surface). +6 tests. |
+| **#11** | AUTO-select is now CC-budget-aware — walks execs tracking a running budget, picks the safest AFFORDABLE choice, never overdraws Creative Capital | `b482c5e` | `creativeCapital` threaded into the machine context. +10 tests. Known limitation: budget doesn't net out manually pre-queued CC (server is final authority; reported fresh-AUTO case fixed). |
+
+**#4 resolved (investigation → fixed):** "Artist Hats" is NOT a real component/tab — it's the **Overview tab** (`ArtistPage.tsx` tabs: Overview / Discography / Releases / Analytics / Manage). Talent already rendered in `OverviewTab.tsx:132-135` + 3 discovery/selector surfaces; now added to the 6 surfaces it was missing from (4 cards/tabs + 2 dropdowns).
+
+**Still open from this playtest:** **#8/C67** (tour tier-band range — needs a decision on `[0, current-max]` vs `[lowest-unlocked-min, current-max]`), plus the two design-discussion sections (effect-key legibility; meeting "fakeness") which need a planning pass, not a bug fix.
 
 ---
 
@@ -109,14 +122,14 @@ Regression coverage added in `69a7bcf` (`tests/engine/meeting-change-dedup.test.
 
 - 🐛 Bugs:
   - #1 ✅ **FIXED `ef1050b`** — Weekly results Meetings section renders each exec twice (raw-slug entry with real deltas + human-readable-title entry with no deltas)
-  - #2 Advancing week from inside the exec meetings room skips the Weekly Results popup
+  - #2 ✅ **FIXED `52dd7be`** — Advancing week from inside the exec meetings room skips the Weekly Results popup (auto-open consumer moved to always-mounted CommandDock)
   - #3 ✅ **FIXED `ef1050b`** — "Delayed effect triggered" boxes are unlabeled/generic, can't tell how many distinct delayed effects actually fired or match them to the detailed CCO box
   - #6 ✅ **FIXED `f41bf27`** — Venue capacity slider vs. server validation — three-layer bug (config `none` tier range collides with hardcoded server `>=50`, server rejects `venueAccess==='none'` outright, client slider not gated); client-gating fix, server/config left correct
   - #7 ✅ **FIXED `ef1050b`** — "Met with CEO" nonsensical since player IS the CEO
-  - #8 venueCapacity slider locks to current tier's exact band instead of `[0 or lowest-tier-min, current-tier-max]`, blocking small shows for new artists once a higher tier is unlocked — **now tracked as `technical-debt-backlog.md` Comment 67**
-  - #9 Milestone Moments mislabels a tour milestone as "Advanced to Recorded Stage" (recording-pipeline stage name leaking into tour milestones) — **now tracked as `technical-debt-backlog.md` Comment 68**
-  - #11 Auto-select meetings can pick a combo that overdraws Creative Capital (-2 CC preview with only 1 CC available) — no budget guardrail
-  - #12 Tour-completion email shows gross revenue only, no net profit
+  - #8 ⏸️ **NEEDS DECISION** — venueCapacity slider locks to current tier's exact band instead of `[0 or lowest-tier-min, current-tier-max]`, blocking small shows for new artists once a higher tier is unlocked — **tracked as `technical-debt-backlog.md` Comment 67** (range semantics is a design choice)
+  - #9 ✅ **FIXED `5b44d9e`** (C68) — Milestone Moments mislabels a tour milestone as "Advanced to Recorded Stage" (recording-pipeline stage name leaking into tour milestones)
+  - #11 ✅ **FIXED `b482c5e`** — Auto-select meetings can pick a combo that overdraws Creative Capital (-2 CC preview with only 1 CC available); now CC-budget-aware
+  - #12 ✅ **FIXED `5b44d9e`** — Tour-completion email shows gross revenue only, no net profit
 
 - 🎨 Feel / balance:
   - #5 ✅ **FIXED `45d884d`** — Week view calendar missing prev/next arrows that month view has (easy add)
@@ -131,4 +144,5 @@ Regression coverage added in `69a7bcf` (`tests/engine/meeting-change-dedup.test.
   - #3: are the three "Delayed effect triggered" boxes 3 distinct effects, or duplicates of the same event (echoing the #1 duplicate-rendering pattern)? Needs source-level check of the delayed-effects renderer.
   - #6/#8: once fixed, should "none" tier allow booking at all (server currently hard-rejects it), or should reaching some minimal reputation be required before any tour is bookable — i.e. is blocking correct behavior and only the UI/slider needs to reflect it, or should "none" tier get a legitimate small-capacity booking path?
 
-- ⚠️ **Not yet promoted to the durable backlog** (still living only in this session doc — #1, #2, #3, #7, #11, #12, plus the two design-discussion sections above): worth a deliberate decision on whether these get C-numbers too, or ride directly into a future planning pass once this branch merges. Only #8/#9 were promoted so far, per explicit request in the 2026-07-04 organization pass.
+- ✅ **Resolved this session (no backlog entry needed):** #1, #2, #3, #5, #6, #7, #9, #11, #12 all fixed + committed on the branch (see "Fixes landed"), and #4 fixed across all 6 surfaces. #9 was C68 (now fixed).
+- ⏸️ **Still needs attention:** #8/C67 (durable backlog, needs a range-semantics decision) and the two design-discussion sections above (effect-key legibility; meeting "fakeness") — carried into a future planning pass, NOT quick fixes.
