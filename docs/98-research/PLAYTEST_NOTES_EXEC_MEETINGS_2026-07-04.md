@@ -85,29 +85,49 @@ Separate overarching feeling from the player, distinct from the effect-key legib
 
 ---
 
+## Fixes landed — 2026-07-04 (branch `feat/exec-meetings-revival`, PR #119, orchestrated subagent batch)
+
+Five findings fixed and committed on the branch this session (orchestrator + subagents; every fix orchestrator-reviewed, full suite green at **1,151 tests** after the batch). All rode onto PR #119 per the standing "one merge at the end" policy — no new branches.
+
+| # | Fix | Commit | Notes |
+|---|-----|--------|-------|
+| **#1** | Meeting rows deduped — `processExecutiveActions` no longer pushes a second `executive_interaction` "Met with `<slug>`" row; it returns the mood/loyalty deltas which `processRoleMeeting` folds onto the single `meeting` change | `ef1050b` | Fixed at the SOURCE (ActionProcessor), not the renderer. WeekSummary already rendered deltas for any meetings-bucket entry, so display is preserved. Loyalty-decay `executive_interaction` path untouched. |
+| **#3** | Delayed-effect payoffs labeled via new `describeDelayedEffect()` — "Delayed effect: `<meeting>` — `<choice>`" instead of bare "Delayed effect triggered", graceful fallbacks | `ef1050b` | Resolves meeting name + choice label from the delayed-effect flag context. |
+| **#7** | CEO meetings render "Executive strategy decision" instead of "Met with CEO" (player IS the CEO) | `ef1050b` | Golden-master's single delta; snapshot updated. |
+| **#5** | Week-view calendar gains prev/next arrows mirroring the month view, clamped to `[minWeek, maxWeek]` | `45d884d` | `MusicCalendar.tsx`, client-only. |
+| **#6** | Venue booking UI gated when `venueAccess === 'none'` — slider hidden behind a reputation-gated "Venue Access Locked" panel, `handleSubmit`/Book disabled | `f41bf27` | Client-only; server `>=50` / `none`-rejection guards left intact (they were correct). Unlock threshold derived from config, not hardcoded. Tier-band issue (#8/C67) explicitly out of scope. |
+
+Regression coverage added in `69a7bcf` (`tests/engine/meeting-change-dedup.test.ts`, 5 tests): pins single-`meeting`-row + folded deltas (#1), CEO relabel + no exec deltas (#7), and `describeDelayedEffect` labeling with fallbacks (#3).
+
+**#4 resolved (investigation, no fix yet):** "Artist Hats" is NOT a real component/tab — it's the **Overview tab** (`ArtistPage.tsx` tabs: Overview / Discography / Releases / Analytics / Manage). Talent DOES render in `OverviewTab.tsx:132-135` and 3 discovery/selector surfaces, confirming the player's "only visible there" for the profile view. Genuinely MISSING from `ArtistDashboardCard.tsx` (roster cards, highest impact), `ArtistCard.tsx` (expanded header 5-col grid), `artist-dialogue/ArtistDialogueModal.tsx` (badge row), `artist/ManagementTab.tsx` (relationship card). Display-only, no conflicts — ranked scope ready if greenlit.
+
+**Still open from this playtest:** #2 (popup skip), #8/C67, #9/C68, #11 (auto-select CC overdraw), #12 (tour email net), plus the two design-discussion sections. #11/#12 were queued behind #1/#3/#7 (meetings-subsystem + golden-master contention) and are now unblocked.
+
+---
+
 ## Triage (fill in at session end)
 
 - 🐛 Bugs:
-  - #1 Weekly results Meetings section renders each exec twice (raw-slug entry with real deltas + human-readable-title entry with no deltas)
+  - #1 ✅ **FIXED `ef1050b`** — Weekly results Meetings section renders each exec twice (raw-slug entry with real deltas + human-readable-title entry with no deltas)
   - #2 Advancing week from inside the exec meetings room skips the Weekly Results popup
-  - #3 "Delayed effect triggered" boxes are unlabeled/generic, can't tell how many distinct delayed effects actually fired or match them to the detailed CCO box
-  - #6 Venue capacity slider vs. server validation — three-layer bug (config `none` tier range collides with hardcoded server `>=50`, server rejects `venueAccess==='none'` outright, client slider not gated) — **root cause confirmed**, ready to fix: `data/balance/progression.json`, `server/routes/tour.ts:26-31,46-48`, `client/src/pages/LivePerformancePage.tsx:~481-510,839-846`
-  - #7 "Met with CEO" nonsensical since player IS the CEO
+  - #3 ✅ **FIXED `ef1050b`** — "Delayed effect triggered" boxes are unlabeled/generic, can't tell how many distinct delayed effects actually fired or match them to the detailed CCO box
+  - #6 ✅ **FIXED `f41bf27`** — Venue capacity slider vs. server validation — three-layer bug (config `none` tier range collides with hardcoded server `>=50`, server rejects `venueAccess==='none'` outright, client slider not gated); client-gating fix, server/config left correct
+  - #7 ✅ **FIXED `ef1050b`** — "Met with CEO" nonsensical since player IS the CEO
   - #8 venueCapacity slider locks to current tier's exact band instead of `[0 or lowest-tier-min, current-tier-max]`, blocking small shows for new artists once a higher tier is unlocked — **now tracked as `technical-debt-backlog.md` Comment 67**
   - #9 Milestone Moments mislabels a tour milestone as "Advanced to Recorded Stage" (recording-pipeline stage name leaking into tour milestones) — **now tracked as `technical-debt-backlog.md` Comment 68**
   - #11 Auto-select meetings can pick a combo that overdraws Creative Capital (-2 CC preview with only 1 CC available) — no budget guardrail
   - #12 Tour-completion email shows gross revenue only, no net profit
 
 - 🎨 Feel / balance:
-  - #5 Week view calendar missing prev/next arrows that month view has (easy add)
+  - #5 ✅ **FIXED `45d884d`** — Week view calendar missing prev/next arrows that month view has (easy add)
   - #12 also feel-adjacent — player wants profit visibility, not just revenue
 
 - 💡 Ideas / backlog candidates:
-  - #4 Surface Talent stat in more places (roster cards, expanded profile header, dialogue modal) — talent already renders in OverviewTab/AR-discovery-table/discovery-modal/exec-meeting-selector per sub-agent audit; open question below on whether player actually sees it there today
+  - #4 Surface Talent stat in more places — **investigation done (no fix yet)**: talent already renders in `OverviewTab.tsx:132-135` + AR-discovery-table/discovery-modal/exec-meeting-selector; "Artist Hats" == the Overview tab (not a distinct component). Genuinely missing from `ArtistDashboardCard.tsx`, `ArtistCard.tsx`, `ArtistDialogueModal.tsx`, `ManagementTab.tsx` — ranked scope in the "Fixes landed" section above; ready if greenlit
   - #10 [BIG] Artist revenue-share on streaming + tour income — needs its own design pass before scoping
 
 - ❓ Open questions:
-  - #4: sub-agent found talent already rendered in `OverviewTab.tsx` — does that contradict the "only visible under Artist Hats" observation, or is "Artist Hats" == OverviewTab under a different label? Needs a quick in-app check before finalizing scope.
+  - #4: ✅ **RESOLVED** — "Artist Hats" is not a distinct tab; it's the **Overview tab**, where talent DOES render (`OverviewTab.tsx:132-135`). No contradiction. Scope finalized (4 missing surfaces, see "Fixes landed").
   - #3: are the three "Delayed effect triggered" boxes 3 distinct effects, or duplicates of the same event (echoing the #1 duplicate-rendering pattern)? Needs source-level check of the delayed-effects renderer.
   - #6/#8: once fixed, should "none" tier allow booking at all (server currently hard-rejects it), or should reaching some minimal reputation be required before any tour is bookable — i.e. is blocking correct behavior and only the UI/slider needs to reflect it, or should "none" tier get a legitimate small-capacity booking path?
 
