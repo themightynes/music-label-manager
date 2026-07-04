@@ -31,11 +31,13 @@
 
 **New debt:** C66 (loose non-actions Zod loaders, verbose engine debug logging, stale `actions.json.backup`). Deferred by design, do NOT build casually: mood availability gates (<20/<10), Level/XP, success/failure rolls, combo actions.
 
+**Docs workstream addendum (July 4, same branch):** produced the canonical **`[REFERENCE] executive-meetings-system-complete-reference.md`** (`fcc177a` — 20 meetings × 59 choices with live values, 14 channels, mood bands, guardrails; linked from docs/CLAUDE.md). Two staleness audits then established that the Phase 0→4 arc had left descriptive docs badly stale (Passport-auth/month-cadence fossils survived ~10 months). Cleanup pass 1 (`9aeb1e6`): archived 4 pre-refactor docs to **`docs/99-legacy/superseded-2026-07/`** with dated superseded-headers (api-design, frontend-architecture, music-creation-architecture, plan-release-api-spec), rewrote backend-architecture.md's contradictory body, fixed the /onboard-facing fragments. Pass 2 (`62ffa57`): status headers on the three 2026-07-03 research docs (dispositions PROPOSAL→ADOPTED), archived 2 more exec docs, fixed two code-verified false claims (artist_energy is NOT display-only; artists never had a loyalty column), and **codified the rules**: documentation-governance.md gains formal *Archival Mechanism* + *Doc-Sync Rule* sections; root/client/data CLAUDE.mds carry the doc-sync, badge-whitelist, exec-mood-parity, and effect-key authoring rules; `/session-end` gained a governance-compliance step (`07bb796`). CI storage fix `4d140c9` (updateExecutive instance-db fallback) verified — **PR #119 fully green**.
+
 **Open threads / next steps:**
-- **Nes: playtest `feat/exec-meetings-revival`** (dev server was left running on it) — meeting badges, WeekSummary meetings card, press/quality/awareness/variance/award consequences, exec mood chips, AUTO behavior. Channel magnitudes are balance-JSON knobs if anything feels off (note: tuning `exec_mood_modifiers` requires updating `DEFAULT_EXEC_MOOD_MODIFIER_CONFIG` — a tripwire test enforces this).
-- **Confirm CI green on PR #119 after `4d140c9`**, then merge (one squash/merge — Nes's call).
-- After merge: move the plan doc to `COMPLETED/`, apply the case-file's corrected counts to older docs if desired, and consider the deferred slices (success/failure rolls is the natural next act; needs PR-6's variance vocabulary, which now exists).
-- Carried over: Nes still owes the Phase 4 audio audition; side events (gap finding 1) are now unblocked — `events.json` is key-clean and the channel infrastructure exists.
+- **Nes: playtest `feat/exec-meetings-revival`** (dev server left running on it; Docker test DB up on 5433) — meeting badges, WeekSummary meetings card, press/quality/awareness/variance/award consequences, exec mood chips, AUTO behavior. Channel magnitudes are balance-JSON knobs if anything feels off (tuning `exec_mood_modifiers` requires updating `DEFAULT_EXEC_MOOD_MODIFIER_CONFIG` — tripwire test enforces).
+- **Standing decision (Nes, July 4): all playtest-driven fixes land on this same branch/PR #119** — no new branches until the one merge at the end.
+- After merge: move the plan doc to `COMPLETED/` (per the /session-end governance check), then the deferred slices (success/failure rolls is the natural next act; PR-6's variance vocabulary now exists) and side events (unblocked — events.json is key-clean).
+- Carried over: Nes still owes the Phase 4 audio audition.
 
 ---
 
