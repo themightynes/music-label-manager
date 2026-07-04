@@ -11,6 +11,8 @@ import type { DialogueChoice, RoleMeeting, Executive } from '@shared/types/gameT
 import {
   pickSafestChoice,
   prepareAutoSelectOptions,
+  selectTopOptions,
+  getChoiceCreativeCapitalCost,
 } from '../../client/src/services/executiveAutoSelect';
 
 function choice(id: string, overrides: Partial<DialogueChoice> = {}): DialogueChoice {
@@ -146,5 +148,131 @@ describe('prepareAutoSelectOptions — AUTO never gambles when a safe alternativ
     expect(options).toHaveLength(1);
     // Whichever choice wins, it must be one of the three real (gamble-free) ids.
     expect(['full_campaign', 'grassroots_push', 'skip_awards']).toContain(options[0].choice.id);
+  });
+});
+
+describe('getChoiceCreativeCapitalCost', () => {
+  it('reports the spend magnitude of a CC-negative choice', () => {
+    expect(getChoiceCreativeCapitalCost(choice('c', { effects_immediate: { creative_capital: -2 } }))).toBe(2);
+  });
+
+  it('sums creative_capital across immediate and delayed', () => {
+    const c = choice('c', {
+      effects_immediate: { creative_capital: -1 },
+      effects_delayed: { creative_capital: -2 },
+    });
+    expect(getChoiceCreativeCapitalCost(c)).toBe(3);
+  });
+
+  it('a CC-granting choice costs 0', () => {
+    expect(getChoiceCreativeCapitalCost(choice('c', { effects_immediate: { creative_capital: 3 } }))).toBe(0);
+  });
+
+  it('a choice with no creative_capital costs 0', () => {
+    expect(getChoiceCreativeCapitalCost(choice('c', { effects_immediate: { money: -5000 } }))).toBe(0);
+  });
+});
+
+describe('pickSafestChoice — budget awareness (playtest bug #11)', () => {
+  it('excludes a choice that would overdraw the CC budget', () => {
+    const cheap = choice('cheap', { effects_immediate: { creative_capital: -1 } });
+    const expensive = choice('expensive', { effects_immediate: { creative_capital: -3, quality_bonus: 10 } });
+
+    // budgetLeft = 1: only the -1 choice is affordable.
+    const picked = pickSafestChoice([expensive, cheap], 1);
+    expect(picked?.id).toBe('cheap');
+  });
+
+  it('falls back to the least-cost choice when NONE are affordable', () => {
+    const bigCost = choice('big', { effects_immediate: { creative_capital: -5 } });
+    const smallCost = choice('small', { effects_immediate: { creative_capital: -2 } });
+
+    // budgetLeft = 0: neither is affordable → pick the least-cost (smallest spend).
+    const picked = pickSafestChoice([bigCost, smallCost], 0);
+    expect(picked?.id).toBe('small');
+  });
+
+  it('with an unlimited budget, behaves exactly like the unbudgeted risk-averse pick', () => {
+    const gamble = choice('risky', { effects_delayed: { variance_up: 2 } });
+    const safe = choice('safe', { effects_delayed: { press_momentum: 1 } });
+    expect(pickSafestChoice([gamble, safe], Infinity)?.id).toBe('safe');
+    expect(pickSafestChoice([gamble, safe])?.id).toBe('safe');
+  });
+});
+
+describe('selectTopOptions — never overdraws Creative Capital (playtest bug #11)', () => {
+  const exec = (role: string, mood = 50): Executive => ({ id: `exec-${role}`, role, level: 1, mood, loyalty: 50 });
+
+  function meetingWith(id: string, role: string, choices: DialogueChoice[]): RoleMeeting {
+    return { id, prompt: id, target_scope: 'global', role_id: role, choices } as RoleMeeting;
+  }
+
+  it('the committed set never spends more CC than the player has (budget = 1)', () => {
+    // Two execs, each with a meeting whose safest choice costs 2 CC. With only
+    // 1 CC of budget and 2 slots, the naive "safest each" set would spend 4 CC.
+    const arMeeting = meetingWith('ar', 'head_ar', [
+      choice('ar_free', { effects_immediate: { money: -1000 } }),
+      choice('ar_costly', { effects_immediate: { creative_capital: -2, quality_bonus: 4 } }),
+    ]);
+    const cmoMeeting = meetingWith('cmo', 'cmo', [
+      choice('cmo_costly', { effects_immediate: { creative_capital: -2 }, effects_delayed: { press_momentum: 2 } }),
+    ]);
+
+    const options = prepareAutoSelectOptions(
+      [exec('head_ar'), exec('cmo')],
+      { head_ar: [arMeeting], cmo: [cmoMeeting] },
+    );
+
+    const remainingCC = 1;
+    const picked = selectTopOptions(options, 2, remainingCC);
+
+    const totalCost = picked.reduce((sum, o) => sum + getChoiceCreativeCapitalCost(o.choice), 0);
+    expect(totalCost).toBeLessThanOrEqual(remainingCC);
+  });
+
+  it('downgrades an expensive safest-choice to a cheaper affordable one instead of overdrawing', () => {
+    // The safest overall choice costs 2 CC; a cheaper (free) safe alternative
+    // exists. With budget 1, AUTO must pick the free one, not the 2-CC one.
+    const meeting = meetingWith('ar', 'head_ar', [
+      choice('costly_safe', { effects_immediate: { creative_capital: -2 }, effects_delayed: { quality_bonus: 5 } }),
+      choice('free_safe', { effects_immediate: { money: -500 }, effects_delayed: { quality_bonus: 3 } }),
+    ]);
+
+    const options = prepareAutoSelectOptions([exec('head_ar')], { head_ar: [meeting] });
+    const picked = selectTopOptions(options, 1, 1);
+
+    expect(picked).toHaveLength(1);
+    expect(picked[0].choice.id).toBe('free_safe');
+    expect(getChoiceCreativeCapitalCost(picked[0].choice)).toBeLessThanOrEqual(1);
+  });
+
+  it('with a zero CC budget, only free choices are committed', () => {
+    const freeMeeting = meetingWith('ar', 'head_ar', [
+      choice('ar_free', { effects_delayed: { quality_bonus: 2 } }),
+    ]);
+    const paidMeeting = meetingWith('cmo', 'cmo', [
+      choice('cmo_paid', { effects_immediate: { creative_capital: -1 } }),
+    ]);
+
+    const options = prepareAutoSelectOptions(
+      [exec('head_ar'), exec('cmo')],
+      { head_ar: [freeMeeting], cmo: [paidMeeting] },
+    );
+
+    const picked = selectTopOptions(options, 2, 0);
+    const totalCost = picked.reduce((sum, o) => sum + getChoiceCreativeCapitalCost(o.choice), 0);
+    expect(totalCost).toBe(0);
+    // The free meeting's choice is still selected.
+    expect(picked.some((o) => o.choice.id === 'ar_free')).toBe(true);
+  });
+
+  it('omitting the budget preserves the old score-then-slice behavior', () => {
+    const m1 = meetingWith('ar', 'head_ar', [choice('a', { effects_immediate: { creative_capital: -5 } })]);
+    const m2 = meetingWith('cmo', 'cmo', [choice('b', { effects_immediate: { creative_capital: -5 } })]);
+
+    // No budget arg → both expensive choices are still selected (unbudgeted).
+    const options = prepareAutoSelectOptions([exec('head_ar'), exec('cmo')], { head_ar: [m1], cmo: [m2] });
+    const picked = selectTopOptions(options, 2);
+    expect(picked).toHaveLength(2);
   });
 });

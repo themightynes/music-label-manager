@@ -41,6 +41,11 @@ export interface ExecutiveMeetingContext {
   currentDialogue: DialogueData | null;
   focusSlotsUsed: number;
   focusSlotsTotal: number;
+  /**
+   * Remaining Creative Capital the player has to spend. AUTO_SELECT uses this as
+   * a hard budget so the auto-picked set can never overdraw CC (playtest bug #11).
+   */
+  creativeCapital: number;
   error: string | null;
   autoOptions: AutoOption[];
   impactPreview: {
@@ -65,7 +70,7 @@ export type ExecutiveMeetingEvent =
   | { type: 'BACK_TO_EXECUTIVES' }
   | { type: 'BACK_TO_MEETINGS' }
   | { type: 'RESET' }
-  | { type: 'SYNC_SLOTS'; used: number; total: number }
+  | { type: 'SYNC_SLOTS'; used: number; total: number; creativeCapital?: number }
   | { type: 'SYNC_WEEK'; currentWeek: number }
   | { type: 'AUTO_SELECT' }
   | { type: 'CALCULATE_IMPACT_PREVIEW'; selectedActions: string[] }
@@ -75,6 +80,8 @@ interface ExecutiveMeetingInput {
   gameId: string;
   currentWeek: number;
   focusSlotsTotal: number;
+  /** Remaining Creative Capital budget for AUTO_SELECT (playtest bug #11). */
+  creativeCapital?: number;
   onActionSelected: (action: string) => void;
   fetchExecutives?: ExecutiveServices['fetchExecutives'];
   fetchRoleMeetings?: ExecutiveServices['fetchRoleMeetings'];
@@ -120,6 +127,9 @@ export const executiveMeetingMachine = setup({
         ? {
             focusSlotsUsed: event.used,
             focusSlotsTotal: event.total,
+            ...(typeof event.creativeCapital === 'number'
+              ? { creativeCapital: event.creativeCapital }
+              : {}),
           }
         : {}
     ),
@@ -318,9 +328,10 @@ export const executiveMeetingMachine = setup({
         meetingsByRole[executive.role] = await ensureMeetings(executive.role);
       }
 
-      // Use shared auto-select logic
+      // Use shared auto-select logic. Pass the remaining Creative Capital as a
+      // hard budget so AUTO never assembles a set that overdraws CC (bug #11).
       const allOptions = prepareAutoSelectOptions(context.executives, meetingsByRole);
-      const topOptions = selectTopOptions(allOptions, slotsRemaining);
+      const topOptions = selectTopOptions(allOptions, slotsRemaining, context.creativeCapital);
 
       // Convert to AutoOption format expected by machine
       const machineOptions: AutoOption[] = topOptions.map(option => ({
@@ -431,6 +442,7 @@ export const executiveMeetingMachine = setup({
     currentDialogue: null,
     focusSlotsUsed: 0,
     focusSlotsTotal: input.focusSlotsTotal,
+    creativeCapital: input.creativeCapital ?? Infinity,
     error: null,
     autoOptions: [],
     impactPreview: { immediate: {}, delayed: {}, selectedChoices: [] },

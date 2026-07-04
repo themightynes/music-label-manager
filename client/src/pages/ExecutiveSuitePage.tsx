@@ -128,6 +128,7 @@ export default function ExecutiveSuitePage({
                       total: gameState.focusSlots || 3,
                       used: gameState.usedFocusSlots || 0,
                     }}
+                    creativeCapital={gameState.creativeCapital ?? 0}
                     arOfficeStatus={getAROfficeStatus()}
                     onImpactPreviewUpdate={setImpactPreview}
                   />
