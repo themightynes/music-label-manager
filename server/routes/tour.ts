@@ -100,8 +100,10 @@ const router = Router();
         marketingBudget: totalMarketingBudget
       });
 
-      // Get tier range for response using VenueCapacityManager
-      const tierRange = VenueCapacityManager.getCapacityRangeFromTier(venueAccess, serverGameData);
+      // Get the bookable capacity range for the response using VenueCapacityManager.
+      // #8/C67: the slider spans [smallest bookable venue min, current tier max] so
+      // an unlocked label can still book small shows, not just its top-tier band.
+      const tierRange = VenueCapacityManager.getBookingRangeForTier(venueAccess, serverGameData);
 
       // Calculate price per ticket from first city (all cities have same pricing)
       const firstCity = detailedBreakdown.cities[0];

@@ -521,7 +521,21 @@ export default function LivePerformancePage() {
       throw new Error(`Malformed capacity_range for venue tier '${currentVenueAccess}' - expected [min, max] array`);
     }
 
-    const [min, max] = tierConfig.capacity_range;
+    // #8/C67: booking range = [smallest bookable venue min, current tier max], so
+    // an unlocked label can still book small shows (mirrors the server's
+    // VenueCapacityManager.getBookingRangeForTier; this is the pre-estimate
+    // fallback — the primary path uses estimateData.tierRange from the server).
+    // Floor = smallest capacity_range[0] among unlocked, bookable tiers (every
+    // tier whose threshold <= current, excluding un-bookable 'none').
+    const currentThreshold = tierConfig.threshold ?? 0;
+    const bookableMins = Object.entries(venueAccessConfig)
+      .filter(([name, cfg]: [string, any]) =>
+        name !== 'none' &&
+        (cfg?.threshold ?? 0) <= currentThreshold &&
+        Array.isArray(cfg?.capacity_range))
+      .map(([, cfg]: [string, any]) => cfg.capacity_range[0]);
+    const min = bookableMins.length ? Math.min(...bookableMins) : tierConfig.capacity_range[0];
+    const max = tierConfig.capacity_range[1];
     if (typeof min !== 'number' || typeof max !== 'number' || min < 0 || max <= min) {
       throw new Error(`Invalid capacity range [${min}, ${max}] for venue tier '${currentVenueAccess}' - values must be positive numbers with max > min`);
     }

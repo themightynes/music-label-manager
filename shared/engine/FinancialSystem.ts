@@ -155,6 +155,38 @@ export class VenueCapacityManager {
     return { min, max };
   }
 
+  /**
+   * Playtest #8 / C67: the capacity range a player may BOOK at, given their
+   * current (highest-unlocked) venue tier. Unlocking a higher tier raises the
+   * CEILING but keeps the FLOOR at the smallest real venue, so a big label can
+   * still book a small show for a new artist rather than being forced into an
+   * oversized venue. Floor = the smallest capacity_range[0] among all unlocked,
+   * bookable tiers (every tier whose threshold <= the current tier's, EXCLUDING
+   * 'none' — 'none' is un-bookable; the server rejects venueAccess==='none'
+   * outright). Max = the current tier's own ceiling.
+   *
+   * Distinct from getCapacityRangeFromTier (a single tier's OWN band), which
+   * auto/legacy tour capacity generation still uses — only booking validation and
+   * the player-facing slider range route through this wider booking range.
+   */
+  static getBookingRangeForTier(currentTier: string, gameData: any): {min: number, max: number} {
+    const venueAccess = gameData.getAccessTiersSync().venue_access;
+    const currentConfig = venueAccess[currentTier];
+    if (!currentConfig?.capacity_range) {
+      throw new Error(`Invalid venue tier: ${currentTier}. Available: ${Object.keys(venueAccess)}`);
+    }
+    const currentThreshold = currentConfig.threshold ?? 0;
+    const bookableMins = Object.entries(venueAccess)
+      .filter(([name, cfg]: [string, any]) =>
+        name !== 'none' &&
+        (cfg?.threshold ?? 0) <= currentThreshold &&
+        Array.isArray(cfg?.capacity_range))
+      .map(([, cfg]: [string, any]) => cfg.capacity_range[0]);
+    const min = bookableMins.length ? Math.min(...bookableMins) : currentConfig.capacity_range[0];
+    const max = currentConfig.capacity_range[1];
+    return { min, max };
+  }
+
   static generateCapacityFromTier(tier: string, gameData: any, rng: () => number): number {
     const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(tier, gameData);
     return Math.round(min + (rng() * (max - min)));
@@ -171,9 +203,13 @@ export class VenueCapacityManager {
     }
 
     if (tier) {
-      const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(tier, gameData);
+      // #8/C67: validate against the BOOKING range (floor = smallest bookable
+      // tier min, ceiling = current tier max), not the current tier's own band —
+      // an unlocked label may book smaller shows than its top tier, down to the
+      // smallest real venue.
+      const { min, max } = VenueCapacityManager.getBookingRangeForTier(tier, gameData);
       if (capacity < min || capacity > max) {
-        throw new Error(`Capacity ${capacity} outside ${tier} range (${min}-${max})`);
+        throw new Error(`Capacity ${capacity} outside bookable range (${min}-${max})`);
       }
     }
   }
