@@ -13,6 +13,7 @@ import { useStagedReveal } from '@/hooks/useStagedReveal';
 import { playSound } from '@/lib/audio';
 import { classifyChartUpdate } from '@shared/utils/changeImportance';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
+import { EffectBadgeTooltip } from './executive-meetings/EffectBadgeTooltip';
 import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate } from '../../../shared/types/gameTypes';
 
 interface WeekSummaryProps {
@@ -113,8 +114,14 @@ function formatMeetingEffectLabel(key: string): string {
   }
 }
 
-/** One line per applied effect delta, e.g. "+5 Rep", "-1000 Money". */
-function formatAppliedEffects(effects: Record<string, number> | undefined): string[] {
+/**
+ * One entry per applied effect delta, e.g. `{ key: 'reputation', line: '+5 Rep' }`.
+ * The `key` is retained (not just the formatted string) so the legibility tooltip
+ * (Slice A) can look up the channel's explanation by its canonical key.
+ */
+function formatAppliedEffects(
+  effects: Record<string, number> | undefined
+): Array<{ key: string; line: string }> {
   if (!effects) return [];
   return Object.entries(effects)
     .filter(
@@ -129,10 +136,11 @@ function formatAppliedEffects(effects: Record<string, number> | undefined): stri
     .map(([key, value]) => {
       // variance_up is a volatility magnitude, not a signed value delta — always
       // rendered with ± regardless of the (rare) authored sign.
-      if (key === 'variance_up') {
-        return `±${Math.abs(value)} ${formatMeetingEffectLabel(key)}`;
-      }
-      return `${value > 0 ? '+' : ''}${value} ${formatMeetingEffectLabel(key)}`;
+      const line =
+        key === 'variance_up'
+          ? `±${Math.abs(value)} ${formatMeetingEffectLabel(key)}`
+          : `${value > 0 ? '+' : ''}${value} ${formatMeetingEffectLabel(key)}`;
+      return { key, line };
     });
 }
 
@@ -661,14 +669,15 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                           )}
                           {appliedLines.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
-                              {appliedLines.map((line, lineIdx) => (
-                                <Badge
-                                  key={lineIdx}
-                                  variant="outline"
-                                  className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40"
-                                >
-                                  {line}
-                                </Badge>
+                              {appliedLines.map(({ key, line }, lineIdx) => (
+                                <EffectBadgeTooltip key={lineIdx} effectKey={key}>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40"
+                                  >
+                                    {line}
+                                  </Badge>
+                                </EffectBadgeTooltip>
                               ))}
                             </div>
                           )}

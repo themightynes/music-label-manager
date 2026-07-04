@@ -81,6 +81,102 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Player-facing explanations for every effect channel, keyed by effect key.
+ *
+ * LEGIBILITY Slice A (at-choice explanation): the exec-meeting badges tell a
+ * player WHICH channel a choice touches, but not what that channel DOES, WHEN it
+ * fires, or WHERE it lands. This map is the single home for that vocabulary — a
+ * tooltip on each effect badge reads its `text` from here.
+ *
+ * It is co-located with {@link LIVE_EFFECT_KEYS} on purpose: the two must stay in
+ * lockstep (a channel that goes live needs a description; a channel that is
+ * removed must lose one). The drift-guard test
+ * (`tests/engine/effect-descriptions.test.ts`) asserts this map's keys are
+ * EXACTLY `LIVE_EFFECT_KEYS ∪ {executive_mood}` — the same canonical vocabulary
+ * the data-lint test enforces on the authored JSON.
+ *
+ * Copy conventions (match the game's existing player-facing voice):
+ *   - second person, concise, no dev jargon, no internal key names;
+ *   - `title` is the badge's human label; `text` covers what it does + when it
+ *     fires + where it lands;
+ *   - self-explanatory channels (exec mood, rep gamble, base resources) still get
+ *     an entry (the guard requires total coverage), just a shorter one.
+ *
+ * Timing vocabulary used in the copy — the four lifecycles from the legibility
+ * spec: INSTANT (this week), banks to the next RECORDING SESSION, banks to the
+ * next RELEASE, or ACCUMULATES to campaign end. Magnitudes quoted here are
+ * balance-JSON knobs (verified against data/balance/*.json at authoring time);
+ * keep them in sync with the canonical reference if the knobs are tuned.
+ */
+export interface EffectChannelDescription {
+  /** Human-facing channel name (matches the badge label). */
+  title: string;
+  /** One-to-two sentence explanation: what it does, when it fires, where it lands. */
+  text: string;
+}
+
+export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelDescription>> = {
+  // --- Base resources (self-explanatory; short entries) ---
+  money: {
+    title: 'Money',
+    text: 'Your cash balance, applied instantly. Spend it now or bank a windfall.',
+  },
+  reputation: {
+    title: 'Reputation',
+    text: 'Your label\'s standing in the industry, applied instantly. Higher reputation opens better access and press.',
+  },
+  creative_capital: {
+    title: 'Creative Capital',
+    text: 'The currency for creative moves, applied instantly. Spent to fund artistic bets.',
+  },
+  artist_mood: {
+    title: 'Mood',
+    text: 'How happy the affected artist is, applied instantly. Happier artists perform better; unhappy ones drift.',
+  },
+  artist_energy: {
+    title: 'Energy',
+    text: 'The affected artist\'s energy, applied instantly. Low energy drags down their work.',
+  },
+  artist_popularity: {
+    title: 'Popularity',
+    text: 'The affected artist\'s fame, applied instantly. More popular artists pull bigger numbers.',
+  },
+  // --- Exec-meetings-revival channels ---
+  executive_mood: {
+    title: 'Exec Mood',
+    text: 'How this executive feels about you, applied instantly. A happy exec makes their meetings cheaper and their effects hit harder; a sour one makes everything cost more.',
+  },
+  press_story_flag: {
+    title: 'Press Story',
+    text: 'Lines up a press angle that boosts the odds of coverage on your next release. Waits in the wings until that release, then fires once — win or lose. Expires if unused after about two months.',
+  },
+  press_momentum: {
+    title: 'Press Buzz',
+    text: 'Ongoing press momentum that raises your coverage odds on every release while it lasts. It builds up as you feed it and cools off a little each week, so keep it warm.',
+  },
+  quality_bonus: {
+    title: 'Quality',
+    text: 'A quality boost banked for your next recording session — it lifts every song you record that week, then is spent. A negative value drags that session down. Expires if you don\'t record within about two months.',
+  },
+  awareness_boost: {
+    title: 'Buzz',
+    text: 'Pre-release buzz banked for your next release — it seeds that release with extra early awareness, which drives more streams out of the gate. Applied once to the next release, then spent. Expires unused after about two months.',
+  },
+  variance_up: {
+    title: 'Volatility',
+    text: 'Widens the range of outcomes on your next recording session — bigger chance of a breakout hit, but also a bigger chance of a flop. It doesn\'t change the average, only the swing. Banked until that session, then spent.',
+  },
+  rep_swing: {
+    title: 'Rep Gamble',
+    text: 'A reputation gamble settled right away: the badge shows the swing size, and you\'ll land somewhere between losing and gaining that amount. Pure risk — no guaranteed direction.',
+  },
+  award_chances: {
+    title: 'Prestige',
+    text: 'Prestige points toward the end-of-campaign awards. They accumulate all game long, never expire, and pay off in one roll at the finish — more prestige, better odds of winning an award.',
+  },
+};
+
+/**
  * Playtest bug #1 fix (2026-07-04): the mood/loyalty deltas an executive meeting
  * produces, returned by {@link ActionProcessor.processExecutiveActions} so the
  * single 'meeting' change entry can carry them (instead of a duplicate

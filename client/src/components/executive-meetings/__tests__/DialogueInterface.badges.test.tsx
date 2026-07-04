@@ -187,4 +187,27 @@ describe('ChoiceEffects badge honesty', () => {
     render(<ChoiceEffects choice={buildChoice({ effects_delayed: { award_chances: -1 } })} />);
     expect(screen.getByText('-1 Prestige')).toBeInTheDocument();
   });
+
+  // LEGIBILITY Slice A — the effect badges are now wrapped in an explanation
+  // tooltip. Assert the tooltip trigger is wired (data-effect-key + aria-label)
+  // for both an immediate and a delayed badge, without driving Radix's portal.
+  it('wraps each live badge in an explanation tooltip trigger (immediate + delayed)', () => {
+    render(
+      <ChoiceEffects
+        choice={buildChoice({
+          effects_immediate: { reputation: 3 },
+          effects_delayed: { awareness_boost: 2 },
+        })}
+      />
+    );
+
+    const repTrigger = document.querySelector('[data-effect-key="reputation"]');
+    expect(repTrigger).not.toBeNull();
+    expect(repTrigger?.getAttribute('aria-label')).toContain('Reputation');
+
+    const buzzTrigger = document.querySelector('[data-effect-key="awareness_boost"]');
+    expect(buzzTrigger).not.toBeNull();
+    // The Buzz copy explains it banks to the next release.
+    expect(buzzTrigger?.getAttribute('aria-label')).toContain('release');
+  });
 });

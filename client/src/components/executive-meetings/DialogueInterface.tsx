@@ -8,6 +8,7 @@ import { GlowEffect } from '../motion-primitives/glow-effect';
 import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft, Shuffle } from 'lucide-react';
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
+import { EffectBadgeTooltip } from './EffectBadgeTooltip';
 
 // Badge honesty (exec-meetings-revival PR-2): only render a badge for a key the
 // engine actually implements (LIVE_EFFECT_KEYS) or 'executive_mood' (handled
@@ -167,13 +168,14 @@ export function ChoiceEffects({
           </div>
           <div className="flex flex-wrap gap-1">
             {immediateEntries.map(([effect, value]) => (
-              <EffectBadge
-                key={effect}
-                effect={effect}
-                value={value as number}
-                targetScope={targetScope}
-                selectedArtistName={selectedArtistName}
-              />
+              <EffectBadgeTooltip key={effect} effectKey={effect}>
+                <EffectBadge
+                  effect={effect}
+                  value={value as number}
+                  targetScope={targetScope}
+                  selectedArtistName={selectedArtistName}
+                />
+              </EffectBadgeTooltip>
             ))}
           </div>
         </div>
@@ -187,14 +189,15 @@ export function ChoiceEffects({
           </div>
           <div className="flex flex-wrap gap-1">
             {delayedEntries.map(([effect, value]) => (
-              <EffectBadge
-                key={effect}
-                effect={effect}
-                value={value as number}
-                isDelayed={true}
-                targetScope={targetScope}
-                selectedArtistName={selectedArtistName}
-              />
+              <EffectBadgeTooltip key={effect} effectKey={effect}>
+                <EffectBadge
+                  effect={effect}
+                  value={value as number}
+                  isDelayed={true}
+                  targetScope={targetScope}
+                  selectedArtistName={selectedArtistName}
+                />
+              </EffectBadgeTooltip>
             ))}
           </div>
         </div>

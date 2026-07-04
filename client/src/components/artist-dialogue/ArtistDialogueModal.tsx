@@ -14,6 +14,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { isRenderableEffectKey } from '../executive-meetings/DialogueInterface';
+import { EffectBadgeTooltip } from '../executive-meetings/EffectBadgeTooltip';
 
 interface ArtistDialogueModalProps {
   gameId: string;
@@ -216,17 +217,18 @@ export function ArtistDialogueModal({
                     {Object.entries(context.appliedEffects)
                       .filter(([key]) => isRenderableEffectKey(key))
                       .map(([key, value]) => (
-                      <Badge
-                        key={key}
-                        variant="secondary"
-                        className={`rounded-pill font-mono text-[11px] ${
-                          value > 0
-                            ? 'bg-[rgba(55,224,176,0.1)] text-positive'
-                            : 'bg-[rgba(255,93,138,0.1)] text-negative'
-                        }`}
-                      >
-                        {getEffectLabel(key)}: {formatEffect(key, value)}
-                      </Badge>
+                      <EffectBadgeTooltip key={key} effectKey={key}>
+                        <Badge
+                          variant="secondary"
+                          className={`rounded-pill font-mono text-[11px] ${
+                            value > 0
+                              ? 'bg-[rgba(55,224,176,0.1)] text-positive'
+                              : 'bg-[rgba(255,93,138,0.1)] text-negative'
+                          }`}
+                        >
+                          {getEffectLabel(key)}: {formatEffect(key, value)}
+                        </Badge>
+                      </EffectBadgeTooltip>
                     ))}
                   </div>
                 </div>
@@ -239,17 +241,18 @@ export function ArtistDialogueModal({
                     {Object.entries(context.delayedEffects)
                       .filter(([key]) => isRenderableEffectKey(key))
                       .map(([key, value]) => (
-                      <Badge
-                        key={key}
-                        variant="outline"
-                        className={`rounded-pill font-mono text-[11px] ${
-                          value > 0
-                            ? 'border-[rgba(55,224,176,0.5)] text-positive'
-                            : 'border-[rgba(255,93,138,0.5)] text-negative'
-                        }`}
-                      >
-                        {getEffectLabel(key)}: {formatEffect(key, value)}
-                      </Badge>
+                      <EffectBadgeTooltip key={key} effectKey={key}>
+                        <Badge
+                          variant="outline"
+                          className={`rounded-pill font-mono text-[11px] ${
+                            value > 0
+                              ? 'border-[rgba(55,224,176,0.5)] text-positive'
+                              : 'border-[rgba(255,93,138,0.5)] text-negative'
+                          }`}
+                        >
+                          {getEffectLabel(key)}: {formatEffect(key, value)}
+                        </Badge>
+                      </EffectBadgeTooltip>
                     ))}
                   </div>
                 </div>
