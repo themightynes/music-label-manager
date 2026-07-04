@@ -534,10 +534,28 @@ export class GameEngine {
         }
       }
 
+      // Thread executive moods (read-only) so email narratives reflect the
+      // sending exec's current mood band. Additive-only; failure to load moods
+      // simply falls back to the neutral band inside the generator.
+      const executiveMoods: Record<string, number> = {};
+      try {
+        if (this.storage.getExecutivesByGame) {
+          const execs = await this.storage.getExecutivesByGame(this.gameState.id, dbTransaction);
+          for (const exec of execs ?? []) {
+            if (exec?.role && typeof exec.mood === 'number') {
+              executiveMoods[exec.role] = exec.mood;
+            }
+          }
+        }
+      } catch (moodErr) {
+        console.warn('[EMAIL GENERATION] Could not load executive moods; using neutral band:', moodErr);
+      }
+
       const emails = generateEmails({
         gameId: this.gameState.id,
         weekSummary: summary,
         chartUpdates: summary.chartUpdates ?? [],
+        executiveMoods,
         discoveredArtist: discoveredArtist
           ? {
               id: discoveredArtist.id,
