@@ -58,7 +58,10 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'creative_capital',
   'artist_mood',
   'artist_energy',
-  'artist_popularity'
+  'artist_popularity',
+  // Exec-meetings-revival PR-3 (C2 — press/hype momentum channel):
+  'press_story_flag',
+  'press_momentum'
 ]);
 
 export class ActionProcessor {
@@ -567,6 +570,45 @@ export class ActionProcessor {
           });
           break;
 
+        case 'press_story_flag': {
+          // Exec-meetings-revival PR-3 (C2) — one-shot boolean. Any positive authored
+          // value sets the flag; it is consumed (and cleared) by the next release's
+          // press roll in ReleaseProcessor/FinancialSystem.calculatePressPickups.
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          if (value > 0) {
+            flags.pressStoryFlag = true;
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: 'Press story queued — next release gets a story angle boost',
+              amount: 0
+            });
+            console.log('[EFFECT PROCESSING] press_story_flag set (flags.pressStoryFlag = true)');
+          } else {
+            console.log(`[EFFECT PROCESSING] press_story_flag effect with non-positive value (${value}) ignored`);
+          }
+          break;
+        }
+
+        case 'press_momentum': {
+          // Exec-meetings-revival PR-3 (C2) — decaying pool. Accumulates across
+          // meetings; feeds a small additive bonus to press-pickup chance and decays
+          // −1/week toward 0 (see ActionProcessor.processDelayedEffects for the decay).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pressMomentum === 'number' ? flags.pressMomentum : 0;
+          flags.pressMomentum = previous + value;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Press buzz ${value > 0 ? 'building' : 'cooling'} (${value > 0 ? '+' : ''}${value})`,
+            amount: value
+          });
+          console.log(`[EFFECT PROCESSING] press_momentum effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pressMomentum})`);
+          break;
+        }
+
         default:
           // MISSING: unknown/unimplemented effect key encountered by applyEffects (PR-1 truth
           // infrastructure). 'executive_mood' is deliberately silent here — it's consumed
@@ -658,6 +700,18 @@ export class ActionProcessor {
         delete flags[key];
       }
 
+      // Exec-meetings-revival PR-3 (C2) — press_momentum weekly decay. This runs
+      // once per week (processDelayedEffects is called exactly once from
+      // advanceWeek), which is the natural home for flag/state maintenance that
+      // isn't itself a triggered delayed-effect entry. −1/week, floors at 0.
+      if (typeof flags.pressMomentum === 'number' && flags.pressMomentum !== 0) {
+        const decayed = Math.max(0, flags.pressMomentum - 1);
+        if (decayed !== flags.pressMomentum) {
+          console.log(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
+        }
+        flags.pressMomentum = decayed;
+      }
+
       ctx.gameState.flags = flags;
     } catch (err) {
       console.warn('[DELAYED EFFECTS] Failed to process delayed effects:', err);
@@ -703,15 +757,23 @@ export class ActionProcessor {
     let effectDescription = '';
 
     switch (marketingType) {
-      case 'pr_push':
-        // PR campaigns improve press pickup chances
+      case 'pr_push': {
+        // PR campaigns improve press pickup chances.
+        // Exec-meetings-revival PR-3 (C2): press_momentum feeds this roll's chance
+        // too (it's a real press-pickup draw). The one-shot pressStoryFlag is
+        // deliberately NOT read/cleared here — its single consumer is the next
+        // release's press roll (ReleaseProcessor.calculatePressOutcome), so a
+        // player can't burn the flag early on an unrelated PR-push action.
+        const pressFlags = (ctx.gameState.flags || {}) as Record<string, any>;
+        const pressMomentumForPush = typeof pressFlags.pressMomentum === 'number' ? pressFlags.pressMomentum : 0;
         const pressPickups = ctx.financialSystem.calculatePressPickups(
           ctx.gameState.pressAccess || 'none',
           campaignCost,
           ctx.gameState.reputation || 0,
           false,
           () => ctx.getRandom(0, 1),
-          ctx.financialSystem.getAccessChance.bind(ctx.financialSystem)
+          ctx.financialSystem.getAccessChance.bind(ctx.financialSystem),
+          pressMomentumForPush
         );
         if (pressPickups > 0) {
           ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + pressPickups);
@@ -722,6 +784,7 @@ export class ActionProcessor {
           effectDescription = 'PR campaign completed - limited media pickup';
         }
         break;
+      }
 
       case 'digital_ads':
         // Digital ads improve streaming potential

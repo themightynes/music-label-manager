@@ -103,6 +103,11 @@ export class ReleaseProcessor {
    * Calculates press coverage outcome including pickups and reputation gain
    */
   // DELEGATED TO FinancialSystem
+  // Exec-meetings-revival PR-3 (C2) — threads flags.pressStoryFlag (one-shot,
+  // cleared here after consumption) and flags.pressMomentum (decaying pool,
+  // decayed weekly in ActionProcessor.processDelayedEffects — NOT cleared here)
+  // through to FinancialSystem.calculatePressPickups. No RNG draw count change:
+  // both only modify the CHANCE fed into the existing per-pickup draws.
   calculatePressOutcome(
     ctx: WeekContext,
     quality: number,
@@ -110,14 +115,29 @@ export class ReleaseProcessor {
     reputation: number,
     marketingBudget: number
   ): { pickups: number; reputationGain: number } {
-    return ctx.financialSystem.calculatePressOutcome(
+    const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+    const hasStoryFlag = flags.pressStoryFlag === true;
+    const pressMomentum = typeof flags.pressMomentum === 'number' ? flags.pressMomentum : 0;
+
+    const outcome = ctx.financialSystem.calculatePressOutcome(
       quality,
       pressAccess,
       reputation,
       marketingBudget,
       () => ctx.getRandom(0, 1),
-      ctx.financialSystem.getAccessChance.bind(ctx.financialSystem)
+      ctx.financialSystem.getAccessChance.bind(ctx.financialSystem),
+      hasStoryFlag,
+      pressMomentum
     );
+
+    // One-shot: clear the story flag once it has fed a press roll, win or lose.
+    if (hasStoryFlag) {
+      flags.pressStoryFlag = false;
+      ctx.gameState.flags = flags;
+      console.log('[PRESS] pressStoryFlag consumed by this release\'s press roll — cleared');
+    }
+
+    return outcome;
   }
 
   /**

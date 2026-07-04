@@ -29,7 +29,8 @@
       "pr_spend_modifier": 0.001,
       "story_flag_bonus": 0.30,
       "reputation_modifier": 0.008,
-      "max_pickups_per_release": 8
+      "max_pickups_per_release": 8,
+      "press_momentum_chance_per_point": 0.02
     },
     
     "tour_revenue": {

@@ -439,7 +439,7 @@
             "money": -1000
           },
           "effects_delayed": {
-            "press_bias": 1
+            "press_momentum": 1
           }
         },
         {
@@ -486,7 +486,7 @@
             "reputation": -1
           },
           "effects_delayed": {
-            "media_skepticism": 1
+            "press_momentum": -1
           }
         },
         {
@@ -496,7 +496,7 @@
             "creative_capital": -1
           },
           "effects_delayed": {
-            "press_pickups": 2,
+            "press_momentum": 2,
             "collab_pressure": 1
           }
         },

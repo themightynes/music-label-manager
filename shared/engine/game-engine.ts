@@ -666,26 +666,6 @@ export class GameEngine {
   }
 
   /**
-   * Calculates press coverage for a release
-   */
-  // DELEGATED TO FinancialSystem
-  calculatePressPickups(
-    pressAccess: string,
-    prSpend: number,
-    reputation: number,
-    hasStoryFlag: boolean
-  ): number {
-    return this.financialSystem.calculatePressPickups(
-      pressAccess,
-      prSpend,
-      reputation,
-      hasStoryFlag,
-      () => this.getRandom(0, 1),
-      this.getAccessChance.bind(this)
-    );
-  }
-
-  /**
    * Calculates press coverage outcome including pickups and reputation gain
    */
   // DELEGATED TO ReleaseProcessor (Phase 2 engine-seams PR-10). Same-signature

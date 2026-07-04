@@ -472,17 +472,20 @@ export class ServerGameData {
         pr_spend_modifier: 0.001,
         reputation_modifier: 0.008,
         story_flag_bonus: 0.30,
-        max_pickups_per_release: 8
+        max_pickups_per_release: 8,
+        // Exec-meetings-revival PR-3 (C2): press_momentum chance-per-point knob.
+        press_momentum_chance_per_point: 0.02
       };
     }
-    
+
     const press = this.balanceData.market_formulas.press_coverage;
     return {
       base_chance: press.base_chance,
       pr_spend_modifier: press.pr_spend_modifier,
       reputation_modifier: press.reputation_modifier,
       story_flag_bonus: press.story_flag_bonus,
-      max_pickups_per_release: press.max_pickups_per_release
+      max_pickups_per_release: press.max_pickups_per_release,
+      press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02
     };
   }
 

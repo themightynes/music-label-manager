@@ -1857,22 +1857,32 @@ export class FinancialSystem {
     reputation: number,
     hasStoryFlag: boolean,
     getRandomFn: () => number,
-    getAccessChanceFn: (type: string, tier: string) => number
+    getAccessChanceFn: (type: string, tier: string) => number,
+    // Exec-meetings-revival PR-3 (C2) — decaying press-momentum pool. Optional so
+    // existing callers that don't pass it are unaffected (chance bonus is 0).
+    // Modifies the CHANCE fed into the existing per-pickup draws below; does not
+    // add or remove draws (RNG invariant — see ActionProcessor.ts RNG INVARIANT note).
+    pressMomentum: number = 0
   ): number {
     const config = this.gameData.getPressConfigSync();
-    
+
     // Get base chance from access tier
     const accessChance = getAccessChanceFn('press', pressAccess);
-    
+
     // Calculate pickup chance
     let chance = config.base_chance + accessChance;
     chance += (prSpend * config.pr_spend_modifier);
     chance += (reputation * config.reputation_modifier);
-    
+
     if (hasStoryFlag) {
       chance += config.story_flag_bonus;
     }
-    
+
+    if (pressMomentum) {
+      const perPoint = config.press_momentum_chance_per_point ?? 0.02;
+      chance += pressMomentum * perPoint;
+    }
+
     // Roll for each potential pickup
     let pickups = 0;
     for (let i = 0; i < config.max_pickups_per_release; i++) {
@@ -1880,7 +1890,7 @@ export class FinancialSystem {
         pickups++;
       }
     }
-    
+
     return pickups;
   }
 
@@ -1894,20 +1904,26 @@ export class FinancialSystem {
     reputation: number,
     marketingBudget: number,
     getRandomFn: () => number,
-    getAccessChanceFn: (type: string, tier: string) => number
+    getAccessChanceFn: (type: string, tier: string) => number,
+    // Exec-meetings-revival PR-3 (C2) — threaded from gameState.flags by the caller
+    // (ReleaseProcessor). hasStoryFlag defaults false / pressMomentum defaults 0 so
+    // any caller that hasn't been updated yet keeps prior (dead-flag) behavior.
+    hasStoryFlag: boolean = false,
+    pressMomentum: number = 0
   ): { pickups: number; reputationGain: number } {
     const pickups = this.calculatePressPickups(
-      pressAccess, 
-      marketingBudget, 
-      reputation, 
-      false,
+      pressAccess,
+      marketingBudget,
+      reputation,
+      hasStoryFlag,
       getRandomFn,
-      getAccessChanceFn
+      getAccessChanceFn,
+      pressMomentum
     );
-    
+
     // Calculate reputation gain based on pickups and quality
     const reputationGain = pickups > 0 ? Math.floor(pickups * (quality / 100) * this.CONSTANTS.REPUTATION_GAIN_MULTIPLIER) : 0;
-    
+
     return {
       pickups,
       reputationGain

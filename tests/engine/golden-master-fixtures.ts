@@ -127,6 +127,7 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       reputation_modifier: press.reputation_modifier,
       story_flag_bonus: press.story_flag_bonus,
       max_pickups_per_release: press.max_pickups_per_release,
+      press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02,
     }),
     getPressCoverageConfigSync: () => ({
       base_chance: press.base_chance,
@@ -134,6 +135,7 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       reputation_modifier: press.reputation_modifier,
       story_flag_bonus: press.story_flag_bonus,
       max_pickups_per_release: press.max_pickups_per_release,
+      press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02,
     }),
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],

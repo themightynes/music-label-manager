@@ -73,6 +73,11 @@ function EffectBadge({
         return `${val > 0 ? '+' : ''}${val} Popularity`;
       case 'executive_mood':
         return `${val > 0 ? '+' : ''}${val} Exec Mood`;
+      case 'press_story_flag':
+        // Exec-meetings-revival PR-3 (C2) — one-shot boolean, value-less badge.
+        return 'Press Story';
+      case 'press_momentum':
+        return `${val > 0 ? '+' : ''}${val} Press Buzz`;
       default:
         // Unreachable in practice — the caller filters to isRenderableEffectKey
         // before rendering an EffectBadge at all. Kept as a safe fallback only.

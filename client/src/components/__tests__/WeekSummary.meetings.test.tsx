@@ -140,6 +140,30 @@ describe('WeekSummary meetings card', () => {
     expect(screen.queryByText(/quality/i)).not.toBeInTheDocument();
   });
 
+  it('renders press_story_flag and press_momentum applied-effect lines (exec-meetings-revival PR-3)', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Met with Role ceo',
+        meetingId: 'ceo_priorities',
+        choiceId: 'content_first',
+        choiceLabel: 'Content-first to grow socials',
+        appliedEffects: { press_momentum: 1 },
+        importance: 'routine',
+      } as GameChange,
+      {
+        type: 'delayed_effect',
+        description: 'Delayed effect triggered',
+        meetingId: 'ceo_priorities',
+        choiceId: 'content_first',
+        appliedEffects: { press_story_flag: 1 },
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('+1 Press Buzz')).toBeInTheDocument();
+    expect(screen.getByText('+1 Press Story')).toBeInTheDocument();
+  });
+
   it('does not render the meetings card when there are no meeting-bucket changes', () => {
     renderSummary([
       { type: 'revenue', description: 'Streaming revenue', amount: 1000, importance: 'routine' } as GameChange,

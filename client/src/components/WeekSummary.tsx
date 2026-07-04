@@ -89,6 +89,10 @@ function formatMeetingEffectLabel(key: string): string {
       return 'Popularity';
     case 'executive_mood':
       return 'Exec Mood';
+    case 'press_story_flag':
+      return 'Press Story';
+    case 'press_momentum':
+      return 'Press Buzz';
     default:
       return key.replace(/_/g, ' ');
   }

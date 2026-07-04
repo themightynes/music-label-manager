@@ -44,7 +44,6 @@ describe('isRenderableEffectKey', () => {
   it('rejects dead/non-canonical keys', () => {
     for (const deadKey of [
       'quality_bonus',
-      'press_story_flag',
       'sellthrough_hint',
       'venue_relationships',
       'quality_risk',
@@ -55,14 +54,20 @@ describe('isRenderableEffectKey', () => {
       expect(isRenderableEffectKey(deadKey)).toBe(false);
     }
   });
+
+  it('accepts the PR-3 press channel keys (press_story_flag, press_momentum)', () => {
+    expect(isRenderableEffectKey('press_story_flag')).toBe(true);
+    expect(isRenderableEffectKey('press_momentum')).toBe(true);
+  });
 });
 
 describe('ChoiceEffects badge honesty', () => {
   it('renders nothing for a dead (non-canonical) effect key', () => {
-    render(<ChoiceEffects choice={buildChoice({ effects_immediate: { quality_bonus: 5, press_story_flag: 1 } })} />);
+    // press_story_flag went live in exec-meetings-revival PR-3 (C2) — use a key
+    // that is still dead (quality_bonus, C1, not yet wired) for this assertion.
+    render(<ChoiceEffects choice={buildChoice({ effects_immediate: { quality_bonus: 5, quality_risk: 1 } })} />);
 
     expect(screen.queryByText(/Quality/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Press Story/)).not.toBeInTheDocument();
     // With no renderable effects, the honest "No direct effects" fallback shows.
     expect(screen.getByText('No direct effects')).toBeInTheDocument();
   });
@@ -105,5 +110,21 @@ describe('ChoiceEffects badge honesty', () => {
   it('shows "No direct effects" when both immediate and delayed are empty', () => {
     render(<ChoiceEffects choice={buildChoice()} />);
     expect(screen.getByText('No direct effects')).toBeInTheDocument();
+  });
+
+  // Exec-meetings-revival PR-3 (C2) — press channel badges are now live.
+  it('renders a value-less "Press Story" badge for press_story_flag', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { press_story_flag: 1 } })} />);
+    expect(screen.getByText('Press Story')).toBeInTheDocument();
+  });
+
+  it('renders "+N Press Buzz" for a positive press_momentum', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { press_momentum: 2 } })} />);
+    expect(screen.getByText('+2 Press Buzz')).toBeInTheDocument();
+  });
+
+  it('renders "-N Press Buzz" for a negative press_momentum', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { press_momentum: -1 } })} />);
+    expect(screen.getByText('-1 Press Buzz')).toBeInTheDocument();
   });
 });
