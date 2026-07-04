@@ -4,6 +4,37 @@
 
 ---
 
+## 📅 Session Log — July 3, 2026 (Phase 4 COMPLETE: game feel — planned, executed, live-verified in one session; PRs #100, #102, #109, #112–#117)
+
+**Phase 4 (game feel) went from "no tickets" to fully planned, built, merged, and live-verified**, running as orchestrator + one subagent per PR (Opus for high-risk/engine-adjacent, Sonnet for scoped builds), concurrent worktrees, orchestrator diff-review before every merge, self-merge-on-green-CI per session grant. Ran in parallel with (and coordinated live against) the Phase 3.5 + D6 session below — Phase 4's WeekSummary/GameHeader PRs were explicitly gated on 3.5 landing and started the hour the gate opened.
+
+**Plan**: `implementation-specs/COMPLETED/[COMPLETE] phase-4-game-feel-plan.md` — 7 PRs anchored on the week-advance moment, from a two-explorer recon (UX flow map + game-feel toolkit inventory). Scope decisions from Nes: full pass, sound IN, server-side `importance` field OK.
+
+**Shipped (all merged to `main`, CI green incl. the 3.5 grep-gate):**
+- **PR-1 #100** — `AnimatedNumber` motion primitive (static on first mount by design; animates on value change) + MetricsDashboard adoption.
+- **PR-2 #102** — `shared/utils/changeImportance.ts`: deterministic hero/notable/routine classifier, exhaustive over all 19 `GameChange` types (`assertNever` compile guard); optional additive `importance` on `GameChange`/`ChartUpdate`; ONE engine call site at WeekSummary assembly. Golden-master diff independently audited: 67 added lines, all `importance`, zero deletions (26/12/29 hero/notable/routine); run-twice stable.
+- **#109** — six ElevenLabs stings (user-generated in their account via browser automation, user-auditioned favorites, downloaded + renamed) in `client/public/audio/` with `CREDITS.md` provenance (prompts + license basis).
+- **PR-6 #112** — sound foundation: `client/src/lib/audio.ts` (plain HTMLAudioElement, autoplay-safe unlock-on-gesture, never-throws, persisted mute/volume default ON at 0.4), dock More-menu Switch+Slider control, store-level wiring with priority pick (campaign-end > hero-fanfare > tier-unlock > week-advance — one sting per week, no pile-up).
+- **PR-3 #113** — **the centerpiece**: staged WeekSummary reveal (entrance → net-income count-up → revenue → "Milestone Moments" hero card with tier unlocks MOVED INTO the modal + No. 1s → notable → routine; 1.8s total, click-anywhere skip, reduced-motion instant). `useStagedReveal` timeline hook (deliberately not XState). `unlockToasts.tsx` deleted (grep-verified single caller; modal hero placement supersedes). **Review caught two animation-defeating bugs pre-merge**: (1) count-up never played (AnimatedNumber is static on first mount; fixed by driving 0→value post-mount) and (2) `RevealGroup` defined inside the component (new identity per render → subtree remounts → transitions snapped instead of animating; fixed by hoisting to module scope). Both invisible to jsdom — caught by diff review.
+- **PR-4 #114** — anticipation beat: charged shimmer/pulse button while advancing + `WeekTransition` full-screen interstitial ("ADVANCING TO WEEK N", HoloDisc spin-up; 700ms min display so fast responses don't flash, never gates data, pointer-events none, 10s safety dismiss, reduced-motion renders nothing). Agent's own fake-timer tests caught a min-display-timer cancellation bug mid-build.
+- **PR-5 #115** — celebration tier: `ParticleBurst` SVG primitive (no new dep, no RNG — hashed per-index scatter; reduced-motion baked in), No. 1 burst over the hero card, `notable-chime` wired at the notable stage (skip/instant-suppressed; `warning` left unwired — no clean trigger), CampaignResultsModal staged (score count-up, staggered cells, entry burst, click-to-skip).
+- **PR-7 #116** — HoloDisc `pulse` prop (`ds-ring` halo, caller-owned duration) + CommandDock triggers: ~6s on a hero/notable week, ~1s on action selection. Fixed a pre-existing missing React import in CommandDock (first-ever direct test render).
+- **#117** — **the live pass found a 10-month-old bug**: WeekSummary auto-open NEVER fired — `weeklyOutcome.week === currentWeek - 1` while the engine stamps `summary.week` = the week advanced TO and increments `currentWeek` to the same value (`game-engine.ts:156,172`) → mathematically always false, dead since the Sept 2025 month→week conversion (`8e5cdbe`), masked by the old toasts (removed in #113, which made this fix load-bearing). Fixed to `=== currentWeek`.
+
+**Live verification (dev server + real browser, evidence screenshots in-session):** advance click → charged button → WeekTransition interstitial captured mid-flight → modal AUTO-OPENED (post-#117) → net-income count-up observed mid-spring (-$2,396) and settled (-$20,167) → Milestone Moments hero card glowing with a NEW ACCESS UNLOCKED entry → HoloDisc dock pulse visible on both triggers. Player's real save protected: preview-browser run used a manual backup ("phase4-preview-backup wk12") and was restored after; user-browser run used the existing Midnight Records test game. NOT verified by ear: the stings audible-in-practice check — Nes should confirm audio while playing. Gotcha for future preview passes: the preview tab reports `visibilityState: hidden`, so rAF-driven springs freeze — motion verification needs a real visible browser tab (claude-in-chrome), not the preview harness.
+
+**Decisions made:** full-pass scope + sound in scope + engine `importance` field (Nes, session start); sound assets = ElevenLabs generation over CC0 packs (Nes auditioned + starred winners); default sound ON at low volume; `warning` sting deliberately unwired; taste rule enforced in review ("annoying on the 30th week" = blocking).
+
+**Suite:** 774 → ~800+ (every PR added tests; client suite alone grew ~60 tests incl. reveal characterization, fake-timer transition tests, audio-manager unit tests, holo-disc/CommandDock pulse tests). `tsc` clean throughout.
+
+**Open threads / next steps:**
+- **Nes: audio audition** — play a few weeks with sound on; tune per-sting volume/selection if anything grates (assets swap trivially in `client/public/audio/`).
+- **C56** (façade selector re-render bail-out) unchanged — became relevant to animation code; PR-3/4 worked around it via local state per the sanctioned pattern.
+- **C58** (advance-week idempotency guard, from the D6 handoff) — good companion for any future GameHeader work; not done this session.
+- Phase 4 plan doc moved to COMPLETED; the scaling arc (Phase 0 → 4) is now **fully complete**.
+
+---
+
 ## 📅 Session Log — July 3, 2026 (Phase 3.5 + D6 COMPLETE: PRs #98–#111 minus Phase 4's, orchestrator + subagent factory)
 
 **Phase 3.5 (gameState → TanStack Query) AND D6 (whole-week transaction atomicity) both planned and fully executed in one orchestrated session** — same pattern as Phases 1–3: planner agents first, one implementation agent per PR in isolated worktrees, adversarial reviewer on every med-high-risk PR, CI-gated self-merge (user-granted this session). All merged to `main` (final: `73cb031`). Ran concurrently with the parallel Phase 4 session (PRs #100/#102/#109 landed mid-flight; coordinated via relayed constraints, no conflicts).

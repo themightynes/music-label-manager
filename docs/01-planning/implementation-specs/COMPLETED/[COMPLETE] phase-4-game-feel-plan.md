@@ -1,15 +1,15 @@
 # [READY] Phase 4: Game Feel — The Week-Advance Moment and the Juice Pass
 
 *Created: July 3, 2026 — planned from a two-agent exploration of the live tree (no code modified).*
-*Status: IN PROGRESS — PRs 1–2 merged 2026-07-03.*
+*Status: COMPLETE — all 7 PRs + assets + the auto-open fix merged 2026-07-03 (#100, #102, #109, #112–#117); live-verified in the running app.*
 *Part of the scaling arc (Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 3.5 in flight · **Phase 4: game feel**).*
 
 ## Execution status
 
 - **PR-1 ✅ MERGED** — #100 (`89d3f89`): `AnimatedNumber` primitive + MetricsDashboard net-income adoption; 8 new jsdom tests, client suite 75/75.
 - **PR-2 ✅ MERGED** — #102 (`d177cd8`): `shared/utils/changeImportance.ts` classifier (exhaustive over all 19 `GameChange` types, `assertNever` compile guard); optional additive `importance` on `GameChange`/`ChartUpdate`; single engine call site at WeekSummary assembly. Golden-master diff audited: 67 added lines, all `importance`, zero deletions (26 hero / 12 notable / 29 routine); run-twice stable. 30 classifier unit tests.
-- **PR-3..5, 7** — gated on Phase 3.5 (in flight, separate session).
-- **PR-6 (sound)** — asset gate CLEARED 2026-07-03: 6 stings generated via ElevenLabs (user-auditioned favorites), landed in `client/public/audio/` with `CREDITS.md` provenance. PR-6 implementation (audio manager + settings + wiring) can start any time.
+- **PR-3 ✅ #113** (staged reveal + 2 review-caught animation bugs fixed), **PR-4 ✅ #114** (anticipation beat), **PR-5 ✅ #115** (celebrations), **PR-7 ✅ #116** (HoloDisc pulse). **Bonus fix #117**: WeekSummary auto-open was mathematically dead since the Sept 2025 month→week conversion — found by the live pass, fixed, verified.
+- **PR-6 ✅ #109 (assets) + #112 (implementation)** — audio manager, dock settings control, priority-picked week stings.
 
 ## 0. Ground truth (verified against the working tree)
 
