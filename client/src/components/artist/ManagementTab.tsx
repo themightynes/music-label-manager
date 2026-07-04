@@ -58,6 +58,12 @@ function ManagementTabComponent({
                   : 'Artist is unhappy. Immediate attention needed to improve relationship.'
                 }
               </p>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.05]">
+                <span className="text-sm text-text-muted">Talent</span>
+                <span className={`font-mono text-sm font-medium ${(artist.talent || 0) >= 70 ? 'text-positive' : (artist.talent || 0) >= 40 ? 'text-warning' : 'text-negative'}`}>
+                  {artist.talent || 0}%
+                </span>
+              </div>
             </div>
 
             {/* Archetype Information */}

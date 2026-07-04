@@ -152,7 +152,7 @@ export function ArtistCard({
       </div>
 
       {/* Condensed Metrics */}
-      <div className="grid grid-cols-5 gap-2 mb-2 text-center">
+      <div className="grid grid-cols-6 gap-2 mb-2 text-center">
         <div className="p-1 bg-white/[0.03] rounded-chip text-xs">
           <div className="font-medium font-mono text-text-primary">{insights.projects}</div>
           <div className="text-text-muted">Projects</div>
@@ -180,6 +180,12 @@ export function ArtistCard({
             {artist.popularity || 0}%
           </div>
           <div className="text-text-muted">Popularity</div>
+        </div>
+        <div className="p-1 bg-white/[0.03] rounded-chip text-xs">
+          <div className={`font-medium font-mono ${(artist.talent || 0) >= 70 ? 'text-positive' : (artist.talent || 0) >= 40 ? 'text-warning' : 'text-negative'}`}>
+            {artist.talent || 0}%
+          </div>
+          <div className="text-text-muted">Talent</div>
         </div>
       </div>
 

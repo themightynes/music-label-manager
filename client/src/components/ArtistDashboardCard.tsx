@@ -11,6 +11,7 @@ type ArtistDashboardCardProps = {
   mood: number;
   energy: number;
   popularity: number;
+  talent: number;
   onNavigate?: () => void;
 };
 
@@ -82,6 +83,7 @@ export function ArtistDashboardCard({
   mood,
   energy,
   popularity,
+  talent,
   onNavigate,
 }: ArtistDashboardCardProps) {
   const statusMeta = getStatusLabel(status);
@@ -114,6 +116,7 @@ export function ArtistDashboardCard({
           <MetricBar label="Mood" value={mood} />
           <MetricBar label="Energy" value={energy} />
           <MetricBar label="Popularity" value={popularity} />
+          <MetricBar label="Talent" value={talent} />
         </div>
       </div>
     </div>

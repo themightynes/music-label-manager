@@ -130,6 +130,13 @@ export function ArtistDialogueModal({
     return 'bg-[rgba(233,230,244,0.1)] border-[rgba(233,230,244,0.3)] text-muted-foreground';
   };
 
+  // Helper to get talent badge color (v2: hue-tinted chip classes)
+  const getTalentColor = (talent: number): string => {
+    if (talent >= 70) return 'bg-[rgba(55,224,176,0.14)] border-[rgba(55,224,176,0.4)] text-positive';
+    if (talent >= 40) return 'bg-[rgba(245,197,66,0.14)] border-[rgba(245,197,66,0.4)] text-warning';
+    return 'bg-[rgba(255,93,138,0.14)] border-[rgba(255,93,138,0.4)] text-negative';
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -143,6 +150,9 @@ export function ArtistDialogueModal({
             </Badge>
             <Badge variant="outline" className={`rounded-pill font-mono text-[11px] ${getEnergyColor(artist.energy)}`}>
               Energy: {artist.energy}
+            </Badge>
+            <Badge variant="outline" className={`rounded-pill font-mono text-[11px] ${getTalentColor(artist.talent)}`}>
+              Talent: {artist.talent}
             </Badge>
             <Badge
               variant="outline"
