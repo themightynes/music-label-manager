@@ -374,6 +374,12 @@ export interface GameChange {
   choiceId?: string;
   choiceLabel?: string;
   appliedEffects?: Record<string, number>;
+  // Exec-meetings-revival PR-9 (C6/D): mood-modifier context on a 'meeting' change
+  // entry, set only when a non-neutral executive-mood modifier fired for that meeting.
+  // Optional/additive — old saves without these fields remain valid.
+  moodBand?: 'disgruntled' | 'neutral' | 'content' | 'inspired';
+  costMultiplier?: number;
+  effectMultiplier?: number;
 }
 
 export interface EventOccurrence {

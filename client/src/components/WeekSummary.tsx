@@ -640,6 +640,25 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                               {change.choiceLabel}
                             </p>
                           )}
+                          {/* Exec-meetings-revival PR-9: mood-modifier note when it fired. */}
+                          {change.moodBand && change.moodBand !== 'neutral' && (
+                            <Badge
+                              variant="outline"
+                              className={`mt-1 text-xs font-mono rounded-pill ${
+                                change.moodBand === 'inspired'
+                                  ? 'text-neon-cyan border-neon-cyan/40'
+                                  : change.moodBand === 'content'
+                                    ? 'text-positive border-positive/40'
+                                    : 'text-negative border-negative/40'
+                              }`}
+                            >
+                              {change.moodBand === 'inspired'
+                                ? `Inspired +${Math.round(((change.effectMultiplier ?? 1.2) - 1) * 100)}% effects`
+                                : change.moodBand === 'content'
+                                  ? `Content −${Math.round((1 - (change.costMultiplier ?? 0.9)) * 100)}% costs`
+                                  : `Disgruntled +${Math.round(((change.costMultiplier ?? 1.25) - 1) * 100)}% costs`}
+                            </Badge>
+                          )}
                           {appliedLines.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {appliedLines.map((line, lineIdx) => (

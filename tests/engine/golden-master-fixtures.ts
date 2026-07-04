@@ -163,6 +163,19 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       award_score_bonus: progression.reputation_system?.award_score_bonus ?? 2000,
       award_nominee_pool_threshold: progression.reputation_system?.award_nominee_pool_threshold ?? 5,
     }),
+    // Mirror ServerGameData.getExecMoodModifierConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-9, C6/D — executive-mood meeting-outcome modifiers).
+    getExecMoodModifierConfigSync: () => {
+      const cfg = progression.reputation_system?.exec_mood_modifiers ?? {};
+      return {
+        disgruntled_below: cfg.disgruntled_below ?? 30,
+        content_above: cfg.content_above ?? 80,
+        inspired_above: cfg.inspired_above ?? 90,
+        cost_multiplier_disgruntled: cfg.cost_multiplier_disgruntled ?? 1.25,
+        cost_multiplier_content: cfg.cost_multiplier_content ?? 0.9,
+        effect_multiplier_inspired: cfg.effect_multiplier_inspired ?? 1.2,
+      };
+    },
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],
     getAllRoles: async () => [],

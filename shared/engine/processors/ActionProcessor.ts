@@ -45,6 +45,12 @@ import { ArtistChangeHelpers } from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
 import { seededRandom } from '../../utils/seededRandom';
+import {
+  getMoodModifiers,
+  applyMoodModifiersToEffects,
+  isNeutral,
+  type MoodModifiers,
+} from '../../utils/executiveMoodModifier';
 
 /**
  * Effect keys that applyEffects's switch actually implements (PR-1, truth infrastructure).
@@ -198,6 +204,34 @@ export class ActionProcessor {
       console.log(`[GAME-ENGINE] Global targeting: Effects will apply to all signed artists`);
     }
 
+    // Exec-meetings-revival PR-9 (C6/D) — executive-mood meeting-outcome modifier.
+    // HOIST the executive fetch ABOVE effect application so the exec's CURRENT mood
+    // can scale this meeting's numeric effects and delayed queue BEFORE they land.
+    // CEO meetings have no executive row → no modifier ever. The already-fetched
+    // executive is threaded into processExecutiveActions to avoid a double-fetch
+    // (its mood/loyalty update semantics stay byte-identical — see that method).
+    const executiveId = action.metadata?.executiveId;
+    const roleIdForExec = action.metadata?.roleId;
+    let executiveForMeeting: any = null;
+    if (roleIdForExec !== 'ceo' && executiveId) {
+      executiveForMeeting = await ctx.storage.getExecutive(executiveId, dbTransaction);
+    }
+
+    // Compute the mood modifiers (neutral no-op when no exec row / mood 30-80).
+    let moodModifiers: MoodModifiers | null = null;
+    if (executiveForMeeting && typeof executiveForMeeting.mood === 'number') {
+      const config = ctx.gameData.getExecMoodModifierConfigSync();
+      moodModifiers = getMoodModifiers(executiveForMeeting.mood, config);
+      if (!isNeutral(moodModifiers)) {
+        console.log(
+          `[EXEC MOOD MODIFIER] ${executiveForMeeting.role} mood ${executiveForMeeting.mood} → ` +
+          `band=${moodModifiers.band}, costMultiplier=${moodModifiers.costMultiplier}, ` +
+          `effectMultiplier=${moodModifiers.effectMultiplier}`
+        );
+      }
+    }
+    const modifierFired = moodModifiers != null && !isNeutral(moodModifiers);
+
     // Apply immediate effects
     // Exec-meetings-revival PR-2: captured outside the `if` so the 'meeting' change
     // entry below can carry the actual numeric effects passed to applyEffects, even
@@ -210,16 +244,34 @@ export class ActionProcessor {
           appliedEffects[key] = value;
         }
       }
-      await this.applyEffects(ctx, appliedEffects, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+      // PR-9: transform through the shared mood util BEFORE applyEffects so the
+      // scaled numbers are what actually land (and match the client Impact Preview,
+      // which routes the same util). Neutral/no-exec → identity transform.
+      const immediateToApply = moodModifiers
+        ? applyMoodModifiersToEffects(appliedEffects, moodModifiers)
+        : appliedEffects;
+      // Reflect the scaled numbers in the summary too.
+      if (moodModifiers) {
+        for (const key of Object.keys(appliedEffects)) {
+          appliedEffects[key] = immediateToApply[key];
+        }
+      }
+      await this.applyEffects(ctx, immediateToApply, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
     }
 
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
     if (choice.effects_delayed) {
       const flags = ctx.gameState.flags || {};
       const delayedKey = `${action.targetId}-${choiceId}-delayed`;
+      // PR-9: scale delayed effects AT QUEUE TIME so the stored flag entry holds the
+      // already-scaled values — downstream consumption (processDelayedEffects) stays
+      // untouched and never needs to know about mood.
+      const delayedEffects = moodModifiers
+        ? applyMoodModifiersToEffects(choice.effects_delayed as Record<string, number>, moodModifiers)
+        : choice.effects_delayed;
       (flags as any)[delayedKey] = {
         triggerWeek: (ctx.gameState.currentWeek || 0) + 1,
-        effects: choice.effects_delayed,
+        effects: delayedEffects,
         artistId: targetArtistId, // Preserve artist targeting for delayed effects
         targetScope: targetScope, // Preserve scope for validation
         meetingName: meetingName, // Preserve context for logging
@@ -230,7 +282,8 @@ export class ActionProcessor {
 
     // Process executive-specific updates (mood, loyalty)
     // This happens after choice effects are applied
-    // Pass choice data so we can extract mood effects
+    // Pass choice data so we can extract mood effects, and the ALREADY-FETCHED
+    // executive (PR-9) so processExecutiveActions doesn't re-fetch the row.
     const actionWithChoice = {
       ...action,
       metadata: {
@@ -238,19 +291,49 @@ export class ActionProcessor {
         choiceEffects: choice
       }
     };
-    await this.processExecutiveActions(ctx, actionWithChoice, dbTransaction);
+    await this.processExecutiveActions(ctx, actionWithChoice, dbTransaction, executiveForMeeting);
 
     summary.changes.push({
       type: 'meeting',
-      description: `Met with ${roleName}`,
+      description: modifierFired
+        ? `Met with ${roleName} — ${this.moodBandDescription(moodModifiers!, executiveForMeeting)}`
+        : `Met with ${roleName}`,
       roleId: roleId,
       // Exec-meetings-revival PR-2: enrichment so the WeekSummary meetings card has
       // real content — which meeting, which choice, and what it actually did.
       meetingId: actionId,
       choiceId: choiceId,
       choiceLabel: (choice as any).label,
-      appliedEffects
+      appliedEffects,
+      // Exec-meetings-revival PR-9: carry the mood-modifier context so the
+      // WeekSummary meetings card can note it fired. Optional/additive.
+      ...(modifierFired
+        ? {
+            moodBand: moodModifiers!.band,
+            costMultiplier: moodModifiers!.costMultiplier,
+            effectMultiplier: moodModifiers!.effectMultiplier,
+          }
+        : {})
     });
+  }
+
+  /**
+   * Exec-meetings-revival PR-9 — human copy for a fired mood modifier, used in the
+   * 'meeting' change description. Kept out of the shared util (that stays pure/data)
+   * because it's engine-facing prose.
+   */
+  private moodBandDescription(modifiers: MoodModifiers, executive: any): string {
+    const name = executive?.role ? String(executive.role).toUpperCase() : 'The exec';
+    switch (modifiers.band) {
+      case 'inspired':
+        return `${name} was inspired — effects amplified ${Math.round((modifiers.effectMultiplier - 1) * 100)}%`;
+      case 'content':
+        return `${name} was content — costs cut ${Math.round((1 - modifiers.costMultiplier) * 100)}%`;
+      case 'disgruntled':
+        return `${name} was disgruntled — costs up ${Math.round((modifiers.costMultiplier - 1) * 100)}%`;
+      default:
+        return '';
+    }
   }
 
   /**
@@ -260,7 +343,12 @@ export class ActionProcessor {
   async processExecutiveActions(
     ctx: WeekContext,
     action: GameEngineAction,
-    dbTransaction?: any
+    dbTransaction?: any,
+    // Exec-meetings-revival PR-9: the caller (processRoleMeeting) already fetched the
+    // executive row (to compute the mood modifier BEFORE effects landed) — thread it
+    // in to avoid a redundant second getExecutive round-trip. When omitted (direct
+    // callers/tests), we fall back to fetching, so behavior is byte-identical to before.
+    prefetchedExecutive?: any
   ): Promise<void> {
     const { summary } = ctx;
     // Skip CEO meetings - player IS the CEO, no executive to update
@@ -281,8 +369,8 @@ export class ActionProcessor {
     // Track that this executive was used this week
     (summary as any).usedExecutives.add(executiveId);
 
-    // Get executive from database
-    const executive = await ctx.storage.getExecutive(executiveId, dbTransaction);
+    // Get executive from database (PR-9: reuse the caller's fetch when provided).
+    const executive = prefetchedExecutive ?? await ctx.storage.getExecutive(executiveId, dbTransaction);
     if (!executive) {
       console.log('[GAME-ENGINE] Executive not found:', executiveId);
       return;

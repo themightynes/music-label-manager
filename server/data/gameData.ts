@@ -566,6 +566,35 @@ export class ServerGameData {
     };
   }
 
+  // Exec-meetings-revival PR-9 (C6/D) — executive-mood meeting-outcome modifiers.
+  // Band boundaries + cost/effect multipliers. Lives in data/balance/progression.json
+  // under reputation_system.exec_mood_modifiers. The SHARED util
+  // (shared/utils/executiveMoodModifier.ts) is the single source of the math; this
+  // accessor just feeds it the balance-tuned knobs (both engine and client preview
+  // route through the same util so they can never drift).
+  getExecMoodModifierConfigSync() {
+    const defaults = {
+      disgruntled_below: 30,
+      content_above: 80,
+      inspired_above: 90,
+      cost_multiplier_disgruntled: 1.25,
+      cost_multiplier_content: 0.9,
+      effect_multiplier_inspired: 1.2
+    };
+    if (!this.balanceData) {
+      return defaults;
+    }
+    const cfg = ((this.balanceData.reputation_system || {}) as Record<string, any>).exec_mood_modifiers || {};
+    return {
+      disgruntled_below: cfg.disgruntled_below ?? defaults.disgruntled_below,
+      content_above: cfg.content_above ?? defaults.content_above,
+      inspired_above: cfg.inspired_above ?? defaults.inspired_above,
+      cost_multiplier_disgruntled: cfg.cost_multiplier_disgruntled ?? defaults.cost_multiplier_disgruntled,
+      cost_multiplier_content: cfg.cost_multiplier_content ?? defaults.cost_multiplier_content,
+      effect_multiplier_inspired: cfg.effect_multiplier_inspired ?? defaults.effect_multiplier_inspired
+    };
+  }
+
   getBalanceConfigSync(): BalanceConfig {
     if (!this.balanceData) {
       throw new Error('Balance data not loaded. Call initialize() first.');

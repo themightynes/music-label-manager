@@ -2,6 +2,7 @@ import { assign, fromPromise, setup } from 'xstate';
 import type { RoleMeeting, DialogueChoice, Executive } from '../../../shared/types/gameTypes';
 import { fetchExecutives, fetchRoleMeetings, fetchMeetingDialogue } from '../services/executiveService';
 import { prepareAutoSelectOptions, selectTopOptions, optionToActionData, type AutoSelectOption } from '../services/executiveAutoSelect';
+import { getMoodModifiers, applyMoodModifiersToEffects, isNeutral } from '@shared/utils/executiveMoodModifier';
 
 type DialogueData = {
   prompt: string;
@@ -362,13 +363,28 @@ export const executiveMeetingMachine = setup({
           const choice = dialogue.choices.find((c: DialogueChoice) => c.id === actionData.choiceId);
           if (!choice) continue;
 
-          const immediateEffects = Object.fromEntries(
+          let immediateEffects = Object.fromEntries(
             Object.entries(choice.effects_immediate ?? {}).filter(([, value]) => typeof value === 'number')
           ) as Record<string, number>;
 
-          const delayedEffects = Object.fromEntries(
+          let delayedEffects = Object.fromEntries(
             Object.entries(choice.effects_delayed ?? {}).filter(([, value]) => typeof value === 'number')
           ) as Record<string, number>;
+
+          // Exec-meetings-revival PR-9 (C6/D) — apply the SAME shared mood modifier the
+          // engine will apply, so the preview shows the SCALED numbers the week will
+          // actually produce. Look up the executive by role from machine context; CEO
+          // (synthetic exec, no DB row) is skipped exactly like the engine skips it.
+          if (actionData.roleId !== 'ceo') {
+            const exec = context.executives.find((e) => e.role === actionData.roleId);
+            if (exec && typeof exec.mood === 'number') {
+              const modifiers = getMoodModifiers(exec.mood);
+              if (!isNeutral(modifiers)) {
+                immediateEffects = applyMoodModifiersToEffects(immediateEffects, modifiers);
+                delayedEffects = applyMoodModifiersToEffects(delayedEffects, modifiers);
+              }
+            }
+          }
 
           selectedChoices.push({
             executiveName: actionData.roleId.toUpperCase(),
