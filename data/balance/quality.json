@@ -4,6 +4,9 @@
     "max_quality": 100,
     "artist_synergy_bonus": 10,
     "pending_quality_bonus_expiry_weeks": 8,
+    "variance_widen_per_point": 0.5,
+    "outlier_chance_bonus_per_point": 0.02,
+    "pending_variance_expiry_weeks": 8,
     "budget_quality_system": {
       "enabled": true,
       "calculation_method": "dynamic_minimum_viable_cost",

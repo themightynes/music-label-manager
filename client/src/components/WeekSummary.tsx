@@ -97,6 +97,14 @@ function formatMeetingEffectLabel(key: string): string {
       return 'Quality';
     case 'awareness_boost':
       return 'Buzz';
+    case 'variance_up':
+      // Exec-meetings-revival PR-6 (C4) — a volatility knob, not a value delta.
+      return 'Volatility';
+    case 'rep_swing':
+      // Exec-meetings-revival PR-6 (C4) — pre-roll gamble magnitude when shown
+      // at choice-preview time; post-roll the appliedEffects value IS the
+      // resolved reputation delta (see formatAppliedEffects's own-sign handling).
+      return 'Rep Gamble';
     default:
       return key.replace(/_/g, ' ');
   }
@@ -115,7 +123,14 @@ function formatAppliedEffects(effects: Record<string, number> | undefined): stri
         // channel PRs land — never render a badge the engine didn't apply.
         (LIVE_EFFECT_KEYS.has(key) || key === 'executive_mood')
     )
-    .map(([key, value]) => `${value > 0 ? '+' : ''}${value} ${formatMeetingEffectLabel(key)}`);
+    .map(([key, value]) => {
+      // variance_up is a volatility magnitude, not a signed value delta — always
+      // rendered with ± regardless of the (rare) authored sign.
+      if (key === 'variance_up') {
+        return `±${Math.abs(value)} ${formatMeetingEffectLabel(key)}`;
+      }
+      return `${value > 0 ? '+' : ''}${value} ${formatMeetingEffectLabel(key)}`;
+    });
 }
 
 export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekResults, onClose }: WeekSummaryProps) {

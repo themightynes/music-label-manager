@@ -220,6 +220,48 @@ describe('WeekSummary meetings card', () => {
     expect(screen.getByText(/Buzz paid off: \+24 awareness seeded into "Planned Single"/)).toBeInTheDocument();
   });
 
+  it('renders a variance_up applied-effect line as ±N Volatility (exec-meetings-revival PR-6)', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Met with Role ar',
+        meetingId: 'ar_single_choice',
+        choiceId: 'greenlight_weird',
+        choiceLabel: 'Greenlight the weird one',
+        appliedEffects: { variance_up: 1 },
+        importance: 'routine',
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('±1 Volatility')).toBeInTheDocument();
+  });
+
+  it('renders a rep_swing applied-effect line with the ROLLED (post-roll) signed value (exec-meetings-revival PR-6)', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Reputation gamble paid off: +2 reputation',
+        appliedEffects: { rep_swing: 2 },
+        importance: 'routine',
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('+2 Rep Gamble')).toBeInTheDocument();
+    expect(screen.getByText(/Reputation gamble paid off: \+2 reputation/)).toBeInTheDocument();
+  });
+
+  it('renders the banked-variance consumption line pushed by SongGenerationProcessor', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Riskier session this week: outcomes swung wider (±2 volatility)',
+        amount: 2,
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText(/Riskier session this week: outcomes swung wider \(±2 volatility\)/)).toBeInTheDocument();
+  });
+
   it('does not render the meetings card when there are no meeting-bucket changes', () => {
     renderSummary([
       { type: 'revenue', description: 'Streaming revenue', amount: 1000, importance: 'routine' } as GameChange,

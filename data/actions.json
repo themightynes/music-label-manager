@@ -81,7 +81,7 @@
           },
           "effects_delayed": {
             "venue_relationships": 1,
-            "quality_risk": 1
+            "variance_up": 1
           }
         },
         {
@@ -173,7 +173,7 @@
           },
           "effects_delayed": {
             "quality_bonus": 2,
-            "delay_risk": 1
+            "variance_up": 1
           }
         },
         {
@@ -320,7 +320,7 @@
           },
           "effects_delayed": {
             "quality_bonus": 6,
-            "delay_risk": 1
+            "variance_up": 1
           }
         }
       ]
@@ -344,7 +344,7 @@
           "effects_immediate": {},
           "effects_delayed": {
             "authenticity_bonus": 2,
-            "commercial_risk": 1
+            "variance_up": 1
           }
         },
         {
@@ -724,7 +724,7 @@
           "effects_immediate": {},
           "effects_delayed": {
             "industry_respect": 2,
-            "blacklist_risk": -2
+            "rep_swing": 2
           }
         }
       ]
@@ -749,7 +749,7 @@
           },
           "effects_delayed": {
             "awareness_boost": 3,
-            "detection_risk": 2
+            "variance_up": 2
           }
         },
         {

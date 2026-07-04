@@ -66,6 +66,11 @@ describe('isRenderableEffectKey', () => {
   it('accepts the PR-5 awareness channel key (awareness_boost)', () => {
     expect(isRenderableEffectKey('awareness_boost')).toBe(true);
   });
+
+  it('accepts the PR-6 variance channel keys (variance_up, rep_swing)', () => {
+    expect(isRenderableEffectKey('variance_up')).toBe(true);
+    expect(isRenderableEffectKey('rep_swing')).toBe(true);
+  });
 });
 
 describe('ChoiceEffects badge honesty', () => {
@@ -155,5 +160,16 @@ describe('ChoiceEffects badge honesty', () => {
   it('renders "-N Buzz" for a negative awareness_boost', () => {
     render(<ChoiceEffects choice={buildChoice({ effects_delayed: { awareness_boost: -1 } })} />);
     expect(screen.getByText('-1 Buzz')).toBeInTheDocument();
+  });
+
+  // Exec-meetings-revival PR-6 (C4) — variance/risk channel badges are now live.
+  it('renders "±N Volatility" for variance_up (always ±, never signed)', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { variance_up: 1 } })} />);
+    expect(screen.getByText('±1 Volatility')).toBeInTheDocument();
+  });
+
+  it('renders "±N Rep Gamble" for rep_swing', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { rep_swing: 2 } })} />);
+    expect(screen.getByText('±2 Rep Gamble')).toBeInTheDocument();
   });
 });

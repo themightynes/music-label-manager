@@ -148,6 +148,13 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       awareness_boost_points_per_unit: markets.market_formulas?.awareness_system?.awareness_boost_points_per_unit ?? 8,
       pending_awareness_boost_expiry_weeks: markets.market_formulas?.awareness_system?.pending_awareness_boost_expiry_weeks ?? 8,
     }),
+    // Mirror ServerGameData.getVarianceConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-6, C4 — outcome variance/risk channel).
+    getVarianceConfigSync: () => ({
+      variance_widen_per_point: quality.quality_system?.variance_widen_per_point ?? 0.5,
+      outlier_chance_bonus_per_point: quality.quality_system?.outlier_chance_bonus_per_point ?? 0.02,
+      pending_variance_expiry_weeks: quality.quality_system?.pending_variance_expiry_weeks ?? 8,
+    }),
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],
     getAllRoles: async () => [],

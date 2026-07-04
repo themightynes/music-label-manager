@@ -44,6 +44,7 @@ import type { WeekSummary } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
+import { seededRandom } from '../../utils/seededRandom';
 
 /**
  * Effect keys that applyEffects's switch actually implements (PR-1, truth infrastructure).
@@ -65,7 +66,10 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   // Exec-meetings-revival PR-4 (C1 — next-release quality channel):
   'quality_bonus',
   // Exec-meetings-revival PR-5 (C3 — next-release awareness channel):
-  'awareness_boost'
+  'awareness_boost',
+  // Exec-meetings-revival PR-6 (C4 — outcome variance/risk channel):
+  'variance_up',
+  'rep_swing'
 ]);
 
 export class ActionProcessor {
@@ -650,6 +654,73 @@ export class ActionProcessor {
           break;
         }
 
+        case 'variance_up': {
+          // Exec-meetings-revival PR-6 (C4) — outcome variance/risk channel. Signed
+          // points bank into flags.pendingVariance; consumed by the next song(s)
+          // generated (SongGenerationProcessor.calculateEnhancedSongQuality widens
+          // baseVarianceRange and raises the outlier-roll thresholds using this
+          // pool), then zeroed in processRecordingProjects (mirrors PR-4's quality
+          // bank exactly — same songsGeneratedThisWeek gating). Stamps
+          // pendingVarianceWeek so processDelayedEffects can expire an unconsumed
+          // bank after pending_variance_expiry_weeks (data/balance/quality.json).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pendingVariance === 'number' ? flags.pendingVariance : 0;
+          flags.pendingVariance = previous + value;
+          flags.pendingVarianceWeek = ctx.gameState.currentWeek || 0;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Outcomes ${value > 0 ? 'more volatile' : 'more predictable'} for the next recording session (${value > 0 ? '+' : ''}${value})`,
+            amount: value,
+            appliedEffects: { variance_up: value }
+          });
+          console.log(`[EFFECT PROCESSING] variance_up effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingVariance}, stamped week ${flags.pendingVarianceWeek})`);
+          break;
+        }
+
+        case 'rep_swing': {
+          // Exec-meetings-revival PR-6 (C4) — immediate reputation gamble. Resolves
+          // RIGHT HERE via an ISOLATED deterministic seeded roll (shared/utils/
+          // seededRandom.ts) — NOT ctx.getRandom, so the engine's pinned RNG stream
+          // and its draw count are completely undisturbed by this effect. The
+          // authored value is the magnitude of the gamble; the roll maps to a
+          // uniform integer in [-value, +value] and is applied to reputation with
+          // the same 0-100 clamp the 'reputation' case above uses.
+          const gameId = ctx.gameState.id || 'unknown-game';
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const seed = `${gameId}-week${currentWeek}-repswing-${meetingName || 'unknown-meeting'}-${choiceId || 'unknown-choice'}`;
+          const magnitude = Math.abs(value);
+          const roll = seededRandom(seed); // [0, 1)
+          // Map [0,1) to a uniform integer in [-magnitude, +magnitude] (2*magnitude+1 buckets).
+          const rolledValue = magnitude === 0
+            ? 0
+            : Math.floor(roll * (2 * magnitude + 1)) - magnitude;
+
+          const previousReputation = ctx.gameState.reputation || 0;
+          ctx.gameState.reputation = Math.max(0, Math.min(100, previousReputation + rolledValue));
+
+          if (!summary.reputationChanges) {
+            summary.reputationChanges = {};
+          }
+          summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + rolledValue;
+
+          const outcomeLabel = rolledValue > 0
+            ? `paid off: +${rolledValue} reputation`
+            : rolledValue < 0
+              ? `backfired: ${rolledValue} reputation`
+              : `was a wash: no reputation change`;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Reputation gamble ${outcomeLabel}`,
+            amount: rolledValue,
+            appliedEffects: { rep_swing: rolledValue }
+          });
+          console.log(`[EFFECT PROCESSING] rep_swing effect: gambled ±${magnitude}, rolled ${rolledValue > 0 ? '+' : ''}${rolledValue} (seed: ${seed})`);
+          break;
+        }
+
         case 'press_momentum': {
           // Exec-meetings-revival PR-3 (C2) — decaying pool. Accumulates across
           // meetings; feeds a small additive bonus to press-pickup chance and decays
@@ -830,6 +901,25 @@ export class ActionProcessor {
           console.log(`[AWARENESS BOOST] Expired unconsumed boost (${flags.pendingAwarenessBoost}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingAwarenessBoost = 0;
           delete flags.pendingAwarenessBoostWeek;
+        }
+      }
+
+      // Exec-meetings-revival PR-6 (C4) — pendingVariance expiry. If a banked
+      // variance-widen pool goes unconsumed (no song generation cleared it — see
+      // SongGenerationProcessor.processRecordingProjects) for
+      // pending_variance_expiry_weeks weeks after it was stamped, drop it so
+      // players can't bank indefinitely. Same expiry pattern as the PR-4/PR-5
+      // banks above; runs AFTER the triggered-entry loop so a variance_up that
+      // just landed via a delayed effect this week survives to be read by this
+      // week's song generation (2b6f28e ordering lesson).
+      if (typeof flags.pendingVariance === 'number' && flags.pendingVariance !== 0) {
+        const stampedWeek = typeof flags.pendingVarianceWeek === 'number' ? flags.pendingVarianceWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getVarianceConfigSync().pending_variance_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[VARIANCE] Expired unconsumed variance pool (${flags.pendingVariance}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pendingVariance = 0;
+          delete flags.pendingVarianceWeek;
         }
       }
 

@@ -5,7 +5,7 @@ import { Card, CardContent } from '../ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
 import { BorderTrail } from '../motion-primitives/border-trail';
 import { GlowEffect } from '../motion-primitives/glow-effect';
-import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft, Shuffle } from 'lucide-react';
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 
@@ -43,10 +43,18 @@ function EffectBadge({
   selectedArtistName?: string;
 }) {
   const isPositive = value > 0;
-  const Icon = isDelayed ? Clock : (isPositive ? TrendingUp : TrendingDown);
-  const colorClass = isPositive
-    ? 'text-positive bg-positive/10 border-positive/40'
-    : 'text-negative bg-negative/10 border-negative/40';
+  // Exec-meetings-revival PR-6 (C4): variance_up is neither good nor bad — it's a
+  // volatility knob, not a value delta — so it renders neutral instead of
+  // green/red regardless of sign. rep_swing IS a directional value (a
+  // reputation change, even if gambled), so it keeps the normal positive/
+  // negative styling once resolved.
+  const isNeutralEffect = effect === 'variance_up';
+  const Icon = isDelayed ? Clock : (isNeutralEffect ? Shuffle : (isPositive ? TrendingUp : TrendingDown));
+  const colorClass = isNeutralEffect
+    ? 'text-neon-amber bg-neon-amber/10 border-neon-amber/40'
+    : isPositive
+      ? 'text-positive bg-positive/10 border-positive/40'
+      : 'text-negative bg-negative/10 border-negative/40';
   const delayedClass = isDelayed ? 'border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac' : '';
 
   const formatEffect = (key: string, val: number) => {
@@ -84,6 +92,16 @@ function EffectBadge({
       case 'awareness_boost':
         // Exec-meetings-revival PR-5 (C3) — next-release awareness channel.
         return `${val > 0 ? '+' : ''}${val} Buzz`;
+      case 'variance_up':
+        // Exec-meetings-revival PR-6 (C4) — a volatility knob, not a value delta;
+        // always shown with a magnitude (±N), never colored green/red (see
+        // isNeutralEffect above).
+        return `±${Math.abs(val)} Volatility`;
+      case 'rep_swing':
+        // Exec-meetings-revival PR-6 (C4) — the authored value here is the
+        // GAMBLE's magnitude (pre-roll), shown at the choice-preview stage before
+        // the isolated seeded roll resolves it.
+        return `±${Math.abs(val)} Rep Gamble`;
       default:
         // Unreachable in practice — the caller filters to isRenderableEffectKey
         // before rendering an EffectBadge at all. Kept as a safe fallback only.

@@ -523,6 +523,26 @@ export class ServerGameData {
     };
   }
 
+  // Exec-meetings-revival PR-6 (C4): variance-channel knobs — how much a banked
+  // pendingVariance point widens the next song's variance band and raises the
+  // outlier-roll chance, plus its unconsumed-bank expiry (same pattern as C1).
+  getVarianceConfigSync() {
+    if (!this.balanceData) {
+      return {
+        variance_widen_per_point: 0.5,
+        outlier_chance_bonus_per_point: 0.02,
+        pending_variance_expiry_weeks: 8
+      };
+    }
+
+    const qualitySystem = (this.balanceData.quality_system || {}) as Record<string, any>;
+    return {
+      variance_widen_per_point: qualitySystem.variance_widen_per_point ?? 0.5,
+      outlier_chance_bonus_per_point: qualitySystem.outlier_chance_bonus_per_point ?? 0.02,
+      pending_variance_expiry_weeks: qualitySystem.pending_variance_expiry_weeks ?? 8
+    };
+  }
+
   getBalanceConfigSync(): BalanceConfig {
     if (!this.balanceData) {
       throw new Error('Balance data not loaded. Call initialize() first.');
