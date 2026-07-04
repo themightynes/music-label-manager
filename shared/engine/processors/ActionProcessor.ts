@@ -663,80 +663,135 @@ export class ActionProcessor {
           break;
 
         case 'artist_energy':
-          // UNIFIED FORMAT: Apply energy change to all signed artists using per-artist objects
-          // This matches the artist_mood global targeting pattern for consistency
+          // Per-artist energy targeting (C60): mirrors artist_mood's artistId-targeting
+          // branch above — when an artistId is present (e.g. a delayed effect from a
+          // one-on-one artist dialogue), apply only to that artist. Otherwise, preserve
+          // the existing apply-to-all-signed-artists behavior (role meetings legitimately
+          // target the whole roster).
           if (!summary.artistChanges) summary.artistChanges = {};
 
-          // Load all signed artists to apply energy change globally
-          const signedArtistsForEnergy = await new ArtistStateProcessor().loadSignedArtists(ctx);
+          if (artistId) {
+            // Per-artist targeting: Apply energy change to specific artist
+            ArtistChangeHelpers.addEnergy(summary.artistChanges, artistId, value);
 
-          if (signedArtistsForEnergy.length === 0) {
-            console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
-            break;
-          }
+            console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (target: ${artistId})`);
 
-          // Apply energy change to each signed artist (per-artist object format)
-          signedArtistsForEnergy.forEach(artist => {
-            ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, value);
-          });
+            // Add to summary changes for UI display (using mood type with energyBoost field)
+            // BUGFIX: Set moodChange for UI badge display (WeekSummary uses moodChange || 0)
+            summary.changes.push({
+              type: 'mood',
+              description: `Artist energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+              energyBoost: value,
+              amount: value,
+              moodChange: value, // Add moodChange so UI badge shows correct value
+              artistId: artistId
+            });
 
-          // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForEnergy.length} signed artists`);
-
-          // Add to summary changes for UI display (using mood type with energyBoost field)
-          // BUGFIX: Set moodChange for UI badge display (WeekSummary uses moodChange || 0)
-          summary.changes.push({
-            type: 'mood',
-            description: `All artists' energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
-            energyBoost: value,
-            amount: value,
-            moodChange: value // Add moodChange so UI badge shows correct value
-          });
-
-          // Validation: Warn if accumulated changes are extreme
-          signedArtistsForEnergy.forEach(artist => {
-            const artistEnergyChange = ArtistChangeHelpers.getEnergy(summary.artistChanges, artist.id);
+            // Validation: Warn if accumulated changes are extreme
+            const artistEnergyChange = ArtistChangeHelpers.getEnergy(summary.artistChanges, artistId);
             if (Math.abs(artistEnergyChange) > 10) {
-              console.warn(`[EFFECT VALIDATION] Large accumulated energy change for ${artist.name}: ${artistEnergyChange}`);
+              console.warn(`[EFFECT VALIDATION] Large accumulated energy change for artist ${artistId}: ${artistEnergyChange}`);
             }
-          });
+          } else {
+            // UNIFIED FORMAT: Apply energy change to all signed artists using per-artist objects
+            // This matches the artist_mood global targeting pattern for consistency
+            // Load all signed artists to apply energy change globally
+            const signedArtistsForEnergy = await new ArtistStateProcessor().loadSignedArtists(ctx);
+
+            if (signedArtistsForEnergy.length === 0) {
+              console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+              break;
+            }
+
+            // Apply energy change to each signed artist (per-artist object format)
+            signedArtistsForEnergy.forEach(artist => {
+              ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, value);
+            });
+
+            // Add comprehensive logging
+            console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForEnergy.length} signed artists`);
+
+            // Add to summary changes for UI display (using mood type with energyBoost field)
+            // BUGFIX: Set moodChange for UI badge display (WeekSummary uses moodChange || 0)
+            summary.changes.push({
+              type: 'mood',
+              description: `All artists' energy ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+              energyBoost: value,
+              amount: value,
+              moodChange: value // Add moodChange so UI badge shows correct value
+            });
+
+            // Validation: Warn if accumulated changes are extreme
+            signedArtistsForEnergy.forEach(artist => {
+              const artistEnergyChange = ArtistChangeHelpers.getEnergy(summary.artistChanges, artist.id);
+              if (Math.abs(artistEnergyChange) > 10) {
+                console.warn(`[EFFECT VALIDATION] Large accumulated energy change for ${artist.name}: ${artistEnergyChange}`);
+              }
+            });
+          }
           break;
 
         case 'artist_popularity':
-          // UNIFIED FORMAT: Apply popularity change to all signed artists using per-artist objects
-          // This matches the artist_mood global targeting pattern for consistency
+          // Per-artist popularity targeting (C60): mirrors artist_mood's artistId-targeting
+          // branch above — when an artistId is present (e.g. a delayed effect from a
+          // one-on-one artist dialogue), apply only to that artist. Otherwise, preserve
+          // the existing apply-to-all-signed-artists behavior (role meetings legitimately
+          // target the whole roster).
           if (!summary.artistChanges) summary.artistChanges = {};
 
-          // Load all signed artists to apply popularity change globally
-          const signedArtistsForPopularity = await new ArtistStateProcessor().loadSignedArtists(ctx);
+          if (artistId) {
+            // Per-artist targeting: Apply popularity change to specific artist
+            ArtistChangeHelpers.addPopularity(summary.artistChanges, artistId, value);
 
-          if (signedArtistsForPopularity.length === 0) {
-            console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
-            break;
-          }
+            console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (target: ${artistId})`);
 
-          // Apply popularity change to each signed artist (per-artist object format)
-          signedArtistsForPopularity.forEach(artist => {
-            ArtistChangeHelpers.addPopularity(summary.artistChanges, artist.id, value);
-          });
+            // Add to summary changes for UI display
+            summary.changes.push({
+              type: 'popularity',
+              description: `Artist popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+              amount: value,
+              artistId: artistId
+            });
 
-          // Add comprehensive logging
-          console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForPopularity.length} signed artists`);
-
-          // Add to summary changes for UI display
-          summary.changes.push({
-            type: 'popularity',
-            description: `All artists' popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
-            amount: value
-          });
-
-          // Validation: Warn if accumulated changes are extreme
-          signedArtistsForPopularity.forEach(artist => {
-            const artistPopularityChange = ArtistChangeHelpers.getPopularity(summary.artistChanges, artist.id);
+            // Validation: Warn if accumulated changes are extreme
+            const artistPopularityChange = ArtistChangeHelpers.getPopularity(summary.artistChanges, artistId);
             if (Math.abs(artistPopularityChange) > 10) {
-              console.warn(`[EFFECT VALIDATION] Large accumulated popularity change for ${artist.name}: ${artistPopularityChange}`);
+              console.warn(`[EFFECT VALIDATION] Large accumulated popularity change for artist ${artistId}: ${artistPopularityChange}`);
             }
-          });
+          } else {
+            // UNIFIED FORMAT: Apply popularity change to all signed artists using per-artist objects
+            // This matches the artist_mood global targeting pattern for consistency
+            // Load all signed artists to apply popularity change globally
+            const signedArtistsForPopularity = await new ArtistStateProcessor().loadSignedArtists(ctx);
+
+            if (signedArtistsForPopularity.length === 0) {
+              console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+              break;
+            }
+
+            // Apply popularity change to each signed artist (per-artist object format)
+            signedArtistsForPopularity.forEach(artist => {
+              ArtistChangeHelpers.addPopularity(summary.artistChanges, artist.id, value);
+            });
+
+            // Add comprehensive logging
+            console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForPopularity.length} signed artists`);
+
+            // Add to summary changes for UI display
+            summary.changes.push({
+              type: 'popularity',
+              description: `All artists' popularity ${value > 0 ? 'increased' : 'decreased'} from meeting decision (${value > 0 ? '+' : ''}${value})`,
+              amount: value
+            });
+
+            // Validation: Warn if accumulated changes are extreme
+            signedArtistsForPopularity.forEach(artist => {
+              const artistPopularityChange = ArtistChangeHelpers.getPopularity(summary.artistChanges, artist.id);
+              if (Math.abs(artistPopularityChange) > 10) {
+                console.warn(`[EFFECT VALIDATION] Large accumulated popularity change for ${artist.name}: ${artistPopularityChange}`);
+              }
+            });
+          }
           break;
 
         case 'press_story_flag': {
