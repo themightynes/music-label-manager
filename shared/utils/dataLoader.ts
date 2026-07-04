@@ -333,7 +333,12 @@ export class GameDataLoader {
         prompt: z.string().optional(),
         prompt_before_selection: z.string().optional(),
         target_scope: z.enum(['global', 'predetermined', 'user_selected']).optional(),
-        choices: z.array(z.any()).optional(),
+        choices: z.array(z.object({
+          id: z.string(),
+          label: z.string(),
+          effects_immediate: z.record(z.number()).optional(),
+          effects_delayed: z.record(z.number()).optional()
+        }).passthrough()).optional(),
         details: z.object({
           cost: z.string(),
           duration: z.string(),
@@ -363,7 +368,12 @@ export class GameDataLoader {
       if (error.errors) {
         console.error('Validation errors:', JSON.stringify(error.errors, null, 2));
       }
-      // Return the raw data anyway for now to not break the app
+      // PR-1 truth infrastructure: fail loudly in dev/test so schema drift is caught at the
+      // source instead of silently propagating malformed choice data into the engine.
+      if (process.env.NODE_ENV !== 'production') {
+        throw error;
+      }
+      // Return the raw data anyway in production for now to not break the app
       console.warn('WARNING: Returning unvalidated actions data');
       return data;
     }

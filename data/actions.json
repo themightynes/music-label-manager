@@ -4,42 +4,6 @@
   "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting. v2.3.0: Migrated to shared Zod schema contracts for type-safe validation across frontend/backend.",
   "weekly_actions": [
     {
-      "id": "TEST_mood_boost_immediate",
-      "name": "CEO: Artist Roundtable",
-      "type": "role_meeting",
-      "icon": "fas fa-flask",
-      "description": "Gather all Artist for a Meet & Greet with the CEO",
-      "role_id": "ceo",
-      "meeting_id": "test_mood",
-      "category": "business",
-      "target_scope": "global",
-      "prompt": "The general consensus is that it's tough out there. What should we do?",
-      "choices": [
-        {
-          "id": "yes_boost",
-          "label": "Yes - Boost mood by +5 immediately",
-          "effects_immediate": {
-            "artist_mood": 5
-          },
-          "effects_delayed": {}
-        },
-        {
-          "id": "no_boost",
-          "label": "No boost",
-          "effects_immediate": {},
-          "effects_delayed": {}
-        },
-        {
-          "id": "small_boost",
-          "label": "Small Pep Talk +3",
-          "effects_immediate": {
-            "artist_mood": 3
-          },
-          "effects_delayed": {}
-        }
-      ]
-    },
-    {
       "id": "ceo_priorities",
       "name": "CEO: Strategic Priorities",
       "type": "role_meeting",

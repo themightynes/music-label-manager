@@ -45,6 +45,22 @@ import { ArtistChangeHelpers } from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
 
+/**
+ * Effect keys that applyEffects's switch actually implements (PR-1, truth infrastructure).
+ * 'executive_mood' is intentionally excluded — it's read directly out of
+ * effects_immediate by processExecutiveActions (outside this switch) and legitimately
+ * never reaches applyEffects's per-key loop as a "live" key; see the default case below,
+ * which special-cases it so it doesn't trigger the unknown-key warning.
+ */
+export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
+  'money',
+  'reputation',
+  'creative_capital',
+  'artist_mood',
+  'artist_energy',
+  'artist_popularity'
+]);
+
 export class ActionProcessor {
   /**
    * Processes a single player action
@@ -184,7 +200,7 @@ export class ActionProcessor {
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
     if (choice.effects_delayed) {
       const flags = ctx.gameState.flags || {};
-      const delayedKey = `${action.targetId}-${action.details?.choiceId}-delayed`;
+      const delayedKey = `${action.targetId}-${choiceId}-delayed`;
       (flags as any)[delayedKey] = {
         triggerWeek: (ctx.gameState.currentWeek || 0) + 1,
         effects: choice.effects_delayed,
@@ -540,6 +556,18 @@ export class ActionProcessor {
               console.warn(`[EFFECT VALIDATION] Large accumulated popularity change for ${artist.name}: ${artistPopularityChange}`);
             }
           });
+          break;
+
+        default:
+          // MISSING: unknown/unimplemented effect key encountered by applyEffects (PR-1 truth
+          // infrastructure). 'executive_mood' is deliberately silent here — it's consumed
+          // directly out of effects_immediate by processExecutiveActions, not via this switch.
+          if (key !== 'executive_mood') {
+            console.warn(
+              `[EFFECT VALIDATION] Unknown effect key "${key}" (value: ${value}) dropped` +
+              `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}${targetScope ? `, scope: ${targetScope}` : ''}`
+            );
+          }
           break;
       }
     }
