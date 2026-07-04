@@ -93,6 +93,8 @@ function formatMeetingEffectLabel(key: string): string {
       return 'Press Story';
     case 'press_momentum':
       return 'Press Buzz';
+    case 'quality_bonus':
+      return 'Quality';
     default:
       return key.replace(/_/g, ' ');
   }

@@ -61,7 +61,9 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'artist_popularity',
   // Exec-meetings-revival PR-3 (C2 — press/hype momentum channel):
   'press_story_flag',
-  'press_momentum'
+  'press_momentum',
+  // Exec-meetings-revival PR-4 (C1 — next-release quality channel):
+  'quality_bonus'
 ]);
 
 export class ActionProcessor {
@@ -591,6 +593,29 @@ export class ActionProcessor {
           break;
         }
 
+        case 'quality_bonus': {
+          // Exec-meetings-revival PR-4 (C1) — next-release quality channel. Signed
+          // points bank into flags.pendingQualityBonus; consumed as an ADDITIVE
+          // post-formula bonus (then clamped) by every song generated in the week
+          // that first consumes it (SongGenerationProcessor.calculateEnhancedSongQuality
+          // + the zero-out in processRecordingProjects). Stamps pendingQualityBonusWeek
+          // so processDelayedEffects can expire an unconsumed bank after N weeks
+          // (pending_quality_bonus_expiry_weeks, data/balance/quality.json).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pendingQualityBonus === 'number' ? flags.pendingQualityBonus : 0;
+          flags.pendingQualityBonus = previous + value;
+          flags.pendingQualityBonusWeek = ctx.gameState.currentWeek || 0;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Studio focus ${value > 0 ? 'banked' : 'cost'} ${value > 0 ? '+' : ''}${value} quality for the next recording session`,
+            amount: value
+          });
+          console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingQualityBonus}, stamped week ${flags.pendingQualityBonusWeek})`);
+          break;
+        }
+
         case 'press_momentum': {
           // Exec-meetings-revival PR-3 (C2) — decaying pool. Accumulates across
           // meetings; feeds a small additive bonus to press-pickup chance and decays
@@ -710,6 +735,23 @@ export class ActionProcessor {
           console.log(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
         }
         flags.pressMomentum = decayed;
+      }
+
+      // Exec-meetings-revival PR-4 (C1) — pendingQualityBonus expiry. If a banked
+      // quality bonus goes unconsumed (no song generation cleared it — see
+      // SongGenerationProcessor.processRecordingProjects) for
+      // pending_quality_bonus_expiry_weeks weeks after it was stamped, drop it so
+      // players can't bank indefinitely. Same once-per-week home as the press
+      // momentum decay above.
+      if (typeof flags.pendingQualityBonus === 'number' && flags.pendingQualityBonus !== 0) {
+        const stampedWeek = typeof flags.pendingQualityBonusWeek === 'number' ? flags.pendingQualityBonusWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getQualityBonusConfigSync().pending_quality_bonus_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[QUALITY BONUS] Expired unconsumed bonus (${flags.pendingQualityBonus}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pendingQualityBonus = 0;
+          delete flags.pendingQualityBonusWeek;
+        }
       }
 
       ctx.gameState.flags = flags;

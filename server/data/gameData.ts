@@ -489,6 +489,20 @@ export class ServerGameData {
     };
   }
 
+  // Exec-meetings-revival PR-4 (C1): pending-quality-bonus expiry knob.
+  getQualityBonusConfigSync() {
+    if (!this.balanceData) {
+      return {
+        pending_quality_bonus_expiry_weeks: 8
+      };
+    }
+
+    const qualitySystem = (this.balanceData.quality_system || {}) as Record<string, any>;
+    return {
+      pending_quality_bonus_expiry_weeks: qualitySystem.pending_quality_bonus_expiry_weeks ?? 8
+    };
+  }
+
   getBalanceConfigSync(): BalanceConfig {
     if (!this.balanceData) {
       throw new Error('Balance data not loaded. Call initialize() first.');

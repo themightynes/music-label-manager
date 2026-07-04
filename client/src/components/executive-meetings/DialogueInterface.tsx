@@ -78,6 +78,9 @@ function EffectBadge({
         return 'Press Story';
       case 'press_momentum':
         return `${val > 0 ? '+' : ''}${val} Press Buzz`;
+      case 'quality_bonus':
+        // Exec-meetings-revival PR-4 (C1) — next-release quality channel.
+        return `${val > 0 ? '+' : ''}${val} Quality`;
       default:
         // Unreachable in practice — the caller filters to isRenderableEffectKey
         // before rendering an EffectBadge at all. Kept as a safe fallback only.

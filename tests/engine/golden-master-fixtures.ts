@@ -137,6 +137,11 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       max_pickups_per_release: press.max_pickups_per_release,
       press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02,
     }),
+    // Mirror ServerGameData.getQualityBonusConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-4, C1 — next-release quality channel).
+    getQualityBonusConfigSync: () => ({
+      pending_quality_bonus_expiry_weeks: quality.quality_system?.pending_quality_bonus_expiry_weeks ?? 8,
+    }),
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],
     getAllRoles: async () => [],

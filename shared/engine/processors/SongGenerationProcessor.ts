@@ -51,10 +51,44 @@ export class SongGenerationProcessor {
         return;
       }
 
+      // Exec-meetings-revival PR-4 (C1) — snapshot the banked quality bonus BEFORE
+      // generating this week's songs. calculateEnhancedSongQuality reads
+      // flags.pendingQualityBonus per song (additive, post-formula); once any
+      // song has had a chance to consume it this week, the bank zeroes here so it
+      // doesn't carry into future weeks. Only touch flags at all if a bonus is
+      // actually banked, so games that never use the channel stay byte-stable
+      // (no stray flags keys added to golden-master snapshots).
+      const bankedFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
+      const bankedQualityBonus = typeof bankedFlagsSnapshot.pendingQualityBonus === 'number'
+        ? bankedFlagsSnapshot.pendingQualityBonus
+        : 0;
+
+      let songsGeneratedThisWeek = false;
+
       for (const project of recordingProjects) {
         if (this.shouldGenerateProjectSongs(project)) {
+          const songsBefore = project.songsCreated || 0;
           await this.generateWeeklyProjectSongs(ctx, project, summary, dbTransaction);
+          if ((project.songsCreated || 0) > songsBefore) {
+            songsGeneratedThisWeek = true;
+          }
         }
+      }
+
+      if (bankedQualityBonus !== 0 && songsGeneratedThisWeek) {
+        const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+        flags.pendingQualityBonus = 0;
+        delete flags.pendingQualityBonusWeek;
+        ctx.gameState.flags = flags;
+
+        summary.changes.push({
+          type: 'meeting',
+          description: bankedQualityBonus > 0
+            ? `Studio focus paid off: +${bankedQualityBonus} quality applied to this week's recordings`
+            : `Studio pressure took its toll: ${bankedQualityBonus} quality on this week's recordings`,
+          amount: bankedQualityBonus
+        });
+        console.log(`[QUALITY BONUS] Consumed banked bonus (${bankedQualityBonus}) this week, pool zeroed`);
       }
     } catch (error) {
       console.error('[SONG GENERATION] Error processing recording projects:', error);
@@ -445,7 +479,22 @@ export class SongGenerationProcessor {
     const QUALITY_FLOOR = 25;   // No song is completely worthless
     const QUALITY_CEILING = 98;  // Leave room for legendary moments
 
-    const finalQuality = Math.round(Math.min(QUALITY_CEILING, Math.max(QUALITY_FLOOR, quality)));
+    // Exec-meetings-revival PR-4 (C1) — next-release quality channel. A banked
+    // meeting bonus (flags.pendingQualityBonus, signed points) is applied here as
+    // an ADDITIVE post-formula adjustment — deliberately AFTER every multiplicative
+    // factor and the outlier/variance roll above, so it never reorders or adds RNG
+    // draws (the golden-master draw sequence is untouched). Read-only here: the
+    // bank is zeroed once per week (after all songs generated that week have had a
+    // chance to consume it) in processRecordingProjects, not per-song, so a batch of
+    // songs from the same recording session all benefit from one banked bonus.
+    const qualityFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
+    const pendingQualityBonus = typeof qualityFlagsSnapshot.pendingQualityBonus === 'number'
+      ? qualityFlagsSnapshot.pendingQualityBonus
+      : 0;
+
+    const finalQuality = Math.round(
+      Math.min(QUALITY_CEILING, Math.max(QUALITY_FLOOR, quality + pendingQualityBonus))
+    );
 
     console.log(`[QUALITY CALC] New multiplicative song quality calculation:`, {
       baseQuality: baseQuality.toFixed(1),
@@ -459,6 +508,7 @@ export class SongGenerationProcessor {
       moodFactor: moodFactor.toFixed(3),
       variance: variance.toFixed(3),
       rawQuality: quality.toFixed(1),
+      pendingQualityBonus,
       finalQuality
     });
 

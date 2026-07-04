@@ -43,7 +43,6 @@ describe('isRenderableEffectKey', () => {
 
   it('rejects dead/non-canonical keys', () => {
     for (const deadKey of [
-      'quality_bonus',
       'sellthrough_hint',
       'venue_relationships',
       'quality_risk',
@@ -59,15 +58,19 @@ describe('isRenderableEffectKey', () => {
     expect(isRenderableEffectKey('press_story_flag')).toBe(true);
     expect(isRenderableEffectKey('press_momentum')).toBe(true);
   });
+
+  it('accepts the PR-4 quality channel key (quality_bonus)', () => {
+    expect(isRenderableEffectKey('quality_bonus')).toBe(true);
+  });
 });
 
 describe('ChoiceEffects badge honesty', () => {
   it('renders nothing for a dead (non-canonical) effect key', () => {
-    // press_story_flag went live in exec-meetings-revival PR-3 (C2) — use a key
-    // that is still dead (quality_bonus, C1, not yet wired) for this assertion.
-    render(<ChoiceEffects choice={buildChoice({ effects_immediate: { quality_bonus: 5, quality_risk: 1 } })} />);
+    // quality_bonus went live in exec-meetings-revival PR-4 (C1) — use a key
+    // that is still dead (quality_risk, C4, not yet wired) for this assertion.
+    render(<ChoiceEffects choice={buildChoice({ effects_immediate: { quality_risk: 1 } })} />);
 
-    expect(screen.queryByText(/Quality/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Quality Risk/)).not.toBeInTheDocument();
     // With no renderable effects, the honest "No direct effects" fallback shows.
     expect(screen.getByText('No direct effects')).toBeInTheDocument();
   });
@@ -126,5 +129,16 @@ describe('ChoiceEffects badge honesty', () => {
   it('renders "-N Press Buzz" for a negative press_momentum', () => {
     render(<ChoiceEffects choice={buildChoice({ effects_delayed: { press_momentum: -1 } })} />);
     expect(screen.getByText('-1 Press Buzz')).toBeInTheDocument();
+  });
+
+  // Exec-meetings-revival PR-4 (C1) — quality channel badges are now live.
+  it('renders "+N Quality" for a positive quality_bonus', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { quality_bonus: 5 } })} />);
+    expect(screen.getByText('+5 Quality')).toBeInTheDocument();
+  });
+
+  it('renders "-N Quality" for a negative quality_bonus', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { quality_bonus: -2 } })} />);
+    expect(screen.getByText('-2 Quality')).toBeInTheDocument();
   });
 });

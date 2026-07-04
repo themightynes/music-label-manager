@@ -173,7 +173,7 @@
             "money": -1000
           },
           "effects_delayed": {
-            "learning_bonus": 1,
+            "quality_bonus": 2,
             "delay_risk": 1
           }
         },
@@ -185,7 +185,7 @@
           },
           "effects_delayed": {
             "variance_up": 1,
-            "quality_potential": 4
+            "quality_bonus": 4
           }
         }
       ]
@@ -356,8 +356,7 @@
             "artist_mood": -2
           },
           "effects_delayed": {
-            "quality_bonus": 3,
-            "radio_ready": 1
+            "quality_bonus": 5
           }
         },
         {
@@ -403,8 +402,7 @@
             "creative_capital": -1
           },
           "effects_delayed": {
-            "innovation_bonus": 2,
-            "producer_rep": 1
+            "quality_bonus": 2
           }
         },
         {
@@ -415,7 +413,7 @@
           },
           "effects_delayed": {
             "authenticity_bonus": 1,
-            "quality_penalty": -2
+            "quality_bonus": -2
           }
         }
       ]

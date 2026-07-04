@@ -3,6 +3,7 @@
     "base_range": [20, 80],
     "max_quality": 100,
     "artist_synergy_bonus": 10,
+    "pending_quality_bonus_expiry_weeks": 8,
     "budget_quality_system": {
       "enabled": true,
       "calculation_method": "dynamic_minimum_viable_cost",

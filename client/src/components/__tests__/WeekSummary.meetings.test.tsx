@@ -124,20 +124,20 @@ describe('WeekSummary meetings card', () => {
   it('never renders a badge for a dead effect key arriving via delayed_effect (badge honesty)', () => {
     // Regression (Phase A verifier find): delayed_effect changes carry the RAW
     // authored effects_delayed record, which can still contain dead keys until
-    // the channel PRs land — e.g. ceo_priorities/studio_first ships
-    // quality_bonus: 5 in production data today.
+    // the channel PRs land. quality_bonus went live in PR-4 (C1); quality_risk
+    // (C4) is still dead — use it here instead.
     renderSummary([
       {
         type: 'delayed_effect',
         description: 'Delayed effect triggered',
-        meetingId: 'ceo_priorities',
-        choiceId: 'studio_first',
-        appliedEffects: { quality_bonus: 5, artist_mood: 2 },
+        meetingId: 'ceo_local_talent',
+        choiceId: 'local_talent',
+        appliedEffects: { quality_risk: 1, artist_mood: 2 },
       } as GameChange,
     ]);
 
     expect(screen.getByText('+2 Mood')).toBeInTheDocument();
-    expect(screen.queryByText(/quality/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/quality risk/i)).not.toBeInTheDocument();
   });
 
   it('renders press_story_flag and press_momentum applied-effect lines (exec-meetings-revival PR-3)', () => {
@@ -162,6 +162,34 @@ describe('WeekSummary meetings card', () => {
 
     expect(screen.getByText('+1 Press Buzz')).toBeInTheDocument();
     expect(screen.getByText('+1 Press Story')).toBeInTheDocument();
+  });
+
+  it('renders a quality_bonus applied-effect line (exec-meetings-revival PR-4)', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Met with Role cco',
+        meetingId: 'cco_timeline',
+        choiceId: 'add_revision',
+        choiceLabel: 'Add a revision pass',
+        appliedEffects: { quality_bonus: 6 },
+        importance: 'routine',
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('+6 Quality')).toBeInTheDocument();
+  });
+
+  it('renders the banked-bonus consumption line pushed by SongGenerationProcessor', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: "Studio focus paid off: +6 quality applied to this week's recordings",
+        amount: 6,
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText(/Studio focus paid off: \+6 quality applied to this week's recordings/)).toBeInTheDocument();
   });
 
   it('does not render the meetings card when there are no meeting-bucket changes', () => {
