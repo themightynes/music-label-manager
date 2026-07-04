@@ -1077,12 +1077,10 @@ export class FinancialSystem {
       const marketingBreakdown = release.metadata.marketingBudgetBreakdown;
       let totalMarketingBoost = 1.0;
 
-      // Calculate awareness gain during weeks 1-4 (awareness building phase)
-      if (weeksSinceRelease >= 1 && weeksSinceRelease <= 4) {
-        const awarenessGain = this.calculateAwarenessGain(song, marketingBreakdown);
-        // Note: Actual awareness accumulation will be handled by GameEngine in next phase
-        // This calculation establishes the framework for awareness building
-      }
+      // C69: removed a dead `calculateAwarenessGain` call here — its result was
+      // assigned and never used ("framework" placeholder). The real awareness
+      // accumulation happens in ReleaseProcessor, which is the sole live caller.
+      // Keeping the dead call meant an extra (now-async) artist fetch for nothing.
 
       // Radio: 85% effectiveness, sustained discovery (weeks 2-4)
       const radioSpend = marketingBreakdown.radio || 0;
@@ -1131,7 +1129,7 @@ export class FinancialSystem {
    * - PR: 0.4 per $1k
    * - Influencer: 0.3 per $1k
    */
-  calculateAwarenessGain(song: any, marketingBreakdown: any): number {
+  async calculateAwarenessGain(song: any, marketingBreakdown: any): Promise<number> {
     try {
       const balanceConfig = this.gameData.getBalanceConfigSync();
       const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
@@ -1180,9 +1178,19 @@ export class FinancialSystem {
       const qualityMultiplier = (song.quality || 50) / 100;
       awarenessGain *= qualityMultiplier;
 
-      // Apply artist popularity bonus
-      const artist = this.gameData.getArtistSync(song.artistId);
-      const artistPopularity = artist?.popularity || 0;
+      // Apply artist popularity bonus. C69: the prior code called a non-existent
+      // `getArtistSync`, which threw and was swallowed by the catch below — nuking
+      // the ENTIRE awareness gain to 0 for ~9 months. Use the real async accessor
+      // (`getArtistById`), guarded: a gameData without it (client/test contexts)
+      // degrades gracefully to no popularity bonus (×1.0) instead of losing the
+      // whole gain, and logs distinctly so a genuinely-missing accessor is visible.
+      let artistPopularity = 0;
+      if (typeof this.gameData.getArtistById === 'function') {
+        const artist = await this.gameData.getArtistById(song.artistId);
+        artistPopularity = artist?.popularity || 0;
+      } else {
+        console.warn('[AWARENESS GAIN] gameData.getArtistById unavailable — applying awareness gain without the artist-popularity bonus');
+      }
       const popularityBonus = 1 + (artistPopularity / 200);
       awarenessGain *= popularityBonus;
 

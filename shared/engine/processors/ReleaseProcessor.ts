@@ -680,7 +680,7 @@ export class ReleaseProcessor {
               const marketingBreakdown = release?.metadata?.marketingBudgetBreakdown;
 
               if (marketingBreakdown) {
-              const awarenessGain = ctx.financialSystem.calculateAwarenessGain(song, marketingBreakdown);
+              const awarenessGain = await ctx.financialSystem.calculateAwarenessGain(song, marketingBreakdown);
               let newAwareness = Math.round(Math.min(currentAwareness + awarenessGain, 100));
 
               // Check for breakthrough achievement during weeks 3-6
