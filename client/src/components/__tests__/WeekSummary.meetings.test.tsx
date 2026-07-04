@@ -192,6 +192,34 @@ describe('WeekSummary meetings card', () => {
     expect(screen.getByText(/Studio focus paid off: \+6 quality applied to this week's recordings/)).toBeInTheDocument();
   });
 
+  it('renders an awareness_boost applied-effect line (exec-meetings-revival PR-5)', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Met with Role cmo',
+        meetingId: 'cmo_platform_exclusive',
+        choiceId: 'spotify_exclusive',
+        choiceLabel: "Take Spotify's deal",
+        appliedEffects: { awareness_boost: 2 },
+        importance: 'routine',
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('+2 Buzz')).toBeInTheDocument();
+  });
+
+  it('renders the banked-awareness consumption line pushed by ReleaseProcessor', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Buzz paid off: +24 awareness seeded into "Planned Single"',
+        amount: 3,
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText(/Buzz paid off: \+24 awareness seeded into "Planned Single"/)).toBeInTheDocument();
+  });
+
   it('does not render the meetings card when there are no meeting-bucket changes', () => {
     renderSummary([
       { type: 'revenue', description: 'Streaming revenue', amount: 1000, importance: 'routine' } as GameChange,

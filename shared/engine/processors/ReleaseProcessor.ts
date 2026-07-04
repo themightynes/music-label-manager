@@ -1037,9 +1037,27 @@ export class ReleaseProcessor {
       if (plannedReleases.length === 0) {
         return;
       }
-      
+
+      // Exec-meetings-revival PR-5 (C3) — snapshot the banked awareness boost BEFORE
+      // seeding any release this week. A meeting choice banks signed authored points
+      // into flags.pendingAwarenessBoost (ActionProcessor); here they SEED the next
+      // release's per-song initial awareness (× awareness_boost_points_per_unit, ×8),
+      // clamped at 0 — a negative pool (viral_kill / reach_limitation) suppresses
+      // discovery but never drives awareness below zero. The seed rides the live
+      // awareness economy (weeks 1-4 build path + the up-to-2× stream multiplier).
+      // Consumed by the FIRST release that actually releases songs this week, then
+      // the pool zeroes so it can't seed a second release or carry into future weeks.
+      // Only touch flags at all when a boost is banked, so games that never use the
+      // channel stay byte-stable (no stray flags keys in golden-master snapshots).
+      const awarenessFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
+      const bankedAwarenessBoost = typeof awarenessFlagsSnapshot.pendingAwarenessBoost === 'number'
+        ? awarenessFlagsSnapshot.pendingAwarenessBoost
+        : 0;
+      const awarenessPointsPerUnit = ctx.gameData.getAwarenessBoostConfigSync().awareness_boost_points_per_unit;
+      let awarenessBoostConsumed = false;
+
       // Process planned releases
-      
+
       for (const release of plannedReleases) {
         
         // Get songs associated with this release
@@ -1084,17 +1102,53 @@ export class ReleaseProcessor {
           releaseArtist
         );
 
+        // Exec-meetings-revival PR-5 (C3) — seed each released song's initial
+        // awareness from the banked boost (× points-per-unit, clamped at 0). Applied
+        // to THIS release only if the pool is still unconsumed; consumed once, then
+        // zeroed below. The seed is additive to whatever awareness the song already
+        // had (0 for a fresh song) and is the value the weeks-1-4 build path grows
+        // from (ReleaseProcessor's awareness loop reads song.awareness).
+        const awarenessSeed = (bankedAwarenessBoost !== 0 && !awarenessBoostConsumed)
+          ? Math.max(0, (songsToRelease[0]?.awareness || 0) + bankedAwarenessBoost * awarenessPointsPerUnit)
+          : null;
+
         // Prepare song updates using sophisticated breakdown
-        const songUpdates = sophisticatedResults.perSongBreakdown.map(songResult => ({
-          songId: songResult.songId,
-          isReleased: true,
-          releaseWeek: ctx.gameState.currentWeek,
-          initialStreams: songResult.streams,
-          weeklyStreams: songResult.streams,
-          totalStreams: (songsToRelease.find(s => s.id === songResult.songId)?.totalStreams || 0) + songResult.streams,
-          totalRevenue: Math.round((songsToRelease.find(s => s.id === songResult.songId)?.totalRevenue || 0) + songResult.revenue),
-          lastWeekRevenue: Math.round(songResult.revenue)
-        }));
+        const songUpdates = sophisticatedResults.perSongBreakdown.map(songResult => {
+          const base: any = {
+            songId: songResult.songId,
+            isReleased: true,
+            releaseWeek: ctx.gameState.currentWeek,
+            initialStreams: songResult.streams,
+            weeklyStreams: songResult.streams,
+            totalStreams: (songsToRelease.find(s => s.id === songResult.songId)?.totalStreams || 0) + songResult.streams,
+            totalRevenue: Math.round((songsToRelease.find(s => s.id === songResult.songId)?.totalRevenue || 0) + songResult.revenue),
+            lastWeekRevenue: Math.round(songResult.revenue)
+          };
+          if (awarenessSeed !== null) {
+            const song = songsToRelease.find(s => s.id === songResult.songId);
+            base.awareness = Math.max(0, (song?.awareness || 0) + bankedAwarenessBoost * awarenessPointsPerUnit);
+            base.peak_awareness = Math.round(Math.max(song?.peak_awareness || 0, base.awareness));
+          }
+          return base;
+        });
+
+        // Consume the banked boost on the first release that seeds songs this week.
+        if (awarenessSeed !== null) {
+          awarenessBoostConsumed = true;
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          flags.pendingAwarenessBoost = 0;
+          delete flags.pendingAwarenessBoostWeek;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: bankedAwarenessBoost > 0
+              ? `Buzz paid off: +${bankedAwarenessBoost * awarenessPointsPerUnit} awareness seeded into "${release.title}"`
+              : `Suppressed discovery: ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness on "${release.title}"`,
+            amount: bankedAwarenessBoost
+          });
+          console.log(`[AWARENESS BOOST] Consumed banked boost (${bankedAwarenessBoost}) -> seeded ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness into "${release.title}", pool zeroed`);
+        }
 
         // Handle marketing investment allocation - use actual charged amount including seasonal adjustments
         const totalMarketingBudget = metadata?.totalInvestment ||

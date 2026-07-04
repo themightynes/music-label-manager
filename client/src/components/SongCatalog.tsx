@@ -31,6 +31,11 @@ interface Song {
   weeklyStreams?: number;
   lastWeekRevenue?: number;
   releaseWeek?: number;
+  // Exec-meetings-revival PR-5 (C3): song awareness ("Buzz") — the live driver
+  // that multiplies weekly streams up to 2×. Surfaced here as a minimal teaser
+  // so a banked awareness_boost is visible on the release; full surfacing is
+  // gap-finding-4 territory.
+  awareness?: number;
 
   // Chart-related fields
   currentChartPosition?: number | null;
@@ -408,6 +413,23 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-text-muted">Released:</span>
                       <span className="font-mono text-text-body">Week {song.releaseWeek}</span>
+                    </div>
+                  )}
+
+                  {/* Exec-meetings-revival PR-5 (C3): minimal Buzz (awareness) readout.
+                      Awareness multiplies weekly streams up to 2× and is the sink a
+                      banked awareness_boost seeds — surfacing it here makes that channel
+                      visible on the release. */}
+                  {typeof song.awareness === 'number' && song.awareness > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-text-muted">Buzz:</span>
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-mono rounded-pill flex items-center gap-1 text-neon-cyan bg-neon-cyan/10 border-neon-cyan/40"
+                      >
+                        <Target className="w-3 h-3" />
+                        {Math.round(song.awareness)}
+                      </Badge>
                     </div>
                   )}
                 </div>

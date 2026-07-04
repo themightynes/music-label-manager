@@ -125,6 +125,8 @@
     "awareness_system": {
       "enabled": true,
       "per_unit_spend": 1000,
+      "awareness_boost_points_per_unit": 8,
+      "pending_awareness_boost_expiry_weeks": 8,
       "channel_awareness_coefficients": {
         "radio": 0.1,
         "digital": 0.2,

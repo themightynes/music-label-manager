@@ -81,6 +81,9 @@ function EffectBadge({
       case 'quality_bonus':
         // Exec-meetings-revival PR-4 (C1) — next-release quality channel.
         return `${val > 0 ? '+' : ''}${val} Quality`;
+      case 'awareness_boost':
+        // Exec-meetings-revival PR-5 (C3) — next-release awareness channel.
+        return `${val > 0 ? '+' : ''}${val} Buzz`;
       default:
         // Unreachable in practice — the caller filters to isRenderableEffectKey
         // before rendering an EffectBadge at all. Kept as a safe fallback only.

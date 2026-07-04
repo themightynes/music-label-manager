@@ -162,8 +162,7 @@
             "artist_mood": -2
           },
           "effects_delayed": {
-            "playlist_bias": 2,
-            "adds_bonus": 5
+            "awareness_boost": 4
           }
         },
         {
@@ -256,7 +255,7 @@
             "artist_mood": -3
           },
           "effects_delayed": {
-            "commercial_potential": 2,
+            "awareness_boost": 2,
             "authenticity_loss": 1
           }
         },
@@ -279,7 +278,7 @@
           },
           "effects_delayed": {
             "artistic_growth": 1,
-            "chart_stability": 1
+            "awareness_boost": 1
           }
         }
       ]
@@ -577,7 +576,7 @@
             "money": -2000
           },
           "effects_delayed": {
-            "viral_boost": 3,
+            "awareness_boost": 3,
             "fan_loyalty": 2
           }
         },
@@ -588,8 +587,7 @@
             "money": -8000
           },
           "effects_delayed": {
-            "streaming_boost": 2,
-            "remix_competition": 1
+            "awareness_boost": 1
           }
         },
         {
@@ -597,7 +595,7 @@
           "label": "Copyright strike - protect the original",
           "effects_immediate": {},
           "effects_delayed": {
-            "viral_kill": -2,
+            "awareness_boost": -2,
             "fan_backlash": -1
           }
         }
@@ -622,8 +620,7 @@
             "money": 15000
           },
           "effects_delayed": {
-            "streaming_boost": 2,
-            "apple_relationship": -1
+            "awareness_boost": 2
           }
         },
         {
@@ -633,8 +630,7 @@
             "money": 18000
           },
           "effects_delayed": {
-            "premium_positioning": 1,
-            "reach_limitation": -1
+            "awareness_boost": -1
           }
         },
         {
@@ -642,8 +638,8 @@
           "label": "Decline both - simultaneous release",
           "effects_immediate": {},
           "effects_delayed": {
-            "platform_neutrality": 1,
-            "discovery_challenge": 1
+            "awareness_boost": 1,
+            "reputation": 1
           }
         }
       ]
@@ -665,7 +661,7 @@
           "label": "Obvious single + clean assets",
           "effects_immediate": {},
           "effects_delayed": {
-            "playlist_bias": 2
+            "awareness_boost": 2
           }
         },
         {
@@ -684,7 +680,7 @@
           "label": "Hold this week; build proof points",
           "effects_immediate": {},
           "effects_delayed": {
-            "playlist_bias_next": 1
+            "awareness_boost": 1
           }
         }
       ]
@@ -709,8 +705,7 @@
             "reputation": -1
           },
           "effects_delayed": {
-            "playlist_guaranteed": 1,
-            "industry_compromise": 1
+            "awareness_boost": 4
           }
         },
         {
@@ -720,8 +715,7 @@
             "creative_capital": -1
           },
           "effects_delayed": {
-            "niche_success": 2,
-            "mainstream_miss": -1
+            "awareness_boost": 1
           }
         },
         {
@@ -754,7 +748,7 @@
             "money": -5000
           },
           "effects_delayed": {
-            "artificial_boost": 3,
+            "awareness_boost": 3,
             "detection_risk": 2
           }
         },
@@ -765,8 +759,7 @@
             "money": -2000
           },
           "effects_delayed": {
-            "moderate_boost": 1,
-            "sustainable_growth": 1
+            "awareness_boost": 2
           }
         },
         {
@@ -775,7 +768,7 @@
           "effects_immediate": {},
           "effects_delayed": {
             "authentic_growth": 1,
-            "slow_building": 1
+            "awareness_boost": 1
           }
         }
       ]
@@ -846,7 +839,7 @@
           },
           "effects_delayed": {
             "collector_loyalty": 2,
-            "premium_positioning": 1
+            "awareness_boost": 1
           }
         },
         {

@@ -62,6 +62,10 @@ describe('isRenderableEffectKey', () => {
   it('accepts the PR-4 quality channel key (quality_bonus)', () => {
     expect(isRenderableEffectKey('quality_bonus')).toBe(true);
   });
+
+  it('accepts the PR-5 awareness channel key (awareness_boost)', () => {
+    expect(isRenderableEffectKey('awareness_boost')).toBe(true);
+  });
 });
 
 describe('ChoiceEffects badge honesty', () => {
@@ -140,5 +144,16 @@ describe('ChoiceEffects badge honesty', () => {
   it('renders "-N Quality" for a negative quality_bonus', () => {
     render(<ChoiceEffects choice={buildChoice({ effects_delayed: { quality_bonus: -2 } })} />);
     expect(screen.getByText('-2 Quality')).toBeInTheDocument();
+  });
+
+  // Exec-meetings-revival PR-5 (C3) — awareness channel badges are now live.
+  it('renders "+N Buzz" for a positive awareness_boost', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { awareness_boost: 2 } })} />);
+    expect(screen.getByText('+2 Buzz')).toBeInTheDocument();
+  });
+
+  it('renders "-N Buzz" for a negative awareness_boost', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { awareness_boost: -1 } })} />);
+    expect(screen.getByText('-1 Buzz')).toBeInTheDocument();
   });
 });

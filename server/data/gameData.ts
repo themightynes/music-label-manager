@@ -503,6 +503,23 @@ export class ServerGameData {
     };
   }
 
+  // Exec-meetings-revival PR-5 (C3): awareness-boost consumption + expiry knobs.
+  // Lives in data/balance/markets.json under market_formulas.awareness_system.
+  getAwarenessBoostConfigSync() {
+    if (!this.balanceData) {
+      return {
+        awareness_boost_points_per_unit: 8,
+        pending_awareness_boost_expiry_weeks: 8
+      };
+    }
+
+    const awareness = (this.balanceData.market_formulas?.awareness_system || {}) as Record<string, any>;
+    return {
+      awareness_boost_points_per_unit: awareness.awareness_boost_points_per_unit ?? 8,
+      pending_awareness_boost_expiry_weeks: awareness.pending_awareness_boost_expiry_weeks ?? 8
+    };
+  }
+
   getBalanceConfigSync(): BalanceConfig {
     if (!this.balanceData) {
       throw new Error('Balance data not loaded. Call initialize() first.');

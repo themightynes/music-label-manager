@@ -142,6 +142,12 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     getQualityBonusConfigSync: () => ({
       pending_quality_bonus_expiry_weeks: quality.quality_system?.pending_quality_bonus_expiry_weeks ?? 8,
     }),
+    // Mirror ServerGameData.getAwarenessBoostConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-5, C3 — next-release awareness channel).
+    getAwarenessBoostConfigSync: () => ({
+      awareness_boost_points_per_unit: markets.market_formulas?.awareness_system?.awareness_boost_points_per_unit ?? 8,
+      pending_awareness_boost_expiry_weeks: markets.market_formulas?.awareness_system?.pending_awareness_boost_expiry_weeks ?? 8,
+    }),
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],
     getAllRoles: async () => [],

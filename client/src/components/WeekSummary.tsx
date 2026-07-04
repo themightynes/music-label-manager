@@ -95,6 +95,8 @@ function formatMeetingEffectLabel(key: string): string {
       return 'Press Buzz';
     case 'quality_bonus':
       return 'Quality';
+    case 'awareness_boost':
+      return 'Buzz';
     default:
       return key.replace(/_/g, ' ');
   }

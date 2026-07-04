@@ -63,7 +63,9 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'press_story_flag',
   'press_momentum',
   // Exec-meetings-revival PR-4 (C1 — next-release quality channel):
-  'quality_bonus'
+  'quality_bonus',
+  // Exec-meetings-revival PR-5 (C3 — next-release awareness channel):
+  'awareness_boost'
 ]);
 
 export class ActionProcessor {
@@ -618,6 +620,34 @@ export class ActionProcessor {
           break;
         }
 
+        case 'awareness_boost': {
+          // Exec-meetings-revival PR-5 (C3) — next-release awareness channel. Signed
+          // authored points bank into flags.pendingAwarenessBoost; consumed at a
+          // planned release's release-week path (ReleaseProcessor.processPlannedReleases
+          // / the lead-single path), where each released song's INITIAL awareness is
+          // seeded by pendingAwarenessBoost × awareness_boost_points_per_unit (×8),
+          // clamped at 0 (a negative pool suppresses discovery but never drives
+          // awareness below zero), then the pool zeroes. Riding the live awareness
+          // economy, that seed multiplies weekly streams up to 2× (weeks 1-4 build path
+          // + the awareness stream multiplier). Stamps pendingAwarenessBoostWeek so
+          // processDelayedEffects can expire an unconsumed bank after N weeks
+          // (pending_awareness_boost_expiry_weeks, data/balance/markets.json).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pendingAwarenessBoost === 'number' ? flags.pendingAwarenessBoost : 0;
+          flags.pendingAwarenessBoost = previous + value;
+          flags.pendingAwarenessBoostWeek = ctx.gameState.currentWeek || 0;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Buzz ${value > 0 ? 'building' : 'cooling'} for the next release (${value > 0 ? '+' : ''}${value})`,
+            amount: value,
+            appliedEffects: { awareness_boost: value }
+          });
+          console.log(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingAwarenessBoost}, stamped week ${flags.pendingAwarenessBoostWeek})`);
+          break;
+        }
+
         case 'press_momentum': {
           // Exec-meetings-revival PR-3 (C2) — decaying pool. Accumulates across
           // meetings; feeds a small additive bonus to press-pickup chance and decays
@@ -760,6 +790,23 @@ export class ActionProcessor {
           console.log(`[QUALITY BONUS] Expired unconsumed bonus (${flags.pendingQualityBonus}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingQualityBonus = 0;
           delete flags.pendingQualityBonusWeek;
+        }
+      }
+
+      // Exec-meetings-revival PR-5 (C3) — pendingAwarenessBoost expiry. If a banked
+      // awareness boost goes unconsumed (no planned release seeded from it — see
+      // ReleaseProcessor.processPlannedReleases) for
+      // pending_awareness_boost_expiry_weeks weeks after it was stamped, drop it so
+      // players can't bank indefinitely. Same expiry pattern as the PR-4 quality
+      // bank above; expiry (not decay) keeps the semantics consistent with C1.
+      if (typeof flags.pendingAwarenessBoost === 'number' && flags.pendingAwarenessBoost !== 0) {
+        const stampedWeek = typeof flags.pendingAwarenessBoostWeek === 'number' ? flags.pendingAwarenessBoostWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getAwarenessBoostConfigSync().pending_awareness_boost_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[AWARENESS BOOST] Expired unconsumed boost (${flags.pendingAwarenessBoost}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pendingAwarenessBoost = 0;
+          delete flags.pendingAwarenessBoostWeek;
         }
       }
 
