@@ -114,7 +114,11 @@ Four more agents in parallel (client-disjoint + one isolated engine agent for th
 
 **#4 resolved (investigation → fixed):** "Artist Hats" is NOT a real component/tab — it's the **Overview tab** (`ArtistPage.tsx` tabs: Overview / Discography / Releases / Analytics / Manage). Talent already rendered in `OverviewTab.tsx:132-135` + 3 discovery/selector surfaces; now added to the 6 surfaces it was missing from (4 cards/tabs + 2 dropdowns).
 
-**Still open from this playtest:** **#8/C67** (tour tier-band range — needs a decision on `[0, current-max]` vs `[lowest-unlocked-min, current-max]`), plus the two design-discussion sections (effect-key legibility; meeting "fakeness") which need a planning pass, not a bug fix.
+**#8/C67 fixed (commit `071c6df`):** decision made (`[lowest-unlocked-min, current-max]`). New `VenueCapacityManager.getBookingRangeForTier` = `[smallest bookable-tier min, current-tier max]`; `validateCapacity` + estimate `tierRange` + client `getCapacityRange` fallback all route through it. Unlocking a tier now raises the ceiling, keeps the floor at the smallest real venue. +8 venue tests; golden master + tour-estimate snapshot unaffected.
+
+**Discovered incidentally (logged as C69, NOT fixed):** `FinancialSystem.calculateAwarenessGain` (`:1184`) calls a non-existent `getArtistSync`, silently zeroing marketing awareness gain during advance-week — pre-existing since 2025-09-26, swallowed by a try/catch. Not caused by the revival; see `technical-debt-backlog.md` C69 for the full diagnosis + likely fix.
+
+**Still open from this playtest:** only the two design-discussion sections (effect-key legibility; meeting "fakeness") — they need a planning pass, not a bug fix.
 
 ---
 
@@ -126,7 +130,7 @@ Four more agents in parallel (client-disjoint + one isolated engine agent for th
   - #3 ✅ **FIXED `ef1050b`** — "Delayed effect triggered" boxes are unlabeled/generic, can't tell how many distinct delayed effects actually fired or match them to the detailed CCO box
   - #6 ✅ **FIXED `f41bf27`** — Venue capacity slider vs. server validation — three-layer bug (config `none` tier range collides with hardcoded server `>=50`, server rejects `venueAccess==='none'` outright, client slider not gated); client-gating fix, server/config left correct
   - #7 ✅ **FIXED `ef1050b`** — "Met with CEO" nonsensical since player IS the CEO
-  - #8 ⏸️ **NEEDS DECISION** — venueCapacity slider locks to current tier's exact band instead of `[0 or lowest-tier-min, current-tier-max]`, blocking small shows for new artists once a higher tier is unlocked — **tracked as `technical-debt-backlog.md` Comment 67** (range semantics is a design choice)
+  - #8 ✅ **FIXED `071c6df`** (C67) — venueCapacity slider locked to current tier's exact band; now spans `[lowest-bookable-tier-min, current-tier-max]` (decision: unlocking raises the ceiling, keeps the floor at the smallest real venue)
   - #9 ✅ **FIXED `5b44d9e`** (C68) — Milestone Moments mislabels a tour milestone as "Advanced to Recorded Stage" (recording-pipeline stage name leaking into tour milestones)
   - #11 ✅ **FIXED `b482c5e`** — Auto-select meetings can pick a combo that overdraws Creative Capital (-2 CC preview with only 1 CC available); now CC-budget-aware
   - #12 ✅ **FIXED `5b44d9e`** — Tour-completion email shows gross revenue only, no net profit
@@ -144,5 +148,6 @@ Four more agents in parallel (client-disjoint + one isolated engine agent for th
   - #3: are the three "Delayed effect triggered" boxes 3 distinct effects, or duplicates of the same event (echoing the #1 duplicate-rendering pattern)? Needs source-level check of the delayed-effects renderer.
   - #6/#8: once fixed, should "none" tier allow booking at all (server currently hard-rejects it), or should reaching some minimal reputation be required before any tour is bookable — i.e. is blocking correct behavior and only the UI/slider needs to reflect it, or should "none" tier get a legitimate small-capacity booking path?
 
-- ✅ **Resolved this session (no backlog entry needed):** #1, #2, #3, #5, #6, #7, #9, #11, #12 all fixed + committed on the branch (see "Fixes landed"), and #4 fixed across all 6 surfaces. #9 was C68 (now fixed).
-- ⏸️ **Still needs attention:** #8/C67 (durable backlog, needs a range-semantics decision) and the two design-discussion sections above (effect-key legibility; meeting "fakeness") — carried into a future planning pass, NOT quick fixes.
+- ✅ **Resolved this session:** #1, #2, #3, #5, #6, #7, #8, #9, #11, #12 all fixed + committed on the branch (see "Fixes landed"), and #4 fixed across all 7 surfaces (cards/profile/dialogue/management + Live Performance/Recording Session dropdowns + Plan Release). #8 was C67, #9 was C68 (both now fixed).
+- 🆕 **Logged, not fixed (C69):** the `getArtistSync` awareness-gain silent-zero bug found incidentally during the playtest (pre-existing, unrelated to the revival).
+- ⏸️ **Still needs attention:** only the two design-discussion sections above (effect-key legibility; meeting "fakeness") — carried into a future planning pass, NOT quick fixes.
