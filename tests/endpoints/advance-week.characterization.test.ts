@@ -220,6 +220,34 @@ describe('POST /api/advance-week (characterization)', () => {
     expect(res.body.message).toMatch(/Validation failed/);
   });
 
+  it('C58 — stale expectedCurrentWeek: 409 ADVANCE_WEEK_CONFLICT, week does NOT advance', async () => {
+    const { gameId } = await seedGame({ ownerId: TEST_USER_ID, currentWeek: 5 });
+
+    const res = await request(app)
+      .post('/api/advance-week')
+      .send({ gameId, selectedActions: [], expectedCurrentWeek: 4 });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('ADVANCE_WEEK_CONFLICT');
+    expect(res.body).toHaveProperty('currentWeek', 5);
+    expect(res.body).toHaveProperty('expectedCurrentWeek', 4);
+
+    const { eq } = await import('drizzle-orm');
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.currentWeek).toBe(5);
+  });
+
+  it('C58 — correct expectedCurrentWeek: 200, week advances normally', async () => {
+    const { gameId } = await seedGame({ ownerId: TEST_USER_ID, currentWeek: 5 });
+
+    const res = await request(app)
+      .post('/api/advance-week')
+      .send({ gameId, selectedActions: [], expectedCurrentWeek: 5 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.gameState.currentWeek).toBe(6);
+  });
+
   it('non-owner: 404 GAME_NOT_FOUND (body gameId)', async () => {
     const { gameId } = await seedGame({ ownerId: OTHER_USER_ID });
     currentUserId = TEST_USER_ID;

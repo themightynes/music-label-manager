@@ -861,6 +861,11 @@ export const useGameStore = create<GameStore>()(
 
           const advanceRequest = {
             gameId: gameState.id,
+            // C58: optimistic stale-week guard — always send the week we
+            // currently believe we're on so a double-submitted advance click's
+            // second request 409s instead of silently advancing two weeks
+            // (server enforces inside the FOR UPDATE lock, advanceWeekService.ts).
+            expectedCurrentWeek: gameState.currentWeek,
             selectedActions: selectedActions.map(actionStr => {
               // Parse the JSON string to get our structured data
               let actionData: any;
@@ -1083,8 +1088,14 @@ export const useGameStore = create<GameStore>()(
             const status = (error as any).status;
             const statusText = (error as any).statusText;
             const details = (error as any).details;
-            
-            if (status && statusText) {
+
+            if (status === 409) {
+              // C58: stale-week guard rejection (a double-submitted advance
+              // click's second request). Not a real failure — the week already
+              // advanced from under this request — so keep the toast calm
+              // instead of surfacing "HTTP 409: Conflict".
+              displayError = new Error('Week already advanced — refreshing your game.');
+            } else if (status && statusText) {
               displayError = new Error(`HTTP ${status}: ${statusText}. ${error.message}`);
             } else if (details && details.message) {
               displayError = new Error(`Server Error: ${details.message}`);

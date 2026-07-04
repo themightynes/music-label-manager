@@ -46,6 +46,30 @@ import { serverGameData as serverGameDataSingleton } from '../data/gameData';
 import { GameEngine } from '../../shared/engine/game-engine';
 import { gameStates, weeklyActions, projects, songs, artists } from '@shared/schema';
 
+/**
+ * C58: thrown when the caller's `expectedCurrentWeek` (from AdvanceWeekRequest)
+ * no longer matches the row's `currentWeek` after the `SELECT ... FOR UPDATE`
+ * re-read. This is the "reject-on-stale-week" follow-up noted in the D6 plan
+ * (`docs/01-planning/implementation-specs/COMPLETED/[COMPLETE]
+ * d6-week-transaction-atomicity-plan.md`, §3 + discovered-debt #10): D6's
+ * `FOR UPDATE` lock already serializes concurrent advances for the same game,
+ * but both still SUCCEED — a double-submitted click advances two weeks instead
+ * of one. This guard makes the second (stale) request 409 instead of
+ * re-reading week N+1 and advancing to N+2.
+ *
+ * Follows the ArtistServiceError / ReleaseServiceError convention: the route
+ * layer maps `res.status(err.status).json(err.body)` verbatim.
+ */
+export class AdvanceWeekConflictError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly body: Record<string, unknown>,
+  ) {
+    super('ADVANCE_WEEK_CONFLICT');
+    this.name = 'AdvanceWeekConflictError';
+  }
+}
+
 export class AdvanceWeekService {
   constructor(
     private storage = storageSingleton,
@@ -59,7 +83,7 @@ export class AdvanceWeekService {
    * requireGameOwner in the route. Returns the exact response envelope the
    * original handler returned ({ gameState, summary, campaignResults, debug }).
    */
-  async advanceWeek(gameId: string, selectedActions: any[]) {
+  async advanceWeek(gameId: string, selectedActions: any[], expectedCurrentWeek?: number) {
     // D6 PR-3 review fix: load balance config BEFORE the transaction so the
     // FOR UPDATE row lock is never held across disk I/O. Neither call touches
     // the DB or depends on tx: getStartingValues() reads balance JSON, and
@@ -86,6 +110,25 @@ export class AdvanceWeekService {
 
       if (!gameState) {
         throw new Error('Game not found');
+      }
+
+      // C58: optimistic stale-week guard, enforced INSIDE the FOR UPDATE lock,
+      // right after the re-read. Only checked when the client sent
+      // expectedCurrentWeek (backward-compatible — omitting it preserves prior
+      // behavior). A double-submitted advance click races two requests for the
+      // same game; the FOR UPDATE lock already serializes them, but without
+      // this guard the second one would just re-read week N+1 and advance to
+      // N+2. Reject it instead so exactly one request advances the week.
+      if (
+        expectedCurrentWeek !== undefined &&
+        (gameState.currentWeek ?? 1) !== expectedCurrentWeek
+      ) {
+        throw new AdvanceWeekConflictError(409, {
+          error: 'ADVANCE_WEEK_CONFLICT',
+          message: 'Week already advanced',
+          currentWeek: gameState.currentWeek ?? 1,
+          expectedCurrentWeek,
+        });
       }
 
       // Load current artists for mood calculations
