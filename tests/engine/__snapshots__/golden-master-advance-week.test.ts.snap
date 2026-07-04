@@ -190,7 +190,7 @@ exports[`GameEngine.advanceWeek — golden master > actions-week: role meeting +
         },
         "choiceId": "<id>",
         "choiceLabel": "Choice choice_a",
-        "description": "Met with Role ceo",
+        "description": "Executive strategy decision",
         "importance": "routine",
         "meetingId": "strategy_session",
         "roleId": "ceo",

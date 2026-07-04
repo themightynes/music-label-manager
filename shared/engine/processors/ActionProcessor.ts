@@ -80,6 +80,19 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'award_chances'
 ]);
 
+/**
+ * Playtest bug #1 fix (2026-07-04): the mood/loyalty deltas an executive meeting
+ * produces, returned by {@link ActionProcessor.processExecutiveActions} so the
+ * single 'meeting' change entry can carry them (instead of a duplicate
+ * 'executive_interaction' "Met with <slug>" row).
+ */
+export interface ExecutiveInteractionResult {
+  moodChange: number;
+  newMood: number;
+  loyaltyBoost: number;
+  newLoyalty: number;
+}
+
 export class ActionProcessor {
   /**
    * Processes a single player action
@@ -291,13 +304,21 @@ export class ActionProcessor {
         choiceEffects: choice
       }
     };
-    await this.processExecutiveActions(ctx, actionWithChoice, dbTransaction, executiveForMeeting);
+    // Playtest bug #1 fix: capture the exec mood/loyalty deltas instead of letting
+    // processExecutiveActions push its own duplicate 'executive_interaction' row.
+    const execResult = await this.processExecutiveActions(ctx, actionWithChoice, dbTransaction, executiveForMeeting);
+
+    // Playtest bug #7 fix: the player IS the CEO, so "Met with CEO" is nonsensical.
+    // Frame a CEO meeting as a solo executive decision rather than a meeting with
+    // a hired executive. Non-CEO meetings keep the "Met with <role>" copy.
+    const isCeoMeeting = roleId === 'ceo';
+    const baseDescription = isCeoMeeting ? 'Executive strategy decision' : `Met with ${roleName}`;
 
     summary.changes.push({
       type: 'meeting',
       description: modifierFired
-        ? `Met with ${roleName} — ${this.moodBandDescription(moodModifiers!, executiveForMeeting)}`
-        : `Met with ${roleName}`,
+        ? `${baseDescription} — ${this.moodBandDescription(moodModifiers!, executiveForMeeting)}`
+        : baseDescription,
       roleId: roleId,
       // Exec-meetings-revival PR-2: enrichment so the WeekSummary meetings card has
       // real content — which meeting, which choice, and what it actually did.
@@ -305,6 +326,16 @@ export class ActionProcessor {
       choiceId: choiceId,
       choiceLabel: (choice as any).label,
       appliedEffects,
+      // Playtest bug #1 fix: fold the exec mood/loyalty deltas onto this single
+      // 'meeting' entry (CEO meetings have no executive → execResult is null).
+      ...(execResult
+        ? {
+            moodChange: execResult.moodChange,
+            newMood: execResult.newMood,
+            loyaltyBoost: execResult.loyaltyBoost,
+            newLoyalty: execResult.newLoyalty,
+          }
+        : {}),
       // Exec-meetings-revival PR-9: carry the mood-modifier context so the
       // WeekSummary meetings card can note it fired. Optional/additive.
       ...(modifierFired
@@ -337,6 +368,44 @@ export class ActionProcessor {
   }
 
   /**
+   * Playtest bug #3 fix (2026-07-04): builds a descriptive label for a delayed-effect
+   * payoff instead of the bare "Delayed effect triggered" placeholder. Resolves the
+   * originating meeting's human name and, when available, the chosen option's label
+   * from the delayed-effect flag's stored context (meetingName = actionId, choiceId).
+   * Falls back gracefully when the meeting/choice can't be resolved (e.g. dialogue
+   * scenes, or legacy flags missing context) so a payoff is never left unlabeled.
+   */
+  private async describeDelayedEffect(
+    ctx: WeekContext,
+    meetingName: string | undefined,
+    choiceId: string | undefined
+  ): Promise<string> {
+    let meetingLabel: string | undefined;
+    let choiceLabel: string | undefined;
+
+    if (meetingName) {
+      try {
+        const actionData = await ctx.gameData.getActionById(meetingName);
+        meetingLabel = actionData?.name;
+        if (choiceId) {
+          const choice = await ctx.gameData.getChoiceById(meetingName, choiceId);
+          choiceLabel = (choice as any)?.label;
+        }
+      } catch {
+        // Resolution is best-effort — fall through to the generic label below.
+      }
+    }
+
+    if (meetingLabel && choiceLabel) {
+      return `Delayed effect: ${meetingLabel} — ${choiceLabel}`;
+    }
+    if (meetingLabel) {
+      return `Delayed effect: ${meetingLabel}`;
+    }
+    return 'Delayed effect triggered';
+  }
+
+  /**
    * Processes executive-specific effects from actions
    * Updates mood, loyalty, and lastActionWeek when executives are used
    */
@@ -349,19 +418,26 @@ export class ActionProcessor {
     // in to avoid a redundant second getExecutive round-trip. When omitted (direct
     // callers/tests), we fall back to fetching, so behavior is byte-identical to before.
     prefetchedExecutive?: any
-  ): Promise<void> {
+  ): Promise<ExecutiveInteractionResult | null> {
+    // Playtest bug #1 fix (2026-07-04): this method NO LONGER pushes its own
+    // 'executive_interaction' "Met with <slug>" change. That produced a DUPLICATE
+    // meeting row in the WeekSummary meetings card — one entry with the raw role
+    // slug (e.g. "head_ar") carrying the real +Mood/+Loyalty deltas, and a second
+    // "Met with Head of A&R" (the 'meeting' entry) carrying only the choice effects.
+    // Instead it RETURNS the mood/loyalty deltas so the single 'meeting' change
+    // pushed by processRoleMeeting can carry them, and the exec updates still persist.
     const { summary } = ctx;
     // Skip CEO meetings - player IS the CEO, no executive to update
     const roleId = action.metadata?.roleId;
     if (roleId === 'ceo') {
       console.log('[GAME-ENGINE] CEO meeting - player is the CEO, no executive to update');
-      return;
+      return null;
     }
 
     const executiveId = action.metadata?.executiveId;
     if (!executiveId) {
       console.log('[GAME-ENGINE] No executiveId in action metadata, skipping executive processing');
-      return;
+      return null;
     }
 
     console.log('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
@@ -373,7 +449,7 @@ export class ActionProcessor {
     const executive = prefetchedExecutive ?? await ctx.storage.getExecutive(executiveId, dbTransaction);
     if (!executive) {
       console.log('[GAME-ENGINE] Executive not found:', executiveId);
-      return;
+      return null;
     }
 
     console.log('[GAME-ENGINE] Current executive state:', {
@@ -421,17 +497,12 @@ export class ActionProcessor {
       dbTransaction
     );
 
-    // Add to summary for UI feedback
-    summary.changes.push({
-      type: 'executive_interaction',
-      description: `Met with ${executive.role}`,
-      moodChange,
-      newMood,
-      loyaltyBoost: 5,
-      newLoyalty
-    });
-
     console.log('[GAME-ENGINE] Executive updated successfully');
+
+    // Playtest bug #1 fix: return the deltas for processRoleMeeting to fold into
+    // the single 'meeting' change entry, instead of pushing a duplicate
+    // 'executive_interaction' "Met with <slug>" row here.
+    return { moodChange, newMood, loyaltyBoost: 5, newLoyalty };
   }
 
   /**
@@ -933,9 +1004,12 @@ export class ActionProcessor {
               // Apply delayed effects with artist targeting and context
               await this.applyEffects(ctx, delayedEffectsRecord, artistId, targetScope, meetingName, choiceId);
 
+              // Playtest bug #3 fix: descriptive label (which meeting + choice)
+              // instead of the bare "Delayed effect triggered for artist X".
+              const description = await this.describeDelayedEffect(ctx, meetingName, choiceId);
               summary.changes.push({
                 type: 'delayed_effect',
-                description: `Delayed effect triggered for artist ${artistId}`,
+                description,
                 // Exec-meetings-revival PR-2: mirror the meeting/choice context onto
                 // the delayed-effect entry — already available on the flag payload.
                 meetingId: meetingName,
@@ -946,9 +1020,16 @@ export class ActionProcessor {
               // Old-style delayed effect (global, no scope validation)
               const globalEffects = (value as any).effects || {};
               await this.applyEffects(ctx, globalEffects, undefined, undefined);
+              // Playtest bug #3 fix: descriptive label instead of bare
+              // "Delayed effect triggered".
+              const description = await this.describeDelayedEffect(
+                ctx,
+                (value as any).meetingName,
+                (value as any).choiceId
+              );
               summary.changes.push({
                 type: 'delayed_effect',
-                description: 'Delayed effect triggered',
+                description,
                 meetingId: (value as any).meetingName,
                 choiceId: (value as any).choiceId,
                 appliedEffects: globalEffects
