@@ -186,3 +186,22 @@ describe('balance JSON knobs stay in lockstep with the util defaults (preview-pa
     );
   });
 });
+
+describe('rep_swing under inspired mood (Phase D verifier gap)', () => {
+  it('scales rep_swing magnitude like any non-money effect, sign preserved', () => {
+    const inspired = getMoodModifiers(95, DEFAULT_EXEC_MOOD_MODIFIER_CONFIG);
+    const scaled = applyMoodModifiersToEffects({ rep_swing: 2 }, inspired);
+    // 2 * 1.2 = 2.4 -> Math.round -> 2... verify against the util's actual rule:
+    expect(scaled.rep_swing).toBe(Math.sign(2) * Math.round(Math.abs(2) * 1.2));
+
+    const scaledBig = applyMoodModifiersToEffects({ rep_swing: 3 }, inspired);
+    expect(scaledBig.rep_swing).toBe(4); // 3 * 1.2 = 3.6 -> 4: a genuinely bigger gamble
+  });
+
+  it('does not scale rep_swing in the disgruntled band (cost-only band)', () => {
+    const disgruntled = getMoodModifiers(20, DEFAULT_EXEC_MOOD_MODIFIER_CONFIG);
+    const scaled = applyMoodModifiersToEffects({ rep_swing: 2, money: -1000 }, disgruntled);
+    expect(scaled.rep_swing).toBe(2);       // magnitude untouched
+    expect(scaled.money).toBe(-1250);       // cost scaled
+  });
+});
