@@ -34,16 +34,16 @@
 ### **02-Architecture** - Technical Design
 - [System Architecture](./02-architecture/system-architecture.md)
 - [Database Design](./02-architecture/database-design.md)
-- [API Design](./02-architecture/api-design.md)
-- [Music Creation Architecture](./02-architecture/music-creation-architecture.md)
 - [Content Data Schemas](./02-architecture/content-data-schemas.md)
+- API Design and Music Creation Architecture were archived July 4, 2026 (see `99-legacy/superseded-2026-07/`) — superseded by System Architecture + `shared/api/contracts.ts`, and by the engine processors, respectively
 
 ### **03-Workflows** - User & Game Systems
 - [User Interaction Flows](./03-workflows/user-interaction-flows.md)
 - [Game System Workflows](./03-workflows/game-system-workflows.md)
 
 ### **04-Frontend** - React Application
-- [Frontend Architecture](./04-frontend/frontend-architecture.md) *(Updated: Aug 31, 2025 - Dark Plum Theme)*
+- [Client Frontend Rules](../client/CLAUDE.md) - Current frontend architecture, state management, navigation
+- [Design System v2](./04-frontend/design/v2/design-system-v2.md) - Neo-Cyber HUD visual system
 
 ### **05-Backend** - Server Architecture
 - [Backend Architecture](./05-backend/backend-architecture.md)
@@ -61,6 +61,13 @@
 
 ### **09-Troubleshooting** - Issues & Solutions
 - [Consolidated Troubleshooting](./09-troubleshooting/consolidated-system-troubleshooting.md)
+
+### **98-Research** - Dated Research & Audits
+- Dated case files and adversarially-verified system audits (e.g. gap analyses, code reviews). Point-in-time snapshots, not living docs.
+- [Executive Meetings System - Complete Reference](./01-planning/implementation-specs/REFERENCES%20AND%20ANALYSIS/%5BREFERENCE%5D%20executive-meetings-system-complete-reference.md) - Canonical reference for the executive meetings system
+
+### **99-Legacy** - Archived Content
+- `99-legacy/superseded-2026-07/` - Docs archived July 4, 2026 during the Phase 0-4 staleness cleanup (pre-refactor API design, music creation architecture, frontend architecture, and plan-release API spec)
 
 ---
 

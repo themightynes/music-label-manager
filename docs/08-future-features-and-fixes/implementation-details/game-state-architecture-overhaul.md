@@ -1,5 +1,12 @@
 # Game State Architecture Overhaul - Future Enhancement Plan
 
+> **Status update (July 4, 2026)**: Per the interactivity/staleness gap analysis, most of the issues below were resolved by Phases 1-3.5:
+> - **Issue 1 (Missing User Association)** — fixed. Game creation now assigns `userId`; see `server/services/gameCreationService.ts`.
+> - **Issue 7 / Issue 9 (Source of Truth Conflicts / Authorization Gaps)** — fixed. `requireGameOwner` middleware (`server/middleware/requireGameOwner.ts`) enforces per-request ownership on every game-scoped route, and the Phase 3.5 `gameState` spine (TanStack Query, `['gameState:record', gameId]`) plus the Zustand `{ id }` pointer eliminated the client-side dual-source-of-truth between `GameContext.gameId` and `gameStore.gameState.id` — see `client/CLAUDE.md`.
+> - **Issue 3 (Storage Bloat)** — fixed. Zustand persistence is now limited to `gameState.id`, `selectedActions`, `isAdvancingWeek`; the server collections and spine live in TanStack Query, not localStorage.
+>
+> **Still open** (the only genuinely live content in this doc): Issue 4 (no TTL/archival cleanup beyond the manual orphaned-game tooling — see `docs/05-backend/backend-architecture.md` Orphaned Game Cleanup section) and the optimistic-locking `version` column proposed in Phase 2.3 below. The rest of this document is retained for historical context; do not treat its problem list as current.
+
 ## Executive Summary
 
 Through critical architectural analysis, 10 major flaws were identified in the current game state management system. These issues range from security vulnerabilities to data corruption risks and poor user experience. This document outlines a comprehensive plan to transform the system into an enterprise-grade, multi-user game management platform.

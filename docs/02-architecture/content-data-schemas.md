@@ -179,6 +179,9 @@ interface DialogueChoice {
             "money": 5000,
             "description": "Growth investment pays off"
           }
+          // NOTE: `trigger_month` is verified present in data/roles.json as of July 4, 2026 —
+          // this field genuinely still uses month-based language and has NOT been converted
+          // to a `trigger_week` equivalent despite the broader week-cadence conversion.
         }
       ]
     }
@@ -409,7 +412,7 @@ return moods[Math.floor(this.getRandom(0, moods.length))];
 ```
 PATCH /api/songs/:songId
 Content-Type: application/json
-Authorization: Required (via getUserId middleware)
+Authorization: Required (via Clerk `requireClerkUser` + `requireGameOwner` middleware)
 ```
 
 **Request Body**:

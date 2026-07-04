@@ -1,3 +1,5 @@
+> **Note (July 4, 2026)**: This doc's cadence language (month-based framing in places) predates the month→week conversion. Per the gap-analysis "doc formula fidelity" ruling, the shipped weekly system differs from some of the formulas below by design — this document is NOT being rewritten to match; treat the formulas as a historical/conceptual reference rather than a literal spec of current behavior.
+
 🎵 SONG QUALITY FORMULAS
 
   // Base Quality Calculation
@@ -179,16 +181,7 @@
     (100 - burnoutRisk) * 1.5
   ) / 6.5
 
-● Update Todos
-  ⎿  ☒ Document all formulas affecting artists after implementation        
-     ☒ Organize formulas by category (Quality, Revenue, Psychology, Growth)
-     ☒ Map formula dependencies and interactions
-     ☒ Identify feedback loops and balancing points
-
-
-● Claude Opus limit reached, now using Sonnet 4
-
-● 🎯 CRITICAL BALANCING THRESHOLDS
+🎯 CRITICAL BALANCING THRESHOLDS
 
   // Danger Zones
   STRESS_WARNING = 70      // UI shows orange warning

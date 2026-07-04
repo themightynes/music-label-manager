@@ -27,6 +27,7 @@ See `@ai-dev-tasks/README.md` for full details.
 - Fix bug → `09-troubleshooting/`
 - Understand UX → `03-workflows/user-interaction-flows.md`
 - Plan work → `01-planning/CORE_FEATURES_sim-v2.0.md`
+- Understand executive meetings → `01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md`
 
 ---
 
@@ -41,7 +42,9 @@ See `@ai-dev-tasks/README.md` for full details.
 | `05-backend/` | Server implementation |
 | `06-development/` | How-to guides |
 | `ai-dev-tasks/` | AI workflow templates |
-| `08-future-features/` | Roadmap |
+| `08-future-features-and-fixes/` | Roadmap |
 | `09-troubleshooting/` | Debugging |
+| `98-research/` | Dated research case files / adversarially-verified audits |
+| `99-legacy/` | Archived/superseded docs (see `superseded-2026-07/`) |
 
 **Full navigation**: See `README.md`

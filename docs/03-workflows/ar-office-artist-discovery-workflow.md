@@ -11,7 +11,7 @@ The A&R Office provides a dedicated artist discovery system that replaces the pr
 ## 🔄 **Complete User Workflow**
 
 ### **Phase 1: Accessing A&R Office**
-1. **Navigation**: Player clicks "A&R Office" from the Game Sidebar
+1. **Navigation**: Player clicks "A&R Office" from the CommandDock
 2. **Page Load**: A&R Office page displays with Marcus Rodriguez executive avatar
 3. **Status Check**: System displays current Focus Slot availability and any active operations
 

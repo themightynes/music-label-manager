@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 4, 2026 — describes the pre-Phase-1-4 system (Passport auth / month cadence / pre-refactor architecture). Superseded by: `docs/02-architecture/system-architecture.md` + `shared/api/contracts.ts`. Kept for historical reference.
+
 # API Design Documentation
 
 **Music Label Manager - REST API Specification**  

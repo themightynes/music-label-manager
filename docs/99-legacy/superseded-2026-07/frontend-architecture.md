@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 4, 2026 — describes the pre-Phase-1-4 system (Passport auth / month cadence / pre-refactor architecture). Superseded by: `client/CLAUDE.md` + `docs/04-frontend/design/v2/design-system-v2.md`. Kept for historical reference.
+
 # Frontend Architecture
 
 **Music Label Manager - React Application Design**  

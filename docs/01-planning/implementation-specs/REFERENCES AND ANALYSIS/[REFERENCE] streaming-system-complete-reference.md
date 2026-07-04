@@ -15,7 +15,7 @@ Before reading this guide, review these existing documents:
 - **Core mechanics**: `/docs/99-legacy/streaming-revenue-decay-IMPLEMENTED.md` (Lines 1-258)
 - **Revenue analysis**: `/docs/98-research/REVENUE_AND_STREAMS_SYSTEM_ANALYSIS_2025-08-23.md` (Lines 74-185)
 - **Economic calculations**: `/docs/98-research/ECONOMY_CALCULATIONS_DEEP_DIVE_2025-08-26.md` (Lines 8-35)
-- **API specifications**: `/docs/api-specifications/plan-release-api-spec.md` (Lines 236-260)
+- **API specifications**: `/docs/99-legacy/superseded-2026-07/plan-release-api-spec.md` (Lines 236-260) (archived July 4, 2026)
 - **Budget impact**: `/docs/01-planning/implementation-specs/song-budget-quality-calculation.md` (Full document)
 
 ---

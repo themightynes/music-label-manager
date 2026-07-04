@@ -2,6 +2,7 @@
 
 **Music Label Manager - Documentation Standards & Guidelines**  
 *Internal Reference*
+*Last Updated: July 4, 2026*
 
 ---
 
@@ -47,8 +48,9 @@ docs/
 ├── 04-frontend/        # React Implementation (Frontend audience)
 ├── 05-backend/         # Server Implementation (Backend audience)
 ├── 06-development/     # Practical Guides (All developers)
-├── 08-future-features/ # Roadmap & Research (PM/Developer audience)
+├── 08-future-features-and-fixes/ # Roadmap & Research (PM/Developer audience)
 ├── 09-troubleshooting/ # Problem Resolution (All audiences)
+├── 98-research/        # Dated research case files / adversarially-verified audits
 └── 99-legacy/          # Archived Content (Reference only)
 ```
 
@@ -62,8 +64,9 @@ docs/
 | 04-frontend | React patterns, UI | Frontend devs | Implementation | Per sprint |
 | 05-backend | Server implementation | Backend devs | Implementation | Per sprint |
 | 06-development | Practical how-tos | All developers | Action-oriented | As needed |
-| 08-future-features | Roadmap, research | PM/Developers | Conceptual | Monthly |
+| 08-future-features-and-fixes | Roadmap, research | PM/Developers | Conceptual | Monthly |
 | 09-troubleshooting | Problem solutions | All roles | Solution-focused | As issues arise |
+| 98-research | Dated research case files / adversarially-verified audits | Developers | Point-in-time snapshot | As conducted |
 
 ---
 

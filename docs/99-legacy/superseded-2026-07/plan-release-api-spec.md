@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 4, 2026 — describes the pre-Phase-1-4 system (Passport auth / month cadence / pre-refactor architecture). Superseded by: `server/services/releasePlanningService.ts` + `docs/03-workflows/plan-release-system-workflows.md`. Kept for historical reference.
+
 # Plan Release Feature - API Specifications
 
 **✅ COMPLETED - Phase 2: Strategic Release Planning - Backend API Requirements**

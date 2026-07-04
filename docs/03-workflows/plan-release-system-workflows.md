@@ -108,7 +108,7 @@ timing, songs                 preview          ReleasePreview data      metrics 
 ```
 
 #### **3.2 Preview API Processing**
-**Location**: `server/routes.ts:1474`
+**Location**: `server/routes/releases.ts` — `POST /api/game/:gameId/releases/preview` handler
 ```typescript
 const previewResults = gameEngine.calculateReleasePreview(
   releaseSongs,
@@ -148,7 +148,7 @@ validateRelease() checks:
 ```
 
 #### **4.2 Backend Storage Process**
-**Location**: `server/routes.ts:1588-1631`
+**Location**: `server/routes/releases.ts` — `POST /api/game/:gameId/releases/plan` handler, delegating to `server/services/releasePlanningService.ts`
 
 ```
 Database Transaction:
@@ -167,7 +167,7 @@ Database Transaction:
 ### **Phase 5: Release Execution During Week Advancement**
 
 #### **5.1 Execution Trigger**
-**Location**: `game-engine.ts:167`
+**Location**: `shared/engine/game-engine.ts`, `advanceWeek()` — delegates to `ReleaseProcessor.processPlannedReleases()` (`shared/engine/processors/ReleaseProcessor.ts`)
 ```
 Weekly Advancement Process:
 ├── Process executive actions
@@ -178,7 +178,7 @@ Weekly Advancement Process:
 ```
 
 #### **5.2 Release Execution Logic**
-**Location**: `game-engine.ts:1087-1190`
+**Location**: `shared/engine/processors/ReleaseProcessor.ts` — `processPlannedReleases()` / `calculateSophisticatedReleaseOutcome()`
 
 ```
 For each planned release where releaseWeek === currentWeek:

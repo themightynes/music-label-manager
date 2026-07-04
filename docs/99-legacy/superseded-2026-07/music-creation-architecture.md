@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 4, 2026 — describes the pre-Phase-1-4 system (Passport auth / month cadence / pre-refactor architecture). Superseded by: `docs/02-architecture/system-architecture.md` + `docs/98-research/SONGS_ALBUMS_RECORDING_RELEASES_SYSTEM_ANALYSIS` + the engine processors (`shared/engine/processors/`). Kept for historical reference.
+
 # Song Creation Workflow - Technical Implementation Documentation
 
 **Music Label Manager - PHASE 1 Backend Architecture**  

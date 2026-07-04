@@ -87,6 +87,8 @@ class GameEngine {
 - Single source of truth for all game logic
 - Configuration-driven calculations using `data/balance/` JSON modules
 - Transaction-safe processing with database integration
+
+`GameEngine` delegates domain logic to 8 processors under `shared/engine/processors/` (`ActionProcessor`, `AROfficeProcessor`, `ArtistStateProcessor`, `ProgressionProcessor`, `ProjectStageProcessor`, `ReleaseProcessor`, `SongGenerationProcessor`, `TourProcessor`, `WeeklyFinancesProcessor`), all driven by the same seeded RNG for determinism. Regression safety for `advanceWeek()` is covered by a golden-master snapshot harness (`tests/engine/golden-master-advance-week.test.ts` + `golden-master-fixtures.ts`).
 - Financial math delegated to `FinancialSystem` (`shared/engine/FinancialSystem.ts`)
 
 ### **2. Database Layer (`/shared/schema.ts`, `/server/storage.ts`)**
@@ -168,20 +170,20 @@ GET  /api/game/:gameId/emails
 **Frontend Architecture**:
 - **React 18**: Component-based UI with hooks
 - **TypeScript**: Type safety throughout the application
-- **Zustand**: Global state management
-- **React Query**: Server state caching and synchronization
+- **Zustand**: Session/UI state ONLY (selected actions, advancing flag, weekly outcome) plus a minimal `{ id }` pointer into the game state cache
+- **TanStack Query**: Owns the `gameState` spine (week, money, reputation, focus slots, etc. — read via `useGameState()`/`useGameId()`) AND all server collections (`songs`, `releases`, `projects`, `artists`, etc.) via domain hooks (Phase 3/3.5 ownership model — see `client/CLAUDE.md`)
 - **XState**: Multi-step decision flows (A&R Office, artist dialogue)
 - **Clerk React**: Authentication (`useUser()`, `<SignedIn>`, `<UserButton>`)
 - **Motion.dev**: Production-grade animation library (successor to Framer Motion)
-- **Tailwind CSS**: Utility-first styling with custom dark plum/burgundy theme
+- **Tailwind CSS**: Utility-first styling with the v2 "Neo-Cyber HUD" token system (see below)
 - **Vite**: Fast development and optimized builds
 
-**Visual Theme System** *(Updated: August 31, 2025)*:
-- **Dark Plum Theme**: Comprehensive UI overhaul with #2a1821 base and #2a1821 containers
-- **Burgundy Accents**: Secondary color changed from purple to #791014 burgundy
-- **Background Integration**: Full-opacity plum background image (plum_background.880Z.png)
-- **Accessibility**: White/white-70 text on dark backgrounds with WCAG AA compliance
-- **Modern Aesthetic**: 10px rounded corners and immersive gaming experience
+**Visual Theme System** *(v2 "Neo-Cyber HUD" — July 2026)*:
+- **Token system**: `surface-*` (app/panel/inner/tooltip), `neon-*` spectral accents (magenta/cyan/purple/lilac/…), semantic `positive`/`negative`/`warning`, and `money` (always `font-mono text-money`, gold)
+- **Utilities**: `.glass-panel`, `.chromatic-hairline`, `.hud-ticks`, `.backdrop-*`, `.text-aberration`, `.shimmer-bar` (defined in `client/src/index.css`)
+- **Navigation shell**: `CommandDock.tsx` (floating bottom-center dock) + `GameHeader.tsx` (balance chip, week/date, Advance Week) replace the old `GameSidebar`
+- **Legacy `brand-*` classes** still compile (remapped to v2 hues in `tailwind.config.ts`) but new code should prefer v2 tokens
+- Full spec: `docs/04-frontend/design/v2/design-system-v2.md`
 
 **Component Structure** (selection):
 ```
@@ -305,11 +307,11 @@ Player Edit → UI Update → API Request → Authorization → Database Update 
 - **Validation**: Zod schemas for runtime type checking
 
 ### **State Management Pattern**
-- **Server state**: React Query for API data caching
-- **Client state**: Zustand for UI state and game state preview
-- **Flow state**: XState machines for multi-step flows (A&R operations, dialogue)
+- **Server state**: TanStack Query owns the `gameState` spine (client-committed record, `['gameState:record', gameId]`) AND all server collections via domain hooks (`useSongs`, `useReleases`, `useProjects`, `useArtists`, etc.)
+- **Client state**: Zustand holds session/UI state only (selected actions, advancing flag, weekly outcome) plus a `{ id }` pointer — never the spine itself
+- **Flow state**: XState machines for multi-step flows (A&R operations, dialogue, executive meetings)
 - **Form state**: React Hook Form with Zod validation
-- **Persistence**: Local storage for UI preferences and current game ID
+- **Persistence**: Local storage for UI preferences and the current game ID pointer only
 
 ### **Performance Optimization**
 - **Database**: Indexed queries for game state retrieval
