@@ -27,6 +27,8 @@
 
 **Suite:** 774 → ~800+ (every PR added tests; client suite alone grew ~60 tests incl. reveal characterization, fake-timer transition tests, audio-manager unit tests, holo-disc/CommandDock pulse tests). `tsc` clean throughout.
 
+**Post-wrap playtest round (same day, Nes at the keyboard):** Nes ran the UX checklist live and reported two issues, both fixed and merged as **#118** (`4ce8d9a`) within the hour: (1) the HoloDisc action-selection pulse was unreadably subtle and the halo looked off-center (the dock's glass panel was occluding it — it sat at `-z-10` behind ancestor backgrounds) → the disc now spins ~4x faster while pulsing (the readable signal) with a brighter transform-centered halo at `z-0`; (2) the results modal re-popped every time the player navigated back to the dashboard → the auto-open dedupe moved from Dashboard component state (resets on remount) to a one-shot `weeklyOutcomeAutoShow` store flag (set only by `advanceWeek`, consumed on first show, explicitly false on load/restore/new-game, not persisted). Both user-verified live before merge.
+
 **Open threads / next steps:**
 - **Nes: audio audition** — play a few weeks with sound on; tune per-sting volume/selection if anything grates (assets swap trivially in `client/public/audio/`).
 - **C56** (façade selector re-render bail-out) unchanged — became relevant to animation code; PR-3/4 worked around it via local state per the sanctioned pattern.
