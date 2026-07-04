@@ -10,10 +10,10 @@
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 4, 2026
 - **Total Items**: 68
-- **Completed**: 48
+- **Completed**: 51
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 16 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026
+- **Pending**: 13 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -857,7 +857,7 @@ Grab-bag from the July 3, 2026 redesign agent reports: (1) `ChartPerformanceCard
 
 ---
 
-### [ ] Comment 51: Artist badge shows "On Tour" for one extra week after the tour's last show 🔵
+### [x] ~~Comment 51: Artist badge shows "On Tour" for one extra week after the tour's last show~~ ✅ RESOLVED
 **Priority**: 🔵 Low
 **Impact**: Display inconsistency (one-week lag, self-corrects)
 **Effort**: Low-Medium
@@ -865,6 +865,8 @@ Grab-bag from the July 3, 2026 redesign agent reports: (1) `ChartPerformanceCard
 Two different "is the tour done?" definitions disagree by exactly one week. The Live Performance / ActiveTours UI marks a tour **COMPLETE** the week its last city is played (metadata check: `cityCounts.completed >= cityCounts.planned`, `client/src/components/ActiveTours.tsx:345,373,397`). But the engine only advances the project's `stage` from `'production'` to `'recorded'` (which acts as "completed" for tours) **one week later** — `ProjectStageProcessor.advanceProjectStages` requires `weeksInProduction > citiesPlanned`, strictly greater (`shared/engine/processors/ProjectStageProcessor.ts:126-129`). The artist status badge derives "ON TOUR" from `stage === 'production'` (`client/src/components/ArtistCard.tsx:44-55`, duplicated in `client/src/components/ArtistRoster.tsx:168-176`), so for that one week the tour card says COMPLETE while the artist card still says On Tour. Reported live by Nes during the 2026-07-03 post-Phase-3 manual smoke.
 
 **Action**: Decide the authoritative definition, then align the other side. Options: (a) client-only — the badge derivation also checks the metadata city counts (same check ActiveTours uses) so a tour with all cities played stops counting as "on tour"; or (b) engine — advance tour stage the same week the last city completes (`>=` instead of `>`), but that changes week-advance behavior and needs a golden-master update + check that the final city's revenue processing isn't skipped. (a) is the safe display-layer fix. Either way, extract the duplicated status-derivation logic in ArtistCard/ArtistRoster into one shared helper so the two badges can't drift.
+
+**✅ FIXED (commit `6e945e3`, July 4, 2026, on `feat/session-fixes-legibility-emails`/PR #120):** option (a) per decision (Nes) — shared `getArtistStatus` extracted into `client/src/utils/tourHelpers.ts` (home of `getTourMetadata`/`getCityCounts`, which it reuses); a Mini-Tour counts as on tour only while in `production` AND not all planned cities completed (ActiveTours' exact check); missing city-count metadata fails open to the previous stage-only behavior. ArtistCard and ArtistRoster both consume the helper so the badges can't drift. Client-only; engine untouched. +10 tests in `client/src/utils/__tests__/tourHelpers.test.ts`.
 
 **Relevant Files**:
 - [client/src/components/ArtistCard.tsx](client/src/components/ArtistCard.tsx)
@@ -918,12 +920,14 @@ The façade mounts a `useQuery` whose only job is cold-cache fallback (page relo
 
 ---
 
-### [ ] Comment 58: Advance-week has no reject-on-stale-week guard (double-click advances two weeks)
+### [x] ~~Comment 58: Advance-week has no reject-on-stale-week guard (double-click advances two weeks)~~ ✅ RESOLVED
 **Priority**: 🟢 Medium
 **Impact**: Two rapid advance requests for the same game serialize correctly (D6's `FOR UPDATE`) but BOTH succeed — a double-submitted click advances two weeks instead of one
 **Effort**: Small-Medium
 
 D6 (PR #107) made the week advance one atomic transaction with `SELECT ... FOR UPDATE`, so concurrent advances can no longer interleave/double-apply a single week. But the second request simply waits for the lock, re-reads week N+1, and advances to N+2 — correct serialization, not idempotency. Follow-up deliberately left out of D6 scope: client sends its expected current week; server rejects inside the lock if the row's week differs (optimistic guard). See the code comment at `server/services/advanceWeekService.ts:23` and the D6 plan doc's open-decision note.
+
+**✅ FIXED (commit `3d8066a`, July 4, 2026, on `feat/session-fixes-legibility-emails`/PR #120):** implemented the D6 plan's prescribed optimistic guard — `AdvanceWeekRequest` gained an OPTIONAL `expectedCurrentWeek` (backward-compatible, guard enforced only when present; omission pinned by test); the client always sends its known week; `advanceWeekService` throws a new `AdvanceWeekConflictError` (409, `ADVANCE_WEEK_CONFLICT`, body carries `currentWeek`/`expectedCurrentWeek`) INSIDE the FOR UPDATE lock right after the re-read, before any engine work; the client maps the 409 to a calm "Week already advanced" toast through the existing error-normalization path. +5 tests (service-level stale/correct/omitted + HTTP-level 409 pins in the advance-week characterization suite). Golden master unchanged.
 
 **Relevant Files**:
 - [server/services/advanceWeekService.ts](server/services/advanceWeekService.ts)
@@ -947,12 +951,14 @@ Both July 3, 2026 plan docs carry a "Discovered debt" section with code-verified
 
 ---
 
-### [ ] Comment 60: Delayed `artist_energy`/`artist_popularity` effects apply to the entire roster, ignoring `artistId` 🟢
+### [x] ~~Comment 60: Delayed `artist_energy`/`artist_popularity` effects apply to the entire roster, ignoring `artistId`~~ ✅ RESOLVED
 **Priority**: 🟢 Medium
 **Impact**: A delayed effect queued from a one-on-one artist dialogue hits every signed artist when it fires one week later
 **Effort**: Small
 
 The `artist_mood` case in `applyEffects` respects per-artist targeting, but the `artist_energy` (shared/engine/processors/ActionProcessor.ts:468-484) and `artist_popularity` (:508-543) cases apply to **all** signed artists regardless of the `artistId` carried by the effect. Immediate dialogue effects are applied per-artist by a separate path (server/routes/artists.ts:106-115), so the bug surfaces specifically via delayed effects (queued at server/routes/artists.ts:141-153, fired through ActionProcessor.processDelayedEffects → the same switch). Fix: thread `artistId` through these two cases, mirroring the `artist_mood` implementation.
+
+**✅ FIXED (commit `7898de6`, July 4, 2026, on `feat/session-fixes-legibility-emails`/PR #120):** both cases now mirror `artist_mood`'s targeting — `artistId` present ⇒ only that artist (via `ArtistChangeHelpers.addEnergy`/`addPopularity`, change entry tagged with `artistId`); absent ⇒ unchanged apply-to-all (role meetings legitimately target the whole roster, pinned by test). `artistId` was already threaded through `processDelayedEffects` into `applyEffects` — the switch cases just never read it. +5 regression tests in `tests/engine/artist-energy-popularity-targeting-c60.test.ts` incl. an end-to-end `processDelayedEffects` threading test. Golden master untouched.
 
 **Relevant Files**:
 - [shared/engine/processors/ActionProcessor.ts](shared/engine/processors/ActionProcessor.ts)
@@ -982,6 +988,8 @@ The `artist_mood` case in `applyEffects` respects per-artist targeting, but the 
 **Effort**: Small
 
 In `shared/engine/AchievementsEngine.ts`: (1) `artistsSuccessful: 0` and `projectsCompleted: 0` are hardcoded with TODOs (lines 35-36), silently skewing victory-type determination toward money/reputation; (2) "🎵 Media Mogul — Maximum playlist and press access" checks `playlistAccess === 'mid' && pressAccess === 'mid_tier'` (line 129) — strict equality on the *middle* tiers, so players at the real maxima (flagship/national) fail it; (3) "Survivor — Made it through 12 weeks" and all five summary strings reference a 12-week campaign (lines 135, 170) — campaigns are 52 weeks (`data/balance/projects.json:3`). Also note "⭐ Industry Legend — 200+ Reputation" (line 125) is practically unreachable since reputation is capped at 100 on all paths but one (see C65).
+
+**🔶 PARTIALLY FIXED (commit `f1b1315`, July 4, 2026, on `feat/session-fixes-legibility-emails`/PR #120):** sub-items (2) and (3) resolved — Media Mogul now requires the true maxima (`flagship`/`national` per `progression.json`), and both 12-week strings say 52 weeks (HARDCODED: comments; the engine only receives the `gameState` row, not balance config). Sub-item (1) — the zeroed `artistsSuccessful`/`projectsCompleted` — remains open BY DESIGN: no doc defines the success/completion semantics, and `calculateCampaignResults` receives only `gameState` (no artist/project data), so implementing it needs a design decision + call-site plumbing (see `docs/01-planning/PENDING-DECISIONS.md`). Expanded TODO left at the site. +6 tests in `tests/engine/achievements-engine.test.ts`. **Remaining scope of this item = sub-item (1) only.**
 
 **Relevant Files**:
 - [shared/engine/AchievementsEngine.ts](shared/engine/AchievementsEngine.ts)
@@ -1108,14 +1116,14 @@ Found during the exec-meetings-revival playtest (`docs/99-legacy/superseded-2026
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 3 pending (C58 — advance-week idempotency guard; C60 — delayed effects hit whole roster; C62 — AchievementsEngine zeroed components) — C67 (venue capacity tier-lock) + C68 (tour mislabel) + C69 (getArtistSync awareness zero) resolved July 4, 2026
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 13 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds)
+- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 12 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120)
 
 ### By Status
-- ✅ Completed: 48 items (70.6%)
+- ✅ Completed: 51 items (75.0%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 16 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings; C60–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; all low except C58/C60/C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026
+- 📋 Pending: 13 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
 
 ---
 
