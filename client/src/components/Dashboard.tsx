@@ -25,28 +25,20 @@ export function Dashboard({
   setShowSaveModal = () => {}
 }: DashboardProps) {
   const gameState = useGameState();
-  const { isAdvancingWeek, advanceWeek, weeklyOutcome, createProject } = useGameStore();
+  const { isAdvancingWeek, advanceWeek, weeklyOutcome, createProject, weeklyOutcomeAutoShow, consumeWeeklyOutcomeAutoShow } = useGameStore();
   const [, setLocation] = useLocation();
   const [showWeekSummary, setShowWeekSummary] = useState(false);
-  const [lastProcessedWeek, setLastProcessedWeek] = useState<number | null>(null);
 
   useEffect(() => {
-    // Only auto-show if this is a fresh weekly outcome (not from page refresh)
-    if (weeklyOutcome && !isAdvancingWeek && gameState) {
-      // The engine stamps summary.week with the week being advanced TO and then
-      // increments currentWeek to that same value (game-engine.ts:156,172), so a
-      // fresh outcome satisfies week === currentWeek. The previous `- 1`
-      // comparison (carried over from the 2025 month->week conversion) could
-      // never be true, so this auto-open had been silently dead.
-      const isCurrentWeekResult = weeklyOutcome.week === (gameState.currentWeek ?? 1);
-      const isNewResult = lastProcessedWeek !== weeklyOutcome.week;
-
-      if (isCurrentWeekResult && isNewResult) {
-        setShowWeekSummary(true);
-        setLastProcessedWeek(weeklyOutcome.week);
-      }
+    // Auto-open the results modal exactly ONCE per advance. The one-shot flag
+    // lives in the store (set by advanceWeek, cleared here) because component
+    // state resets on remount — the previous week-number dedupe re-popped the
+    // modal every time the player navigated back to the dashboard.
+    if (weeklyOutcome && !isAdvancingWeek && weeklyOutcomeAutoShow) {
+      setShowWeekSummary(true);
+      consumeWeeklyOutcomeAutoShow();
     }
-  }, [weeklyOutcome, isAdvancingWeek, gameState, lastProcessedWeek]);
+  }, [weeklyOutcome, isAdvancingWeek, weeklyOutcomeAutoShow, consumeWeeklyOutcomeAutoShow]);
 
   if (!gameState) {
     return (

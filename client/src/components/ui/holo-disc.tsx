@@ -44,6 +44,11 @@ const HoloDisc = React.forwardRef<HTMLDivElement, HoloDiscProps>(
     { size = 40, spinSeconds = 14, sheen = true, grooves = false, pulse = false, className, style, ...props },
     ref
   ) => {
+    // While pulsing, the disc also spins ~4x faster — the speed change is the
+    // readable part of the reaction (the halo alone proved too subtle in play).
+    // Switching animation-duration snaps the rotation phase, but the snap is
+    // masked by the halo appearing in the same frame.
+    const effectiveSpinSeconds = pulse ? Math.max(0.8, spinSeconds / 4) : spinSeconds
     return (
       <div
         ref={ref}
@@ -65,24 +70,27 @@ const HoloDisc = React.forwardRef<HTMLDivElement, HoloDiscProps>(
           <span
             aria-hidden="true"
             data-testid="holo-disc-pulse"
-            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 animate-ds-ring rounded-full blur-[10px]"
+            className="pointer-events-none absolute left-1/2 top-1/2 z-0 animate-ds-ring rounded-full blur-[10px]"
             style={{
-              width: size * 1.8,
-              height: size * 1.8,
-              marginLeft: -(size * 0.9),
-              marginTop: -(size * 0.9),
+              // transform-centered (not margin-centered) so the halo is dead
+              // behind the disc regardless of the parent's box; z-0 under the
+              // z-[1] disc face but NOT behind ancestor backgrounds (-z-10 let
+              // the dock's glass panel occlude it asymmetrically → looked off).
+              width: size * 2,
+              height: size * 2,
+              transform: "translate(-50%, -50%)",
               background:
-                "radial-gradient(circle, rgba(160,90,240,0.55) 0%, rgba(160,90,240,0.28) 42%, rgba(160,90,240,0) 72%)",
+                "radial-gradient(circle, rgba(180,92,255,0.85) 0%, rgba(160,90,240,0.45) 45%, rgba(160,90,240,0) 72%)",
             }}
           />
         )}
-        <div className="absolute inset-0 overflow-hidden rounded-full">
+        <div className="absolute inset-0 z-[1] overflow-hidden rounded-full">
           {/* spectral spinning layer */}
           <div
             className="animate-ds-spin absolute inset-0"
             style={{
               background: SPECTRUM,
-              animationDuration: `${spinSeconds}s`,
+              animationDuration: `${effectiveSpinSeconds}s`,
             }}
           />
           {/* optional brushed-sheen soft-light layer, slightly slower + reversed feel */}
@@ -94,7 +102,7 @@ const HoloDisc = React.forwardRef<HTMLDivElement, HoloDiscProps>(
                 opacity: 0.5,
                 background:
                   "conic-gradient(from 90deg at 50% 50%, rgba(255,255,255,0.6), rgba(255,255,255,0) 30%, rgba(255,255,255,0.5) 55%, rgba(255,255,255,0) 80%, rgba(255,255,255,0.6))",
-                animationDuration: `${spinSeconds * 1.6}s`,
+                animationDuration: `${effectiveSpinSeconds * 1.6}s`,
               }}
             />
           )}

@@ -348,7 +348,12 @@ interface GameStore {
   isAdvancingWeek: boolean;
   weeklyOutcome: any | null;
   campaignResults: any | null;
-  
+  /** One-shot: true only between an advanceWeek completing and the Dashboard
+   *  auto-opening the WeekSummary modal for it. Never persisted; load/restore
+   *  paths leave it false so a restored outcome doesn't pop the modal. */
+  weeklyOutcomeAutoShow: boolean;
+  consumeWeeklyOutcomeAutoShow: () => void;
+
   // Actions
   loadGame: (gameId: string) => Promise<void>;
   loadGameFromSave: (saveId: string, snapshot: GameSaveSnapshot, mode?: 'overwrite' | 'fork') => Promise<string>;
@@ -402,6 +407,13 @@ export const useGameStore = create<GameStore>()(
       isAdvancingWeek: false,
       weeklyOutcome: null,
       campaignResults: null,
+      weeklyOutcomeAutoShow: false,
+
+      // Phase 4 feel-feedback fix: the Dashboard consumes this one-shot flag to
+      // auto-open the WeekSummary modal exactly once per advance. The dedupe used
+      // to live in Dashboard component state, which reset on every remount and
+      // re-popped the modal each time the player navigated back to home.
+      consumeWeeklyOutcomeAutoShow: () => set({ weeklyOutcomeAutoShow: false }),
 
       // Load existing game
       loadGame: async (gameId: string) => {
@@ -536,6 +548,7 @@ export const useGameStore = create<GameStore>()(
             selectedActions: [],
             campaignResults: null,
             weeklyOutcome: snapshot.weeklyOutcome ?? null,
+            weeklyOutcomeAutoShow: false,
           });
 
           if (mode !== 'fork') {
@@ -578,6 +591,7 @@ export const useGameStore = create<GameStore>()(
             selectedActions: [],
             campaignResults: null,
             weeklyOutcome: snapshot.weeklyOutcome ?? null,
+            weeklyOutcomeAutoShow: false,
           });
 
           if (!syncedGameState.arOfficeSlotUsed) {
@@ -738,7 +752,8 @@ export const useGameStore = create<GameStore>()(
             moodEvents: [],
             selectedActions: [],
             campaignResults: null,
-            weeklyOutcome: null
+            weeklyOutcome: null,
+            weeklyOutcomeAutoShow: false
           });
 
           // Return the new game state so the UI can update
@@ -945,7 +960,8 @@ export const useGameStore = create<GameStore>()(
             weeklyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],
-            isAdvancingWeek: false
+            isAdvancingWeek: false,
+            weeklyOutcomeAutoShow: true
           });
 
           // Phase 4 PR-6: single week-advance/tier-unlock/hero-fanfare/
