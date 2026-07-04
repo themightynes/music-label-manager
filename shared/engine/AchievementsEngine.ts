@@ -76,8 +76,17 @@ export class AchievementsEngine {
     const scoreBreakdown: ScoreBreakdown = {
       money: Math.max(0, Math.floor((gameState.money || 0) / 1000)), // 1 point per $1k
       reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 5)), // 1 point per 5 reputation
-      artistsSuccessful: 0, // TODO: Calculate based on artist success metrics
-      projectsCompleted: 0, // TODO: Calculate based on completed projects
+      // TODO (C62): still hardcoded 0. No doc (ACHIEVEMENTS_DEPENDENCY_CHART.md,
+      // ACHIEVEMENTS_KNOWLEDGE_CHART.md, technical-debt-backlog.md) defines what
+      // "successful artist" or "completed project" means for campaign scoring,
+      // and this function only receives `gameState` (the scalar game_states row)
+      // — no `artists[]`/`projects[]` arrays, which live in separate tables and
+      // aren't passed in by the sole call site (ProgressionProcessor.
+      // checkCampaignCompletion). Computing this needs both a design decision on
+      // the semantics AND a signature change to thread artist/project data in.
+      // Left as-is per C62 scope (do not invent semantics).
+      artistsSuccessful: 0,
+      projectsCompleted: 0,
       accessTierBonus: this.calculateAccessTierBonus(gameState),
       awardBonus
     };
@@ -181,13 +190,20 @@ export class AchievementsEngine {
     else if (scoreBreakdown.reputation >= 20) achievements.push('🌟 Well Known - 100+ Reputation');
 
     // Access tier achievements
-    if (gameState.playlistAccess === 'mid' && gameState.pressAccess === 'mid_tier') {
+    // C62: was `=== 'mid'` / `=== 'mid_tier'`, the MIDDLE tiers — a player at the
+    // true maxima (playlist 'flagship', press 'national', see
+    // data/balance/progression.json access_tier_system) could never earn this.
+    if (gameState.playlistAccess === 'flagship' && gameState.pressAccess === 'national') {
       achievements.push('🎵 Media Mogul - Maximum playlist and press access');
     }
 
     // Survival achievements
+    // HARDCODED: campaign length (52 weeks, data/balance/projects.json
+    // campaign_length_weeks) — AchievementsEngine only receives `gameState`
+    // (the scalar game_states row), not the balance config, so it can't read
+    // this dynamically without a signature change (C62).
     if ((gameState.money || 0) >= 0 && achievements.length === 0) {
-      achievements.push('🛡️ Survivor - Made it through 12 weeks');
+      achievements.push('🛡️ Survivor - Made it through 52 weeks');
     }
 
     return achievements;
@@ -222,7 +238,8 @@ export class AchievementsEngine {
         return `The music industry proved too challenging this time. With $${(money/1000).toFixed(0)}k and ${reputation} reputation, consider this a learning experience for your next venture.`;
 
       default:
-        return `Your 12-week music label campaign has concluded with a final score of ${finalScore} points.`;
+        // HARDCODED: campaign length (52 weeks) — see Survivor achievement note above (C62).
+        return `Your 52-week music label campaign has concluded with a final score of ${finalScore} points.`;
     }
   }
 }
