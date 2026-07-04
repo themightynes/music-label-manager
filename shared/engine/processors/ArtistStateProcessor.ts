@@ -448,7 +448,10 @@ export class ArtistStateProcessor {
           summary.changes.push({
             type: 'executive_interaction',
             description: `${this.formatExecutiveRole(exec.role)}'s loyalty decreased (ignored for ${weeksSinceAction} weeks)`,
-            amount: loyaltyChange
+            amount: loyaltyChange,
+            // Exec-meetings-revival PR-2: explicit discriminator so changeImportance
+            // can promote genuine decay notices to 'notable' without string-matching.
+            loyaltyChange
           });
         }
 

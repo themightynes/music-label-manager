@@ -7,6 +7,16 @@ import { BorderTrail } from '../motion-primitives/border-trail';
 import { GlowEffect } from '../motion-primitives/glow-effect';
 import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft } from 'lucide-react';
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
+import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
+
+// Badge honesty (exec-meetings-revival PR-2): only render a badge for a key the
+// engine actually implements (LIVE_EFFECT_KEYS) or 'executive_mood' (handled
+// outside applyEffects's switch by processExecutiveActions, but still a real,
+// wired effect). Every other key is a dead channel until its own PR lands — no
+// badge, not a mislabeled one. See EXECUTIVE_MEETINGS_CASE_FILE_2026-07-03.md §2/§6d.
+export function isRenderableEffectKey(key: string): boolean {
+  return LIVE_EFFECT_KEYS.has(key) || key === 'executive_mood';
+}
 
 interface DialogueInterfaceProps {
   dialogue: {
@@ -57,25 +67,15 @@ function EffectBadge({
           return `${val > 0 ? '+' : ''}${val} Mood (Most Popular)`;
         }
         return `${val > 0 ? '+' : ''}${val} Mood`;
-    case 'artist_energy':
-      return `${val > 0 ? '+' : ''}${val} Energy`;
-    case 'artist_loyalty':
-      return `${val > 0 ? '+' : ''}${val} Loyalty`;
-      case 'quality_bonus':
-        return `${val > 0 ? '+' : ''}${val} Quality`;
-      case 'press_story_flag':
-        return 'Press Story';
-      case 'sellthrough_hint':
-        return 'Market Data';
-      case 'venue_relationships':
-        return `${val > 0 ? '+' : ''}${val} Venue Rep`;
-      case 'quality_risk':
-        return 'Quality Risk';
+      case 'artist_energy':
+        return `${val > 0 ? '+' : ''}${val} Energy`;
       case 'artist_popularity':
         return `${val > 0 ? '+' : ''}${val} Popularity`;
-      case 'international_rep':
-        return `${val > 0 ? '+' : ''}${val} Intl Rep`;
+      case 'executive_mood':
+        return `${val > 0 ? '+' : ''}${val} Exec Mood`;
       default:
+        // Unreachable in practice — the caller filters to isRenderableEffectKey
+        // before rendering an EffectBadge at all. Kept as a safe fallback only.
         return `${val > 0 ? '+' : ''}${val} ${key.replace(/_/g, ' ')}`;
     }
   };
@@ -91,7 +91,10 @@ function EffectBadge({
   );
 }
 
-function ChoiceEffects({
+// Exported for badge-honesty testing (exec-meetings-revival PR-2) — lets tests
+// render just the effects list without mounting the Carousel/BorderTrail tree,
+// which is brittle under jsdom.
+export function ChoiceEffects({
   choice,
   targetScope,
   selectedArtistName
@@ -100,8 +103,18 @@ function ChoiceEffects({
   targetScope?: 'global' | 'predetermined' | 'user_selected';
   selectedArtistName?: string;
 }) {
-  const hasImmediate = choice.effects_immediate && Object.keys(choice.effects_immediate).length > 0;
-  const hasDelayed = choice.effects_delayed && Object.keys(choice.effects_delayed).length > 0;
+  // Badge honesty: only surface entries for LIVE_EFFECT_KEYS (+ executive_mood).
+  // Dead keys are filtered out entirely here, not just at render — so
+  // hasImmediate/hasDelayed (and thus the "No direct effects" fallback) reflect
+  // reality rather than the raw authored data.
+  const immediateEntries = Object.entries(choice.effects_immediate || {}).filter(
+    ([effect, value]) => value !== undefined && isRenderableEffectKey(effect)
+  );
+  const delayedEntries = Object.entries(choice.effects_delayed || {}).filter(
+    ([effect, value]) => value !== undefined && isRenderableEffectKey(effect)
+  );
+  const hasImmediate = immediateEntries.length > 0;
+  const hasDelayed = delayedEntries.length > 0;
 
   if (!hasImmediate && !hasDelayed) {
     return (
@@ -120,17 +133,15 @@ function ChoiceEffects({
             <span className="text-xs font-medium text-text-body">Immediate</span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {Object.entries(choice.effects_immediate).map(([effect, value]) =>
-              value !== undefined ? (
-                <EffectBadge
-                  key={effect}
-                  effect={effect}
-                  value={value}
-                  targetScope={targetScope}
-                  selectedArtistName={selectedArtistName}
-                />
-              ) : null
-            )}
+            {immediateEntries.map(([effect, value]) => (
+              <EffectBadge
+                key={effect}
+                effect={effect}
+                value={value as number}
+                targetScope={targetScope}
+                selectedArtistName={selectedArtistName}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -142,18 +153,16 @@ function ChoiceEffects({
             <span className="text-xs font-medium text-text-body">Next Week</span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {Object.entries(choice.effects_delayed).map(([effect, value]) =>
-              value !== undefined ? (
-                <EffectBadge
-                  key={effect}
-                  effect={effect}
-                  value={value}
-                  isDelayed={true}
-                  targetScope={targetScope}
-                  selectedArtistName={selectedArtistName}
-                />
-              ) : null
-            )}
+            {delayedEntries.map(([effect, value]) => (
+              <EffectBadge
+                key={effect}
+                effect={effect}
+                value={value as number}
+                isDelayed={true}
+                targetScope={targetScope}
+                selectedArtistName={selectedArtistName}
+              />
+            ))}
           </div>
         </div>
       )}

@@ -186,15 +186,18 @@ export class ActionProcessor {
     }
 
     // Apply immediate effects
+    // Exec-meetings-revival PR-2: captured outside the `if` so the 'meeting' change
+    // entry below can carry the actual numeric effects passed to applyEffects, even
+    // when effects_immediate is empty (appliedEffects then stays {}).
+    const appliedEffects: Record<string, number> = {};
     if (choice.effects_immediate) {
       // Convert to Record<string, number> for applyEffects
-      const effects: Record<string, number> = {};
       for (const [key, value] of Object.entries(choice.effects_immediate)) {
         if (typeof value === 'number') {
-          effects[key] = value;
+          appliedEffects[key] = value;
         }
       }
-      await this.applyEffects(ctx, effects, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+      await this.applyEffects(ctx, appliedEffects, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
     }
 
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
@@ -227,7 +230,13 @@ export class ActionProcessor {
     summary.changes.push({
       type: 'meeting',
       description: `Met with ${roleName}`,
-      roleId: roleId
+      roleId: roleId,
+      // Exec-meetings-revival PR-2: enrichment so the WeekSummary meetings card has
+      // real content — which meeting, which choice, and what it actually did.
+      meetingId: actionId,
+      choiceId: choiceId,
+      choiceLabel: (choice as any).label,
+      appliedEffects
     });
   }
 
@@ -619,14 +628,23 @@ export class ActionProcessor {
 
               summary.changes.push({
                 type: 'delayed_effect',
-                description: `Delayed effect triggered for artist ${artistId}`
+                description: `Delayed effect triggered for artist ${artistId}`,
+                // Exec-meetings-revival PR-2: mirror the meeting/choice context onto
+                // the delayed-effect entry — already available on the flag payload.
+                meetingId: meetingName,
+                choiceId: choiceId,
+                appliedEffects: delayedEffectsRecord
               });
             } else {
               // Old-style delayed effect (global, no scope validation)
-              await this.applyEffects(ctx, (value as any).effects || {}, undefined, undefined);
+              const globalEffects = (value as any).effects || {};
+              await this.applyEffects(ctx, globalEffects, undefined, undefined);
               summary.changes.push({
                 type: 'delayed_effect',
-                description: 'Delayed effect triggered'
+                description: 'Delayed effect triggered',
+                meetingId: (value as any).meetingName,
+                choiceId: (value as any).choiceId,
+                appliedEffects: globalEffects
               });
             }
           } finally {

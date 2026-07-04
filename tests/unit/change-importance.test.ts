@@ -149,7 +149,6 @@ describe('classifyChange', () => {
       'expense_tracking',
       'marketing',
       'meeting',
-      'executive_interaction',
       'delayed_effect',
       'mood',
       'popularity',
@@ -160,6 +159,31 @@ describe('classifyChange', () => {
     for (const type of routineTypes) {
       expect(classifyChange(change(type, { amount: 999999 }))).toBe('routine');
     }
+  });
+
+  // --- EXECUTIVE_INTERACTION (loyaltyChange-driven, exec-meetings-revival PR-2) ---
+  it('classifies an executive_interaction WITHOUT a negative loyaltyChange as routine', () => {
+    // The "Met with X" interaction entry (positive loyaltyBoost/newLoyalty, no
+    // loyaltyChange field) and the natural mood-drift entry (neither field).
+    expect(classifyChange(change('executive_interaction', { amount: 5 }))).toBe('routine');
+    expect(
+      classifyChange(change('executive_interaction', { amount: 5, loyaltyBoost: 5, newLoyalty: 65 })),
+    ).toBe('routine');
+    // A positive loyaltyChange (hypothetical) would also stay routine — only
+    // decay (negative) escalates.
+    expect(classifyChange(change('executive_interaction', { loyaltyChange: 5 }))).toBe('routine');
+  });
+
+  it('classifies an executive_interaction WITH a negative loyaltyChange as notable (loyalty decay)', () => {
+    // ArtistStateProcessor's decay push: { type, description, amount, loyaltyChange }
+    // with loyaltyChange always < 0. This is the first-time-visible feedback loop
+    // from the case file (§2/§6d) — a neglected executive's loyalty erosion.
+    expect(classifyChange(change('executive_interaction', { amount: -5, loyaltyChange: -5 }))).toBe(
+      'notable',
+    );
+    expect(classifyChange(change('executive_interaction', { amount: -5, loyaltyChange: -1 }))).toBe(
+      'notable',
+    );
   });
 
   it('does not let a huge revenue amount escalate a routine type', () => {

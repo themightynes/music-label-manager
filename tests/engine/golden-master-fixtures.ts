@@ -183,6 +183,10 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     getActionById: async (actionId: string) => ({ id: actionId, target_scope: 'global' }),
     getChoiceById: async (_actionId: string, choiceId: string) => ({
       id: choiceId,
+      // Exec-meetings-revival PR-2: real actions.json choices always carry a label
+      // (enforced by the dataLoader schema); mirror that here so the 'meeting'
+      // change entry's choiceLabel field is realistic rather than undefined.
+      label: `Choice ${choiceId}`,
       // Fixed, deterministic effects — no RNG involved.
       effects_immediate: { money: -1000, reputation: 2 },
       effects_delayed: {},
