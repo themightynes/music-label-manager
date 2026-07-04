@@ -8,12 +8,12 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: July 3, 2026
-- **Total Items**: 66
+- **Last Updated**: July 4, 2026
+- **Total Items**: 68
 - **Completed**: 47
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 16 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66)
+- **Pending**: 18 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66, C67, C68)
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1056,19 +1056,47 @@ Found during the exec-meetings revival Phase A verification (July 3, 2026), out 
 
 ---
 
+### [ ] Comment 67 (C67): Venue capacity slider locks to the exact current tier band instead of scaling down to smaller shows 🟢
+**Priority**: 🟢 Medium
+**Impact**: Blocks legitimate small-capacity bookings once a higher venue-access tier unlocks — a label at Theater access can't book a small club-sized show for a new artist, forcing every artist into an oversized venue regardless of fit
+**Effort**: Medium
+
+Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` #8, July 4, 2026). `data/balance/progression.json`'s `venue_access` tiers are `none` [0,50], `clubs` [50,500], `theaters` [500,2000], `arenas` [2000,20000]; the slider locks to exactly the current tier's band rather than `[0 or lowest-unlocked-tier-min, current-tier-max]`. Design expectation: unlocking a tier should raise the ceiling, not move the floor. Related but distinct from the separate venue-capacity/server-validation collision noted in the same playtest (#6, not yet promoted here).
+
+**Relevant Files**:
+- [client/src/pages/LivePerformancePage.tsx](client/src/pages/LivePerformancePage.tsx)
+- [data/balance/progression.json](data/balance/progression.json)
+
+*Identified July 4, 2026 during exec-meetings-revival playtest.*
+
+---
+
+### [ ] Comment 68 (C68): Weekly Summary "Milestone Moments" mislabels tour milestones with recording-pipeline stage names 🟢
+**Priority**: 🟢 Medium
+**Impact**: Player-facing copy bug — breaks narrative coherence in the Milestone Moments hero card (a tour event reads "Advanced to Recorded Stage," a recording-project concept, not a touring one)
+**Effort**: Small
+
+Found during the exec-meetings-revival playtest (`docs/98-research/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` #9, July 4, 2026). For a tour "Quantum Leap Showcase," milestone entries read "Advanced to Recorded Stage" / "Tour Completed After One City" — the milestone-moments generator appears to reuse a generic project-stage-progression enum/message for tour milestones instead of tour-specific labels (tours should progress through something like Planned → Touring/In Progress → Completed).
+
+**Relevant Files**: not yet root-caused — likely the Milestone Moments assembly in WeekSummary/game-engine.ts tour milestone tracking
+
+*Identified July 4, 2026 during exec-meetings-revival playtest.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 3 pending (C58 — advance-week idempotency guard; C60 — delayed effects hit whole roster; C62 — AchievementsEngine zeroed components)
+- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 5 pending (C58 — advance-week idempotency guard; C60 — delayed effects hit whole roster; C62 — AchievementsEngine zeroed components; C67 — venue capacity tier-lock; C68 — Milestone Moments tour mislabel)
 - 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 12 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026)
 
 ### By Status
-- ✅ Completed: 47 items (72.3%)
+- ✅ Completed: 47 items (69.1%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 15 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings; C60–C65 — interactivity-gap analysis, July 3, 2026; all low except C58/C60/C62 medium, not scheduled)
+- 📋 Pending: 17 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings; C60–C65 — interactivity-gap analysis, July 3, 2026; C67–C68 — exec-meetings-revival playtest, July 4, 2026; all low except C58/C60/C62/C67/C68 medium, not scheduled)
 
 ---
 

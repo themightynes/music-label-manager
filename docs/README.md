@@ -28,8 +28,17 @@
 ### **01-Planning** - Strategic Documents
 - [**Active Development (v2.0)**](./01-planning/CORE_FEATURES_sim-v2.0.md) - Current 6-month priorities
 - [Development Roadmap 2025 (v1.0) - COMPLETE](./99-legacy/complete/development_roadmap_2025_sim-v1.0.md) - Historical MVP record
-- [Music Creation Future Phases](./01-planning/implementation-specs/music-creation-release-cycle-phases-3-4-FUTURE.md)
+- [Music Creation Future Phases](<./01-planning/implementation-specs/[FUTURE] music-creation-release-cycle-phases-3-4.md>)
 - [Music Game System Map](./01-planning/music_game_system_map.html)
+- [Desktop GUI Migration Strategy](./01-planning/desktop-gui-migration-strategy.md) - Tauri vs. Electron vs. web-native pathways (Planning phase)
+- [Artist Contract System - Dependency Analysis](./01-planning/implementation-specs/artist-contract-system-dependencies.md) - Dependency map for A&R scouting/discovery/signing/cost systems
+
+**`[FUTURE]`-tagged specs** (deferred designs, not yet scheduled):
+- [Awareness System Design](<./01-planning/implementation-specs/[FUTURE] awareness-system-design.md>) - Sustained-streaming awareness mechanic
+- [Email Narrative Storytelling Guide](<./01-planning/implementation-specs/[FUTURE] Email Narrative Storytelling Guide.md>) - Voice/personality guide for exec email content
+- [Release Experience Improvement Plan](<./01-planning/implementation-specs/[FUTURE] release-experience-improvement-plan.md>) - Deferred behind Phase 1 service extractions; companion to the tour plan below
+- [Tour Experience Improvement Plan](<./01-planning/implementation-specs/[FUTURE] tour-experience-improvement-plan.md>) - Deferred behind the server-routes refactor
+- [XState Modal Orchestrator Plan](<./01-planning/implementation-specs/[FUTURE] xstate-modal-orchestrator-plan.md>) - Fixes stacked-modal race (Campaign Results vs. Week Summary)
 
 ### **02-Architecture** - Technical Design
 - [System Architecture](./02-architecture/system-architecture.md)
@@ -64,7 +73,8 @@
 
 ### **98-Research** - Dated Research & Audits
 - Dated case files and adversarially-verified system audits (e.g. gap analyses, code reviews). Point-in-time snapshots, not living docs.
-- [Executive Meetings System - Complete Reference](./01-planning/implementation-specs/REFERENCES%20AND%20ANALYSIS/%5BREFERENCE%5D%20executive-meetings-system-complete-reference.md) - Canonical reference for the executive meetings system
+- [Executive Meetings System - Complete Reference](./01-planning/implementation-specs/REFERENCES%20AND%20ANALYSIS/%5BREFERENCE%5D%20executive-meetings-system-complete-reference.md) - Canonical as-built reference for the executive meetings system (see `docs/CLAUDE.md` for the full doc constellation: vision doc, playtest notes, backlog)
+- [Playtest Notes - Executive Meetings Revival (2026-07-04)](./98-research/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md) - Live playtest findings + design-discussion threads (effect-key legibility, meeting relevance) ahead of PR #119 merge
 
 ### **99-Legacy** - Archived Content
 - `99-legacy/superseded-2026-07/` - Docs archived July 4, 2026 during the Phase 0-4 staleness cleanup (pre-refactor API design, music creation architecture, frontend architecture, and plan-release API spec)
