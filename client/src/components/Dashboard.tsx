@@ -6,13 +6,11 @@ import { ActiveReleases } from './ActiveReleases';
 import { Top10ChartDisplay } from './Top10ChartDisplay';
 import { SaveGameModal } from './SaveGameModal';
 import { ToastNotification } from './ToastNotification';
-import { WeekSummary } from './WeekSummary';
 import { MusicCalendar } from './MusicCalendar';
 import { InboxWidget } from './InboxWidget';
 import { TextScramble } from './motion-primitives/text-scramble';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
-import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 interface DashboardProps {
@@ -25,20 +23,14 @@ export function Dashboard({
   setShowSaveModal = () => {}
 }: DashboardProps) {
   const gameState = useGameState();
-  const { isAdvancingWeek, advanceWeek, weeklyOutcome, createProject, weeklyOutcomeAutoShow, consumeWeeklyOutcomeAutoShow } = useGameStore();
+  const { isAdvancingWeek, advanceWeek, weeklyOutcome, createProject } = useGameStore();
   const [, setLocation] = useLocation();
-  const [showWeekSummary, setShowWeekSummary] = useState(false);
 
-  useEffect(() => {
-    // Auto-open the results modal exactly ONCE per advance. The one-shot flag
-    // lives in the store (set by advanceWeek, cleared here) because component
-    // state resets on remount — the previous week-number dedupe re-popped the
-    // modal every time the player navigated back to the dashboard.
-    if (weeklyOutcome && !isAdvancingWeek && weeklyOutcomeAutoShow) {
-      setShowWeekSummary(true);
-      consumeWeeklyOutcomeAutoShow();
-    }
-  }, [weeklyOutcome, isAdvancingWeek, weeklyOutcomeAutoShow, consumeWeeklyOutcomeAutoShow]);
+  // NOTE: the Weekly Results (WeekSummary) modal — both the one-shot auto-open
+  // after an advance and the manual reopen from the More menu — is now owned
+  // entirely by CommandDock (always mounted via GameLayout). Advancing from the
+  // executive-meetings/live-performance routes unmounts the Dashboard, so the
+  // one-shot consumer had to live on the always-mounted dock to surface reliably.
 
   if (!gameState) {
     return (
@@ -50,12 +42,6 @@ export function Dashboard({
       </div>
     );
   }
-
-
-  const handleCloseSummary = () => {
-    setShowWeekSummary(false);
-  };
-
 
 
   return (
@@ -134,27 +120,10 @@ export function Dashboard({
         </div>
       </main>
 
-      {/* Week Summary Modal */}
-      {showWeekSummary && weeklyOutcome && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={handleCloseSummary}
-        >
-          <div
-            className="bg-brand-dark-card border border-brand-purple rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <WeekSummary
-              weeklyStats={weeklyOutcome}
-              onAdvanceWeek={handleCloseSummary}
-              isAdvancing={false}
-              isWeekResults={true}
-              onClose={handleCloseSummary}
-            />
-          </div>
-        </div>
-      )}
-      
+      {/* Weekly Results modal is owned by the always-mounted CommandDock
+          (auto-open after advance + manual reopen from the More menu), so the
+          Dashboard no longer renders its own copy. */}
+
       <SaveGameModal open={showSaveModal} onOpenChange={setShowSaveModal} />
       
 

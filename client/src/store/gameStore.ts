@@ -348,9 +348,12 @@ interface GameStore {
   isAdvancingWeek: boolean;
   weeklyOutcome: any | null;
   campaignResults: any | null;
-  /** One-shot: true only between an advanceWeek completing and the Dashboard
-   *  auto-opening the WeekSummary modal for it. Never persisted; load/restore
-   *  paths leave it false so a restored outcome doesn't pop the modal. */
+  /** One-shot: true only between an advanceWeek completing and the CommandDock
+   *  auto-opening the WeekSummary modal for it. The CommandDock (not the
+   *  Dashboard) consumes it because the dock is mounted on every route, so the
+   *  popup surfaces even when the week was advanced from the exec-meetings /
+   *  live-performance routes (where the Dashboard is unmounted). Never persisted;
+   *  load/restore paths leave it false so a restored outcome doesn't pop the modal. */
   weeklyOutcomeAutoShow: boolean;
   consumeWeeklyOutcomeAutoShow: () => void;
 
@@ -409,10 +412,13 @@ export const useGameStore = create<GameStore>()(
       campaignResults: null,
       weeklyOutcomeAutoShow: false,
 
-      // Phase 4 feel-feedback fix: the Dashboard consumes this one-shot flag to
+      // Phase 4 feel-feedback fix: the CommandDock consumes this one-shot flag to
       // auto-open the WeekSummary modal exactly once per advance. The dedupe used
       // to live in Dashboard component state, which reset on every remount and
-      // re-popped the modal each time the player navigated back to home.
+      // re-popped the modal each time the player navigated back to home. It then
+      // moved into this store flag but was still only consumed by the Dashboard,
+      // so advancing from a non-Dashboard route (exec-meetings) skipped the popup;
+      // the consumer now lives on the always-mounted CommandDock.
       consumeWeeklyOutcomeAutoShow: () => set({ weeklyOutcomeAutoShow: false }),
 
       // Load existing game
