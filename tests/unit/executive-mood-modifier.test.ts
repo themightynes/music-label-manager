@@ -168,3 +168,21 @@ describe('DEFAULT_EXEC_MOOD_MODIFIER_CONFIG matches the locked plan values', () 
     });
   });
 });
+
+describe('balance JSON knobs stay in lockstep with the util defaults (preview-parity drift guard)', () => {
+  it('progression.json exec_mood_modifiers === DEFAULT_EXEC_MOOD_MODIFIER_CONFIG', async () => {
+    // The engine reads the JSON knobs (getExecMoodModifierConfigSync); the client
+    // Impact Preview has no gameData handle and uses the util DEFAULTS. Parity is
+    // only structural while these two stay identical — if you tune the JSON, you
+    // MUST update DEFAULT_EXEC_MOOD_MODIFIER_CONFIG (or give the client a real
+    // config path). This test is the tripwire.
+    const fs = await import('fs');
+    const path = await import('path');
+    const progression = JSON.parse(
+      fs.readFileSync(path.resolve(process.cwd(), 'data/balance/progression.json'), 'utf8')
+    );
+    expect(progression.reputation_system.exec_mood_modifiers).toEqual(
+      DEFAULT_EXEC_MOOD_MODIFIER_CONFIG
+    );
+  });
+});
