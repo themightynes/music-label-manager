@@ -63,6 +63,10 @@ User Action: Select Artist
 API Call: GET /api/game/{gameId}/artists/ready-for-release
      ↓
 Response: Artists with recordedSongs > 0 AND releasedSongs count
+     • Per-artist fields include mood, energy, popularity, talent
+       (popularity/talent added `server/routes/releases.ts`, fixed
+       July 4, 2026 — the endpoint previously omitted them and the
+       Plan Release artist cards rendered both as 0)
      ↓
 User Action: Select Songs
      ↓
