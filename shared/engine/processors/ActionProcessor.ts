@@ -584,7 +584,8 @@ export class ActionProcessor {
             summary.changes.push({
               type: 'meeting',
               description: 'Press story queued — next release gets a story angle boost',
-              amount: 0
+              amount: 0,
+              appliedEffects: { press_story_flag: 1 }
             });
             console.log('[EFFECT PROCESSING] press_story_flag set (flags.pressStoryFlag = true)');
           } else {
@@ -610,7 +611,8 @@ export class ActionProcessor {
           summary.changes.push({
             type: 'meeting',
             description: `Studio focus ${value > 0 ? 'banked' : 'cost'} ${value > 0 ? '+' : ''}${value} quality for the next recording session`,
-            amount: value
+            amount: value,
+            appliedEffects: { quality_bonus: value }
           });
           console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingQualityBonus}, stamped week ${flags.pendingQualityBonusWeek})`);
           break;
@@ -628,7 +630,8 @@ export class ActionProcessor {
           summary.changes.push({
             type: 'meeting',
             description: `Press buzz ${value > 0 ? 'building' : 'cooling'} (${value > 0 ? '+' : ''}${value})`,
-            amount: value
+            amount: value,
+            appliedEffects: { press_momentum: value }
           });
           console.log(`[EFFECT PROCESSING] press_momentum effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pressMomentum})`);
           break;
@@ -728,9 +731,15 @@ export class ActionProcessor {
       // Exec-meetings-revival PR-3 (C2) — press_momentum weekly decay. This runs
       // once per week (processDelayedEffects is called exactly once from
       // advanceWeek), which is the natural home for flag/state maintenance that
-      // isn't itself a triggered delayed-effect entry. −1/week, floors at 0.
+      // isn't itself a triggered delayed-effect entry. Decays 1/week TOWARD 0
+      // from either side: negative momentum (scandal fallout) lingers and fades
+      // over |m| weeks, symmetric with positive buzz — Math.max(0, m - 1) alone
+      // would snap any m <= -2 straight to 0 in a single week (Phase B verifier
+      // find).
       if (typeof flags.pressMomentum === 'number' && flags.pressMomentum !== 0) {
-        const decayed = Math.max(0, flags.pressMomentum - 1);
+        const decayed = flags.pressMomentum > 0
+          ? Math.max(0, flags.pressMomentum - 1)
+          : Math.min(0, flags.pressMomentum + 1);
         if (decayed !== flags.pressMomentum) {
           console.log(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
         }

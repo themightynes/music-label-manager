@@ -131,6 +131,27 @@ describe('ActionProcessor.processDelayedEffects — press_momentum weekly decay'
     await expect(processor.processDelayedEffects(ctx)).resolves.not.toThrow();
     expect((ctx.gameState.flags as any).pressMomentum).toBeUndefined();
   });
+
+  it('decays NEGATIVE momentum gradually toward 0, symmetric with positive (Phase B verifier fix)', async () => {
+    // Regression: Math.max(0, m - 1) snapped any m <= -2 straight to 0 in one
+    // week — a -3 scandal-fallout stack must fade over 3 weeks, like +3 does.
+    const processor = new ActionProcessor();
+    const ctx = buildContext();
+    (ctx.gameState.flags as any).pressMomentum = -3;
+
+    await processor.processDelayedEffects(ctx);
+    expect((ctx.gameState.flags as any).pressMomentum).toBe(-2);
+
+    await processor.processDelayedEffects(ctx);
+    expect((ctx.gameState.flags as any).pressMomentum).toBe(-1);
+
+    await processor.processDelayedEffects(ctx);
+    expect((ctx.gameState.flags as any).pressMomentum).toBe(0);
+
+    // Settled at 0 — stays there.
+    await processor.processDelayedEffects(ctx);
+    expect((ctx.gameState.flags as any).pressMomentum).toBe(0);
+  });
 });
 
 // FinancialSystem's constructor runs validateConfiguration(), which reads

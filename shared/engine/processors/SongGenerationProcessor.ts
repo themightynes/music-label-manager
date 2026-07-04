@@ -86,7 +86,8 @@ export class SongGenerationProcessor {
           description: bankedQualityBonus > 0
             ? `Studio focus paid off: +${bankedQualityBonus} quality applied to this week's recordings`
             : `Studio pressure took its toll: ${bankedQualityBonus} quality on this week's recordings`,
-          amount: bankedQualityBonus
+          amount: bankedQualityBonus,
+          appliedEffects: { quality_bonus: bankedQualityBonus }
         });
         console.log(`[QUALITY BONUS] Consumed banked bonus (${bankedQualityBonus}) this week, pool zeroed`);
       }
