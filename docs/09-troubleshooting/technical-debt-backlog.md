@@ -9,11 +9,13 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 3, 2026
-- **Total Items**: 59
+- **Total Items**: 65
 - **Completed**: 47
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 9 (C50, C51, C52, C53, C55, C56, C57, C58, C59)
+- **Pending**: 15 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65)
+
+> ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing.
 
 ---
 
@@ -943,19 +945,109 @@ Both July 3, 2026 plan docs carry a "Discovered debt" section with code-verified
 
 ---
 
+### [ ] Comment 60: Delayed `artist_energy`/`artist_popularity` effects apply to the entire roster, ignoring `artistId` 🟢
+**Priority**: 🟢 Medium
+**Impact**: A delayed effect queued from a one-on-one artist dialogue hits every signed artist when it fires one week later
+**Effort**: Small
+
+The `artist_mood` case in `applyEffects` respects per-artist targeting, but the `artist_energy` (shared/engine/processors/ActionProcessor.ts:468-484) and `artist_popularity` (:508-543) cases apply to **all** signed artists regardless of the `artistId` carried by the effect. Immediate dialogue effects are applied per-artist by a separate path (server/routes/artists.ts:106-115), so the bug surfaces specifically via delayed effects (queued at server/routes/artists.ts:141-153, fired through ActionProcessor.processDelayedEffects → the same switch). Fix: thread `artistId` through these two cases, mirroring the `artist_mood` implementation.
+
+**Relevant Files**:
+- [shared/engine/processors/ActionProcessor.ts](shared/engine/processors/ActionProcessor.ts)
+- [server/routes/artists.ts](server/routes/artists.ts)
+
+*Identified July 3, 2026 during the interactivity-gap analysis (see docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md).*
+
+---
+
+### [ ] Comment 61: Access-tier downgrades announce "Upgraded"; drop to `none` announces nothing 🔵
+**Priority**: 🔵 Low
+**Impact**: Misleading notification copy on a code path that becomes live the moment reputation can fall (decay/flop penalties)
+**Effort**: Small
+
+`ProgressionProcessor.updateAccessTiers` (shared/engine/processors/ProgressionProcessor.ts:31-142) recomputes each tier from current reputation weekly, so a reputation drop reassigns a lower tier. The change notifications (lines 87, 105, 123) fire on any `previous !== current` with hardcoded "Playlist/Press/Venue Access Upgraded" wording — a flagship→mid downgrade announces "Upgraded: Mid-Tier playlists unlocked!". A drop to `'none'` produces no notification at all. Latent today because reputation rarely falls; fix wording (direction-aware) before shipping reputation decay or flop penalties.
+
+**Relevant Files**:
+- [shared/engine/processors/ProgressionProcessor.ts](shared/engine/processors/ProgressionProcessor.ts)
+
+*Identified July 3, 2026 during the interactivity-gap analysis.*
+
+---
+
+### [ ] Comment 62: AchievementsEngine — two score components hardcoded 0, Media Mogul checks mid-tiers with `===`, "12 weeks" copy rot 🟢
+**Priority**: 🟢 Medium
+**Impact**: Campaign-end scoring ignores 2 of 5 designed axes; a max-access player cannot earn "Media Mogul"; summary strings say "12-week campaign" in a 52-week game
+**Effort**: Small
+
+In `shared/engine/AchievementsEngine.ts`: (1) `artistsSuccessful: 0` and `projectsCompleted: 0` are hardcoded with TODOs (lines 35-36), silently skewing victory-type determination toward money/reputation; (2) "🎵 Media Mogul — Maximum playlist and press access" checks `playlistAccess === 'mid' && pressAccess === 'mid_tier'` (line 129) — strict equality on the *middle* tiers, so players at the real maxima (flagship/national) fail it; (3) "Survivor — Made it through 12 weeks" and all five summary strings reference a 12-week campaign (lines 135, 170) — campaigns are 52 weeks (`data/balance/projects.json:3`). Also note "⭐ Industry Legend — 200+ Reputation" (line 125) is practically unreachable since reputation is capped at 100 on all paths but one (see C65).
+
+**Relevant Files**:
+- [shared/engine/AchievementsEngine.ts](shared/engine/AchievementsEngine.ts)
+
+*Identified July 3, 2026 during the interactivity-gap analysis; adversarially verified.*
+
+---
+
+### [ ] Comment 63: Dead artist columns (massAppeal, stress, creativity, moodHistory, lastMoodEvent, moodTrend) + phantom `artist.loyalty` fallbacks 🔵
+**Priority**: 🔵 Low
+**Impact**: Schema/serialization dead weight with live CHECK constraints; misleading fields ride along in every API response and save snapshot
+**Effort**: Small (triage decision) — Medium if dropping columns
+
+Verified never read AND never written by any engine/server/client code (only schema defaults, serialization passthrough, and test factories): `artists.massAppeal` (shared/schema.ts:45), `stress` (:43), `creativity` (:44), `moodHistory`/`lastMoodEvent`/`moodTrend` (:54-56). All carry CHECK constraints in `migrations/0020_add_artist_attribute_constraints.sql`. `temperament` (:49) is written at signing but rendered nowhere and read by nothing. Mood history actually lives in the separate `mood_events` table. Separately, client code carries fallbacks to a **nonexistent** `artist.loyalty` column (`client/src/components/artist/OverviewTab.tsx:89`, `client/src/pages/ArtistsLandingPage.tsx:305` — `(artist as any).loyalty`); loyalty exists only on executives (schema.ts:324). Decide per column: wire (see the interactivity-gap report's findings on massAppeal/archetype) or drop (migration + `SNAPSHOT_VERSION` review). Remove the phantom loyalty fallbacks either way.
+
+**Relevant Files**:
+- [shared/schema.ts](shared/schema.ts)
+- [migrations/0020_add_artist_attribute_constraints.sql](migrations/0020_add_artist_attribute_constraints.sql)
+- [client/src/components/artist/OverviewTab.tsx](client/src/components/artist/OverviewTab.tsx)
+- [client/src/pages/ArtistsLandingPage.tsx](client/src/pages/ArtistsLandingPage.tsx)
+
+*Identified July 3, 2026 during the interactivity-gap analysis; adversarially verified.*
+
+---
+
+### [ ] Comment 64: Weekly side-event roll uses unseeded `Math.random()`, breaking seeded-RNG discipline 🔵
+**Priority**: 🔵 Low
+**Impact**: Non-deterministic draw inside the week advance (currently harmless — the result is discarded, see the interactivity-gap report's finding 1 — but becomes a determinism bug the moment events are surfaced)
+**Effort**: Small
+
+`getRandomEvent` (shared/utils/dataLoader.ts:482-490) picks uniformly with `Math.random()`, ignoring the game's `rngSeed` and the `event_weights`/`event_cooldown`/`max_events_per_week` config in `data/balance/events.json`. Called from `checkForEvents` (shared/engine/game-engine.ts:966-980) during week advance. If/when the side-event system is wired to the player (report finding 1), this must switch to the engine's seeded RNG and honor the weights/cooldown config.
+
+**Relevant Files**:
+- [shared/utils/dataLoader.ts](shared/utils/dataLoader.ts)
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts)
+
+*Identified July 3, 2026 during the interactivity-gap analysis.*
+
+---
+
+### [ ] Comment 65: Release press-coverage path writes reputation uncapped (only path that can exceed 100) 🔵
+**Priority**: 🔵 Low
+**Impact**: Reputation invariant (0-100, enforced in ActionProcessor and assumed by tier thresholds) can be violated by press pickups on release
+**Effort**: Small
+
+`ActionProcessor.applyEffects` clamps reputation to 0-100 (shared/engine/processors/ActionProcessor.ts:351-358), and `max_reputation: 100` exists in `data/balance/progression.json` (though nothing reads it). But the release press-coverage reputation gain at `shared/engine/processors/ReleaseProcessor.ts:1172` applies no cap — the single write path that can push reputation above 100. Fix: clamp there (ideally via one shared helper reading `max_reputation`).
+
+**Relevant Files**:
+- [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts)
+- [data/balance/progression.json](data/balance/progression.json)
+
+*Identified July 3, 2026 during the interactivity-gap analysis.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026), 1 pending (C58 — advance-week idempotency guard)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 8 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026)
+- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 3 pending (C58 — advance-week idempotency guard; C60 — delayed effects hit whole roster; C62 — AchievementsEngine zeroed components)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 12 pending (C50 — client tests' incidental DB dependency; C51 — "On Tour" badge one-week lag; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026)
 
 ### By Status
-- ✅ Completed: 47 items (79.7%)
+- ✅ Completed: 47 items (72.3%)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 9 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings, July 3, 2026; all low except C58 medium, not scheduled)
+- 📋 Pending: 15 items (C50, C51 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C59 — Phase 3.5 + D6 session findings; C60–C65 — interactivity-gap analysis, July 3, 2026; all low except C58/C60/C62 medium, not scheduled)
 
 ---
 

@@ -4,6 +4,33 @@
 
 ---
 
+## 📅 Session Log — July 3, 2026 (Interactivity Gap Analysis: adversarially-verified case file on hollow simulation; read-only, docs-only)
+
+**A dedicated hunting session produced `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`** — an evidence-backed, ranked case file on (Track 1) features designed in docs but never wired, and (Track 2) code that runs but doesn't matter to the player. Ran as orchestrator + 6 scout subagents (2 doc-sweeps, 4 engine traces) + 3 adversarial verifiers that attempted to REFUTE every "it's dead" claim before it entered the report (the star_power_amplification false-kill precedent drove this design — and the verifiers DID catch several stale doc claims in the other direction). Every claim is backed by file:line inspected this session; two items are explicitly marked UNVERIFIED rather than asserted.
+
+**Headline findings (consequence-weighted ranking, full detail + effort sizing + constraint collisions in the report):**
+1. **Random side events are a phantom system** — 20% weekly roll (`game-engine.ts:966-980`) picks fully-authored multi-choice events from `data/events.json`, then discards everything: effects never applied, choices never presented, title never rendered.
+2. **71 of 77 executive-meeting effect keys are silent no-ops** — `ActionProcessor.applyEffects` handles 6 keys with no default case, while BOTH badge renderers (DialogueInterface, SelectionSummary) promise every key to the player. Produces fake choices, free-money traps (e.g. apple_exclusive strictly dominates), and 7 all-payoff-dead meetings. S-size mitigation available (badge whitelist) independent of the L-size real wiring.
+3. **`WeekSummary.tsx` `categorizeChanges` has an unrendered `other` bucket** swallowing 8 change types — including `breakthrough`, which `changeImportance.ts` classifies as HERO. One S-size UI fix un-hides several systems.
+4. **The awareness economy is fully live and completely invisible** — up to 2× weekly streams (`FinancialSystem.ts:983-1013`, enabled), zero player UI (admin StreamingDecayTester only). **Backlog C42 was factually wrong** and now carries a correction note; C43 was half-wrong (DELETE-release endpoint exists server-side with safe refund; only the UI button is missing).
+5. **Artist energy is display-only** (read by nothing), dialogue scene mood/energy targeting is unread (scenes picked at random), exec Level is hardcoded 1 forever, exec mood/loyalty gate nothing, charts feed nothing back (hit_single/number_one rep bonuses are dead config), reputation never decays, difficulty system has no UI and ¾ dead modifiers, achievements score on 3 of 5 axes with a mid-tier-only "Media Mogul" equality bug.
+
+**Also produced:** a "not worth it" section (roles table = delete-not-wire; artist loyalty = deliberately refactored away; two superseded planning docs to archive), a corrected-stale-claims ledger (C40/C42/C43/C44/C45 + several planning-doc claims), and a per-finding constraint cheat-sheet (golden master / SNAPSHOT_VERSION / atomic-week / seeded-RNG collisions).
+
+**Tech debt logged (C60–C65):** delayed artist_energy/popularity effects hit the whole roster ignoring artistId (medium); tier downgrades announce "Upgraded"; AchievementsEngine hardcoded-zero components + equality bug + 12-week copy rot (medium); dead artist columns (massAppeal/stress/creativity/moodHistory/lastMoodEvent/moodTrend) + phantom `artist.loyalty` client fallbacks; side-event roll uses unseeded Math.random; release press path writes reputation uncapped. Backlog header counts updated; C42/C43 stale-premise correction note added.
+
+**Decisions made (Nes):** ranking lens = consequence-weighted; full Track 2 sweep; deliverable = files only (committed at session wrap, no fixes applied — read-only mission honored).
+
+**Coordination note:** the parallel Phase 4 session merged #113–#118 mid-flight; the report's Phase-4 and modal-race bullets were reconciled against that before commit (notable-chime now wired; `warning` deliberately unwired; auto-open reworked — re-verify the stacked-modal race before scoping the XState orchestrator).
+
+**Open threads / next steps:**
+- **Nes: pick from the report's ranked list.** The zero-engine-risk first wave is findings 3 (render the `other`/hero bucket), 4 (awareness surfacing), 9 (difficulty picker), 11 (cancel-release button), 14 (email CTAs), plus the meeting-badge whitelist from finding 2.
+- **C60 and C62 are S-size real bugs** worth folding into any nearby PR.
+- Two UNVERIFIED items if anyone wants closure: legacy no-releaseId song path reachability; whether "Industry Legend" (200 rep) is strictly impossible.
+- The report's corrected-stale-claims ledger should be applied to the source planning docs (C42/C43 backlog notes already annotated).
+
+---
+
 ## 📅 Session Log — July 3, 2026 (Phase 4 COMPLETE: game feel — planned, executed, live-verified in one session; PRs #100, #102, #109, #112–#117)
 
 **Phase 4 (game feel) went from "no tickets" to fully planned, built, merged, and live-verified**, running as orchestrator + one subagent per PR (Opus for high-risk/engine-adjacent, Sonnet for scoped builds), concurrent worktrees, orchestrator diff-review before every merge, self-merge-on-green-CI per session grant. Ran in parallel with (and coordinated live against) the Phase 3.5 + D6 session below — Phase 4's WeekSummary/GameHeader PRs were explicitly gated on 3.5 landing and started the hour the gate opened.
