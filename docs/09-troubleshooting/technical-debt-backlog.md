@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 3, 2026
-- **Total Items**: 65
+- **Total Items**: 66
 - **Completed**: 47
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 15 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65)
+- **Pending**: 16 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66)
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing.
 
@@ -1032,6 +1032,25 @@ Verified never read AND never written by any engine/server/client code (only sch
 - [data/balance/progression.json](data/balance/progression.json)
 
 *Identified July 3, 2026 during the interactivity-gap analysis.*
+
+---
+
+### [ ] Comment 66: Stray loose-schema loaders + verbose engine debug logging (exec-meetings revival Phase A finds) 🔵
+**Priority**: 🔵 Low
+**Impact**: Authoring/validation hygiene; noisy logs in the week-advance hot path
+**Effort**: Small
+
+Found during the exec-meetings revival Phase A verification (July 3, 2026), out of scope there:
+1. `shared/utils/dataLoader.ts` still has several loaders beyond actions.json (`loadWorldData`, balance loaders) using `z.record(z.any())`/loose passthrough schemas — the same looseness class that let 71 dead effect keys accumulate silently before PR-1 tightened the actions choice schema.
+2. `ActionProcessor.processRoleMeeting`/`processAction` carry very verbose `console.log` debug statements on every meeting processed (pre-existing).
+3. `data/actions.json.backup` (tracked; write-only target of `server/routes/admin.ts:55`) still contains the deleted `TEST_mood_boost_immediate` entry — never read by the engine, but greps hit it.
+
+**Relevant Files**:
+- [shared/utils/dataLoader.ts](shared/utils/dataLoader.ts)
+- [shared/engine/processors/ActionProcessor.ts](shared/engine/processors/ActionProcessor.ts)
+- [data/actions.json.backup](data/actions.json.backup)
+
+*Identified July 3, 2026 during exec-meetings revival Phase A (fresh-context verifier).*
 
 ---
 
