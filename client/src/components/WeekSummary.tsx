@@ -12,6 +12,7 @@ import { ParticleBurst } from './motion-primitives/particle-burst';
 import { useStagedReveal } from '@/hooks/useStagedReveal';
 import { playSound } from '@/lib/audio';
 import { classifyChartUpdate } from '@shared/utils/changeImportance';
+import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate } from '../../../shared/types/gameTypes';
 
 interface WeekSummaryProps {
@@ -97,7 +98,15 @@ function formatMeetingEffectLabel(key: string): string {
 function formatAppliedEffects(effects: Record<string, number> | undefined): string[] {
   if (!effects) return [];
   return Object.entries(effects)
-    .filter(([, value]) => typeof value === 'number' && value !== 0)
+    .filter(
+      ([key, value]) =>
+        typeof value === 'number' &&
+        value !== 0 &&
+        // Badge honesty (PR-2 fix): delayed_effect changes carry the RAW authored
+        // effects_delayed record, which can still contain dead keys until the
+        // channel PRs land — never render a badge the engine didn't apply.
+        (LIVE_EFFECT_KEYS.has(key) || key === 'executive_mood')
+    )
     .map(([key, value]) => `${value > 0 ? '+' : ''}${value} ${formatMeetingEffectLabel(key)}`);
 }
 

@@ -121,6 +121,25 @@ describe('WeekSummary meetings card', () => {
     expect(screen.getByText('+3 Mood')).toBeInTheDocument();
   });
 
+  it('never renders a badge for a dead effect key arriving via delayed_effect (badge honesty)', () => {
+    // Regression (Phase A verifier find): delayed_effect changes carry the RAW
+    // authored effects_delayed record, which can still contain dead keys until
+    // the channel PRs land — e.g. ceo_priorities/studio_first ships
+    // quality_bonus: 5 in production data today.
+    renderSummary([
+      {
+        type: 'delayed_effect',
+        description: 'Delayed effect triggered',
+        meetingId: 'ceo_priorities',
+        choiceId: 'studio_first',
+        appliedEffects: { quality_bonus: 5, artist_mood: 2 },
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('+2 Mood')).toBeInTheDocument();
+    expect(screen.queryByText(/quality/i)).not.toBeInTheDocument();
+  });
+
   it('does not render the meetings card when there are no meeting-bucket changes', () => {
     renderSummary([
       { type: 'revenue', description: 'Streaming revenue', amount: 1000, importance: 'routine' } as GameChange,

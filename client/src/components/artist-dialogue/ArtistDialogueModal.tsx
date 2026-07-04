@@ -13,6 +13,7 @@ import {
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { isRenderableEffectKey } from '../executive-meetings/DialogueInterface';
 
 interface ArtistDialogueModalProps {
   gameId: string;
@@ -202,7 +203,9 @@ export function ArtistDialogueModal({
                 <div className="w-full space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Immediate Effects:</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(context.appliedEffects).map(([key, value]) => (
+                    {Object.entries(context.appliedEffects)
+                      .filter(([key]) => isRenderableEffectKey(key))
+                      .map(([key, value]) => (
                       <Badge
                         key={key}
                         variant="secondary"
@@ -223,7 +226,9 @@ export function ArtistDialogueModal({
                 <div className="w-full space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Delayed Effects (Next Week):</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(context.delayedEffects).map(([key, value]) => (
+                    {Object.entries(context.delayedEffects)
+                      .filter(([key]) => isRenderableEffectKey(key))
+                      .map(([key, value]) => (
                       <Badge
                         key={key}
                         variant="outline"

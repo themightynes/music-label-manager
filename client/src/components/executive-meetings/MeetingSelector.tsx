@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
-import { Clock, DollarSign, TrendingUp, TrendingDown, Zap, Globe, Star, User } from 'lucide-react';
+import { Clock, DollarSign, Zap, Globe, Star, User } from 'lucide-react';
 import type { RoleMeeting, GameArtist } from '../../../../shared/types/gameTypes';
 import { ArtistSelector } from './ArtistSelector';
 
@@ -12,38 +12,6 @@ interface MeetingSelectorProps {
   signedArtists: GameArtist[];
   onSelectMeeting: (meeting: RoleMeeting, selectedArtistId?: string) => void;
   onBack: () => void;
-}
-
-function EffectBadge({ effect, value }: { effect: string; value: number }) {
-  const isPositive = value > 0;
-  const Icon = isPositive ? TrendingUp : TrendingDown;
-  const colorClass = isPositive
-    ? 'text-positive bg-positive/10 border border-positive/40'
-    : 'text-negative bg-negative/10 border border-negative/40';
-
-  const formatEffect = (key: string, val: number) => {
-    switch (key) {
-      case 'money':
-        return `${val > 0 ? '+' : ''}$${val.toLocaleString()}`;
-      case 'reputation':
-        return `${val > 0 ? '+' : ''}${val} Rep`;
-      case 'creative_capital':
-        return `${val > 0 ? '+' : ''}${val} Creative`;
-      case 'artist_mood':
-        return `${val > 0 ? '+' : ''}${val} Mood`;
-      case 'artist_loyalty':
-        return `${val > 0 ? '+' : ''}${val} Loyalty`;
-      default:
-        return `${val > 0 ? '+' : ''}${val} ${key}`;
-    }
-  };
-
-  return (
-    <Badge variant="secondary" className={`text-xs font-mono rounded-pill ${colorClass} flex items-center gap-1`}>
-      <Icon className="h-3 w-3" />
-      {formatEffect(effect, value)}
-    </Badge>
-  );
 }
 
 function ChoicePreview({ choices }: { choices: RoleMeeting['choices'] }) {

@@ -605,11 +605,14 @@ describe('Mood System Unit Tests - Data Structure Logic', () => {
       const action = {
         actionType: 'role_meeting' as const,
         targetId: 'ceo_priorities',
-        details: { choiceId: 'studio_first' }
+        metadata: { choiceId: 'studio_first' }
       };
 
-      // Simulate delayedKey generation (line 918)
-      const delayedKey = `${action.targetId}-${action.details?.choiceId}-delayed`;
+      // Simulate delayedKey generation: processRoleMeeting keys the flag with the
+      // choiceId destructured from action.metadata (PR-1 fixed the old
+      // `action.details?.choiceId` path, which was always undefined).
+      const { choiceId } = action.metadata;
+      const delayedKey = `${action.targetId}-${choiceId}-delayed`;
 
       expect(delayedKey).toBe('ceo_priorities-studio_first-delayed');
     });
