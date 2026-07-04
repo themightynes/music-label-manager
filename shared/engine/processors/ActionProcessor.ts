@@ -69,7 +69,9 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'awareness_boost',
   // Exec-meetings-revival PR-6 (C4 — outcome variance/risk channel):
   'variance_up',
-  'rep_swing'
+  'rep_swing',
+  // Exec-meetings-revival PR-7 (C5 — prestige/award track):
+  'award_chances'
 ]);
 
 export class ActionProcessor {
@@ -718,6 +720,30 @@ export class ActionProcessor {
             appliedEffects: { rep_swing: rolledValue }
           });
           console.log(`[EFFECT PROCESSING] rep_swing effect: gambled ±${magnitude}, rolled ${rolledValue > 0 ? '+' : ''}${rolledValue} (seed: ${seed})`);
+          break;
+        }
+
+        case 'award_chances': {
+          // Exec-meetings-revival PR-7 (C5) — prestige/award track. Signed points
+          // accumulate into flags.awardChances with NO expiry and NO decay — this
+          // is the one channel that intentionally banks forever, persisting to
+          // campaign end (award season). Consumed by AchievementsEngine's
+          // campaign-end award roll (isolated seeded RNG, see AchievementsEngine.ts)
+          // — there is no weekly consumer, unlike every other bank in this file.
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.awardChances === 'number' ? flags.awardChances : 0;
+          flags.awardChances = previous + value;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: value > 0
+              ? 'Industry standing growing — award season will remember'
+              : 'Industry standing took a hit — award season will remember',
+            amount: value,
+            appliedEffects: { award_chances: value }
+          });
+          console.log(`[EFFECT PROCESSING] award_chances effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.awardChances})`);
           break;
         }
 

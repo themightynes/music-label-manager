@@ -155,6 +155,14 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       outlier_chance_bonus_per_point: quality.quality_system?.outlier_chance_bonus_per_point ?? 0.02,
       pending_variance_expiry_weeks: quality.quality_system?.pending_variance_expiry_weeks ?? 8,
     }),
+    // Mirror ServerGameData.getAwardConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-7, C5 — prestige/award track).
+    getAwardConfigSync: () => ({
+      award_chance_per_point: progression.reputation_system?.award_chance_per_point ?? 0.08,
+      award_chance_cap: progression.reputation_system?.award_chance_cap ?? 0.8,
+      award_score_bonus: progression.reputation_system?.award_score_bonus ?? 2000,
+      award_nominee_pool_threshold: progression.reputation_system?.award_nominee_pool_threshold ?? 5,
+    }),
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],
     getAllRoles: async () => [],

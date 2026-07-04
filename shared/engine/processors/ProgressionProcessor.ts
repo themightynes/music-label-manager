@@ -199,7 +199,11 @@ export class ProgressionProcessor {
     ctx.gameState.campaignCompleted = true;
 
     // Calculate complete campaign results
-    const campaignResults = AchievementsEngine.calculateCampaignResults(ctx.gameState);
+    // Exec-meetings-revival PR-7 (C5): award-roll knobs come from the same
+    // balance-JSON accessor pattern as every other channel (progression.json
+    // reputation_system, via ServerGameData.getAwardConfigSync).
+    const awardConfig = ctx.gameData.getAwardConfigSync();
+    const campaignResults = AchievementsEngine.calculateCampaignResults(ctx.gameState, awardConfig);
 
     // Add campaign completion to summary
     summary.changes.push({

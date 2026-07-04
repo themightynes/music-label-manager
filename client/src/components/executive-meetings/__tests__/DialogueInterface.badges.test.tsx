@@ -71,6 +71,10 @@ describe('isRenderableEffectKey', () => {
     expect(isRenderableEffectKey('variance_up')).toBe(true);
     expect(isRenderableEffectKey('rep_swing')).toBe(true);
   });
+
+  it('accepts the PR-7 award channel key (award_chances)', () => {
+    expect(isRenderableEffectKey('award_chances')).toBe(true);
+  });
 });
 
 describe('ChoiceEffects badge honesty', () => {
@@ -171,5 +175,16 @@ describe('ChoiceEffects badge honesty', () => {
   it('renders "±N Rep Gamble" for rep_swing', () => {
     render(<ChoiceEffects choice={buildChoice({ effects_delayed: { rep_swing: 2 } })} />);
     expect(screen.getByText('±2 Rep Gamble')).toBeInTheDocument();
+  });
+
+  // Exec-meetings-revival PR-7 (C5) — award/prestige channel badges are now live.
+  it('renders "+N Prestige" for a positive award_chances', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { award_chances: 3 } })} />);
+    expect(screen.getByText('+3 Prestige')).toBeInTheDocument();
+  });
+
+  it('renders "-N Prestige" for a negative award_chances (the skip_awards trap fix)', () => {
+    render(<ChoiceEffects choice={buildChoice({ effects_delayed: { award_chances: -1 } })} />);
+    expect(screen.getByText('-1 Prestige')).toBeInTheDocument();
   });
 });

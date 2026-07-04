@@ -7,7 +7,12 @@
     "hit_single_bonus": 5,
     "number_one_bonus": 10,
     "flop_penalty": 3,
-    
+
+    "award_chance_per_point": 0.08,
+    "award_chance_cap": 0.8,
+    "award_score_bonus": 2000,
+    "award_nominee_pool_threshold": 5,
+
     "regional_barriers": {
       "domestic": 0,
       "neighboring": 15,

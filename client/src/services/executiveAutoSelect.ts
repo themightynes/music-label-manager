@@ -26,8 +26,13 @@ const GAMBLE_EFFECT_KEYS = new Set(['variance_up', 'rep_swing']);
  * Keys that count as "guaranteed" positive/negative value for the safety score.
  * Costs (money/creative_capital negative) get a small penalty; guaranteed
  * upside on these axes gets a small bonus. Gamble keys are handled separately.
+ *
+ * Exec-meetings-revival PR-7 (C5): award_chances is a guaranteed-positive
+ * accumulating pool (no expiry, no roll at authoring time) — the opposite of a
+ * gamble — so it belongs here, not in GAMBLE_EFFECT_KEYS. This keeps AUTO from
+ * treating a real, banked prestige gain as a risk to avoid.
  */
-const VALUE_EFFECT_KEYS = ['money', 'reputation', 'creative_capital'] as const;
+const VALUE_EFFECT_KEYS = ['money', 'reputation', 'creative_capital', 'award_chances'] as const;
 
 /**
  * Score a single choice's LIVE effects for risk-averseness. Higher = safer/better.

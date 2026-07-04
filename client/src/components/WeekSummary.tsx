@@ -105,6 +105,9 @@ function formatMeetingEffectLabel(key: string): string {
       // at choice-preview time; post-roll the appliedEffects value IS the
       // resolved reputation delta (see formatAppliedEffects's own-sign handling).
       return 'Rep Gamble';
+    case 'award_chances':
+      // Exec-meetings-revival PR-7 (C5) — prestige/award track (never expires).
+      return 'Prestige';
     default:
       return key.replace(/_/g, ' ');
   }

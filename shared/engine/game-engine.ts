@@ -1031,9 +1031,90 @@ export class GameEngine {
 
       const chartUpdateCount = summary.chartUpdates?.length ?? 0;
       console.log(`[CHART PROCESSING] Generated chart for week ${chartWeek} with ${chartUpdateCount} player entries`);
+
+      // Exec-meetings-revival PR-7 (C5): wire the dead hit_single_bonus/
+      // number_one_bonus config (data/balance/progression.json reputation_system)
+      // — a #1 (or top-10) finally pays reputation. currentWeekEntries (pre-map,
+      // still carrying songId) is the milestone source.
+      this.applyChartMilestoneBonuses(currentWeekEntries, summary);
     } catch (error) {
       console.error('[CHART PROCESSING] Error generating weekly chart:', error);
       // Don't throw - chart generation should not break weekly processing
+    }
+  }
+
+  /**
+   * Exec-meetings-revival PR-7 (C5) — chart reputation milestones.
+   *
+   * `hit_single_bonus`/`number_one_bonus` (data/balance/progression.json
+   * reputation_system) were authored but never consumed anywhere (gap-analysis
+   * finding 7's S-slice). Semantics are ONCE per song per milestone, not weekly:
+   * hit_single_bonus fires the week a song FIRST enters the top 10;
+   * number_one_bonus fires the week a song FIRST reaches No. 1. A song hitting
+   * both in the same week gets both.
+   *
+   * "First" is tracked via `gameState.flags.chartMilestones[songId]` (documented
+   * choice, not `peakPosition`/`isDebut` off the chart-entry shape): ChartService's
+   * `peakPosition` only reflects PRIOR charting weeks captured in `chart_entries`,
+   * and a song that debuts directly at position <=10 (or at #1) needs the SAME
+   * week's bonus to fire — inferring "first" from movement/peak alone at this
+   * call site would require re-deriving history ChartService already computed
+   * differently for isDebut vs peakPosition. An explicit once-fired flag is
+   * simpler to reason about and immune to any future ChartService peak-tracking
+   * change. Competitor rows (no songId) are skipped — no reputation payout for
+   * NPC chart performance.
+   */
+  private applyChartMilestoneBonuses(
+    entries: Array<{ songId?: string | null; songTitle: string; position: number | null; isCompetitorSong?: boolean | null }>,
+    summary: WeekSummary
+  ): void {
+    const reputationSystem = (this.gameData.getBalanceConfigSync() as any)?.reputation_system || {};
+    const hitSingleBonus = typeof reputationSystem.hit_single_bonus === 'number' ? reputationSystem.hit_single_bonus : 5;
+    const numberOneBonus = typeof reputationSystem.number_one_bonus === 'number' ? reputationSystem.number_one_bonus : 10;
+
+    const flags = (this.gameState.flags || {}) as Record<string, any>;
+    const milestones = { ...(flags.chartMilestones || {}) } as Record<string, { hitTop10?: boolean; hitNumberOne?: boolean }>;
+    let milestonesChanged = false;
+
+    for (const entry of entries) {
+      if (entry.isCompetitorSong || !entry.songId || entry.position === null) continue;
+
+      const songId = entry.songId;
+      const record = milestones[songId] || {};
+      let bonus = 0;
+      const labels: string[] = [];
+
+      if (entry.position <= 10 && !record.hitTop10) {
+        bonus += hitSingleBonus;
+        labels.push(`Top 10 debut (+${hitSingleBonus} reputation)`);
+        record.hitTop10 = true;
+      }
+      if (entry.position === 1 && !record.hitNumberOne) {
+        bonus += numberOneBonus;
+        labels.push(`No. 1 (+${numberOneBonus} reputation)`);
+        record.hitNumberOne = true;
+      }
+
+      if (bonus > 0) {
+        milestones[songId] = record;
+        milestonesChanged = true;
+
+        this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + bonus));
+        if (!summary.reputationChanges) summary.reputationChanges = {};
+        summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + bonus;
+
+        summary.changes.push({
+          type: 'reputation',
+          description: `Chart smash: ${entry.songTitle} hit the ${labels.join(' and ')}`,
+          amount: bonus
+        });
+        console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${bonus} reputation (${labels.join(', ')})`);
+      }
+    }
+
+    if (milestonesChanged) {
+      flags.chartMilestones = milestones;
+      this.gameState.flags = flags;
     }
   }
 
@@ -1246,8 +1327,12 @@ export interface CampaignResults {
     artistsSuccessful: number;
     projectsCompleted: number;
     accessTierBonus: number;
+    // Exec-meetings-revival PR-7 (C5) — campaign-end award-roll bonus (0 if none).
+    awardBonus: number;
   };
   victoryType: 'Commercial Success' | 'Critical Acclaim' | 'Balanced Growth' | 'Survival' | 'Failure';
   summary: string;
   achievements: string[];
+  // Exec-meetings-revival PR-7 (C5) — true when the campaign-end award roll hit.
+  industryAward?: boolean;
 }

@@ -126,7 +126,7 @@
             "money": -12000
           },
           "effects_delayed": {
-            "international_rep": 2
+            "reputation": 2
           }
         },
         {
@@ -267,7 +267,7 @@
             "money": -5000
           },
           "effects_delayed": {
-            "niche_dominance": 1
+            "award_chances": 1
           }
         },
         {
@@ -528,8 +528,7 @@
             "money": -20000
           },
           "effects_delayed": {
-            "award_chances": 3,
-            "industry_respect": 2
+            "award_chances": 5
           }
         },
         {
@@ -540,8 +539,7 @@
             "creative_capital": -1
           },
           "effects_delayed": {
-            "award_chances": 1,
-            "relationship_building": 2
+            "award_chances": 3
           }
         },
         {
@@ -552,7 +550,7 @@
           },
           "effects_delayed": {
             "commercial_focus": 1,
-            "prestige_loss": -1
+            "award_chances": -1
           }
         }
       ]
@@ -723,7 +721,7 @@
           "label": "Report the behavior to Spotify",
           "effects_immediate": {},
           "effects_delayed": {
-            "industry_respect": 2,
+            "award_chances": 2,
             "rep_swing": 2
           }
         }
@@ -802,7 +800,7 @@
             "money": -8000
           },
           "effects_delayed": {
-            "prestige": 1,
+            "award_chances": 1,
             "sellthrough_risk": 1
           }
         },
@@ -813,7 +811,7 @@
             "money": -12000
           },
           "effects_delayed": {
-            "prestige": 2,
+            "award_chances": 2,
             "rep_swing": 1
           }
         }

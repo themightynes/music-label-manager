@@ -543,6 +543,29 @@ export class ServerGameData {
     };
   }
 
+  // Exec-meetings-revival PR-7 (C5): award-track knobs — how a banked
+  // flags.awardChances pool converts into a campaign-end award-roll chance
+  // (capped) and the score bonus a win adds to AchievementsEngine's total.
+  // Lives in data/balance/progression.json under reputation_system.
+  getAwardConfigSync() {
+    if (!this.balanceData) {
+      return {
+        award_chance_per_point: 0.08,
+        award_chance_cap: 0.8,
+        award_score_bonus: 2000,
+        award_nominee_pool_threshold: 5
+      };
+    }
+
+    const reputationSystem = (this.balanceData.reputation_system || {}) as Record<string, any>;
+    return {
+      award_chance_per_point: reputationSystem.award_chance_per_point ?? 0.08,
+      award_chance_cap: reputationSystem.award_chance_cap ?? 0.8,
+      award_score_bonus: reputationSystem.award_score_bonus ?? 2000,
+      award_nominee_pool_threshold: reputationSystem.award_nominee_pool_threshold ?? 5
+    };
+  }
+
   getBalanceConfigSync(): BalanceConfig {
     if (!this.balanceData) {
       throw new Error('Balance data not loaded. Call initialize() first.');

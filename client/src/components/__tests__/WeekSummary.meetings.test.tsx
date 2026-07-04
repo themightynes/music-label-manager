@@ -262,6 +262,38 @@ describe('WeekSummary meetings card', () => {
     expect(screen.getByText(/Riskier session this week: outcomes swung wider \(±2 volatility\)/)).toBeInTheDocument();
   });
 
+  it('renders an award_chances applied-effect line as +N Prestige (exec-meetings-revival PR-7)', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Industry standing growing — award season will remember',
+        meetingId: 'cmo_awards',
+        choiceId: 'full_campaign',
+        choiceLabel: 'Full campaign - hire the best consultants',
+        appliedEffects: { award_chances: 5 },
+        importance: 'routine',
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('+5 Prestige')).toBeInTheDocument();
+  });
+
+  it('renders a negative award_chances applied-effect line as -N Prestige (the skip_awards trap fix)', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Industry standing took a hit — award season will remember',
+        meetingId: 'cmo_awards',
+        choiceId: 'skip_awards',
+        choiceLabel: 'Skip it - focus on commercial success',
+        appliedEffects: { award_chances: -1 },
+        importance: 'routine',
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText('-1 Prestige')).toBeInTheDocument();
+  });
+
   it('does not render the meetings card when there are no meeting-bucket changes', () => {
     renderSummary([
       { type: 'revenue', description: 'Streaming revenue', amount: 1000, importance: 'routine' } as GameChange,

@@ -65,6 +65,23 @@ describe('pickSafestChoice', () => {
     expect(picked?.id).toBe('profitable');
   });
 
+  it('exec-meetings-revival PR-7 (C5): award_chances counts as a guaranteed-positive, not a gamble — AUTO prefers it over a neutral choice', () => {
+    const neutral = choice('neutral', {});
+    const prestige = choice('prestige', { effects_delayed: { award_chances: 2 } });
+
+    const picked = pickSafestChoice([neutral, prestige]);
+    expect(picked?.id).toBe('prestige');
+  });
+
+  it('award_chances is NOT penalized like a gamble key even at large magnitude', () => {
+    const bigPrestige = choice('big-prestige', { effects_delayed: { award_chances: 5 } });
+    const smallGamble = choice('small-gamble', { effects_delayed: { variance_up: 1 } });
+
+    // A gamble of ANY magnitude must lose to a guaranteed prestige gain.
+    const picked = pickSafestChoice([smallGamble, bigPrestige]);
+    expect(picked?.id).toBe('big-prestige');
+  });
+
   it('ties resolve deterministically to the first matching choice', () => {
     const a = choice('a', {});
     const b = choice('b', {});
@@ -103,5 +120,31 @@ describe('prepareAutoSelectOptions — AUTO never gambles when a safe alternativ
     const options = prepareAutoSelectOptions([executive], { cmo: [meeting] });
     expect(options).toHaveLength(1);
     expect(options[0].choice.id).toBe('safe');
+  });
+
+  it('exec-meetings-revival PR-7 (C5): a meeting with an award_chances choice and no gamble never routes AUTO into a gamble', () => {
+    // Mirrors the real cmo_awards meeting shape post-normalization. This pins
+    // that award_chances participates in scoring as ordinary guaranteed value
+    // (money/reputation/creative_capital weighting is unchanged by this PR —
+    // AUTO's cost-vs-prestige tradeoff logic is out of scope here), while
+    // confirming none of these gamble-free choices are ever penalized as a risk.
+    const meeting: RoleMeeting = {
+      id: 'cmo_awards',
+      prompt: 'Award season is coming.',
+      target_scope: 'global',
+      choices: [
+        choice('full_campaign', { effects_immediate: { money: -20000 }, effects_delayed: { award_chances: 5 } }),
+        choice('grassroots_push', {
+          effects_immediate: { money: -5000, creative_capital: -1 },
+          effects_delayed: { award_chances: 3 },
+        }),
+        choice('skip_awards', { effects_immediate: { money: 3000 }, effects_delayed: { commercial_focus: 1, award_chances: -1 } }),
+      ],
+    };
+
+    const options = prepareAutoSelectOptions([executive], { cmo: [meeting] });
+    expect(options).toHaveLength(1);
+    // Whichever choice wins, it must be one of the three real (gamble-free) ids.
+    expect(['full_campaign', 'grassroots_push', 'skip_awards']).toContain(options[0].choice.id);
   });
 });

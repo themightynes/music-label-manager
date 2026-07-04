@@ -102,6 +102,10 @@ function EffectBadge({
         // GAMBLE's magnitude (pre-roll), shown at the choice-preview stage before
         // the isolated seeded roll resolves it.
         return `±${Math.abs(val)} Rep Gamble`;
+      case 'award_chances':
+        // Exec-meetings-revival PR-7 (C5) — prestige/award track. Never expires,
+        // banks to campaign end; badge reads as a durable prestige value.
+        return `${val > 0 ? '+' : ''}${val} Prestige`;
       default:
         // Unreachable in practice — the caller filters to isRenderableEffectKey
         // before rendering an EffectBadge at all. Kept as a safe fallback only.
