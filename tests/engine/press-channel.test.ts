@@ -132,6 +132,67 @@ describe('ActionProcessor.processDelayedEffects — press_momentum weekly decay'
     expect((ctx.gameState.flags as any).pressMomentum).toBeUndefined();
   });
 
+  it('decays BEFORE applying this week-s triggered delayed effects, so fresh momentum survives its first week (Phase B fix-2)', async () => {
+    // Regression: decay used to run AFTER the triggered-entry loop, so a +1
+    // momentum landing via a delayed effect was applied and decayed to 0 in the
+    // SAME call — it could never influence any press roll (rolls run earlier in
+    // the weekly pipeline). cmo_pr_angle/safe and damage_control were total
+    // no-ops end-to-end.
+    const processor = new ActionProcessor();
+    const ctx = buildContext();
+    (ctx.gameState.flags as any)['cmo_pr_angle-safe-delayed'] = {
+      triggerWeek: 5, // = buildContext currentWeek
+      effects: { press_momentum: 1 },
+    };
+
+    await processor.processDelayedEffects(ctx);
+
+    // Fresh momentum survives the call it landed in...
+    expect((ctx.gameState.flags as any).pressMomentum).toBe(1);
+
+    // ...is readable for the NEXT week's press rolls, and only then decays.
+    await processor.processDelayedEffects(ctx);
+    expect((ctx.gameState.flags as any).pressMomentum).toBe(0);
+  });
+
+  it('decay-first also protects a topped-up pool (old 2 decays, fresh 1 lands: net 2)', async () => {
+    const processor = new ActionProcessor();
+    const ctx = buildContext();
+    (ctx.gameState.flags as any).pressMomentum = 2;
+    (ctx.gameState.flags as any)['spin-delayed'] = {
+      triggerWeek: 5,
+      effects: { press_momentum: 1 },
+    };
+
+    await processor.processDelayedEffects(ctx);
+
+    expect((ctx.gameState.flags as any).pressMomentum).toBe(2); // (2-1)+1
+  });
+
+  it('expires an unconsumed pressStoryFlag after the knob window (Phase B fix-2)', async () => {
+    const processor = new ActionProcessor();
+    const pressConfigMock = {
+      getPressConfigSync: () => ({ press_story_flag_expiry_weeks: 8 }),
+    } as any;
+
+    // Stamped 8 weeks ago -> expires.
+    const expiredCtx = buildContext({ gameData: pressConfigMock });
+    (expiredCtx.gameState as any).currentWeek = 20;
+    (expiredCtx.gameState.flags as any).pressStoryFlag = true;
+    (expiredCtx.gameState.flags as any).pressStoryFlagWeek = 12;
+    await processor.processDelayedEffects(expiredCtx);
+    expect((expiredCtx.gameState.flags as any).pressStoryFlag).toBe(false);
+    expect((expiredCtx.gameState.flags as any).pressStoryFlagWeek).toBeUndefined();
+
+    // Stamped 7 weeks ago -> survives.
+    const freshCtx = buildContext({ gameData: pressConfigMock });
+    (freshCtx.gameState as any).currentWeek = 20;
+    (freshCtx.gameState.flags as any).pressStoryFlag = true;
+    (freshCtx.gameState.flags as any).pressStoryFlagWeek = 13;
+    await processor.processDelayedEffects(freshCtx);
+    expect((freshCtx.gameState.flags as any).pressStoryFlag).toBe(true);
+  });
+
   it('decays NEGATIVE momentum gradually toward 0, symmetric with positive (Phase B verifier fix)', async () => {
     // Regression: Math.max(0, m - 1) snapped any m <= -2 straight to 0 in one
     // week — a -3 scandal-fallout stack must fade over 3 weeks, like +3 does.

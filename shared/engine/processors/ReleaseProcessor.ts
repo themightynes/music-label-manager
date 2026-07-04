@@ -133,6 +133,7 @@ export class ReleaseProcessor {
     // One-shot: clear the story flag once it has fed a press roll, win or lose.
     if (hasStoryFlag) {
       flags.pressStoryFlag = false;
+      delete flags.pressStoryFlagWeek; // Phase B fix-2: drop the expiry stamp with it
       ctx.gameState.flags = flags;
       console.log('[PRESS] pressStoryFlag consumed by this release\'s press roll — cleared');
     }

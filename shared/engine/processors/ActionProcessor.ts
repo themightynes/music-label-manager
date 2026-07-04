@@ -581,6 +581,8 @@ export class ActionProcessor {
           const flags = (ctx.gameState.flags || {}) as Record<string, any>;
           if (value > 0) {
             flags.pressStoryFlag = true;
+            // Phase B fix-2: stamp for the expiry check in processDelayedEffects.
+            flags.pressStoryFlagWeek = ctx.gameState.currentWeek || 0;
             ctx.gameState.flags = flags;
 
             summary.changes.push({
@@ -694,6 +696,26 @@ export class ActionProcessor {
         return Math.max(min, Math.min(max, value));
       };
 
+      // Exec-meetings-revival Phase B fix-2 — press_momentum weekly decay runs
+      // BEFORE this week's triggered delayed effects apply. Decay-after-apply
+      // eroded freshly-landed momentum in the same call: a +1 authored value
+      // (cmo_pr_angle/safe) applied here and decayed to 0 six lines later, so it
+      // could never influence any press roll (which run earlier in the weekly
+      // pipeline) — the exact silent-no-op problem this revival exists to fix.
+      // With decay-first, momentum landing this week survives to be read by next
+      // week's press rolls and then decays. Decays 1/week TOWARD 0 from either
+      // side (daf7cfe): negative scandal fallout fades over |m| weeks, symmetric
+      // with positive buzz.
+      if (typeof flags.pressMomentum === 'number' && flags.pressMomentum !== 0) {
+        const decayed = flags.pressMomentum > 0
+          ? Math.max(0, flags.pressMomentum - 1)
+          : Math.min(0, flags.pressMomentum + 1);
+        if (decayed !== flags.pressMomentum) {
+          console.log(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
+        }
+        flags.pressMomentum = decayed;
+      }
+
       for (const [key, value] of Object.entries(flags)) {
         if (
           value &&
@@ -758,22 +780,23 @@ export class ActionProcessor {
         delete flags[key];
       }
 
-      // Exec-meetings-revival PR-3 (C2) — press_momentum weekly decay. This runs
-      // once per week (processDelayedEffects is called exactly once from
-      // advanceWeek), which is the natural home for flag/state maintenance that
-      // isn't itself a triggered delayed-effect entry. Decays 1/week TOWARD 0
-      // from either side: negative momentum (scandal fallout) lingers and fades
-      // over |m| weeks, symmetric with positive buzz — Math.max(0, m - 1) alone
-      // would snap any m <= -2 straight to 0 in a single week (Phase B verifier
-      // find).
-      if (typeof flags.pressMomentum === 'number' && flags.pressMomentum !== 0) {
-        const decayed = flags.pressMomentum > 0
-          ? Math.max(0, flags.pressMomentum - 1)
-          : Math.min(0, flags.pressMomentum + 1);
-        if (decayed !== flags.pressMomentum) {
-          console.log(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
+      // (press_momentum decay moved ABOVE the triggered-entry loop — Phase B
+      // fix-2; see the comment there.)
+
+      // Exec-meetings-revival Phase B fix-2 — pressStoryFlag expiry. A story flag
+      // is only consumed by a release press roll with marketing budget > 0, so an
+      // unconsumed flag could otherwise be banked indefinitely (verifier find;
+      // quality/awareness banks both got expiry knobs, the press flag didn't).
+      // Same stamp-based pattern; knob lives with the press config.
+      if (flags.pressStoryFlag === true) {
+        const stampedWeek = typeof flags.pressStoryFlagWeek === 'number' ? flags.pressStoryFlagWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getPressConfigSync().press_story_flag_expiry_weeks ?? 8;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[PRESS STORY] Expired unconsumed story flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pressStoryFlag = false;
+          delete flags.pressStoryFlagWeek;
         }
-        flags.pressMomentum = decayed;
       }
 
       // Exec-meetings-revival PR-4 (C1) — pendingQualityBonus expiry. If a banked
