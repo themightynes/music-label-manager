@@ -1,7 +1,7 @@
 # Executive Meetings — Effect-Key Disposition Worksheet
 
 **Date**: July 3, 2026
-**Status**: PROPOSAL — awaiting Nes review/edits. One recommendation per key; edit dispositions in place.
+**Status**: ADOPTED AS-IS and executed (PR #119, July 3-4 2026). See the [REFERENCE] executive-meetings-system-complete-reference.md for post-execution ground truth.
 **Produced by**: design-reasoning agent (Opus) grounded in `EXECUTIVE_MEETINGS_CASE_FILE_2026-07-03.md`; orchestrator-validated: all 71 dead keys present (cross-checked against the deterministic actions.json audit), disposition counts sum to 71, proposed consumer sites verified against the case file's wiring surface.
 **Companion docs**: `EXECUTIVE_MEETINGS_CASE_FILE_2026-07-03.md` (§4 choice map, §6 wiring surface), `INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md` (findings 2/6).
 

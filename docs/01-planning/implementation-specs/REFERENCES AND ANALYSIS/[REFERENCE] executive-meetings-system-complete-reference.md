@@ -4,7 +4,7 @@
 **Status**: CURRENT — describes the system as implemented on branch `feat/exec-meetings-revival` (9 PRs, `39ad919`..`4d140c9`, opened as PR #119; merge deferred pending playtest per Nes — the code described here is real and mergeable, not a plan).
 **Supersedes** (as current-state truth; keep these for historical narrative, but do not trust their present-tense claims):
 - `docs/98-research/EXECUTIVE_MEETINGS_CASE_FILE_2026-07-03.md` §2 (architecture map) and §4 (choice map / dead-key ledger) — every "dead key" claim there is now obsolete.
-- `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/Actions Implementation Analysis - CORRECTED.md` (if present) — its dead-key catalog is stale.
+- `docs/99-legacy/superseded-2026-07/Actions Implementation Analysis - CORRECTED.md` (archived July 4, 2026) — its dead-key catalog is stale.
 - The executive-meetings wireframe specs' badge promises — badges are now whitelisted to what the engine actually implements (`LIVE_EFFECT_KEYS`), so any wireframe promising a dead effect is aspirational, not current.
 - `docs/98-research/EXEC_MEETINGS_EFFECT_KEY_DISPOSITIONS_2026-07-03.md` and `docs/01-planning/implementation-specs/[READY] executive-meetings-revival-plan.md` remain valid as the **design rationale / historical record** of how this shipped — this document is the as-built reference, not a replacement for their "why."
 

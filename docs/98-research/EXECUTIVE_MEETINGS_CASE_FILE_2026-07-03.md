@@ -1,5 +1,7 @@
 # Executive Meetings — Complete Case File
 
+> **Update (July 4, 2026)**: This case file was executed against — PR #119 (branch `feat/exec-meetings-revival`, merge deferred pending playtest). Of the §7 plan slices, 1-5 and 7 shipped (badge whitelist + delayed-key fix, WeekSummary meetings bucket, `press_story_flag`, `quality_bonus`, exec mood cost/effectiveness modifier, and the remaining multi-use key triage); slice 6 (success/failure rolls), slice 8 (Level/XP), and slice 9 (combo actions) remain deferred. §2 (architecture map) and §4 (choice map / dead-key ledger) describe the PRE-revival state and are superseded for current-state truth by `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md`.
+
 **Date**: July 3, 2026
 **Method**: Orchestrator + 3 scouts (docs design-intent sweep, exhaustive actions.json choice map, end-to-end code trace), with orchestrator validation: an independent deterministic parse of `data/actions.json` cross-checked every aggregate number, and every load-bearing code claim (mood table, delayed-key bug, WeekSummary buckets, free-money-trap values) was re-verified directly against source.
 **Purpose**: everything needed to plan "bringing executive meetings to life." Read-only analysis; nothing changed.

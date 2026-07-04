@@ -524,7 +524,8 @@ The unified artist mood & loyalty integration is primarily an **order of operati
 ### 🎯 **System Behavior Confirmed:**
 
 1. **Executive Meeting Effects**: Applied BEFORE natural mood decay ✅
-2. **Artist Targeting**: Global effects (all artists affected) ✅  
+2. **Artist Targeting**: Global effects (all artists affected) ✅
+   > **Note (July 4, 2026)**: This "global by design" claim applies to `artist_mood`/`artist_loyalty` only. `artist_energy` and `artist_popularity` also ignoring `artistId` and hitting the whole roster is a bug, not by design — tracked as backlog item C60 (still open). See `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md` finding 5.
 3. **Order of Operations**: Meetings → Database Update → Project Processing ✅
 4. **UI Integration**: Choice previews and toast notifications working ✅
 5. **Natural Systems**: Mood drift toward 50% applied after meeting effects ✅

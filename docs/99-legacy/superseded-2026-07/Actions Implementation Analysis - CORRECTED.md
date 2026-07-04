@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 4, 2026 — pre-revival dead-key catalog for actions.json, now stale. Superseded by: `docs/98-research/EXEC_MEETINGS_EFFECT_KEY_DISPOSITIONS_2026-07-03.md` + `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md`. Kept for historical reference.
+
 # Actions.json Implementation Analysis - CORRECTED
 **Music Label Manager - Executive Team System**
 

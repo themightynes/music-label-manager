@@ -15,7 +15,7 @@
 - **In Progress**: 0
 - **Pending**: 16 (C50, C51, C52, C53, C55, C56, C57, C58, C59, C60, C61, C62, C63, C64, C65, C66)
 
-> ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing.
+> ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
 ---
 
@@ -680,6 +680,8 @@ The 60% tour-cancellation refund is computed entirely client-side (`client/src/c
 The song awareness system (`shared/engine/game-engine.ts:1617-1750`) runs every week: awareness gain from marketing channels (weeks 1–4), breakthrough checks with 2.5× awareness explosions (weeks 3–6), and decay (weeks 5+). Values are persisted per song and announced in WeekSummary ("🔥 BREAKTHROUGH ACHIEVED!") — but awareness feeds into **nothing**: not streaming revenue, not charts, not any financial metric. The game celebrates a stat with zero mechanical existence. Config lives in `data/balance/markets.json` (awareness_system); the integration design exists in `docs/01-planning/implementation-specs/[FUTURE] awareness-system-design.md` but the "Awareness System Backend Integration" work was never finished.
 
 **Action**: Product decision — either wire awareness into the ongoing streaming multiplier (preferred; see the release-experience plan Tier 2) or stop surfacing it in WeekSummary until it does something.
+
+**Update (July 4, 2026)**: A first player-facing awareness readout shipped — a Buzz chip in SongCatalog (PR #119). The underlying product decision (streaming-multiplier integration vs. removal) is still open; this only adds visibility, it does not resolve the deferred decision.
 
 **Relevant Files**:
 - [shared/engine/game-engine.ts](shared/engine/game-engine.ts)

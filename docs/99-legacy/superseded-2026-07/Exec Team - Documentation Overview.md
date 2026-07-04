@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 4, 2026 — stale navigation index whose Current Status says "Implementation: Not started"; the executive meetings system has since shipped (PR #119). Superseded by: `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md`. Kept for historical reference.
+
 # Exec Team - Documentation Overview
 #execteam 
 

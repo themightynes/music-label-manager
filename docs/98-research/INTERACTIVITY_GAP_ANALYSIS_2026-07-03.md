@@ -1,5 +1,7 @@
 # Interactivity Gap Analysis — Where the Simulation Is Hollow
 
+> **Update (July 4, 2026)**: Finding 2 (executive meetings, 71/77 dead effect keys) is RESOLVED by PR #119 — 14 canonical effect keys now live, badges whitelisted to `LIVE_EFFECT_KEYS ∪ {executive_mood}`. Finding 3 (WeekSummary `other` bucket) is partially resolved — the meetings card now ships; whether the awareness/breakthrough entries in the `other` bucket are surfaced is unverified. Finding 4 (awareness economy invisible) is partially resolved — a first awareness readout (Buzz chip) shipped in SongCatalog; the release page and dashboard still show nothing. Finding 1 (random side events rolled and discarded) remains open. See `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md` for the as-built ground truth.
+
 **Date**: July 3, 2026
 **Method**: Two-track sweep — (1) planning docs / backlog / roadmap verified against current code, (2) end-to-end traces of every player-facing choice and stat (choice → effect key → engine read → player-visible outcome). Six scout agents + three adversarial verifiers that attempted to REFUTE every "it's dead" claim (dynamic access, camelCase/snake_case variants, config-driven reads, serialization paths). Every claim below is backed by a file:line inspected this session. Items that could not be fully verified are marked **UNVERIFIED**.
 **Ranking lens**: consequence-weighted — choices whose outcomes differ and matter later rank highest; visible feedback second; spectacle last.

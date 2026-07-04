@@ -259,7 +259,7 @@ interface ArtistChoice extends DialogueChoice {
 
 ```
 
-> **Note:** `artist_effects.energy` is a display-only value that communicates narrative feedback. It does _not_ modify gameplay systems, whereas executive loyalty remains a fully functional mechanic.
+> **Note (verified July 4, 2026 — corrects an outdated claim):** `artist_effects.energy` is NOT display-only. Dialogue's `artist_energy` effect is a live engine key: `server/routes/artists.ts` (`/api/game/:gameId/artist-dialogue`) reads `effectKey === 'artist_energy'`, clamps `artist.energy + value`, and persists it via `storage.updateArtist(artistId, { energy: newEnergy })` (~lines 111-114). The same key is also live in the executive-meetings path (`ActionProcessor.ts` `case 'artist_energy'`, ~line 594) — see `LIVE_EFFECT_KEYS` in `shared/engine/processors/ActionProcessor.ts`.
 
 ### **Example Dialogue**
 ```json
