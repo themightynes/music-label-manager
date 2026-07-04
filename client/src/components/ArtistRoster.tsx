@@ -20,6 +20,7 @@ import { SyntheticEvent, useMemo, useState } from 'react';
 import { CalendarDays, Disc3, Mic, Rocket, Users, Search, Plus } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { generateArtistSlug } from '@/utils/artistSlug';
+import { getArtistStatus as getArtistTourStatus } from '@/utils/tourHelpers';
 import type { GameArtist } from '@shared/types/gameTypes';
 import type { Artist as DbArtist } from '@shared/schema';
 import { toast } from '@/hooks/use-toast';
@@ -164,26 +165,7 @@ export function ArtistRoster() {
   // Enhanced artist analytics (ROI moved to backend)
   const currentWeek = gameState?.currentWeek || 1;
 
-  const getArtistStatus = (artistId: string) => {
-    if (!projects || !Array.isArray(projects)) return 'IDLE';
-
-    const artistProjects = projects.filter((project: any) =>
-      project.artistId === artistId &&
-      project.stage === 'production' &&
-      project.startWeek &&
-      currentWeek >= project.startWeek
-    );
-
-    const activeTour = artistProjects.find((project: any) => project.type === 'Mini-Tour');
-    if (activeTour) return 'ON TOUR';
-
-    const activeRecording = artistProjects.find((project: any) =>
-      project.type === 'Single' || project.type === 'EP'
-    );
-    if (activeRecording) return 'RECORDING';
-
-    return 'IDLE';
-  };
+  const getArtistStatus = (artistId: string) => getArtistTourStatus(artistId, currentWeek, projects || []);
 
   const getArtistInsights = (artist: any) => {
     const archetype = artist.archetype;

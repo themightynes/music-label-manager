@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Heart, Info, ExternalLink } from 'lucide-reac
 import { SongCatalog } from './SongCatalog';
 import { useArtistROI } from '@/hooks/useAnalytics';
 import { useProjects } from '@/hooks/useProjects';
+import { getArtistStatus } from '@/utils/tourHelpers';
 
 export interface ArtistCardProps {
   artist: any;
@@ -37,31 +38,6 @@ export function ArtistCard({
   const { data: fetchedRoiData } = useArtistROI(passedRoiData ? null : artist.id);
   const roiData = passedRoiData || fetchedRoiData;
   const avgROI = roiData?.overallROI ?? 0;
-
-  // Helper function to determine artist status based on current projects
-  const getArtistStatus = (artistId: string, currentWeek: number, projects: any[]) => {
-    if (!projects || !Array.isArray(projects)) return 'IDLE';
-
-    // Find active projects for this artist in the current week
-    const artistProjects = projects.filter(project =>
-      project.artistId === artistId &&
-      project.stage === 'production' &&
-      project.startWeek &&
-      currentWeek >= project.startWeek
-    );
-
-    // Check for active tours (Mini-Tour type in production)
-    const activeTour = artistProjects.find(project => project.type === 'Mini-Tour');
-    if (activeTour) return 'ON TOUR';
-
-    // Check for active recordings (Single/EP type in production)
-    const activeRecording = artistProjects.find(project =>
-      (project.type === 'Single' || project.type === 'EP')
-    );
-    if (activeRecording) return 'RECORDING';
-
-    return 'IDLE';
-  };
 
   const currentWeek = gameState?.currentWeek || 1;
   const artistStatus = getArtistStatus(artist.id, currentWeek, projects || []);
