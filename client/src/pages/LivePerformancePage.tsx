@@ -767,6 +767,9 @@ export default function LivePerformancePage() {
                             <Badge variant="outline" className="text-xs">
                               Energy: {artist.energy ?? 0}
                             </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Talent: {artist.talent ?? 0}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))
