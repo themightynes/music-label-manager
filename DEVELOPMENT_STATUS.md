@@ -4,6 +4,45 @@
 
 ---
 
+## 📅 Session Log — July 4, 2026 (Exec-meetings playtest: 12 findings fixed + C69 discovered/fixed, design threads elevated, playtest doc archived — all on PR #119, still UNMERGED)
+
+**Nes playtested `feat/exec-meetings-revival` (PR #119) and the session fixed every actionable finding**, all committed onto the SAME branch/PR per the standing one-merge-at-the-end policy (no new branches). Ran orchestrator + subagents in two parallel waves (agents kept getting stopped mid-task in this environment — critical pieces like C69 were finished foreground). Every fix was orchestrator-diff-reviewed before commit; full suite ended **green at 1,189 tests** (was 1,013 at revival end), tsc clean. Branch now `f41bf27` → `fcdc877` (20 commits this session).
+
+**Playtest findings fixed (12 of 12 bug/feature items; the 2 design discussions were elevated, not "fixed"):**
+- **#1/#3/#7** (`ef1050b` + test `69a7bcf`) — fixed at the SOURCE (`ActionProcessor`): meeting rows deduped (dropped the duplicate `executive_interaction` "Met with <slug>" row, folded exec deltas onto the single `meeting` change), delayed-effect payoffs labeled (`describeDelayedEffect`), CEO meetings read "Executive strategy decision" (player IS the CEO). Golden master's only delta = the CEO relabel.
+- **#5** (`45d884d`) — week-view calendar prev/next arrows.
+- **#6** (`f41bf27`) — venue booking UI gated when `venueAccess==='none'` (client-only; server guards were correct).
+- **#4** (`4bcfc26`, `537983a`, `b02e9bf`, `3a74535`) — talent surfaced on 7 surfaces (roster cards, profile grid, dialogue, management, Live Performance + Recording Session dropdowns, Plan Release). Plan Release also needed a **server fix** (`3a74535`): the `ready-for-release` endpoint never SELECTed popularity/talent → they rendered 0 until fixed.
+- **#9/C68** + **#12** (`5b44d9e`) — tour milestones read Planned/On Tour/Tour Completed (not "recorded stage"); tour-completion email shows NET profit (gross alongside). `GameChange` gained additive `totalCosts`/`netProfit`.
+- **#11** (`b482c5e`) — AUTO-select is now Creative-Capital-budget-aware (can't overdraw). `creativeCapital` threaded into the XState machine context.
+- **#2** (`52dd7be`) — Weekly Results popup auto-opens from ANY route (consumer moved from Dashboard-only to always-mounted `CommandDock`).
+- **#8/C67** (`071c6df`) — **decision (Nes): venue slider range = `[lowest-bookable-tier-min, current-tier-max]`** (unlocking raises the ceiling, keeps the floor at the smallest real venue). New `VenueCapacityManager.getBookingRangeForTier`; `validateCapacity` + estimate `tierRange` + client fallback route through it.
+
+**C69 discovered incidentally + fixed** (`1db5c39`, backlog `6c9e5a8`): `FinancialSystem.calculateAwarenessGain` called a non-existent `getArtistSync` — threw, was swallowed by a try/catch, and **silently zeroed the entire marketing-driven awareness gain for ~9 months** (pre-existing since 2025-09-26, NOT caused by the revival). Fixed: async `getArtistById`, guarded so a missing accessor degrades to no popularity bonus (×1.0) instead of nuking the gain; dead second call removed; +4 regression tests. Golden master unaffected.
+
+**Design discussions elevated to `[FUTURE]` seed planning docs** (`861d8de`): `[FUTURE] executive-meeting-effect-legibility.md` (explanation / pending-visibility / payoff-attribution gaps on the 14 keys) and `[FUTURE] executive-meeting-relevance-and-reactivity.md` (meetings feel disconnected from label state → the *"you just hit AUTO because it doesn't matter"* root cause; carries a **Tier 0/1/2 scope fork** needing a product decision).
+
+**Playtest doc archived** (`fcdc877`): `PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` `git mv`-ed to `docs/99-legacy/superseded-2026-07/` with a dated ARCHIVED header; all 5 inbound links fixed (README section move, CLAUDE.md constellation relabel, backlog + both planning-doc origin refs).
+
+**Ops note:** the dev server runs plain `tsx` (NOT watch) — server/engine fixes are invisible until a restart. The server WAS restarted mid-session, so all fixes are now live for continued playtesting.
+
+**Decisions (Nes):** all playtest fixes land on PR #119 (no new branches); venue range = lowest-min→current-max; C69 logged-then-fixed on request; design docs = seed depth (not full plans); archive the playtest doc now.
+
+**📋 Doc-governance check (this session):**
+- **Archival convention** — ✅ PASS (playtest doc archived correctly, links fixed in the same commit).
+- **Placement** — ✅ PASS (2 new `[FUTURE]` docs in `implementation-specs/` with `[STATUS]` prefix).
+- **Reference-doc freshness** — ✅ PASS (`actions.json`/`LIVE_EFFECT_KEYS` did NOT change → exec-meetings `[REFERENCE]` doc unaffected; `[READY]` revival plan stays `[READY]` until the PR merges).
+- **Doc-sync rule** — ⚠️ PARTIAL / logged here: most fixes were behavior-RESTORING (code brought in line with already-documented intent). Three are genuine behavior/shape changes whose descriptive workflow docs were NOT updated this session: **C67 venue booking-range rule** + **#12 tour-completion net profit** (→ `docs/03-workflows/tour-system-workflows.md`) and the **popularity/talent field on `ready-for-release`** (→ `docs/03-workflows/plan-release-system-workflows.md`). Logged as an open thread rather than silently orphaned — fold into a future docs pass or the merge.
+
+**Open threads / next steps:**
+- **PR #119 still UNMERGED** — carries the full revival + 12 playtest fixes + C69. One merge at the end, Nes's call.
+- Reconcile the 3 workflow-doc staleness items above (doc-sync rule) — small, defer-able.
+- The relevance/reactivity `[FUTURE]` doc needs Nes's **Tier 0/1/2 decision** before it can become a real plan.
+- After merge: rename `[READY] executive-meetings-revival-plan.md` → `[COMPLETE]` + move to `COMPLETED/`; then the deferred slices (success/failure rolls, side events — events.json is key-clean).
+- Still open from prior sessions: phantom side-events system; backlog C58/C60/C62/C66/C67; Phase 4 audio audition.
+
+---
+
 ## 📅 Session Log — July 3–4, 2026 (Executive Meetings Revival EXECUTED: 9 PRs, 71 dead keys → 0 — PR #119 open, UNMERGED pending playtest)
 
 **The full revival plan (`docs/01-planning/implementation-specs/[READY] executive-meetings-revival-plan.md`) was executed end-to-end in one orchestrated session** — orchestrator + one fresh subagent per PR (Sonnet for scoped builds, Opus for PR-5/PR-8/PR-9 judgment work) + a fresh-context verifier after every phase. All work is on branch **`feat/exec-meetings-revival`** (17 commits, `39ad919` → `4d140c9`), opened as **PR #119**. **Merge policy per Nes: ONE merge at the end, and NOT yet — playtest first.** Local `main` carries the (unpushed) docs-trio commit `43f9570`, which rides inside the PR.
