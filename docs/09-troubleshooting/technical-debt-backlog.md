@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 4, 2026
-- **Total Items**: 69 (C1–C69, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
+- **Total Items**: 70 (C1–C70, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
 - **Completed**: 53
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 13 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
+- **Pending**: 14 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1111,6 +1111,21 @@ Found during the exec-meetings-revival playtest (`docs/99-legacy/superseded-2026
 
 ---
 
+### [ ] Comment 70 (C70): Residual "12-week campaign" copy rot outside AchievementsEngine 🔵
+**Priority**: 🔵 Low
+**Impact**: Player-facing copy says 12 weeks in a 52-week game (same rot class as C62 sub-item 3, different files)
+**Effort**: Small
+
+Found by the PR #120 Group-D verifier (July 4, 2026) while confirming C62: `server/services/advanceWeekService.ts:192` and `server/routes.ts:92` still carry "12-week" campaign-end summary strings. Deliberately not fixed in the C62 slice (out of its AchievementsEngine scope; strings may be pinned by characterization tests — check before editing).
+
+**Relevant Files**:
+- [server/services/advanceWeekService.ts](server/services/advanceWeekService.ts)
+- [server/routes.ts](server/routes.ts)
+
+*Identified July 4, 2026 by the PR #120 fresh-context verifier.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
@@ -1120,10 +1135,10 @@ Found during the exec-meetings-revival playtest (`docs/99-legacy/superseded-2026
 - 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 12 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120)
 
 ### By Status
-- ✅ Completed: 53 items (76.8% of 69; 53 + 3 deferred + 13 pending = 69 ✓)
+- ✅ Completed: 53 items (75.7% of 70; 53 + 3 deferred + 14 pending = 70 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 13 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
+- 📋 Pending: 14 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
 
 ---
 
