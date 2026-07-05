@@ -335,14 +335,14 @@
       "name": "CCO: Creative Direction",
       "type": "role_meeting",
       "icon": "fas fa-sliders-h",
-      "description": "Resolve creative differences in production",
+      "description": "Resolve creative differences with an artist",
       "role_id": "cco",
       "meeting_id": "prod_creative_clash",
       "category": "production",
       "target_scope": "user_selected",
       "requires": ["artist_signed"],
       "prompt_before_selection": "Which artist is having creative differences?",
-      "prompt": "{artistName} wants to record everything live in one take. I think we need overdubs to compete.",
+      "prompt": "{artistName} wants to keep everything raw and unpolished—says that's the artistic identity. I think we need a more produced sound to compete.",
       "choices": [
         {
           "id": "artist_vision",
@@ -355,7 +355,7 @@
         },
         {
           "id": "producer_expertise",
-          "label": "Insist on professional overdubs",
+          "label": "Insist on a polished, professional sound",
           "effects_immediate": {
             "money": -3000,
             "artist_mood": -2,
@@ -367,7 +367,7 @@
         },
         {
           "id": "hybrid_approach",
-          "label": "Compromise - live basics, key overdubs",
+          "label": "Compromise - keep the raw edge, polish the hooks",
           "effects_immediate": {
             "money": -1500
           },

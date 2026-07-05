@@ -96,7 +96,7 @@ Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values
 | **cco_timeline** (global) — "Timeline is tight—what's the call?" | `rush` | money +1000, executive_mood −2 | quality_bonus **−5** | Trap-fixed: the windfall now costs real quality |
 | | `standard` | (none) | (none) | True no-op baseline |
 | | `add_revision` | money −1500 | quality_bonus +6, variance_up +1 | Biggest quality bank in the catalog, at a real cost |
-| **cco_creative_clash** (user_selected) — "{artist} wants to record live in one take; I want overdubs." | `artist_vision` | (none) | variance_up +1, artist_mood +2 | Free immediate cost; banks risk and artist goodwill |
+| **cco_creative_clash** (user_selected) — "{artist} wants to keep everything raw and unpolished; I want a more produced sound." | `artist_vision` | (none) | variance_up +1, artist_mood +2 | Free immediate cost; banks risk and artist goodwill |
 | | `producer_expertise` | money −3000, artist_mood −2, executive_mood +8 | quality_bonus +5 | Priciest on mood, but a clean quality payoff |
 | | `hybrid_approach` | money −1500 | quality_bonus +1, artist_mood +1 | Cheap compromise; smaller payoff on both axes |
 | **cco_budget_crisis** (global) — "We're over budget and the vocals still aren't right." | `demand_more_money` | money −10000, reputation +1 | quality_bonus +4 | Most expensive, but reputation AND quality both gain |
