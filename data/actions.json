@@ -249,11 +249,11 @@
       "category": "talent",
       "target_scope": "global",
       "requires": ["artist_signed"],
-      "prompt": "Rock is dying in the charts. Should we push our guitar bands toward pop-rock crossover?",
+      "prompt": "The charts are moving away from our sound. Should we push toward what's trending?",
       "choices": [
         {
           "id": "chase_trends",
-          "label": "Follow the money - pivot to pop",
+          "label": "Follow the money - chase the trend",
           "effects_immediate": {
             "artist_mood": -3,
             "executive_mood": 8
@@ -265,7 +265,7 @@
         },
         {
           "id": "double_down_rock",
-          "label": "Double down - rock will come back",
+          "label": "Double down - our sound will come back",
           "effects_immediate": {
             "creative_capital": -2,
             "money": -5000
@@ -276,7 +276,7 @@
         },
         {
           "id": "gradual_evolution",
-          "label": "Gradual evolution - keep the rock soul",
+          "label": "Gradual evolution - keep our soul",
           "effects_immediate": {
             "money": -2000
           },
