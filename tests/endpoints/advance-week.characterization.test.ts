@@ -197,6 +197,12 @@ describe('POST /api/advance-week (characterization)', () => {
     expect(res.body.campaignResults).toHaveProperty('finalScore');
     expect(res.body.campaignResults).toHaveProperty('scoreBreakdown');
     expect(res.body.campaignResults).toHaveProperty('victoryType');
+    // C70: summary copy must reflect the configured campaign length
+    // (data/balance/projects.json time_progression.campaign_length_weeks = 52),
+    // not the stale "12-week" text.
+    expect(res.body.campaignResults.summary).toBe(
+      'Your 52-week campaign has ended. Time to start fresh!'
+    );
     expect(res.body.summary).toHaveProperty('week');
 
     // Early return path persists the game state unchanged: week stays 52.

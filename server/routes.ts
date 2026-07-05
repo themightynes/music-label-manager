@@ -89,7 +89,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(gameLoopRouter);
 
   // OLD ENDPOINT REMOVED - Use /api/advance-week instead
-  // This endpoint did not have 12-week campaign completion logic
+  // This endpoint did not have campaign completion logic (52-week campaign; see
+  // data/balance/projects.json time_progression.campaign_length_weeks)
 
   // Save endpoints extracted to server/routes/saves.ts (PR-14)
   // Mounted at the original position of GET /api/saves to preserve registration order.
