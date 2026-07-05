@@ -189,7 +189,9 @@ export class AdvanceWeekService {
             accessTierBonus: 0
           },
           victoryType: gameState.money && gameState.money > 0 ? 'Survival' : 'Failure',
-          summary: 'Your 12-week campaign has ended. Time to start fresh!',
+          // C70: campaign length sourced from balance config (data/balance/projects.json
+          // time_progression.campaign_length_weeks, currently 52) — was stale "12-week" copy.
+          summary: `Your ${balanceConfig.time_progression.campaign_length_weeks}-week campaign has ended. Time to start fresh!`,
           achievements: ['📅 Campaign Completed']
         };
 
