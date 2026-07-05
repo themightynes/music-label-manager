@@ -73,6 +73,13 @@ export type ExecutiveMeetingEvent =
   | { type: 'SYNC_SLOTS'; used: number; total: number; creativeCapital?: number }
   | { type: 'SYNC_WEEK'; currentWeek: number }
   | { type: 'AUTO_SELECT' }
+  // Meeting-relevance PR-3 (AUTO Option A: propose-then-confirm). AUTO now
+  // computes its picks into a review panel instead of committing them straight
+  // away; the player then confirms all, cancels (commit nothing), or overrides a
+  // single row (drop into the normal manual meeting flow for that exec).
+  | { type: 'CONFIRM_AUTO_SELECT' }
+  | { type: 'CANCEL_AUTO_SELECT' }
+  | { type: 'OVERRIDE_AUTO_ROW'; executive: Executive }
   | { type: 'CALCULATE_IMPACT_PREVIEW'; selectedActions: string[] }
   | { type: 'REFRESH_EXECUTIVES' };
 
@@ -112,6 +119,11 @@ export const executiveMeetingMachine = setup({
     },
     hasFocusSlotsAndCachedMeetings: ({ context, event }) => {
       if (event.type !== 'SELECT_EXECUTIVE') return false;
+      const cacheKey = `${event.executive.role}-week${context.currentWeek}`;
+      return context.focusSlotsUsed < context.focusSlotsTotal && Boolean(context.meetingsCache[cacheKey]?.length);
+    },
+    hasFocusSlotsAndCachedMeetingsForOverride: ({ context, event }) => {
+      if (event.type !== 'OVERRIDE_AUTO_ROW') return false;
       const cacheKey = `${event.executive.role}-week${context.currentWeek}`;
       return context.focusSlotsUsed < context.focusSlotsTotal && Boolean(context.meetingsCache[cacheKey]?.length);
     },
@@ -196,6 +208,35 @@ export const executiveMeetingMachine = setup({
         error: null,
       };
     }),
+    // Meeting-relevance PR-3 — override a single AUTO row: behaves exactly like
+    // SELECT_EXECUTIVE (assign the exec, clear any prior selection) but reads the
+    // exec off OVERRIDE_AUTO_ROW and drops the pending AUTO proposal so the
+    // review panel closes and the player enters the normal manual flow.
+    assignOverrideExecutive: assign(({ event }) =>
+      event.type === 'OVERRIDE_AUTO_ROW'
+        ? {
+            selectedExecutive: event.executive,
+            selectedMeeting: null,
+            currentDialogue: null,
+            availableMeetings: [],
+            autoOptions: [],
+            error: null,
+          }
+        : {}
+    ),
+    useCachedMeetingsForOverride: assign(({ context, event }) => {
+      if (event.type !== 'OVERRIDE_AUTO_ROW') return {};
+      const cacheKey = `${event.executive.role}-week${context.currentWeek}`;
+      const meetings = context.meetingsCache[cacheKey] ?? [];
+      return {
+        selectedExecutive: event.executive,
+        availableMeetings: meetings,
+        selectedMeeting: null,
+        currentDialogue: null,
+        autoOptions: [],
+        error: null,
+      } satisfies Partial<ExecutiveMeetingContext>;
+    }),
     selectMeeting: assign(({ event }) =>
       event.type === 'SELECT_MEETING'
         ? {
@@ -254,10 +295,13 @@ export const executiveMeetingMachine = setup({
       const result = (event as any)?.output as { options: AutoOption[]; meetings: Record<string, RoleMeeting[]> } | undefined;
       if (!result) return {};
       const { options, meetings } = result;
+      // `meetings` (meetingsUpdates from the prepareAutoSelections actor) is already
+      // keyed by the canonical `${role}-week${week}` cache key, so merging it as-is
+      // lets an OVERRIDE_AUTO_ROW read the pool straight from cache (no refetch).
       const updatedMeetings = { ...context.meetingsCache };
-      Object.entries(meetings).forEach(([role, list]) => {
+      Object.entries(meetings).forEach(([cacheKey, list]) => {
         if (list.length > 0) {
-          updatedMeetings[role] = list;
+          updatedMeetings[cacheKey] = list;
         }
       });
       return {
@@ -631,14 +675,56 @@ export const executiveMeetingMachine = setup({
       invoke: {
         src: 'prepareAutoSelections',
         input: ({ context }) => ({ context }),
-        onDone: {
-          target: 'idle',
-          actions: ['storeAutoOptions', 'executeAutoOptions', 'clearSelection'],
-        },
+        // PR-3 (Option A): only STORE the computed picks — do NOT commit them.
+        // The player reviews them in `reviewingAutoSelections` and confirms,
+        // cancels, or overrides a row. Selection logic is untouched; this state
+        // is a pure review gate between "picks computed" and "picks committed".
+        onDone: [
+          {
+            // No slots free / empty pools everywhere → nothing to review; stay put.
+            guard: ({ event }) =>
+              (((event as any)?.output?.options as AutoOption[] | undefined)?.length ?? 0) === 0,
+            target: 'idle',
+            actions: 'storeAutoOptions',
+          },
+          {
+            target: 'reviewingAutoSelections',
+            actions: 'storeAutoOptions',
+          },
+        ],
         onError: {
           target: 'idle',
           actions: 'captureError',
         },
+      },
+    },
+    reviewingAutoSelections: {
+      on: {
+        // Confirm ALL: commit exactly the proposed picks, then clear.
+        CONFIRM_AUTO_SELECT: {
+          target: 'idle',
+          actions: ['executeAutoOptions', 'clearSelection'],
+        },
+        // Cancel: commit NOTHING; clearSelection drops the pending autoOptions so
+        // no focus slots are consumed and no machine state leaks.
+        CANCEL_AUTO_SELECT: {
+          target: 'idle',
+          actions: 'clearSelection',
+        },
+        // Override one row: drop the whole proposal and enter the normal manual
+        // meeting flow for that exec (same path SELECT_EXECUTIVE takes).
+        OVERRIDE_AUTO_ROW: [
+          {
+            guard: 'hasFocusSlotsAndCachedMeetingsForOverride' as const,
+            target: 'selectingMeeting',
+            actions: 'useCachedMeetingsForOverride',
+          },
+          {
+            guard: 'hasFocusSlots' as const,
+            target: 'loadingMeetings',
+            actions: 'assignOverrideExecutive',
+          },
+        ],
       },
     },
     fetchingImpactPreview: {

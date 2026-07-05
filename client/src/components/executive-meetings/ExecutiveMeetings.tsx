@@ -6,6 +6,7 @@ import { makeCachedFetchExecutives } from '../../hooks/useExecutives';
 import { ExecutiveCard } from './ExecutiveCard';
 import { MeetingSelector } from './MeetingSelector';
 import { DialogueInterface } from './DialogueInterface';
+import { AutoSelectReviewPanel } from './AutoSelectReviewPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -94,6 +95,9 @@ export function ExecutiveMeetings({
   const { context } = state;
   const previousWeekRef = useRef<number | null>(null);
   const hasAvailableSlots = context.focusSlotsUsed < context.focusSlotsTotal;
+  // PR-3: hide the AUTO button while AUTO is computing or its proposal is under
+  // review, so the flow can't be re-triggered on top of itself.
+  const isAutoFlowActive = state.matches('autoSelecting') || state.matches('reviewingAutoSelections');
   const arOfficeStatus = arOfficeStatusProp ?? getAROfficeStatus();
   const executives = context.executives;
   const executivesLoading = state.matches('loadingExecutives') || state.matches('refreshingExecutives');
@@ -230,6 +234,29 @@ export function ExecutiveMeetings({
 
   // Render middle column content based on state
   const renderMiddleColumn = () => {
+    // Meeting-relevance PR-3 (AUTO Option A): review AUTO's proposed picks before
+    // they commit. Execs that sat out never made it into autoOptions, so they
+    // never appear here.
+    if (state.matches('reviewingAutoSelections')) {
+      return (
+        <AutoSelectReviewPanel
+          options={context.autoOptions}
+          onConfirmAll={() => send({ type: 'CONFIRM_AUTO_SELECT' })}
+          onCancel={() => send({ type: 'CANCEL_AUTO_SELECT' })}
+          onOverrideRow={(executive) => send({ type: 'OVERRIDE_AUTO_ROW', executive })}
+        />
+      );
+    }
+
+    if (state.matches('autoSelecting')) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8">
+          <Loader2 className="h-6 w-6 animate-spin text-neon-cyan mb-2" />
+          <span className="text-text-body">AUTO is choosing meetings...</span>
+        </div>
+      );
+    }
+
     if (state.matches('loadingMeetings')) {
       return (
         <div className="flex flex-col items-center justify-center p-8">
@@ -382,7 +409,7 @@ export function ExecutiveMeetings({
         <CardTitle className="flex items-center justify-between text-text-primary font-display text-lg">
           Executive Meetings
           <div className="flex items-center gap-3">
-            {hasAvailableSlots && (
+            {hasAvailableSlots && !isAutoFlowActive && (
               <Button
                 variant="outline"
                 size="sm"
