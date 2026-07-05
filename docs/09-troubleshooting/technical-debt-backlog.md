@@ -10,10 +10,10 @@
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 5, 2026
 - **Total Items**: 74 (C1–C74, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
-- **Completed**: 55
+- **Completed**: 58
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 16 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70, C72, C73 — content-honesty warts from meeting-relevance PR-1, all July 5, 2026) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
+- **Pending**: 13 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66) — C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1111,12 +1111,14 @@ Found during the exec-meetings-revival playtest (`docs/99-legacy/superseded-2026
 
 ---
 
-### [ ] Comment 70 (C70): Residual "12-week campaign" copy rot outside AchievementsEngine 🔵
+### [x] ~~Comment 70 (C70): Residual "12-week campaign" copy rot outside AchievementsEngine~~ ✅ RESOLVED 🔵
 **Priority**: 🔵 Low
 **Impact**: Player-facing copy says 12 weeks in a 52-week game (same rot class as C62 sub-item 3, different files)
 **Effort**: Small
 
 Found by the PR #120 Group-D verifier (July 4, 2026) while confirming C62: `server/services/advanceWeekService.ts:192` and `server/routes.ts:92` still carry "12-week" campaign-end summary strings. Deliberately not fixed in the C62 slice (out of its AchievementsEngine scope; strings may be pinned by characterization tests — check before editing).
+
+**✅ FIXED (July 5, 2026, PR #128):** the campaign-end `summary` string in `advanceWeekService.ts` now interpolates `balanceConfig.time_progression.campaign_length_weeks` (the config was already loaded in scope — goes one better than C62's hardcoded "52-week", which was forced only because AchievementsEngine lacks the config); the `routes.ts` comment reworded to point at the config key. Regression pin added to the existing campaign-completed characterization test (`tests/endpoints/advance-week.characterization.test.ts`). Repo-wide grep confirmed no snapshots/pins carried the old copy; remaining "12-week" hits are historical docs only.
 
 **Relevant Files**:
 - [server/services/advanceWeekService.ts](server/services/advanceWeekService.ts)
@@ -1143,7 +1145,7 @@ Doc-sync rule log (rather than silent orphaning) for PR #120's two feature slice
 
 ---
 
-### [ ] Comment 72 (C72): `ar_genre_shift` copy is plural + genre-specific vs its `artist_signed` minimum tag 🔵
+### [x] ~~Comment 72 (C72): `ar_genre_shift` copy is plural + genre-specific vs its `artist_signed` minimum tag~~ ✅ RESOLVED 🔵
 **Priority**: 🔵 Low
 **Impact**: Content-honesty wart only — the meeting can be offered in states its copy slightly overclaims
 **Effort**: Small
@@ -1153,11 +1155,13 @@ Found during the meeting-relevance Tier 0 close reading (spec `[READY] meeting-r
 **Relevant Files**:
 - [data/actions.json](data/actions.json)
 
+**✅ FIXED (July 5, 2026, PR #129):** copy-only rewrite — prompt is now roster-size- and genre-agnostic ("The charts are moving away from our sound. Should we push toward what's trending?") and all three choice labels lost the rock/pop specificity ("chase the trend" / "our sound will come back" / "keep our soul"). `requires`, effects, and choice ids untouched; the `[REFERENCE]` doc's verbatim quote updated per the doc-sync rule.
+
 *Identified July 5, 2026 during meeting-relevance PR-1 (spec §1 close reading).*
 
 ---
 
-### [ ] Comment 73 (C73): `cco_creative_clash` content implies a recording context its tag doesn't require 🔵
+### [x] ~~Comment 73 (C73): `cco_creative_clash` content implies a recording context its tag doesn't require~~ ✅ RESOLVED 🔵
 **Priority**: 🔵 Low
 **Impact**: Content-honesty wart only — the selected artist may not actually be recording anything
 **Effort**: Small
@@ -1167,6 +1171,8 @@ Found during the same Tier 0 close reading: `cco_creative_clash` (user_selected)
 **Relevant Files**:
 - [data/actions.json](data/actions.json)
 - [client/src/components/executive-meetings/MeetingSelector.tsx](client/src/components/executive-meetings/MeetingSelector.tsx)
+
+**✅ FIXED (July 5, 2026, PR #130):** copy-softening chosen (the ledger's lighter option) — the clash is now about the artist's overall direction ("wants to keep everything raw and unpolished—says that's the artistic identity") rather than an in-session recording demand, so it reads honestly for an idle artist. Choice labels de-specified accordingly ("polished, professional sound" / "keep the raw edge, polish the hooks"); `requires`, effects, choice ids, and the artist picker untouched. Road not taken (recorded in the PR): picker restriction + tag tightening to `recording_project_active`. `[REFERENCE]` doc quote updated per the doc-sync rule.
 
 *Identified July 5, 2026 during meeting-relevance PR-1 (spec §1 close reading).*
 
@@ -1198,13 +1204,13 @@ Found by the July 5, 2026 fresh-context verifier (finding F1) after the meeting-
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 15 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; C72–C73 — meeting-relevance content-honesty warts, July 5, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 12 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass)
 
 ### By Status
-- ✅ Completed: 55 items (74.3% of 74; 55 + 3 deferred + 16 pending = 74 ✓)
+- ✅ Completed: 58 items (78.4% of 74; 58 + 3 deferred + 13 pending = 74 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 16 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; C72, C73 — meeting-relevance PR-1 content-honesty warts, July 5, 2026; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
+- 📋 Pending: 13 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; all low except C62 medium, not scheduled). C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
 
 ---
 

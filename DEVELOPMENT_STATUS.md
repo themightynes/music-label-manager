@@ -21,11 +21,16 @@
 
 **Evening addendum — playtest done, C74 resolved same day (PR #126, `df49d51`).** Nes playtested the arc live and liked the review panel; two findings, both fixed and merged as **PR #126**: (1) **C74 decided + executed** — the header AUTO's direct-commit path DELETED; the button now sets a session intent (`pendingAutoSelectIntent`, Zustand UI state, never persisted) and routes into the Executive Suite's review panel — one AUTO behavior everywhere; (2) **new playtest bug fixed**: AUTO proposed Marcus (head_ar) while the A&R office slot was in use — `prepareAutoSelectOptions` now takes an `arOfficeSlotUsed` exclusion, threaded via `SYNC_SLOTS` (the manual UI already blocked him; slot math was already correct). Suite **1,334 green** (+11), tsc clean, golden master double-run zero-delta. **Live-verified in the running game**: header AUTO → review panel (2 proposals, Marcus correctly absent with his slot in use, CCO/Distro sitting out per the week-1 rule) → Cancel → nothing committed. Ledger: C74 struck (74 = 55 + 3 + 16 ✓); PENDING-DECISIONS §7 removed.
 
+**Evening addendum 2 — debt pile landed + the Tier 2 design conversation opened.** Two tracks per Nes's directive:
+- **Track 1 (debt pile, DONE):** three sequential factory slices, orchestrator diff-review then merge-on-green (per-session grant re-confirmed): **C70 → PR #128** (campaign-end summary now interpolates `campaign_length_weeks` from balance config — can't rot again; regression pin in the advance-week characterization test), **C72 → PR #129** (`ar_genre_shift` copy made roster/genre-agnostic, `[REFERENCE]` quote synced), **C73 → PR #130** (`cco_creative_clash` copy-softened to a direction clash honest for idle artists; road not taken: picker restriction + tag tightening). Suite 1,334 green at every slice; ledger now 74 = 58 + 3 + 13. *Ops note:* the three agents were initially launched in parallel and collided on the shared working tree (concurrent checkouts) — caught immediately, work salvaged via patch, re-run strictly sequentially; parallel build agents need worktree isolation or serialization.
+- **Weighting decision (Nes):** relevance weighting (2.0/4w) **explicitly left alone** — one playtest session isn't enough signal to tune a feel knob; revisit after more play.
+- **Track 2 (Tier 2 + side-events + mood, AT CHECKPOINT):** design space researched and presented as six forks with recommendations — see PENDING-DECISIONS §1 for the full record ("WHERE IT STOPPED"). Headline research facts: side events are half-alive (a weekly 20% roll already burns an RNG draw INSIDE the golden-master stream at `game-engine.ts:967`, picks one of 13 fully-authored events, and the result is invisible — no UI reads `summary.events`; selection is unseeded `Math.random()`, C64); every canonical Tier 2 trigger (chart debut, release out, tour wrap, mood change, signing) is already persisted with a week number, so reactive meetings can stay route-side with zero golden-master impact, same as Tier 0+1. Nes folded **mood phases 6–10 (former §5) fully into this design call**. Awaiting Nes's fork decisions (A–F); no spec written yet by design (hard checkpoint).
+
 **Open threads / next steps:**
-- **Tier 2 + side-events joint design** (PENDING-DECISIONS §1) — playtest feedback now exists; this is the next product conversation.
-- Relevance weighting (2.0/4w) is still first-guess tuning — revisit after more play.
+- **Tier 2 forks A–F await Nes's decisions** (PENDING-DECISIONS §1) — then [DRAFT] spec → approval → factory execution.
+- Relevance weighting (2.0/4w): explicitly left alone July 5 (Nes) — revisit after more play.
 - Nes still owes the Phase 4 in-game audio audition.
-- Carry-overs: C70 copy rot, C72/C73 content warts, remaining ledger pendings (16).
+- Carry-overs: remaining ledger pendings (13, all 🔵 low except C62 🟢).
 
 ---
 
