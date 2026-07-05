@@ -28,7 +28,7 @@
 
 **Open threads / next steps:**
 - **Merge order: #119 first, then #120** (stacked). Both green. After merge: plan-doc renames per the July 3–4 entries, plus prune the docs/CLAUDE.md exec-meetings signpost.
-- **⚠️ Verifier find: the July 4 playtest session's ~20 commits (local `d562d0d`) were never pushed — remote #119 still ends at `5fdea64`,** so GitHub's #119 lacks the playtest fixes and #120's PR diff shows them as its own. Needs a plain fast-forward push of `feat/exec-meetings-revival` (Nes to authorize — branch was declared frozen; details in PENDING-DECISIONS.md #7).
+- ~~**⚠️ Verifier find: the July 4 playtest session's ~20 commits (local `d562d0d`) were never pushed — remote #119 still ends at `5fdea64`**~~ **RESOLVED July 5:** Nes authorized; fast-forward push done, `origin/feat/exec-meetings-revival` = `d562d0d` (details in PENDING-DECISIONS.md #7).
 - PENDING-DECISIONS.md items await Nes (the relevance/reactivity Tier fork gates the most).
 - Small carry-overs: C70 copy rot, C71 reference-doc sync, remaining pending ledger items (15).
 

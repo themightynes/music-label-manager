@@ -24,7 +24,7 @@
 
 ## 7. PR #119 merge timing (and now PR #120 stacked on it)
 **Q:** When to do the one-merge-at-the-end of `feat/exec-meetings-revival`? **New consideration this session:** PR #120 (Group D fixes + legibility Slice A + Email Narrative Phase 1) is stacked on #119 and lands only after it. **Defer cost:** grows with every stacked commit — `main` is now 50+ commits behind the working line; the `[READY]` revival plan doc can't move to `COMPLETED/` until merge.
-**⚠️ Blocking fact (found by the July 4 PR #120 final verifier):** the July 4 playtest session's ~20 commits (all 12 playtest fixes, C69, session log — through local `d562d0d`) were **never pushed**; remote PR #119 still ends at `5fdea64`. GitHub's #119 is missing the playtest work, and #120's GitHub diff shows those 20 commits as its own until they're pushed. **Needed before merge:** a plain fast-forward `git push` of local `feat/exec-meetings-revival` — deliberately NOT done this session because #119 was declared frozen ("no new commits"); Nes to authorize since the commits predate the freeze and were always intended for #119.
+**✅ RESOLVED (July 5, 2026):** the unpushed-playtest-commits blocker is cleared — Nes authorized the plain fast-forward push and `origin/feat/exec-meetings-revival` now ends at `d562d0d` (verified pure fast-forward from `5fdea64`, no force). GitHub's #119 carries the full playtest work and #120's diff shows only its own commits. The remaining question here is merge timing itself.
 
 ---
 
