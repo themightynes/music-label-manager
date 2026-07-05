@@ -52,15 +52,22 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
             storage.getReleasesByGame(gameId as string),
             storage.getSongsByGame(gameId as string),
           ]);
+          // Meeting-relevance Tier 1 (PR-2): tuning from data/balance/progression.json
+          // weekly_meeting_selection (HARDCODED fallback inside the accessor).
+          const tuning = serverGameData.getWeeklyMeetingSelectionConfigSync();
           const relevanceState = deriveRelevanceState({
             artists,
             projects,
             releases,
             songs,
             currentWeek: weekNum,
+            recencyWindowWeeks: tuning.recency_window_weeks,
           });
           const seed = generateMeetingSeed(gameId as string, weekNum, req.params.roleId);
-          const selectedMeeting = selectWeeklyMeeting(roleMeetings, relevanceState, seed);
+          const selectedMeeting = selectWeeklyMeeting(roleMeetings, relevanceState, seed, {
+            relevanceWeight: tuning.relevance_weight,
+            recencyWindowWeeks: tuning.recency_window_weeks,
+          });
           console.log(`[MEETING API] ✅ Relevance-filtered pick for ${req.params.roleId} week ${weekNum}:`, selectedMeeting?.id ?? '(sit-out — empty eligible pool)');
           roleMeetings = selectedMeeting ? [selectedMeeting] : [];
         }

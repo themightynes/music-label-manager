@@ -51,6 +51,47 @@ export function seededRandomPick<T>(array: T[], seed: string): T | undefined {
 }
 
 /**
+ * Weighted seeded pick: one cumulative-weight walk over a single seededRandom(seed)
+ * draw. Deterministic — same (array, weights, seed) always returns the same item.
+ *
+ * Defensive fallbacks (both degrade to a uniform seededRandomPick, not a throw):
+ * - `weights.length !== array.length` (mismatched arrays)
+ * - all weights sum to 0 (or are otherwise non-positive)
+ *
+ * @param array - Array to select from
+ * @param weights - Parallel array of non-negative weights (need not sum to 1)
+ * @param seed - String seed for deterministic randomization
+ * @returns Single item from the array, or undefined if array is empty
+ */
+export function seededWeightedPick<T>(array: T[], weights: number[], seed: string): T | undefined {
+  if (array.length === 0) return undefined;
+  if (array.length === 1) return array[0];
+
+  if (weights.length !== array.length) {
+    return seededRandomPick(array, seed);
+  }
+
+  const total = weights.reduce((sum, w) => sum + (w > 0 ? w : 0), 0);
+  if (!(total > 0)) {
+    return seededRandomPick(array, seed);
+  }
+
+  const randomValue = seededRandom(seed);
+  const target = randomValue * total;
+
+  let cumulative = 0;
+  for (let i = 0; i < array.length; i++) {
+    const w = weights[i] > 0 ? weights[i] : 0;
+    cumulative += w;
+    if (target < cumulative) {
+      return array[i];
+    }
+  }
+  // Floating-point edge case (target === total): return the last positive-weight item.
+  return array[array.length - 1];
+}
+
+/**
  * Generate a seed string for weekly meeting randomization
  *
  * @param gameId - Unique game identifier

@@ -595,6 +595,28 @@ export class ServerGameData {
     };
   }
 
+  // Meeting-relevance Tier 1 (PR-2) — weekly meeting selection tunables.
+  // Lives in data/balance/progression.json under weekly_meeting_selection.
+  // Threaded into shared/engine/meetingSelection.ts's weighMeetings/
+  // selectWeeklyMeeting via server/routes/executives.ts's MeetingSelectionTuning.
+  getWeeklyMeetingSelectionConfigSync() {
+    // HARDCODED: fallback tuning if data/balance/progression.json's
+    // weekly_meeting_selection block is absent (matches the balance file's
+    // authored defaults so behavior is identical either way).
+    const defaults = {
+      relevance_weight: 2.0,
+      recency_window_weeks: 4
+    };
+    if (!this.balanceData) {
+      return defaults;
+    }
+    const cfg = (this.balanceData.weekly_meeting_selection || {}) as Record<string, any>;
+    return {
+      relevance_weight: cfg.relevance_weight ?? defaults.relevance_weight,
+      recency_window_weeks: cfg.recency_window_weeks ?? defaults.recency_window_weeks
+    };
+  }
+
   getBalanceConfigSync(): BalanceConfig {
     if (!this.balanceData) {
       throw new Error('Balance data not loaded. Call initialize() first.');

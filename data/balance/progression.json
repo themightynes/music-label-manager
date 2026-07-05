@@ -112,6 +112,11 @@
     "global_label_reputation": 75
   },
   
+  "weekly_meeting_selection": {
+    "relevance_weight": 2.0,
+    "recency_window_weeks": 4
+  },
+
   "difficulty_modifiers": {
     "easy": {
       "starting_money_multiplier": 1.5,

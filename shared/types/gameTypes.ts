@@ -71,6 +71,13 @@ export interface RoleMeeting {
    * Absent = always eligible. See shared/engine/meetingSelection.ts.
    */
   requires?: RelevanceTag[];
+  /**
+   * Meeting-relevance Tier 1 (PR-2): weighting axis. Existing field on every
+   * actions.json entry (business/talent/production/marketing/distribution/live);
+   * typed here so shared/engine/meetingSelection.ts's weighting stage can read
+   * it off a properly-typed RoleMeeting instead of an `any`.
+   */
+  category?: string;
   choices: DialogueChoice[];
 }
 
@@ -253,6 +260,11 @@ export interface BalanceConfig {
   ui_constants: Record<string, number>;
   save_system: Record<string, any>;
   difficulty_modifiers: Record<string, Record<string, number>>;
+  /** Meeting-relevance Tier 1 (PR-2). Optional — absent ⇒ read-site HARDCODED fallback. */
+  weekly_meeting_selection?: {
+    relevance_weight: number;
+    recency_window_weeks: number;
+  };
   song_generation?: {
     name_pools: {
       default: string[];

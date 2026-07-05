@@ -39,6 +39,8 @@ describe('deriveRelevanceState — one predicate per tag', () => {
       releaseOut: false,
       recordingProjectActive: false,
       tourActive: false,
+      releasePlannedSoon: false,
+      artistSignedRecently: false,
     });
   });
 
@@ -164,6 +166,8 @@ describe('filterEligible — AND semantics, absent requires = always eligible', 
       releaseOut: false,
       recordingProjectActive: true,
       tourActive: false,
+      releasePlannedSoon: false,
+      artistSignedRecently: false,
     };
     expect(isTagSatisfied('artist_signed', state)).toBe(true);
     expect(isTagSatisfied('music_exists', state)).toBe(false);
