@@ -1,6 +1,6 @@
 # [FUTURE] Executive Meeting — Relevance & Reactivity
 
-> **Status:** FUTURE / seed planning doc — problem framing + directions, NOT a chosen design or build plan. This one has a **large scope fork** that needs a product decision before any planning pass.
+> **Status:** FUTURE / seed planning doc — problem framing + directions. **Scope fork DECIDED July 5, 2026 (Nes): Tier 0+1 as one planned slice** — see `[DRAFT] meeting-relevance-tier0-1-plan.md` (same folder) for the implementation plan; Tier 2 stays deferred, paired with side-events (PENDING-DECISIONS.md §1). This doc remains the problem framing / design rationale. Note: the golden-master caution in "Constraints" below turned out not to apply — selection lives in the roles route, outside the advance-week engine path (plan §0).
 > **Created:** 2026-07-04 (elevated from the design-discussion section of `docs/99-legacy/superseded-2026-07/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md`)
 > **Origin:** exec-meetings-revival playtest walkthrough (Nes + Claude), post-PR #119.
 > **Related:** [REFERENCE] executive-meetings-system-complete-reference.md (canonical as-built — meeting selection mechanism), COMPLETED/[COMPLETE] executive-meetings-revival-plan.md, [FUTURE] executive-meeting-effect-legibility.md (the sibling problem), docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md.
