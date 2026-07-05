@@ -27,12 +27,6 @@ See `@ai-dev-tasks/README.md` for full details.
 - Fix bug → `09-troubleshooting/`
 - Understand UX → `03-workflows/user-interaction-flows.md`
 - Plan work → `01-planning/CORE_FEATURES_sim-v2.0.md`
-- Understand executive meetings → constellation, not just one doc (⚠️ temporary signpost for an actively hot topic — mid-revival, unmerged PR #119, live playtest; safe to prune once merged and settled, since the generic 5-bin search recipe in `.claude/commands/onboard.md` covers this without a hand-built entry):
-  - As-built canonical reference (code-verified, must stay in sync): `01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md`
-  - Original design vision (frozen historical intent, source for anything "deferred by design"): `01-planning/exec_team_context/Exec Team - Actions - COMPLETE MECHANICAL FRAMEWORK.md`
-  - Playtest findings (ARCHIVED July 4, 2026 — all fixed/logged/elevated): `99-legacy/superseded-2026-07/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md`; its design threads live on as `01-planning/implementation-specs/[FUTURE] executive-meeting-effect-legibility.md` + `[FUTURE] executive-meeting-relevance-and-reactivity.md`
-  - Durable open bugs/debt: `09-troubleshooting/technical-debt-backlog.md` (search "exec meetings" / relevant C-numbers, e.g. C67)
-  - Related/adjacent (exec email personality, not the meetings mechanics themselves): `01-planning/implementation-specs/[FUTURE] Email Narrative Storytelling Guide.md`
 
 ---
 

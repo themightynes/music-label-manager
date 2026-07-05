@@ -8,12 +8,12 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: July 4, 2026
+- **Last Updated**: July 5, 2026
 - **Total Items**: 71 (C1–C71, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
-- **Completed**: 53
+- **Completed**: 54
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 15 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70, C71) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
+- **Pending**: 14 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1126,12 +1126,14 @@ Found by the PR #120 Group-D verifier (July 4, 2026) while confirming C62: `serv
 
 ---
 
-### [ ] Comment 71 (C71): Two reference docs stale after PR #120's feature slices (doc-sync log) 🔵
+### [x] ~~Comment 71 (C71): Two reference docs stale after PR #120's feature slices (doc-sync log)~~ ✅ RESOLVED
 **Priority**: 🔵 Low
 **Impact**: Documentation accuracy only
 **Effort**: Small
 
 Doc-sync rule log (rather than silent orphaning) for PR #120's two feature slices: (1) `docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md` describes the pre-narrative generic email content/senders — Email Narrative Phase 1 (`c86f707`) added exec-voiced mood-banded templates, per-exec metadata, and the sender-per-category mapping it doesn't cover; (2) `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md` doesn't mention the badge explanation tooltips / `EFFECT_CHANNEL_DESCRIPTIONS` map (`af99a29`, legibility Slice A; `LIVE_EFFECT_KEYS` itself unchanged, so the data-lint-adjacent doc rule wasn't triggered). Fold both into the next docs pass.
+
+**✅ FIXED (July 5, 2026, post-merge docs pass):** both reference docs updated against the actual source. The email reference gained an "Email Narrative Phase 1" section (5 mood bands + FNV-1a deterministic selection in `shared/engine/emailNarrative.ts`, 6 template categories × 5 bands in `shared/engine/emailTemplates.ts`, fail-soft-to-neutral mood threading, additive-optional body/metadata fields) and its "Narrative Depth" future-enhancement bullet struck as shipped. The exec-meetings reference gained the legibility Slice A tooltip paragraph (§1: `EffectBadgeTooltip` on all four whitelisted badge renderers, `EFFECT_CHANNEL_DESCRIPTIONS` co-located with `LIVE_EFFECT_KEYS`, drift-guard `tests/engine/effect-descriptions.test.ts`), a maintenance-note extension covering the description map, and a status-header update for the PR #119/#120 merges.
 
 **Relevant Files**:
 - [docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md](docs/01-planning/implementation-specs/COMPLETED/email-notification-system-complete-reference.md)
@@ -1147,13 +1149,13 @@ Doc-sync rule log (rather than silent orphaning) for PR #120's two feature slice
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 14 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot; C71 — reference-doc staleness log, both July 4, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 13 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass)
 
 ### By Status
-- ✅ Completed: 53 items (74.6% of 71; 53 + 3 deferred + 15 pending = 71 ✓)
+- ✅ Completed: 54 items (76.1% of 71; 54 + 3 deferred + 14 pending = 71 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 15 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot + C71 — reference-doc staleness log, July 4, 2026; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120
+- 📋 Pending: 14 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
 
 ---
 
