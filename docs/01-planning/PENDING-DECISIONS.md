@@ -1,11 +1,11 @@
 # Pending Decisions — Nes's Queue
 
-*One entry per open product/strategy decision. Updated in place (resolved entries are deleted, not struck). Last updated: July 4, 2026 (PR #120 session).*
+*One entry per open product/strategy decision. Updated in place (resolved entries are deleted, not struck). Last updated: July 5, 2026 (merge day + meeting-relevance Tier 0+1 arc).*
 
 ---
 
 ## 1. Tier 2 (event-driven meetings) — deferred, paired with side-events
-**Resolved upstream (July 5, 2026):** Nes chose **Tier 0+1 as one planned slice** — plan: `implementation-specs/[READY] meeting-relevance-tier0-1-plan.md` (approved incl. sit-out rule; AUTO = Option A). **What remains pending:** Tier 2 (meetings fire *because* something happened) is deferred by decision and must be **designed jointly with the deferred side-events system** — they'd share an event model (`events.json` is already key-clean per revival PR-8); neither should be planned in isolation. The Tier 0+1 selection pipeline is built as staged pure functions specifically so Tier 2 slots in as a pre-draw stage (plan §5). **Unblocks when decided:** the "timeliness" half of the relevance problem + the phantom side-events system. **Defer cost:** low while Tier 0+1 is unplaytested — timeliness feedback should come from playing the weighted version first.
+**Resolved upstream (July 5, 2026):** Nes chose **Tier 0+1 as one planned slice** — plan: `implementation-specs/COMPLETED/[COMPLETE] meeting-relevance-tier0-1-plan.md` (EXECUTED — PRs #122–#124 merged July 5, 2026; verifier-confirmed except C74, see §7). **What remains pending:** Tier 2 (meetings fire *because* something happened) is deferred by decision and must be **designed jointly with the deferred side-events system** — they'd share an event model (`events.json` is already key-clean per revival PR-8); neither should be planned in isolation. The Tier 0+1 selection pipeline is built as staged pure functions specifically so Tier 2 slots in as a pre-draw stage (plan §5). **Unblocks when decided:** the "timeliness" half of the relevance problem + the phantom side-events system. **Defer cost:** low while Tier 0+1 is unplaytested — timeliness feedback should come from playing the weighted version first.
 
 ## 2. C42 — awareness → wire further or stop celebrating it
 **Q:** Awareness is live in streaming revenue but weakly surfaced — invest in full player-facing integration (release page/dashboard readouts per `[FUTURE] awareness-system-design.md`) or trim the celebration to match its weight? **Unblocks:** Release-Experience Tier 2 AND the awareness design doc (three docs queue on this one call). **Defer cost:** a live economic system stays invisible; WeekSummary keeps celebrating a stat players can't reason about. **Session evidence:** C69 (fixed July 4 on PR #119) showed marketing-driven awareness gain was silently dead for ~9 months and nobody noticed — strong signal the system's invisibility is itself the bug. The Slice A "Buzz" tooltip (PR #120) now explains the meeting channel, which slightly raises the cost of removing awareness later.
@@ -22,9 +22,10 @@
 ## 6. Desktop GUI migration — option A/B/C
 **Q:** Cloud-dependent (A, ~60% effort) vs local-first hybrid (B, ~120%) vs full offline (C, ~250%) — gated on 5 framing questions (offline? multiplayer? mobile? timeline? monetization?). **Unblocks:** all of `desktop-gui-migration-strategy.md`. **Defer cost:** none while web-first development continues.
 
-## 7. PR #119 merge timing (and now PR #120 stacked on it)
-**Q:** When to do the one-merge-at-the-end of `feat/exec-meetings-revival`? **New consideration this session:** PR #120 (Group D fixes + legibility Slice A + Email Narrative Phase 1) is stacked on #119 and lands only after it. **Defer cost:** grows with every stacked commit — `main` is now 50+ commits behind the working line; the `[READY]` revival plan doc can't move to `COMPLETED/` until merge.
-**✅ RESOLVED (July 5, 2026):** the unpushed-playtest-commits blocker is cleared — Nes authorized the plain fast-forward push and `origin/feat/exec-meetings-revival` now ends at `d562d0d` (verified pure fast-forward from `5fdea64`, no force). GitHub's #119 carries the full playtest work and #120's diff shows only its own commits. The remaining question here is merge timing itself.
+## 7. C74 — GameHeader AUTO button bypasses the propose-then-confirm gate
+**Q:** The always-visible header AUTO button (`client/src/components/GameHeader.tsx`, Phase 4 code — pre-existing, not touched by PR-3) still fetches, scores, and **commits AUTO picks immediately**, bypassing the Option A review panel that now gates the Executive Suite's AUTO button. Found by the July 5 fresh-context verifier (F1, Medium); logged as backlog C74. **Options:** (a) wire the header button through the same review flow (needs the machine's review state reachable from outside ExecutiveMeetings — real plumbing); (b) remove/repoint the header button to the Executive Suite (product/UX call — it's the more prominent button); (c) accept two AUTO behaviors and document it. **Unblocks:** C74; makes Option A's "one deliberate glance" actually universal. **Defer cost:** players who use the header button never see the review gate, so the disengagement fix doesn't reach them — worth deciding before the next playtest.
+
+*(Former entry 7 — PR #119/#120 merge timing — resolved and removed July 5, 2026: both merged, plus the docs pass, as `bbcacef`/`e6b4723`/`d3ddc2f`.)*
 
 ---
 

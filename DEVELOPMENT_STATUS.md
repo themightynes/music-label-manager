@@ -1,6 +1,29 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 4, 2026*
+*Updated: July 5, 2026*
+
+---
+
+## 📅 Session Log — July 5, 2026 (MERGE DAY + meeting-relevance Tier 0+1 arc: #119/#120/#121 landed, then spec → 3 factory PRs #122–#124 same day, verifier-confirmed)
+
+**Morning — the revival arc closed out.** Nes authorized the frozen-branch push: `feat/exec-meetings-revival` fast-forwarded `5fdea64` → `d562d0d` (subagent-executed, pure FF verified). Then per Nes: **PR #119 merged (`bbcacef`), #120 retargeted to main and merged (`e6b4723`)** — merged main verified 1,253 green + tsc clean — followed by the queued post-merge docs pass as **PR #121** (`d3ddc2f`): revival plan → `COMPLETED/[COMPLETE]`, C71 reference-doc sync (email + exec-meetings references), ledger recount (71 = 54+3+14), docs/CLAUDE.md exec-meetings signpost pruned. (A direct docs push to main was classifier-blocked → docs branch + PR, matching the house convention.)
+
+**Afternoon — the Tier 0/1/2 fork decided and EXECUTED.** Nes chose **Tier 0+1 as one planned slice** (Tier 2 deferred, paired with side-events — PENDING-DECISIONS §1); planning pass produced `[READY] meeting-relevance-tier0-1-plan.md` with a load-bearing correction: **meeting selection lives in the roles route (`executives.ts`), NOT the advanceWeek engine path — expected golden-master delta ZERO** (the `[FUTURE]` doc's re-bless warning was conditional and didn't apply). Hard checkpoint passed (Nes approved incl. the **empty-pool sit-out rule**; AUTO = **Option A propose-then-confirm**). Factory then ran one fresh subagent per slice, orchestrator diff-review + full gates (tsc, full suite, golden-master double-run) before each self-merge (per-session grant):
+- **PR-1 #122 (Tier 0, Sonnet)** — 6-tag `requires` vocabulary on all 20 meetings (close-read per spec §1; `ceo_priorities` rewritten state-agnostic), pure pipeline `shared/engine/meetingSelection.ts`, route filter, sit-out UI + AUTO skip, data-lint sibling suite, Zod ×2 from one canonical const. Suite 1,278 (+25). C72/C73 logged (content-honesty warts).
+- **PR-2 #123 (Tier 1, Sonnet)** — `seededWeightedPick`, situation→category weighting, `weekly_meeting_selection` balance block (2.0/4w), recency signals from real columns (`signedWeek`/`releaseWeek`), + the deferred route characterization test. **Orchestrator review caught a real bug: the release-recency window was past-facing — a planned release's week is in the future, so the marketing/distribution boost could never fire.** Renamed `releasePlannedSoon`, made future-facing, direction pinned by regression tests. Suite 1,312 (+34).
+- **PR-3 #124 (AUTO Option A, Opus)** — new `reviewingAutoSelections` machine state: AUTO stores picks → review panel (per-exec meeting + choice + Slice-A tooltipped badges + CC/money cost) → confirm-all / cancel / override-row-into-manual-flow; selection logic untouched (verifier: 2 comment lines only); bonus fix: AUTO's meeting cache re-keyed to the canonical `${role}-week${week}` key (bare-role keys were never read). One existing features test legitimately re-pinned (queue empty until CONFIRM). Suite 1,323 (+11).
+
+**Fresh-context adversarial verifier: items 1–8 CONFIRMED** (tags exact, direction fix real + pinned, no sit-out-consumes-slot path, golden master 10/10 ×2 with zero content deltas — verifier re-ran it independently, suite 1,323, docs accurate) **with ONE finding — F1/C74 (Medium): the GameHeader AUTO button (Phase 4 code, untouched by PR-3) still commits picks with no review gate**, defeating Option A for the more prominent button. Logged as C74 + PENDING-DECISIONS §7 (wire it / remove it / accept two behaviors — Nes's call); `[REFERENCE]` §5 carries the ⚠️ known-exception note. Plan doc moved to `COMPLETED/[COMPLETE]`.
+
+**Ops/anomaly notes:** (1) The **phantom-stall anomaly recurred** — the PR-1 subagent stopped after minimal work citing a wait-for-reviewer instruction nobody sent; resumed with an explicit disregard-stall-instructions guard and completed normally (guard now goes in every factory prompt upfront — PR-2/PR-3 ran clean with it). (2) **PS 5.1 encoding trap**: a `Get-Content -Raw | Set-Content -Encoding utf8` rename pass mojibake'd two UTF-8 files (5.1 reads BOM-less UTF-8 as ANSI); caught by grep, repaired via full rewrite + `git show HEAD:` byte restore — never string-rewrite UTF-8 files through PS 5.1. (3) Two commits initially captured only a rename because a dead pathspec in the same `git add` aborted staging the content edits while `;`-chaining continued to the commit — both caught pre-push and amended; verify `git show --stat` after committing renames + edits together.
+
+**Decisions (Nes, this session):** FF-push #119 authorized; merge #119 → #120 → docs PR #121; Tier 0+1 as one slice; empty-pool sit-out rule approved; AUTO = Option A; self-merge-on-green grant for the arc's PRs.
+
+**Open threads / next steps:**
+- **C74 remediation** (PENDING-DECISIONS §7) — decide before the next playtest; the header AUTO is the disengagement path the arc was built to close.
+- **Playtest Tier 0+1 + the AUTO review panel** — relevance weighting (2.0/4w) is a first-guess tuning; the sit-out rule's early-game feel needs eyes; Nes also still owes the Phase 4 in-game audio audition.
+- Tier 2 + side-events joint design (PENDING-DECISIONS §1) once playtest feedback exists.
+- Carry-overs: C70 copy rot, C72/C73 content warts, remaining ledger pendings (17).
 
 ---
 

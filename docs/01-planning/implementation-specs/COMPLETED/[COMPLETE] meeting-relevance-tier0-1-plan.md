@@ -1,7 +1,7 @@
-# [READY] Executive Meeting Relevance — Tier 0+1 Implementation Plan
+# [COMPLETE] Executive Meeting Relevance — Tier 0+1 Implementation Plan
 
 **Date**: July 5, 2026
-**Status**: READY — checkpoint passed July 5, 2026: Nes approved the spec **including the empty-pool sit-out rule** (§1) and chose **AUTO Option A (propose-then-confirm)** for §6/PR-3.
+**Status**: COMPLETE — executed same day as three factory slices, all merged to `main` July 5, 2026: PR-1 #122 (Tier 0 honest pools + sit-out), PR-2 #123 (Tier 1 weighting; orchestrator review caught + fixed a direction bug — `releasePlannedSoon` is future-facing), PR-3 #124 (AUTO Option A review panel). Fresh-context adversarial verifier: items 1–8 all CONFIRMED, one finding — **F1/C74: the GameHeader AUTO button (Phase 4, pre-existing) bypasses the Option A review gate**; logged in the backlog, remediation is a pending product call. Checkpoint history: Nes approved the spec **including the empty-pool sit-out rule** (§1) and chose **AUTO Option A (propose-then-confirm)** for §6/PR-3.
 **Decision recorded**: Nes chose **Tier 0+1 as one planned slice** (July 5, 2026); Tier 2 (event-driven meetings) stays deferred, to be designed **jointly with the side-events system** — recorded in `docs/01-planning/PENDING-DECISIONS.md`.
 **Problem statement / fork analysis** (not repeated here): `[FUTURE] executive-meeting-relevance-and-reactivity.md`. Sibling: `[FUTURE] executive-meeting-effect-legibility.md`.
 **As-built ground truth**: `REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md` §1.
