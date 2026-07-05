@@ -9,7 +9,7 @@ import {
   createErrorResponse,
 } from '@shared/api/contracts';
 import { insertWeeklyActionSchema } from '@shared/schema';
-import { advanceWeekService } from '../services/advanceWeekService';
+import { advanceWeekService, AdvanceWeekConflictError } from '../services/advanceWeekService';
 
 const router = Router();
 
@@ -39,12 +39,19 @@ const router = Router();
     try {
       // Validate request using shared contract
       const request = validateRequest(AdvanceWeekRequest, req.body);
-      const { gameId, selectedActions } = request;
+      const { gameId, selectedActions, expectedCurrentWeek } = request;
 
-      const finalResult = await advanceWeekService.advanceWeek(gameId, selectedActions);
+      const finalResult = await advanceWeekService.advanceWeek(gameId, selectedActions, expectedCurrentWeek);
 
       res.json(finalResult);
     } catch (error) {
+      // C58: stale-week guard conflict — map before the generic logging/500
+      // path below (mirrors ArtistServiceError/ReleaseServiceError handling in
+      // routes/artists.ts and routes/releases.ts).
+      if (error instanceof AdvanceWeekConflictError) {
+        return res.status(error.status).json(error.body);
+      }
+
       console.error('=== ADVANCE WEEK ERROR ===');
       console.error('Error type:', typeof error);
       console.error('Error instance:', error?.constructor?.name);

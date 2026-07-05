@@ -4,6 +4,36 @@
 
 ---
 
+## 📅 Session Log — July 4, 2026, later session (PR #120 STACKED on #119: Group D debt fixes + legibility Slice A + Email Narrative Phase 1 — #119 stays frozen/UNMERGED)
+
+**Orchestrated factory session (Fable + one fresh subagent per slice, orchestrator diff-review before every commit, fresh-context adversarial verifier after Group D and at wrap).** All work on **`feat/session-fixes-legibility-emails` = PR #120, base `feat/exec-meetings-revival` (NOT main)** — #119 is frozen per decision (no new commits/rebase/merge). Decision-free scope only; every gated item logged, not built. Suite **1,189 → 1,253 green** (+64), tsc clean at every commit.
+
+**Group D debt fixes (regression tests on each; all four CONFIRMED by a fresh-context adversarial verifier that re-ran the suite independently):**
+- **C60** (`7898de6`) — delayed `artist_energy`/`artist_popularity` effects now respect `artistId`, mirroring `artist_mood` (was: a one-on-one dialogue's delayed effect hit the whole roster). Global no-`artistId` branch pinned unchanged. +5 tests incl. end-to-end `processDelayedEffects` threading.
+- **C58** (`3d8066a`) — optimistic stale-week guard: client always sends `expectedCurrentWeek` (optional in `AdvanceWeekRequest`, backward-compatible); server 409s (`ADVANCE_WEEK_CONFLICT`, new `AdvanceWeekConflictError`) inside the FOR UPDATE lock; calm client toast. Double-click can no longer advance two weeks. +5 tests.
+- **C62 PARTIAL** (`f1b1315`) — Media Mogul now requires the true maxima (flagship/national; was unearnable `=== mid` tiers); 12-week → 52-week copy (HARDCODED: comments). **Zeroed `artistsSuccessful`/`projectsCompleted` deliberately NOT built** — undefined semantics + missing data plumbing = gated; logged in PENDING-DECISIONS.md. +6 tests.
+- **C51** (`6e945e3`) — "On Tour" badge ends the week the last city plays: shared `getArtistStatus` in `tourHelpers.ts` reuses ActiveTours' city-count check; ArtistCard/ArtistRoster both consume it (client-only per decision). +10 tests.
+
+**Features (mechanism + UI + tests per spec):**
+- **Legibility Slice A** (`af99a29`) — `EFFECT_CHANNEL_DESCRIPTIONS` (14 entries, co-located with `LIVE_EFFECT_KEYS`, drift-guard test mirrors data-lint) + `EffectBadgeTooltip` on all four whitelisted badge renderers. Pure additive UI; directions B/C untouched (spec's open questions stand). +13 tests.
+- **Email Narrative Phase 1** (`c86f707`) — exec-voiced mood-banded emails: `emailNarrative.ts` (5 mood bands, FNV-1a deterministic variant/quirk/timestamp selection — no Math.random, no seeded-stream consumption) + `emailTemplates.ts` (6 categories × 5 bands; Mac/Sam/Pat/Dante per guide); exec moods loaded read-only inside the D6 transaction, fail-soft to neutral; additive-optional metadata (no SNAPSHOT_VERSION bump — email snapshot schema is permissive). **Golden master re-blessed (10 snapshots): delta independently verified email-content-only** (zero non-email field changes). Phase 2/3 not built. +25 tests.
+
+**Housekeeping/ledger:** C67 marked resolved (was fixed on #119, ledger never updated); 3 stale workflow-doc items from #119 reconciled (`d8480b2` — closes the July 4 doc-sync PARTIAL); ledger arithmetic fixed (verifier find: header said 68 items/buckets summed 67; true count C1–C71, now 53 completed + 3 deferred + 15 pending = 71 ✓). **New debt logged:** C70 (residual 12-week copy in advanceWeekService/routes), C71 (email + exec-meetings reference docs stale after the two feature slices — doc-sync log).
+
+**New session artifact:** **`docs/01-planning/PENDING-DECISIONS.md`** — one entry per gated decision (relevance/reactivity Tier fork, C42, C43, C32, artist-mood 6–10, desktop GUI, #119/#120 merge timing) with options/unblocks/defer-costs/session evidence, plus the C62 stopped-slice log. Update in place going forward.
+
+**Anomaly note:** one subagent run (Email Narrative, first attempt) terminated after a single tool call, reporting an embedded "wait for reviewer instructions" line that no one sent; re-dispatched with an explicit disregard-stall-instructions guard and it completed normally. Watch for recurrence.
+
+**Decisions (Nes, this session):** C51 = client-only fix; DEVELOPMENT_STATUS log rides PR #120 (variance from the usual keep-logs-off-feature-PRs rule).
+
+**Open threads / next steps:**
+- **Merge order: #119 first, then #120** (stacked). Both green. After merge: plan-doc renames per the July 3–4 entries, plus prune the docs/CLAUDE.md exec-meetings signpost.
+- ~~**⚠️ Verifier find: the July 4 playtest session's ~20 commits (local `d562d0d`) were never pushed — remote #119 still ends at `5fdea64`**~~ **RESOLVED July 5:** Nes authorized; fast-forward push done, `origin/feat/exec-meetings-revival` = `d562d0d` (details in PENDING-DECISIONS.md #7).
+- PENDING-DECISIONS.md items await Nes (the relevance/reactivity Tier fork gates the most).
+- Small carry-overs: C70 copy rot, C71 reference-doc sync, remaining pending ledger items (15).
+
+---
+
 ## 📅 Session Log — July 4, 2026 (Exec-meetings playtest: 12 findings fixed + C69 discovered/fixed, design threads elevated, playtest doc archived — all on PR #119, still UNMERGED)
 
 **Nes playtested `feat/exec-meetings-revival` (PR #119) and the session fixed every actionable finding**, all committed onto the SAME branch/PR per the standing one-merge-at-the-end policy (no new branches). Ran orchestrator + subagents in two parallel waves (agents kept getting stopped mid-task in this environment — critical pieces like C69 were finished foreground). Every fix was orchestrator-diff-reviewed before commit; full suite ended **green at 1,189 tests** (was 1,013 at revival end), tsc clean. Branch now `f41bf27` → `fcdc877` (20 commits this session).

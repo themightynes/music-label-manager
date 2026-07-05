@@ -72,6 +72,10 @@ POST /api/tour/estimate
 Server validates inputs and game state
     ↓
 VenueCapacityManager validates capacity
+    • Bookable range = [lowest-bookable-tier min, current-tier max]
+      (unlocking a higher venue-access tier raises the ceiling but keeps
+      the floor at the smallest real venue — a Theater-access label can
+      still book a Clubs-sized show; see `getBookingRangeForTier`)
     ↓
 FinancialSystem calculates detailed breakdown
     ↓
@@ -138,6 +142,20 @@ If all cities complete: tour moves to "recorded" stage
     ↓
 Frontend displays updated tour progress
 ```
+
+**Player-facing milestone labels**: the internal DB stage machine tours reuse
+("planning" → "production" → "recorded") is the same one recording projects
+use, but tour-facing copy never says "recorded" — `ProjectStageProcessor`
+branches the label on `project.type === 'Mini-Tour'` so Weekly Summary
+milestones read **Planned → On Tour → Tour Completed** instead of the
+recording-pipeline stage names (fixed C68, July 4, 2026).
+
+**Tour-completion summary/email**: on final-city completion, `ProjectStageProcessor`
+sums the per-city costs (venue + production + marketing) into `totalCosts` and
+computes `netProfit = totalRevenue - totalCosts`, attached to the
+`project_complete` change (`GameChange.totalCosts`/`netProfit`). The completion
+email (`EmailGenerator.buildTourCompletionEmails`) headlines **net profit/loss**,
+with gross revenue shown alongside, rather than gross alone.
 
 ### **Tour Cancellation Workflow**
 
@@ -306,11 +324,17 @@ Aggregate tour analytics:
 
 ### **Venue Access Progression**
 - Better venue access unlocks larger capacity venues
-- Access tiers determine available capacity ranges:
-  - None: 0-50 capacity
+- Each tier's own band (from `data/balance/progression.json`):
+  - None: 0-50 capacity (un-bookable)
   - Clubs: 50-500 capacity
   - Theaters: 500-2000 capacity
   - Arenas: 2000-10000 capacity
+- The **bookable range** offered to the player (slider + server-side
+  `validateCapacity`) is wider than the current tier's own band: it spans
+  from the smallest bookable tier's minimum up to the current tier's
+  maximum, so unlocking a tier only ever raises the ceiling — the floor
+  stays at the smallest real venue (`VenueCapacityManager.getBookingRangeForTier`,
+  `shared/engine/FinancialSystem.ts`; fixed C67, July 4, 2026)
 
 ---
 

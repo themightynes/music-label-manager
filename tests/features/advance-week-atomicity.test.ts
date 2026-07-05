@@ -56,7 +56,7 @@ import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
 import * as schema from '@shared/schema';
 import { DatabaseStorage } from '../../server/storage';
-import { AdvanceWeekService } from '../../server/services/advanceWeekService';
+import { AdvanceWeekService, AdvanceWeekConflictError } from '../../server/services/advanceWeekService';
 import { createTestDatabase, clearDatabase, setupDatabase } from '../helpers/test-db';
 import { createGameData, type TestDb } from '../engine/golden-master-fixtures';
 
@@ -65,6 +65,9 @@ const IDS = {
   crashPersist: '00000000-0000-4000-8000-0000000000d1',
   escapeInTx1: '00000000-0000-4000-8000-0000000000d2',
   concurrentA: '00000000-0000-4000-8000-0000000000d3',
+  staleGuard: '00000000-0000-4000-8000-0000000000d4',
+  freshGuard: '00000000-0000-4000-8000-0000000000d5',
+  noGuard: '00000000-0000-4000-8000-0000000000d6',
 };
 
 let db: TestDb;
@@ -444,5 +447,85 @@ describe('D6 — advance-week whole-week transaction atomicity', () => {
       .from(schema.gameStates)
       .where(eq(schema.gameStates.id, gameId));
     expect(gsAfter.currentWeek).toBe(7);
+  });
+
+  // C58: optimistic stale-week guard. The concurrency smoke test above proves
+  // both concurrent requests SUCCEED (the FOR UPDATE lock only serializes
+  // them) — that is exactly the double-submit bug: a second click advances an
+  // extra week instead of being rejected. These tests pin the guard that fixes
+  // it: the service checks the row's currentWeek against the caller's
+  // expectedCurrentWeek right after the FOR UPDATE re-read, inside the tx.
+  it('C58 — stale expectedCurrentWeek is rejected with a 409 AdvanceWeekConflictError; week does NOT advance', async () => {
+    const gameId = IDS.staleGuard;
+    await seedGame(gameId, 5);
+    await seedArtist(gameId, { name: 'Stale Guard' });
+
+    const storage = new DatabaseStorage(db);
+    const gameData = makeServiceGameData(storage);
+    const service = new AdvanceWeekService(storage as any, db as any, gameData as any);
+
+    // Row is at week 5; caller believes it's still week 4 (e.g. its own prior
+    // advance request already committed and moved the row to 5).
+    await expect(service.advanceWeek(gameId, [], 4)).rejects.toThrow(AdvanceWeekConflictError);
+
+    try {
+      await service.advanceWeek(gameId, [], 4);
+      throw new Error('expected advanceWeek to reject');
+    } catch (err) {
+      expect(err).toBeInstanceOf(AdvanceWeekConflictError);
+      expect((err as AdvanceWeekConflictError).status).toBe(409);
+      expect((err as AdvanceWeekConflictError).body).toMatchObject({
+        error: 'ADVANCE_WEEK_CONFLICT',
+        currentWeek: 5,
+        expectedCurrentWeek: 4,
+      });
+    }
+
+    const [gsAfter] = await db
+      .select()
+      .from(schema.gameStates)
+      .where(eq(schema.gameStates.id, gameId));
+    // Week unchanged by either rejected call.
+    expect(gsAfter.currentWeek).toBe(5);
+  });
+
+  it('C58 — correct expectedCurrentWeek succeeds and advances the week normally', async () => {
+    const gameId = IDS.freshGuard;
+    await seedGame(gameId, 5);
+    await seedArtist(gameId, { name: 'Fresh Guard' });
+
+    const storage = new DatabaseStorage(db);
+    const gameData = makeServiceGameData(storage);
+    const service = new AdvanceWeekService(storage as any, db as any, gameData as any);
+
+    const result = await service.advanceWeek(gameId, [], 5);
+    expect(result.gameState.currentWeek).toBe(6);
+
+    const [gsAfter] = await db
+      .select()
+      .from(schema.gameStates)
+      .where(eq(schema.gameStates.id, gameId));
+    expect(gsAfter.currentWeek).toBe(6);
+  });
+
+  it('C58 — omitting expectedCurrentWeek preserves prior behavior (no guard enforced)', async () => {
+    const gameId = IDS.noGuard;
+    await seedGame(gameId, 5);
+    await seedArtist(gameId, { name: 'No Guard' });
+
+    const storage = new DatabaseStorage(db);
+    const gameData = makeServiceGameData(storage);
+    const service = new AdvanceWeekService(storage as any, db as any, gameData as any);
+
+    // No third argument at all — backward-compat pin: the call succeeds exactly
+    // as it did before the guard existed, regardless of the row's actual week.
+    const result = await service.advanceWeek(gameId, []);
+    expect(result.gameState.currentWeek).toBe(6);
+
+    const [gsAfter] = await db
+      .select()
+      .from(schema.gameStates)
+      .where(eq(schema.gameStates.id, gameId));
+    expect(gsAfter.currentWeek).toBe(6);
   });
 });

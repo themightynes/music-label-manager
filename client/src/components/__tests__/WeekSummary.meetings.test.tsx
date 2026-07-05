@@ -294,6 +294,32 @@ describe('WeekSummary meetings card', () => {
     expect(screen.getByText('-1 Prestige')).toBeInTheDocument();
   });
 
+  // LEGIBILITY Slice A — the applied-effect badges in the meetings card are now
+  // wrapped in an explanation tooltip. Assert the trigger is wired (per channel)
+  // without driving Radix's portal.
+  it('wraps each applied-effect badge in an explanation tooltip trigger', () => {
+    renderSummary([
+      {
+        type: 'meeting',
+        description: 'Met with Role cmo',
+        meetingId: 'cmo_awards',
+        choiceId: 'full_campaign',
+        choiceLabel: 'Full campaign',
+        appliedEffects: { money: -20000, award_chances: 5 },
+        importance: 'routine',
+      } as GameChange,
+    ]);
+
+    const moneyTrigger = document.querySelector('[data-effect-key="money"]');
+    expect(moneyTrigger).not.toBeNull();
+    expect(moneyTrigger?.getAttribute('aria-label')).toContain('Money');
+
+    const prestigeTrigger = document.querySelector('[data-effect-key="award_chances"]');
+    expect(prestigeTrigger).not.toBeNull();
+    // Prestige copy explains it pays off at campaign end.
+    expect(prestigeTrigger?.getAttribute('aria-label')).toContain('campaign');
+  });
+
   it('does not render the meetings card when there are no meeting-bucket changes', () => {
     renderSummary([
       { type: 'revenue', description: 'Streaming revenue', amount: 1000, importance: 'routine' } as GameChange,

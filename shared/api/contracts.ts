@@ -148,7 +148,14 @@ export const GetGameStateResponse = z.object({
 // Week advancement schemas
 export const AdvanceWeekRequest = z.object({
   gameId: z.string().uuid(),
-  selectedActions: z.array(ActionSchema)
+  selectedActions: z.array(ActionSchema),
+  // C58: optimistic stale-week guard. OPTIONAL so existing callers/tests are
+  // unaffected — the server only enforces the guard when this is present. The
+  // client ALWAYS sends its currently-known currentWeek so a double-submitted
+  // advance click 409s on the second request instead of silently advancing
+  // two weeks (see advanceWeekService.ts's guard, right after the
+  // `SELECT ... FOR UPDATE` re-read).
+  expectedCurrentWeek: z.number().int().optional()
 });
 
 export const CampaignResultsSchema = z.object({
