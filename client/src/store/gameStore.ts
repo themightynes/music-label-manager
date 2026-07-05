@@ -357,6 +357,17 @@ interface GameStore {
   weeklyOutcomeAutoShow: boolean;
   consumeWeeklyOutcomeAutoShow: () => void;
 
+  /**
+   * C74: session-scoped intent that the global GameHeader AUTO button was
+   * clicked. The header is mounted everywhere but the AUTO review flow lives in
+   * the ExecutiveMeetings machine (Executive Suite page only), so the header sets
+   * this flag + navigates to /executives; ExecutiveMeetings consumes it exactly
+   * once when its machine is idle (sends AUTO_SELECT) and clears it. SESSION/UI
+   * state — NEVER persisted (not in partialize), so it can't survive a reload. */
+  pendingAutoSelectIntent: boolean;
+  setPendingAutoSelectIntent: (pending: boolean) => void;
+  consumePendingAutoSelectIntent: () => void;
+
   // Actions
   loadGame: (gameId: string) => Promise<void>;
   loadGameFromSave: (saveId: string, snapshot: GameSaveSnapshot, mode?: 'overwrite' | 'fork') => Promise<string>;
@@ -411,6 +422,15 @@ export const useGameStore = create<GameStore>()(
       weeklyOutcome: null,
       campaignResults: null,
       weeklyOutcomeAutoShow: false,
+      pendingAutoSelectIntent: false,
+
+      // C74: the global GameHeader AUTO button sets this intent + navigates to
+      // /executives; ExecutiveMeetings consumes it once (machine idle → AUTO_SELECT)
+      // and clears it, so both AUTO entry points route through the review gate.
+      // Session/UI state only — never persisted (see partialize).
+      setPendingAutoSelectIntent: (pending: boolean) =>
+        set({ pendingAutoSelectIntent: pending }),
+      consumePendingAutoSelectIntent: () => set({ pendingAutoSelectIntent: false }),
 
       // Phase 4 feel-feedback fix: the CommandDock consumes this one-shot flag to
       // auto-open the WeekSummary modal exactly once per advance. The dedupe used

@@ -151,6 +151,44 @@ describe('prepareAutoSelectOptions — AUTO never gambles when a safe alternativ
   });
 });
 
+describe('prepareAutoSelectOptions — AR-busy exclusion (playtest bug: AUTO grabbed Marcus while the A&R office slot was in use)', () => {
+  const arExec: Executive = { id: 'e-ar', role: 'head_ar', level: 1, mood: 50, loyalty: 50 };
+  const cmoExec: Executive = { id: 'e-cmo', role: 'cmo', level: 1, mood: 50, loyalty: 50 };
+  const meeting = (id: string, role: string): RoleMeeting => ({
+    id,
+    prompt: id,
+    target_scope: 'global',
+    role_id: role,
+    choices: [choice(`${id}_c1`, { effects_immediate: { reputation: 1 } })],
+  } as RoleMeeting);
+
+  const meetingsByRole = {
+    head_ar: [meeting('ar_meeting', 'head_ar')],
+    cmo: [meeting('cmo_meeting', 'cmo')],
+  };
+
+  it('excludes head_ar when arOfficeSlotUsed=true', () => {
+    const options = prepareAutoSelectOptions([arExec, cmoExec], meetingsByRole, {
+      arOfficeSlotUsed: true,
+    });
+    expect(options.some((o) => o.executive.role === 'head_ar')).toBe(false);
+    // Other execs are unaffected.
+    expect(options.some((o) => o.executive.role === 'cmo')).toBe(true);
+  });
+
+  it('includes head_ar when arOfficeSlotUsed=false', () => {
+    const options = prepareAutoSelectOptions([arExec, cmoExec], meetingsByRole, {
+      arOfficeSlotUsed: false,
+    });
+    expect(options.some((o) => o.executive.role === 'head_ar')).toBe(true);
+  });
+
+  it('includes head_ar when the config is absent (default = current behavior, existing tests stay green)', () => {
+    const options = prepareAutoSelectOptions([arExec, cmoExec], meetingsByRole);
+    expect(options.some((o) => o.executive.role === 'head_ar')).toBe(true);
+  });
+});
+
 describe('getChoiceCreativeCapitalCost', () => {
   it('reports the spend magnitude of a CC-negative choice', () => {
     expect(getChoiceCreativeCapitalCost(choice('c', { effects_immediate: { creative_capital: -2 } }))).toBe(2);

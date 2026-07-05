@@ -10,10 +10,10 @@
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 5, 2026
 - **Total Items**: 74 (C1–C74, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
-- **Completed**: 54
+- **Completed**: 55
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 17 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70, C72, C73 — content-honesty warts from meeting-relevance PR-1 + C74 — header AUTO review-gate bypass, verifier F1, all July 5, 2026) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
+- **Pending**: 16 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70, C72, C73 — content-honesty warts from meeting-relevance PR-1, all July 5, 2026) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1172,18 +1172,23 @@ Found during the same Tier 0 close reading: `cco_creative_clash` (user_selected)
 
 ---
 
-### [ ] Comment 74 (C74): GameHeader AUTO button bypasses the propose-then-confirm review gate 🟢
+### [x] ~~Comment 74 (C74): GameHeader AUTO button bypasses the propose-then-confirm review gate~~ ✅ RESOLVED 🟢
 **Priority**: 🟢 Medium
+**Status**: ✅ **RESOLVED** (July 5, 2026 — fixed same-day by Nes's playtest decision; the header direct-commit path was removed)
 **Impact**: The meeting-relevance arc's AUTO Option A ("one deliberate glance at the week") is defeated for players using the header AUTO button — the MORE prominent of the two entry points
 **Effort**: Medium (plumbing) or Small (product decision to remove/repoint the button)
 
-Found by the July 5, 2026 fresh-context verifier (finding F1) after the meeting-relevance Tier 0+1 arc (PRs #122–#124): PR-3 gated the Executive Suite's AUTO button behind the `reviewingAutoSelections` review panel, but `client/src/components/GameHeader.tsx` (`handleAutoSelect`, Phase 4 code — pre-existing, untouched by PR-3) has its OWN AUTO path: it fetches meetings, runs `prepareAutoSelectOptions`/`selectTopOptions`, and immediately commits every pick via `selectAction(...)` with no review. It does correctly skip sit-out execs. Remediation options (Nes to decide — PENDING-DECISIONS.md §7): wire it through the machine's review flow, remove/repoint the header button, or accept + document two AUTO behaviors. The `[REFERENCE]` doc §5 carries a ⚠️ known-exception note until resolved.
+Found by the July 5, 2026 fresh-context verifier (finding F1) after the meeting-relevance Tier 0+1 arc (PRs #122–#124): PR-3 gated the Executive Suite's AUTO button behind the `reviewingAutoSelections` review panel, but `client/src/components/GameHeader.tsx` (`handleAutoSelect`, Phase 4 code — pre-existing, untouched by PR-3) had its OWN AUTO path: it fetched meetings, ran `prepareAutoSelectOptions`/`selectTopOptions`, and immediately committed every pick via `selectAction(...)` with no review.
+
+**Resolution** (Nes's decision, playtesting the shipped arc — option (b), elevate the review panel to the header AUTO button; the old direct-commit path is deprecated/removed): the header AUTO path was deleted entirely. The button now sets a session-scoped `pendingAutoSelectIntent` flag (Zustand, never persisted) and navigates to `/executives`; `ExecutiveMeetings` consumes the intent exactly once when its machine is idle and sends `AUTO_SELECT`, so the header AUTO lands in the same `reviewingAutoSelections` review panel. Both AUTO entry points now route through the review gate. **The same slice also fixed an AR-busy AUTO bug** — AUTO was proposing the A&R exec (`head_ar`, Marcus) while the A&R office slot was in use; `prepareAutoSelectOptions` now takes an `{ arOfficeSlotUsed }` config that excludes `head_ar` when busy (threaded to the machine via `SYNC_SLOTS`), mirroring the manual UI's `isArBusy` block.
 
 **Relevant Files**:
 - [client/src/components/GameHeader.tsx](client/src/components/GameHeader.tsx)
 - [client/src/machines/executiveMeetingMachine.ts](client/src/machines/executiveMeetingMachine.ts)
+- [client/src/components/executive-meetings/ExecutiveMeetings.tsx](client/src/components/executive-meetings/ExecutiveMeetings.tsx)
+- [client/src/services/executiveAutoSelect.ts](client/src/services/executiveAutoSelect.ts)
 
-*Identified July 5, 2026 by the meeting-relevance arc's fresh-context verifier (F1, Medium).*
+*Identified July 5, 2026 by the meeting-relevance arc's fresh-context verifier (F1, Medium); resolved same day.*
 
 ---
 
@@ -1192,14 +1197,14 @@ Found by the July 5, 2026 fresh-context verifier (finding F1) after the meeting-
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 2 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing; C74 — header AUTO bypasses the review gate, July 5, 2026, needs product decision) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120)
+- 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
 - 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 15 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; C72–C73 — meeting-relevance content-honesty warts, July 5, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass)
 
 ### By Status
-- ✅ Completed: 54 items (73.0% of 74; 54 + 3 deferred + 17 pending = 74 ✓)
+- ✅ Completed: 55 items (74.3% of 74; 55 + 3 deferred + 16 pending = 74 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 17 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; C72, C73 — meeting-relevance PR-1 content-honesty warts + C74 — header AUTO review-gate bypass, July 5, 2026; all low except C62 + C74 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
+- 📋 Pending: 16 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; C72, C73 — meeting-relevance PR-1 content-honesty warts, July 5, 2026; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
 
 ---
 

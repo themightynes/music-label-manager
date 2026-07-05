@@ -1,13 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useLocation } from 'wouter';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
-import { useGameContext } from '@/contexts/GameContext';
-import { fetchExecutives, fetchRoleMeetings } from '@/services/executiveService';
-import {
-  prepareAutoSelectOptions,
-  selectTopOptions,
-  optionToActionData,
-} from '@/services/executiveAutoSelect';
 import { toast } from '@/hooks/use-toast';
 import logger from '@/lib/logger';
 import { getWeekDateRange } from '@shared/utils/seasonalCalculations';
@@ -25,10 +19,12 @@ import { WeekTransition } from '@/components/WeekTransition';
  */
 export function GameHeader() {
   const gameState = useGameState();
-  const { selectedActions, isAdvancingWeek, advanceWeek, selectAction } =
-    useGameStore();
-  const { gameId } = useGameContext();
-  const [isAutoSelecting, setIsAutoSelecting] = useState(false);
+  const { selectedActions, isAdvancingWeek, advanceWeek } = useGameStore();
+  const pendingAutoSelectIntent = useGameStore((s) => s.pendingAutoSelectIntent);
+  const setPendingAutoSelectIntent = useGameStore(
+    (s) => s.setPendingAutoSelectIntent,
+  );
+  const [, setLocation] = useLocation();
   const prefersReducedMotion = useReducedMotion();
 
   if (!gameState) {
@@ -38,66 +34,24 @@ export function GameHeader() {
   const freeFocusSlots =
     (gameState.focusSlots || 3) - (gameState.usedFocusSlots || 0);
 
-  // AUTO focus-slot filler (shared service; formerly in the dock's More menu)
-  const handleAutoSelect = async () => {
-    if (!gameId || isAutoSelecting) return;
-
-    setIsAutoSelecting(true);
-    try {
-      logger.debug('[HEADER AUTO] Starting auto-selection...');
-
-      const executives = await fetchExecutives(gameId);
-      const roles = ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution'];
-      const meetingsByRole: Record<string, any[]> = {};
-      const currentWeek = gameState.currentWeek || 1;
-
-      for (const role of roles) {
-        try {
-          meetingsByRole[role] = await fetchRoleMeetings(role, gameId, currentWeek);
-        } catch (error) {
-          meetingsByRole[role] = [];
-        }
-      }
-
-      const options = prepareAutoSelectOptions(executives, meetingsByRole);
-      const topOptions = selectTopOptions(options, freeFocusSlots);
-
-      for (const option of topOptions) {
-        const actionData = optionToActionData(option);
-        await selectAction(JSON.stringify(actionData));
-      }
-
-      logger.debug(`[HEADER AUTO] Selected ${topOptions.length} actions`);
-
-      if (topOptions.length > 0) {
-        toast({
-          title: 'Auto-select complete',
-          description: `Selected ${topOptions.length} meeting${topOptions.length !== 1 ? 's' : ''} for executives who need attention.`,
-          duration: 3000,
-        });
-      } else {
-        toast({
-          title: 'No meetings available',
-          description:
-            'All eligible executives have been assigned or no meetings are available.',
-          variant: 'default',
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      logger.error('[HEADER AUTO] Error:', error);
-      toast({
-        title: 'Auto-select failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Failed to auto-select executive meetings. Please try again.',
-        variant: 'destructive',
-        duration: 5000,
-      });
-    } finally {
-      setIsAutoSelecting(false);
-    }
+  /**
+   * C74: route the header AUTO button through the SAME propose-then-confirm review
+   * gate the Executive Suite's AUTO button uses (Option A). The old direct
+   * fetch/score/COMMIT path here was removed — it bypassed the review panel.
+   *
+   * The machine that owns the review flow only lives inside ExecutiveMeetings (the
+   * Executive Suite page). Since the header is global, we set a session-scoped
+   * intent flag and navigate to /executives; ExecutiveMeetings consumes the intent
+   * exactly once when its machine is idle, sending AUTO_SELECT. If the player is
+   * already on the Executive Suite, the flag is still consumed on the next effect
+   * pass, so the button works from that route too. The button is disabled while
+   * the intent is already pending and while there are no free focus slots.
+   */
+  const handleAutoSelect = () => {
+    if (freeFocusSlots <= 0 || pendingAutoSelectIntent) return;
+    logger.debug('[HEADER AUTO] Routing to Executive Suite review gate...');
+    setPendingAutoSelectIntent(true);
+    setLocation('/executives');
   };
 
   const week = gameState.currentWeek || 1;
@@ -149,8 +103,8 @@ export function GameHeader() {
           <button
             type="button"
             onClick={handleAutoSelect}
-            disabled={isAutoSelecting}
-            title={`Smart-fills ${freeFocusSlots} slot${freeFocusSlots !== 1 ? 's' : ''} with executives who need attention`}
+            disabled={pendingAutoSelectIntent}
+            title={`Review an AUTO fill for ${freeFocusSlots} slot${freeFocusSlots !== 1 ? 's' : ''} in the Executive Suite`}
             className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-button bg-gradient-to-br from-action-pink to-action-purple px-4 py-1.5 text-[13px] font-semibold text-white shadow-action transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span
@@ -158,7 +112,7 @@ export function GameHeader() {
               className="pointer-events-none absolute left-3.5 right-3.5 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
             />
             <Zap className="h-3.5 w-3.5" aria-hidden="true" />
-            {isAutoSelecting ? 'Auto-selecting…' : 'AUTO'}
+            {pendingAutoSelectIntent ? 'Opening…' : 'AUTO'}
           </button>
         )}
         <button

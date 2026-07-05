@@ -10,6 +10,12 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
+// C74: GameHeader now uses wouter's useLocation to navigate to the Executive
+// Suite when AUTO is clicked, so the router hook must be mocked here too.
+vi.mock('wouter', () => ({
+  useLocation: () => ['/game', vi.fn()],
+}));
+
 const mockUseReducedMotion = vi.fn(() => false);
 vi.mock('motion/react', async () => {
   const actual =
@@ -38,6 +44,9 @@ const fakeStore = {
   isAdvancingWeek: false,
   advanceWeek: vi.fn(),
   selectAction: vi.fn(),
+  // C74: intent flag + setter consumed by the header AUTO button.
+  pendingAutoSelectIntent: false,
+  setPendingAutoSelectIntent: vi.fn(),
 };
 vi.mock('@/store/gameStore', () => ({
   useGameStore: vi.fn((selector?: (s: any) => any) =>
