@@ -55,6 +55,14 @@ export function ExecutiveMeetings({
   onImpactPreviewUpdate,
 }: ExecutiveMeetingsProps) {
   const [roleSalaries, setRoleSalaries] = useState<Record<string, number>>({});
+  /**
+   * Meeting-relevance Tier 0 (PR-1): roles whose eligible meeting pool is EMPTY
+   * this week (server answered meetings: []) — those execs sit out and cannot
+   * be selected into a focus slot. Keyed per (gameId, week); the server pick is
+   * deterministic per (gameId, week, roleId) so this prefetch always matches
+   * what the machine's own fetch would return.
+   */
+  const [sitOutRoles, setSitOutRoles] = useState<Set<string>>(new Set());
 
   const { getAROfficeStatus, selectedActions } = useGameStore();
   // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
@@ -130,6 +138,35 @@ export function ExecutiveMeetings({
       mounted = false;
     };
   }, []);
+
+  // Meeting-relevance Tier 0 (PR-1): prefetch each role's weekly pool once per
+  // (gameId, week) to learn which execs sit out (empty eligible pool). Fetch
+  // errors fail OPEN (exec stays selectable) so a transient network problem
+  // never locks a card.
+  useEffect(() => {
+    if (!gameId) return;
+    let isCancelled = false;
+    const roleIds = ['ceo', 'head_ar', 'cco', 'cmo', 'head_distribution'];
+
+    (async () => {
+      const results = await Promise.all(
+        roleIds.map(async (roleId) => {
+          try {
+            const meetings = await fetchRoleMeetings(roleId, gameId, currentWeek);
+            return [roleId, meetings.length] as const;
+          } catch {
+            return [roleId, -1] as const; // unknown → fail open
+          }
+        })
+      );
+      if (isCancelled) return;
+      setSitOutRoles(new Set(results.filter(([, count]) => count === 0).map(([roleId]) => roleId)));
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [gameId, currentWeek]);
 
   // Sync focus slots (and the Creative Capital budget for AUTO) with the machine
   useEffect(() => {
@@ -382,6 +419,7 @@ export function ExecutiveMeetings({
                     key={executive.role}
                     executive={executive}
                     disabled={!hasAvailableSlots || isExecutiveUsed(executive.role)}
+                    sitOut={sitOutRoles.has(executive.role)}
                     onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
                     weeklySalary={roleSalaries[executive.role]}
                     arOfficeStatus={arOfficeStatus}
@@ -405,6 +443,7 @@ export function ExecutiveMeetings({
                     key={executive.role}
                     executive={executive}
                     disabled={!hasAvailableSlots || isExecutiveUsed(executive.role)}
+                    sitOut={sitOutRoles.has(executive.role)}
                     onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
                     weeklySalary={roleSalaries[executive.role]}
                     arOfficeStatus={arOfficeStatus}
@@ -423,6 +462,7 @@ export function ExecutiveMeetings({
                     key="ceo"
                     executive={ceoExecutive}
                     disabled={!hasAvailableSlots || isExecutiveUsed(ceoExecutive.role)}
+                    sitOut={sitOutRoles.has(ceoExecutive.role)}
                     onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive: ceoExecutive })}
                     weeklySalary={roleSalaries['ceo']}
                     arOfficeStatus={arOfficeStatus}

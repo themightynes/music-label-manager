@@ -104,11 +104,14 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
     : meetings;
 
   if (filteredMeetings.length === 0) {
+    // Meeting-relevance Tier 0 (PR-1): empty eligible pool — the exec sits out
+    // the week. Calm, honest copy: nothing about the label's current state
+    // needs this executive's attention yet.
     return (
-      <div className="text-center p-8">
+      <div className="text-center p-8" data-testid="meeting-pool-empty">
         <div className="text-text-body">
-          <p className="text-lg font-medium">No meetings available</p>
-          <p className="text-sm mt-1 text-text-muted">This executive doesn't have any available meetings right now.</p>
+          <p className="text-lg font-medium">Nothing needs your call this week</p>
+          <p className="text-sm mt-1 text-text-muted">This executive has no business to discuss yet — they'll have more as your label grows.</p>
         </div>
         <Button onClick={onBack} className="mt-4" variant="outline">
           Back to Executives

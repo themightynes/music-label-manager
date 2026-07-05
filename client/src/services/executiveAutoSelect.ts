@@ -228,6 +228,8 @@ export function prepareAutoSelectOptions(
 
   for (const executive of executives) {
     const meetings = meetingsByRole[executive.role] || [];
+    // Meeting-relevance Tier 0 (PR-1): an exec whose eligible pool is empty
+    // (server answered meetings: [] — the sit-out rule) is skipped by AUTO here.
     if (meetings.length === 0) continue;
 
     const meeting = findEligibleMeeting(meetings);

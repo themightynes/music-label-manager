@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ArtistSchema } from '../schemas/artist';
+import { RELEVANCE_TAGS } from '../types/gameTypes';
 import type {
   GameDataFiles,
   GameArtist,
@@ -333,6 +334,10 @@ export class GameDataLoader {
         prompt: z.string().optional(),
         prompt_before_selection: z.string().optional(),
         target_scope: z.enum(['global', 'predetermined', 'user_selected']).optional(),
+        // Meeting-relevance Tier 0 (PR-1): optional relevance tags (AND semantics,
+        // absent = always eligible). Enum derived from the canonical RELEVANCE_TAGS
+        // in shared/types/gameTypes.ts — single source of truth.
+        requires: z.array(z.enum(RELEVANCE_TAGS)).nonempty().optional(),
         choices: z.array(z.object({
           id: z.string(),
           label: z.string(),

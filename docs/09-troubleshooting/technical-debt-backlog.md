@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 5, 2026
-- **Total Items**: 71 (C1–C71, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
+- **Total Items**: 73 (C1–C73, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
 - **Completed**: 54
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
-- **Pending**: 14 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
+- **Pending**: 16 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C64, C65, C66, C70, C72, C73 — content-honesty warts from meeting-relevance PR-1, July 5, 2026) — C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1143,19 +1143,48 @@ Doc-sync rule log (rather than silent orphaning) for PR #120's two feature slice
 
 ---
 
+### [ ] Comment 72 (C72): `ar_genre_shift` copy is plural + genre-specific vs its `artist_signed` minimum tag 🔵
+**Priority**: 🔵 Low
+**Impact**: Content-honesty wart only — the meeting can be offered in states its copy slightly overclaims
+**Effort**: Small
+
+Found during the meeting-relevance Tier 0 close reading (spec `[READY] meeting-relevance-tier0-1-plan.md` §1, July 5, 2026): `ar_genre_shift`'s prompt says "our guitar **bands**" — plural AND genre-specific — but the honest *minimum* relevance tag is `artist_signed` (one artist, any genre), which is what PR-1 authored into `data/actions.json`. A player with a single signed pop artist can be offered a meeting about "our guitar bands." Fix is copy (make the prompt roster/genre-agnostic) or a future roster-composition tag — content work, deliberately not blocking Tier 0.
+
+**Relevant Files**:
+- [data/actions.json](data/actions.json)
+
+*Identified July 5, 2026 during meeting-relevance PR-1 (spec §1 close reading).*
+
+---
+
+### [ ] Comment 73 (C73): `cco_creative_clash` content implies a recording context its tag doesn't require 🔵
+**Priority**: 🔵 Low
+**Impact**: Content-honesty wart only — the selected artist may not actually be recording anything
+**Effort**: Small
+
+Found during the same Tier 0 close reading: `cco_creative_clash` (user_selected) has the chosen artist "want[ing] to record everything live in one take" — a recording-session context — but its PR-1 tag is the honest minimum `artist_signed`, not `+recording_project_active`, because the artist picker doesn't restrict the choice to artists with an active recording project. Strictly honest tagging would require both the stricter tag AND a recording-aware artist picker; until then the meeting can target an idle artist. Fix is either copy softening or a picker restriction + tag tightening together — logged, not blocking.
+
+**Relevant Files**:
+- [data/actions.json](data/actions.json)
+- [client/src/components/executive-meetings/MeetingSelector.tsx](client/src/components/executive-meetings/MeetingSelector.tsx)
+
+*Identified July 5, 2026 during meeting-relevance PR-1 (spec §1 close reading).*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120)
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 13 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 15 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63–C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; C72–C73 — meeting-relevance content-honesty warts, July 5, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass)
 
 ### By Status
-- ✅ Completed: 54 items (76.1% of 71; 54 + 3 deferred + 14 pending = 71 ✓)
+- ✅ Completed: 54 items (74.0% of 73; 54 + 3 deferred + 16 pending = 73 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 14 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
+- 📋 Pending: 16 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63–C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C70 — residual 12-week copy rot, July 4, 2026; C72, C73 — meeting-relevance PR-1 content-honesty warts, July 5, 2026; all low except C62 medium, not scheduled). C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass
 
 ---
 

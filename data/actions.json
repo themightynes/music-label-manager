@@ -13,11 +13,11 @@
       "meeting_id": "mgr_priorities",
       "category": "business",
       "target_scope": "global",
-      "prompt": "We can only push two tracks next week—what's the focus?",
+      "prompt": "We can only push two initiatives next week—what's the focus?",
       "choices": [
         {
           "id": "studio_first",
-          "label": "Studio-first to polish the single",
+          "label": "Studio-first to polish our next single",
           "effects_immediate": {
             "money": -2000
           },
@@ -60,6 +60,7 @@
       "meeting_id": "mgr_crisis",
       "category": "business",
       "target_scope": "predetermined",
+      "requires": ["artist_signed", "tour_active"],
       "prompt": "Your biggest artist just fired their last three backup dancers. The tour starts in two weeks.",
       "choices": [
         {
@@ -106,6 +107,7 @@
       "meeting_id": "mgr_expansion",
       "category": "business",
       "target_scope": "predetermined",
+      "requires": ["artist_signed"],
       "prompt": "Three major festivals want your act for next summer. We can only do one without burning out.",
       "choices": [
         {
@@ -151,6 +153,7 @@
       "meeting_id": "anr_single_choice",
       "category": "talent",
       "target_scope": "user_selected",
+      "requires": ["artist_signed"],
       "prompt_before_selection": "Which artist are you working with on single strategy?",
       "prompt": "Pick the lead single approach for {artistName}.",
       "choices": [
@@ -245,6 +248,7 @@
       "meeting_id": "anr_genre_shift",
       "category": "talent",
       "target_scope": "global",
+      "requires": ["artist_signed"],
       "prompt": "Rock is dying in the charts. Should we push our guitar bands toward pop-rock crossover?",
       "choices": [
         {
@@ -293,6 +297,7 @@
       "meeting_id": "prod_timeline",
       "category": "production",
       "target_scope": "global",
+      "requires": ["recording_project_active"],
       "prompt": "Timeline is tight—what's the call?",
       "choices": [
         {
@@ -335,6 +340,7 @@
       "meeting_id": "prod_creative_clash",
       "category": "production",
       "target_scope": "user_selected",
+      "requires": ["artist_signed"],
       "prompt_before_selection": "Which artist is having creative differences?",
       "prompt": "{artistName} wants to record everything live in one take. I think we need overdubs to compete.",
       "choices": [
@@ -382,6 +388,7 @@
       "meeting_id": "prod_budget_crisis",
       "category": "production",
       "target_scope": "global",
+      "requires": ["recording_project_active"],
       "prompt": "We're over budget and the vocals still aren't right. The label is breathing down my neck.",
       "choices": [
         {
@@ -475,6 +482,7 @@
       "meeting_id": "pr_scandal_brewing",
       "category": "marketing",
       "target_scope": "global",
+      "requires": ["artist_signed"],
       "prompt": "Paparazzi caught your artist leaving a rival's studio at 3am. The rumors are flying.",
       "choices": [
         {
@@ -522,6 +530,7 @@
       "meeting_id": "pr_award_campaign",
       "category": "marketing",
       "target_scope": "global",
+      "requires": ["release_out"],
       "prompt": "Award season is coming. Do we launch a campaign for the album or save money?",
       "choices": [
         {
@@ -570,6 +579,7 @@
       "meeting_id": "digital_viral_moment",
       "category": "marketing",
       "target_scope": "global",
+      "requires": ["release_out"],
       "prompt": "A fan remix of your single is going viral on TikTok. Do we embrace it or shut it down?",
       "choices": [
         {
@@ -615,6 +625,7 @@
       "meeting_id": "digital_platform_exclusive",
       "category": "marketing",
       "target_scope": "global",
+      "requires": ["release_planned"],
       "prompt": "Spotify wants an exclusive window for the new album. Apple Music will match the offer.",
       "choices": [
         {
@@ -658,6 +669,7 @@
       "meeting_id": "pitch_strategy",
       "category": "distribution",
       "target_scope": "global",
+      "requires": ["music_exists"],
       "prompt": "Which track and context for editorial pitch?",
       "choices": [
         {
@@ -699,6 +711,7 @@
       "meeting_id": "streaming_playlist_politics",
       "category": "distribution",
       "target_scope": "global",
+      "requires": ["music_exists"],
       "prompt": "The Today's Top Hits curator wants a 'favor' before considering our track. Wink, wink.",
       "choices": [
         {
@@ -746,6 +759,7 @@
       "meeting_id": "streaming_algorithm_hack",
       "category": "distribution",
       "target_scope": "global",
+      "requires": ["release_out"],
       "prompt": "I found a loophole in the algorithm. We could game 10M streams, but it's ethically gray.",
       "choices": [
         {
@@ -792,6 +806,7 @@
       "meeting_id": "tour_scale",
       "category": "live",
       "target_scope": "global",
+      "requires": ["artist_signed"],
       "prompt": "Mini-tour scale choice?",
       "choices": [
         {
@@ -838,6 +853,7 @@
       "meeting_id": "ops_supply_chain",
       "category": "distribution",
       "target_scope": "global",
+      "requires": ["release_planned"],
       "prompt": "Vinyl shortage is hitting everyone. We can get our allocation by paying 3x normal cost.",
       "choices": [
         {
@@ -882,6 +898,7 @@
       "meeting_id": "creative_recording",
       "category": "production",
       "target_scope": "user_selected",
+      "requires": ["artist_signed"],
       "prompt": "Perfect, I'll get started. {artistName} is going to love this! How much do they have? Honestly, we're going to be able to use this strategy going forward.",
       "choices": [
         {

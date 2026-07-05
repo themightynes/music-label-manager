@@ -7,6 +7,11 @@ import { getMoodModifiers, isNeutral } from '@shared/utils/executiveMoodModifier
 interface ExecutiveCardProps {
   executive: Executive;
   disabled?: boolean;
+  /**
+   * Meeting-relevance Tier 0 (PR-1): this exec's eligible meeting pool is empty
+   * this week — they sit out. Card is not selectable and shows a calm notice.
+   */
+  sitOut?: boolean;
   onSelect: () => void;
   weeklySalary?: number;
   arOfficeStatus?: {
@@ -64,7 +69,7 @@ const roleConfig = {
   },
 } as const;
 
-export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySalary, arOfficeStatus, flipAvatar = false, badgesOnLeft = false, alignContent = 'center', isSelected = false, compactBadges = false }: ExecutiveCardProps) {
+export function ExecutiveCard({ executive, disabled = false, sitOut = false, onSelect, weeklySalary, arOfficeStatus, flipAvatar = false, badgesOnLeft = false, alignContent = 'center', isSelected = false, compactBadges = false }: ExecutiveCardProps) {
   const config = roleConfig[executive.role as keyof typeof roleConfig] || {
     icon: Users,
     color: 'bg-gray-500',
@@ -76,7 +81,9 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
   const isCEO = executive.role === 'ceo';
   const isHeadAR = executive.role === 'head_ar';
   const isArBusy = !!(isHeadAR && arOfficeStatus?.arOfficeSlotUsed);
-  const effectiveDisabled = disabled || isArBusy;
+  // PR-1 sit-out: an exec with an empty eligible meeting pool cannot be
+  // selected into a focus slot this week.
+  const effectiveDisabled = disabled || isArBusy || sitOut;
   const shouldCompact = compactBadges && !isSelected;
 
   const loyaltyValue = executive.loyalty ?? 50;
@@ -154,15 +161,22 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
   // CEO only shows badge, no avatar
   if (isCEO) {
     return (
-      <Badge
-        variant="secondary"
-        className={`text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill ${
-          effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-neon-lilac/20 transition-colors'
-        }`}
-        onClick={effectiveDisabled ? undefined : onSelect}
-      >
-        {config.shortTitle} - {config.name}
-      </Badge>
+      <div className="flex flex-col items-center gap-1">
+        <Badge
+          variant="secondary"
+          className={`text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill ${
+            effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-neon-lilac/20 transition-colors'
+          }`}
+          onClick={effectiveDisabled ? undefined : onSelect}
+        >
+          {config.shortTitle} - {config.name}
+        </Badge>
+        {sitOut && (
+          <span data-testid={`sit-out-${executive.role}`} className="text-xs text-text-muted">
+            Nothing needs your call this week
+          </span>
+        )}
+      </div>
     );
   }
 
@@ -235,6 +249,13 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
       >
         {config.shortTitle} - {config.name}
       </Badge>
+
+      {/* Meeting-relevance Tier 0 (PR-1): sit-out notice — empty eligible pool */}
+      {sitOut && (
+        <span data-testid={`sit-out-${executive.role}`} className="text-xs text-text-muted max-w-36 text-center">
+          Nothing needs their call this week
+        </span>
+      )}
     </div>
   );
 

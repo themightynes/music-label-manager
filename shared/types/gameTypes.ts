@@ -39,12 +39,38 @@ export interface DialogueChoice {
 // Mood targeting scope for executive meetings (Task 3.1)
 export type TargetScope = 'global' | 'predetermined' | 'user_selected';
 
+/**
+ * Meeting-relevance Tier 0 (PR-1) — the canonical relevance-tag vocabulary.
+ *
+ * SINGLE SOURCE OF TRUTH for the `requires` field on weekly_actions: both Zod
+ * surfaces (shared/utils/dataLoader.ts and shared/api/contracts.ts) derive
+ * their enums from this array, and the data-lint suite
+ * (tests/engine/data-lint-relevance-tags.test.ts) validates data/actions.json
+ * against it. Add new tags HERE first; predicates live in
+ * shared/engine/meetingSelection.ts.
+ */
+export const RELEVANCE_TAGS = [
+  'artist_signed',
+  'music_exists',
+  'release_planned',
+  'release_out',
+  'recording_project_active',
+  'tour_active',
+] as const;
+
+export type RelevanceTag = (typeof RELEVANCE_TAGS)[number];
+
 export interface RoleMeeting {
   id: string;
   name?: string; // Display name for the meeting (e.g., "CEO: Artist Roundtable")
   prompt: string;
   prompt_before_selection?: string; // For user_selected meetings (Task 3.2)
   target_scope: TargetScope; // Determines how mood effects are targeted (Task 3.2)
+  /**
+   * Meeting-relevance Tier 0 (PR-1): relevance tags with AND semantics.
+   * Absent = always eligible. See shared/engine/meetingSelection.ts.
+   */
+  requires?: RelevanceTag[];
   choices: DialogueChoice[];
 }
 
