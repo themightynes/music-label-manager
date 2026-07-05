@@ -303,7 +303,12 @@ export class GameDataLoader {
         quality_system: z.record(z.any()).optional(),
         ui_constants: z.record(z.any()).optional(),
         save_system: z.record(z.any()).optional(),
-        difficulty_modifiers: z.record(z.any()).optional()
+        difficulty_modifiers: z.record(z.any()).optional(),
+        // Meeting-relevance Tier 1 (PR-2): weekly meeting selection tunables
+        // ({ relevance_weight, recency_window_weeks }). Additive/optional —
+        // absent block ⇒ read-site HARDCODED fallback (server/data/gameData.ts
+        // getWeeklyMeetingSelectionConfigSync).
+        weekly_meeting_selection: z.record(z.any()).optional()
       }).passthrough(); // Allow extra fields
 
       return data as unknown as BalanceConfig;
