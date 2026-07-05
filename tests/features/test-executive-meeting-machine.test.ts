@@ -338,6 +338,16 @@ describe('Executive Meeting State Machine', () => {
 
     actor.send({ type: 'AUTO_SELECT' });
 
+    // Meeting-relevance PR-3 (AUTO Option A): AUTO no longer commits directly —
+    // it parks its proposal in `reviewingAutoSelections` for the player to
+    // confirm. Nothing may hit the action queue before confirmation.
+    await vi.waitFor(() => {
+      expect(actor.getSnapshot().matches('reviewingAutoSelections')).toBe(true);
+    });
+    expect(actionQueue.length).toBe(0);
+
+    actor.send({ type: 'CONFIRM_AUTO_SELECT' });
+
     await vi.waitFor(() => {
       expect(actionQueue.length).toBe(1);
     });
