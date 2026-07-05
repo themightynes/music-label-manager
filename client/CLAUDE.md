@@ -111,3 +111,7 @@
 - ❌ Using `react-router` → ✓ Use Wouter
 - ❌ Missing cleanup flags → ✓ Use `isCancelled` in useEffect
 - ❌ Overriding backend data → ✓ Honor API responses
+
+## Effect Badges & Exec Mood (July 2026)
+- **Never render an effect badge for a key outside `LIVE_EFFECT_KEYS` ∪ {executive_mood}** — import the set from `@shared/engine/processors/ActionProcessor` and filter both the immediate-effects loop and the delayed-effects loop against it (PR-2 precedent). The WeekSummary meetings-card regression — where a dead/unauthored key briefly rendered a plausible-looking badge — is the cautionary tale; don't reintroduce it.
+- **Exec mood modifiers must route through `shared/utils/executiveMoodModifier`** — the Impact Preview reads its `DEFAULT_EXEC_MOOD_MODIFIER_CONFIG`. If you tune `progression.json`'s `exec_mood_modifiers`, you MUST update `DEFAULT_EXEC_MOOD_MODIFIER_CONFIG` to match, or a tripwire test fails.

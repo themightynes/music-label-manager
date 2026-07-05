@@ -190,7 +190,8 @@ export function ArtistRoster() {
     const mood = artist.mood || 50;
     const energy = (artist as any).energy ?? (artist as any).loyalty ?? 50;
     const popularity = artist.popularity || 0;
-    
+    const talent = artist.talent ?? 50;
+
     // Artist projects
     const artistProjects = (projects || []).filter((p: any) => p.artistId === artist.id);
     const releasedProjects = artistProjects.filter(p => p.stage === 'released');
@@ -207,7 +208,8 @@ export function ArtistRoster() {
       totalRevenue,
       mood,
       energy,
-      popularity
+      popularity,
+      talent
     };
   };
 
@@ -320,6 +322,7 @@ export function ArtistRoster() {
                           mood={insights.mood}
                           energy={insights.energy}
                           popularity={insights.popularity}
+                          talent={insights.talent}
                           onNavigate={() => handleNavigateToArtist(artist)}
                         />
                       </div>

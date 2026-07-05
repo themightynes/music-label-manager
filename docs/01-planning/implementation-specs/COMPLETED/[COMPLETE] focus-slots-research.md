@@ -209,8 +209,8 @@ usedFocusSlots: 0,
 ```
 
 ### **7. Documentation Files**
-**File:** `docs/02-architecture/api-design.md` (Lines 124, 199, 244, 329, 391)
-**File:** `docs/04-frontend/frontend-architecture.md` (Line 176)
+**File:** `docs/99-legacy/superseded-2026-07/api-design.md` (Lines 124, 199, 244, 329, 391) (archived July 4, 2026)
+**File:** `docs/99-legacy/superseded-2026-07/frontend-architecture.md` (Line 176) (archived July 4, 2026)
 **File:** `docs/99-legacy/ClaudeProject.md` (Line 58)
 **File:** `docs/99-legacy/01-mvp-planning/prd.md` (Lines 24, 73)
 **File:** `docs/99-legacy/01-mvp-planning/mpv_content_scope.md` (Lines 4, 23, 41)

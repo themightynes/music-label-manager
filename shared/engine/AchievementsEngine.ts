@@ -5,6 +5,7 @@
  */
 
 import type { GameState } from '../schema';
+import { seededRandom } from '../utils/seededRandom';
 
 interface ScoreBreakdown {
   money: number;
@@ -12,7 +13,31 @@ interface ScoreBreakdown {
   artistsSuccessful: number;
   projectsCompleted: number;
   accessTierBonus: number;
+  // Exec-meetings-revival PR-7 (C5) — campaign-end award-roll bonus. 0 when no
+  // award was won (near-miss/no pool), award_score_bonus (balance knob,
+  // data/balance/progression.json reputation_system.award_score_bonus) on a win.
+  awardBonus: number;
 }
+
+/**
+ * Exec-meetings-revival PR-7 (C5) — award-track knobs consumed by the
+ * campaign-end award roll. Optional: callers that don't pass it (e.g. existing
+ * direct unit tests) get the same defaults `ServerGameData.getAwardConfigSync`
+ * falls back to, so calculateCampaignResults stays backward compatible.
+ */
+export interface AwardConfig {
+  award_chance_per_point: number;
+  award_chance_cap: number;
+  award_score_bonus: number;
+  award_nominee_pool_threshold: number;
+}
+
+const DEFAULT_AWARD_CONFIG: AwardConfig = {
+  award_chance_per_point: 0.08,
+  award_chance_cap: 0.8,
+  award_score_bonus: 2000,
+  award_nominee_pool_threshold: 5
+};
 
 interface CampaignResults {
   campaignCompleted: boolean;
@@ -21,25 +46,54 @@ interface CampaignResults {
   victoryType: 'Commercial Success' | 'Critical Acclaim' | 'Balanced Growth' | 'Survival' | 'Failure';
   summary: string;
   achievements: string[];
+  // Exec-meetings-revival PR-7 (C5) — true when the campaign-end award roll hit.
+  industryAward?: boolean;
 }
 
 export class AchievementsEngine {
   /**
    * Calculate complete campaign results including scores, achievements, and victory type
    */
-  static calculateCampaignResults(gameState: GameState): CampaignResults {
+  static calculateCampaignResults(gameState: GameState, awardConfig: AwardConfig = DEFAULT_AWARD_CONFIG): CampaignResults {
+    // Exec-meetings-revival PR-7 (C5) — campaign-end award roll. Consumes
+    // flags.awardChances (an accumulating, never-expiring pool — see
+    // ActionProcessor's award_chances case) via an ISOLATED seeded roll (shared/
+    // utils/seededRandom.ts, NOT ctx.getRandom — the engine's pinned RNG stream/
+    // draw count are completely undisturbed by this end-of-campaign, one-shot
+    // resolution). Chance = pool * award_chance_per_point, capped at
+    // award_chance_cap. A pool of 0 always has a 0% chance (no free rolls).
+    const flags = (gameState.flags || {}) as Record<string, any>;
+    const awardPool = typeof flags.awardChances === 'number' ? flags.awardChances : 0;
+    const awardChance = awardPool > 0
+      ? Math.min(awardConfig.award_chance_cap, awardPool * awardConfig.award_chance_per_point)
+      : 0;
+    const awardSeed = `${gameState.id || 'unknown-game'}-awardseason`;
+    const awardRoll = seededRandom(awardSeed);
+    const industryAward = awardPool > 0 && awardRoll < awardChance;
+    const awardBonus = industryAward ? awardConfig.award_score_bonus : 0;
+
     // Calculate score breakdown
     const scoreBreakdown: ScoreBreakdown = {
       money: Math.max(0, Math.floor((gameState.money || 0) / 1000)), // 1 point per $1k
       reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 5)), // 1 point per 5 reputation
       artistsSuccessful: 0, // TODO: Calculate based on artist success metrics
       projectsCompleted: 0, // TODO: Calculate based on completed projects
-      accessTierBonus: this.calculateAccessTierBonus(gameState)
+      accessTierBonus: this.calculateAccessTierBonus(gameState),
+      awardBonus
     };
 
     const finalScore = Object.values(scoreBreakdown).reduce((total, score) => total + score, 0);
     const victoryType = this.determineVictoryType(finalScore, scoreBreakdown, gameState);
     const achievements = this.calculateAchievements(scoreBreakdown, gameState);
+    // Exec-meetings-revival PR-7 (C5): award/near-miss achievement entries. A win
+    // takes priority; a near-miss (pool >= award_nominee_pool_threshold but no
+    // win, or pool > 0 but chance capped/rolled against) gets a consolation entry
+    // so an unconsumed pool is never silently invisible at campaign end.
+    if (industryAward) {
+      achievements.push('🏆 Industry Award Winner');
+    } else if (awardPool >= awardConfig.award_nominee_pool_threshold) {
+      achievements.push('🎗 Award Nominee');
+    }
     const summary = this.generateCampaignSummary(victoryType, finalScore, scoreBreakdown, gameState);
 
     return {
@@ -48,7 +102,8 @@ export class AchievementsEngine {
       scoreBreakdown,
       victoryType,
       summary,
-      achievements
+      achievements,
+      industryAward
     };
   }
 

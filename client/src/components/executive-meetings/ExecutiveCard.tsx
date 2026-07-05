@@ -2,6 +2,7 @@ import React from 'react';
 import { Badge } from '../ui/badge';
 import { Users, Brain, DollarSign, Star, Truck } from 'lucide-react';
 import type { Executive } from '../../../../shared/types/gameTypes';
+import { getMoodModifiers, isNeutral } from '@shared/utils/executiveMoodModifier';
 
 interface ExecutiveCardProps {
   executive: Executive;
@@ -122,6 +123,34 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
   const levelClass = shouldCompact ? neutralBadgeClass : 'font-mono bg-neon-blue/10 text-neon-blue border border-neon-blue/40 rounded-pill';
   const salaryClass = shouldCompact ? neutralBadgeClass : 'font-mono bg-money/10 text-money border border-money/40 rounded-pill';
 
+  // Exec-meetings-revival PR-9 (C6/D) — active mood-modifier chip. CEO has no exec row
+  // (returns early below), so this only surfaces for real executives. Neutral band
+  // (mood 30-80) shows nothing. Uses the SAME shared util the engine + preview route
+  // through, so the label can never drift from the mechanic.
+  const moodModifiers = getMoodModifiers(moodValue);
+  const moodBandChip = isCEO || isNeutral(moodModifiers)
+    ? null
+    : moodModifiers.band === 'inspired'
+      ? {
+          label: shouldCompact
+            ? `+${Math.round((moodModifiers.effectMultiplier - 1) * 100)}%`
+            : `Inspired +${Math.round((moodModifiers.effectMultiplier - 1) * 100)}%`,
+          className: 'font-mono bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/40 rounded-pill',
+        }
+      : moodModifiers.band === 'content'
+        ? {
+            label: shouldCompact
+              ? `-${Math.round((1 - moodModifiers.costMultiplier) * 100)}%`
+              : `Content −${Math.round((1 - moodModifiers.costMultiplier) * 100)}% costs`,
+            className: 'font-mono bg-positive/10 text-positive border border-positive/40 rounded-pill',
+          }
+        : {
+            label: shouldCompact
+              ? `+${Math.round((moodModifiers.costMultiplier - 1) * 100)}%`
+              : `Disgruntled +${Math.round((moodModifiers.costMultiplier - 1) * 100)}% costs`,
+            className: 'font-mono bg-negative/10 text-negative border border-negative/40 rounded-pill',
+          };
+
   // CEO only shows badge, no avatar
   if (isCEO) {
     return (
@@ -174,6 +203,13 @@ export function ExecutiveCard({ executive, disabled = false, onSelect, weeklySal
           <Badge variant="secondary" className={`text-xs px-2 py-1 ${moodClass}`}>
             {shouldCompact ? `M${moodValue}` : `Mood: ${moodValue}`}
           </Badge>
+
+          {/* Exec-meetings-revival PR-9: mood-modifier chip (non-neutral only) */}
+          {moodBandChip && (
+            <Badge variant="secondary" className={`text-xs px-2 py-1 ${moodBandChip.className}`}>
+              {moodBandChip.label}
+            </Badge>
+          )}
 
           {/* Level Badge */}
           <Badge variant="secondary" className={`text-xs px-2 py-1 ${levelClass}`}>

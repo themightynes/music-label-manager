@@ -1306,8 +1306,8 @@ erDiagram
 
 **Related Documents:**
 - `docs/02-architecture/database-design.md`
-- `docs/02-architecture/api-design.md`
-- `docs/04-frontend/frontend-architecture.md`
+- `docs/99-legacy/superseded-2026-07/api-design.md` (archived July 4, 2026)
+- `docs/99-legacy/superseded-2026-07/frontend-architecture.md` (archived July 4, 2026)
 
 ---
 

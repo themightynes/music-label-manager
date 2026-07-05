@@ -4,42 +4,6 @@
   "description": "All available actions including role meetings extracted from roles system. Executive meeting UI removed 2025-09-19; keep for future integration. Added target_scope field (global/predetermined/user_selected) for artist effect targeting. v2.3.0: Migrated to shared Zod schema contracts for type-safe validation across frontend/backend.",
   "weekly_actions": [
     {
-      "id": "TEST_mood_boost_immediate",
-      "name": "CEO: Artist Roundtable",
-      "type": "role_meeting",
-      "icon": "fas fa-flask",
-      "description": "Gather all Artist for a Meet & Greet with the CEO",
-      "role_id": "ceo",
-      "meeting_id": "test_mood",
-      "category": "business",
-      "target_scope": "global",
-      "prompt": "The general consensus is that it's tough out there. What should we do?",
-      "choices": [
-        {
-          "id": "yes_boost",
-          "label": "Yes - Boost mood by +5 immediately",
-          "effects_immediate": {
-            "artist_mood": 5
-          },
-          "effects_delayed": {}
-        },
-        {
-          "id": "no_boost",
-          "label": "No boost",
-          "effects_immediate": {},
-          "effects_delayed": {}
-        },
-        {
-          "id": "small_boost",
-          "label": "Small Pep Talk +3",
-          "effects_immediate": {
-            "artist_mood": 3
-          },
-          "effects_delayed": {}
-        }
-      ]
-    },
-    {
       "id": "ceo_priorities",
       "name": "CEO: Strategic Priorities",
       "type": "role_meeting",
@@ -80,8 +44,8 @@
             "money": -4000
           },
           "effects_delayed": {
-            "sellthrough_hint": 1,
-            "artist_mood": -1
+            "artist_mood": -1,
+            "awareness_boost": 2
           }
         }
       ]
@@ -116,8 +80,7 @@
             "money": -3000
           },
           "effects_delayed": {
-            "venue_relationships": 1,
-            "quality_risk": 1
+            "variance_up": 1
           }
         },
         {
@@ -162,7 +125,7 @@
             "money": -12000
           },
           "effects_delayed": {
-            "international_rep": 2
+            "reputation": 2
           }
         },
         {
@@ -198,8 +161,7 @@
             "artist_mood": -2
           },
           "effects_delayed": {
-            "playlist_bias": 2,
-            "adds_bonus": 5
+            "awareness_boost": 4
           }
         },
         {
@@ -209,8 +171,8 @@
             "money": -1000
           },
           "effects_delayed": {
-            "learning_bonus": 1,
-            "delay_risk": 1
+            "quality_bonus": 2,
+            "variance_up": 1
           }
         },
         {
@@ -221,7 +183,7 @@
           },
           "effects_delayed": {
             "variance_up": 1,
-            "quality_potential": 4
+            "quality_bonus": 4
           }
         }
       ]
@@ -243,11 +205,12 @@
           "label": "Accept their terms - worth the risk",
           "effects_immediate": {
             "money": -15000,
-            "creative_capital": -3
+            "creative_capital": -3,
+            "executive_mood": 8
           },
           "effects_delayed": {
-            "talent_potential": 4,
-            "control_issues": 1
+            "reputation": 2,
+            "artist_mood": -2
           }
         },
         {
@@ -257,19 +220,18 @@
             "money": -8000
           },
           "effects_delayed": {
-            "talent_potential": 2,
-            "relationship_stability": 1
+            "reputation": 1,
+            "artist_mood": 1
           }
         },
         {
           "id": "pass_on_talent",
           "label": "Pass - too many red flags",
           "effects_immediate": {
-            "reputation": -1
+            "reputation": -1,
+            "executive_mood": 2
           },
-          "effects_delayed": {
-            "competitor_gain": 1
-          }
+          "effects_delayed": {}
         }
       ]
     },
@@ -289,11 +251,12 @@
           "id": "chase_trends",
           "label": "Follow the money - pivot to pop",
           "effects_immediate": {
-            "artist_mood": -3
+            "artist_mood": -3,
+            "executive_mood": 8
           },
           "effects_delayed": {
-            "commercial_potential": 2,
-            "authenticity_loss": 1
+            "awareness_boost": 2,
+            "artist_mood": -1
           }
         },
         {
@@ -304,7 +267,7 @@
             "money": -5000
           },
           "effects_delayed": {
-            "niche_dominance": 1
+            "award_chances": 1
           }
         },
         {
@@ -314,8 +277,8 @@
             "money": -2000
           },
           "effects_delayed": {
-            "artistic_growth": 1,
-            "chart_stability": 1
+            "awareness_boost": 1,
+            "artist_mood": 1
           }
         }
       ]
@@ -336,11 +299,11 @@
           "id": "rush",
           "label": "Rush to hit date",
           "effects_immediate": {
-            "money": 1000
+            "money": 1000,
+            "executive_mood": -2
           },
           "effects_delayed": {
-            "quality_bonus": -5,
-            "on_time": 1
+            "quality_bonus": -5
           }
         },
         {
@@ -357,7 +320,7 @@
           },
           "effects_delayed": {
             "quality_bonus": 6,
-            "delay_risk": 1
+            "variance_up": 1
           }
         }
       ]
@@ -380,8 +343,8 @@
           "label": "Trust the artist's instincts",
           "effects_immediate": {},
           "effects_delayed": {
-            "authenticity_bonus": 2,
-            "commercial_risk": 1
+            "variance_up": 1,
+            "artist_mood": 2
           }
         },
         {
@@ -389,11 +352,11 @@
           "label": "Insist on professional overdubs",
           "effects_immediate": {
             "money": -3000,
-            "artist_mood": -2
+            "artist_mood": -2,
+            "executive_mood": 8
           },
           "effects_delayed": {
-            "quality_bonus": 3,
-            "radio_ready": 1
+            "quality_bonus": 5
           }
         },
         {
@@ -439,19 +402,19 @@
             "creative_capital": -1
           },
           "effects_delayed": {
-            "innovation_bonus": 2,
-            "producer_rep": 1
+            "quality_bonus": 2
           }
         },
         {
           "id": "release_as_is",
           "label": "Call it done - character over perfection",
           "effects_immediate": {
-            "money": 2000
+            "money": 2000,
+            "executive_mood": -2
           },
           "effects_delayed": {
-            "authenticity_bonus": 1,
-            "quality_penalty": -2
+            "quality_bonus": -2,
+            "artist_mood": 2
           }
         }
       ]
@@ -475,7 +438,7 @@
             "money": -1000
           },
           "effects_delayed": {
-            "press_bias": 1
+            "press_momentum": 1
           }
         },
         {
@@ -496,8 +459,8 @@
             "money": -800
           },
           "effects_delayed": {
-            "local_favor": 1,
-            "ticket_bias": 1
+            "reputation": 1,
+            "artist_popularity": 1
           }
         }
       ]
@@ -522,18 +485,19 @@
             "reputation": -1
           },
           "effects_delayed": {
-            "media_skepticism": 1
+            "press_momentum": -1
           }
         },
         {
           "id": "spin_collaboration",
           "label": "Spin it as a surprise collaboration",
           "effects_immediate": {
-            "creative_capital": -1
+            "creative_capital": -1,
+            "executive_mood": 8
           },
           "effects_delayed": {
-            "press_pickups": 2,
-            "collab_pressure": 1
+            "press_momentum": 2,
+            "artist_mood": -1
           }
         },
         {
@@ -543,7 +507,7 @@
             "reputation": -2
           },
           "effects_delayed": {
-            "authenticity_bonus": 1
+            "artist_mood": 2
           }
         }
       ]
@@ -564,11 +528,11 @@
           "id": "full_campaign",
           "label": "Full campaign - hire the best consultants",
           "effects_immediate": {
-            "money": -20000
+            "money": -20000,
+            "executive_mood": 8
           },
           "effects_delayed": {
-            "award_chances": 3,
-            "industry_respect": 2
+            "award_chances": 5
           }
         },
         {
@@ -579,19 +543,19 @@
             "creative_capital": -1
           },
           "effects_delayed": {
-            "award_chances": 1,
-            "relationship_building": 2
+            "award_chances": 3
           }
         },
         {
           "id": "skip_awards",
           "label": "Skip it - focus on commercial success",
           "effects_immediate": {
-            "money": 3000
+            "money": 3000,
+            "executive_mood": -2
           },
           "effects_delayed": {
-            "commercial_focus": 1,
-            "prestige_loss": -1
+            "award_chances": -1,
+            "awareness_boost": 1
           }
         }
       ]
@@ -615,8 +579,8 @@
             "money": -2000
           },
           "effects_delayed": {
-            "viral_boost": 3,
-            "fan_loyalty": 2
+            "awareness_boost": 3,
+            "artist_popularity": 1
           }
         },
         {
@@ -626,8 +590,8 @@
             "money": -8000
           },
           "effects_delayed": {
-            "streaming_boost": 2,
-            "remix_competition": 1
+            "awareness_boost": 1,
+            "press_story_flag": 1
           }
         },
         {
@@ -635,8 +599,8 @@
           "label": "Copyright strike - protect the original",
           "effects_immediate": {},
           "effects_delayed": {
-            "viral_kill": -2,
-            "fan_backlash": -1
+            "awareness_boost": -2,
+            "artist_popularity": -1
           }
         }
       ]
@@ -660,8 +624,7 @@
             "money": 15000
           },
           "effects_delayed": {
-            "streaming_boost": 2,
-            "apple_relationship": -1
+            "awareness_boost": 2
           }
         },
         {
@@ -671,8 +634,7 @@
             "money": 18000
           },
           "effects_delayed": {
-            "premium_positioning": 1,
-            "reach_limitation": -1
+            "awareness_boost": -1
           }
         },
         {
@@ -680,8 +642,8 @@
           "label": "Decline both - simultaneous release",
           "effects_immediate": {},
           "effects_delayed": {
-            "platform_neutrality": 1,
-            "discovery_challenge": 1
+            "awareness_boost": 1,
+            "reputation": 1
           }
         }
       ]
@@ -703,7 +665,7 @@
           "label": "Obvious single + clean assets",
           "effects_immediate": {},
           "effects_delayed": {
-            "playlist_bias": 2
+            "awareness_boost": 2
           }
         },
         {
@@ -719,10 +681,10 @@
         },
         {
           "id": "hold",
-          "label": "Hold this week; build proof points",
+          "label": "Hold the pitch; build proof points first",
           "effects_immediate": {},
           "effects_delayed": {
-            "playlist_bias_next": 1
+            "award_chances": 1
           }
         }
       ]
@@ -744,11 +706,11 @@
           "label": "Play the game - arrange the 'favor'",
           "effects_immediate": {
             "money": -10000,
-            "reputation": -1
+            "reputation": -1,
+            "executive_mood": 8
           },
           "effects_delayed": {
-            "playlist_guaranteed": 1,
-            "industry_compromise": 1
+            "awareness_boost": 4
           }
         },
         {
@@ -758,17 +720,18 @@
             "creative_capital": -1
           },
           "effects_delayed": {
-            "niche_success": 2,
-            "mainstream_miss": -1
+            "awareness_boost": 1
           }
         },
         {
           "id": "report_behavior",
           "label": "Report the behavior to Spotify",
-          "effects_immediate": {},
+          "effects_immediate": {
+            "executive_mood": 2
+          },
           "effects_delayed": {
-            "industry_respect": 2,
-            "blacklist_risk": -2
+            "award_chances": 2,
+            "rep_swing": 2
           }
         }
       ]
@@ -792,8 +755,8 @@
             "money": -5000
           },
           "effects_delayed": {
-            "artificial_boost": 3,
-            "detection_risk": 2
+            "awareness_boost": 3,
+            "variance_up": 2
           }
         },
         {
@@ -803,17 +766,18 @@
             "money": -2000
           },
           "effects_delayed": {
-            "moderate_boost": 1,
-            "sustainable_growth": 1
+            "awareness_boost": 2
           }
         },
         {
           "id": "organic_only",
           "label": "Stick to organic growth only",
-          "effects_immediate": {},
+          "effects_immediate": {
+            "executive_mood": -2
+          },
           "effects_delayed": {
-            "authentic_growth": 1,
-            "slow_building": 1
+            "awareness_boost": 2,
+            "artist_mood": 1
           }
         }
       ]
@@ -837,7 +801,7 @@
             "money": -5000
           },
           "effects_delayed": {
-            "venue_stability": 1
+            "money": 2000
           }
         },
         {
@@ -847,8 +811,8 @@
             "money": -8000
           },
           "effects_delayed": {
-            "prestige": 1,
-            "sellthrough_risk": 1
+            "award_chances": 1,
+            "variance_up": 1
           }
         },
         {
@@ -858,7 +822,7 @@
             "money": -12000
           },
           "effects_delayed": {
-            "prestige": 2,
+            "award_chances": 2,
             "rep_swing": 1
           }
         }
@@ -883,8 +847,8 @@
             "money": -12000
           },
           "effects_delayed": {
-            "collector_loyalty": 2,
-            "premium_positioning": 1
+            "awareness_boost": 1,
+            "reputation": 1
           }
         },
         {
@@ -894,8 +858,7 @@
             "money": 3000
           },
           "effects_delayed": {
-            "cost_savings": 1,
-            "collector_disappointment": -2
+            "artist_popularity": -2
           }
         },
         {
@@ -903,8 +866,8 @@
           "label": "Delay vinyl, release digital first",
           "effects_immediate": {},
           "effects_delayed": {
-            "staggered_release": 1,
-            "timeline_disruption": 1
+            "award_chances": 1,
+            "artist_mood": -1
           }
         }
       ]

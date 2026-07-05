@@ -777,7 +777,10 @@ export class DatabaseStorage implements IStorage {
     transaction?: any
   ): Promise<void> {
     console.log('[STORAGE] updateExecutive called with execId:', execId, 'updates:', updates);
-    const dbToUse = transaction || db;
+    // Fall back to the INSTANCE db like every sibling method (was the module-global
+    // `db` — the one method ignoring an injected test database; caught by CI when
+    // PR-9's cultivation-loop test called it without a transaction).
+    const dbToUse = transaction || this.db;
     await dbToUse.update(executives)
       .set(updates)
       .where(eq(executives.id, execId));

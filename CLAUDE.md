@@ -133,6 +133,11 @@ function calculateMood() { return Math.random() * 100; }
 
 This ensures we can easily grep for `STUB:`, `HARDCODED:`, `TODO:`, and `MISSING:` to find what needs enhancement in future iterations.
 
+## 📚 Documentation Maintenance
+- **Doc-sync rule**: any PR that changes engine/route/client-state-ownership/schema/game-content behavior must update the affected descriptive docs (`docs/02-architecture/`, `03-workflows/`, `04-frontend/`, `05-backend/`) OR log the staleness in `docs/09-troubleshooting/technical-debt-backlog.md` — see `docs/06-development/documentation-governance.md` for the full rule and rationale.
+- **Archival convention**: superseded docs move via `git mv` to `docs/99-legacy/superseded-<yyyy-mm>/` with a dated `> ⚠️ ARCHIVED …` header pointing to the successor doc, and every inbound link fixed in the same commit (see documentation-governance.md's Archival Mechanism section for the exact header template).
+- **When `data/actions.json` or `LIVE_EFFECT_KEYS` changes**, update `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md` — the data-lint test (`tests/engine/data-lint-effect-keys.test.ts`) guards the data itself; this rule guards the doc describing it.
+
 ## 🔀 Git & Branch Workflow
 - **Prefer selective `git add <paths>` over `git add -A`** — blanket adds have swept machine-local files (`.claude/settings.local.json`) and merge artifacts (`*.orig`) into commits here. `*.orig`/`*.rej` are gitignored; don't force-add them.
 - **Resuming a stale/long-lived branch**: merge `main` in and validate (`npm run check` + relevant tests) **before** building new work on it. Branches cut from old `main` can carry hidden conflicts (e.g. `game-engine.ts` auto-merges cleanly at the text level but may still need review).

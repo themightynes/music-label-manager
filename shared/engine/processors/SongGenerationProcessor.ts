@@ -51,10 +51,71 @@ export class SongGenerationProcessor {
         return;
       }
 
+      // Exec-meetings-revival PR-4 (C1) — snapshot the banked quality bonus BEFORE
+      // generating this week's songs. calculateEnhancedSongQuality reads
+      // flags.pendingQualityBonus per song (additive, post-formula); once any
+      // song has had a chance to consume it this week, the bank zeroes here so it
+      // doesn't carry into future weeks. Only touch flags at all if a bonus is
+      // actually banked, so games that never use the channel stay byte-stable
+      // (no stray flags keys added to golden-master snapshots).
+      const bankedFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
+      const bankedQualityBonus = typeof bankedFlagsSnapshot.pendingQualityBonus === 'number'
+        ? bankedFlagsSnapshot.pendingQualityBonus
+        : 0;
+
+      // Exec-meetings-revival PR-6 (C4) — same snapshot-before/zero-after pattern
+      // as the PR-4 quality bank above, so a pendingVariance pool consumed by
+      // calculateEnhancedSongQuality (band-widen + outlier-threshold math) this
+      // week doesn't carry into future weeks. Gated on the same
+      // songsGeneratedThisWeek flag.
+      const bankedVariance = typeof bankedFlagsSnapshot.pendingVariance === 'number'
+        ? bankedFlagsSnapshot.pendingVariance
+        : 0;
+
+      let songsGeneratedThisWeek = false;
+
       for (const project of recordingProjects) {
         if (this.shouldGenerateProjectSongs(project)) {
+          const songsBefore = project.songsCreated || 0;
           await this.generateWeeklyProjectSongs(ctx, project, summary, dbTransaction);
+          if ((project.songsCreated || 0) > songsBefore) {
+            songsGeneratedThisWeek = true;
+          }
         }
+      }
+
+      if (bankedQualityBonus !== 0 && songsGeneratedThisWeek) {
+        const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+        flags.pendingQualityBonus = 0;
+        delete flags.pendingQualityBonusWeek;
+        ctx.gameState.flags = flags;
+
+        summary.changes.push({
+          type: 'meeting',
+          description: bankedQualityBonus > 0
+            ? `Studio focus paid off: +${bankedQualityBonus} quality applied to this week's recordings`
+            : `Studio pressure took its toll: ${bankedQualityBonus} quality on this week's recordings`,
+          amount: bankedQualityBonus,
+          appliedEffects: { quality_bonus: bankedQualityBonus }
+        });
+        console.log(`[QUALITY BONUS] Consumed banked bonus (${bankedQualityBonus}) this week, pool zeroed`);
+      }
+
+      if (bankedVariance !== 0 && songsGeneratedThisWeek) {
+        const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+        flags.pendingVariance = 0;
+        delete flags.pendingVarianceWeek;
+        ctx.gameState.flags = flags;
+
+        summary.changes.push({
+          type: 'meeting',
+          description: bankedVariance > 0
+            ? `Riskier session this week: outcomes swung wider (±${bankedVariance} volatility)`
+            : `Steadier session this week: outcomes narrowed (±${Math.abs(bankedVariance)} volatility)`,
+          amount: bankedVariance,
+          appliedEffects: { variance_up: bankedVariance }
+        });
+        console.log(`[VARIANCE] Consumed banked variance (${bankedVariance}) this week, pool zeroed`);
       }
     } catch (error) {
       console.error('[SONG GENERATION] Error processing recording projects:', error);
@@ -403,28 +464,58 @@ export class SongGenerationProcessor {
     // Medium skill (50): ±20% base variance (was 10%)
     // High skill (75): ±10% base variance (was 5%)
     // Max skill (100): ±5% base variance (was 2%)
-    const baseVarianceRange = 35 - (30 * (combinedSkill / 100)); // 35% down to 5%
+    let baseVarianceRange = 35 - (30 * (combinedSkill / 100)); // 35% down to 5%
 
-    // Check for outlier events (10% chance)
+    // Exec-meetings-revival PR-6 (C4) — outcome variance/risk channel. A banked
+    // meeting bonus (flags.pendingVariance, signed points) widens the variance
+    // BAND and raises the outlier-roll THRESHOLDS the existing draws are compared
+    // against — it does NOT add, remove, or reorder any ctx.getRandom draw (the
+    // golden-master draw sequence is untouched). Read-only here: the bank is
+    // zeroed once per week (after all songs generated that week have had a chance
+    // to consume it) in processRecordingProjects, mirroring PR-4's quality bank.
+    const varianceFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
+    const pendingVariance = typeof varianceFlagsSnapshot.pendingVariance === 'number'
+      ? varianceFlagsSnapshot.pendingVariance
+      : 0;
+    const varianceConfig = ctx.gameData.getVarianceConfigSync();
+
+    if (pendingVariance !== 0) {
+      // Each pendingVariance point widens the band by variance_widen_per_point
+      // (default 0.5 = +50% band width per point). Negative pools narrow the
+      // band (floor at a small positive width so the roll stays well-defined).
+      const widenMultiplier = 1 + (pendingVariance * varianceConfig.variance_widen_per_point);
+      baseVarianceRange = Math.max(1, baseVarianceRange * widenMultiplier);
+    }
+
+    // Each pendingVariance point also adds outlier_chance_bonus_per_point to the
+    // outlier-roll threshold (default 0.02/point) — widening BOTH outlier bands
+    // symmetrically (breakout AND critical-failure), same as the base band above.
+    const outlierBonus = pendingVariance !== 0
+      ? Math.max(0, pendingVariance * varianceConfig.outlier_chance_bonus_per_point)
+      : 0;
+    const breakoutThreshold = Math.min(0.45, 0.05 + outlierBonus);
+    const failureThreshold = Math.min(0.90, 0.10 + outlierBonus * 2);
+
+    // Check for outlier events (10% chance, widened by pendingVariance above)
     // Seeded RNG: getRandom(0, 1) is uniform [0,1), equivalent to Math.random() (Phase 2 PR-1)
     const outlierRoll = ctx.getRandom(0, 1);
     let variance: number;
     let outlierType = '';
 
-    if (outlierRoll < 0.05) {
+    if (outlierRoll < breakoutThreshold) {
       // 5% chance of breakout hit (massive positive outlier)
       // Skill still matters: low skill gets bigger boost potential
       const outlierBoost = 1.5 + (0.5 * (1 - combinedSkill / 100)); // 1.5x to 2.0x for breakout
       variance = outlierBoost;
       outlierType = 'BREAKOUT HIT';
-    } else if (outlierRoll < 0.10) {
+    } else if (outlierRoll < failureThreshold) {
       // 5% chance of critical failure (massive negative outlier)
       // Skill protects: high skill has less severe failures
       const outlierPenalty = 0.5 + (0.2 * (combinedSkill / 100)); // 0.5x to 0.7x for failure
       variance = outlierPenalty;
       outlierType = 'CRITICAL FAILURE';
     } else {
-      // 90% normal variance within calculated range
+      // 90% normal variance within calculated range (widened by pendingVariance above)
       variance = 1 + (ctx.getRandom(-baseVarianceRange, baseVarianceRange) / 100);
     }
 
@@ -437,7 +528,8 @@ export class SongGenerationProcessor {
       combinedSkill: combinedSkill.toFixed(1),
       baseVarianceRange: `±${baseVarianceRange.toFixed(1)}%`,
       actualVariance: ((variance - 1) * 100).toFixed(1) + '%',
-      outlierType: outlierType || 'NORMAL'
+      outlierType: outlierType || 'NORMAL',
+      pendingVariance
     });
 
     // 9. FLOOR AND CEILING
@@ -445,7 +537,22 @@ export class SongGenerationProcessor {
     const QUALITY_FLOOR = 25;   // No song is completely worthless
     const QUALITY_CEILING = 98;  // Leave room for legendary moments
 
-    const finalQuality = Math.round(Math.min(QUALITY_CEILING, Math.max(QUALITY_FLOOR, quality)));
+    // Exec-meetings-revival PR-4 (C1) — next-release quality channel. A banked
+    // meeting bonus (flags.pendingQualityBonus, signed points) is applied here as
+    // an ADDITIVE post-formula adjustment — deliberately AFTER every multiplicative
+    // factor and the outlier/variance roll above, so it never reorders or adds RNG
+    // draws (the golden-master draw sequence is untouched). Read-only here: the
+    // bank is zeroed once per week (after all songs generated that week have had a
+    // chance to consume it) in processRecordingProjects, not per-song, so a batch of
+    // songs from the same recording session all benefit from one banked bonus.
+    const qualityFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
+    const pendingQualityBonus = typeof qualityFlagsSnapshot.pendingQualityBonus === 'number'
+      ? qualityFlagsSnapshot.pendingQualityBonus
+      : 0;
+
+    const finalQuality = Math.round(
+      Math.min(QUALITY_CEILING, Math.max(QUALITY_FLOOR, quality + pendingQualityBonus))
+    );
 
     console.log(`[QUALITY CALC] New multiplicative song quality calculation:`, {
       baseQuality: baseQuality.toFixed(1),
@@ -459,6 +566,7 @@ export class SongGenerationProcessor {
       moodFactor: moodFactor.toFixed(3),
       variance: variance.toFixed(3),
       rawQuality: quality.toFixed(1),
+      pendingQualityBonus,
       finalQuality
     });
 

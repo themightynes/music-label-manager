@@ -17,10 +17,14 @@ interface CampaignResults {
     artistsSuccessful: number;
     projectsCompleted: number;
     accessTierBonus: number;
+    // Exec-meetings-revival PR-7 (C5): campaign-end award-roll bonus. Optional so
+    // older persisted campaignResults payloads (pre-PR-7) still render.
+    awardBonus?: number;
   };
   victoryType: 'Commercial Success' | 'Critical Acclaim' | 'Balanced Growth' | 'Survival' | 'Failure';
   summary: string;
   achievements: string[];
+  industryAward?: boolean;
 }
 
 interface CampaignResultsModalProps {
@@ -141,6 +145,12 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
     { value: campaignResults.scoreBreakdown.artistsSuccessful, label: 'Artist Success', color: 'text-positive' },
     { value: campaignResults.scoreBreakdown.projectsCompleted, label: 'Projects', color: 'text-neon-amber' },
     { value: campaignResults.scoreBreakdown.accessTierBonus, label: 'Access Bonus', color: 'text-neon-cyan' },
+    // Exec-meetings-revival PR-7 (C5): only shown when an award was actually won
+    // (awardBonus > 0) — a 0 bonus is a routine campaign, not worth a cell, and
+    // older persisted results predate this field entirely (undefined -> hidden).
+    ...(campaignResults.scoreBreakdown.awardBonus
+      ? [{ value: campaignResults.scoreBreakdown.awardBonus, label: 'Award Bonus', color: 'text-neon-magenta' }]
+      : []),
   ];
 
   return (
@@ -207,7 +217,12 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
                 {breakdownCells.map((cell, index) => (
                   <RevealCell
                     key={cell.label}
-                    revealed={currentStage >= index + 1}
+                    // Exec-meetings-revival PR-7 (C5): the optional 6th (award)
+                    // cell rides the SAME final stage as cell 5 (Access Bonus) —
+                    // STAGE_COUNT/STAGE_DELAYS stay pinned at 5 stages, so any
+                    // cell beyond BREAKDOWN_COUNT reuses the last reveal stage
+                    // instead of a stage index that can never be reached.
+                    revealed={currentStage >= Math.min(index, BREAKDOWN_COUNT - 1) + 1}
                     instant={instant}
                     className="text-center"
                   >

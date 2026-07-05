@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users } from 'lucide-react';
 import { ChartPerformanceCard } from './ChartPerformanceCard';
 import { AnimatedNumber } from './motion-primitives/animated-number';
 import { GlowEffect } from './motion-primitives/glow-effect';
@@ -12,6 +12,7 @@ import { ParticleBurst } from './motion-primitives/particle-burst';
 import { useStagedReveal } from '@/hooks/useStagedReveal';
 import { playSound } from '@/lib/audio';
 import { classifyChartUpdate } from '@shared/utils/changeImportance';
+import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate } from '../../../shared/types/gameTypes';
 
 interface WeekSummaryProps {
@@ -67,6 +68,73 @@ const RevealGroup: React.FC<{
     </motion.div>
   );
 };
+
+// --- Meetings card formatting (exec-meetings-revival PR-2) -----------------
+// Module scope: pure formatting helpers, no reason to redefine per render.
+
+/** Human label for a live effect key, mirroring DialogueInterface's badge copy. */
+function formatMeetingEffectLabel(key: string): string {
+  switch (key) {
+    case 'money':
+      return 'Money';
+    case 'reputation':
+      return 'Rep';
+    case 'creative_capital':
+      return 'Creative';
+    case 'artist_mood':
+      return 'Mood';
+    case 'artist_energy':
+      return 'Energy';
+    case 'artist_popularity':
+      return 'Popularity';
+    case 'executive_mood':
+      return 'Exec Mood';
+    case 'press_story_flag':
+      return 'Press Story';
+    case 'press_momentum':
+      return 'Press Buzz';
+    case 'quality_bonus':
+      return 'Quality';
+    case 'awareness_boost':
+      return 'Buzz';
+    case 'variance_up':
+      // Exec-meetings-revival PR-6 (C4) — a volatility knob, not a value delta.
+      return 'Volatility';
+    case 'rep_swing':
+      // Exec-meetings-revival PR-6 (C4) — pre-roll gamble magnitude when shown
+      // at choice-preview time; post-roll the appliedEffects value IS the
+      // resolved reputation delta (see formatAppliedEffects's own-sign handling).
+      return 'Rep Gamble';
+    case 'award_chances':
+      // Exec-meetings-revival PR-7 (C5) — prestige/award track (never expires).
+      return 'Prestige';
+    default:
+      return key.replace(/_/g, ' ');
+  }
+}
+
+/** One line per applied effect delta, e.g. "+5 Rep", "-1000 Money". */
+function formatAppliedEffects(effects: Record<string, number> | undefined): string[] {
+  if (!effects) return [];
+  return Object.entries(effects)
+    .filter(
+      ([key, value]) =>
+        typeof value === 'number' &&
+        value !== 0 &&
+        // Badge honesty (PR-2 fix): delayed_effect changes carry the RAW authored
+        // effects_delayed record, which can still contain dead keys until the
+        // channel PRs land — never render a badge the engine didn't apply.
+        (LIVE_EFFECT_KEYS.has(key) || key === 'executive_mood')
+    )
+    .map(([key, value]) => {
+      // variance_up is a volatility magnitude, not a signed value delta — always
+      // rendered with ± regardless of the (rare) authored sign.
+      if (key === 'variance_up') {
+        return `±${Math.abs(value)} ${formatMeetingEffectLabel(key)}`;
+      }
+      return `${value > 0 ? '+' : ''}${value} ${formatMeetingEffectLabel(key)}`;
+    });
+}
 
 export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekResults, onClose }: WeekSummaryProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'projects'>('overview');
@@ -171,6 +239,10 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       expenses: [] as GameChange[],
       achievements: [] as GameChange[],
       mood: [] as GameChange[],
+      // Exec-meetings-revival PR-2: meeting/executive-interaction/delayed-effect
+      // changes get their own bucket so exec decay notices (previously silently
+      // dropped into "other" and never rendered) become visible for the first time.
+      meetings: [] as GameChange[],
       other: [] as GameChange[]
     };
 
@@ -183,6 +255,12 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
         categories.achievements.push(change);
       } else if (change.type === 'mood') {
         categories.mood.push(change);
+      } else if (
+        change.type === 'meeting' ||
+        change.type === 'executive_interaction' ||
+        change.type === 'delayed_effect'
+      ) {
+        categories.meetings.push(change);
       } else if (change.type === 'project_complete') {
         // Projects go to other category, will be shown in Projects tab
         categories.other.push(change);
@@ -511,6 +589,122 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                           >
                             {isPositive ? '+' : ''}{moodDelta}
                           </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </RevealGroup>
+        )}
+
+        {/* Meetings (stage 4, routine) — meeting/executive_interaction/delayed_effect
+            changes. Mirrors the Mood card pattern. Executive decay notices (loyalty
+            drop from neglect) are now visible for the first time (case-file §2/§6d);
+            they carry importance: 'notable' from classifyChange but are rendered here
+            regardless of importance tier — the staged reveal already gates them to
+            the routine stage via this card's placement, not per-item hero/notable
+            styling. */}
+        {categorizedChanges.meetings.length > 0 && (
+          <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-neon-cyan text-sm">
+                  <Users className="h-4 w-4" />
+                  <span>Meetings</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {categorizedChanges.meetings.map((change: GameChange, index: number) => {
+                  const isExecInteraction = change.type === 'executive_interaction';
+                  const isLoyaltyDecay = isExecInteraction && (change.loyaltyChange ?? 0) < 0;
+                  const appliedLines = formatAppliedEffects(change.appliedEffects);
+
+                  return (
+                    <div
+                      key={index}
+                      className={`p-3 rounded-[12px] border ${
+                        isLoyaltyDecay
+                          ? 'bg-neon-amber/10 border-neon-amber/20'
+                          : 'bg-surface-inner/40 border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-white/90">
+                            {change.description}
+                          </span>
+                          {change.choiceLabel && (
+                            <p className="text-xs text-text-muted mt-0.5 truncate">
+                              {change.choiceLabel}
+                            </p>
+                          )}
+                          {/* Exec-meetings-revival PR-9: mood-modifier note when it fired. */}
+                          {change.moodBand && change.moodBand !== 'neutral' && (
+                            <Badge
+                              variant="outline"
+                              className={`mt-1 text-xs font-mono rounded-pill ${
+                                change.moodBand === 'inspired'
+                                  ? 'text-neon-cyan border-neon-cyan/40'
+                                  : change.moodBand === 'content'
+                                    ? 'text-positive border-positive/40'
+                                    : 'text-negative border-negative/40'
+                              }`}
+                            >
+                              {change.moodBand === 'inspired'
+                                ? `Inspired +${Math.round(((change.effectMultiplier ?? 1.2) - 1) * 100)}% effects`
+                                : change.moodBand === 'content'
+                                  ? `Content −${Math.round((1 - (change.costMultiplier ?? 0.9)) * 100)}% costs`
+                                  : `Disgruntled +${Math.round(((change.costMultiplier ?? 1.25) - 1) * 100)}% costs`}
+                            </Badge>
+                          )}
+                          {appliedLines.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {appliedLines.map((line, lineIdx) => (
+                                <Badge
+                                  key={lineIdx}
+                                  variant="outline"
+                                  className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40"
+                                >
+                                  {line}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Exec mood/loyalty deltas from processExecutiveActions ("Met
+                            with X") or the decay path (loyalty-only, no mood pairing). */}
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          {change.moodChange !== undefined && change.moodChange !== 0 && (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs font-mono font-semibold ${
+                                change.moodChange > 0
+                                  ? 'text-positive border-positive/40'
+                                  : 'text-negative border-negative/40'
+                              }`}
+                            >
+                              {change.moodChange > 0 ? '+' : ''}{change.moodChange} Mood
+                            </Badge>
+                          )}
+                          {change.loyaltyBoost !== undefined && change.loyaltyBoost !== 0 && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono font-semibold text-positive border-positive/40"
+                            >
+                              +{change.loyaltyBoost} Loyalty
+                            </Badge>
+                          )}
+                          {isLoyaltyDecay && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono font-semibold text-neon-amber border-neon-amber/40"
+                            >
+                              {change.loyaltyChange} Loyalty
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>

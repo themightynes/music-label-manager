@@ -127,6 +127,7 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       reputation_modifier: press.reputation_modifier,
       story_flag_bonus: press.story_flag_bonus,
       max_pickups_per_release: press.max_pickups_per_release,
+      press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02,
     }),
     getPressCoverageConfigSync: () => ({
       base_chance: press.base_chance,
@@ -134,7 +135,47 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       reputation_modifier: press.reputation_modifier,
       story_flag_bonus: press.story_flag_bonus,
       max_pickups_per_release: press.max_pickups_per_release,
+      press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02,
     }),
+    // Mirror ServerGameData.getQualityBonusConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-4, C1 — next-release quality channel).
+    getQualityBonusConfigSync: () => ({
+      pending_quality_bonus_expiry_weeks: quality.quality_system?.pending_quality_bonus_expiry_weeks ?? 8,
+    }),
+    // Mirror ServerGameData.getAwarenessBoostConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-5, C3 — next-release awareness channel).
+    getAwarenessBoostConfigSync: () => ({
+      awareness_boost_points_per_unit: markets.market_formulas?.awareness_system?.awareness_boost_points_per_unit ?? 8,
+      pending_awareness_boost_expiry_weeks: markets.market_formulas?.awareness_system?.pending_awareness_boost_expiry_weeks ?? 8,
+    }),
+    // Mirror ServerGameData.getVarianceConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-6, C4 — outcome variance/risk channel).
+    getVarianceConfigSync: () => ({
+      variance_widen_per_point: quality.quality_system?.variance_widen_per_point ?? 0.5,
+      outlier_chance_bonus_per_point: quality.quality_system?.outlier_chance_bonus_per_point ?? 0.02,
+      pending_variance_expiry_weeks: quality.quality_system?.pending_variance_expiry_weeks ?? 8,
+    }),
+    // Mirror ServerGameData.getAwardConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-7, C5 — prestige/award track).
+    getAwardConfigSync: () => ({
+      award_chance_per_point: progression.reputation_system?.award_chance_per_point ?? 0.08,
+      award_chance_cap: progression.reputation_system?.award_chance_cap ?? 0.8,
+      award_score_bonus: progression.reputation_system?.award_score_bonus ?? 2000,
+      award_nominee_pool_threshold: progression.reputation_system?.award_nominee_pool_threshold ?? 5,
+    }),
+    // Mirror ServerGameData.getExecMoodModifierConfigSync (server/data/gameData.ts,
+    // exec-meetings-revival PR-9, C6/D — executive-mood meeting-outcome modifiers).
+    getExecMoodModifierConfigSync: () => {
+      const cfg = progression.reputation_system?.exec_mood_modifiers ?? {};
+      return {
+        disgruntled_below: cfg.disgruntled_below ?? 30,
+        content_above: cfg.content_above ?? 80,
+        inspired_above: cfg.inspired_above ?? 90,
+        cost_multiplier_disgruntled: cfg.cost_multiplier_disgruntled ?? 1.25,
+        cost_multiplier_content: cfg.cost_multiplier_content ?? 0.9,
+        effect_multiplier_inspired: cfg.effect_multiplier_inspired ?? 1.2,
+      };
+    },
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],
     getAllRoles: async () => [],
@@ -183,6 +224,10 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     getActionById: async (actionId: string) => ({ id: actionId, target_scope: 'global' }),
     getChoiceById: async (_actionId: string, choiceId: string) => ({
       id: choiceId,
+      // Exec-meetings-revival PR-2: real actions.json choices always carry a label
+      // (enforced by the dataLoader schema); mirror that here so the 'meeting'
+      // change entry's choiceLabel field is realistic rather than undefined.
+      label: `Choice ${choiceId}`,
       // Fixed, deterministic effects — no RNG involved.
       effects_immediate: { money: -1000, reputation: 2 },
       effects_delayed: {},

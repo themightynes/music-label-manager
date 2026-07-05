@@ -18,7 +18,7 @@ Transform Music Label Manager from a solid MVP into the **definitive music indus
 **Origin**: v1.0 Sprint 6 (Weeks 11-12) - Not implemented
 **Status**: REMOVED - Loyalty tracking exists but will remain display-only
 
-**Note**: Artist loyalty is tracked and modified through dialogue/meetings but has no gameplay impact. This is intentional - loyalty serves as relationship flavor rather than mechanical consequences.
+**Note (verified July 4, 2026 — corrects an outdated claim)**: Artists have NO loyalty column at all — `loyalty` exists only on the `executives` table (`shared/schema.ts` ~line 324, executives-only field). `artist_loyalty` is not referenced in `ActionProcessor.ts` or the artist-dialogue route (`server/routes/artists.ts`); it was normalized away as part of the exec-meetings revival (PR #119). There is no "tracked but inert" artist loyalty stat to be intentional about — the mechanic simply does not exist on artists.
 
 ### **Music Creation & Release Cycle - Advanced Phases**
 **Origin**: v1.0 Phases 3-4 - Not implemented

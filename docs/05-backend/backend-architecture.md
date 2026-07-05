@@ -3,6 +3,8 @@
 **Music Label Manager - Node.js Server Design**  
 *Version: 1.0 (MVP Complete)*
 
+*Last Updated: July 4, 2026*
+
 ---
 
 ## 🚀 Backend Overview
@@ -13,7 +15,7 @@ The Music Label Manager backend is a **Node.js** application built with **Expres
 - **Node.js 18+** with TypeScript
 - **Express.js** web framework
 - **PostgreSQL** with Drizzle ORM
-- **Passport.js** for authentication
+- **Clerk** for authentication (JWT verified via `apiRequest()` on the client; `requireClerkUser` + `requireGameOwner` middleware on the server)
 - **Zod** for validation
 - **Shared types** between client and server
 
@@ -76,7 +78,7 @@ POST   /api/game                  // Create new game session
 PATCH  /api/game/:id              // Update specific fields
 DELETE /api/game/:gameId          // Delete game (orphaned cleanup)
 GET    /api/games                 // List all user's games (newest first)
-POST   /api/advance-month         // Process monthly turn
+POST   /api/advance-week          // Process weekly turn
 
 // Entity management
 POST   /api/game/:gameId/artists  // Sign new artist
@@ -91,40 +93,12 @@ POST   /api/saves                 // Create new save
 GET    /api/admin/database-stats         // Database health metrics
 POST   /api/admin/cleanup-orphaned-games // Manual orphaned game cleanup
 
-// Authentication
-POST   /api/auth/register         // User registration
-POST   /api/auth/login            // User login
-POST   /api/auth/logout           // Session termination
-GET    /api/auth/me               // Current user
+// Authentication (Clerk-issued JWT verified per request; no local auth endpoints)
+GET    /api/me                    // Current user
 ```
 
 ### **2. Request Validation with Zod**
-Runtime validation for all API endpoints:
-
-```typescript
-// Route handler with validation
-app.post('/api/game/:gameId/artists', getUserId, async (req, res) => {
-  try {
-    const validatedData = insertArtistSchema.parse({
-      ...req.body,
-      gameId: req.params.gameId
-    });
-    
-    const artist = await storage.createArtist(validatedData);
-    res.json(artist);
-    
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ 
-        message: 'Invalid artist data', 
-        errors: error.errors 
-      });
-    } else {
-      res.status(500).json({ message: 'Failed to create artist' });
-    }
-  }
-});
-```
+Runtime validation for all API endpoints. Actual route handlers are thin — business logic lives in feature services, not inline in route files: `saveService.ts`, `releasePlanningService.ts`, `artistService.ts`, `gameCreationService.ts`, and `advanceWeekService.ts` (all under `server/services/`). A typical handler validates the request body with a Zod schema, delegates to the relevant service, and maps the result/error to an HTTP response.
 
 ### **3. Content Loading System**
 JSON-based game data with caching:
@@ -374,80 +348,19 @@ artistId: uuid('artist_id')
 ## 🔐 Authentication Implementation
 
 ### **Authentication & Authorization**
-Session-based authentication with Passport.js:
+Authentication is handled entirely by **Clerk**. The client attaches a Clerk-issued JWT to every request via the shared `apiRequest()` helper (`client/src/lib/queryClient.ts`); the server verifies it with `requireClerkUser`, which populates `req.userId`.
+
+Object-level authorization (ensuring a caller owns the game they're operating on) is handled by the shared `requireGameOwner` middleware (`server/middleware/requireGameOwner.ts`), added in Phase 1 to close an IDOR gap that previously required each route to hand-roll its own ownership check. It resolves the `gameId` from the route param (or body/query fallback for routes that carry it off-path), loads the game scoped to both that id AND `req.userId`, and returns 404 (not 403) on a mismatch so it never leaks whether a given `gameId` exists to a non-owner. On success it stashes the loaded row on `req.gameState` so the handler can reuse it without a second query. Routes whose id param isn't named `gameId` (e.g. `games.ts`'s `:id`) use `requireGameOwnerByParam('id')` instead.
 
 ```typescript
-// server/auth.ts
-export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ message: 'Authentication required' });
-};
-
-export const getUserId = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user) {
-    req.userId = (req.user as any).id;
-    return next();
-  }
-  res.status(401).json({ message: 'User not authenticated' });
-};
-
-// Usage in routes
-app.get('/api/game/:id', getUserId, async (req, res) => {
-  // req.userId automatically available
-  const gameState = await storage.getGameState(req.params.id);
-  
-  // Verify user owns this game state
-  if (gameState.userId !== req.userId) {
-    return res.status(403).json({ message: 'Access denied' });
-  }
-  
-  res.json(gameState);
+// Typical route wiring
+router.get('/api/game/:gameId/...', requireClerkUser, requireGameOwner, async (req, res) => {
+  // req.userId and req.gameState are both populated here
 });
 ```
 
 ### **Input Validation Pattern**
-All endpoints use Zod validation:
-
-```typescript
-// Validation helper
-export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): T {
-  try {
-    return schema.parse(data);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`);
-    }
-    throw error;
-  }
-}
-
-// Route handler example
-app.post('/api/game/:gameId/artists', getUserId, async (req, res) => {
-  try {
-    // Validate input against schema
-    const validatedData = insertArtistSchema.parse({
-      ...req.body,
-      gameId: req.params.gameId
-    });
-    
-    // Process request with validated data
-    const artist = await storage.createArtist(validatedData);
-    res.json(artist);
-    
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ 
-        message: 'Invalid artist data', 
-        errors: error.errors 
-      });
-    } else {
-      res.status(500).json({ message: 'Failed to create artist' });
-    }
-  }
-});
-```
+All endpoints use Zod validation via the same `validateRequest<T>()` helper used above — parse the request against a shared schema, and let a thrown `z.ZodError` map to a 400 response in the route's catch block.
 
 ---
 
@@ -503,17 +416,17 @@ export class Storage {
     artists: Artist[];
     projects: Project[];
     roles: Role[];
-    monthlyActions: MonthlyAction[];
+    weeklyActions: WeeklyAction[];
   }> {
-    const [gameState, artists, projects, roles, monthlyActions] = await Promise.all([
+    const [gameState, artists, projects, roles, weeklyActions] = await Promise.all([
       this.getGameState(gameId),
       this.getArtistsByGame(gameId),
       this.getProjectsByGame(gameId),
       this.getRolesByGame(gameId),
-      this.getMonthlyActions(gameId, currentMonth)
+      this.getWeeklyActions(gameId, currentWeek)
     ]);
     
-    return { gameState, artists, projects, roles, monthlyActions };
+    return { gameState, artists, projects, roles, weeklyActions };
   }
 
   // Individual Song Management (NEW: Phase 1 Enhancement)
@@ -600,14 +513,14 @@ export function createErrorResponse(
 }
 
 // Usage in route handlers
-app.post('/api/advance-month', getUserId, async (req, res) => {
+router.post('/api/advance-week', requireClerkUser, requireGameOwner, async (req, res) => {
   try {
-    const request = validateRequest(AdvanceMonthRequest, req.body);
-    const result = await processAdvanceMonth(request);
+    const request = validateRequest(AdvanceWeekRequest, req.body);
+    const result = await advanceWeekService.advanceWeek(request);
     res.json(result);
     
   } catch (error) {
-    console.error('Advance month error:', error);
+    console.error('Advance week error:', error);
     
     if (error instanceof z.ZodError) {
       return res.status(400).json(createErrorResponse(
@@ -625,60 +538,21 @@ app.post('/api/advance-month', getUserId, async (req, res) => {
     }
     
     res.status(500).json(createErrorResponse(
-      'ADVANCE_MONTH_ERROR',
-      'Failed to advance month'
+      'ADVANCE_WEEK_ERROR',
+      'Failed to advance week'
     ));
   }
 });
 ```
+
+Week advancement runs inside a single database transaction with `SELECT ... FOR UPDATE` row locking on the game state (the "D6" hardening pass), so concurrent advance-week calls for the same game serialize instead of racing each other; a failure at any point rolls back the whole turn rather than leaving partial state.
 
 ---
 
 ## 🔐 Security Implementation
 
 ### **Authentication System**
-```typescript
-// server/auth.ts
-import passport from 'passport';
-import { Strategy as LocalStrategy } from 'passport-local';
-import bcrypt from 'bcryptjs';
-
-// Configure Passport Local Strategy
-passport.use(new LocalStrategy(
-  { usernameField: 'username' },
-  async (username: string, password: string, done) => {
-    try {
-      const user = await findUserByUsername(username);
-      if (!user) {
-        return done(null, false, { message: 'Invalid username or password' });
-      }
-      
-      const isValid = await bcrypt.compare(password, user.passwordHash);
-      if (!isValid) {
-        return done(null, false, { message: 'Invalid username or password' });
-      }
-      
-      return done(null, user);
-    } catch (error) {
-      return done(error);
-    }
-  }
-));
-
-// Session serialization
-passport.serializeUser((user: any, done) => {
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id: string, done) => {
-  try {
-    const user = await findUserById(id);
-    done(null, user);
-  } catch (error) {
-    done(error);
-  }
-});
-```
+Authentication is Clerk-only — there is no local username/password store, session table, or Passport strategy in this codebase. See "Authentication Implementation" above for the `requireClerkUser` + `requireGameOwner` middleware chain.
 
 ### **Data Protection**
 ```typescript
@@ -742,7 +616,7 @@ async getGameStateWithRelated(gameId: string) {
 // - game_states.user_id
 // - artists.game_id
 // - projects.game_id
-// - monthly_actions.game_id
+// - weekly_actions.game_id
 ```
 
 ### **Caching Strategy**

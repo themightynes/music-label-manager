@@ -117,7 +117,7 @@ function DockItem({
 export function CommandDock({ onShowSaveModal }: CommandDockProps) {
   const [location, setLocation] = useLocation();
   const gameState = useGameState();
-  const { weeklyOutcome, selectedActions } = useGameStore();
+  const { weeklyOutcome, selectedActions, isAdvancingWeek, weeklyOutcomeAutoShow, consumeWeeklyOutcomeAutoShow } = useGameStore();
   const { gameId } = useGameContext();
   const { user } = useUser();
   const { isAdmin } = useIsAdmin();
@@ -168,6 +168,18 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
     }
     prevSelectedCountRef.current = selectedActions.length;
   }, [selectedActions.length]);
+
+  // Auto-open the Weekly Results modal exactly ONCE per advance, from the
+  // always-mounted dock (NOT the Dashboard, which is unmounted when the player
+  // advances the week from the executive-meetings/live-performance/etc. routes).
+  // The one-shot flag lives in the store (set by advanceWeek, cleared here) so
+  // it survives navigation and is consumed on the first mount that observes it.
+  useEffect(() => {
+    if (weeklyOutcome && !isAdvancingWeek && weeklyOutcomeAutoShow) {
+      setShowWeekSummary(true);
+      consumeWeeklyOutcomeAutoShow();
+    }
+  }, [weeklyOutcome, isAdvancingWeek, weeklyOutcomeAutoShow, consumeWeeklyOutcomeAutoShow]);
 
   useEffect(() => () => {
     if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);

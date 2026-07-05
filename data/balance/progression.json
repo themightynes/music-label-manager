@@ -7,7 +7,21 @@
     "hit_single_bonus": 5,
     "number_one_bonus": 10,
     "flop_penalty": 3,
-    
+
+    "award_chance_per_point": 0.08,
+    "award_chance_cap": 0.8,
+    "award_score_bonus": 2000,
+    "award_nominee_pool_threshold": 5,
+
+    "exec_mood_modifiers": {
+      "disgruntled_below": 30,
+      "content_above": 80,
+      "inspired_above": 90,
+      "cost_multiplier_disgruntled": 1.25,
+      "cost_multiplier_content": 0.9,
+      "effect_multiplier_inspired": 1.2
+    },
+
     "regional_barriers": {
       "domestic": 0,
       "neighboring": 15,

@@ -194,6 +194,8 @@ const createReleaseSchema = z.object({
           name: artists.name,
           mood: artists.mood,
           energy: artists.energy,
+          popularity: artists.popularity,
+          talent: artists.talent,
           archetype: artists.archetype,
           signedWeek: artists.signedWeek,
           readySongsCount: sql<string>`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false AND ${songs.releaseId} IS NULL THEN 1 END)`,
@@ -202,7 +204,7 @@ const createReleaseSchema = z.object({
         .from(artists)
         .leftJoin(songs, eq(songs.artistId, artists.id))
         .where(eq(artists.gameId, gameId))
-        .groupBy(artists.id, artists.name, artists.mood, artists.energy, artists.archetype, artists.signedWeek)
+        .groupBy(artists.id, artists.name, artists.mood, artists.energy, artists.popularity, artists.talent, artists.archetype, artists.signedWeek)
         .having(sql`COUNT(CASE WHEN ${songs.isRecorded} = true AND ${songs.isReleased} = false AND ${songs.releaseId} IS NULL THEN 1 END) >= ${minSongs}`);
 
       const totalReadySongs = artistsResult.reduce((sum: number, artist: any) => sum + parseInt(artist.readySongsCount as string), 0);
@@ -222,6 +224,8 @@ const createReleaseSchema = z.object({
           genre: 'Pop', // Default genre since not stored in artists table
           mood: artist.mood || 50,
           energy: artist.energy || 50,
+          popularity: artist.popularity ?? 0,
+          talent: artist.talent ?? 50,
           readySongsCount: parseInt(artist.readySongsCount as string),
           totalSongsCount: parseInt(artist.totalSongsCount as string),
           lastProjectWeek: artist.signedWeek,

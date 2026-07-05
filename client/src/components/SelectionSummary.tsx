@@ -7,6 +7,14 @@ import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3, X, Rocket, Loader2, Search, Crown, Music, Megaphone, Palette, Truck, type LucideIcon } from 'lucide-react';
 import logger from '@/lib/logger';
+import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
+
+// Badge honesty (exec-meetings-revival PR-2): same whitelist as DialogueInterface —
+// only render a badge for a key the engine actually implements, or 'executive_mood'
+// (wired outside applyEffects's switch). See DialogueInterface.tsx for the twin.
+function isRenderableEffectKey(key: string): boolean {
+  return LIVE_EFFECT_KEYS.has(key) || key === 'executive_mood';
+}
 
 interface ExecutiveAction {
   id: string;
@@ -362,12 +370,14 @@ export function SelectionSummary({
                   <span className="text-xs font-medium text-text-body">This Week</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {Object.entries(impactPreview?.immediate || {}).map(([effect, value]) => (
-                    <Badge key={effect} variant="outline" className={`text-xs font-mono rounded-pill ${value > 0 ? 'text-positive border-positive/40 bg-positive/10' : 'text-negative border-negative/40 bg-negative/10'}`}>
-                      {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
-                    </Badge>
-                  ))}
-                  {Object.keys(impactPreview?.immediate || {}).length === 0 && (
+                  {Object.entries(impactPreview?.immediate || {})
+                    .filter(([effect]) => isRenderableEffectKey(effect))
+                    .map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className={`text-xs font-mono rounded-pill ${value > 0 ? 'text-positive border-positive/40 bg-positive/10' : 'text-negative border-negative/40 bg-negative/10'}`}>
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                  {Object.keys(impactPreview?.immediate || {}).filter(isRenderableEffectKey).length === 0 && (
                     <span className="text-xs text-text-muted">No immediate effects</span>
                   )}
                 </div>
@@ -380,12 +390,14 @@ export function SelectionSummary({
                   <span className="text-xs font-medium text-text-body">Delayed Effects</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {Object.entries(impactPreview?.delayed || {}).map(([effect, value]) => (
-                    <Badge key={effect} variant="outline" className="text-xs font-mono rounded-pill border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac">
-                      {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
-                    </Badge>
-                  ))}
-                  {Object.keys(impactPreview?.delayed || {}).length === 0 && (
+                  {Object.entries(impactPreview?.delayed || {})
+                    .filter(([effect]) => isRenderableEffectKey(effect))
+                    .map(([effect, value]) => (
+                      <Badge key={effect} variant="outline" className="text-xs font-mono rounded-pill border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac">
+                        {value > 0 ? '+' : ''}{value} {effect.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                  {Object.keys(impactPreview?.delayed || {}).filter(isRenderableEffectKey).length === 0 && (
                     <span className="text-xs text-text-muted">No delayed effects</span>
                   )}
                 </div>

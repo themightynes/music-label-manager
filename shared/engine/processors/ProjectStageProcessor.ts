@@ -134,6 +134,19 @@ export class ProjectStageProcessor {
                 const totalRevenue = tourStats.cities.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0);
                 const avgAttendance = Math.round(tourStats.cities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / tourStats.cities.length);
 
+                // C68/#12: net out the tour's total costs so the completion
+                // summary + email report ACTUAL profit/loss, not just top-line
+                // gross. Per-city costs (venue + production + marketing) were
+                // stored at pre-calculation time in economics.costs.total; sum
+                // them for the whole tour. Fallback: if the per-city cost
+                // breakdown is missing (legacy/partial data), derive tour costs
+                // from the project's committed spend (totalCost).
+                const totalCosts = tourStats.cities.reduce(
+                  (sum: number, city: any) => sum + (city?.economics?.costs?.total ?? 0),
+                  0
+                ) || (project.totalCost || 0);
+                const netProfit = totalRevenue - totalCosts;
+
                 // Save total revenue for ROI calculation
                 if (ctx.storage?.updateProject) {
                   await ctx.storage.updateProject(project.id, {
@@ -142,12 +155,15 @@ export class ProjectStageProcessor {
                   }, dbTransaction);
                 }
 
+                const profitLabel = netProfit >= 0 ? 'net profit' : 'net loss';
                 summary.changes.push({
                   type: 'project_complete',
-                  description: `${project.title} tour completed - ${tourStats.cities.length} cities, ${avgAttendance}% avg attendance, $${totalRevenue.toLocaleString()} total revenue`,
+                  description: `${project.title} tour completed - ${tourStats.cities.length} cities, ${avgAttendance}% avg attendance, $${totalRevenue.toLocaleString()} gross, $${netProfit.toLocaleString()} ${profitLabel}`,
                   amount: 0, // Revenue already counted weekly
                   projectId: project.id,
-                  grossRevenue: totalRevenue
+                  grossRevenue: totalRevenue,
+                  totalCosts,
+                  netProfit
                 });
               }
             } else if (weeksInProduction > 0) {
@@ -202,9 +218,19 @@ export class ProjectStageProcessor {
             .where(eq(projects.id, project.id));
 
           // Add to summary
+          // C68: tours reuse the recording stage machine internally (their
+          // "completed" state IS the `recorded` stage index), but the recording
+          // pipeline's stage NAMES ("recorded") must not leak into tour-facing
+          // milestone copy. Branch the player-facing stage label on project type:
+          // tours progress Planned → On Tour → Tour Completed, recordings keep
+          // the writing/production/recorded pipeline names.
+          const isTourProject = project.type === 'Mini-Tour';
+          const description = isTourProject
+            ? `📈 ${project.title}: ${({ planning: 'Tour Planned', production: 'On Tour', recorded: 'Tour Completed' } as Record<string, string>)[newStage] ?? newStage} — ${advancementReason}`
+            : `📈 ${project.title} advanced to ${newStage} stage: ${advancementReason}`;
           summary.changes.push({
             type: 'unlock',
-            description: `📈 ${project.title} advanced to ${newStage} stage: ${advancementReason}`,
+            description,
             amount: 0
           });
 

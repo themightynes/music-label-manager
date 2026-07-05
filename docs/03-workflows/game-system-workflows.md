@@ -49,9 +49,9 @@ GameEngine Processing → Individual System Updates → Cross-System Effects
 ```
 Calculated Changes → Database Transaction → Client State Update → UI Refresh
        ↓                    ↓                     ↓                 ↓
-- New resources        - Atomic update       - Zustand store   - Dashboard
-- Updated projects     - All or nothing      - Game state      - Component
-- Changed relations    - Consistent state    - Action reset      refresh
+- New resources        - Atomic update       - TanStack Query  - Dashboard
+- Updated projects     - All or nothing      - gameState spine - Component
+- Changed relations    - Consistent state    - (via facade)      refresh
 ```
 
 ### **Authoritative Weekly Processing Order**

@@ -280,7 +280,7 @@ npm run db:introspect
 
 - [ ] All migrations applied successfully in dev
 - [ ] Tested in at least 2 full game runs
-- [ ] No console errors when advancing months
+- [ ] No console errors when advancing weeks
 - [ ] All player actions still work
 - [ ] Game state persists correctly after restart
 - [ ] Migration has been manually reviewed
@@ -393,7 +393,7 @@ VALUES ('0005_custom_migration', 0);
 ## 🔗 Related Documentation
 
 - **Schema Design**: [Database Design](../02-architecture/database-design.md)
-- **API Contracts**: [API Design](../02-architecture/api-design.md)
+- **API Contracts**: [System Architecture](../02-architecture/system-architecture.md) + `shared/api/contracts.ts` (superseded the archived [API Design](../99-legacy/superseded-2026-07/api-design.md))
 - **Troubleshooting**: [System Troubleshooting](../09-troubleshooting/consolidated-system-troubleshooting.md)
 - **Development Setup**: [CLAUDE.md](../../CLAUDE.md)
 

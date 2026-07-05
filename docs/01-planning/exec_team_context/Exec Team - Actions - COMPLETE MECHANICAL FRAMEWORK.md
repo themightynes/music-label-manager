@@ -382,6 +382,8 @@ _Theme: Revenue optimization, market access, efficiency_
 
 ### **Executive Mood Impacts**
 
+> **Note (July 4, 2026)**: The cost/effectiveness modifiers below (mood <30/>80/>90) SHIPPED July 2026 as PR #119 PR-9 — see `shared/utils/executiveMoodModifier.ts`. The <20 (refuses risky actions) and <10 (basic-only) availability gates remain deferred design canon, not yet built.
+
 - Mood < 30: Actions cost +25% more
 - Mood < 20: Executive refuses risky actions
 - Mood < 10: Executive only offers basic actions

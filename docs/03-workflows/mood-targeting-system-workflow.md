@@ -290,6 +290,7 @@ See [tasks/0002-prd-technical-debt-found.md](../../tasks/0002-prd-technical-debt
 1. **Mixed data formats** in `summary.artistChanges`
    - Per-artist mood: Object format (`{ mood, energy, loyalty }`)
    - Global energy/popularity: Number format (legacy)
+   - **C60 cross-reference**: `artist_energy`/`artist_popularity` delayed effects currently apply roster-wide regardless of `artistId` — see backlog item C60 in `docs/09-troubleshooting/technical-debt-backlog.md` (still open).
 
 2. **Medium Priority**: Unify all artist changes to object format
 3. **Medium Priority**: Add integration tests with real database

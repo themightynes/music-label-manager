@@ -72,19 +72,35 @@ function buildTourCompletionEmails(ctx: EmailFactoryContext, completion: GameCha
     ? `Tour Metrics – ${completion.description}`
     : `Tour Performance Update`;
 
+  // #12: the player reads NET profit (gross − tour costs), not just top-line
+  // gross. ProjectStageProcessor now attaches `totalCosts`/`netProfit` to the
+  // completion change; carry them through so the email headline reflects actual
+  // profit/loss. Fall back to gross when net wasn't computed (legacy change).
+  const grossRevenue = completion.grossRevenue ?? completion.amount ?? 0;
+  const totalCosts = completion.totalCosts ?? null;
+  const netProfit = completion.netProfit ?? null;
+  const netPreview =
+    netProfit !== null
+      ? `Net ${netProfit >= 0 ? "profit" : "loss"} $${Math.abs(netProfit).toLocaleString()} (gross $${grossRevenue.toLocaleString()})`
+      : completion.description;
+
   return createBaseEmail(ctx, "artist", subject, {
     description: completion.description,
-    amount: completion.grossRevenue ?? completion.amount ?? 0,
+    amount: grossRevenue,
     grossRevenue: completion.grossRevenue ?? null,
+    totalCosts,
+    netProfit,
     projectId: completion.projectId ?? null,
     metadata,
   }, {
     sender: EXECUTIVE_SENDERS.head_distribution,
     senderRoleId: "head_distribution",
-    preview: completion.description,
+    preview: netPreview,
     metadata: {
       ...metadata,
       grossRevenue: completion.grossRevenue ?? null,
+      totalCosts,
+      netProfit,
     },
   });
 }

@@ -267,9 +267,9 @@ Before considering the fix complete:
 ## 📚 Related Documentation
 
 - **Song Logic Unification**: See previous successful single source of truth implementation
-- **API Design Guidelines**: `/docs/02-architecture/api-design.md`
+- **API Design Guidelines**: `/docs/99-legacy/superseded-2026-07/api-design.md` (archived July 4, 2026)
 - **Database Design**: `/docs/02-architecture/database-design.md`
-- **Frontend Architecture**: `/docs/04-frontend/frontend-architecture.md`
+- **Frontend Architecture**: `/docs/99-legacy/superseded-2026-07/frontend-architecture.md` (archived July 4, 2026; see `client/CLAUDE.md` for current)
 
 ---
 

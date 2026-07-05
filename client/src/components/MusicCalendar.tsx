@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Music, Mic2, Clock } from 'lucide-react';
+import { Plus, Music, Mic2, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGameState } from '@/hooks/useGameState';
 import { useReleases } from '@/hooks/useReleases';
 import { useProjects } from '@/hooks/useProjects';
@@ -107,6 +107,21 @@ export function MusicCalendar({
 
   // Derive all 7 dates for the active week (Sunday-Saturday)
   const selectedWeekDates = useMemo(() => getWeekDates(activeSelectedWeek), [activeSelectedWeek, getWeekDates]);
+
+  // Step the week view to an adjacent week, clamped to [minWeek, maxWeek] to
+  // mirror how the month calendar's prev/next nav respects its bounds.
+  const stepWeek = useCallback((delta: number) => {
+    const target = activeSelectedWeek + delta;
+    if (target < minWeek || target > maxWeek) return;
+    if (selectionMode && onWeekSelect) {
+      onWeekSelect(target);
+    } else {
+      setInternalSelectedWeek(target);
+    }
+  }, [activeSelectedWeek, minWeek, maxWeek, selectionMode, onWeekSelect]);
+
+  const canStepPrev = activeSelectedWeek > minWeek;
+  const canStepNext = activeSelectedWeek < maxWeek;
 
   // Update internal selected week when current week changes (only in display mode)
   useEffect(() => {
@@ -625,12 +640,37 @@ export function MusicCalendar({
           {/* Events on the right (display mode) or Week info (selection mode) */}
           <div className="flex-1 basis-44 min-w-0 border-l border-white/[0.06] pl-4 flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
+              <div className="flex items-center gap-1 min-w-0">
+                {/* Week stepping controls — mirror the month calendar's prev/next nav */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => stepWeek(-1)}
+                  disabled={!canStepPrev}
+                  className="size-6 shrink-0 bg-transparent text-text-body hover:text-text-primary border-white/[0.12] rounded-button opacity-70 hover:opacity-100 disabled:opacity-30"
+                  title="Previous week"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="sr-only">Previous week</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => stepWeek(1)}
+                  disabled={!canStepNext}
+                  className="size-6 shrink-0 bg-transparent text-text-body hover:text-text-primary border-white/[0.12] rounded-button opacity-70 hover:opacity-100 disabled:opacity-30"
+                  title="Next week"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="sr-only">Next week</span>
+                </Button>
+                <WeekHeader week={activeSelectedWeek} dates={selectedWeekDates} />
+              </div>
               {!selectionMode && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-6 text-neon-cyan hover:text-neon-cyan hover:bg-neon-cyan/10 border border-neon-cyan/35 rounded-button"
+                  className="size-6 shrink-0 text-neon-cyan hover:text-neon-cyan hover:bg-neon-cyan/10 border border-neon-cyan/35 rounded-button"
                   title="Add Event"
                 >
                   <Plus className="h-4 w-4" />

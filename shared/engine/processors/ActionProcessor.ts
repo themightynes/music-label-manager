@@ -44,6 +44,54 @@ import type { WeekSummary } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
+import { seededRandom } from '../../utils/seededRandom';
+import {
+  getMoodModifiers,
+  applyMoodModifiersToEffects,
+  isNeutral,
+  type MoodModifiers,
+} from '../../utils/executiveMoodModifier';
+
+/**
+ * Effect keys that applyEffects's switch actually implements (PR-1, truth infrastructure).
+ * 'executive_mood' is intentionally excluded — it's read directly out of
+ * effects_immediate by processExecutiveActions (outside this switch) and legitimately
+ * never reaches applyEffects's per-key loop as a "live" key; see the default case below,
+ * which special-cases it so it doesn't trigger the unknown-key warning.
+ */
+export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
+  'money',
+  'reputation',
+  'creative_capital',
+  'artist_mood',
+  'artist_energy',
+  'artist_popularity',
+  // Exec-meetings-revival PR-3 (C2 — press/hype momentum channel):
+  'press_story_flag',
+  'press_momentum',
+  // Exec-meetings-revival PR-4 (C1 — next-release quality channel):
+  'quality_bonus',
+  // Exec-meetings-revival PR-5 (C3 — next-release awareness channel):
+  'awareness_boost',
+  // Exec-meetings-revival PR-6 (C4 — outcome variance/risk channel):
+  'variance_up',
+  'rep_swing',
+  // Exec-meetings-revival PR-7 (C5 — prestige/award track):
+  'award_chances'
+]);
+
+/**
+ * Playtest bug #1 fix (2026-07-04): the mood/loyalty deltas an executive meeting
+ * produces, returned by {@link ActionProcessor.processExecutiveActions} so the
+ * single 'meeting' change entry can carry them (instead of a duplicate
+ * 'executive_interaction' "Met with <slug>" row).
+ */
+export interface ExecutiveInteractionResult {
+  moodChange: number;
+  newMood: number;
+  loyaltyBoost: number;
+  newLoyalty: number;
+}
 
 export class ActionProcessor {
   /**
@@ -169,25 +217,74 @@ export class ActionProcessor {
       console.log(`[GAME-ENGINE] Global targeting: Effects will apply to all signed artists`);
     }
 
+    // Exec-meetings-revival PR-9 (C6/D) — executive-mood meeting-outcome modifier.
+    // HOIST the executive fetch ABOVE effect application so the exec's CURRENT mood
+    // can scale this meeting's numeric effects and delayed queue BEFORE they land.
+    // CEO meetings have no executive row → no modifier ever. The already-fetched
+    // executive is threaded into processExecutiveActions to avoid a double-fetch
+    // (its mood/loyalty update semantics stay byte-identical — see that method).
+    const executiveId = action.metadata?.executiveId;
+    const roleIdForExec = action.metadata?.roleId;
+    let executiveForMeeting: any = null;
+    if (roleIdForExec !== 'ceo' && executiveId) {
+      executiveForMeeting = await ctx.storage.getExecutive(executiveId, dbTransaction);
+    }
+
+    // Compute the mood modifiers (neutral no-op when no exec row / mood 30-80).
+    let moodModifiers: MoodModifiers | null = null;
+    if (executiveForMeeting && typeof executiveForMeeting.mood === 'number') {
+      const config = ctx.gameData.getExecMoodModifierConfigSync();
+      moodModifiers = getMoodModifiers(executiveForMeeting.mood, config);
+      if (!isNeutral(moodModifiers)) {
+        console.log(
+          `[EXEC MOOD MODIFIER] ${executiveForMeeting.role} mood ${executiveForMeeting.mood} → ` +
+          `band=${moodModifiers.band}, costMultiplier=${moodModifiers.costMultiplier}, ` +
+          `effectMultiplier=${moodModifiers.effectMultiplier}`
+        );
+      }
+    }
+    const modifierFired = moodModifiers != null && !isNeutral(moodModifiers);
+
     // Apply immediate effects
+    // Exec-meetings-revival PR-2: captured outside the `if` so the 'meeting' change
+    // entry below can carry the actual numeric effects passed to applyEffects, even
+    // when effects_immediate is empty (appliedEffects then stays {}).
+    const appliedEffects: Record<string, number> = {};
     if (choice.effects_immediate) {
       // Convert to Record<string, number> for applyEffects
-      const effects: Record<string, number> = {};
       for (const [key, value] of Object.entries(choice.effects_immediate)) {
         if (typeof value === 'number') {
-          effects[key] = value;
+          appliedEffects[key] = value;
         }
       }
-      await this.applyEffects(ctx, effects, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+      // PR-9: transform through the shared mood util BEFORE applyEffects so the
+      // scaled numbers are what actually land (and match the client Impact Preview,
+      // which routes the same util). Neutral/no-exec → identity transform.
+      const immediateToApply = moodModifiers
+        ? applyMoodModifiersToEffects(appliedEffects, moodModifiers)
+        : appliedEffects;
+      // Reflect the scaled numbers in the summary too.
+      if (moodModifiers) {
+        for (const key of Object.keys(appliedEffects)) {
+          appliedEffects[key] = immediateToApply[key];
+        }
+      }
+      await this.applyEffects(ctx, immediateToApply, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
     }
 
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
     if (choice.effects_delayed) {
       const flags = ctx.gameState.flags || {};
-      const delayedKey = `${action.targetId}-${action.details?.choiceId}-delayed`;
+      const delayedKey = `${action.targetId}-${choiceId}-delayed`;
+      // PR-9: scale delayed effects AT QUEUE TIME so the stored flag entry holds the
+      // already-scaled values — downstream consumption (processDelayedEffects) stays
+      // untouched and never needs to know about mood.
+      const delayedEffects = moodModifiers
+        ? applyMoodModifiersToEffects(choice.effects_delayed as Record<string, number>, moodModifiers)
+        : choice.effects_delayed;
       (flags as any)[delayedKey] = {
         triggerWeek: (ctx.gameState.currentWeek || 0) + 1,
-        effects: choice.effects_delayed,
+        effects: delayedEffects,
         artistId: targetArtistId, // Preserve artist targeting for delayed effects
         targetScope: targetScope, // Preserve scope for validation
         meetingName: meetingName, // Preserve context for logging
@@ -198,7 +295,8 @@ export class ActionProcessor {
 
     // Process executive-specific updates (mood, loyalty)
     // This happens after choice effects are applied
-    // Pass choice data so we can extract mood effects
+    // Pass choice data so we can extract mood effects, and the ALREADY-FETCHED
+    // executive (PR-9) so processExecutiveActions doesn't re-fetch the row.
     const actionWithChoice = {
       ...action,
       metadata: {
@@ -206,13 +304,105 @@ export class ActionProcessor {
         choiceEffects: choice
       }
     };
-    await this.processExecutiveActions(ctx, actionWithChoice, dbTransaction);
+    // Playtest bug #1 fix: capture the exec mood/loyalty deltas instead of letting
+    // processExecutiveActions push its own duplicate 'executive_interaction' row.
+    const execResult = await this.processExecutiveActions(ctx, actionWithChoice, dbTransaction, executiveForMeeting);
+
+    // Playtest bug #7 fix: the player IS the CEO, so "Met with CEO" is nonsensical.
+    // Frame a CEO meeting as a solo executive decision rather than a meeting with
+    // a hired executive. Non-CEO meetings keep the "Met with <role>" copy.
+    const isCeoMeeting = roleId === 'ceo';
+    const baseDescription = isCeoMeeting ? 'Executive strategy decision' : `Met with ${roleName}`;
 
     summary.changes.push({
       type: 'meeting',
-      description: `Met with ${roleName}`,
-      roleId: roleId
+      description: modifierFired
+        ? `${baseDescription} — ${this.moodBandDescription(moodModifiers!, executiveForMeeting)}`
+        : baseDescription,
+      roleId: roleId,
+      // Exec-meetings-revival PR-2: enrichment so the WeekSummary meetings card has
+      // real content — which meeting, which choice, and what it actually did.
+      meetingId: actionId,
+      choiceId: choiceId,
+      choiceLabel: (choice as any).label,
+      appliedEffects,
+      // Playtest bug #1 fix: fold the exec mood/loyalty deltas onto this single
+      // 'meeting' entry (CEO meetings have no executive → execResult is null).
+      ...(execResult
+        ? {
+            moodChange: execResult.moodChange,
+            newMood: execResult.newMood,
+            loyaltyBoost: execResult.loyaltyBoost,
+            newLoyalty: execResult.newLoyalty,
+          }
+        : {}),
+      // Exec-meetings-revival PR-9: carry the mood-modifier context so the
+      // WeekSummary meetings card can note it fired. Optional/additive.
+      ...(modifierFired
+        ? {
+            moodBand: moodModifiers!.band,
+            costMultiplier: moodModifiers!.costMultiplier,
+            effectMultiplier: moodModifiers!.effectMultiplier,
+          }
+        : {})
     });
+  }
+
+  /**
+   * Exec-meetings-revival PR-9 — human copy for a fired mood modifier, used in the
+   * 'meeting' change description. Kept out of the shared util (that stays pure/data)
+   * because it's engine-facing prose.
+   */
+  private moodBandDescription(modifiers: MoodModifiers, executive: any): string {
+    const name = executive?.role ? String(executive.role).toUpperCase() : 'The exec';
+    switch (modifiers.band) {
+      case 'inspired':
+        return `${name} was inspired — effects amplified ${Math.round((modifiers.effectMultiplier - 1) * 100)}%`;
+      case 'content':
+        return `${name} was content — costs cut ${Math.round((1 - modifiers.costMultiplier) * 100)}%`;
+      case 'disgruntled':
+        return `${name} was disgruntled — costs up ${Math.round((modifiers.costMultiplier - 1) * 100)}%`;
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Playtest bug #3 fix (2026-07-04): builds a descriptive label for a delayed-effect
+   * payoff instead of the bare "Delayed effect triggered" placeholder. Resolves the
+   * originating meeting's human name and, when available, the chosen option's label
+   * from the delayed-effect flag's stored context (meetingName = actionId, choiceId).
+   * Falls back gracefully when the meeting/choice can't be resolved (e.g. dialogue
+   * scenes, or legacy flags missing context) so a payoff is never left unlabeled.
+   */
+  private async describeDelayedEffect(
+    ctx: WeekContext,
+    meetingName: string | undefined,
+    choiceId: string | undefined
+  ): Promise<string> {
+    let meetingLabel: string | undefined;
+    let choiceLabel: string | undefined;
+
+    if (meetingName) {
+      try {
+        const actionData = await ctx.gameData.getActionById(meetingName);
+        meetingLabel = actionData?.name;
+        if (choiceId) {
+          const choice = await ctx.gameData.getChoiceById(meetingName, choiceId);
+          choiceLabel = (choice as any)?.label;
+        }
+      } catch {
+        // Resolution is best-effort — fall through to the generic label below.
+      }
+    }
+
+    if (meetingLabel && choiceLabel) {
+      return `Delayed effect: ${meetingLabel} — ${choiceLabel}`;
+    }
+    if (meetingLabel) {
+      return `Delayed effect: ${meetingLabel}`;
+    }
+    return 'Delayed effect triggered';
   }
 
   /**
@@ -222,20 +412,32 @@ export class ActionProcessor {
   async processExecutiveActions(
     ctx: WeekContext,
     action: GameEngineAction,
-    dbTransaction?: any
-  ): Promise<void> {
+    dbTransaction?: any,
+    // Exec-meetings-revival PR-9: the caller (processRoleMeeting) already fetched the
+    // executive row (to compute the mood modifier BEFORE effects landed) — thread it
+    // in to avoid a redundant second getExecutive round-trip. When omitted (direct
+    // callers/tests), we fall back to fetching, so behavior is byte-identical to before.
+    prefetchedExecutive?: any
+  ): Promise<ExecutiveInteractionResult | null> {
+    // Playtest bug #1 fix (2026-07-04): this method NO LONGER pushes its own
+    // 'executive_interaction' "Met with <slug>" change. That produced a DUPLICATE
+    // meeting row in the WeekSummary meetings card — one entry with the raw role
+    // slug (e.g. "head_ar") carrying the real +Mood/+Loyalty deltas, and a second
+    // "Met with Head of A&R" (the 'meeting' entry) carrying only the choice effects.
+    // Instead it RETURNS the mood/loyalty deltas so the single 'meeting' change
+    // pushed by processRoleMeeting can carry them, and the exec updates still persist.
     const { summary } = ctx;
     // Skip CEO meetings - player IS the CEO, no executive to update
     const roleId = action.metadata?.roleId;
     if (roleId === 'ceo') {
       console.log('[GAME-ENGINE] CEO meeting - player is the CEO, no executive to update');
-      return;
+      return null;
     }
 
     const executiveId = action.metadata?.executiveId;
     if (!executiveId) {
       console.log('[GAME-ENGINE] No executiveId in action metadata, skipping executive processing');
-      return;
+      return null;
     }
 
     console.log('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
@@ -243,11 +445,11 @@ export class ActionProcessor {
     // Track that this executive was used this week
     (summary as any).usedExecutives.add(executiveId);
 
-    // Get executive from database
-    const executive = await ctx.storage.getExecutive(executiveId, dbTransaction);
+    // Get executive from database (PR-9: reuse the caller's fetch when provided).
+    const executive = prefetchedExecutive ?? await ctx.storage.getExecutive(executiveId, dbTransaction);
     if (!executive) {
       console.log('[GAME-ENGINE] Executive not found:', executiveId);
-      return;
+      return null;
     }
 
     console.log('[GAME-ENGINE] Current executive state:', {
@@ -295,17 +497,12 @@ export class ActionProcessor {
       dbTransaction
     );
 
-    // Add to summary for UI feedback
-    summary.changes.push({
-      type: 'executive_interaction',
-      description: `Met with ${executive.role}`,
-      moodChange,
-      newMood,
-      loyaltyBoost: 5,
-      newLoyalty
-    });
-
     console.log('[GAME-ENGINE] Executive updated successfully');
+
+    // Playtest bug #1 fix: return the deltas for processRoleMeeting to fold into
+    // the single 'meeting' change entry, instead of pushing a duplicate
+    // 'executive_interaction' "Met with <slug>" row here.
+    return { moodChange, newMood, loyaltyBoost: 5, newLoyalty };
   }
 
   /**
@@ -541,6 +738,204 @@ export class ActionProcessor {
             }
           });
           break;
+
+        case 'press_story_flag': {
+          // Exec-meetings-revival PR-3 (C2) — one-shot boolean. Any positive authored
+          // value sets the flag; it is consumed (and cleared) by the next release's
+          // press roll in ReleaseProcessor/FinancialSystem.calculatePressPickups.
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          if (value > 0) {
+            flags.pressStoryFlag = true;
+            // Phase B fix-2: stamp for the expiry check in processDelayedEffects.
+            flags.pressStoryFlagWeek = ctx.gameState.currentWeek || 0;
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: 'Press story queued — next release gets a story angle boost',
+              amount: 0,
+              appliedEffects: { press_story_flag: 1 }
+            });
+            console.log('[EFFECT PROCESSING] press_story_flag set (flags.pressStoryFlag = true)');
+          } else {
+            console.log(`[EFFECT PROCESSING] press_story_flag effect with non-positive value (${value}) ignored`);
+          }
+          break;
+        }
+
+        case 'quality_bonus': {
+          // Exec-meetings-revival PR-4 (C1) — next-release quality channel. Signed
+          // points bank into flags.pendingQualityBonus; consumed as an ADDITIVE
+          // post-formula bonus (then clamped) by every song generated in the week
+          // that first consumes it (SongGenerationProcessor.calculateEnhancedSongQuality
+          // + the zero-out in processRecordingProjects). Stamps pendingQualityBonusWeek
+          // so processDelayedEffects can expire an unconsumed bank after N weeks
+          // (pending_quality_bonus_expiry_weeks, data/balance/quality.json).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pendingQualityBonus === 'number' ? flags.pendingQualityBonus : 0;
+          flags.pendingQualityBonus = previous + value;
+          flags.pendingQualityBonusWeek = ctx.gameState.currentWeek || 0;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Studio focus ${value > 0 ? 'banked' : 'cost'} ${value > 0 ? '+' : ''}${value} quality for the next recording session`,
+            amount: value,
+            appliedEffects: { quality_bonus: value }
+          });
+          console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingQualityBonus}, stamped week ${flags.pendingQualityBonusWeek})`);
+          break;
+        }
+
+        case 'awareness_boost': {
+          // Exec-meetings-revival PR-5 (C3) — next-release awareness channel. Signed
+          // authored points bank into flags.pendingAwarenessBoost; consumed at a
+          // planned release's release-week path (ReleaseProcessor.processPlannedReleases
+          // / the lead-single path), where each released song's INITIAL awareness is
+          // seeded by pendingAwarenessBoost × awareness_boost_points_per_unit (×8),
+          // clamped at 0 (a negative pool suppresses discovery but never drives
+          // awareness below zero), then the pool zeroes. Riding the live awareness
+          // economy, that seed multiplies weekly streams up to 2× (weeks 1-4 build path
+          // + the awareness stream multiplier). Stamps pendingAwarenessBoostWeek so
+          // processDelayedEffects can expire an unconsumed bank after N weeks
+          // (pending_awareness_boost_expiry_weeks, data/balance/markets.json).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pendingAwarenessBoost === 'number' ? flags.pendingAwarenessBoost : 0;
+          flags.pendingAwarenessBoost = previous + value;
+          flags.pendingAwarenessBoostWeek = ctx.gameState.currentWeek || 0;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Buzz ${value > 0 ? 'building' : 'cooling'} for the next release (${value > 0 ? '+' : ''}${value})`,
+            amount: value,
+            appliedEffects: { awareness_boost: value }
+          });
+          console.log(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingAwarenessBoost}, stamped week ${flags.pendingAwarenessBoostWeek})`);
+          break;
+        }
+
+        case 'variance_up': {
+          // Exec-meetings-revival PR-6 (C4) — outcome variance/risk channel. Signed
+          // points bank into flags.pendingVariance; consumed by the next song(s)
+          // generated (SongGenerationProcessor.calculateEnhancedSongQuality widens
+          // baseVarianceRange and raises the outlier-roll thresholds using this
+          // pool), then zeroed in processRecordingProjects (mirrors PR-4's quality
+          // bank exactly — same songsGeneratedThisWeek gating). Stamps
+          // pendingVarianceWeek so processDelayedEffects can expire an unconsumed
+          // bank after pending_variance_expiry_weeks (data/balance/quality.json).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pendingVariance === 'number' ? flags.pendingVariance : 0;
+          flags.pendingVariance = previous + value;
+          flags.pendingVarianceWeek = ctx.gameState.currentWeek || 0;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Outcomes ${value > 0 ? 'more volatile' : 'more predictable'} for the next recording session (${value > 0 ? '+' : ''}${value})`,
+            amount: value,
+            appliedEffects: { variance_up: value }
+          });
+          console.log(`[EFFECT PROCESSING] variance_up effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingVariance}, stamped week ${flags.pendingVarianceWeek})`);
+          break;
+        }
+
+        case 'rep_swing': {
+          // Exec-meetings-revival PR-6 (C4) — immediate reputation gamble. Resolves
+          // RIGHT HERE via an ISOLATED deterministic seeded roll (shared/utils/
+          // seededRandom.ts) — NOT ctx.getRandom, so the engine's pinned RNG stream
+          // and its draw count are completely undisturbed by this effect. The
+          // authored value is the magnitude of the gamble; the roll maps to a
+          // uniform integer in [-value, +value] and is applied to reputation with
+          // the same 0-100 clamp the 'reputation' case above uses.
+          const gameId = ctx.gameState.id || 'unknown-game';
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const seed = `${gameId}-week${currentWeek}-repswing-${meetingName || 'unknown-meeting'}-${choiceId || 'unknown-choice'}`;
+          const magnitude = Math.abs(value);
+          const roll = seededRandom(seed); // [0, 1)
+          // Map [0,1) to a uniform integer in [-magnitude, +magnitude] (2*magnitude+1 buckets).
+          const rolledValue = magnitude === 0
+            ? 0
+            : Math.floor(roll * (2 * magnitude + 1)) - magnitude;
+
+          const previousReputation = ctx.gameState.reputation || 0;
+          ctx.gameState.reputation = Math.max(0, Math.min(100, previousReputation + rolledValue));
+
+          if (!summary.reputationChanges) {
+            summary.reputationChanges = {};
+          }
+          summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + rolledValue;
+
+          const outcomeLabel = rolledValue > 0
+            ? `paid off: +${rolledValue} reputation`
+            : rolledValue < 0
+              ? `backfired: ${rolledValue} reputation`
+              : `was a wash: no reputation change`;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Reputation gamble ${outcomeLabel}`,
+            amount: rolledValue,
+            appliedEffects: { rep_swing: rolledValue }
+          });
+          console.log(`[EFFECT PROCESSING] rep_swing effect: gambled ±${magnitude}, rolled ${rolledValue > 0 ? '+' : ''}${rolledValue} (seed: ${seed})`);
+          break;
+        }
+
+        case 'award_chances': {
+          // Exec-meetings-revival PR-7 (C5) — prestige/award track. Signed points
+          // accumulate into flags.awardChances with NO expiry and NO decay — this
+          // is the one channel that intentionally banks forever, persisting to
+          // campaign end (award season). Consumed by AchievementsEngine's
+          // campaign-end award roll (isolated seeded RNG, see AchievementsEngine.ts)
+          // — there is no weekly consumer, unlike every other bank in this file.
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.awardChances === 'number' ? flags.awardChances : 0;
+          flags.awardChances = previous + value;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: value > 0
+              ? 'Industry standing growing — award season will remember'
+              : 'Industry standing took a hit — award season will remember',
+            amount: value,
+            appliedEffects: { award_chances: value }
+          });
+          console.log(`[EFFECT PROCESSING] award_chances effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.awardChances})`);
+          break;
+        }
+
+        case 'press_momentum': {
+          // Exec-meetings-revival PR-3 (C2) — decaying pool. Accumulates across
+          // meetings; feeds a small additive bonus to press-pickup chance and decays
+          // −1/week toward 0 (see ActionProcessor.processDelayedEffects for the decay).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = typeof flags.pressMomentum === 'number' ? flags.pressMomentum : 0;
+          flags.pressMomentum = previous + value;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `Press buzz ${value > 0 ? 'building' : 'cooling'} (${value > 0 ? '+' : ''}${value})`,
+            amount: value,
+            appliedEffects: { press_momentum: value }
+          });
+          console.log(`[EFFECT PROCESSING] press_momentum effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pressMomentum})`);
+          break;
+        }
+
+        default:
+          // MISSING: unknown/unimplemented effect key encountered by applyEffects (PR-1 truth
+          // infrastructure). 'executive_mood' is deliberately silent here — it's consumed
+          // directly out of effects_immediate by processExecutiveActions, not via this switch.
+          if (key !== 'executive_mood') {
+            console.warn(
+              `[EFFECT VALIDATION] Unknown effect key "${key}" (value: ${value}) dropped` +
+              `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}${targetScope ? `, scope: ${targetScope}` : ''}`
+            );
+          }
+          break;
       }
     }
   }
@@ -556,6 +951,26 @@ export class ActionProcessor {
       const clamp = (value: number, min: number, max: number): number => {
         return Math.max(min, Math.min(max, value));
       };
+
+      // Exec-meetings-revival Phase B fix-2 — press_momentum weekly decay runs
+      // BEFORE this week's triggered delayed effects apply. Decay-after-apply
+      // eroded freshly-landed momentum in the same call: a +1 authored value
+      // (cmo_pr_angle/safe) applied here and decayed to 0 six lines later, so it
+      // could never influence any press roll (which run earlier in the weekly
+      // pipeline) — the exact silent-no-op problem this revival exists to fix.
+      // With decay-first, momentum landing this week survives to be read by next
+      // week's press rolls and then decays. Decays 1/week TOWARD 0 from either
+      // side (daf7cfe): negative scandal fallout fades over |m| weeks, symmetric
+      // with positive buzz.
+      if (typeof flags.pressMomentum === 'number' && flags.pressMomentum !== 0) {
+        const decayed = flags.pressMomentum > 0
+          ? Math.max(0, flags.pressMomentum - 1)
+          : Math.min(0, flags.pressMomentum + 1);
+        if (decayed !== flags.pressMomentum) {
+          console.log(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
+        }
+        flags.pressMomentum = decayed;
+      }
 
       for (const [key, value] of Object.entries(flags)) {
         if (
@@ -589,16 +1004,35 @@ export class ActionProcessor {
               // Apply delayed effects with artist targeting and context
               await this.applyEffects(ctx, delayedEffectsRecord, artistId, targetScope, meetingName, choiceId);
 
+              // Playtest bug #3 fix: descriptive label (which meeting + choice)
+              // instead of the bare "Delayed effect triggered for artist X".
+              const description = await this.describeDelayedEffect(ctx, meetingName, choiceId);
               summary.changes.push({
                 type: 'delayed_effect',
-                description: `Delayed effect triggered for artist ${artistId}`
+                description,
+                // Exec-meetings-revival PR-2: mirror the meeting/choice context onto
+                // the delayed-effect entry — already available on the flag payload.
+                meetingId: meetingName,
+                choiceId: choiceId,
+                appliedEffects: delayedEffectsRecord
               });
             } else {
               // Old-style delayed effect (global, no scope validation)
-              await this.applyEffects(ctx, (value as any).effects || {}, undefined, undefined);
+              const globalEffects = (value as any).effects || {};
+              await this.applyEffects(ctx, globalEffects, undefined, undefined);
+              // Playtest bug #3 fix: descriptive label instead of bare
+              // "Delayed effect triggered".
+              const description = await this.describeDelayedEffect(
+                ctx,
+                (value as any).meetingName,
+                (value as any).choiceId
+              );
               summary.changes.push({
                 type: 'delayed_effect',
-                description: 'Delayed effect triggered'
+                description,
+                meetingId: (value as any).meetingName,
+                choiceId: (value as any).choiceId,
+                appliedEffects: globalEffects
               });
             }
           } finally {
@@ -610,6 +1044,78 @@ export class ActionProcessor {
       // Remove triggered delayed-effect entries while preserving other flags (like A&R discovery)
       for (const key of triggeredKeys) {
         delete flags[key];
+      }
+
+      // (press_momentum decay moved ABOVE the triggered-entry loop — Phase B
+      // fix-2; see the comment there.)
+
+      // Exec-meetings-revival Phase B fix-2 — pressStoryFlag expiry. A story flag
+      // is only consumed by a release press roll with marketing budget > 0, so an
+      // unconsumed flag could otherwise be banked indefinitely (verifier find;
+      // quality/awareness banks both got expiry knobs, the press flag didn't).
+      // Same stamp-based pattern; knob lives with the press config.
+      if (flags.pressStoryFlag === true) {
+        const stampedWeek = typeof flags.pressStoryFlagWeek === 'number' ? flags.pressStoryFlagWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getPressConfigSync().press_story_flag_expiry_weeks ?? 8;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[PRESS STORY] Expired unconsumed story flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pressStoryFlag = false;
+          delete flags.pressStoryFlagWeek;
+        }
+      }
+
+      // Exec-meetings-revival PR-4 (C1) — pendingQualityBonus expiry. If a banked
+      // quality bonus goes unconsumed (no song generation cleared it — see
+      // SongGenerationProcessor.processRecordingProjects) for
+      // pending_quality_bonus_expiry_weeks weeks after it was stamped, drop it so
+      // players can't bank indefinitely. Same once-per-week home as the press
+      // momentum decay above.
+      if (typeof flags.pendingQualityBonus === 'number' && flags.pendingQualityBonus !== 0) {
+        const stampedWeek = typeof flags.pendingQualityBonusWeek === 'number' ? flags.pendingQualityBonusWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getQualityBonusConfigSync().pending_quality_bonus_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[QUALITY BONUS] Expired unconsumed bonus (${flags.pendingQualityBonus}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pendingQualityBonus = 0;
+          delete flags.pendingQualityBonusWeek;
+        }
+      }
+
+      // Exec-meetings-revival PR-5 (C3) — pendingAwarenessBoost expiry. If a banked
+      // awareness boost goes unconsumed (no planned release seeded from it — see
+      // ReleaseProcessor.processPlannedReleases) for
+      // pending_awareness_boost_expiry_weeks weeks after it was stamped, drop it so
+      // players can't bank indefinitely. Same expiry pattern as the PR-4 quality
+      // bank above; expiry (not decay) keeps the semantics consistent with C1.
+      if (typeof flags.pendingAwarenessBoost === 'number' && flags.pendingAwarenessBoost !== 0) {
+        const stampedWeek = typeof flags.pendingAwarenessBoostWeek === 'number' ? flags.pendingAwarenessBoostWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getAwarenessBoostConfigSync().pending_awareness_boost_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[AWARENESS BOOST] Expired unconsumed boost (${flags.pendingAwarenessBoost}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pendingAwarenessBoost = 0;
+          delete flags.pendingAwarenessBoostWeek;
+        }
+      }
+
+      // Exec-meetings-revival PR-6 (C4) — pendingVariance expiry. If a banked
+      // variance-widen pool goes unconsumed (no song generation cleared it — see
+      // SongGenerationProcessor.processRecordingProjects) for
+      // pending_variance_expiry_weeks weeks after it was stamped, drop it so
+      // players can't bank indefinitely. Same expiry pattern as the PR-4/PR-5
+      // banks above; runs AFTER the triggered-entry loop so a variance_up that
+      // just landed via a delayed effect this week survives to be read by this
+      // week's song generation (2b6f28e ordering lesson).
+      if (typeof flags.pendingVariance === 'number' && flags.pendingVariance !== 0) {
+        const stampedWeek = typeof flags.pendingVarianceWeek === 'number' ? flags.pendingVarianceWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getVarianceConfigSync().pending_variance_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[VARIANCE] Expired unconsumed variance pool (${flags.pendingVariance}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pendingVariance = 0;
+          delete flags.pendingVarianceWeek;
+        }
       }
 
       ctx.gameState.flags = flags;
@@ -657,15 +1163,23 @@ export class ActionProcessor {
     let effectDescription = '';
 
     switch (marketingType) {
-      case 'pr_push':
-        // PR campaigns improve press pickup chances
+      case 'pr_push': {
+        // PR campaigns improve press pickup chances.
+        // Exec-meetings-revival PR-3 (C2): press_momentum feeds this roll's chance
+        // too (it's a real press-pickup draw). The one-shot pressStoryFlag is
+        // deliberately NOT read/cleared here — its single consumer is the next
+        // release's press roll (ReleaseProcessor.calculatePressOutcome), so a
+        // player can't burn the flag early on an unrelated PR-push action.
+        const pressFlags = (ctx.gameState.flags || {}) as Record<string, any>;
+        const pressMomentumForPush = typeof pressFlags.pressMomentum === 'number' ? pressFlags.pressMomentum : 0;
         const pressPickups = ctx.financialSystem.calculatePressPickups(
           ctx.gameState.pressAccess || 'none',
           campaignCost,
           ctx.gameState.reputation || 0,
           false,
           () => ctx.getRandom(0, 1),
-          ctx.financialSystem.getAccessChance.bind(ctx.financialSystem)
+          ctx.financialSystem.getAccessChance.bind(ctx.financialSystem),
+          pressMomentumForPush
         );
         if (pressPickups > 0) {
           ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + pressPickups);
@@ -676,6 +1190,7 @@ export class ActionProcessor {
           effectDescription = 'PR campaign completed - limited media pickup';
         }
         break;
+      }
 
       case 'digital_ads':
         // Digital ads improve streaming potential

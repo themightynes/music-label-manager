@@ -103,6 +103,16 @@ export function classifyChange(
       return magnitude >= reputationThreshold ? 'notable' : 'routine';
     }
 
+    // Executive loyalty DECAY (the player ignored an exec for 3+ weeks) is a
+    // warning worth surfacing above the routine churn — it is the first time
+    // this feedback loop becomes visible to the player (case-file §2/§6d).
+    // Discriminated via the explicit `loyaltyChange` field (ArtistStateProcessor),
+    // not the description string: only the decay push sets it, and always < 0
+    // (the "Met with X" interaction entry carries loyaltyBoost/newLoyalty instead,
+    // always positive; the natural mood-drift entry carries neither field).
+    case 'executive_interaction':
+      return (change.loyaltyChange ?? 0) < 0 ? 'notable' : 'routine';
+
     // --- ROUTINE: ordinary weekly churn ----------------------------------
     case 'revenue':
     case 'ongoing_revenue':
@@ -110,7 +120,6 @@ export function classifyChange(
     case 'expense_tracking':
     case 'marketing':
     case 'meeting':
-    case 'executive_interaction':
     case 'delayed_effect':
     case 'mood':
     case 'popularity':

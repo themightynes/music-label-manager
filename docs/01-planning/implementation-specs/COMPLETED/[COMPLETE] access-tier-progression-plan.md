@@ -115,7 +115,7 @@ The **Access Tier Progression System** provides reputation-based unlocking of in
 
 #### **5. API Integration (COMPLETE)**
 - **File**: `/server/routes.ts` - Game state responses include tier fields
-- **File**: `/docs/02-architecture/api-design.md` lines 127-129 - API specification includes tier fields
+- **File**: `/docs/99-legacy/superseded-2026-07/api-design.md` lines 127-129 - API specification includes tier fields (doc archived July 4, 2026)
 - **Status**: ✅ Proper serialization and deserialization
 
 ---
@@ -545,7 +545,7 @@ The Access Tier Progression System is now **fully integrated** with all game sys
 
 ### **Architecture Documents**
 - **Database Design**: `/docs/02-architecture/database-design.md` lines 58-61
-- **API Design**: `/docs/02-architecture/api-design.md` lines 127-129
+- **API Design**: `/docs/99-legacy/superseded-2026-07/api-design.md` lines 127-129 (archived July 4, 2026)
 - **System Architecture**: `/docs/02-architecture/system-architecture.md` lines 135-204
 
 ### **Implementation Files**

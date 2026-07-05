@@ -472,17 +472,126 @@ export class ServerGameData {
         pr_spend_modifier: 0.001,
         reputation_modifier: 0.008,
         story_flag_bonus: 0.30,
-        max_pickups_per_release: 8
+        max_pickups_per_release: 8,
+        // Exec-meetings-revival PR-3 (C2): press_momentum chance-per-point knob.
+        press_momentum_chance_per_point: 0.02,
+        // Phase B fix-2: unconsumed story flags expire like the quality/awareness banks.
+        press_story_flag_expiry_weeks: 8
       };
     }
-    
+
     const press = this.balanceData.market_formulas.press_coverage;
     return {
       base_chance: press.base_chance,
       pr_spend_modifier: press.pr_spend_modifier,
       reputation_modifier: press.reputation_modifier,
       story_flag_bonus: press.story_flag_bonus,
-      max_pickups_per_release: press.max_pickups_per_release
+      max_pickups_per_release: press.max_pickups_per_release,
+      press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02,
+      press_story_flag_expiry_weeks: press.press_story_flag_expiry_weeks ?? 8
+    };
+  }
+
+  // Exec-meetings-revival PR-4 (C1): pending-quality-bonus expiry knob.
+  getQualityBonusConfigSync() {
+    if (!this.balanceData) {
+      return {
+        pending_quality_bonus_expiry_weeks: 8
+      };
+    }
+
+    const qualitySystem = (this.balanceData.quality_system || {}) as Record<string, any>;
+    return {
+      pending_quality_bonus_expiry_weeks: qualitySystem.pending_quality_bonus_expiry_weeks ?? 8
+    };
+  }
+
+  // Exec-meetings-revival PR-5 (C3): awareness-boost consumption + expiry knobs.
+  // Lives in data/balance/markets.json under market_formulas.awareness_system.
+  getAwarenessBoostConfigSync() {
+    if (!this.balanceData) {
+      return {
+        awareness_boost_points_per_unit: 8,
+        pending_awareness_boost_expiry_weeks: 8
+      };
+    }
+
+    const awareness = (this.balanceData.market_formulas?.awareness_system || {}) as Record<string, any>;
+    return {
+      awareness_boost_points_per_unit: awareness.awareness_boost_points_per_unit ?? 8,
+      pending_awareness_boost_expiry_weeks: awareness.pending_awareness_boost_expiry_weeks ?? 8
+    };
+  }
+
+  // Exec-meetings-revival PR-6 (C4): variance-channel knobs — how much a banked
+  // pendingVariance point widens the next song's variance band and raises the
+  // outlier-roll chance, plus its unconsumed-bank expiry (same pattern as C1).
+  getVarianceConfigSync() {
+    if (!this.balanceData) {
+      return {
+        variance_widen_per_point: 0.5,
+        outlier_chance_bonus_per_point: 0.02,
+        pending_variance_expiry_weeks: 8
+      };
+    }
+
+    const qualitySystem = (this.balanceData.quality_system || {}) as Record<string, any>;
+    return {
+      variance_widen_per_point: qualitySystem.variance_widen_per_point ?? 0.5,
+      outlier_chance_bonus_per_point: qualitySystem.outlier_chance_bonus_per_point ?? 0.02,
+      pending_variance_expiry_weeks: qualitySystem.pending_variance_expiry_weeks ?? 8
+    };
+  }
+
+  // Exec-meetings-revival PR-7 (C5): award-track knobs — how a banked
+  // flags.awardChances pool converts into a campaign-end award-roll chance
+  // (capped) and the score bonus a win adds to AchievementsEngine's total.
+  // Lives in data/balance/progression.json under reputation_system.
+  getAwardConfigSync() {
+    if (!this.balanceData) {
+      return {
+        award_chance_per_point: 0.08,
+        award_chance_cap: 0.8,
+        award_score_bonus: 2000,
+        award_nominee_pool_threshold: 5
+      };
+    }
+
+    const reputationSystem = (this.balanceData.reputation_system || {}) as Record<string, any>;
+    return {
+      award_chance_per_point: reputationSystem.award_chance_per_point ?? 0.08,
+      award_chance_cap: reputationSystem.award_chance_cap ?? 0.8,
+      award_score_bonus: reputationSystem.award_score_bonus ?? 2000,
+      award_nominee_pool_threshold: reputationSystem.award_nominee_pool_threshold ?? 5
+    };
+  }
+
+  // Exec-meetings-revival PR-9 (C6/D) — executive-mood meeting-outcome modifiers.
+  // Band boundaries + cost/effect multipliers. Lives in data/balance/progression.json
+  // under reputation_system.exec_mood_modifiers. The SHARED util
+  // (shared/utils/executiveMoodModifier.ts) is the single source of the math; this
+  // accessor just feeds it the balance-tuned knobs (both engine and client preview
+  // route through the same util so they can never drift).
+  getExecMoodModifierConfigSync() {
+    const defaults = {
+      disgruntled_below: 30,
+      content_above: 80,
+      inspired_above: 90,
+      cost_multiplier_disgruntled: 1.25,
+      cost_multiplier_content: 0.9,
+      effect_multiplier_inspired: 1.2
+    };
+    if (!this.balanceData) {
+      return defaults;
+    }
+    const cfg = ((this.balanceData.reputation_system || {}) as Record<string, any>).exec_mood_modifiers || {};
+    return {
+      disgruntled_below: cfg.disgruntled_below ?? defaults.disgruntled_below,
+      content_above: cfg.content_above ?? defaults.content_above,
+      inspired_above: cfg.inspired_above ?? defaults.inspired_above,
+      cost_multiplier_disgruntled: cfg.cost_multiplier_disgruntled ?? defaults.cost_multiplier_disgruntled,
+      cost_multiplier_content: cfg.cost_multiplier_content ?? defaults.cost_multiplier_content,
+      effect_multiplier_inspired: cfg.effect_multiplier_inspired ?? defaults.effect_multiplier_inspired
     };
   }
 

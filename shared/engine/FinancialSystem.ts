@@ -155,6 +155,38 @@ export class VenueCapacityManager {
     return { min, max };
   }
 
+  /**
+   * Playtest #8 / C67: the capacity range a player may BOOK at, given their
+   * current (highest-unlocked) venue tier. Unlocking a higher tier raises the
+   * CEILING but keeps the FLOOR at the smallest real venue, so a big label can
+   * still book a small show for a new artist rather than being forced into an
+   * oversized venue. Floor = the smallest capacity_range[0] among all unlocked,
+   * bookable tiers (every tier whose threshold <= the current tier's, EXCLUDING
+   * 'none' — 'none' is un-bookable; the server rejects venueAccess==='none'
+   * outright). Max = the current tier's own ceiling.
+   *
+   * Distinct from getCapacityRangeFromTier (a single tier's OWN band), which
+   * auto/legacy tour capacity generation still uses — only booking validation and
+   * the player-facing slider range route through this wider booking range.
+   */
+  static getBookingRangeForTier(currentTier: string, gameData: any): {min: number, max: number} {
+    const venueAccess = gameData.getAccessTiersSync().venue_access;
+    const currentConfig = venueAccess[currentTier];
+    if (!currentConfig?.capacity_range) {
+      throw new Error(`Invalid venue tier: ${currentTier}. Available: ${Object.keys(venueAccess)}`);
+    }
+    const currentThreshold = currentConfig.threshold ?? 0;
+    const bookableMins = Object.entries(venueAccess)
+      .filter(([name, cfg]: [string, any]) =>
+        name !== 'none' &&
+        (cfg?.threshold ?? 0) <= currentThreshold &&
+        Array.isArray(cfg?.capacity_range))
+      .map(([, cfg]: [string, any]) => cfg.capacity_range[0]);
+    const min = bookableMins.length ? Math.min(...bookableMins) : currentConfig.capacity_range[0];
+    const max = currentConfig.capacity_range[1];
+    return { min, max };
+  }
+
   static generateCapacityFromTier(tier: string, gameData: any, rng: () => number): number {
     const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(tier, gameData);
     return Math.round(min + (rng() * (max - min)));
@@ -171,9 +203,13 @@ export class VenueCapacityManager {
     }
 
     if (tier) {
-      const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(tier, gameData);
+      // #8/C67: validate against the BOOKING range (floor = smallest bookable
+      // tier min, ceiling = current tier max), not the current tier's own band —
+      // an unlocked label may book smaller shows than its top tier, down to the
+      // smallest real venue.
+      const { min, max } = VenueCapacityManager.getBookingRangeForTier(tier, gameData);
       if (capacity < min || capacity > max) {
-        throw new Error(`Capacity ${capacity} outside ${tier} range (${min}-${max})`);
+        throw new Error(`Capacity ${capacity} outside bookable range (${min}-${max})`);
       }
     }
   }
@@ -1041,12 +1077,10 @@ export class FinancialSystem {
       const marketingBreakdown = release.metadata.marketingBudgetBreakdown;
       let totalMarketingBoost = 1.0;
 
-      // Calculate awareness gain during weeks 1-4 (awareness building phase)
-      if (weeksSinceRelease >= 1 && weeksSinceRelease <= 4) {
-        const awarenessGain = this.calculateAwarenessGain(song, marketingBreakdown);
-        // Note: Actual awareness accumulation will be handled by GameEngine in next phase
-        // This calculation establishes the framework for awareness building
-      }
+      // C69: removed a dead `calculateAwarenessGain` call here — its result was
+      // assigned and never used ("framework" placeholder). The real awareness
+      // accumulation happens in ReleaseProcessor, which is the sole live caller.
+      // Keeping the dead call meant an extra (now-async) artist fetch for nothing.
 
       // Radio: 85% effectiveness, sustained discovery (weeks 2-4)
       const radioSpend = marketingBreakdown.radio || 0;
@@ -1095,7 +1129,7 @@ export class FinancialSystem {
    * - PR: 0.4 per $1k
    * - Influencer: 0.3 per $1k
    */
-  calculateAwarenessGain(song: any, marketingBreakdown: any): number {
+  async calculateAwarenessGain(song: any, marketingBreakdown: any): Promise<number> {
     try {
       const balanceConfig = this.gameData.getBalanceConfigSync();
       const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
@@ -1144,9 +1178,19 @@ export class FinancialSystem {
       const qualityMultiplier = (song.quality || 50) / 100;
       awarenessGain *= qualityMultiplier;
 
-      // Apply artist popularity bonus
-      const artist = this.gameData.getArtistSync(song.artistId);
-      const artistPopularity = artist?.popularity || 0;
+      // Apply artist popularity bonus. C69: the prior code called a non-existent
+      // `getArtistSync`, which threw and was swallowed by the catch below — nuking
+      // the ENTIRE awareness gain to 0 for ~9 months. Use the real async accessor
+      // (`getArtistById`), guarded: a gameData without it (client/test contexts)
+      // degrades gracefully to no popularity bonus (×1.0) instead of losing the
+      // whole gain, and logs distinctly so a genuinely-missing accessor is visible.
+      let artistPopularity = 0;
+      if (typeof this.gameData.getArtistById === 'function') {
+        const artist = await this.gameData.getArtistById(song.artistId);
+        artistPopularity = artist?.popularity || 0;
+      } else {
+        console.warn('[AWARENESS GAIN] gameData.getArtistById unavailable — applying awareness gain without the artist-popularity bonus');
+      }
       const popularityBonus = 1 + (artistPopularity / 200);
       awarenessGain *= popularityBonus;
 
@@ -1857,22 +1901,32 @@ export class FinancialSystem {
     reputation: number,
     hasStoryFlag: boolean,
     getRandomFn: () => number,
-    getAccessChanceFn: (type: string, tier: string) => number
+    getAccessChanceFn: (type: string, tier: string) => number,
+    // Exec-meetings-revival PR-3 (C2) — decaying press-momentum pool. Optional so
+    // existing callers that don't pass it are unaffected (chance bonus is 0).
+    // Modifies the CHANCE fed into the existing per-pickup draws below; does not
+    // add or remove draws (RNG invariant — see ActionProcessor.ts RNG INVARIANT note).
+    pressMomentum: number = 0
   ): number {
     const config = this.gameData.getPressConfigSync();
-    
+
     // Get base chance from access tier
     const accessChance = getAccessChanceFn('press', pressAccess);
-    
+
     // Calculate pickup chance
     let chance = config.base_chance + accessChance;
     chance += (prSpend * config.pr_spend_modifier);
     chance += (reputation * config.reputation_modifier);
-    
+
     if (hasStoryFlag) {
       chance += config.story_flag_bonus;
     }
-    
+
+    if (pressMomentum) {
+      const perPoint = config.press_momentum_chance_per_point ?? 0.02;
+      chance += pressMomentum * perPoint;
+    }
+
     // Roll for each potential pickup
     let pickups = 0;
     for (let i = 0; i < config.max_pickups_per_release; i++) {
@@ -1880,7 +1934,7 @@ export class FinancialSystem {
         pickups++;
       }
     }
-    
+
     return pickups;
   }
 
@@ -1894,20 +1948,26 @@ export class FinancialSystem {
     reputation: number,
     marketingBudget: number,
     getRandomFn: () => number,
-    getAccessChanceFn: (type: string, tier: string) => number
+    getAccessChanceFn: (type: string, tier: string) => number,
+    // Exec-meetings-revival PR-3 (C2) — threaded from gameState.flags by the caller
+    // (ReleaseProcessor). hasStoryFlag defaults false / pressMomentum defaults 0 so
+    // any caller that hasn't been updated yet keeps prior (dead-flag) behavior.
+    hasStoryFlag: boolean = false,
+    pressMomentum: number = 0
   ): { pickups: number; reputationGain: number } {
     const pickups = this.calculatePressPickups(
-      pressAccess, 
-      marketingBudget, 
-      reputation, 
-      false,
+      pressAccess,
+      marketingBudget,
+      reputation,
+      hasStoryFlag,
       getRandomFn,
-      getAccessChanceFn
+      getAccessChanceFn,
+      pressMomentum
     );
-    
+
     // Calculate reputation gain based on pickups and quality
     const reputationGain = pickups > 0 ? Math.floor(pickups * (quality / 100) * this.CONSTANTS.REPUTATION_GAIN_MULTIPLIER) : 0;
-    
+
     return {
       pickups,
       reputationGain

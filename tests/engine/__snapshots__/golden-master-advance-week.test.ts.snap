@@ -184,8 +184,15 @@ exports[`GameEngine.advanceWeek — golden master > actions-week: role meeting +
     },
     "changes": [
       {
-        "description": "Met with Role ceo",
+        "appliedEffects": {
+          "money": -1000,
+          "reputation": 2,
+        },
+        "choiceId": "<id>",
+        "choiceLabel": "Choice choice_a",
+        "description": "Executive strategy decision",
         "importance": "routine",
+        "meetingId": "strategy_session",
         "roleId": "ceo",
         "type": "meeting",
       },
@@ -198,7 +205,8 @@ exports[`GameEngine.advanceWeek — golden master > actions-week: role meeting +
       {
         "amount": -5,
         "description": "Head of A&R's loyalty decreased (ignored for 5 weeks)",
-        "importance": "routine",
+        "importance": "notable",
+        "loyaltyChange": -5,
         "type": "executive_interaction",
       },
       {

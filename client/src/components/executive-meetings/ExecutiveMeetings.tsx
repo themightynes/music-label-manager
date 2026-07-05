@@ -22,6 +22,11 @@ interface ExecutiveMeetingsProps {
     total: number;
     used: number;
   };
+  /**
+   * Remaining Creative Capital. Passed to the machine as the AUTO_SELECT budget
+   * so auto-select can never assemble a set that overdraws CC (playtest bug #11).
+   */
+  creativeCapital?: number;
   arOfficeStatus?: {
     arOfficeSlotUsed: boolean;
     arOfficeSourcingType: string | null;
@@ -45,6 +50,7 @@ export function ExecutiveMeetings({
   currentWeek,
   onActionSelected,
   focusSlots,
+  creativeCapital,
   arOfficeStatus: arOfficeStatusProp,
   onImpactPreviewUpdate,
 }: ExecutiveMeetingsProps) {
@@ -69,6 +75,7 @@ export function ExecutiveMeetings({
       gameId,
       currentWeek,
       focusSlotsTotal: focusSlots.total,
+      creativeCapital,
       onActionSelected,
       fetchExecutives: cachedFetchExecutives,
       fetchRoleMeetings,
@@ -124,14 +131,15 @@ export function ExecutiveMeetings({
     };
   }, []);
 
-  // Sync focus slots with the machine
+  // Sync focus slots (and the Creative Capital budget for AUTO) with the machine
   useEffect(() => {
     send({
       type: 'SYNC_SLOTS',
       used: focusSlots.used,
-      total: focusSlots.total
+      total: focusSlots.total,
+      creativeCapital,
     });
-  }, [focusSlots.used, focusSlots.total, send]);
+  }, [focusSlots.used, focusSlots.total, creativeCapital, send]);
 
   // Sync current week with the machine (clears cache when week changes)
   useEffect(() => {

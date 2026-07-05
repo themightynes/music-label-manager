@@ -134,7 +134,7 @@ Player clicks   Check ≥1       GameEngine         Database      Weekly Results
                 selected       all changes        commits        results
 ```
 
-The sidebar **"Advance Week"** button calls the `advanceWeek()` store action, which POSTs to `/api/advance-week`, reloads state, and writes an autosave ("Autosave - Week N").
+The **"Advance Week"** button in `GameHeader` calls the `advanceWeek()` store action, which POSTs to `/api/advance-week`, reloads state, and writes an autosave ("Autosave - Week N").
 
 **Processing Order Workflow** (server-authoritative — see [Game System Workflows](./game-system-workflows.md) for the full ordered list):
 ```

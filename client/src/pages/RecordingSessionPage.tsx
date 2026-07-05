@@ -497,6 +497,9 @@ export default function RecordingSessionPage() {
                           <Badge variant="outline" className="text-xs font-mono">
                             Energy: {artist.energy ?? 0}
                           </Badge>
+                          <Badge variant="outline" className="text-xs font-mono">
+                            Talent: {artist.talent ?? 0}
+                          </Badge>
                         </div>
                       </SelectItem>
                     ))}

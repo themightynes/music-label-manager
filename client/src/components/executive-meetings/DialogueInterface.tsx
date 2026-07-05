@@ -5,8 +5,18 @@ import { Card, CardContent } from '../ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
 import { BorderTrail } from '../motion-primitives/border-trail';
 import { GlowEffect } from '../motion-primitives/glow-effect';
-import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft, Shuffle } from 'lucide-react';
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
+import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
+
+// Badge honesty (exec-meetings-revival PR-2): only render a badge for a key the
+// engine actually implements (LIVE_EFFECT_KEYS) or 'executive_mood' (handled
+// outside applyEffects's switch by processExecutiveActions, but still a real,
+// wired effect). Every other key is a dead channel until its own PR lands — no
+// badge, not a mislabeled one. See EXECUTIVE_MEETINGS_CASE_FILE_2026-07-03.md §2/§6d.
+export function isRenderableEffectKey(key: string): boolean {
+  return LIVE_EFFECT_KEYS.has(key) || key === 'executive_mood';
+}
 
 interface DialogueInterfaceProps {
   dialogue: {
@@ -33,10 +43,18 @@ function EffectBadge({
   selectedArtistName?: string;
 }) {
   const isPositive = value > 0;
-  const Icon = isDelayed ? Clock : (isPositive ? TrendingUp : TrendingDown);
-  const colorClass = isPositive
-    ? 'text-positive bg-positive/10 border-positive/40'
-    : 'text-negative bg-negative/10 border-negative/40';
+  // Exec-meetings-revival PR-6 (C4): variance_up is neither good nor bad — it's a
+  // volatility knob, not a value delta — so it renders neutral instead of
+  // green/red regardless of sign. rep_swing IS a directional value (a
+  // reputation change, even if gambled), so it keeps the normal positive/
+  // negative styling once resolved.
+  const isNeutralEffect = effect === 'variance_up';
+  const Icon = isDelayed ? Clock : (isNeutralEffect ? Shuffle : (isPositive ? TrendingUp : TrendingDown));
+  const colorClass = isNeutralEffect
+    ? 'text-neon-amber bg-neon-amber/10 border-neon-amber/40'
+    : isPositive
+      ? 'text-positive bg-positive/10 border-positive/40'
+      : 'text-negative bg-negative/10 border-negative/40';
   const delayedClass = isDelayed ? 'border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac' : '';
 
   const formatEffect = (key: string, val: number) => {
@@ -57,25 +75,40 @@ function EffectBadge({
           return `${val > 0 ? '+' : ''}${val} Mood (Most Popular)`;
         }
         return `${val > 0 ? '+' : ''}${val} Mood`;
-    case 'artist_energy':
-      return `${val > 0 ? '+' : ''}${val} Energy`;
-    case 'artist_loyalty':
-      return `${val > 0 ? '+' : ''}${val} Loyalty`;
-      case 'quality_bonus':
-        return `${val > 0 ? '+' : ''}${val} Quality`;
-      case 'press_story_flag':
-        return 'Press Story';
-      case 'sellthrough_hint':
-        return 'Market Data';
-      case 'venue_relationships':
-        return `${val > 0 ? '+' : ''}${val} Venue Rep`;
-      case 'quality_risk':
-        return 'Quality Risk';
+      case 'artist_energy':
+        return `${val > 0 ? '+' : ''}${val} Energy`;
       case 'artist_popularity':
         return `${val > 0 ? '+' : ''}${val} Popularity`;
-      case 'international_rep':
-        return `${val > 0 ? '+' : ''}${val} Intl Rep`;
+      case 'executive_mood':
+        return `${val > 0 ? '+' : ''}${val} Exec Mood`;
+      case 'press_story_flag':
+        // Exec-meetings-revival PR-3 (C2) — one-shot boolean, value-less badge.
+        return 'Press Story';
+      case 'press_momentum':
+        return `${val > 0 ? '+' : ''}${val} Press Buzz`;
+      case 'quality_bonus':
+        // Exec-meetings-revival PR-4 (C1) — next-release quality channel.
+        return `${val > 0 ? '+' : ''}${val} Quality`;
+      case 'awareness_boost':
+        // Exec-meetings-revival PR-5 (C3) — next-release awareness channel.
+        return `${val > 0 ? '+' : ''}${val} Buzz`;
+      case 'variance_up':
+        // Exec-meetings-revival PR-6 (C4) — a volatility knob, not a value delta;
+        // always shown with a magnitude (±N), never colored green/red (see
+        // isNeutralEffect above).
+        return `±${Math.abs(val)} Volatility`;
+      case 'rep_swing':
+        // Exec-meetings-revival PR-6 (C4) — the authored value here is the
+        // GAMBLE's magnitude (pre-roll), shown at the choice-preview stage before
+        // the isolated seeded roll resolves it.
+        return `±${Math.abs(val)} Rep Gamble`;
+      case 'award_chances':
+        // Exec-meetings-revival PR-7 (C5) — prestige/award track. Never expires,
+        // banks to campaign end; badge reads as a durable prestige value.
+        return `${val > 0 ? '+' : ''}${val} Prestige`;
       default:
+        // Unreachable in practice — the caller filters to isRenderableEffectKey
+        // before rendering an EffectBadge at all. Kept as a safe fallback only.
         return `${val > 0 ? '+' : ''}${val} ${key.replace(/_/g, ' ')}`;
     }
   };
@@ -91,7 +124,10 @@ function EffectBadge({
   );
 }
 
-function ChoiceEffects({
+// Exported for badge-honesty testing (exec-meetings-revival PR-2) — lets tests
+// render just the effects list without mounting the Carousel/BorderTrail tree,
+// which is brittle under jsdom.
+export function ChoiceEffects({
   choice,
   targetScope,
   selectedArtistName
@@ -100,8 +136,18 @@ function ChoiceEffects({
   targetScope?: 'global' | 'predetermined' | 'user_selected';
   selectedArtistName?: string;
 }) {
-  const hasImmediate = choice.effects_immediate && Object.keys(choice.effects_immediate).length > 0;
-  const hasDelayed = choice.effects_delayed && Object.keys(choice.effects_delayed).length > 0;
+  // Badge honesty: only surface entries for LIVE_EFFECT_KEYS (+ executive_mood).
+  // Dead keys are filtered out entirely here, not just at render — so
+  // hasImmediate/hasDelayed (and thus the "No direct effects" fallback) reflect
+  // reality rather than the raw authored data.
+  const immediateEntries = Object.entries(choice.effects_immediate || {}).filter(
+    ([effect, value]) => value !== undefined && isRenderableEffectKey(effect)
+  );
+  const delayedEntries = Object.entries(choice.effects_delayed || {}).filter(
+    ([effect, value]) => value !== undefined && isRenderableEffectKey(effect)
+  );
+  const hasImmediate = immediateEntries.length > 0;
+  const hasDelayed = delayedEntries.length > 0;
 
   if (!hasImmediate && !hasDelayed) {
     return (
@@ -120,17 +166,15 @@ function ChoiceEffects({
             <span className="text-xs font-medium text-text-body">Immediate</span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {Object.entries(choice.effects_immediate).map(([effect, value]) =>
-              value !== undefined ? (
-                <EffectBadge
-                  key={effect}
-                  effect={effect}
-                  value={value}
-                  targetScope={targetScope}
-                  selectedArtistName={selectedArtistName}
-                />
-              ) : null
-            )}
+            {immediateEntries.map(([effect, value]) => (
+              <EffectBadge
+                key={effect}
+                effect={effect}
+                value={value as number}
+                targetScope={targetScope}
+                selectedArtistName={selectedArtistName}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -142,18 +186,16 @@ function ChoiceEffects({
             <span className="text-xs font-medium text-text-body">Next Week</span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {Object.entries(choice.effects_delayed).map(([effect, value]) =>
-              value !== undefined ? (
-                <EffectBadge
-                  key={effect}
-                  effect={effect}
-                  value={value}
-                  isDelayed={true}
-                  targetScope={targetScope}
-                  selectedArtistName={selectedArtistName}
-                />
-              ) : null
-            )}
+            {delayedEntries.map(([effect, value]) => (
+              <EffectBadge
+                key={effect}
+                effect={effect}
+                value={value as number}
+                isDelayed={true}
+                targetScope={targetScope}
+                selectedArtistName={selectedArtistName}
+              />
+            ))}
           </div>
         </div>
       )}

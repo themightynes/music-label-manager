@@ -4,6 +4,7 @@
 
 *Audience: Developers, Product Managers*
 *Purpose: Understanding tour system processes and user journeys*
+*Last Updated: July 4, 2026*
 
 ---
 
@@ -16,7 +17,8 @@ The Tour System enables players to book live performances for their artists, fro
 ### **Frontend Components**
 - `LivePerformancePage.tsx` (961 lines) - Tour creation interface
 - `ActiveTours.tsx` (878 lines) - Tour management and analytics
-- `useGameStore` - State management for tours
+- `useProjects()` hook (`client/src/hooks/useProjects.ts`) - reads the project list (tours are `Project` records) from the TanStack Query cache
+- `useGameStore` actions `createProject()`/`cancelProject()` - the write path for creating and cancelling tours
 
 ### **Backend Systems**
 - `/api/tour/estimate` - Real-time tour profitability calculations
@@ -109,10 +111,10 @@ Tour appears in Active Tours list
 3. **Recorded/Complete** - All cities completed successfully
 4. **Cancelled** - Tour terminated early (60% refund)
 
-### **Month Advancement Processing**
+### **Week Advancement Processing**
 
 ```
-User advances month with tour in "planning" stage
+User advances week with tour in "planning" stage
     ↓
 GameEngine processes tour project
     ↓

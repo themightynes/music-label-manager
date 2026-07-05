@@ -2,6 +2,7 @@
 
 **Music Label Manager - Documentation Standards & Guidelines**  
 *Internal Reference*
+*Last Updated: July 4, 2026 (pass 2 — added Archival Mechanism + Doc-Sync Rule sections)*
 
 ---
 
@@ -47,8 +48,9 @@ docs/
 ├── 04-frontend/        # React Implementation (Frontend audience)
 ├── 05-backend/         # Server Implementation (Backend audience)
 ├── 06-development/     # Practical Guides (All developers)
-├── 08-future-features/ # Roadmap & Research (PM/Developer audience)
+├── 08-future-features-and-fixes/ # Roadmap & Research (PM/Developer audience)
 ├── 09-troubleshooting/ # Problem Resolution (All audiences)
+├── 98-research/        # Dated research case files / adversarially-verified audits
 └── 99-legacy/          # Archived Content (Reference only)
 ```
 
@@ -62,8 +64,9 @@ docs/
 | 04-frontend | React patterns, UI | Frontend devs | Implementation | Per sprint |
 | 05-backend | Server implementation | Backend devs | Implementation | Per sprint |
 | 06-development | Practical how-tos | All developers | Action-oriented | As needed |
-| 08-future-features | Roadmap, research | PM/Developers | Conceptual | Monthly |
+| 08-future-features-and-fixes | Roadmap, research | PM/Developers | Conceptual | Monthly |
 | 09-troubleshooting | Problem solutions | All roles | Solution-focused | As issues arise |
+| 98-research | Dated research case files / adversarially-verified audits | Developers | Point-in-time snapshot | As conducted |
 
 ---
 
@@ -177,6 +180,37 @@ Does this fit an existing folder's purpose?
     ├─ No → Find the closest fit
     └─ Yes → Propose new folder with clear purpose
 ```
+
+---
+
+## 📦 **Archival Mechanism**
+
+When a document's core claims no longer describe the current system **and** a successor document exists, archive it rather than leaving it to rot in place:
+
+1. **Move it with history preserved**: `git mv <doc>` into `docs/99-legacy/superseded-<yyyy-mm>/` (month of archival, e.g. `superseded-2026-07/`).
+2. **Add a dated header** as the very first line of the file, in this exact template (quoted from pass 1, commit `9aeb1e6`):
+
+   ```
+   > ⚠️ ARCHIVED <Month DD, YYYY> — <one-line reason the doc is stale>. Superseded by: `<path/to/successor.md>`. Kept for historical reference.
+   ```
+
+3. **Fix every inbound link** to the old path in the same commit — grep `docs/` (and root/`client`/`data` `CLAUDE.md`) for the old filename/path and repoint each hit to the new `99-legacy/superseded-<yyyy-mm>/` location (or to the successor doc, if that reads better in context).
+4. Do this **in a single commit** alongside the move — an archived doc with stale inbound links is worse than not archiving at all.
+
+Archival is not deletion: the doc's content remains readable and git-tracked, just clearly labeled as historical.
+
+---
+
+## 🔄 **Doc-Sync Rule**
+
+Any feature arc or PR that changes system behavior — engine logic, routes, client state ownership, schemas, or game content (`data/*.json`) — must, before being considered done, do ONE of:
+
+- **Update the affected descriptive docs** (`02-architecture/`, `03-workflows/`, `04-frontend/`, `05-backend/`) so they describe the system as it now behaves, OR
+- **Explicitly log the staleness** as a dated note or backlog item in `docs/09-troubleshooting/technical-debt-backlog.md` if updating the docs isn't practical in the same PR.
+
+**Why this exists**: the July 2026 staleness audits found Passport-era auth documentation and month-cadence endpoint descriptions that had survived roughly 10 months of refactors (Clerk migration, week-cadence conversion) without a single doc update — despite the underlying systems changing completely. Silent drift like this compounds; each subsequent PR trusts docs that were already wrong.
+
+The `/session-end` skill's step 6 now enforces a documentation-governance compliance check at the end of every session, so this rule has an automated backstop rather than relying purely on developer discipline.
 
 ---
 

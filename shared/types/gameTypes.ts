@@ -350,6 +350,11 @@ export interface GameChange {
   roleId?: string;
   projectId?: string;
   grossRevenue?: number;
+  // #12: tour-completion economics. `totalCosts` = summed per-city tour costs
+  // (venue + production + marketing); `netProfit` = grossRevenue − totalCosts.
+  // Optional/additive — old saves without these fields remain valid.
+  totalCosts?: number;
+  netProfit?: number;
   moodChange?: number;
   newMood?: number;
   energyBoost?: number;
@@ -361,6 +366,25 @@ export interface GameChange {
   // Phase 4 PR-2: optional additive importance classification. Old saves without
   // this field remain valid; no SNAPSHOT_VERSION bump.
   importance?: ChangeImportance;
+  // Exec-meetings-revival PR-2: explicit signed loyalty delta for executive-decay
+  // 'executive_interaction' entries (ArtistStateProcessor). Distinguishes a genuine
+  // loyalty-decay notice (loyaltyChange < 0) from the "Met with X" interaction entry
+  // (which instead carries loyaltyBoost/newLoyalty, always positive) and from the
+  // natural-mood-drift entry (neither field) — without string-matching descriptions.
+  loyaltyChange?: number;
+  // Exec-meetings-revival PR-2: enrichment for 'meeting' change entries so the
+  // WeekSummary meetings card has real content (which meeting, which choice, what
+  // it actually did). Optional/additive — old saves without these fields remain valid.
+  meetingId?: string;
+  choiceId?: string;
+  choiceLabel?: string;
+  appliedEffects?: Record<string, number>;
+  // Exec-meetings-revival PR-9 (C6/D): mood-modifier context on a 'meeting' change
+  // entry, set only when a non-neutral executive-mood modifier fired for that meeting.
+  // Optional/additive — old saves without these fields remain valid.
+  moodBand?: 'disgruntled' | 'neutral' | 'content' | 'inspired';
+  costMultiplier?: number;
+  effectMultiplier?: number;
 }
 
 export interface EventOccurrence {

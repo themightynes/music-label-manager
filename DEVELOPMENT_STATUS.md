@@ -1,6 +1,82 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 3, 2026*
+*Updated: July 4, 2026*
+
+---
+
+## 📅 Session Log — July 4, 2026 (Exec-meetings playtest: 12 findings fixed + C69 discovered/fixed, design threads elevated, playtest doc archived — all on PR #119, still UNMERGED)
+
+**Nes playtested `feat/exec-meetings-revival` (PR #119) and the session fixed every actionable finding**, all committed onto the SAME branch/PR per the standing one-merge-at-the-end policy (no new branches). Ran orchestrator + subagents in two parallel waves (agents kept getting stopped mid-task in this environment — critical pieces like C69 were finished foreground). Every fix was orchestrator-diff-reviewed before commit; full suite ended **green at 1,189 tests** (was 1,013 at revival end), tsc clean. Branch now `f41bf27` → `fcdc877` (20 commits this session).
+
+**Playtest findings fixed (12 of 12 bug/feature items; the 2 design discussions were elevated, not "fixed"):**
+- **#1/#3/#7** (`ef1050b` + test `69a7bcf`) — fixed at the SOURCE (`ActionProcessor`): meeting rows deduped (dropped the duplicate `executive_interaction` "Met with <slug>" row, folded exec deltas onto the single `meeting` change), delayed-effect payoffs labeled (`describeDelayedEffect`), CEO meetings read "Executive strategy decision" (player IS the CEO). Golden master's only delta = the CEO relabel.
+- **#5** (`45d884d`) — week-view calendar prev/next arrows.
+- **#6** (`f41bf27`) — venue booking UI gated when `venueAccess==='none'` (client-only; server guards were correct).
+- **#4** (`4bcfc26`, `537983a`, `b02e9bf`, `3a74535`) — talent surfaced on 7 surfaces (roster cards, profile grid, dialogue, management, Live Performance + Recording Session dropdowns, Plan Release). Plan Release also needed a **server fix** (`3a74535`): the `ready-for-release` endpoint never SELECTed popularity/talent → they rendered 0 until fixed.
+- **#9/C68** + **#12** (`5b44d9e`) — tour milestones read Planned/On Tour/Tour Completed (not "recorded stage"); tour-completion email shows NET profit (gross alongside). `GameChange` gained additive `totalCosts`/`netProfit`.
+- **#11** (`b482c5e`) — AUTO-select is now Creative-Capital-budget-aware (can't overdraw). `creativeCapital` threaded into the XState machine context.
+- **#2** (`52dd7be`) — Weekly Results popup auto-opens from ANY route (consumer moved from Dashboard-only to always-mounted `CommandDock`).
+- **#8/C67** (`071c6df`) — **decision (Nes): venue slider range = `[lowest-bookable-tier-min, current-tier-max]`** (unlocking raises the ceiling, keeps the floor at the smallest real venue). New `VenueCapacityManager.getBookingRangeForTier`; `validateCapacity` + estimate `tierRange` + client fallback route through it.
+
+**C69 discovered incidentally + fixed** (`1db5c39`, backlog `6c9e5a8`): `FinancialSystem.calculateAwarenessGain` called a non-existent `getArtistSync` — threw, was swallowed by a try/catch, and **silently zeroed the entire marketing-driven awareness gain for ~9 months** (pre-existing since 2025-09-26, NOT caused by the revival). Fixed: async `getArtistById`, guarded so a missing accessor degrades to no popularity bonus (×1.0) instead of nuking the gain; dead second call removed; +4 regression tests. Golden master unaffected.
+
+**Design discussions elevated to `[FUTURE]` seed planning docs** (`861d8de`): `[FUTURE] executive-meeting-effect-legibility.md` (explanation / pending-visibility / payoff-attribution gaps on the 14 keys) and `[FUTURE] executive-meeting-relevance-and-reactivity.md` (meetings feel disconnected from label state → the *"you just hit AUTO because it doesn't matter"* root cause; carries a **Tier 0/1/2 scope fork** needing a product decision).
+
+**Playtest doc archived** (`fcdc877`): `PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md` `git mv`-ed to `docs/99-legacy/superseded-2026-07/` with a dated ARCHIVED header; all 5 inbound links fixed (README section move, CLAUDE.md constellation relabel, backlog + both planning-doc origin refs).
+
+**Ops note:** the dev server runs plain `tsx` (NOT watch) — server/engine fixes are invisible until a restart. The server WAS restarted mid-session, so all fixes are now live for continued playtesting.
+
+**Decisions (Nes):** all playtest fixes land on PR #119 (no new branches); venue range = lowest-min→current-max; C69 logged-then-fixed on request; design docs = seed depth (not full plans); archive the playtest doc now.
+
+**📋 Doc-governance check (this session):**
+- **Archival convention** — ✅ PASS (playtest doc archived correctly, links fixed in the same commit).
+- **Placement** — ✅ PASS (2 new `[FUTURE]` docs in `implementation-specs/` with `[STATUS]` prefix).
+- **Reference-doc freshness** — ✅ PASS (`actions.json`/`LIVE_EFFECT_KEYS` did NOT change → exec-meetings `[REFERENCE]` doc unaffected; `[READY]` revival plan stays `[READY]` until the PR merges).
+- **Doc-sync rule** — ⚠️ PARTIAL / logged here: most fixes were behavior-RESTORING (code brought in line with already-documented intent). Three are genuine behavior/shape changes whose descriptive workflow docs were NOT updated this session: **C67 venue booking-range rule** + **#12 tour-completion net profit** (→ `docs/03-workflows/tour-system-workflows.md`) and the **popularity/talent field on `ready-for-release`** (→ `docs/03-workflows/plan-release-system-workflows.md`). Logged as an open thread rather than silently orphaned — fold into a future docs pass or the merge.
+
+**Open threads / next steps:**
+- **PR #119 still UNMERGED** — carries the full revival + 12 playtest fixes + C69. One merge at the end, Nes's call.
+- Reconcile the 3 workflow-doc staleness items above (doc-sync rule) — small, defer-able.
+- The relevance/reactivity `[FUTURE]` doc needs Nes's **Tier 0/1/2 decision** before it can become a real plan.
+- After merge: rename `[READY] executive-meetings-revival-plan.md` → `[COMPLETE]` + move to `COMPLETED/`; then the deferred slices (success/failure rolls, side events — events.json is key-clean).
+- Still open from prior sessions: phantom side-events system; backlog C58/C60/C62/C66/C67; Phase 4 audio audition.
+
+---
+
+## 📅 Session Log — July 3–4, 2026 (Executive Meetings Revival EXECUTED: 9 PRs, 71 dead keys → 0 — PR #119 open, UNMERGED pending playtest)
+
+**The full revival plan (`docs/01-planning/implementation-specs/[READY] executive-meetings-revival-plan.md`) was executed end-to-end in one orchestrated session** — orchestrator + one fresh subagent per PR (Sonnet for scoped builds, Opus for PR-5/PR-8/PR-9 judgment work) + a fresh-context verifier after every phase. All work is on branch **`feat/exec-meetings-revival`** (17 commits, `39ad919` → `4d140c9`), opened as **PR #119**. **Merge policy per Nes: ONE merge at the end, and NOT yet — playtest first.** Local `main` carries the (unpushed) docs-trio commit `43f9570`, which rides inside the PR.
+
+**Planning docs produced first (same session, earlier):** `docs/98-research/EXECUTIVE_MEETINGS_CASE_FILE_2026-07-03.md` (validated 62-choice map + wiring surface; corrected several gap-analysis counts), `docs/98-research/EXEC_MEETINGS_EFFECT_KEY_DISPOSITIONS_2026-07-03.md` (71 dead keys → 6 channels + map/delete, Opus-designed, orchestrator-validated), and the 9-PR plan.
+
+**Shipped (all on the branch, every PR gated by orchestrator diff-review + own test runs):**
+- **PR-1 `39ad919`** — truth infrastructure: delayed-effect flag-key bug fixed (`details?.choiceId` was always undefined), `LIVE_EFFECT_KEYS` export + unknown-key `default:` warn in `applyEffects`, `TEST_mood_boost_immediate` removed from prod data, real Zod choice schema (loader now throws outside production).
+- **PR-2 `2161cb1` + `bb92c0b`** — badge honesty: every badge renderer (DialogueInterface, SelectionSummary, WeekSummary meetings card, ArtistDialogueModal) whitelists through `LIVE_EFFECT_KEYS`; new WeekSummary meetings bucket/card surfaces meetings, exec loyalty decay (promoted to notable via new `loyaltyChange` discriminator), and delayed-effect payoffs; meeting change entries enriched (`meetingId`/`choiceId`/`choiceLabel`/`appliedEffects`).
+- **PR-3 `6d53aae`** — C2 press channel: `press_story_flag` (one-shot, consumed+cleared by next release's press roll, +30% pickup chance) and `press_momentum` (accumulating pool, +2%/point pickup chance) live; 3 data normalizations incl. the `media_skepticism` sign flip.
+- **PR-4 `bb6bd4d`** — C1 quality channel: `quality_bonus` banks in `flags.pendingQualityBonus`, applies additively to ALL songs in the next generating week then zeroes (8-week expiry); `rush`/`release_as_is` traps real; 5 keys folded in.
+- **PR-5 `966dbe1`** — C3 awareness channel: `awareness_boost` seeds the next release's per-song awareness (×8/point) riding the already-live awareness economy; 17 choices normalized; **Spotify/Apple/simultaneous rebalanced into a genuine trilemma** (data-driven non-dominance test); first player-facing awareness readout (Buzz chip in SongCatalog).
+- **PR-6 `8569e66`** — C4 variance channel: `variance_up` widens the next session's quality band (+50%/point) + outlier tails; `rep_swing` = deterministic isolated-seeded reputation gamble; **AUTO-select upgraded from always-`choices[0]` to a risk-averse scorer** (never gambles when a safe choice exists).
+- **PR-7 `f1778bd`** — C5 award track: `award_chances` banks forever → isolated seeded award roll at campaign end (8%/point, cap 80%, +2000 score, Winner/Nominee achievements, CampaignResultsModal cell); **the dead `hit_single_bonus`/`number_one_bonus` config finally wired** — first Top-10 entry +5 rep, first #1 +10, once per song via `flags.chartMilestones`.
+- **PR-8 `1644438`** — content sweep (Opus): the last 24 dead keys mapped/deleted per the disposition worksheet (`digital_focus` trap fixed via `artist_popularity: -2`); `executive_mood` authored into 12 non-CEO choices (C6); `cmo_pr_angle`/`distribution_pitch` re-authored into distinct strategies; `events.json` made key-clean for future side-event wiring; **data-lint forever-guard** (every authored key must be canonical) + **no-dominant-choice regression test** (caught and fixed 3 real dominance violations).
+- **PR-9 `ba80f86` + `1d84428`/`8d98d04`** — exec mood modifiers: ONE pure shared util (`shared/utils/executiveMoodModifier.ts`) used by engine AND client Impact Preview (mood <30 ⇒ costs ×1.25; >80 ⇒ ×0.90; >90 ⇒ non-money effects ×1.20; CEO exempt; delayed effects scaled at queue time); ExecutiveCard band chips; parity drift-guard test (progression.json knobs ≡ util defaults); cultivation loop DB-proven ($4,000 meeting → $5,000 at mood 20).
+
+**Verifier-driven fix batches (every phase verifier found real bugs the builders' green tests missed):** `bb92c0b` (WeekSummary meetings card itself rendered dead-key badges via raw delayed-effect payloads; ArtistDialogueModal unguarded), `daf7cfe` (negative momentum snapped to 0 in one week instead of fading), `2b6f28e` (**apply-then-decay erosion**: momentum landing via delayed effects was decayed in the same `processDelayedEffects` call, making every ±1 momentum choice a provable no-op — decay now runs BEFORE the entry loop; `pressStoryFlag` gained the missing expiry), `8d98d04` (rep_swing-under-inspired regression test).
+
+**CI failure root-caused post-push:** PR #119's vitest job failed — `DatabaseStorage.updateExecutive` was the ONE storage method using the module-global `db` (`transaction || db`) instead of the injected instance (`|| this.db`), so PR-9's DB-backed test hit the SSL-configured production pool in CI. Fixed in `4d140c9` (pushed; **CI re-run is the verification** — the local test run was skipped at session wrap).
+
+**Numbers:** suites 776 → **1,013 tests** (678 server + 335 client), tsc clean at every commit; golden master's ONLY delta across the entire branch is PR-2's documented additive meeting fields + importance flip; 14 canonical live effect keys; zero dead keys in actions/events/dialogue.json (independently audited); all 6 free-money traps proven non-dominant by test.
+
+**Decisions (Nes):** one merge at the end (no per-PR merges); disposition worksheet adopted as-is for PR-8 content values (no checkpoint); session docs ride the feature PR (this entry); **merge deferred until playtest**.
+
+**New debt:** C66 (loose non-actions Zod loaders, verbose engine debug logging, stale `actions.json.backup`). Deferred by design, do NOT build casually: mood availability gates (<20/<10), Level/XP, success/failure rolls, combo actions.
+
+**Docs workstream addendum (July 4, same branch):** produced the canonical **`[REFERENCE] executive-meetings-system-complete-reference.md`** (`fcc177a` — 20 meetings × 59 choices with live values, 14 channels, mood bands, guardrails; linked from docs/CLAUDE.md). Two staleness audits then established that the Phase 0→4 arc had left descriptive docs badly stale (Passport-auth/month-cadence fossils survived ~10 months). Cleanup pass 1 (`9aeb1e6`): archived 4 pre-refactor docs to **`docs/99-legacy/superseded-2026-07/`** with dated superseded-headers (api-design, frontend-architecture, music-creation-architecture, plan-release-api-spec), rewrote backend-architecture.md's contradictory body, fixed the /onboard-facing fragments. Pass 2 (`62ffa57`): status headers on the three 2026-07-03 research docs (dispositions PROPOSAL→ADOPTED), archived 2 more exec docs, fixed two code-verified false claims (artist_energy is NOT display-only; artists never had a loyalty column), and **codified the rules**: documentation-governance.md gains formal *Archival Mechanism* + *Doc-Sync Rule* sections; root/client/data CLAUDE.mds carry the doc-sync, badge-whitelist, exec-mood-parity, and effect-key authoring rules; `/session-end` gained a governance-compliance step (`07bb796`). CI storage fix `4d140c9` (updateExecutive instance-db fallback) verified — **PR #119 fully green**.
+
+**Open threads / next steps:**
+- **Nes: playtest `feat/exec-meetings-revival`** (dev server left running on it; Docker test DB up on 5433) — meeting badges, WeekSummary meetings card, press/quality/awareness/variance/award consequences, exec mood chips, AUTO behavior. Channel magnitudes are balance-JSON knobs if anything feels off (tuning `exec_mood_modifiers` requires updating `DEFAULT_EXEC_MOOD_MODIFIER_CONFIG` — tripwire test enforces).
+- **Standing decision (Nes, July 4): all playtest-driven fixes land on this same branch/PR #119** — no new branches until the one merge at the end.
+- After merge: move the plan doc to `COMPLETED/` (per the /session-end governance check), then the deferred slices (success/failure rolls is the natural next act; PR-6's variance vocabulary now exists) and side events (unblocked — events.json is key-clean).
+- Carried over: Nes still owes the Phase 4 audio audition.
 
 ---
 

@@ -160,10 +160,16 @@ export const CampaignResultsSchema = z.object({
     artistsSuccessful: z.number(),
     projectsCompleted: z.number(),
     accessTierBonus: z.number(),
+    // Exec-meetings-revival PR-7 (C5): campaign-end award-roll bonus. Optional +
+    // defaulted so older persisted campaignResults payloads (pre-PR-7) still
+    // validate without a migration.
+    awardBonus: z.number().optional().default(0),
   }),
   victoryType: z.enum(['Commercial Success', 'Critical Acclaim', 'Balanced Growth', 'Survival', 'Failure']),
   summary: z.string(),
   achievements: z.array(z.string()),
+  // Exec-meetings-revival PR-7 (C5): true when the campaign-end award roll hit.
+  industryAward: z.boolean().optional(),
 });
 
 export const AdvanceWeekResponse = z.object({

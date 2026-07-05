@@ -122,6 +122,37 @@ describe('VenueCapacityManager - Configuration Reading', () => {
       }).toThrow(/Available:/);
     });
   });
+
+  describe('getBookingRangeForTier() — #8/C67 booking range', () => {
+    it('clubs (lowest bookable tier): booking range equals its own band', () => {
+      // clubs is the smallest real venue, so nothing lowers its floor.
+      expect(VenueCapacityManager.getBookingRangeForTier('clubs', mockGameData))
+        .toEqual({ min: 50, max: 500 });
+    });
+
+    it('theaters: floor drops to the club minimum, ceiling stays at theater max', () => {
+      // Unlocking theaters must not force a 500+ floor — a label can still book
+      // a small club-sized show for a new artist.
+      expect(VenueCapacityManager.getBookingRangeForTier('theaters', mockGameData))
+        .toEqual({ min: 50, max: 2000 });
+    });
+
+    it('arenas: floor stays at the smallest bookable venue, ceiling is arena max', () => {
+      expect(VenueCapacityManager.getBookingRangeForTier('arenas', mockGameData))
+        .toEqual({ min: 50, max: 20000 });
+    });
+
+    it('excludes the un-bookable "none" tier from the floor', () => {
+      // Even though 'none' has min 0, it must never lower the bookable floor.
+      const range = VenueCapacityManager.getBookingRangeForTier('theaters', mockGameData);
+      expect(range.min).toBe(50); // clubs min, not none's 0
+    });
+
+    it('throws for an invalid tier', () => {
+      expect(() => VenueCapacityManager.getBookingRangeForTier('invalid', mockGameData))
+        .toThrow(/Invalid venue tier/);
+    });
+  });
 });
 
 describe('VenueCapacityManager - Tier Detection', () => {
@@ -308,7 +339,7 @@ describe('VenueCapacityManager - Validation', () => {
     it('should throw error for capacity outside tier range', () => {
       expect(() => {
         VenueCapacityManager.validateCapacity(1000, 'clubs', mockGameData);
-      }).toThrow(/outside clubs range/);
+      }).toThrow(/outside bookable range/);
     });
 
     it('should throw error when gameData is missing', () => {
@@ -332,13 +363,33 @@ describe('VenueCapacityManager - Validation', () => {
     it('should reject capacity below tier minimum', () => {
       expect(() => {
         VenueCapacityManager.validateCapacity(49, 'clubs', mockGameData);
-      }).toThrow(/outside clubs range/);
+      }).toThrow(/outside bookable range/);
     });
 
     it('should reject capacity above tier maximum', () => {
       expect(() => {
         VenueCapacityManager.validateCapacity(501, 'clubs', mockGameData);
-      }).toThrow(/outside clubs range/);
+      }).toThrow(/outside bookable range/);
+    });
+
+    // #8/C67: the core fix — a higher-tier label may book a small show.
+    it('should ACCEPT a below-current-tier capacity down to the club floor (theaters)', () => {
+      // 100 is below theaters own min (500) but within the booking range [50, 2000].
+      expect(() => {
+        VenueCapacityManager.validateCapacity(100, 'theaters', mockGameData);
+      }).not.toThrow();
+    });
+
+    it('should still reject a capacity below the smallest bookable venue (theaters)', () => {
+      expect(() => {
+        VenueCapacityManager.validateCapacity(49, 'theaters', mockGameData);
+      }).toThrow(/outside bookable range/);
+    });
+
+    it('should still reject a capacity above the current tier ceiling (theaters)', () => {
+      expect(() => {
+        VenueCapacityManager.validateCapacity(2001, 'theaters', mockGameData);
+      }).toThrow(/outside bookable range/);
     });
   });
 });

@@ -386,7 +386,7 @@ When a `game_state` is deleted, these related records are automatically deleted 
 ### **Related Files**
 - **CLI Script**: `scripts/cleanup-orphaned-games.ts`
 - **Admin Dashboard**: `client/src/pages/AdminDatabaseHealthPage.tsx`
-- **Backend Routes**: `server/routes.ts` (lines 667-713, 4740-4920)
+- **Backend Routes**: `server/routes/games.ts` (game delete/list endpoints), `server/routes/admin.ts` (database-stats/cleanup-orphaned-games endpoints)
 - **Client Cleanup Logic**: `client/src/store/gameStore.ts` (lines 320-362)
 - **Database Schema**: `shared/schema.ts` (CASCADE foreign keys)
 

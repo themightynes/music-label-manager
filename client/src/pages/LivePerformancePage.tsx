@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info, Target, TrendingUp, TrendingDown, ArrowLeft, Ticket } from 'lucide-react';
+import { MapPin, Music, Calendar, Users, DollarSign, AlertCircle, Info, Target, TrendingUp, TrendingDown, ArrowLeft, Ticket, Lock } from 'lucide-react';
 import type { GameState } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useGameStore } from '@/store/gameStore';
@@ -138,6 +138,25 @@ export default function LivePerformancePage() {
   const currentVenueAccess = gameState?.venueAccess || 'none';
   const currentCreativeCapital = gameState?.creativeCapital || 0;
   const selectedPerformanceType = PERFORMANCE_TYPES.find(type => type.id === selectedType);
+
+  // BUG #6 FIX: The server rejects any booking while venue access is 'none'
+  // (server/routes/tour.ts rejects `venueAccess === 'none'` outright and requires
+  // venueCapacity >= 50, but the 'none' tier's config range is [0, 50]). Reputation
+  // must rise to unlock the first venue tier before ANY show can be booked. Gate the
+  // whole capacity/booking UI on this so the player can't interact with a control that
+  // is guaranteed to 400.
+  const hasVenueAccess = currentVenueAccess !== 'none';
+  const currentReputation = gameState?.reputation ?? 0;
+  // Reputation needed to unlock the lowest venue tier (smallest non-zero threshold in
+  // the venue_access config, i.e. 'clubs'). Derived from config, not hardcoded.
+  const venueUnlockReputation: number | null = (() => {
+    if (!venueAccessConfig) return null;
+    const thresholds = Object.entries(venueAccessConfig)
+      .filter(([tier]) => tier !== 'none')
+      .map(([, cfg]: [string, any]) => cfg?.threshold)
+      .filter((t): t is number => typeof t === 'number' && t > 0);
+    return thresholds.length ? Math.min(...thresholds) : null;
+  })();
 
   // Handle URL parameter for artist pre-selection
   useEffect(() => {
@@ -502,7 +521,21 @@ export default function LivePerformancePage() {
       throw new Error(`Malformed capacity_range for venue tier '${currentVenueAccess}' - expected [min, max] array`);
     }
 
-    const [min, max] = tierConfig.capacity_range;
+    // #8/C67: booking range = [smallest bookable venue min, current tier max], so
+    // an unlocked label can still book small shows (mirrors the server's
+    // VenueCapacityManager.getBookingRangeForTier; this is the pre-estimate
+    // fallback — the primary path uses estimateData.tierRange from the server).
+    // Floor = smallest capacity_range[0] among unlocked, bookable tiers (every
+    // tier whose threshold <= current, excluding un-bookable 'none').
+    const currentThreshold = tierConfig.threshold ?? 0;
+    const bookableMins = Object.entries(venueAccessConfig)
+      .filter(([name, cfg]: [string, any]) =>
+        name !== 'none' &&
+        (cfg?.threshold ?? 0) <= currentThreshold &&
+        Array.isArray(cfg?.capacity_range))
+      .map(([, cfg]: [string, any]) => cfg.capacity_range[0]);
+    const min = bookableMins.length ? Math.min(...bookableMins) : tierConfig.capacity_range[0];
+    const max = tierConfig.capacity_range[1];
     if (typeof min !== 'number' || typeof max !== 'number' || min < 0 || max <= min) {
       throw new Error(`Invalid capacity range [${min}, ${max}] for venue tier '${currentVenueAccess}' - values must be positive numbers with max > min`);
     }
@@ -566,6 +599,9 @@ export default function LivePerformancePage() {
 
   const handleSubmit = async () => {
     if (!selectedType || !selectedArtist || !title || budgetPerCity <= 0) return;
+    // BUG #6 FIX: never submit while venue access is locked — the server rejects
+    // `venueAccess === 'none'` outright (guaranteed 400).
+    if (!hasVenueAccess) return;
 
     const tourData: TourCreationData = {
       title,
@@ -611,7 +647,7 @@ export default function LivePerformancePage() {
 
   const canAfford = estimateData?.canAfford ?? false;
   const hasCreativeCapital = currentCreativeCapital >= 1;
-  const isValid = selectedType && selectedArtist && title && budgetPerCity > 0 && canAfford && hasCreativeCapital && availableArtists.length > 0;
+  const isValid = selectedType && selectedArtist && title && budgetPerCity > 0 && canAfford && hasCreativeCapital && availableArtists.length > 0 && hasVenueAccess;
 
   return (
     <GameLayout>
@@ -745,6 +781,9 @@ export default function LivePerformancePage() {
                             <Badge variant="outline" className="text-xs">
                               Energy: {artist.energy ?? 0}
                             </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Talent: {artist.talent ?? 0}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))
@@ -812,8 +851,29 @@ export default function LivePerformancePage() {
                 </div>
               )}
 
-              {/* PHASE 3: Venue Capacity Selection */}
-              {(() => {
+              {/* BUG #6 FIX: Venue access locked — server rejects any booking while
+                  venue access is 'none', so hide the capacity slider and show a
+                  reputation-gated lock message instead of a control that always 400s. */}
+              {!hasVenueAccess ? (
+                <div className="glass-panel chromatic-hairline border-warning/30 p-4">
+                  <div className="flex items-start gap-3">
+                    <Lock className="w-5 h-5 text-warning mt-0.5 shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-warning mb-1">Venue Access Locked</h4>
+                      <p className="text-sm text-text-muted">
+                        Your label doesn't have venue access yet, so no shows can be booked.
+                        {venueUnlockReputation !== null ? (
+                          <> Reach <span className="font-medium text-text-primary">{venueUnlockReputation} reputation</span> to unlock club venues (currently {currentReputation}).</>
+                        ) : (
+                          <> Build reputation to unlock venue access.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+              /* PHASE 3: Venue Capacity Selection */
+              (() => {
                 try {
                   const capacityRange = getCapacityRange();
                   return (
@@ -929,7 +989,8 @@ export default function LivePerformancePage() {
                     </div>
                   );
                 }
-              })()}
+              })()
+              )}
 
               {/* Comprehensive Tour Analysis - Enhanced API Integration */}
               <div className="glass-panel chromatic-hairline hud-ticks p-4">
