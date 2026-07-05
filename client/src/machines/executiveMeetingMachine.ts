@@ -46,6 +46,13 @@ export interface ExecutiveMeetingContext {
    * a hard budget so the auto-picked set can never overdraw CC (playtest bug #11).
    */
   creativeCapital: number;
+  /**
+   * True when the A&R office slot is in use this week. AUTO_SELECT must NOT
+   * propose the A&R head (`head_ar`, Marcus) while this is true — the manual UI
+   * already blocks him. Threaded in via SYNC_SLOTS (same channel as focus slots /
+   * creativeCapital), read by the prepareAutoSelections actor.
+   */
+  arOfficeSlotUsed: boolean;
   error: string | null;
   autoOptions: AutoOption[];
   impactPreview: {
@@ -70,7 +77,7 @@ export type ExecutiveMeetingEvent =
   | { type: 'BACK_TO_EXECUTIVES' }
   | { type: 'BACK_TO_MEETINGS' }
   | { type: 'RESET' }
-  | { type: 'SYNC_SLOTS'; used: number; total: number; creativeCapital?: number }
+  | { type: 'SYNC_SLOTS'; used: number; total: number; creativeCapital?: number; arOfficeSlotUsed?: boolean }
   | { type: 'SYNC_WEEK'; currentWeek: number }
   | { type: 'AUTO_SELECT' }
   // Meeting-relevance PR-3 (AUTO Option A: propose-then-confirm). AUTO now
@@ -89,6 +96,8 @@ interface ExecutiveMeetingInput {
   focusSlotsTotal: number;
   /** Remaining Creative Capital budget for AUTO_SELECT (playtest bug #11). */
   creativeCapital?: number;
+  /** A&R office slot in use → AUTO must not propose head_ar (see context field). */
+  arOfficeSlotUsed?: boolean;
   onActionSelected: (action: string) => void;
   fetchExecutives?: ExecutiveServices['fetchExecutives'];
   fetchRoleMeetings?: ExecutiveServices['fetchRoleMeetings'];
@@ -141,6 +150,9 @@ export const executiveMeetingMachine = setup({
             focusSlotsTotal: event.total,
             ...(typeof event.creativeCapital === 'number'
               ? { creativeCapital: event.creativeCapital }
+              : {}),
+            ...(typeof event.arOfficeSlotUsed === 'boolean'
+              ? { arOfficeSlotUsed: event.arOfficeSlotUsed }
               : {}),
           }
         : {}
@@ -374,7 +386,11 @@ export const executiveMeetingMachine = setup({
 
       // Use shared auto-select logic. Pass the remaining Creative Capital as a
       // hard budget so AUTO never assembles a set that overdraws CC (bug #11).
-      const allOptions = prepareAutoSelectOptions(context.executives, meetingsByRole);
+      // AR-busy exclusion: skip head_ar when the A&R office slot is in use, so
+      // AUTO never proposes an exec the manual UI already blocks (playtest bug).
+      const allOptions = prepareAutoSelectOptions(context.executives, meetingsByRole, {
+        arOfficeSlotUsed: context.arOfficeSlotUsed,
+      });
       const topOptions = selectTopOptions(allOptions, slotsRemaining, context.creativeCapital);
 
       // Convert to AutoOption format expected by machine
@@ -487,6 +503,7 @@ export const executiveMeetingMachine = setup({
     focusSlotsUsed: 0,
     focusSlotsTotal: input.focusSlotsTotal,
     creativeCapital: input.creativeCapital ?? Infinity,
+    arOfficeSlotUsed: input.arOfficeSlotUsed ?? false,
     error: null,
     autoOptions: [],
     impactPreview: { immediate: {}, delayed: {}, selectedChoices: [] },

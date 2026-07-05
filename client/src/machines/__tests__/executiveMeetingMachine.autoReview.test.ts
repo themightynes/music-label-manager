@@ -33,6 +33,7 @@ function makeMeeting(id: string): RoleMeeting {
 
 const cmoExec: Executive = { id: 'e-cmo', role: 'cmo', level: 1, mood: 20, loyalty: 30 } as any;
 const ccoExec: Executive = { id: 'e-cco', role: 'cco', level: 1, mood: 40, loyalty: 40 } as any;
+const arExec: Executive = { id: 'e-ar', role: 'head_ar', level: 1, mood: 10, loyalty: 20 } as any;
 
 function waitForState(actor: ReturnType<typeof createActor>, matcher: string): Promise<void> {
   return new Promise((resolve) => {
@@ -62,7 +63,7 @@ function waitForExecutives(actor: ReturnType<typeof createActor>): Promise<void>
   });
 }
 
-function buildActor(executives: Executive[]) {
+function buildActor(executives: Executive[], opts: { arOfficeSlotUsed?: boolean } = {}) {
   const onActionSelected = vi.fn();
   const fetchRoleMeetings = vi.fn(async (role: string) => [makeMeeting(`${role}_meeting`)]);
   const actor = createActor(executiveMeetingMachine, {
@@ -71,6 +72,7 @@ function buildActor(executives: Executive[]) {
       currentWeek: 5,
       focusSlotsTotal: 3,
       creativeCapital: 100,
+      arOfficeSlotUsed: opts.arOfficeSlotUsed,
       onActionSelected,
       fetchExecutives: async () => executives,
       fetchRoleMeetings,
@@ -133,6 +135,33 @@ describe('executiveMeetingMachine — AUTO propose-then-confirm (PR-3)', () => {
     expect(actor.getSnapshot().context.autoOptions).toEqual([]);
     // No focus slots leaked, no selection state left behind.
     expect(actor.getSnapshot().context.selectedExecutive).toBeNull();
+  });
+
+  it('AR-busy: AUTO proposal EXCLUDES head_ar when arOfficeSlotUsed is set in context', async () => {
+    // Playtest bug: AUTO grabbed Marcus (head_ar) while the A&R office slot was in
+    // use. The flag reaches the machine via input (SYNC_SLOTS in the live app).
+    const { actor, onActionSelected } = buildActor([cmoExec, arExec], { arOfficeSlotUsed: true });
+    await waitForExecutives(actor);
+
+    actor.send({ type: 'AUTO_SELECT' });
+    await waitForState(actor, 'reviewingAutoSelections');
+
+    const { autoOptions } = actor.getSnapshot().context;
+    expect(autoOptions.some((o) => o.executive.role === 'head_ar')).toBe(false);
+    // The non-busy exec is still proposed.
+    expect(autoOptions.some((o) => o.executive.role === 'cmo')).toBe(true);
+    expect(onActionSelected).not.toHaveBeenCalled();
+  });
+
+  it('AR-free: AUTO proposal INCLUDES head_ar when the flag is absent (default behavior)', async () => {
+    const { actor } = buildActor([cmoExec, arExec]);
+    await waitForExecutives(actor);
+
+    actor.send({ type: 'AUTO_SELECT' });
+    await waitForState(actor, 'reviewingAutoSelections');
+
+    const { autoOptions } = actor.getSnapshot().context;
+    expect(autoOptions.some((o) => o.executive.role === 'head_ar')).toBe(true);
   });
 
   it('OVERRIDE_AUTO_ROW drops the proposal and enters the manual flow for that exec', async () => {

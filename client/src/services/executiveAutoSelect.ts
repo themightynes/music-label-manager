@@ -214,19 +214,42 @@ export function findEligibleMeeting(meetings: RoleMeeting[]): RoleMeeting | null
 }
 
 /**
+ * Options controlling which executives AUTO may propose.
+ *
+ * `arOfficeSlotUsed` — when true, the A&R head (`head_ar`, Marcus) is occupied
+ * running an A&R office operation, so AUTO must NOT propose him. This mirrors the
+ * manual UI, which already blocks the A&R card while the office slot is in use
+ * (`isArBusy` in ExecutiveCard.tsx). Absent/false = current behavior (Marcus is
+ * proposable), which keeps existing callers/tests green. Slot MATH is unaffected —
+ * `usedFocusSlots` already counts the A&R slot; this only fixes the exclusion so
+ * an already-busy exec is never re-proposed.
+ */
+export interface PrepareAutoSelectOptionsConfig {
+  arOfficeSlotUsed?: boolean;
+}
+
+/**
  * Prepare auto-selection options for all executives
  *
  * @param executives - List of executives
  * @param meetingsByRole - Meetings grouped by executive role
+ * @param config - Optional exclusion config (e.g. skip head_ar while the A&R
+ *   office slot is in use). Omit for the default (no extra exclusions).
  * @returns Array of auto-selection options with scores
  */
 export function prepareAutoSelectOptions(
   executives: Executive[],
-  meetingsByRole: Record<string, RoleMeeting[]>
+  meetingsByRole: Record<string, RoleMeeting[]>,
+  config: PrepareAutoSelectOptionsConfig = {}
 ): AutoSelectOption[] {
   const options: AutoSelectOption[] = [];
 
   for (const executive of executives) {
+    // AR-busy exclusion: the A&R head is occupied running an office operation, so
+    // AUTO must not propose him (manual UI already blocks him). Playtest bug: AUTO
+    // grabbed Marcus while the A&R office slot was in use.
+    if (config.arOfficeSlotUsed && executive.role === 'head_ar') continue;
+
     const meetings = meetingsByRole[executive.role] || [];
     // Meeting-relevance Tier 0 (PR-1): an exec whose eligible pool is empty
     // (server answered meetings: [] — the sit-out rule) is skipped by AUTO here.

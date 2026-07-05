@@ -66,6 +66,13 @@ export function ExecutiveMeetings({
   const [sitOutRoles, setSitOutRoles] = useState<Set<string>>(new Set());
 
   const { getAROfficeStatus, selectedActions } = useGameStore();
+  // C74: the global GameHeader AUTO button sets this session intent + navigates
+  // here; we consume it once (below) when the machine is idle by sending
+  // AUTO_SELECT, routing the header AUTO through the same review gate.
+  const pendingAutoSelectIntent = useGameStore((s) => s.pendingAutoSelectIntent);
+  const consumePendingAutoSelectIntent = useGameStore(
+    (s) => s.consumePendingAutoSelectIntent,
+  );
   // Phase 3 PR-9: artists roster read from the TanStack Query cache, not Zustand.
   const { data: artists = [] } = useArtists();
 
@@ -79,12 +86,18 @@ export function ExecutiveMeetings({
     [queryClient],
   );
 
+  // A&R office slot status — threaded to the machine so AUTO_SELECT excludes the
+  // A&R head (head_ar, Marcus) while he's occupied, matching the manual UI.
+  const arOfficeStatusForInput = arOfficeStatusProp ?? getAROfficeStatus();
+  const arOfficeSlotUsedInitial = !!arOfficeStatusForInput?.arOfficeSlotUsed;
+
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
       gameId,
       currentWeek,
       focusSlotsTotal: focusSlots.total,
       creativeCapital,
+      arOfficeSlotUsed: arOfficeSlotUsedInitial,
       onActionSelected,
       fetchExecutives: cachedFetchExecutives,
       fetchRoleMeetings,
@@ -98,7 +111,8 @@ export function ExecutiveMeetings({
   // PR-3: hide the AUTO button while AUTO is computing or its proposal is under
   // review, so the flow can't be re-triggered on top of itself.
   const isAutoFlowActive = state.matches('autoSelecting') || state.matches('reviewingAutoSelections');
-  const arOfficeStatus = arOfficeStatusProp ?? getAROfficeStatus();
+  const arOfficeStatus = arOfficeStatusForInput;
+  const arOfficeSlotUsed = arOfficeSlotUsedInitial;
   const executives = context.executives;
   const executivesLoading = state.matches('loadingExecutives') || state.matches('refreshingExecutives');
   const executivesError = context.error;
@@ -179,8 +193,9 @@ export function ExecutiveMeetings({
       used: focusSlots.used,
       total: focusSlots.total,
       creativeCapital,
+      arOfficeSlotUsed,
     });
-  }, [focusSlots.used, focusSlots.total, creativeCapital, send]);
+  }, [focusSlots.used, focusSlots.total, creativeCapital, arOfficeSlotUsed, send]);
 
   // Sync current week with the machine (clears cache when week changes)
   useEffect(() => {
@@ -189,6 +204,32 @@ export function ExecutiveMeetings({
       currentWeek
     });
   }, [currentWeek, send]);
+
+  // C74: consume the header AUTO intent exactly once. We wait until the machine
+  // is `idle` (its resting state after executives load) before sending AUTO_SELECT
+  // so we never fire on top of an in-flight AUTO/manual flow — if the player lands
+  // mid-flow, the intent simply sits pending until the machine returns to idle.
+  // The flag is cleared as soon as we send, so a re-render can't double-fire, and
+  // it is session/UI state (never persisted), so a reload never re-triggers AUTO.
+  const isMachineIdle = state.matches('idle');
+  useEffect(() => {
+    if (!pendingAutoSelectIntent) return;
+    if (!isMachineIdle) return;
+    consumePendingAutoSelectIntent();
+    // Only actually open the review gate if slots are free; if none are free the
+    // header button was disabled, but a slot could have filled between click and
+    // arrival — in that case we just clear the intent (the machine's own
+    // hasFocusSlots guard on AUTO_SELECT would no-op anyway).
+    if (hasAvailableSlots) {
+      send({ type: 'AUTO_SELECT' });
+    }
+  }, [
+    pendingAutoSelectIntent,
+    isMachineIdle,
+    hasAvailableSlots,
+    consumePendingAutoSelectIntent,
+    send,
+  ]);
 
   // Calculate impact preview when selectedActions change
   const isPreviewBlocked =
