@@ -1,7 +1,7 @@
 # Email & Notification System - Complete Reference
 **Status**: Planning
 **Created**: 2025-09-30
-**Last Updated**: 2026-07-01 (Corrected email category docs: 5 shipped generic categories + legacy event-type mapping)
+**Last Updated**: 2026-07-05 (Email Narrative Phase 1 documented: exec-voiced mood-banded email bodies, deterministic variant selection — see the "Email Narrative Phase 1" section)
 
 ---
 
@@ -353,7 +353,28 @@ Your executive team will send emails based on their expertise areas:
 
 ---
 
-### Email Categories
+### Email Narrative Phase 1 ✅ **IMPLEMENTED** (2026-07-05, PR #120 `c86f707`)
+
+The voice profiles above are no longer just template concepts — email **bodies are now generated in the sending executive's voice, banded on that executive's current mood**. The static "Email Template Concept" blocks later in this document remain the original design sketches; the shipped copy lives in code:
+
+**`shared/engine/emailNarrative.ts`** — shared narrative helpers:
+- **5 mood bands** (`MoodBand`), mapped from the exec's 0–100 mood via `moodToBand`: `terrible` 0–19, `poor` 20–39, `neutral` 40–59, `good` 60–79, `excellent` 80–100. Undefined/null/NaN mood → `neutral`; out-of-range clamps.
+- **Deterministic selection, zero RNG** (backlog C64 constraint): variant/quirk/timestamp selection uses a 32-bit **FNV-1a** hash (`stableHash`) over a seed of `(gameId, week, category, discriminator)` — `pickVariant`, `pickFlag`. Nothing touches the engine's seeded RNG stream or `Math.random()`, so the golden master is untouched and identical inputs yield byte-identical emails.
+- `narrativeTimestamp` — deterministic per-exec quirk timestamps (Mac: 2–4 AM; Sam: business hours; Dante: "cosmic" times like 11:11/3:33; Pat: precisely on the :00/:15/:30/:45).
+
+**`shared/engine/emailTemplates.ts`** — **6 template categories × 5 mood bands**, each a pure function of `(band, vars, picker)` returning `{subject, greeting, narrative, signOff, quirk?}`:
+1. Artist discovery — Mac (`head_ar`)
+2. Chart updates — Sam (`cmo`), with distinct #1-debut and Top-10-debut variants
+3. Tour completion — Pat (`head_distribution`)
+4. Song release — Pat (`head_distribution`)
+5. Tier unlocks — sender varies by tier kind (playlist/venue → Pat, press → Sam, producer → Dante), matching the sender-mapping table below
+6. Weekly financial summary — Finance Department (no exec; banded on the week's **profitability**, not a mood)
+
+Mood-banded `SIGN_OFFS` (e.g. Mac: "Trust the ears," at excellent vs "Doing my best," at terrible) and subject-line prefixes ("BREAKING: " / "Update: " / "Status: ") shift tone per band.
+
+**Fail-soft to neutral**: `generateEmails`' `executiveMoods` param is optional (`ExecutiveMoodMap`). The engine threads read-only moods via `storage.getExecutivesByGame` inside the week transaction (`shared/engine/game-engine.ts:537-558`); if the lookup fails or a role's mood is absent, that email simply falls back to the `neutral` band — callers/tests that supply no moods still get valid output.
+
+**Additive-optional metadata**: `withNarrative` (`EmailGenerator.ts`) folds the narrative parts into the email **additively** — the structured `body` fields the client templates already read are preserved, with `greeting`/`narrative`/`signOff`/optional `quirk` plus an assembled `narrativeBody` string added alongside; `metadata` gains `narrativeBody`, `moodBand`, and per-category extras (e.g. the chart email's `narrativeType: offensive/neutral/defensive`). Pre-narrative emails and clients that ignore the new fields keep working unchanged.
 
 > **Updated 2026-07-01**: The shipped system stores emails under **5 generic categories** (`chart`, `financial`, `artist`, `ar`, `other`), defined by the `EmailCategory` type in `shared/types/emailTypes.ts`. The **7 event types** described below (Tour Completion, Top 10 Debut, etc.) are **legacy names** retained only for backward compatibility — they are normalized into the 5 generic categories at read time by `normalizeEmailCategory` / `LEGACY_CATEGORY_MAP` in `server/storage.ts`. The subsections below remain useful as the per-event **sender assignments and content specs**, but they are event *types*, not stored categories.
 
@@ -1271,9 +1292,9 @@ interface EmailTemplateProps {
 - Separate "Archive" vs "Delete"
 - Archive retention policy
 
-### Narrative Depth
-- Dynamic sender personalities (CFO tone vs A&R tone)
-- Procedurally generated flavor text based on game state
+### ~~Narrative Depth~~ ✅ **SHIPPED as Email Narrative Phase 1** (2026-07-05, PR #120)
+- ~~Dynamic sender personalities (CFO tone vs A&R tone)~~ — exec-voiced, mood-banded templates (see the "Email Narrative Phase 1" section above)
+- ~~Procedurally generated flavor text based on game state~~ — deterministic (FNV-1a) variant/quirk/timestamp selection, banded on executive mood
 
 ---
 
