@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
+import { RELEVANCE_TAGS } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -363,6 +364,10 @@ export const ActionRecommendationsSchema = z.object({
 // Target scope enum
 export const TargetScopeSchema = z.enum(['global', 'predetermined', 'user_selected']);
 
+// Meeting-relevance Tier 0 (PR-1): relevance-tag enum, derived from the canonical
+// RELEVANCE_TAGS array in shared/types/gameTypes.ts (single source of truth).
+export const RelevanceTagSchema = z.enum(RELEVANCE_TAGS);
+
 // Weekly action schema (role meetings and other actions)
 export const WeeklyActionSchema = z.object({
   id: z.string(),
@@ -378,6 +383,8 @@ export const WeeklyActionSchema = z.object({
   prompt: z.string().default(''),
   prompt_before_selection: z.string().optional(),
   target_scope: TargetScopeSchema.default('global'),
+  // Meeting-relevance Tier 0 (PR-1): AND semantics, absent = always eligible.
+  requires: z.array(RelevanceTagSchema).nonempty().optional(),
   choices: z.array(DialogueChoiceSchema).default([]),
   details: ActionDetailsSchema,
   recommendations: ActionRecommendationsSchema,
@@ -428,6 +435,7 @@ export type DialogueChoiceContract = z.infer<typeof DialogueChoiceSchema>;
 export type ActionDetails = z.infer<typeof ActionDetailsSchema>;
 export type ActionRecommendations = z.infer<typeof ActionRecommendationsSchema>;
 export type TargetScope = z.infer<typeof TargetScopeSchema>;
+export type RelevanceTagContract = z.infer<typeof RelevanceTagSchema>;
 export type WeeklyAction = z.infer<typeof WeeklyActionSchema>;
 export type ActionCategory = z.infer<typeof ActionCategorySchema>;
 export type ActionsConfig = z.infer<typeof ActionsConfigSchema>;

@@ -3,7 +3,8 @@ import { serverGameData } from '../data/gameData';
 import { storage } from '../storage';
 import { requireClerkUser } from '../auth';
 import { requireGameOwner } from '../middleware/requireGameOwner';
-import { seededRandomPick, generateMeetingSeed } from '@shared/utils/seededRandom';
+import { generateMeetingSeed } from '@shared/utils/seededRandom';
+import { deriveRelevanceState, selectWeeklyMeeting } from '@shared/engine/meetingSelection';
 import { gameDataLoader } from '@shared/utils/dataLoader';
 
 const router = Router();
@@ -41,10 +42,27 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
       if (gameId && week && roleMeetings.length > 0) {
         const weekNum = parseInt(week as string);
         if (!isNaN(weekNum)) {
+          // Meeting-relevance Tier 0 (PR-1): filter the pool to meetings whose
+          // `requires` tags hold for the current label state, THEN do the same
+          // uniform seeded pick as before. An empty eligible pool means the
+          // exec sits out the week (meetings: []) — spec §1's empty-pool rule.
+          const [artists, projects, releases, songs] = await Promise.all([
+            storage.getArtistsByGame(gameId as string),
+            storage.getProjectsByGame(gameId as string),
+            storage.getReleasesByGame(gameId as string),
+            storage.getSongsByGame(gameId as string),
+          ]);
+          const relevanceState = deriveRelevanceState({
+            artists,
+            projects,
+            releases,
+            songs,
+            currentWeek: weekNum,
+          });
           const seed = generateMeetingSeed(gameId as string, weekNum, req.params.roleId);
-          const selectedMeeting = seededRandomPick(roleMeetings, seed);
-          console.log(`[MEETING API] ✅ Randomized to 1 meeting for ${req.params.roleId} week ${weekNum}:`, selectedMeeting?.id);
-          roleMeetings = selectedMeeting ? [selectedMeeting] : roleMeetings;
+          const selectedMeeting = selectWeeklyMeeting(roleMeetings, relevanceState, seed);
+          console.log(`[MEETING API] ✅ Relevance-filtered pick for ${req.params.roleId} week ${weekNum}:`, selectedMeeting?.id ?? '(sit-out — empty eligible pool)');
+          roleMeetings = selectedMeeting ? [selectedMeeting] : [];
         }
       } else {
         console.log(`[MEETING API] ❌ NO RANDOMIZATION - returning all ${roleMeetings.length} meetings for ${req.params.roleId}`);
