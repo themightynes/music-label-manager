@@ -85,7 +85,7 @@ Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values
 | **ar_discovery** (global) — "I found our next superstar… her parents want creative control." | `accept_terms` | money −15000, creative_capital −3, executive_mood +8 | reputation +2, artist_mood −2 | Priciest, biggest exec-mood payoff, real artist-mood cost |
 | | `negotiate_compromise` | money −8000 | reputation +1, artist_mood +1 | Middle path — cheaper, smaller but positive payoff on both axes |
 | | `pass_on_talent` | reputation −1, executive_mood +2 | (none) | Free of money cost, but a guaranteed reputation hit |
-| **ar_genre_shift** (global) — "Rock is dying in the charts. Pivot to pop-rock?" | `chase_trends` | artist_mood −3, executive_mood +8 | awareness_boost +2, artist_mood −1 | Biggest awareness gain, biggest cumulative mood cost |
+| **ar_genre_shift** (global) — "The charts are moving away from our sound. Push toward what's trending?" | `chase_trends` | artist_mood −3, executive_mood +8 | awareness_boost +2, artist_mood −1 | Biggest awareness gain, biggest cumulative mood cost |
 | | `double_down_rock` | creative_capital −2, money −5000 | award_chances +1 | Only choice banking prestige; costliest immediate spend |
 | | `gradual_evolution` | money −2000 | awareness_boost +1, artist_mood +1 | Cheapest, smallest payoff, but net-positive mood |
 
