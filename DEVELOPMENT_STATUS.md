@@ -19,11 +19,13 @@
 
 **Decisions (Nes, this session):** FF-push #119 authorized; merge #119 → #120 → docs PR #121; Tier 0+1 as one slice; empty-pool sit-out rule approved; AUTO = Option A; self-merge-on-green grant for the arc's PRs.
 
+**Evening addendum — playtest done, C74 resolved same day (PR #126, `df49d51`).** Nes playtested the arc live and liked the review panel; two findings, both fixed and merged as **PR #126**: (1) **C74 decided + executed** — the header AUTO's direct-commit path DELETED; the button now sets a session intent (`pendingAutoSelectIntent`, Zustand UI state, never persisted) and routes into the Executive Suite's review panel — one AUTO behavior everywhere; (2) **new playtest bug fixed**: AUTO proposed Marcus (head_ar) while the A&R office slot was in use — `prepareAutoSelectOptions` now takes an `arOfficeSlotUsed` exclusion, threaded via `SYNC_SLOTS` (the manual UI already blocked him; slot math was already correct). Suite **1,334 green** (+11), tsc clean, golden master double-run zero-delta. **Live-verified in the running game**: header AUTO → review panel (2 proposals, Marcus correctly absent with his slot in use, CCO/Distro sitting out per the week-1 rule) → Cancel → nothing committed. Ledger: C74 struck (74 = 55 + 3 + 16 ✓); PENDING-DECISIONS §7 removed.
+
 **Open threads / next steps:**
-- **C74 remediation** (PENDING-DECISIONS §7) — decide before the next playtest; the header AUTO is the disengagement path the arc was built to close.
-- **Playtest Tier 0+1 + the AUTO review panel** — relevance weighting (2.0/4w) is a first-guess tuning; the sit-out rule's early-game feel needs eyes; Nes also still owes the Phase 4 in-game audio audition.
-- Tier 2 + side-events joint design (PENDING-DECISIONS §1) once playtest feedback exists.
-- Carry-overs: C70 copy rot, C72/C73 content warts, remaining ledger pendings (17).
+- **Tier 2 + side-events joint design** (PENDING-DECISIONS §1) — playtest feedback now exists; this is the next product conversation.
+- Relevance weighting (2.0/4w) is still first-guess tuning — revisit after more play.
+- Nes still owes the Phase 4 in-game audio audition.
+- Carry-overs: C70 copy rot, C72/C73 content warts, remaining ledger pendings (16).
 
 ---
 
