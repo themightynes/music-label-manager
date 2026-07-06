@@ -9,7 +9,7 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 5, 2026
-- **Total Items**: 75 (C1–C75, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
+- **Total Items**: 76 (C1–C76, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69)
 - **Completed**: 59
 - **Deferred by decision**: 3 (C32, C42, C43)
 - **In Progress**: 0
@@ -1216,19 +1216,35 @@ The late-July-5 playtest fix disabled meeting choices whose CC cost exceeds the 
 
 ---
 
+### [ ] Comment 76 (C76): `royalty_discrepancy` side event has a weakly-dominant choice 🔵
+**Priority**: 🔵 Low
+**Impact**: In the side event's three choices, "Negotiate a correction" (delayed `money` +2000, nothing else) weakly dominates "Audit rights and metadata" (immediate `money` −1000 + delayed `money` +500 = net −500, nothing else) under the meeting-dominance value model — a rational player never picks Audit. Content-quality wart only; side events are exempt from the dominance suite by design (meetings-only rule).
+**Effort**: Trivial (copy/effects tuning — Nes's call on the trade shape)
+
+Discovered July 6, 2026 while scoping the Content Editor's side-events lint: applying the meetings dominance hard-block to events would have made the real `data/events.json` unsaveable because of this pair. The editor's `lintSideEvents` deliberately omits the dominance check and documents this event as the reason (`client/src/admin/contentLint.ts`). If the pair is ever fixed, consider whether side events should then adopt the dominance rule (lint + a data-lint-style test) — until then the omission is load-bearing.
+
+**Relevant Files**:
+- [data/events.json](data/events.json)
+- [client/src/admin/contentLint.ts](client/src/admin/contentLint.ts)
+- [tests/engine/meeting-dominance.test.ts](tests/engine/meeting-dominance.test.ts)
+
+*Identified July 6, 2026 during the Content Editor (side events & meetings) session.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42, C43 — product decisions, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 12 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63, C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 13 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63, C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2)
 
 ### By Status
-- ✅ Completed: 59 items (78.7% of 75; 59 + 3 deferred + 13 pending = 75 ✓)
+- ✅ Completed: 59 items (77.6% of 76; 59 + 3 deferred + 14 pending = 76 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42, C43)
-- 📋 Pending: 13 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; all low except C62 medium, not scheduled). C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
+- 📋 Pending: 14 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; all low except C62 medium, not scheduled). C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
 
 ---
 

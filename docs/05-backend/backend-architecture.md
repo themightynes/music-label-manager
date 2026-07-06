@@ -92,6 +92,10 @@ POST   /api/saves                 // Create new save
 // Admin endpoints (require admin role)
 GET    /api/admin/database-stats         // Database health metrics
 POST   /api/admin/cleanup-orphaned-games // Manual orphaned game cleanup
+GET    /api/admin/actions-config         // Content Editor: read data/actions.json
+POST   /api/admin/actions-config         // Content Editor: save meetings (validate → backup → write → cache-clear → changelog)
+GET    /api/admin/events-config          // Content Editor: read data/events.json
+POST   /api/admin/events-config          // Content Editor: save side events (same pipeline; both POSTs append id-level diffs to data/content-changelog.json)
 
 // Authentication (Clerk-issued JWT verified per request; no local auth endpoints)
 GET    /api/me                    // Current user
