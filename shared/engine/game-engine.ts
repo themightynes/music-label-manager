@@ -19,6 +19,7 @@ import { AchievementsEngine } from './AchievementsEngine';
 import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
 import { ArtistChangeHelpers } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
+import { selectSideEvent } from './sideEventSelection';
 import { classifyChange, classifyChartUpdate } from '../utils/changeImportance';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
 import { ProgressionProcessor } from './processors/ProgressionProcessor';
@@ -959,21 +960,64 @@ export class GameEngine {
   }
 
   /**
-   * Checks for random events based on probability
+   * Checks for random side events based on probability (Tier 2, PR-3).
+   *
+   * LAPSE first (spec §3): a pending_side_event left unresolved from a PRIOR
+   * week is cleared here with NO effects — "the moment passed." This runs BEFORE
+   * the weekly roll so lapsing never consumes the new week's roll.
+   *
+   * ROLL unchanged (fork D1, spec §0 constraint 2): the in-stream getRandom(0,1)
+   * draw stays at the SAME position in the RNG stream — removing/moving it would
+   * shift every downstream engine roll and break the golden master.
+   *
+   * ON HIT: event SELECTION moves to an ISOLATED seed (closing ledger C64) via
+   * selectSideEvent — weighted by category, excluding events within their
+   * cooldown. On a selection, we (a) set flags.pending_side_event, (b) stamp
+   * flags.side_event_history[eventId], and (c) push the FULL event payload into
+   * summary.events so PR-4's UI can render the beat from the weekly outcome. If
+   * the cooldown filter empties the pool, no event fires this week.
+   *
+   * WEEK SEMANTICS: this.gameState.currentWeek here is the post-increment
+   * ARRIVAL week; the pending event belongs to (and is consumed during) that
+   * same week.
    */
   private async checkForEvents(summary: WeekSummary): Promise<void> {
+    const currentWeek = this.gameState.currentWeek || 0;
+    const flags = (this.gameState.flags || {}) as Record<string, any>;
+    this.gameState.flags = flags;
+
+    // --- LAPSE: clear a stale pending event from a prior week (no effects). ---
+    const pending = flags.pending_side_event as { eventId: string; week: number } | undefined;
+    if (pending && typeof pending.week === 'number' && pending.week < currentWeek) {
+      console.log(`[SIDE EVENT] Lapsing unresolved event "${pending.eventId}" from week ${pending.week} (now week ${currentWeek})`);
+      delete flags.pending_side_event;
+    }
+
     const eventConfig = this.gameData.getEventConfigSync();
-    
+
     if (this.getRandom(0, 1) < eventConfig.weekly_chance) {
-      // Trigger an event
-      const event = await this.gameData.getRandomEvent();
+      // --- HIT: select WHICH event on an isolated seed (weighted + cooldown). ---
+      const events = await this.gameData.getAllEvents();
+      const selectionConfig = this.gameData.getSideEventsConfigSync();
+      const history = (flags.side_event_history || {}) as Record<string, number>;
+
+      const event = selectSideEvent(events, selectionConfig, history, currentWeek, this.gameState.id);
       if (event) {
+        // Persist pending event + cooldown stamp (additive flags keys only).
+        flags.side_event_history = { ...history, [event.id]: currentWeek };
+        flags.pending_side_event = { eventId: event.id, week: currentWeek };
+
+        // Push the FULL payload so PR-4 can render the beat from the outcome.
         summary.events.push({
           id: event.id,
           title: event.prompt.substring(0, 50),
-          occurred: true
+          occurred: true,
+          category: event.category,
+          prompt: event.prompt,
+          choices: event.choices,
         });
       }
+      // Empty pool (all events on cooldown) → no event fires this week.
     }
   }
 

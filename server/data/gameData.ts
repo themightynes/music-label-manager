@@ -750,12 +750,27 @@ export class ServerGameData {
         max_per_year: 12
       };
     }
-    
+
     const events = this.balanceData.side_events;
     return {
       weekly_chance: events.weekly_chance,
       cooldown_weeks: events.event_cooldown,
       max_per_year: events.max_events_per_week * 12
+    };
+  }
+
+  /**
+   * Tier 2 (PR-3): the weighted-selection config for on-hit side-event picks —
+   * category weights + cooldown from data/balance/events.json side_events.
+   * Consumed by selectSideEvent (shared/engine/sideEventSelection.ts). Falls
+   * back to the authored defaults when balance data has not loaded (the on-hit
+   * path is dark in the golden master, so the fallback never affects it).
+   */
+  getSideEventsConfigSync(): { event_weights: Record<string, number>; event_cooldown: number } {
+    const events = this.balanceData?.side_events;
+    return {
+      event_weights: (events?.event_weights as Record<string, number>) ?? {},
+      event_cooldown: (events?.event_cooldown as number) ?? 2,
     };
   }
 

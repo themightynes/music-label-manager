@@ -307,6 +307,30 @@ export const ArtistDialogueResponseSchema = z.object({
 export type ArtistDialogueRequest = z.infer<typeof ArtistDialogueRequestSchema>;
 export type ArtistDialogueResponse = z.infer<typeof ArtistDialogueResponseSchema>;
 
+// ============================================================================
+// Side Event Choice (Tier 2, PR-3)
+// ============================================================================
+// Resolution endpoint for the pending side event set by the engine on a hit
+// (game-engine.ts checkForEvents). Effects apply at CHOICE-TIME, outside the
+// week transaction, mirroring the artist-dialogue immediate path.
+
+export const SideEventChoiceRequestSchema = z.object({
+  eventId: z.string().min(1, "Event ID is required"),
+  choiceId: z.string().min(1, "Choice ID is required"),
+});
+
+export const SideEventChoiceResponseSchema = z.object({
+  success: z.boolean(),
+  eventId: z.string(),
+  choiceId: z.string(),
+  effects: z.record(z.number()),
+  delayedEffects: z.record(z.number()),
+  message: z.string(),
+});
+
+export type SideEventChoiceRequest = z.infer<typeof SideEventChoiceRequestSchema>;
+export type SideEventChoiceResponse = z.infer<typeof SideEventChoiceResponseSchema>;
+
 // Backward compatibility - keep existing routes for now
 export const API_ROUTES = {
   GAME_STATE: '/api/game-state',
