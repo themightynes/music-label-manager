@@ -1,6 +1,31 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 5, 2026*
+*Updated: July 6, 2026*
+
+---
+
+## 📅 Session Log — July 6, 2026 (Content Editor: no-code side-events & meetings editing — designed, forked, built, verifier-CONFIRMED; branch UNMERGED pending Nes playtest)
+
+**Goal (Nes):** upgrade the Actions JSON Viewer so a game designer/copywriter can edit side events AND meetings without code. **Merge authority: local-only this session — PR OK, NO merge until Nes finalizes + playtests.**
+
+**Design pass first (hard checkpoint honored).** Recon established the as-is gaps with evidence: the viewer had no side-events support at all, couldn't see/edit `requires` or `reactive_trigger` (preserved-but-invisible), hardcoded a 6-key effect whitelist vs the canonical 13+1 (`LIVE_EFFECT_KEYS` ∪ `executive_mood` — seven live channels wrongly badged "not implemented"), offered a data-derived effect picker with a non-canonical `'new_effect'` fallback, read actions.json from the static bundle (prod-stale after save), and — the sharp one — **events.json edits would be invisible to a running server** because `dataLoader.loadAllData()` caches (same failure class as the July 5 stale-server mystery; actions.json dodges it via per-call re-read). Spec: `implementation-specs/[READY] content-editor-side-events-and-meetings-plan.md`. **Nes decided all four forks same session: A3** (tool emits a machine-readable changelog — `data/content-changelog.json`, id-level `{added,modified,deleted}` per save, consumed by a later dev docs pass to satisfy the [REFERENCE]-doc pairing rule), **B1** (balance knobs read-only context strip), **C2** (dominance = HARD block at save, stricter than recommended), **D1** (full side-event add/delete).
+
+**Factory: 3 slices on `feat/content-editor-side-events` (one fresh Sonnet subagent each, orchestrator diff-review before dispatching the next):**
+- **Slice 1 (`5a3c4ef`, server/contracts)** — `GET/POST /api/admin/events-config` mirroring the actions pair (validate → backup → write); `EventsConfigSchema`/`SideEventContractSchema` in contracts deriving `category` from `SIDE_EVENT_CATEGORIES` (one-source pattern); **both content POSTs now `gameDataLoader.clearCache()`** (closes the events-cache staleness) and append the fork-A3 changelog (`server/utils/contentChangelog.ts`, pure diff + warn-only append). Route-manifest delta = exactly the two new routes. Suite 1,445 → 1,461.
+- **Slice 2 (`c7dec05`, meetings tab)** — `client/src/admin/contentLint.ts` (pure lint mirror; `lintMeetings` hard-blocks non-canonical effect keys/tags/triggers, empty choices, dup ids, AND weakly-dominant choices — dominance model mirrored line-for-line from `meeting-dominance.test.ts`); ActionsViewer gains canonical effect picker with `EFFECT_CHANNEL_DESCRIPTIONS` blurbs, a `requires` checkbox editor (can never emit `[]` — omit-when-empty), a `reactive_trigger` selector with plain-language why-now copy, GET-endpoint data source (no static import; refetch-not-reload on save), and the lint gate before Zod before POST. Suite → 1,475.
+- **Slice 3 (`2284fcd`, side events tab)** — page becomes the **Content Editor** (route unchanged `/admin/actions-viewer`; tabs: Meetings | Side Events; GameLayout wraps exactly once); `SideEventsEditor.tsx` with full event CRUD, category picker showing live weights, read-only knobs strip (weekly_chance 0.20 / cooldown 2 / weights, static import, display-only), "(no events yet)" note on zero-event categories (`artist_personal` today — fork E's authoring surface is now real); `lintSideEvents` (canonical keys/categories + category-must-have-weight, mirroring the data-lint hard assertion). Suite → **1,488 green**.
+- **Deliberate design point:** `lintSideEvents` has **NO dominance check** — the meetings-only suite rule can't extend to events because the REAL `data/events.json` contains a weakly-dominant pair today (`royalty_discrepancy`: "negotiate" nets +2000 vs "audit" −500, all else equal → audit is never worth picking); a hard block would make the shipping file unsaveable. Logged as **C76** (🔵, content tuning = Nes's call); ledger now 76 = 59 + 3 + 14.
+
+**Fresh-context adversarial verifier (Opus): ALL 13 items CONFIRMED, none refuted, no High/Medium findings** — gates independently reproduced (tsc clean; **1,488/1,488**; GM double-run green with zero snapshot rewrite), dominance mirror verified byte-identical, `requires: []` impossibility proven at the handler, real events.json confirmed to parse + lint clean through the new pipeline, engine-adjacent diff verified empty (`shared/engine/`/`server/` touched only by admin.ts + contentChangelog.ts).
+
+**Doc-sync:** `data/CLAUDE.md` (in-slice) + `backend-architecture.md` admin-endpoint list (this pass; it had predated even the actions-config pair). Spec stays `[READY]` until the branch merges (then → `COMPLETED/[COMPLETE]`).
+
+**Open threads / next steps:**
+- **Nes: playtest the Content Editor live** (dev server — note both tabs fetch live files, and saves now clear the server data cache, so no restart needed for CONTENT edits; server-code changes still need restarts). Then decide merge.
+- PR open on `feat/content-editor-side-events` (3 slices + spec + docs). Unmerged by design.
+- C76 (royalty_discrepancy dominant choice) — trivial content tuning whenever Nes wants; until fixed, the events-lint dominance omission is load-bearing.
+- First real copywriter session will exercise the changelog → doc-pass loop (fork A3) for the first time — watch that it actually gets consumed.
+- Carry-overs: full-loop playtest of reactive meetings + side events, feel knobs untouched, C75, Phase 4 audio audition.
 
 ---
 
