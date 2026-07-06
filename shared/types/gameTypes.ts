@@ -514,6 +514,9 @@ export interface GameChange {
   // netProfit (declared above for tour completion) is reused for per-city profit.
   estTickets?: number; // deterministic pre-variance ticket estimate (foreshadow)
   artistName?: string;
+  // Slice 1b: artist reaction deltas attached to the tour_performance entry
+  // itself (moodChange above is reused); popularity delta from the show.
+  popularityChange?: number;
 }
 
 export interface EventOccurrence {

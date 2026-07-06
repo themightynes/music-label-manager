@@ -245,5 +245,20 @@ describe('Tour Tier1 Slice 1 — structured fields on tour_performance change', 
     expect(typeof perf!.netProfit).toBe('number');
     // netProfit = revenue − costs consistency.
     expect(perf!.netProfit).toBe((perf!.amount ?? 0) - (perf!.costs ?? 0));
+
+    // Slice 1b: artist reaction attached to the city entry itself, matching the
+    // separate mood/popularity change entries (no client-side re-matching needed).
+    expect(typeof perf!.moodChange).toBe('number');
+    expect(typeof perf!.popularityChange).toBe('number');
+    const moodEntry = summary.changes.find((c: GameChange) => c.type === 'mood' && c.artistId === TEST_ARTIST.id);
+    if (perf!.moodChange !== 0) {
+      expect(moodEntry).toBeDefined();
+      expect(moodEntry!.amount).toBe(perf!.moodChange);
+    }
+    const popEntry = summary.changes.find((c: GameChange) => c.type === 'popularity' && c.artistId === TEST_ARTIST.id);
+    if ((perf!.popularityChange ?? 0) > 0) {
+      expect(popEntry).toBeDefined();
+      expect(popEntry!.amount).toBe(perf!.popularityChange);
+    }
   });
 });

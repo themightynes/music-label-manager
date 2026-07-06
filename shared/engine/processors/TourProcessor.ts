@@ -180,7 +180,7 @@ export class TourProcessor {
 
       // Apply artist mood and popularity impacts based on performance
       console.log(`[TOUR IMPACTS] About to apply impacts for artist ${project.artistId}, city data:`, cityData);
-      await this.applyTourPerformanceImpacts(ctx, project.artistId, cityData, dbTransaction);
+      const reaction = await this.applyTourPerformanceImpacts(ctx, project.artistId, cityData, dbTransaction);
       console.log(`[TOUR IMPACTS] Completed applying impacts for artist ${project.artistId}`);
 
       // Add revenue to weekly summary
@@ -215,7 +215,11 @@ export class TourProcessor {
         costs: cityData.economics?.costs?.total,
         netProfit: cityData.economics?.profit,
         artistId: project.artistId,
-        artistName: artist.name
+        artistName: artist.name,
+        // Slice 1b: artist reaction attached to the city entry itself, so the
+        // client card doesn't re-match the separate mood/popularity entries.
+        moodChange: reaction.moodChange,
+        popularityChange: reaction.popularityChange
       });
     }
 
@@ -305,20 +309,25 @@ export class TourProcessor {
   /**
    * Apply artist mood and popularity impacts based on tour performance
    * Uses summary accumulation pattern to avoid conflicts with processWeeklyMoodChanges
+   *
+   * Returns the computed deltas (tour-tier1 slice 1b) so the caller can attach
+   * the artist reaction to the tour_performance change entry itself — the client
+   * card then doesn't have to re-match the separate mood/popularity entries or
+   * re-derive the attendance thresholds. Zeros on the not-found/error paths.
    */
   async applyTourPerformanceImpacts(
     ctx: WeekContext,
     artistId: string,
     cityData: any,
     dbTransaction: any
-  ): Promise<void> {
+  ): Promise<{ moodChange: number; popularityChange: number }> {
     const { summary } = ctx;
     try {
       // Get artist data from storage since this.artists is not initialized
       const artist = await ctx.storage?.getArtist?.(artistId, dbTransaction);
       if (!artist) {
         console.warn(`[TOUR IMPACTS] Artist ${artistId} not found`);
-        return;
+        return { moodChange: 0, popularityChange: 0 };
       }
 
       const attendanceRate = cityData.attendanceRate || 0;
@@ -393,8 +402,10 @@ export class TourProcessor {
 
       console.log(`[TOUR IMPACTS] ${artist.name}: Mood ${moodChange > 0 ? '+' : ''}${moodChange} (${attendanceRate}% attendance), Popularity +${popularityChange} (${actualAttendees} attendees) - accumulated in summary`);
 
+      return { moodChange, popularityChange };
     } catch (error) {
       console.error(`[TOUR IMPACTS] Error applying performance impacts:`, error);
+      return { moodChange: 0, popularityChange: 0 };
     }
   }
 }
