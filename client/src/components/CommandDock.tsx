@@ -508,6 +508,7 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
               onAdvanceWeek={() => setShowWeekSummary(false)}
               isWeekResults={true}
               onClose={() => setShowWeekSummary(false)}
+              gameId={gameId}
             />
           </div>
         </div>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3 } from 'lucide-react';
 import { ChartPerformanceCard } from './ChartPerformanceCard';
 import { AnimatedNumber } from './motion-primitives/animated-number';
 import { GlowEffect } from './motion-primitives/glow-effect';
@@ -14,7 +14,13 @@ import { playSound } from '@/lib/audio';
 import { classifyChartUpdate } from '@shared/utils/changeImportance';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import { EffectBadgeTooltip } from './executive-meetings/EffectBadgeTooltip';
-import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate } from '../../../shared/types/gameTypes';
+import { ChoiceEffects } from './executive-meetings/DialogueInterface';
+import { useGameStore } from '@/store/gameStore';
+import { useGameState } from '@/hooks/useGameState';
+import { queryClient } from '@/lib/queryClient';
+import { artistsQueryKey } from '@/hooks/useArtists';
+import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate, EventOccurrence, SideEventCategory } from '../../../shared/types/gameTypes';
+import type { SideEventChoiceResponse } from '../../../shared/api/contracts';
 
 interface WeekSummaryProps {
   weeklyStats: WeekSummaryType;
@@ -22,6 +28,9 @@ interface WeekSummaryProps {
   isAdvancing?: boolean;
   isWeekResults?: boolean;
   onClose?: () => void;
+  /** Tier 2 PR-4: needed to POST the side-event choice resolution. Optional so
+   * existing callers/tests that never carry a side event keep compiling. */
+  gameId?: string | null;
 }
 
 // --- Staged reveal timeline (Phase 4 PR-3) ---------------------------------
@@ -69,6 +78,199 @@ const RevealGroup: React.FC<{
     </motion.div>
   );
 };
+
+// --- Side-event beat (Tier 2 PR-4, spec §3, fork C2) -----------------------
+// A choice moment folded into the staged reveal: on a side-event hit, the
+// engine (PR-3) pushes the FULL event payload into summary.events (id, title,
+// occurred, category, prompt, choices) and sets flags.pending_side_event.
+// Resolution POSTs to /api/game/:gameId/side-event-choice via the store's
+// resolveSideEvent action (never a raw fetch — see client/CLAUDE.md).
+
+/** Category-flavored header copy + icon tone. Module scope: static data. */
+const SIDE_EVENT_CATEGORY_META: Record<SideEventCategory, { label: string; accent: string }> = {
+  sync_licensing: { label: 'Sync Licensing', accent: 'text-neon-cyan border-neon-cyan/40' },
+  copyright_issues: { label: 'Copyright Issue', accent: 'text-neon-amber border-neon-amber/40' },
+  platform_opportunities: { label: 'Platform Opportunity', accent: 'text-neon-lilac border-neon-purple/40' },
+  industry_drama: { label: 'Industry Drama', accent: 'text-neon-magenta border-neon-magenta/40' },
+  technical_problems: { label: 'Technical Problem', accent: 'text-neon-amber border-neon-amber/40' },
+  business_opportunities: { label: 'Business Opportunity', accent: 'text-neon-cyan border-neon-cyan/40' },
+  artist_personal: { label: 'Artist Moment', accent: 'text-neon-lilac border-neon-purple/40' },
+};
+
+/** Artist-scoped effect keys — resolving with one of these present means the
+ * roster changed server-side, so the artists query must be invalidated
+ * (client/CLAUDE.md key-shape rule: real key via artistsQueryKey, never a bare
+ * ['artists'] guess). Kept local (not imported from LIVE_EFFECT_KEYS, which is
+ * the full whitelist, not just the artist-scoped subset). */
+const ARTIST_SCOPED_EFFECT_KEYS = new Set(['artist_mood', 'artist_energy', 'artist_popularity']);
+
+type SideEventResolution =
+  | { status: 'resolved'; choiceId: string; choiceLabel: string; response: SideEventChoiceResponse }
+  | { status: 'lapsed' };
+
+interface SideEventBeatProps {
+  event: EventOccurrence;
+  gameId: string | null;
+  /**
+   * One-shot-per-week (spec item 5): whether flags.pending_side_event is STILL
+   * present for this event on the current gameState spine. Chosen over the
+   * alternative (deriving "already resolved" purely from local component
+   * state) because it is the simpler of the two options and it is what
+   * actually persists correctly: the WeekSummary modal is conditionally
+   * rendered by CommandDock (unmounts on close), so local state alone would
+   * forget a same-session resolution on reopen, while the spine survives —
+   * resolveSideEvent's adoptServerSideEventResolution call reconciles `flags`
+   * (among money/reputation/creativeCapital) right after the POST succeeds, so
+   * by the time the response resolves, useGameState already reflects the
+   * cleared flag. The parent computes this via useGameState((gs) =>
+   * gs?.flags?.pending_side_event) so the card doesn't need its own subscription.
+   */
+  isPendingOnSpine: boolean;
+}
+
+/**
+ * Local `resolution` state additionally holds the SPECIFIC choice/response
+ * from a same-session resolve, so the card can show "you chose X" + the exact
+ * applied-effect badges instead of just a generic passed-state. On a fresh
+ * mount (e.g. reopening the modal later in the week) where `isPendingOnSpine`
+ * is already false and there is no local resolution to show, the card falls
+ * back to the generic "already resolved" copy — the exact effects from that
+ * earlier choice aren't retained anywhere the client can re-read cheaply, and
+ * refetching mood-event history just to redisplay a past badge is out of scope.
+ */
+export function SideEventBeat({ event, gameId, isPendingOnSpine }: SideEventBeatProps) {
+  const resolveSideEvent = useGameStore((s) => s.resolveSideEvent);
+  const [resolution, setResolution] = useState<SideEventResolution | null>(null);
+  const [pendingChoiceId, setPendingChoiceId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!event.choices || event.choices.length === 0) return null;
+
+  // Nothing chosen locally this session, AND the spine already shows the
+  // pending flag cleared -> either resolved earlier this session (before a
+  // remount) or lapsed on the next advance. Generic "already resolved" copy.
+  const alreadySettled = !resolution && !isPendingOnSpine;
+
+  const categoryMeta = event.category
+    ? SIDE_EVENT_CATEGORY_META[event.category]
+    : { label: 'Side Event', accent: 'text-neon-lilac border-neon-purple/40' };
+
+  const handleChoice = async (choiceId: string, choiceLabel: string) => {
+    if (!gameId || resolution || pendingChoiceId) return;
+    setPendingChoiceId(choiceId);
+    setError(null);
+    try {
+      const response = await resolveSideEvent(gameId, event.id, choiceId);
+
+      // Invalidate the artists query when the resolved effects touch an
+      // artist-scoped key — the endpoint applies those across the whole
+      // signed roster server-side (label-level event, no single target).
+      const touchesArtists = Object.keys(response.effects || {}).some((k) =>
+        ARTIST_SCOPED_EFFECT_KEYS.has(k)
+      );
+      if (touchesArtists) {
+        await queryClient.invalidateQueries({ queryKey: artistsQueryKey(gameId) });
+      }
+
+      setResolution({ status: 'resolved', choiceId, choiceLabel, response });
+    } catch (err: any) {
+      // 409: the pending event was already resolved/lapsed server-side (e.g.
+      // stale UI after a reload racing another tab, or a week boundary crossed
+      // mid-view). Quiet "moment passed" state — no toast spam (spec §4).
+      if (err?.status === 409) {
+        setResolution({ status: 'lapsed' });
+      } else {
+        setError('Could not record your choice. You can try again.');
+      }
+    } finally {
+      setPendingChoiceId(null);
+    }
+  };
+
+  return (
+    <Card className="relative overflow-hidden border-neon-purple/40">
+      <GlowEffect
+        mode="pulse"
+        blur="stronger"
+        colors={['#a855f7', '#22d3ee', '#ff4fd8']}
+        className="opacity-[0.12]"
+      />
+      <CardHeader className="relative">
+        <CardTitle className="flex items-center justify-between gap-2 text-sm">
+          <span className="flex items-center space-x-2">
+            <Sparkles className="h-4 w-4 text-neon-lilac" aria-hidden="true" />
+            <span className="text-aberration font-bold uppercase tracking-wide">And Then...</span>
+          </span>
+          <Badge variant="outline" className={`text-xs font-mono rounded-pill ${categoryMeta.accent}`}>
+            {categoryMeta.label}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="relative space-y-4">
+        <p className="text-sm font-medium text-white/90">{event.prompt}</p>
+
+        {resolution?.status === 'resolved' ? (
+          <div className="p-3 rounded-[12px] border border-positive/30 bg-positive/[0.06] space-y-2">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] text-positive">
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>You chose: {resolution.choiceLabel}</span>
+            </div>
+            {Object.keys(resolution.response.effects || {}).length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(resolution.response.effects)
+                  .filter(([key, value]) => typeof value === 'number' && value !== 0 && LIVE_EFFECT_KEYS.has(key))
+                  .map(([key, value]) => (
+                    <EffectBadgeTooltip key={key} effectKey={key}>
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40"
+                      >
+                        {value > 0 ? '+' : ''}{value} {key.replace(/_/g, ' ')}
+                      </Badge>
+                    </EffectBadgeTooltip>
+                  ))}
+              </div>
+            )}
+          </div>
+        ) : resolution?.status === 'lapsed' ? (
+          <div className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40 flex items-center gap-2">
+            <Clock3 className="h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
+            <span className="text-xs text-text-muted italic">The moment passed.</span>
+          </div>
+        ) : alreadySettled ? (
+          // Spec item 5 fallback: no local resolution to show (a fresh mount
+          // reopening the modal later), and the spine's pending flag is
+          // already gone — resolved or lapsed earlier. Generic, no re-fetch.
+          <div className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40 flex items-center gap-2">
+            <Check className="h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
+            <span className="text-xs text-text-muted italic">This moment has already passed.</span>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {event.choices.map((choice) => (
+              <div key={choice.id} className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-white/90">{choice.label}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!gameId || pendingChoiceId !== null}
+                    onClick={() => handleChoice(choice.id, choice.label)}
+                    className="shrink-0 border-neon-purple/40 text-neon-lilac hover:bg-neon-purple/10"
+                  >
+                    {pendingChoiceId === choice.id ? 'Choosing...' : 'Choose'}
+                  </Button>
+                </div>
+                <ChoiceEffects choice={choice} />
+              </div>
+            ))}
+            {error && <p className="text-xs text-negative">{error}</p>}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 // --- Meetings card formatting (exec-meetings-revival PR-2) -----------------
 // Module scope: pure formatting helpers, no reason to redefine per render.
@@ -144,7 +346,7 @@ function formatAppliedEffects(
     });
 }
 
-export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekResults, onClose }: WeekSummaryProps) {
+export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekResults, onClose, gameId }: WeekSummaryProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'projects'>('overview');
   const prefersReducedMotion = useReducedMotion();
   const instant = !!prefersReducedMotion;
@@ -292,6 +494,25 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     [weeklyStats?.chartUpdates]
   );
 
+  // Tier 2 PR-4: the side-event beat. summary.events carries the legacy
+  // {id,title,occurred} shape for non-side-event occurrences too — only render
+  // for an entry that actually has the full payload (choices present).
+  const sideEventOccurrence = useMemo(
+    () => (weeklyStats?.events || []).find((e) => Array.isArray(e.choices) && e.choices.length > 0),
+    [weeklyStats?.events]
+  );
+  // Spec item 5: one-shot-per-week, driven off flags.pending_side_event
+  // ABSENCE for exactly this event/week (see SideEventBeat's doc comment).
+  const pendingSideEvent = useGameState((gs) => gs?.flags?.pending_side_event as
+    | { eventId: string; week: number }
+    | undefined);
+  const isSideEventPendingOnSpine = !!(
+    sideEventOccurrence &&
+    pendingSideEvent &&
+    pendingSideEvent.eventId === sideEventOccurrence.id &&
+    pendingSideEvent.week === weeklyStats?.week
+  );
+
   // HERO moments now live IN the modal (fixing the missable-toast gap):
   //  - tier/access unlocks (always hero per the changeImportance classifier)
   //  - No. 1 chart outcomes (debut at #1 or climb to #1)
@@ -381,10 +602,25 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     setActiveTab(value as 'overview' | 'charts' | 'projects');
   };
 
-  const hasResults = isWeekResults && (changes.length > 0 || playerChartUpdates.length > 0);
+  const hasResults = isWeekResults && (changes.length > 0 || playerChartUpdates.length > 0 || !!sideEventOccurrence);
 
   const overviewBody = (
     <div className="space-y-6">
+      {/* Side-event beat (stage 2, HERO weight — "and then THIS happened").
+          Full-width: choice buttons + effect-badge rows need more room than the
+          two-column grid below gives the Milestone Moments card. Placed ABOVE
+          that grid so it reads first among the post-headline-numbers content,
+          ahead of the routine changes list, per spec §3 (fork C2). */}
+      {sideEventOccurrence && (
+        <RevealGroup revealed={currentStage >= STAGE_HERO} instant={instant}>
+          <SideEventBeat
+            event={sideEventOccurrence}
+            gameId={gameId ?? null}
+            isPendingOnSpine={isSideEventPendingOnSpine}
+          />
+        </RevealGroup>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Revenue Sources (stage 1) */}

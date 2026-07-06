@@ -21,6 +21,7 @@ import {
 } from '@/hooks/useDiscoveredArtists';
 import { gameStateQueryKey } from '@/hooks/useGameState';
 import { playHighestPrioritySound, type SoundKey } from '@/lib/audio';
+import type { SideEventChoiceResponse } from '@shared/api/contracts';
 
 // Internal helper: the shared 6-endpoint + email-snapshot parallel reload used
 // identically by loadGame / loadGameFromSave / advanceWeek. Fans out the same
@@ -304,6 +305,39 @@ async function adoptServerBalances(get: () => GameStore, gameId: string) {
   }
 }
 
+// Tier 2 PR-4: reconcile the gameState spine after a side-event choice
+// resolution (POST /api/game/:gameId/side-event-choice). That endpoint mutates
+// money / reputation / creativeCapital server-side AND clears
+// flags.pending_side_event — a strictly wider set of fields than
+// adoptServerBalances (money + creativeCapital only) is documented to merge, so
+// this is a SIBLING helper rather than an adoptServerBalances extension (that
+// helper's narrow two-field contract is relied on by its other three callers).
+// Mirrors adoptServerBalances's shape: refetch GET /api/game/:id, merge just
+// the fields this mutation can touch onto the current cached record, and route
+// the write through the commitGameState funnel so the cache stays the single
+// owner of the spine. Failures are swallowed (console.error) — the choice
+// itself already succeeded server-side; a stale reconciliation just means the
+// player sees last-known balances until the next full reload.
+async function adoptServerSideEventResolution(get: () => GameStore, gameId: string) {
+  try {
+    const response = await apiRequest('GET', `/api/game/${gameId}`);
+    const data = await response.json();
+    const serverGameState = data?.gameState;
+    if (!serverGameState) return;
+    const current = readGameState(get);
+    if (!current) return;
+    commitGameState((partial) => useGameStore.setState(partial), {
+      ...current,
+      money: serverGameState.money,
+      reputation: serverGameState.reputation,
+      creativeCapital: serverGameState.creativeCapital,
+      flags: serverGameState.flags,
+    });
+  } catch (error) {
+    console.error('[Tier2 PR-4] Failed to reconcile gameState after side-event choice:', error);
+  }
+}
+
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
   gameId: string,
@@ -405,6 +439,13 @@ interface GameStore {
   
   // Save management
   saveGame: (name: string, options?: { isAutosave?: boolean }) => Promise<void>;
+
+  // Tier 2 PR-4: resolve a pending side event (WeekSummary reveal beat).
+  resolveSideEvent: (
+    gameId: string,
+    eventId: string,
+    choiceId: string
+  ) => Promise<SideEventChoiceResponse>;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -1476,6 +1517,29 @@ export const useGameStore = create<GameStore>()(
           console.error('Failed to save game:', error);
           throw error;
         }
+      },
+
+      // Tier 2 PR-4: resolve a pending side event surfaced as a WeekSummary
+      // beat. Mirrors signArtist/createProject/planRelease's post-mutation
+      // reconciliation shape: the mutation response itself is returned to the
+      // caller for the resolved-state UI (chosen label + applied effects), and
+      // the gameState spine is reconciled via a dedicated GET-and-merge helper
+      // (money/reputation/creativeCapital/flags — see adoptServerSideEventResolution)
+      // rather than any ad-hoc setQueryData. Callers additionally invalidate the
+      // artists query themselves when the response's effects touch artist-scoped
+      // keys (this action does not know which keys are artist-scoped — that
+      // classification lives with LIVE_EFFECT_KEYS on the client side).
+      resolveSideEvent: async (gameId: string, eventId: string, choiceId: string) => {
+        const response = await apiRequest(
+          'POST',
+          `/api/game/${gameId}/side-event-choice`,
+          { eventId, choiceId }
+        );
+        const result = (await response.json()) as SideEventChoiceResponse;
+
+        await adoptServerSideEventResolution(get, gameId);
+
+        return result;
       }
     }),
     {

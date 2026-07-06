@@ -27,6 +27,18 @@ vi.mock('@/lib/audio', () => ({
   playSound: (key: string) => playSound(key),
 }));
 
+// Tier 2 PR-4: WeekSummary now also reads useGameState (side-event beat's
+// pending-flag check). Mock it store-only/QueryClient-free, matching the
+// ArtistRoster/SelectionSummary precedent — these tests carry no side event
+// (NOTABLE_STATS has no `events`), so a bare gameState is sufficient.
+vi.mock('@/hooks/useGameState', () => ({
+  useGameState: (selector?: (gs: unknown) => unknown) => {
+    const gs = { id: 'game-1', flags: {} };
+    return selector ? selector(gs) : gs;
+  },
+  useGameId: () => 'game-1',
+}));
+
 import { WeekSummary } from '@/components/WeekSummary';
 
 // A player-facing top-10 chart update with upward movement classifies as
