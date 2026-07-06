@@ -12,6 +12,14 @@ interface ExecutiveCardProps {
    * this week — they sit out. Card is not selectable and shows a calm notice.
    */
   sitOut?: boolean;
+  /**
+   * Tier 2 (PR-2, Nes amendment 1 — urgency indicator): this exec's selected
+   * meeting carries `reactiveContext` this week — a happening fired their
+   * reactive meeting. Shows a small pulse dot signaling "something happened"
+   * WITHOUT revealing content (no meeting name/trigger here — the "why now"
+   * line is the payoff on open).
+   */
+  hasReactiveMeeting?: boolean;
   onSelect: () => void;
   weeklySalary?: number;
   arOfficeStatus?: {
@@ -69,7 +77,7 @@ const roleConfig = {
   },
 } as const;
 
-export function ExecutiveCard({ executive, disabled = false, sitOut = false, onSelect, weeklySalary, arOfficeStatus, flipAvatar = false, badgesOnLeft = false, alignContent = 'center', isSelected = false, compactBadges = false }: ExecutiveCardProps) {
+export function ExecutiveCard({ executive, disabled = false, sitOut = false, hasReactiveMeeting = false, onSelect, weeklySalary, arOfficeStatus, flipAvatar = false, badgesOnLeft = false, alignContent = 'center', isSelected = false, compactBadges = false }: ExecutiveCardProps) {
   const config = roleConfig[executive.role as keyof typeof roleConfig] || {
     icon: Users,
     color: 'bg-gray-500',
@@ -162,15 +170,24 @@ export function ExecutiveCard({ executive, disabled = false, sitOut = false, onS
   if (isCEO) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <Badge
-          variant="secondary"
-          className={`text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill ${
-            effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-neon-lilac/20 transition-colors'
-          }`}
-          onClick={effectiveDisabled ? undefined : onSelect}
-        >
-          {config.shortTitle} - {config.name}
-        </Badge>
+        <div className="relative inline-block">
+          <Badge
+            variant="secondary"
+            className={`text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill ${
+              effectiveDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-neon-lilac/20 transition-colors'
+            }`}
+            onClick={effectiveDisabled ? undefined : onSelect}
+          >
+            {config.shortTitle} - {config.name}
+          </Badge>
+          {hasReactiveMeeting && !sitOut && (
+            <span
+              data-testid={`urgency-dot-${executive.role}`}
+              aria-label="Something happened this week"
+              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-neon-cyan shadow-[0_0_6px_2px_rgba(34,211,238,0.6)] animate-pulse"
+            />
+          )}
+        </div>
         {sitOut && (
           <span data-testid={`sit-out-${executive.role}`} className="text-xs text-text-muted">
             Nothing needs your call this week
@@ -184,6 +201,16 @@ export function ExecutiveCard({ executive, disabled = false, sitOut = false, onS
   const avatarColumn = (
     <div className={`flex-shrink-0 flex flex-col ${alignmentClass} justify-center gap-2`}>
       <div className="relative">
+        {/* Tier 2 (PR-2, urgency indicator): dot/pulse signaling a reactive
+            meeting is queued for this exec — no content, just "something
+            happened". Suppressed when sitting out (no meeting to open). */}
+        {hasReactiveMeeting && !sitOut && (
+          <span
+            data-testid={`urgency-dot-${executive.role}`}
+            aria-label="Something happened this week"
+            className="absolute -top-1 -right-1 z-10 h-3.5 w-3.5 rounded-full bg-neon-cyan shadow-[0_0_8px_2px_rgba(34,211,238,0.6)] animate-pulse"
+          />
+        )}
         {/* Avatar/Icon Box */}
         <div className="w-36 h-36 bg-gradient-to-br from-neon-purple to-neon-blue border border-white/10 rounded-card overflow-hidden relative shadow-panel">
           {config.avatar ? (

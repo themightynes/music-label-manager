@@ -28,11 +28,13 @@ import type { HappeningType, RelevanceTag } from '@shared/types/gameTypes';
  *         music, depending on how the meeting frames it — both are honest
  *         minimums depending on authored copy).
  *
- * As of PR-1 (dark launch), ZERO weekly_actions entries set `reactive_trigger`
- * — every rule below passes TRIVIALLY (the loops are over the filtered
- * reactive subset, so an empty subset naturally satisfies every assertion).
- * This is CORRECT dark-launch behavior, not a vacuous test: PR-2 authors the
- * first reactive meetings and these rules start doing real work then.
+ * PR-2 authored the first 5 reactive meetings (one per exec — head_ar x
+ * recent_signing, cmo x chart_debut, ceo x chart_debut, cco x mood_crater,
+ * head_distribution x release_out), so these rules now do real work: the
+ * canonical-enum, per-(role,trigger) uniqueness, and requires-consistency
+ * checks all run over a non-empty reactive subset. Cross-exec duplication of
+ * chart_debut (cmo + ceo) is intentional and permitted by rule 2, which keys
+ * uniqueness on (role_id, trigger), not trigger alone.
  *
  * Spec: docs/01-planning/implementation-specs/[READY] tier2-reactive-meetings-and-side-events-plan.md §2.
  */
@@ -116,7 +118,9 @@ describe('Data lint — reactive triggers (Tier 2, PR-1, dark launch)', () => {
     ).toEqual([]);
   });
 
-  it('sanity: this suite currently sees zero reactive meetings (dark launch)', () => {
-    expect(reactiveMeetings).toEqual([]);
+  it('sanity: PR-2 authored exactly 5 reactive meetings, one per exec', () => {
+    expect(reactiveMeetings).toHaveLength(5);
+    const roleIds = reactiveMeetings.map((m) => m.role_id).sort();
+    expect(roleIds).toEqual(['ceo', 'cco', 'cmo', 'head_ar', 'head_distribution'].sort());
   });
 });

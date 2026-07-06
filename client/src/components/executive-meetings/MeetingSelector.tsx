@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
-import { Clock, DollarSign, Zap, Globe, Star, User } from 'lucide-react';
+import { Clock, DollarSign, Zap, Globe, Star, User, Sparkles } from 'lucide-react';
 import type { RoleMeeting, GameArtist } from '../../../../shared/types/gameTypes';
 import { ArtistSelector } from './ArtistSelector';
+import { formatWhyNow } from '../../utils/reactiveContextCopy';
 
 interface MeetingSelectorProps {
   meetings: RoleMeeting[];
@@ -94,6 +95,26 @@ function ScopeBadge({ scope }: { scope: string }) {
   );
 }
 
+/**
+ * Tier 2 (PR-2) — "why now" reason line, rendered when the selected meeting
+ * carries `reactiveContext` (the injection stage picked it in response to a
+ * week happening). Reveal is the payoff: this line only appears once the
+ * player has opened the meeting, never on the exec card itself (that's the
+ * urgency dot's job — see ExecutiveCard).
+ */
+function WhyNowLine({ meeting }: { meeting: RoleMeeting }) {
+  if (!meeting.reactiveContext) return null;
+  return (
+    <div
+      data-testid="why-now-line"
+      className="flex items-center gap-1.5 text-xs font-mono text-neon-cyan"
+    >
+      <Sparkles className="h-3 w-3 shrink-0" />
+      <span>{formatWhyNow(meeting.reactiveContext)}</span>
+    </div>
+  );
+}
+
 export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBack }: MeetingSelectorProps) {
   const [selectedMeetingIndex, setSelectedMeetingIndex] = useState<number | null>(null);
   const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
@@ -165,6 +186,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <WhyNowLine meeting={meeting} />
             <ArtistSelector
               artists={signedArtists}
               selectedArtistId={selectedArtistId}
@@ -221,6 +243,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                <WhyNowLine meeting={meeting} />
                 <p className="text-sm text-text-body italic">
                   "{meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
                     ? meeting.prompt_before_selection

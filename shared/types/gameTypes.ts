@@ -114,6 +114,18 @@ export interface RoleMeeting {
    * shared/engine/weekHappenings.ts.
    */
   reactive_trigger?: HappeningType;
+  /**
+   * Tier 2 (PR-2): server-attached "why now" context on the SELECTED meeting —
+   * present only when the route's injection stage picked this meeting via a
+   * matching week happening (never authored in data/actions.json; response-side
+   * only). See server/routes/executives.ts and shared/api/contracts.ts
+   * ReactiveContextSchema. Drives the client's "why now" line + urgency dot.
+   */
+  reactiveContext?: {
+    trigger: HappeningType;
+    artistName?: string;
+    songTitle?: string;
+  };
   choices: DialogueChoice[];
 }
 
