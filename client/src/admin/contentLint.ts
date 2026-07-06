@@ -15,8 +15,8 @@
  *     byte-for-byte below: same PAYOFF_KEYS, same EXCLUDED_KEYS, same weaklyDominates rule).
  */
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
-import { RELEVANCE_TAGS, HAPPENING_TYPES } from '@shared/types/gameTypes';
-import type { WeeklyAction, DialogueChoiceContract } from '@shared/api/contracts';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '@shared/types/gameTypes';
+import type { WeeklyAction, DialogueChoiceContract, SideEventContract } from '@shared/api/contracts';
 
 export interface LintIssue {
   severity: 'error';
@@ -38,6 +38,7 @@ export const CANONICAL_EFFECT_KEYS: readonly string[] = Array.from(
 const RELEVANCE_TAG_SET: ReadonlySet<string> = new Set(RELEVANCE_TAGS);
 const HAPPENING_TYPE_SET: ReadonlySet<string> = new Set(HAPPENING_TYPES);
 const CANONICAL_EFFECT_KEY_SET: ReadonlySet<string> = new Set(CANONICAL_EFFECT_KEYS);
+const SIDE_EVENT_CATEGORY_SET: ReadonlySet<string> = new Set(SIDE_EVENT_CATEGORIES);
 
 // ---------------------------------------------------------------------------
 // Dominance model — mirrored EXACTLY from tests/engine/meeting-dominance.test.ts.
@@ -188,5 +189,103 @@ export function lintMeetings(actions: WeeklyAction[]): LintIssue[] {
   return issues;
 }
 
-// MISSING (slice 3): lintSideEvents(events: SideEvent[]): LintIssue[] — will share
-// CANONICAL_EFFECT_KEYS and the LintIssue shape defined above.
+/**
+ * Lint a would-be-saved array of side events (content-editor slice 3, spec §2.3).
+ * Returns a list of hard-block issues; an empty array means the array is safe to
+ * save (pending the Zod parse, which remains the second gate in
+ * SideEventsEditor.tsx).
+ *
+ * `eventWeights` is the `event_weights` table from data/balance/events.json,
+ * keyed by SIDE_EVENT_CATEGORIES entry — passed in by the caller (read-only
+ * display context in the UI; not editable here) so this function stays pure
+ * and framework-free, with no static-import coupling to a specific JSON file.
+ *
+ * DELIBERATELY NO DOMINANCE CHECK. The meeting-dominance suite
+ * (tests/engine/meeting-dominance.test.ts) only covers weekly meetings — side
+ * events are exempt by design. Applying that hard-block here would make the
+ * REAL, currently-shipping data/events.json unsaveable: `royalty_discrepancy`
+ * has a weakly-dominant pair under the same value model — `negotiate` nets
+ * +2000 money with no cost, strictly better than `audit`'s -1000 immediate /
+ * +500 delayed (net -500) on every tracked payoff axis. That's authored,
+ * accepted content, not a bug the tool should block. Do not add a dominance
+ * check to this function without first resolving that data conflict.
+ */
+export function lintSideEvents(
+  events: SideEventContract[],
+  eventWeights: Record<string, number>,
+): LintIssue[] {
+  const issues: LintIssue[] = [];
+
+  const seenEventIds = new Set<string>();
+
+  for (const event of events) {
+    // Duplicate event ids.
+    if (seenEventIds.has(event.id)) {
+      issues.push({
+        severity: 'error',
+        scope: event.id,
+        message: `Duplicate event id '${event.id}' — event ids must be unique.`,
+      });
+    }
+    seenEventIds.add(event.id);
+
+    // Empty choices array.
+    if (!event.choices || event.choices.length === 0) {
+      issues.push({
+        severity: 'error',
+        scope: event.id,
+        message: `Event '${event.id}' has no choices — every side event needs at least one.`,
+      });
+    }
+
+    // category must be one of SIDE_EVENT_CATEGORIES.
+    if (!SIDE_EVENT_CATEGORY_SET.has(event.category)) {
+      issues.push({
+        severity: 'error',
+        scope: event.id,
+        message: `Event '${event.id}' has an unknown category '${event.category}' — must be one of: ${SIDE_EVENT_CATEGORIES.join(', ')}.`,
+      });
+    } else if (!(event.category in eventWeights)) {
+      // Mirrors the HARD assertion in tests/engine/data-lint-side-event-categories.test.ts:
+      // an authored category absent from event_weights is not allowed (a category with
+      // zero authored events is fine — that's the opposite direction).
+      issues.push({
+        severity: 'error',
+        scope: event.id,
+        message: `Event '${event.id}' has category '${event.category}' which has no entry in event_weights (data/balance/events.json) — every authored category must have a weight.`,
+      });
+    }
+
+    // Duplicate choice ids within this event.
+    const seenChoiceIds = new Set<string>();
+    for (const choice of event.choices ?? []) {
+      const scope = `${event.id}:${choice.id}`;
+      if (seenChoiceIds.has(choice.id)) {
+        issues.push({
+          severity: 'error',
+          scope,
+          message: `Duplicate choice id '${choice.id}' within event '${event.id}' — choice ids must be unique per event.`,
+        });
+      }
+      seenChoiceIds.add(choice.id);
+
+      // Effect keys must be canonical.
+      for (const block of ['effects_immediate', 'effects_delayed'] as const) {
+        const effects = choice[block] || {};
+        for (const key of Object.keys(effects)) {
+          if (!CANONICAL_EFFECT_KEY_SET.has(key)) {
+            issues.push({
+              severity: 'error',
+              scope,
+              message: `Choice '${choice.id}' in event '${event.id}' uses unknown effect key '${key}' — must be one of the canonical effect channels.`,
+            });
+          }
+        }
+      }
+    }
+
+    // NO dominance check here — see the function-level comment above.
+  }
+
+  return issues;
+}

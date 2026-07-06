@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import GameLayout from '@/layouts/GameLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -765,40 +764,36 @@ export default function ActionsViewer() {
 
   if (isConfigLoading) {
     return (
-      <GameLayout>
-        <div className="container mx-auto p-6">
-          <Card className="bg-gray-900/50 border-white/10">
-            <CardContent className="p-8 text-center text-white/60">
-              Loading actions configuration...
-            </CardContent>
-          </Card>
-        </div>
-      </GameLayout>
+      <div className="container mx-auto p-6">
+        <Card className="bg-gray-900/50 border-white/10">
+          <CardContent className="p-8 text-center text-white/60">
+            Loading actions configuration...
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (isConfigError) {
     return (
-      <GameLayout>
-        <div className="container mx-auto p-6">
-          <Card className="bg-red-900/20 border-red-500/30">
-            <CardContent className="p-8 text-center text-red-300">
-              Failed to load actions configuration
-              {configError instanceof Error ? `: ${configError.message}` : '.'}
-            </CardContent>
-          </Card>
-        </div>
-      </GameLayout>
+      <div className="container mx-auto p-6">
+        <Card className="bg-red-900/20 border-red-500/30">
+          <CardContent className="p-8 text-center text-red-300">
+            Failed to load actions configuration
+            {configError instanceof Error ? `: ${configError.message}` : '.'}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <GameLayout>
-      <div className="container mx-auto p-6 space-y-6">
+    <>
+    <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="space-y-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">Actions JSON Viewer</h1>
+            <h2 className="text-2xl font-bold text-white">Meetings</h2>
             <p className="text-white/70">
               Version {data.version} • Generated {data.generated} • {data.weekly_actions.length} actions
             </p>
@@ -1959,6 +1954,6 @@ export default function ActionsViewer() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </GameLayout>
+    </>
   );
 }
