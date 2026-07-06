@@ -20,6 +20,8 @@
 
 **Doc-sync:** `data/CLAUDE.md` (in-slice) + `backend-architecture.md` admin-endpoint list (this pass; it had predated even the actions-config pair). Spec stays `[READY]` until the branch merges (then → `COMPLETED/[COMPLETE]`).
 
+**First playtest feedback, fixed same day (slice 4, `8adf014`):** Nes: "a new action gets put at the very bottom — should be a pop-up." Both tabs' instant-append-a-blank-template creation replaced with a Dialog (shadcn primitive already in repo): identity fields up front (Meetings: name/description/role/category/scope/icon; Side Events: prompt/role_hint/category), ID auto-slugged from name/prompt but editable with inline uniqueness validation, and the created item now renders at the TOP of the list, auto-expanded — display-order only, save-output composition unchanged. New shared pure helpers `slugifyId`/`isIdAvailable`/`orderWithNewestFirst` (`client/src/admin/utils.ts`). Suite → **1,507 green** (+19); tsc clean; GM double-run zero-delta; pushed to PR #146.
+
 **Open threads / next steps:**
 - **Nes: playtest the Content Editor live** (dev server — note both tabs fetch live files, and saves now clear the server data cache, so no restart needed for CONTENT edits; server-code changes still need restarts). Then decide merge.
 - PR open on `feat/content-editor-side-events` (3 slices + spec + docs). Unmerged by design.
