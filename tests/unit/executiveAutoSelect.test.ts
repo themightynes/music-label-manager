@@ -187,6 +187,34 @@ describe('prepareAutoSelectOptions — AR-busy exclusion (playtest bug: AUTO gra
     const options = prepareAutoSelectOptions([arExec, cmoExec], meetingsByRole);
     expect(options.some((o) => o.executive.role === 'head_ar')).toBe(true);
   });
+
+  // Playtest round-1 (2026-07-05): Nes picked Marcus manually, hit AUTO for
+  // the remaining slots, and AUTO proposed Marcus again — execs with a queued
+  // action this week must never be re-proposed (mirrors the manual UI's
+  // isExecutiveUsed disable).
+  it('excludes execs already used this week via usedExecutiveRoles', () => {
+    const options = prepareAutoSelectOptions([arExec, cmoExec], meetingsByRole, {
+      usedExecutiveRoles: ['head_ar'],
+    });
+    expect(options.some((o) => o.executive.role === 'head_ar')).toBe(false);
+    expect(options.some((o) => o.executive.role === 'cmo')).toBe(true);
+  });
+
+  it('empty usedExecutiveRoles excludes nobody', () => {
+    const options = prepareAutoSelectOptions([arExec, cmoExec], meetingsByRole, {
+      usedExecutiveRoles: [],
+    });
+    expect(options.some((o) => o.executive.role === 'head_ar')).toBe(true);
+    expect(options.some((o) => o.executive.role === 'cmo')).toBe(true);
+  });
+
+  it('used-roles and AR-busy exclusions compose', () => {
+    const options = prepareAutoSelectOptions([arExec, cmoExec], meetingsByRole, {
+      arOfficeSlotUsed: true,
+      usedExecutiveRoles: ['cmo'],
+    });
+    expect(options).toEqual([]);
+  });
 });
 
 describe('getChoiceCreativeCapitalCost', () => {

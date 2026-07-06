@@ -53,6 +53,15 @@ export interface ExecutiveMeetingContext {
    * creativeCapital), read by the prepareAutoSelections actor.
    */
   arOfficeSlotUsed: boolean;
+  /**
+   * Roles that already have a queued action this week (manual picks or prior
+   * AUTO confirms). AUTO_SELECT must NOT re-propose them — the manual UI
+   * already disables their cards (`isExecutiveUsed`). Threaded in via
+   * SYNC_SLOTS (same channel as arOfficeSlotUsed), read by the
+   * prepareAutoSelections actor. Playtest round-1 bug (2026-07-05): manual
+   * Marcus pick + AUTO for the remaining slots re-proposed Marcus.
+   */
+  usedExecutiveRoles: string[];
   error: string | null;
   autoOptions: AutoOption[];
   impactPreview: {
@@ -77,7 +86,7 @@ export type ExecutiveMeetingEvent =
   | { type: 'BACK_TO_EXECUTIVES' }
   | { type: 'BACK_TO_MEETINGS' }
   | { type: 'RESET' }
-  | { type: 'SYNC_SLOTS'; used: number; total: number; creativeCapital?: number; arOfficeSlotUsed?: boolean }
+  | { type: 'SYNC_SLOTS'; used: number; total: number; creativeCapital?: number; arOfficeSlotUsed?: boolean; usedExecutiveRoles?: string[] }
   | { type: 'SYNC_WEEK'; currentWeek: number }
   | { type: 'AUTO_SELECT' }
   // Meeting-relevance PR-3 (AUTO Option A: propose-then-confirm). AUTO now
@@ -98,6 +107,8 @@ interface ExecutiveMeetingInput {
   creativeCapital?: number;
   /** A&R office slot in use → AUTO must not propose head_ar (see context field). */
   arOfficeSlotUsed?: boolean;
+  /** Roles with a queued action this week → AUTO must not re-propose them (see context field). */
+  usedExecutiveRoles?: string[];
   onActionSelected: (action: string) => void;
   fetchExecutives?: ExecutiveServices['fetchExecutives'];
   fetchRoleMeetings?: ExecutiveServices['fetchRoleMeetings'];
@@ -153,6 +164,9 @@ export const executiveMeetingMachine = setup({
               : {}),
             ...(typeof event.arOfficeSlotUsed === 'boolean'
               ? { arOfficeSlotUsed: event.arOfficeSlotUsed }
+              : {}),
+            ...(Array.isArray(event.usedExecutiveRoles)
+              ? { usedExecutiveRoles: event.usedExecutiveRoles }
               : {}),
           }
         : {}
@@ -390,6 +404,9 @@ export const executiveMeetingMachine = setup({
       // AUTO never proposes an exec the manual UI already blocks (playtest bug).
       const allOptions = prepareAutoSelectOptions(context.executives, meetingsByRole, {
         arOfficeSlotUsed: context.arOfficeSlotUsed,
+        // Already-used exclusion (playtest round-1): never re-propose an exec
+        // who already has a queued action this week.
+        usedExecutiveRoles: context.usedExecutiveRoles,
       });
       const topOptions = selectTopOptions(allOptions, slotsRemaining, context.creativeCapital);
 
@@ -504,6 +521,7 @@ export const executiveMeetingMachine = setup({
     focusSlotsTotal: input.focusSlotsTotal,
     creativeCapital: input.creativeCapital ?? Infinity,
     arOfficeSlotUsed: input.arOfficeSlotUsed ?? false,
+    usedExecutiveRoles: input.usedExecutiveRoles ?? [],
     error: null,
     autoOptions: [],
     impactPreview: { immediate: {}, delayed: {}, selectedChoices: [] },
