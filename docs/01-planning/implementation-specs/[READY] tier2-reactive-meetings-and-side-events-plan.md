@@ -1,6 +1,6 @@
-# [DRAFT] Tier 2 — Reactive Meetings + Side Events (+ mood disposition)
+# [READY] Tier 2 — Reactive Meetings + Side Events (+ mood disposition)
 
-> **Status:** DRAFT — all six design forks decided by Nes (July 5, 2026, evening session): **A1, B1, C2, D1, E and F per recommendation**. Awaiting Nes's approval of THIS spec before any code is written (hard checkpoint, second gate). Promote to `[READY]` on approval.
+> **Status:** READY — all six design forks decided by Nes (July 5, 2026, evening session): **A1, B1, C2, D1, E and F per recommendation**. **Spec APPROVED by Nes same evening with three amendments, all folded in below:** (1) an **urgency indicator** on the exec card when a reactive meeting is queued (PR-2 — closes the discoverability gap: under B1 a reaction the player never opens would evaporate invisibly; the dot converts reactive meetings from a lottery into a pull, without spoiling the reveal); (2) **mood_crater derivation-completeness verification added to PR-1** alongside tour_wrapped (does passive weekly drift write `mood_events` rows, or only discrete effect applications?); (3) a **named playtest gate after PR-2** (orchestrator pings Nes; he decides play-now vs. continue to MVP-2). Nes also confirmed: tour_wrapped fallback (a) with **chart_debut as the CEO's replacement trigger** (CMO = press blitz, CEO = "what does this mean for the label" — different registers; the per-(exec, trigger) lint rule permits cross-exec duplication), **lapse-no-effect confirmed**, threshold-at-PR-time confirmed, and the fixed priority order pinned now as the tie-break law future authoring inherits (near-moot in MVP-1, deliberately decided while nothing depends on it).
 > **Decides:** PENDING-DECISIONS former §1 (Tier 2 + side-events) and former §5 (mood phases 6–10, folded into this call by Nes).
 > **Related:** `COMPLETED/[COMPLETE] meeting-relevance-tier0-1-plan.md` (§5 slot-in guarantee this spec cashes in), `[FUTURE] executive-meeting-relevance-and-reactivity.md` (problem framing), `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md` finding 1 (side events), `[IN-PROGRESS] artist-mood-plan.md` (phases 6–10), `[REFERENCE] executive-meetings-system-complete-reference.md` (as-built).
 
@@ -49,13 +49,15 @@ New module `shared/engine/weekHappenings.ts`, the sibling of `meetingSelection.t
 
 **Route + client**: the roles GET response gains an additive optional `reactiveContext: { trigger, artistName?, songTitle?, … }` on the selected meeting (Zod contracts additive). `MeetingSelector` renders the "why now" line ("Because *{songTitle}* debuted on the charts last week"); `AutoSelectReviewPanel` rows show the same line — AUTO's mechanics are otherwise untouched (fork B1 means no structural AUTO change; the review gate simply gets more worth reading).
 
+**Urgency indicator (Nes amendment 1, PR-2)**: when an exec's selected meeting carries `reactiveContext`, their card in the Executive Suite shows a small urgency indicator — a dot/pulse, **not** the content (preserve the reveal; the "why now" line is the payoff on open). Zero new requests: `ExecutiveMeetings` already prefetches all five role GETs per (gameId, week) for the sit-out feature — the same prefetch data drives the dot. Without this, MVP-1's effective fire rate is (happening rate) × (chance the player opens that exec), and a playtest would under-read a working system. v2 tokens for the treatment (neon accent, not the locked/ghost chip language).
+
 ## 3. Side events surfaced — MVP-2 (forks C2 + D1)
 
 - **Selection**: on the existing roll's hit, pick the event via isolated-seed weighted draw honoring the authored-but-dead config in `data/balance/events.json`: `event_weights` (by category), `event_cooldown` (weeks), `max_events_per_week` (1, inherent). **Authoring addition**: the 13 events in `data/events.json` have no `category` field today (verified — keys are `id, role_hint, prompt, choices`); MVP-2 adds `category` to each, mapping to the 7 `event_weights` keys, with a new data-lint rule (category ∈ weight keys; effect keys already linted).
 - **State** (additive `gameState.flags` keys): `pending_side_event: { eventId, week }` set on hit; `side_event_history: { [eventId]: lastFiredWeek }` for cooldown. Set only on a hit → dark in GM fixtures → zero expected GM delta.
 - **Presentation** (fork C2): a new beat in the staged WeekSummary reveal (the Phase 4 flow) — event card with the 3 authored choices, reusing the meeting-choice UI components and the `LIVE_EFFECT_KEYS`-whitelisted badge renderers (Slice A tooltips included).
 - **Resolution**: choice POSTs to a new endpoint (`server/routes/` — `requireGameOwner`-guarded) that validates the pending event, applies `effects_immediate` at choice-time (ActionProcessor path, dialogue precedent), routes `effects_delayed` through the existing flags mechanism, logs mood events where `artist_mood` is touched, and clears the pending flag.
-- **Lapse rule (recommendation, confirm at spec approval)**: an unresolved pending event **lapses on the next advance** — cleared, no effects, "the moment passed." (Alternative — auto-resolve to a default choice — rejected as AUTO-for-drama; lapsing keeps ignoring an event a real choice.)
+- **Lapse rule (CONFIRMED by Nes at spec approval)**: an unresolved pending event **lapses on the next advance** — cleared, no effects, "the moment passed." (Alternative — auto-resolve to a default choice — rejected as AUTO-for-drama; lapsing makes ignoring an event a real choice with a cost, which is on-theme.)
 - Closes **C64**; ticks it in-slice.
 
 ## 4. Mood phases 6–10 disposition (fork E — resolves former PENDING-DECISIONS §5)
@@ -83,8 +85,9 @@ New module `shared/engine/weekHappenings.ts`, the sibling of `meetingSelection.t
 
 | PR | Scope | Model |
 |---|---|---|
-| PR-1 | `weekHappenings.ts` + canonical enum + injection stage + route threading + Zod ×2 + data-lint + unit/characterization tests. **Dark launch** — no reactive meetings authored yet, injection never fires. Includes the §9 tour_wrapped verification. | Sonnet |
-| PR-2 | 5 authored reactive meetings + `[REFERENCE]` doc sync + client why-now line (MeetingSelector + review panel) + client tests. Lights MVP-1 up. | Sonnet |
+| PR-1 | `weekHappenings.ts` + canonical enum + injection stage + route threading + Zod ×2 + data-lint + unit/characterization tests. **Dark launch** — no reactive meetings authored yet, injection never fires. Includes BOTH §9 verifications: tour_wrapped derivability (item 1) and mood_crater completeness (item 2). | Sonnet |
+| PR-2 | 5 authored reactive meetings + `[REFERENCE]` doc sync + client why-now line (MeetingSelector + review panel) + **urgency indicator on exec cards** (Nes amendment 1) + client tests. Lights MVP-1 up. | Sonnet |
+| **⏸ PLAYTEST GATE** | **After PR-2 merges, the orchestrator pings Nes: MVP-1 is playable. Nes decides play-now vs. continue** (Nes amendment 3 — MVP-1 and MVP-2 are separable systems; feedback on reactive meetings shouldn't wait on the side-event beat). PR-3 does not start until Nes answers. | — |
 | PR-3 | Side-event seeded/weighted/cooldown selection + `category` authoring + flags persistence + choice endpoint + lapse + data-lint + C64 tick. | Opus (engine-adjacent) |
 | PR-4 | WeekSummary event beat UI + client tests + live browser verification. | Sonnet |
 | PR-5 | Wrap: docs pass (ledger, PENDING-DECISIONS, this doc → COMPLETED), then a **fresh-context adversarial verifier** incl. independent golden-master double-run. | Opus (verifier) |
@@ -99,9 +102,10 @@ Sequencing: PR-1 → PR-2 (MVP-1 shippable/playtestable here) → PR-3 → PR-4 
 - PENDING-DECISIONS: §1 resolved → execution pointer; §5 deleted (resolved entries are deleted, not struck).
 - Ledger: C64 ticked in PR-3.
 
-## 9. Open items to close at [READY] promotion
+## 9. Open items (resolutions decided at approval; verifications execute in PR-1)
 
-1. **tour_wrapped derivability** (PR-1 verifies): if tour metadata lacks a queryable completion week, options are (a) drop `tour_wrapped` from MVP-1 and give the CEO a different trigger, or (b) add an additive completion-week stamp in the engine — which touches the GM surface and needs a root-caused re-bless. **Recommendation: (a)** — no engine writes in MVP-1.
-2. **Lapse rule confirmation** (§3) — recommend lapse-no-effect.
-3. **Mood-crater threshold** — pinned from the authored mood bands at PR time.
-4. Final reactive-meeting copy (exec voice) — authored in PR-2, reviewed against the register of neighboring meetings.
+1. **tour_wrapped derivability** (PR-1 verifies): if tour metadata lacks a queryable completion week, **fallback (a) is CONFIRMED by Nes** — drop `tour_wrapped` from MVP-1 (never option (b): "no engine writes in MVP-1" is the load-bearing property of this spec) and the CEO's replacement trigger is **`chart_debut`** (CEO register: "what does this mean for the label"; distinct from the CMO's press-blitz register; cross-exec trigger duplication is permitted by the per-(exec, trigger) lint rule).
+2. **mood_crater derivation completeness** (PR-1 verifies — Nes amendment 2): the trigger reads `mood_events` rows at week N−1 straddling the boundary, which is complete only if EVERY mood-lowering path writes a row — including passive natural drift (`ArtistStateProcessor.calculateNaturalMoodDrift`), not just discrete effect applications. If drift mutates mood without logging, an artist can slide across the threshold invisibly and never trigger the CCO. Fallback logic mirrors item 1: verify the source; if incomplete, narrow the trigger (discrete-event craters only, documented) or derive from a mood snapshot comparison if one is queryable — never an engine write.
+3. ~~Lapse rule~~ — **CONFIRMED: lapse-no-effect** (§3).
+4. **Mood-crater threshold** — pinned from the authored mood bands at PR time (confirmed approach).
+5. Final reactive-meeting copy (exec voice) — authored in PR-2, reviewed against the register of neighboring meetings.
