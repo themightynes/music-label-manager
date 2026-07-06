@@ -386,9 +386,14 @@ router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, requireGameOw
 
       // 5. Store delayed effects on flags (global — no single target artist),
       //    drained by processDelayedEffects at triggerWeek === currentWeek.
+      //    Key is DETERMINISTIC (week-based, like the dialogue/meeting banked
+      //    keys) — never Date.now(): flags land in save snapshots and the
+      //    engine's determinism discipline expects byte-identical state for
+      //    identical play. Collisions are impossible: one pending event per
+      //    week, cleared on resolve.
       const effectsDelayed = choice.effects_delayed || {};
       if (Object.keys(effectsDelayed).length > 0) {
-        const delayedKey = `side-event-${eventId}-${choiceId}-${Date.now()}`;
+        const delayedKey = `side-event-${eventId}-${choiceId}-week${currentWeek}`;
         nextFlags[delayedKey] = {
           triggerWeek: currentWeek + 1,
           effects: effectsDelayed,

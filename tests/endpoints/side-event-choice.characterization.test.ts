@@ -159,9 +159,11 @@ describe('POST /api/game/:gameId/side-event-choice — happy path', () => {
     const flags = gs.flags as any;
     // pending cleared.
     expect(flags.pending_side_event).toBeUndefined();
-    // a delayed-effect bank entry exists with triggerWeek = currentWeek + 1.
+    // a delayed-effect bank entry exists with triggerWeek = currentWeek + 1,
+    // under a DETERMINISTIC week-based key — never Date.now() (flags land in
+    // save snapshots; determinism discipline requires byte-identical state).
     const delayedKeys = Object.keys(flags).filter((k) => k.startsWith('side-event-'));
-    expect(delayedKeys.length).toBe(1);
+    expect(delayedKeys).toEqual([`side-event-${EVENT_ID}-${CHOICE_ID}-week5`]);
     expect(flags[delayedKeys[0]].triggerWeek).toBe(6);
   });
 
