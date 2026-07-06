@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
-import { RELEVANCE_TAGS } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -368,6 +368,24 @@ export const TargetScopeSchema = z.enum(['global', 'predetermined', 'user_select
 // RELEVANCE_TAGS array in shared/types/gameTypes.ts (single source of truth).
 export const RelevanceTagSchema = z.enum(RELEVANCE_TAGS);
 
+// Tier 2 (PR-1): week-happening-type enum, derived from the canonical
+// HAPPENING_TYPES array in shared/types/gameTypes.ts (single source of truth).
+export const HappeningTypeSchema = z.enum(HAPPENING_TYPES);
+
+// Tier 2 (PR-1): additive optional context describing WHY a reactive meeting
+// was selected for GET /api/roles/:roleId this week — attached ON the selected
+// meeting object in the response (spec §2), rendered as the "why now" line in
+// PR-2. Present only when the injection stage
+// (shared/engine/meetingSelection.ts selectWeeklyMeetingWithHappenings) picked
+// a reactive meeting over the normal weighted draw. Dark launch: never
+// populated until PR-2 authors reactive_trigger meetings.
+export const ReactiveContextSchema = z.object({
+  trigger: HappeningTypeSchema,
+  artistName: z.string().optional(),
+  songTitle: z.string().optional(),
+});
+export type ReactiveContext = z.infer<typeof ReactiveContextSchema>;
+
 // Weekly action schema (role meetings and other actions)
 export const WeeklyActionSchema = z.object({
   id: z.string(),
@@ -385,6 +403,12 @@ export const WeeklyActionSchema = z.object({
   target_scope: TargetScopeSchema.default('global'),
   // Meeting-relevance Tier 0 (PR-1): AND semantics, absent = always eligible.
   requires: z.array(RelevanceTagSchema).nonempty().optional(),
+  // Tier 2 (PR-1): optional reactive-meeting trigger. Dark launch: no
+  // data/actions.json entry sets this yet (PR-2 authors the first ones).
+  reactive_trigger: HappeningTypeSchema.optional(),
+  // Tier 2 (PR-1): server-attached "why now" context on the SELECTED meeting
+  // (never authored in data/actions.json — response-side only).
+  reactiveContext: ReactiveContextSchema.optional(),
   choices: z.array(DialogueChoiceSchema).default([]),
   details: ActionDetailsSchema,
   recommendations: ActionRecommendationsSchema,

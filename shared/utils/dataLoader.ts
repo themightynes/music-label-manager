@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ArtistSchema } from '../schemas/artist';
-import { RELEVANCE_TAGS } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES } from '../types/gameTypes';
 import type {
   GameDataFiles,
   GameArtist,
@@ -343,6 +343,10 @@ export class GameDataLoader {
         // absent = always eligible). Enum derived from the canonical RELEVANCE_TAGS
         // in shared/types/gameTypes.ts — single source of truth.
         requires: z.array(z.enum(RELEVANCE_TAGS)).nonempty().optional(),
+        // Tier 2 (PR-1): optional reactive-meeting trigger. Enum derived from
+        // the canonical HAPPENING_TYPES in shared/types/gameTypes.ts — single
+        // source of truth. Dark launch: no data/actions.json entry sets this yet.
+        reactive_trigger: z.enum(HAPPENING_TYPES).optional(),
         choices: z.array(z.object({
           id: z.string(),
           label: z.string(),

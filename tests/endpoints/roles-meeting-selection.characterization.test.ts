@@ -15,7 +15,7 @@
  * (a tour-active game's CMO/live-category-style meeting gets picked more often
  * under real balance-config tuning than a plain uniform draw would).
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 
 const TEST_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5433/music_label_test';
 process.env.DATABASE_URL = TEST_DATABASE_URL;
@@ -50,8 +50,9 @@ import express, { type Express } from 'express';
 import request from 'supertest';
 import { db } from '../../server/db';
 import { serverGameData } from '../../server/data/gameData';
-import { gameStates, users, artists, projects } from '@shared/schema';
+import { gameStates, users, artists, projects, moodEvents, songs, chartEntries } from '@shared/schema';
 import executivesRouter from '../../server/routes/executives';
+import { MOOD_CRATER_THRESHOLD } from '@shared/engine/weekHappenings';
 
 let app: Express;
 
@@ -154,5 +155,184 @@ describe('GET /api/roles/:roleId — Tier 1 weighting under real balance config'
     const first = await request(app).get('/api/roles/ceo').query({ gameId, week: '3' });
     const second = await request(app).get('/api/roles/ceo').query({ gameId, week: '3' });
     expect(first.body.meetings.map((m: any) => m.id)).toEqual(second.body.meetings.map((m: any) => m.id));
+  });
+});
+
+describe('GET /api/roles/:roleId — dark launch: real data/actions.json has zero reactive_trigger meetings', () => {
+  it('no meeting ever carries reactiveContext against the real catalog', async () => {
+    const gameId = await seedGame();
+    for (const roleId of ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution']) {
+      const res = await request(app).get(`/api/roles/${roleId}`).query({ gameId, week: '3' });
+      expect(res.status).toBe(200);
+      for (const meeting of res.body.meetings) {
+        expect(meeting.reactiveContext).toBeUndefined();
+      }
+    }
+  });
+});
+
+describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reactive meeting)', () => {
+  const originalGetWeeklyActions = serverGameData.getWeeklyActionsWithCategories.bind(serverGameData);
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Injects one synthetic `mood_crater` reactive meeting into the CCO pool
+   * (alongside the real catalog) by wrapping the real
+   * getWeeklyActionsWithCategories() result — mirrors this file's existing
+   * DB-mocking pattern of monkey-patching the narrowest surface needed
+   * instead of re-mocking the whole data layer.
+   */
+  function injectSyntheticReactiveMeeting() {
+    vi.spyOn(serverGameData, 'getWeeklyActionsWithCategories').mockImplementation(async () => {
+      const real = await originalGetWeeklyActions();
+      return {
+        ...real,
+        actions: [
+          ...real.actions,
+          {
+            id: 'synthetic_cco_mood_crater_reactive',
+            type: 'role_meeting',
+            role_id: 'cco',
+            category: 'talent',
+            target_scope: 'predetermined',
+            prompt: 'Synthetic reactive meeting for characterization test.',
+            requires: ['artist_signed'],
+            reactive_trigger: 'mood_crater',
+            choices: [
+              { id: 'c1', label: 'Intervene', effects_immediate: {}, effects_delayed: {} },
+            ],
+          },
+        ],
+      };
+    });
+  }
+
+  it('a mood_crater happening at week N-1 selects the synthetic reactive meeting and attaches reactiveContext', async () => {
+    injectSyntheticReactiveMeeting();
+
+    const gameId = await seedGame();
+    const artistId = crypto.randomUUID();
+    await db.insert(artists).values({
+      id: artistId,
+      gameId,
+      name: 'Crater Artist',
+      archetype: 'Visionary',
+      genre: 'pop',
+      mood: MOOD_CRATER_THRESHOLD,
+      energy: 50,
+      signed: true,
+    });
+    // A discrete mood-lowering event straddling the crater threshold at week 4
+    // (so it fires for a week-5 request, freshness window N-1).
+    await db.insert(moodEvents).values({
+      artistId,
+      gameId,
+      eventType: 'executive_meeting',
+      moodChange: -10,
+      moodBefore: MOOD_CRATER_THRESHOLD + 5,
+      moodAfter: MOOD_CRATER_THRESHOLD,
+      description: 'Test mood crater event',
+      weekOccurred: 4,
+    });
+
+    const res = await request(app).get('/api/roles/cco').query({ gameId, week: '5' });
+    expect(res.status).toBe(200);
+    expect(res.body.meetings).toHaveLength(1);
+    expect(res.body.meetings[0].id).toBe('synthetic_cco_mood_crater_reactive');
+    // Spec §2: reactiveContext rides ON the selected meeting (additive optional).
+    expect(res.body.meetings[0].reactiveContext).toEqual({
+      trigger: 'mood_crater',
+      artistName: 'Crater Artist',
+    });
+    expect(res.body.reactiveContext).toBeUndefined();
+  });
+
+  it('no matching happening (mood event outside freshness window) → falls through to normal pipeline, no reactiveContext', async () => {
+    injectSyntheticReactiveMeeting();
+
+    const gameId = await seedGame();
+    const artistId = crypto.randomUUID();
+    await db.insert(artists).values({
+      id: artistId,
+      gameId,
+      name: 'Stale Crater Artist',
+      archetype: 'Visionary',
+      genre: 'pop',
+      mood: MOOD_CRATER_THRESHOLD,
+      energy: 50,
+      signed: true,
+    });
+    // Event is two weeks stale relative to the week-5 request (targetWeek = 4).
+    await db.insert(moodEvents).values({
+      artistId,
+      gameId,
+      eventType: 'executive_meeting',
+      moodChange: -10,
+      moodBefore: MOOD_CRATER_THRESHOLD + 5,
+      moodAfter: MOOD_CRATER_THRESHOLD,
+      description: 'Stale mood crater event',
+      weekOccurred: 2,
+    });
+
+    const res = await request(app).get('/api/roles/cco').query({ gameId, week: '5' });
+    expect(res.status).toBe(200);
+    // Falls through to the normal pipeline: the event-gated synthetic reactive
+    // meeting must NOT appear, and no meeting carries reactiveContext.
+    for (const meeting of res.body.meetings) {
+      expect(meeting.id).not.toBe('synthetic_cco_mood_crater_reactive');
+      expect(meeting.reactiveContext).toBeUndefined();
+    }
+  });
+
+  it('a recent_signing happening (artists.signedWeek === week-1) fires end-to-end with the artist name in context', async () => {
+    // Second trigger through the real route + DB, no mood_events involved —
+    // proves deriveWeekHappenings' artist-derived path is threaded too.
+    vi.spyOn(serverGameData, 'getWeeklyActionsWithCategories').mockImplementation(async () => {
+      const real = await originalGetWeeklyActions();
+      return {
+        ...real,
+        actions: [
+          ...real.actions,
+          {
+            id: 'synthetic_ceo_recent_signing_reactive',
+            type: 'role_meeting',
+            role_id: 'ceo',
+            category: 'business',
+            target_scope: 'global',
+            prompt: 'Synthetic reactive signing meeting.',
+            requires: ['artist_signed'],
+            reactive_trigger: 'recent_signing',
+            choices: [
+              { id: 'c1', label: 'Welcome aboard', effects_immediate: {}, effects_delayed: {} },
+            ],
+          },
+        ],
+      };
+    });
+
+    const gameId = await seedGame();
+    await db.insert(artists).values({
+      id: crypto.randomUUID(),
+      gameId,
+      name: 'Fresh Face',
+      archetype: 'Workhorse',
+      genre: 'pop',
+      mood: 50,
+      energy: 50,
+      signed: true,
+      signedWeek: 4, // week-5 request → targetWeek 4 → fires
+    });
+
+    const res = await request(app).get('/api/roles/ceo').query({ gameId, week: '5' });
+    expect(res.status).toBe(200);
+    expect(res.body.meetings).toHaveLength(1);
+    expect(res.body.meetings[0].id).toBe('synthetic_ceo_recent_signing_reactive');
+    expect(res.body.meetings[0].reactiveContext).toEqual({
+      trigger: 'recent_signing',
+      artistName: 'Fresh Face',
+    });
   });
 });

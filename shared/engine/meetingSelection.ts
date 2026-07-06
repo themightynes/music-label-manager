@@ -13,7 +13,8 @@
  */
 
 import { seededRandomPick, seededWeightedPick } from '../utils/seededRandom';
-import type { RelevanceTag } from '../types/gameTypes';
+import type { RelevanceTag, HappeningType } from '../types/gameTypes';
+import type { WeekHappening } from './weekHappenings';
 
 /**
  * Snapshot of the label state the relevance predicates read.
@@ -301,4 +302,152 @@ export function selectWeeklyMeeting<T extends RelevanceTaggable & CategoryTaggab
   }
   const weights = weighMeetings(eligible, state, tuning);
   return seededWeightedPick(eligible, weights, seed) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Tier 2 (PR-1) — reactive-meeting injection stage (dark launch).
+//
+// Spec: docs/01-planning/implementation-specs/[READY] tier2-reactive-meetings-and-side-events-plan.md §2,
+// slot-in guarantee: COMPLETED/[COMPLETE] meeting-relevance-tier0-1-plan.md §5.
+//
+// Injection sits PRE-DRAW, after the existing Tier 0 eligibility filter: if a
+// current happening matches a pool meeting's `reactive_trigger` AND that
+// meeting's `requires` tags are still satisfied, the reactive meeting
+// REPLACES the weighted draw entirely for that exec this week (fork B1).
+// With zero authored `reactive_trigger` values in data/actions.json (this PR
+// is dark-launch), `matchReactiveMeeting` always returns null and
+// `selectWeeklyMeetingWithHappenings` falls through to the existing
+// filter → weigh → draw pipeline, UNCHANGED — this is the dark-launch
+// invariant `no-match falls through byte-identical to the pre-existing
+// pipeline`, exercised by the unit tests beside this module.
+// ---------------------------------------------------------------------------
+
+/** Minimal shape a pool item needs to be considered for reactive injection. */
+export interface ReactiveTaggable {
+  reactive_trigger?: HappeningType;
+}
+
+/**
+ * Fixed trigger priority (spec §2 item 2 / §9 item 1's tie-break law):
+ * crisis first, then follow-ups. `tour_wrapped` is intentionally absent — see
+ * `HAPPENING_TYPES`'s doc comment (shared/types/gameTypes.ts) for why it never
+ * made it into this PR's vocabulary.
+ */
+export const REACTIVE_TRIGGER_PRIORITY: readonly HappeningType[] = [
+  'mood_crater',
+  'chart_debut',
+  'release_out',
+  'recent_signing',
+];
+
+/** Result of the injection stage: which meeting won and why, or no match. */
+export interface ReactiveMatch<T> {
+  meeting: T;
+  happening: WeekHappening;
+}
+
+/**
+ * Find the reactive meeting (if any) that should replace this exec's weighted
+ * draw this week.
+ *
+ * 1. Filter `eligiblePool` (already Tier-0-filtered by the caller) to
+ *    meetings whose `reactive_trigger` matches ANY current happening's type.
+ * 2. Among matches, pick the happening/meeting pair whose trigger has the
+ *    highest `REACTIVE_TRIGGER_PRIORITY` rank.
+ * 3. Ties within the same priority level (e.g. two different happenings of
+ *    the SAME trigger type both matching, which the per-(exec,trigger) data
+ *    lint makes rare but not impossible if the pool ever holds >1 meeting per
+ *    trigger) are broken by a seeded pick using an ISOLATED seed
+ *    (`${seed}-reactive-tiebreak`) — NEVER `ctx.getRandom`, so the engine's
+ *    RNG stream stays untouched.
+ *
+ * Returns null when no happening matches any pool meeting's trigger — the
+ * caller then runs the existing Tier 0+1 pipeline unchanged.
+ */
+export function matchReactiveMeeting<T extends ReactiveTaggable>(
+  eligiblePool: T[],
+  happenings: WeekHappening[],
+  seed: string
+): ReactiveMatch<T> | null {
+  if (happenings.length === 0 || eligiblePool.length === 0) return null;
+
+  const happeningsByType = new Map<HappeningType, WeekHappening[]>();
+  for (const happening of happenings) {
+    const list = happeningsByType.get(happening.type) ?? [];
+    list.push(happening);
+    happeningsByType.set(happening.type, list);
+  }
+
+  // Collect every (meeting, happening) pair whose trigger fires this week.
+  const candidates: ReactiveMatch<T>[] = [];
+  for (const meeting of eligiblePool) {
+    if (!meeting.reactive_trigger) continue;
+    const matchingHappenings = happeningsByType.get(meeting.reactive_trigger);
+    if (!matchingHappenings) continue;
+    for (const happening of matchingHappenings) {
+      candidates.push({ meeting, happening });
+    }
+  }
+  if (candidates.length === 0) return null;
+
+  // Highest-priority trigger type present among the candidates wins.
+  let bestPriorityIndex = Infinity;
+  for (const candidate of candidates) {
+    const idx = REACTIVE_TRIGGER_PRIORITY.indexOf(candidate.happening.type);
+    const rank = idx === -1 ? Infinity : idx;
+    if (rank < bestPriorityIndex) bestPriorityIndex = rank;
+  }
+  const topCandidates = candidates.filter(
+    (c) => REACTIVE_TRIGGER_PRIORITY.indexOf(c.happening.type) === bestPriorityIndex
+  );
+
+  if (topCandidates.length === 1) return topCandidates[0];
+
+  // Tie-break: isolated seed, never the engine's ctx.getRandom stream.
+  const picked = seededRandomPick(topCandidates, `${seed}-reactive-tiebreak`);
+  return picked ?? topCandidates[0];
+}
+
+/**
+ * Extended selection entry point: injects the Tier 2 reactive stage before
+ * the existing Tier 0+1 pipeline. `selectWeeklyMeeting` (above) is left
+ * completely untouched so existing callers that don't pass `happenings` keep
+ * their exact prior behavior — this function is additive, not a signature
+ * change to the original.
+ *
+ * `happenings` defaults to an empty array (== "no happenings"), which is
+ * byte-identical to omitting it: both fall straight through to
+ * `selectWeeklyMeeting`'s existing filter → weigh → draw pipeline.
+ *
+ * REACTIVE MEETINGS ARE EVENT-GATED: a meeting carrying `reactive_trigger`
+ * can ONLY be selected via the injection stage — it is excluded from the
+ * fall-through weighted draw. Its authored copy references a specific
+ * last-week event ("because X debuted…"), which would read as nonsense in a
+ * week where that event didn't happen. With zero authored reactive meetings
+ * (this PR's dark launch) the exclusion filters nothing, so fall-through
+ * remains byte-identical to the pre-existing pipeline.
+ */
+export function selectWeeklyMeetingWithHappenings<
+  T extends RelevanceTaggable & CategoryTaggable & ReactiveTaggable
+>(
+  pool: T[],
+  state: MeetingRelevanceState,
+  seed: string,
+  happenings: WeekHappening[] = [],
+  tuning?: MeetingSelectionTuning
+): { meeting: T | null; reactiveHappening: WeekHappening | null } {
+  const eligible = filterEligible(pool, state);
+  if (eligible.length > 0 && happenings.length > 0) {
+    const match = matchReactiveMeeting(eligible, happenings, seed);
+    if (match) {
+      return { meeting: match.meeting, reactiveHappening: match.happening };
+    }
+  }
+
+  // No match (or no happenings at all): existing Tier 0+1 pipeline, unchanged
+  // over the NON-reactive pool (see doc comment — reactive meetings are
+  // event-gated and never enter the regular rotation).
+  const regularPool = pool.filter((m) => m.reactive_trigger === undefined);
+  const selected = selectWeeklyMeeting(regularPool, state, seed, tuning);
+  return { meeting: selected, reactiveHappening: null };
 }
