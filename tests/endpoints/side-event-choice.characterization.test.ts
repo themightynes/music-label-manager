@@ -132,6 +132,38 @@ beforeEach(async () => {
   ]);
 });
 
+describe('POST /api/game/:gameId/side-event-choice — concurrency (verifier finding F1)', () => {
+  it('two concurrent resolutions of the same pending event apply effects exactly ONCE (FOR UPDATE serialization)', async () => {
+    // F1: before the fix, both requests could pass the pending check off the
+    // middleware's unlocked read and double-apply money (+20000 twice). The
+    // FOR UPDATE row lock serializes them: the loser re-reads committed state,
+    // finds pending_side_event cleared, and 409s.
+    const gameId = await seedGame({
+      ownerId: TEST_USER_ID,
+      currentWeek: 5,
+      money: 100000,
+      flags: { pending_side_event: { eventId: EVENT_ID, week: 5 } },
+    });
+
+    const [r1, r2] = await Promise.all([
+      request(app).post(`/api/game/${gameId}/side-event-choice`).send({ eventId: EVENT_ID, choiceId: CHOICE_ID }),
+      request(app).post(`/api/game/${gameId}/side-event-choice`).send({ eventId: EVENT_ID, choiceId: CHOICE_ID }),
+    ]);
+
+    expect([r1.status, r2.status].sort()).toEqual([200, 409]);
+
+    const gs = await readGame(gameId);
+    // take_deal immediate money is +20000 — applied exactly once.
+    expect(gs.money).toBe(120000);
+    const flags = gs.flags as any;
+    expect(flags.pending_side_event).toBeUndefined();
+    // exactly one banked delayed entry (deterministic key, so a double-apply
+    // would not add a second key — the money assertion above is the real pin;
+    // this one guards the bank shape stayed intact through the transaction).
+    expect(Object.keys(flags).filter((k) => k.startsWith('side-event-'))).toHaveLength(1);
+  });
+});
+
 describe('POST /api/game/:gameId/side-event-choice — happy path', () => {
   it('applies immediate money, banks delayed effects, clears pending, returns summary', async () => {
     const gameId = await seedGame({

@@ -289,20 +289,9 @@ router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, requireGameOw
       }
 
       const { eventId, choiceId } = validationResult.data;
-      const gameState = req.gameState!;
-      const currentWeek = gameState.currentWeek ?? 0;
-      const flags = (gameState.flags || {}) as Record<string, any>;
 
-      // 1. Validate a matching pending event exists for the CURRENT week.
-      const pending = flags.pending_side_event as { eventId: string; week: number } | undefined;
-      if (!pending || pending.eventId !== eventId || pending.week !== currentWeek) {
-        return res.status(409).json({
-          success: false,
-          message: "No matching pending side event for this game's current week",
-        });
-      }
-
-      // 2. Load the event + the chosen choice.
+      // 1. Load the event + the chosen choice OUTSIDE the transaction (disk
+      //    I/O — the D6 rule: never hold a row lock across disk I/O).
       await serverGameData.initialize();
       const event = await serverGameData.getEventById(eventId);
       if (!event) {
@@ -316,104 +305,146 @@ router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, requireGameOw
       const clamp = (value: number, min: number, max: number): number =>
         Math.max(min, Math.min(max, value));
 
-      // 3. Apply immediate effects at choice-time.
-      const effectsImmediate = choice.effects_immediate || {};
-      const effectsApplied: Record<string, number> = {};
-      const gamePatch: Record<string, number> = {};
-
-      // Artist-scoped keys apply to ALL signed artists (label-level / global scope).
-      const artistScopedKeys = ['artist_mood', 'artist_energy', 'artist_popularity'];
-      const hasArtistEffect = Object.keys(effectsImmediate).some((k) => artistScopedKeys.includes(k));
-      const signedArtists = hasArtistEffect ? await storage.getArtistsByGame(gameId) : [];
-
-      for (const [effectKey, rawValue] of Object.entries(effectsImmediate)) {
-        if (typeof rawValue !== 'number') continue;
-        const effectValue = Number(rawValue);
-
-        if (effectKey === 'money') {
-          gamePatch.money = (gameState.money ?? 0) + effectValue;
-          effectsApplied[effectKey] = effectValue;
-        } else if (effectKey === 'reputation') {
-          gamePatch.reputation = clamp((gameState.reputation ?? 0) + effectValue, 0, 100);
-          effectsApplied[effectKey] = effectValue;
-        } else if (effectKey === 'creative_capital') {
-          gamePatch.creativeCapital = (gameState.creativeCapital ?? 0) + effectValue;
-          effectsApplied[effectKey] = effectValue;
-        } else if (effectKey === 'artist_mood') {
-          for (const artist of signedArtists) {
-            const before = artist.mood ?? 50;
-            const after = clamp(before + effectValue, 0, 100);
-            await storage.updateArtist(artist.id, { mood: after });
-            // Log a mood_event per artist (side events are label-level, so the
-            // discrete change is recorded once per affected artist).
-            await storage.createMoodEvent({
-              artistId: artist.id,
-              gameId,
-              eventType: 'side_event',
-              moodChange: after - before,
-              moodBefore: before,
-              moodAfter: after,
-              description: `Side event: ${event.prompt.substring(0, 60)}`,
-              weekOccurred: currentWeek,
-              metadata: { eventId, choiceId },
-            } as any);
-          }
-          effectsApplied[effectKey] = effectValue;
-        } else if (effectKey === 'artist_energy') {
-          for (const artist of signedArtists) {
-            const before = artist.energy ?? 50;
-            const after = clamp(before + effectValue, 0, 100);
-            await storage.updateArtist(artist.id, { energy: after });
-          }
-          effectsApplied[effectKey] = effectValue;
-        } else if (effectKey === 'artist_popularity') {
-          for (const artist of signedArtists) {
-            const before = artist.popularity ?? 50;
-            const after = clamp(before + effectValue, 0, 100);
-            await storage.updateArtist(artist.id, { popularity: after });
-          }
-          effectsApplied[effectKey] = effectValue;
+      // 2. Validate-and-apply INSIDE one transaction with a FOR UPDATE row
+      //    lock (verifier finding F1, the D6 discipline): two concurrent
+      //    resolutions for the same pending event — two tabs, a client retry —
+      //    previously could BOTH pass the pending check off the middleware's
+      //    unlocked read and double-apply the immediate effects. The lock
+      //    serializes them; the loser re-reads the committed state, finds
+      //    pending_side_event cleared, and 409s. req.gameState (middleware
+      //    read) is NOT used for any mutation math below — only the locked
+      //    re-read is.
+      const txResult = await db.transaction(async (tx) => {
+        const [lockedGame] = await tx
+          .select()
+          .from(gameStates)
+          .where(eq(gameStates.id, gameId))
+          .for('update');
+        if (!lockedGame) {
+          return { outcome: 'not_found' as const };
         }
-        // Any other authored key (press_momentum, quality_bonus, awareness_boost,
-        // variance_up, ...) is a banked/delayed channel — it is not an immediate
-        // gameState mutation, so it is intentionally not applied here. Authoring
-        // routes those through effects_delayed (below); the data-lint guard keeps
-        // all keys canonical.
+
+        const currentWeek = lockedGame.currentWeek ?? 0;
+        const flags = (lockedGame.flags || {}) as Record<string, any>;
+        const pending = flags.pending_side_event as { eventId: string; week: number } | undefined;
+        if (!pending || pending.eventId !== eventId || pending.week !== currentWeek) {
+          return { outcome: 'conflict' as const };
+        }
+
+        // Apply immediate effects at choice-time, computed off the LOCKED row.
+        const effectsImmediate = choice.effects_immediate || {};
+        const effectsApplied: Record<string, number> = {};
+        const gamePatch: Record<string, number> = {};
+
+        // Artist-scoped keys apply to ALL signed artists (label-level / global scope).
+        const artistScopedKeys = ['artist_mood', 'artist_energy', 'artist_popularity'];
+        const hasArtistEffect = Object.keys(effectsImmediate).some((k) => artistScopedKeys.includes(k));
+        const signedArtists = hasArtistEffect ? await storage.getArtistsByGame(gameId, tx) : [];
+
+        for (const [effectKey, rawValue] of Object.entries(effectsImmediate)) {
+          if (typeof rawValue !== 'number') continue;
+          const effectValue = Number(rawValue);
+
+          if (effectKey === 'money') {
+            gamePatch.money = (lockedGame.money ?? 0) + effectValue;
+            effectsApplied[effectKey] = effectValue;
+          } else if (effectKey === 'reputation') {
+            gamePatch.reputation = clamp((lockedGame.reputation ?? 0) + effectValue, 0, 100);
+            effectsApplied[effectKey] = effectValue;
+          } else if (effectKey === 'creative_capital') {
+            gamePatch.creativeCapital = (lockedGame.creativeCapital ?? 0) + effectValue;
+            effectsApplied[effectKey] = effectValue;
+          } else if (effectKey === 'artist_mood') {
+            for (const artist of signedArtists) {
+              const before = artist.mood ?? 50;
+              const after = clamp(before + effectValue, 0, 100);
+              await storage.updateArtist(artist.id, { mood: after }, tx);
+              // Log a mood_event per artist (side events are label-level, so the
+              // discrete change is recorded once per affected artist).
+              await storage.createMoodEvent({
+                artistId: artist.id,
+                gameId,
+                eventType: 'side_event',
+                moodChange: after - before,
+                moodBefore: before,
+                moodAfter: after,
+                description: `Side event: ${event.prompt.substring(0, 60)}`,
+                weekOccurred: currentWeek,
+                metadata: { eventId, choiceId },
+              } as any, tx);
+            }
+            effectsApplied[effectKey] = effectValue;
+          } else if (effectKey === 'artist_energy') {
+            for (const artist of signedArtists) {
+              const before = artist.energy ?? 50;
+              const after = clamp(before + effectValue, 0, 100);
+              await storage.updateArtist(artist.id, { energy: after }, tx);
+            }
+            effectsApplied[effectKey] = effectValue;
+          } else if (effectKey === 'artist_popularity') {
+            for (const artist of signedArtists) {
+              const before = artist.popularity ?? 50;
+              const after = clamp(before + effectValue, 0, 100);
+              await storage.updateArtist(artist.id, { popularity: after }, tx);
+            }
+            effectsApplied[effectKey] = effectValue;
+          }
+          // Any other authored key (press_momentum, quality_bonus, awareness_boost,
+          // variance_up, ...) is a banked/delayed channel — it is not an immediate
+          // gameState mutation, so it is intentionally not applied here. Authoring
+          // routes those through effects_delayed (below); the data-lint guard keeps
+          // all keys canonical.
+        }
+
+        const nextFlags = { ...flags };
+
+        // Store delayed effects on flags (global — no single target artist),
+        // drained by processDelayedEffects at triggerWeek === currentWeek.
+        // Key is DETERMINISTIC (week-based, like the dialogue/meeting banked
+        // keys) — never Date.now(): flags land in save snapshots and the
+        // engine's determinism discipline expects byte-identical state for
+        // identical play. Collisions are impossible: one pending event per
+        // week, cleared on resolve.
+        const effectsDelayed = choice.effects_delayed || {};
+        if (Object.keys(effectsDelayed).length > 0) {
+          const delayedKey = `side-event-${eventId}-${choiceId}-week${currentWeek}`;
+          nextFlags[delayedKey] = {
+            triggerWeek: currentWeek + 1,
+            effects: effectsDelayed,
+          };
+        }
+
+        // Clear the pending event (resolved) and commit game-state changes in
+        // the SAME transaction as the artist mutations — all-or-nothing.
+        delete nextFlags.pending_side_event;
+
+        await tx
+          .update(gameStates)
+          .set({
+            ...(Object.keys(gamePatch).length > 0 ? gamePatch : {}),
+            flags: nextFlags as any,
+          })
+          .where(eq(gameStates.id, gameId));
+
+        return { outcome: 'resolved' as const, effectsApplied, effectsDelayed };
+      });
+
+      if (txResult.outcome === 'not_found') {
+        return res.status(404).json({ success: false, message: "Game not found" });
       }
-
-      // 4. Apply batched game-state patch.
-      const nextFlags = { ...flags };
-
-      // 5. Store delayed effects on flags (global — no single target artist),
-      //    drained by processDelayedEffects at triggerWeek === currentWeek.
-      //    Key is DETERMINISTIC (week-based, like the dialogue/meeting banked
-      //    keys) — never Date.now(): flags land in save snapshots and the
-      //    engine's determinism discipline expects byte-identical state for
-      //    identical play. Collisions are impossible: one pending event per
-      //    week, cleared on resolve.
-      const effectsDelayed = choice.effects_delayed || {};
-      if (Object.keys(effectsDelayed).length > 0) {
-        const delayedKey = `side-event-${eventId}-${choiceId}-week${currentWeek}`;
-        nextFlags[delayedKey] = {
-          triggerWeek: currentWeek + 1,
-          effects: effectsDelayed,
-        };
+      if (txResult.outcome === 'conflict') {
+        return res.status(409).json({
+          success: false,
+          message: "No matching pending side event for this game's current week",
+        });
       }
-
-      // 6. Clear the pending event (resolved).
-      delete nextFlags.pending_side_event;
-
-      await storage.updateGameState(gameId, {
-        ...(Object.keys(gamePatch).length > 0 ? gamePatch : {}),
-        flags: nextFlags as any,
-      } as any);
 
       const response = {
         success: true,
         eventId,
         choiceId,
-        effects: effectsApplied,
-        delayedEffects: effectsDelayed,
+        effects: txResult.effectsApplied,
+        delayedEffects: txResult.effectsDelayed,
         message: "Side event resolved",
       };
       res.json(response);
