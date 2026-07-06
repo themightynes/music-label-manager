@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
-import { RELEVANCE_TAGS, HAPPENING_TYPES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -490,3 +490,60 @@ export type ActionsConfig = z.infer<typeof ActionsConfigSchema>;
 export type SaveActionsConfigRequest = z.infer<typeof SaveActionsConfigRequestSchema>;
 export type SaveActionsConfigResponse = z.infer<typeof SaveActionsConfigResponseSchema>;
 export type GetActionsConfigResponse = z.infer<typeof GetActionsConfigResponseSchema>;
+
+// ========================================
+// Admin Events Config Schemas (content-editor slice 1)
+// ========================================
+
+// Side-event category enum, derived from the canonical SIDE_EVENT_CATEGORIES
+// array in shared/types/gameTypes.ts (the RELEVANCE_TAGS/HAPPENING_TYPES
+// one-source pattern — see RelevanceTagSchema/HappeningTypeSchema above).
+export const SideEventCategorySchema = z.enum(SIDE_EVENT_CATEGORIES);
+
+// Side-event contract schema — reuses DialogueChoiceSchema for choices
+// (same shape as meeting choices: id/label/effects_immediate/effects_delayed).
+export const SideEventContractSchema = z.object({
+  id: z.string(),
+  role_hint: z.string(),
+  category: SideEventCategorySchema,
+  prompt: z.string(),
+  choices: z.array(DialogueChoiceSchema).min(1),
+}).passthrough();
+
+// Full events configuration schema. `generated` is optional here (mirroring
+// ActionsConfigSchema's convention) even though data/events.json always has
+// it and the dataLoader's own schema (shared/utils/dataLoader.ts) requires it.
+export const EventsConfigSchema = z.object({
+  version: z.string(),
+  generated: z.string().optional(),
+  events: z.array(SideEventContractSchema),
+}).passthrough();
+
+// Admin endpoints for events config
+export const adminEventsEndpoints = {
+  getConfig: '/api/admin/events-config',
+  saveConfig: '/api/admin/events-config',
+} as const;
+
+// Request schema for saving events config
+export const SaveEventsConfigRequestSchema = z.object({
+  config: EventsConfigSchema,
+});
+
+// Response schema for saving events config
+export const SaveEventsConfigResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  backupCreated: z.boolean().optional(),
+});
+
+// Response schema for getting events config
+export const GetEventsConfigResponseSchema = EventsConfigSchema;
+
+// Export TypeScript types
+export type SideEventCategoryContract = z.infer<typeof SideEventCategorySchema>;
+export type SideEventContract = z.infer<typeof SideEventContractSchema>;
+export type EventsConfig = z.infer<typeof EventsConfigSchema>;
+export type SaveEventsConfigRequest = z.infer<typeof SaveEventsConfigRequestSchema>;
+export type SaveEventsConfigResponse = z.infer<typeof SaveEventsConfigResponseSchema>;
+export type GetEventsConfigResponse = z.infer<typeof GetEventsConfigResponseSchema>;
