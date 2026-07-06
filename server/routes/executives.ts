@@ -66,20 +66,20 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
             recencyWindowWeeks: tuning.recency_window_weeks,
           });
 
-          // Tier 2 (PR-1, dark launch): derive last week's happenings from
-          // persisted data — mood_events (week N-1) + chart_entries (week N-1,
-          // isDebut) — so the injection stage can offer a reactive meeting
-          // in place of the normal weighted draw. With zero authored
-          // reactive_trigger meetings in data/actions.json today, this never
-          // matches anything; the pipeline below falls through unchanged.
+          // Tier 2: derive fresh happenings from persisted data so the
+          // injection stage can offer a reactive meeting in place of the
+          // normal weighted draw. Engine-stamped events (mood_events,
+          // chart_entries, releases) carry the CURRENT week — they were
+          // written during the advance INTO this week (see the week-semantics
+          // note on deriveWeekHappenings; playtest round-1 fix, 2026-07-05:
+          // querying week N−1 here made release/chart/mood reactions land a
+          // decision phase late).
           const [moodEvents, chartEntries] = await Promise.all([
-            storage.getMoodEventsByWeekRange(gameId as string, weekNum - 1, weekNum - 1),
-            weekNum - 1 >= 1
-              ? storage.getChartEntriesByWeekAndGame(
-                  new Date(ChartService.generateChartWeekFromGameWeek(weekNum - 1)),
-                  gameId as string
-                )
-              : Promise.resolve([]),
+            storage.getMoodEventsByWeekRange(gameId as string, weekNum, weekNum),
+            storage.getChartEntriesByWeekAndGame(
+              new Date(ChartService.generateChartWeekFromGameWeek(weekNum)),
+              gameId as string
+            ),
           ]);
           const songsById = new Map(songs.map((s: any) => [s.id, s]));
           const happenings = deriveWeekHappenings(

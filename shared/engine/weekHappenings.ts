@@ -94,10 +94,12 @@ export interface DeriveWeekHappeningsInput {
   moodEvents: HappeningMoodEventInput[];
   /**
    * FRESHNESS CONTRACT: chart rows carry no game-week number (chart_entries
-   * stores a DATE `chartWeek`), so the CALLER must pass exactly the week-N−1
-   * chart snapshot — the route fetches it by
-   * `ChartService.generateChartWeekFromGameWeek(currentWeek - 1)`. All other
-   * inputs are week-filtered inside this function.
+   * stores a DATE `chartWeek`), so the CALLER must pass exactly the
+   * CURRENT week's chart snapshot — the route fetches it by
+   * `ChartService.generateChartWeekFromGameWeek(currentWeek)` (charts are an
+   * engine-stamped event class; see the week-semantics note on
+   * `deriveWeekHappenings`). All other inputs are week-filtered inside this
+   * function.
    */
   chartEntries: HappeningChartEntryInput[];
 }
@@ -123,44 +125,64 @@ export const MOOD_CRATER_THRESHOLD = 20;
 
 /**
  * Pure derivation: given plain rows and the CURRENT week, return every
- * happening whose underlying event occurred at exactly `currentWeek - 1`
- * (the strict 1-week freshness window — spec §1).
+ * happening in its freshest window — a strict ONE-week window per trigger
+ * (spec §1), but the window differs by the event's STAMP CLASS (playtest
+ * round-1 fix, 2026-07-05):
+ *
+ * - PLAYER-ACTION events (`recent_signing`) happen DURING a decision week and
+ *   are stamped with it (`artists.signedWeek` = the week the player signed).
+ *   The soonest they can be reacted to is the NEXT decision week, so the
+ *   window is `week === currentWeek - 1`.
+ * - ENGINE events (`release_out`, `chart_debut`, `mood_crater`) are processed
+ *   inside `advanceWeek` AFTER `currentWeek` increments (game-engine.ts:172),
+ *   so they are stamped with the week the player ARRIVES at
+ *   (`releases.releaseWeek`/`mood_events.weekOccurred` = post-increment week;
+ *   ReleaseProcessor.ts:1121, ArtistStateProcessor.ts:128). Their numbers are
+ *   in the WeekSummary the player reads at the START of `currentWeek`, so the
+ *   reactive decision belongs to `week === currentWeek` — the same decision
+ *   phase, not one later. (The original uniform `currentWeek - 1` window made
+ *   these fire a week late — Nes's playtest caught it.)
  */
 export function deriveWeekHappenings(
   input: DeriveWeekHappeningsInput,
   currentWeek: number
 ): WeekHappening[] {
-  const targetWeek = currentWeek - 1;
+  /** Window for player-action events (stamped with the prior decision week). */
+  const playerActionWeek = currentWeek - 1;
+  /** Window for engine events (stamped with the arrival week during advance). */
+  const engineEventWeek = currentWeek;
   const happenings: WeekHappening[] = [];
-  if (targetWeek < 0) return happenings;
+  if (currentWeek < 1) return happenings;
 
   const artistsById = new Map(input.artists.map((a) => [a.id, a]));
 
-  // recent_signing: artists.signedWeek === currentWeek - 1
+  // recent_signing: artists.signedWeek === currentWeek - 1 (player-action class)
   for (const artist of input.artists) {
-    if (artist.signedWeek === targetWeek) {
+    if (artist.signedWeek === playerActionWeek) {
       happenings.push({
         type: 'recent_signing',
-        week: targetWeek,
+        week: playerActionWeek,
         artistId: artist.id,
         artistName: artist.name ?? undefined,
       });
     }
   }
 
-  // release_out: releases.releaseWeek === currentWeek - 1 AND the release
-  // actually went out (status released/catalog — set by the engine's release
-  // pipeline). A stale still-'planned' release whose scheduled week slipped
-  // past must NOT read as "went out last week".
+  // release_out: releases.releaseWeek === currentWeek (engine class — the
+  // release went out during the advance INTO this week; its first numbers are
+  // in this week's summary) AND the release actually went out (status
+  // released/catalog — set by the engine's release pipeline). A stale
+  // still-'planned' release whose scheduled week slipped past must NOT read
+  // as "just went out".
   for (const release of input.releases) {
     if (
-      release.releaseWeek === targetWeek &&
+      release.releaseWeek === engineEventWeek &&
       (release.status === 'released' || release.status === 'catalog')
     ) {
       const artist = release.artistId ? artistsById.get(release.artistId) : undefined;
       happenings.push({
         type: 'release_out',
-        week: targetWeek,
+        week: engineEventWeek,
         releaseId: release.id,
         artistId: release.artistId ?? undefined,
         artistName: artist?.name ?? undefined,
@@ -168,25 +190,28 @@ export function deriveWeekHappenings(
     }
   }
 
-  // mood_crater: discrete mood_events rows at week N-1 whose mood straddles
-  // the boundary DOWNWARD (moodBefore > threshold >= moodAfter). See
-  // HappeningMoodEventInput doc comment for the derivation-completeness
+  // mood_crater: discrete mood_events rows at the CURRENT week (engine class —
+  // ArtistStateProcessor writes them during the advance INTO this week) whose
+  // mood straddles the boundary DOWNWARD (moodBefore > threshold >= moodAfter).
+  // See HappeningMoodEventInput doc comment for the derivation-completeness
   // narrowing this implements.
   for (const event of input.moodEvents) {
-    if (event.weekOccurred !== targetWeek) continue;
+    if (event.weekOccurred !== engineEventWeek) continue;
     if (event.moodBefore > MOOD_CRATER_THRESHOLD && event.moodAfter <= MOOD_CRATER_THRESHOLD) {
       const artist = artistsById.get(event.artistId);
       happenings.push({
         type: 'mood_crater',
-        week: targetWeek,
+        week: engineEventWeek,
         artistId: event.artistId,
         artistName: artist?.name ?? undefined,
       });
     }
   }
 
-  // chart_debut: chart_entries rows at week N-1 with isDebut === true
-  // (player songs only — competitor songs never set isDebut, ChartService.ts:326).
+  // chart_debut: chart_entries rows at the CURRENT week (engine class — the
+  // caller passes the currentWeek chart snapshot; charts generate during the
+  // advance INTO this week) with isDebut === true (player songs only —
+  // competitor songs never set isDebut, ChartService.ts:326).
   for (const entry of input.chartEntries) {
     if (entry.isCompetitorSong) continue;
     if (entry.isDebut !== true) continue;
@@ -194,7 +219,7 @@ export function deriveWeekHappenings(
     const artist = entry.artistId ? artistsById.get(entry.artistId) : undefined;
     happenings.push({
       type: 'chart_debut',
-      week: targetWeek,
+      week: engineEventWeek,
       songId: entry.songId,
       songTitle: entry.songTitle ?? undefined,
       artistId: entry.artistId ?? undefined,

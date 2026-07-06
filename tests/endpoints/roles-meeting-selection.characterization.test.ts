@@ -221,7 +221,7 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
     });
   }
 
-  it('a mood_crater happening at week N-1 selects the synthetic reactive meeting and attaches reactiveContext', async () => {
+  it('a mood_crater happening this week (engine-stamped) selects the synthetic reactive meeting and attaches reactiveContext', async () => {
     injectSyntheticReactiveMeeting();
 
     const gameId = await seedGame();
@@ -236,8 +236,9 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
       energy: 50,
       signed: true,
     });
-    // A discrete mood-lowering event straddling the crater threshold at week 4
-    // (so it fires for a week-5 request, freshness window N-1).
+    // A discrete mood-lowering event straddling the crater threshold at week 5
+    // — mood events are ENGINE-stamped (written during the advance INTO week 5),
+    // so the reaction window is the CURRENT week (playtest round-1 fix).
     await db.insert(moodEvents).values({
       artistId,
       gameId,
@@ -246,7 +247,7 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
       moodBefore: MOOD_CRATER_THRESHOLD + 5,
       moodAfter: MOOD_CRATER_THRESHOLD,
       description: 'Test mood crater event',
-      weekOccurred: 4,
+      weekOccurred: 5,
     });
 
     const res = await request(app).get('/api/roles/cco').query({ gameId, week: '5' });
@@ -373,7 +374,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     });
   });
 
-  it('cmo and ceo both offer their real chart_debut reactive meetings when a song debuted last week (cross-exec duplication permitted)', async () => {
+  it('cmo and ceo both offer their real chart_debut reactive meetings when a song just debuted (cross-exec duplication permitted)', async () => {
     const gameId = await seedGame();
     const artistId = crypto.randomUUID();
     await db.insert(artists).values({
@@ -395,7 +396,9 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
       quality: 70,
       isRecorded: true,
     });
-    const chartWeekDate = (await import('@shared/engine/ChartService')).ChartService.generateChartWeekFromGameWeek(4);
+    // Charts are ENGINE-stamped: the week-5 snapshot is what a week-5 request
+    // reacts to (playtest round-1 fix — was week 4, a phase late).
+    const chartWeekDate = (await import('@shared/engine/ChartService')).ChartService.generateChartWeekFromGameWeek(5);
     await db.insert(chartEntries).values({
       gameId,
       songId,
@@ -426,7 +429,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     });
   });
 
-  it('head_distribution picks the real distribution_release_out_numbers meeting when a release went out last week', async () => {
+  it('head_distribution picks the real distribution_release_out_numbers meeting when a release just went out', async () => {
     const gameId = await seedGame();
     const artistId = crypto.randomUUID();
     await db.insert(artists).values({
@@ -455,7 +458,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
       title: 'Debut EP',
       type: 'ep',
       status: 'released',
-      releaseWeek: 4, // week-5 request → targetWeek 4 → fires
+      releaseWeek: 5, // engine-stamped: went out during the advance INTO week 5 → fires for a week-5 request
     });
 
     const res = await request(app).get('/api/roles/head_distribution').query({ gameId, week: '5' });
@@ -468,7 +471,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     });
   });
 
-  it('cco picks the real cco_mood_crater_intervention meeting when an artist craters last week', async () => {
+  it('cco picks the real cco_mood_crater_intervention meeting when an artist just cratered', async () => {
     const gameId = await seedGame();
     const artistId = crypto.randomUUID();
     await db.insert(artists).values({
@@ -489,7 +492,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
       moodBefore: MOOD_CRATER_THRESHOLD + 5,
       moodAfter: MOOD_CRATER_THRESHOLD,
       description: 'Real catalog mood crater event',
-      weekOccurred: 4,
+      weekOccurred: 5, // engine-stamped during the advance INTO week 5
     });
 
     const res = await request(app).get('/api/roles/cco').query({ gameId, week: '5' });

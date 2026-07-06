@@ -226,6 +226,15 @@ export function findEligibleMeeting(meetings: RoleMeeting[]): RoleMeeting | null
  */
 export interface PrepareAutoSelectOptionsConfig {
   arOfficeSlotUsed?: boolean;
+  /**
+   * Roles that already have a queued action this week (manual picks or prior
+   * AUTO confirms) — AUTO must NOT re-propose them. Playtest round-1 bug
+   * (2026-07-05): Nes picked Marcus manually, hit AUTO for the remaining
+   * slots, and AUTO proposed Marcus again. Mirrors the manual UI's
+   * `isExecutiveUsed` disable. Absent/empty = no exclusions (existing
+   * callers/tests unchanged).
+   */
+  usedExecutiveRoles?: readonly string[];
 }
 
 /**
@@ -249,6 +258,10 @@ export function prepareAutoSelectOptions(
     // AUTO must not propose him (manual UI already blocks him). Playtest bug: AUTO
     // grabbed Marcus while the A&R office slot was in use.
     if (config.arOfficeSlotUsed && executive.role === 'head_ar') continue;
+
+    // Already-used exclusion: an exec with a queued action this week can't
+    // meet twice — never re-propose them (manual UI already disables the card).
+    if (config.usedExecutiveRoles?.includes(executive.role)) continue;
 
     const meetings = meetingsByRole[executive.role] || [];
     // Meeting-relevance Tier 0 (PR-1): an exec whose eligible pool is empty

@@ -100,6 +100,24 @@ export function ExecutiveMeetings({
   const arOfficeStatusForInput = arOfficeStatusProp ?? getAROfficeStatus();
   const arOfficeSlotUsedInitial = !!arOfficeStatusForInput?.arOfficeSlotUsed;
 
+  // Track which executives have already been used this week (queued actions),
+  // computed BEFORE the machine mounts so AUTO's exclusion list is threaded in
+  // from the first render (playtest round-1 bug: manual Marcus pick + AUTO for
+  // the remaining slots re-proposed Marcus).
+  const usedExecutiveRoles = new Set<string>();
+  selectedActions.forEach(actionString => {
+    try {
+      const action = JSON.parse(actionString);
+      if (action.roleId) {
+        usedExecutiveRoles.add(action.roleId);
+      }
+    } catch (e) {
+      // Ignore invalid action strings
+    }
+  });
+  // Stable, order-independent key so effects don't re-fire on Set identity.
+  const usedExecutiveRolesKey = Array.from(usedExecutiveRoles).sort().join(',');
+
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
       gameId,
@@ -107,6 +125,7 @@ export function ExecutiveMeetings({
       focusSlotsTotal: focusSlots.total,
       creativeCapital,
       arOfficeSlotUsed: arOfficeSlotUsedInitial,
+      usedExecutiveRoles: Array.from(usedExecutiveRoles),
       onActionSelected,
       fetchExecutives: cachedFetchExecutives,
       fetchRoleMeetings,
@@ -126,20 +145,8 @@ export function ExecutiveMeetings({
   const executivesLoading = state.matches('loadingExecutives') || state.matches('refreshingExecutives');
   const executivesError = context.error;
 
-  // Track which executives have already been used this week
-  const usedExecutiveRoles = new Set<string>();
-  selectedActions.forEach(actionString => {
-    try {
-      const action = JSON.parse(actionString);
-      if (action.roleId) {
-        usedExecutiveRoles.add(action.roleId);
-      }
-    } catch (e) {
-      // Ignore invalid action strings
-    }
-  });
-
-  // Helper to check if an executive has been used
+  // Helper to check if an executive has been used (set computed above the
+  // machine mount — see usedExecutiveRoles).
   const isExecutiveUsed = (role: string) => usedExecutiveRoles.has(role);
 
   useEffect(() => {
@@ -198,7 +205,8 @@ export function ExecutiveMeetings({
     };
   }, [gameId, currentWeek]);
 
-  // Sync focus slots (and the Creative Capital budget for AUTO) with the machine
+  // Sync focus slots (plus the Creative Capital budget and AUTO's exclusion
+  // lists — AR-busy and already-used roles) with the machine
   useEffect(() => {
     send({
       type: 'SYNC_SLOTS',
@@ -206,8 +214,10 @@ export function ExecutiveMeetings({
       total: focusSlots.total,
       creativeCapital,
       arOfficeSlotUsed,
+      usedExecutiveRoles: usedExecutiveRolesKey ? usedExecutiveRolesKey.split(',') : [],
     });
-  }, [focusSlots.used, focusSlots.total, creativeCapital, arOfficeSlotUsed, send]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- usedExecutiveRolesKey stands in for the Set (stable, order-independent)
+  }, [focusSlots.used, focusSlots.total, creativeCapital, arOfficeSlotUsed, usedExecutiveRolesKey, send]);
 
   // Sync current week with the machine (clears cache when week changes)
   useEffect(() => {
