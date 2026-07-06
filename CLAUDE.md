@@ -81,7 +81,7 @@ npm run db:studio     # Verify in database
 
 ## ✅ Validation Commands
 - `npm run check` - Run TypeScript compilation check
-- `npm run dev` - Starts the dev server (single Express process on port 5000 with Vite as middleware — no separate client dev server)
+- `npm run dev` - Starts the dev server (single Express process on port 5000 with Vite as middleware — no separate client dev server). ⚠️ **`tsx` runs WITHOUT watch: server/engine/shared code loads once at startup and never hot-reloads** (Vite HMR covers client code only) — after merging any server-side change, RESTART the dev server before live verification/playtesting, or the running process keeps executing the pre-merge engine (this silently invalidated a 17-week playtest on 2026-07-05)
 - `npm test` - Run tests once (alias of `test:run`; for watch mode use `npx vitest`)
 - `npm run test:run` - Run tests once (CI mode)
 - `npx kill-port 5000` - Clean up a lingering dev server (Windows-friendly; `pkill -f "tsx server"` on POSIX)
