@@ -1,6 +1,10 @@
 # Artist Mood System - 10-Phase Implementation Plan
 
-**Status**: ⏸️ **PAUSED** after Phase 5 (2025-10-12)
+**Status**: ⏸️ **PAUSED** after Phase 5 (2025-10-12) — **Phases 6–10 DISPOSITIONED July 5, 2026** (Nes, Tier 2 fork E; see `COMPLETED/[COMPLETE] tier2-reactive-meetings-and-side-events-plan.md` §4):
+- **Phase 7 (mood event system): SUBSUMED by Tier 2, shipped** — `mood_crater` happenings fire the CCO's reactive meeting (PRs #134–#136; discrete-event craters only, threshold 20 — passive drift/stress don't log `mood_events` rows), and the `artist_personal` side-event category is the reserved authoring slot for mood-driven side events (currently 0 events). Phase 7 never ships as a standalone system.
+- **Phase 6 (dialogue integration): spun off** as an independent small future slice (unscheduled).
+- **Phase 9 (advanced factors): anticipated only** — archetype modifiers become future happening-weight/threshold tuning; nothing built.
+- **Phases 8 + 10 (UI/analytics): remain deferred** pending player feedback (original rationale unchanged).
 **Reason**: Core system is functional (Phases 1-5 complete). Enhancements (Phases 6-10) deferred pending player feedback on base mechanics.
 **Linked Task File**: [`tasks/tasks-artist-mood-plan.md`](../../tasks/tasks-artist-mood-plan.md)
 
