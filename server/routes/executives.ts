@@ -4,7 +4,9 @@ import { storage } from '../storage';
 import { requireClerkUser } from '../auth';
 import { requireGameOwner } from '../middleware/requireGameOwner';
 import { generateMeetingSeed } from '@shared/utils/seededRandom';
-import { deriveRelevanceState, selectWeeklyMeeting } from '@shared/engine/meetingSelection';
+import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from '@shared/engine/meetingSelection';
+import { deriveWeekHappenings } from '@shared/engine/weekHappenings';
+import { ChartService } from '@shared/engine/ChartService';
 import { gameDataLoader } from '@shared/utils/dataLoader';
 
 const router = Router();
@@ -63,13 +65,71 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
             currentWeek: weekNum,
             recencyWindowWeeks: tuning.recency_window_weeks,
           });
+
+          // Tier 2 (PR-1, dark launch): derive last week's happenings from
+          // persisted data — mood_events (week N-1) + chart_entries (week N-1,
+          // isDebut) — so the injection stage can offer a reactive meeting
+          // in place of the normal weighted draw. With zero authored
+          // reactive_trigger meetings in data/actions.json today, this never
+          // matches anything; the pipeline below falls through unchanged.
+          const [moodEvents, chartEntries] = await Promise.all([
+            storage.getMoodEventsByWeekRange(gameId as string, weekNum - 1, weekNum - 1),
+            weekNum - 1 >= 1
+              ? storage.getChartEntriesByWeekAndGame(
+                  new Date(ChartService.generateChartWeekFromGameWeek(weekNum - 1)),
+                  gameId as string
+                )
+              : Promise.resolve([]),
+          ]);
+          const songsById = new Map(songs.map((s: any) => [s.id, s]));
+          const happenings = deriveWeekHappenings(
+            {
+              artists,
+              releases,
+              moodEvents: moodEvents.map((e: any) => ({
+                artistId: e.artistId,
+                weekOccurred: e.weekOccurred,
+                moodBefore: e.moodBefore,
+                moodAfter: e.moodAfter,
+              })),
+              chartEntries: chartEntries.map((c: any) => ({
+                songId: c.songId,
+                songTitle: c.songId ? songsById.get(c.songId)?.title : undefined,
+                artistId: c.songId ? songsById.get(c.songId)?.artistId : undefined,
+                isDebut: c.isDebut,
+                isCompetitorSong: c.isCompetitorSong,
+              })),
+            },
+            weekNum
+          );
+
           const seed = generateMeetingSeed(gameId as string, weekNum, req.params.roleId);
-          const selectedMeeting = selectWeeklyMeeting(roleMeetings, relevanceState, seed, {
-            relevanceWeight: tuning.relevance_weight,
-            recencyWindowWeeks: tuning.recency_window_weeks,
-          });
+          const { meeting: selectedMeeting, reactiveHappening } = selectWeeklyMeetingWithHappenings(
+            roleMeetings,
+            relevanceState,
+            seed,
+            happenings,
+            {
+              relevanceWeight: tuning.relevance_weight,
+              recencyWindowWeeks: tuning.recency_window_weeks,
+            }
+          );
           console.log(`[MEETING API] ✅ Relevance-filtered pick for ${req.params.roleId} week ${weekNum}:`, selectedMeeting?.id ?? '(sit-out — empty eligible pool)');
-          roleMeetings = selectedMeeting ? [selectedMeeting] : [];
+
+          // Tier 2 (PR-1): additive optional `reactiveContext` attached ON the
+          // selected meeting (spec §2 — the client's "why now" line reads it
+          // off the meeting in PR-2). Absent for every normal weighted pick.
+          if (selectedMeeting && reactiveHappening) {
+            const reactiveContext = {
+              trigger: reactiveHappening.type,
+              ...(reactiveHappening.artistName ? { artistName: reactiveHappening.artistName } : {}),
+              ...(reactiveHappening.songTitle ? { songTitle: reactiveHappening.songTitle } : {}),
+            };
+            console.log(`[MEETING API] 🔔 Reactive meeting selected for ${req.params.roleId}:`, selectedMeeting.id, reactiveContext);
+            roleMeetings = [{ ...selectedMeeting, reactiveContext }];
+          } else {
+            roleMeetings = selectedMeeting ? [selectedMeeting] : [];
+          }
         }
       } else {
         console.log(`[MEETING API] ❌ NO RANDOMIZATION - returning all ${roleMeetings.length} meetings for ${req.params.roleId}`);

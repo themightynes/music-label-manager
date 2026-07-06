@@ -60,6 +60,34 @@ export const RELEVANCE_TAGS = [
 
 export type RelevanceTag = (typeof RELEVANCE_TAGS)[number];
 
+/**
+ * Tier 2 (PR-1) — the canonical "week happening" vocabulary.
+ *
+ * SINGLE SOURCE OF TRUTH for the `reactive_trigger` field on weekly_actions:
+ * both Zod surfaces (shared/utils/dataLoader.ts and shared/api/contracts.ts)
+ * derive their enums from this array, and the data-lint suite
+ * (tests/engine/data-lint-reactive-triggers.test.ts) validates
+ * data/actions.json against it. Add new types HERE first; derivation logic
+ * lives in shared/engine/weekHappenings.ts.
+ *
+ * `tour_wrapped` is deliberately ABSENT: PR-1 verification (spec §9 item 1)
+ * found no queryable tour-completion week — `TourProcessor.processUnifiedTourRevenue`
+ * (shared/engine/processors/TourProcessor.ts) reveals cities into
+ * `project.metadata.tourStats.cities` with no per-city week stamp, only a
+ * cumulative array. Adding one would require an engine write, which the spec
+ * (§9 item 1, §0 constraint 5) forbids for this dark-launch PR. The CEO's
+ * reactive-meeting slot uses `chart_debut` instead (PR-2; cross-exec trigger
+ * duplication with the CMO is permitted by the per-(exec, trigger) lint rule).
+ */
+export const HAPPENING_TYPES = [
+  'chart_debut',
+  'release_out',
+  'mood_crater',
+  'recent_signing',
+] as const;
+
+export type HappeningType = (typeof HAPPENING_TYPES)[number];
+
 export interface RoleMeeting {
   id: string;
   name?: string; // Display name for the meeting (e.g., "CEO: Artist Roundtable")
@@ -78,6 +106,14 @@ export interface RoleMeeting {
    * it off a properly-typed RoleMeeting instead of an `any`.
    */
   category?: string;
+  /**
+   * Tier 2 (PR-1): the week-happening type that makes this meeting reactive.
+   * Absent = a normal Tier 0+1 pool meeting (the dark-launch default — no
+   * data/actions.json entry sets this yet). See
+   * shared/engine/meetingSelection.ts's injection stage and
+   * shared/engine/weekHappenings.ts.
+   */
+  reactive_trigger?: HappeningType;
   choices: DialogueChoice[];
 }
 
