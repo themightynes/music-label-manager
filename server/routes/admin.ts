@@ -2,11 +2,13 @@ import { Router } from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { z } from 'zod';
-import { ActionsConfigSchema } from '@shared/api/contracts';
+import { ActionsConfigSchema, EventsConfigSchema } from '@shared/api/contracts';
 import { gameStates } from '@shared/schema';
 import { db } from '../db';
 import { sql, inArray } from 'drizzle-orm';
 import { requireClerkUser, requireAdmin } from '../auth';
+import { gameDataLoader } from '@shared/utils/dataLoader';
+import { diffContentById, appendContentChangelogEntry } from '../utils/contentChangelog';
 
 const router = Router();
 
@@ -51,10 +53,13 @@ router.post('/api/admin/actions-config', requireClerkUser, requireAdmin, async (
 
       const actionsPath = path.join(process.cwd(), 'data', 'actions.json');
 
-      // Create backup before overwriting
+      // Create backup before overwriting (also gives us the pre-save data
+      // for the changelog diff below).
       const backupPath = path.join(process.cwd(), 'data', 'actions.json.backup');
+      let previousConfig: any = null;
       try {
         const existingData = await fs.readFile(actionsPath, 'utf8');
+        previousConfig = JSON.parse(existingData);
         await fs.writeFile(backupPath, existingData, 'utf8');
         console.log('Created backup at', backupPath);
       } catch (backupError) {
@@ -65,6 +70,22 @@ router.post('/api/admin/actions-config', requireClerkUser, requireAdmin, async (
       const formattedConfig = JSON.stringify(config, null, 2);
       await fs.writeFile(actionsPath, formattedConfig, 'utf8');
 
+      // Clear the shared data-loader cache so a running dev server picks up
+      // the saved content on the next request instead of serving stale data
+      // until restart (see spec §2.4 / finding 5b — events.json already hits
+      // this cache; actions.json is future-proofed the same way here).
+      gameDataLoader.clearCache();
+
+      // Changelog (fork A3): diff old vs new weekly_actions by id, append to
+      // data/content-changelog.json. Never fails the save.
+      if (previousConfig) {
+        const diff = diffContentById(
+          previousConfig.weekly_actions ?? [],
+          config.weekly_actions ?? []
+        );
+        await appendContentChangelogEntry('actions.json', diff);
+      }
+
       res.json({
         success: true,
         message: 'Actions configuration updated successfully',
@@ -74,6 +95,89 @@ router.post('/api/admin/actions-config', requireClerkUser, requireAdmin, async (
       console.error('Failed to save actions config:', error);
       res.status(500).json({
         error: 'Failed to save actions configuration',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+// Events configuration endpoints (Admin only)
+router.get('/api/admin/events-config', requireClerkUser, requireAdmin, async (req, res) => {
+    try {
+      const eventsPath = path.join(process.cwd(), 'data', 'events.json');
+      const configData = await fs.readFile(eventsPath, 'utf8');
+      const config = JSON.parse(configData);
+      res.json(config);
+    } catch (error) {
+      console.error('Failed to load events config:', error);
+      res.status(500).json({ error: 'Failed to load events configuration' });
+    }
+  });
+
+router.post('/api/admin/events-config', requireClerkUser, requireAdmin, async (req, res) => {
+    try {
+      const { config } = req.body;
+
+      if (!config) {
+        return res.status(400).json({ error: 'Configuration data is required' });
+      }
+
+      // Validate using shared schema from contracts
+      try {
+        EventsConfigSchema.parse(config);
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          return res.status(400).json({
+            error: 'Invalid events configuration structure',
+            details: validationError.errors
+          });
+        }
+        throw validationError;
+      }
+
+      const eventsPath = path.join(process.cwd(), 'data', 'events.json');
+
+      // Create backup before overwriting (also gives us the pre-save data
+      // for the changelog diff below).
+      const backupPath = path.join(process.cwd(), 'data', 'events.json.backup');
+      let previousConfig: any = null;
+      try {
+        const existingData = await fs.readFile(eventsPath, 'utf8');
+        previousConfig = JSON.parse(existingData);
+        await fs.writeFile(backupPath, existingData, 'utf8');
+        console.log('Created backup at', backupPath);
+      } catch (backupError) {
+        console.warn('Failed to create backup, continuing with save:', backupError);
+      }
+
+      // Write the new configuration
+      const formattedConfig = JSON.stringify(config, null, 2);
+      await fs.writeFile(eventsPath, formattedConfig, 'utf8');
+
+      // Clear the shared data-loader cache so a running dev server picks up
+      // the saved content on the next request instead of serving stale data
+      // until restart (spec §2.4 / finding 5b: events.json goes through
+      // dataLoader's cache, unlike actions.json's per-call re-read).
+      gameDataLoader.clearCache();
+
+      // Changelog (fork A3): diff old vs new events by id, append to
+      // data/content-changelog.json. Never fails the save.
+      if (previousConfig) {
+        const diff = diffContentById(
+          previousConfig.events ?? [],
+          config.events ?? []
+        );
+        await appendContentChangelogEntry('events.json', diff);
+      }
+
+      res.json({
+        success: true,
+        message: 'Events configuration updated successfully',
+        backupCreated: true
+      });
+    } catch (error) {
+      console.error('Failed to save events config:', error);
+      res.status(500).json({
+        error: 'Failed to save events configuration',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

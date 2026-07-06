@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import GameLayout from '@/layouts/GameLayout';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconPrefix, IconProp } from '@fortawesome/fontawesome-svg-core';
 import {
@@ -24,10 +25,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Zap, Clock, Edit, Save, X, AlertCircle, Pencil, Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import actionsData from '@/../../data/actions.json';
 import {
   ActionsConfigSchema,
   type WeeklyAction,
@@ -35,6 +44,10 @@ import {
   type ActionsConfig,
   type DialogueChoiceContract,
 } from '@shared/api/contracts';
+import { EFFECT_CHANNEL_DESCRIPTIONS } from '@shared/engine/processors/ActionProcessor';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, type RelevanceTag, type HappeningType } from '@shared/types/gameTypes';
+import { CANONICAL_EFFECT_KEYS, lintMeetings, type LintIssue } from '@/admin/contentLint';
+import { slugifyId, isIdAvailable, orderWithNewestFirst } from '@/admin/utils';
 
 // Use shared types from contracts
 type Effect = Record<string, number>;
@@ -42,7 +55,40 @@ type Choice = DialogueChoiceContract;
 type Action = WeeklyAction;
 type ActionsData = ActionsConfig;
 
-const data = actionsData as ActionsData;
+export const ACTIONS_CONFIG_QUERY_KEY = ['admin:actions-config'] as const;
+
+// Plain-language labels for the `requires` relevance-tag checkbox group.
+const RELEVANCE_TAG_LABELS: Record<RelevanceTag, string> = {
+  artist_signed: 'At least one artist signed',
+  music_exists: 'The label has released music',
+  release_planned: 'A release is currently planned',
+  release_out: 'A release went out this week',
+  recording_project_active: 'A recording project is active',
+  tour_active: 'A tour is currently active',
+};
+
+// Plain-language labels + "why now" explainer copy for the reactive_trigger selector.
+const HAPPENING_TYPE_LABELS: Record<HappeningType, string> = {
+  chart_debut: 'A song debuted on the charts this week',
+  release_out: 'A release went live this week',
+  mood_crater: "An artist's mood cratered this week",
+  recent_signing: 'An artist was signed last week',
+};
+
+/**
+ * Pure helper: given the current set of checked relevance tags, returns the
+ * `requires` value to store on the action — `undefined` (field omitted) when
+ * nothing is checked, since the schema requires nonempty-or-absent and the
+ * engine treats "no requires field" as always-eligible (NOT the same as an
+ * empty array, which the schema rejects outright).
+ */
+export function computeRequiresFromChecked(checked: ReadonlySet<RelevanceTag>): RelevanceTag[] | undefined {
+  if (checked.size === 0) return undefined;
+  // Keep a stable, canonical ordering (RELEVANCE_TAGS order) regardless of
+  // check/uncheck order, so diffs stay predictable.
+  const ordered = RELEVANCE_TAGS.filter((tag) => checked.has(tag));
+  return ordered.length > 0 ? ordered : undefined;
+}
 
 const prefixMap: Record<string, IconPrefix> = {
   fas: 'fas',
@@ -92,9 +138,11 @@ const formatIconLabel = (iconClass: string) => {
   return iconName.replace('fa-', '').replace(/-/g, ' ');
 };
 
-// Effects that are actually implemented in GameEngine.applyEffects()
-const CONNECTED_EFFECTS = ['money', 'reputation', 'creative_capital', 'artist_mood', 'artist_energy', 'artist_popularity'];
-const isEffectConnected = (effectKey: string) => CONNECTED_EFFECTS.includes(effectKey);
+// Canonical effect whitelist: LIVE_EFFECT_KEYS ∪ {executive_mood} (imported from
+// @/admin/contentLint, which itself derives from ActionProcessor.ts — the single
+// source of truth). Anything outside this set is "orphaned" — legacy data the
+// engine no longer reads.
+const isEffectConnected = (effectKey: string) => (CANONICAL_EFFECT_KEYS as readonly string[]).includes(effectKey);
 
 export default function ActionsViewer() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -113,13 +161,53 @@ export default function ActionsViewer() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [deleteConfirmActionId, setDeleteConfirmActionId] = useState<string | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [lintIssues, setLintIssues] = useState<LintIssue[]>([]);
   const { toast} = useToast();
+  const queryClient = useQueryClient();
+
+  // Creation dialog state (slice 4, playtest feedback: new actions must appear at
+  // the top of the list via a pop-up, not silently appended off-screen at the bottom).
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [createRole, setCreateRole] = useState('ceo');
+  const [createCategory, setCreateCategory] = useState('');
+  const [createScope, setCreateScope] = useState<'global' | 'predetermined' | 'user_selected'>('global');
+  const [createIcon, setCreateIcon] = useState('fas fa-circle');
+  const [createId, setCreateId] = useState('');
+  const [createIdEdited, setCreateIdEdited] = useState(false);
+
+  // Data source: fetch via the admin GET endpoint (no static bundle import — the
+  // viewer must reflect the live file, including after a save, not build-time data).
+  const {
+    data: fetchedConfig,
+    isLoading: isConfigLoading,
+    isError: isConfigError,
+    error: configError,
+  } = useQuery<ActionsData>({
+    queryKey: ACTIONS_CONFIG_QUERY_KEY,
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/actions-config');
+      return response.json();
+    },
+  });
+
+  // Fallback empty shape while loading/erroring so hooks below can run
+  // unconditionally (rules-of-hooks) — the JSX gates on isConfigLoading/isConfigError
+  // before rendering the actions list.
+  const data: ActionsData = fetchedConfig ?? {
+    version: '',
+    generated: '',
+    description: '',
+    weekly_actions: [],
+    action_categories: [],
+  };
 
   // Get unique roles from actions
   const uniqueRoles = useMemo(() => {
     const roles = new Set(data.weekly_actions.map(action => action.role_id));
     return Array.from(roles).sort();
-  }, []);
+  }, [data.weekly_actions]);
 
   // Role display names
   const getRoleDisplayName = (roleId: string) => {
@@ -188,13 +276,27 @@ export default function ActionsViewer() {
     }));
   };
 
+  // Canonical effect-name options for the effect picker (2.2a): the canonical
+  // whitelist only, each carrying its EFFECT_CHANNEL_DESCRIPTIONS blurb for
+  // help text/title. Replaces the old data-derived getAllEffectNames dropdown.
+  const getCanonicalEffectOptions = () => {
+    return CANONICAL_EFFECT_KEYS.map(key => ({
+      value: key,
+      label: key.replace(/_/g, ' '),
+      description: EFFECT_CHANNEL_DESCRIPTIONS[key]?.text,
+      title: EFFECT_CHANNEL_DESCRIPTIONS[key]?.title ?? key,
+    }));
+  };
+
   // Filter actions based on search and filters
   const filteredActions = useMemo(() => {
-    // Combine original actions (excluding deleted) and new actions
-    const allActions = [
-      ...data.weekly_actions.filter(a => !deletedActionIds.has(a.id)),
-      ...newActions
-    ];
+    // Display order: newest-first new actions on top, then originals — a pure
+    // display-order change (slice 4). The save handler below composes its own
+    // array independently and is unchanged in content/order.
+    const allActions = orderWithNewestFirst(
+      newActions,
+      data.weekly_actions.filter(a => !deletedActionIds.has(a.id)),
+    );
 
     return allActions.filter(action => {
       const matchesSearch = searchTerm === '' ||
@@ -318,17 +420,11 @@ export default function ActionsViewer() {
     }
   };
 
-  // Get all unique effect names from all actions
-  const getAllEffectNames = useMemo(() => {
-    const effectNames = new Set<string>();
-    data.weekly_actions.forEach(action => {
-      action.choices.forEach(choice => {
-        Object.keys(choice.effects_immediate).forEach(key => effectNames.add(key));
-        Object.keys(choice.effects_delayed).forEach(key => effectNames.add(key));
-      });
-    });
-    return Array.from(effectNames).sort();
-  }, []);
+  // Canonical effect names for the effect-name picker (2.2a): the effect-name
+  // Select in edit mode offers ONLY canonical keys — no data-derived union, no
+  // 'new_effect' fallback. Kept as `getAllEffectNames` name for call-site
+  // continuity; sourced from CANONICAL_EFFECT_KEYS.
+  const getAllEffectNames = CANONICAL_EFFECT_KEYS;
 
   // Toggle expanded state for a choice
   const toggleChoiceExpanded = (actionId: string, choiceId: string) => {
@@ -491,27 +587,78 @@ export default function ActionsViewer() {
     const effectsKey = effectType === 'immediate' ? 'effects_immediate' : 'effects_delayed';
     const existingKeys = Object.keys(choice[effectsKey]);
 
-    // Find first unused effect name
+    // Find first unused effect name — ALWAYS from the canonical set, never a
+    // non-canonical fallback like the old 'new_effect' placeholder.
     let newEffectKey = 'money';
     if (existingKeys.includes(newEffectKey)) {
-      newEffectKey = getAllEffectNames.find(name => !existingKeys.includes(name)) || 'new_effect';
+      newEffectKey =
+        getAllEffectNames.find(name => !existingKeys.includes(name)) ?? CANONICAL_EFFECT_KEYS[0];
     }
 
     updateEffect(actionId, choiceId, effectType, newEffectKey, 0);
   };
 
-  // Add new action
-  const addAction = () => {
+  // All action ids currently in play (originals not deleted + new + modified) —
+  // used by the creation dialog to validate id uniqueness (spec: unique against
+  // ALL current action ids).
+  const allCurrentActionIds = useMemo(() => {
+    const ids = new Set<string>();
+    data.weekly_actions.forEach(a => {
+      if (!deletedActionIds.has(a.id)) ids.add(a.id);
+    });
+    newActions.forEach(a => ids.add(a.id));
+    modifiedActions.forEach((_, id) => ids.add(id));
+    return ids;
+  }, [data.weekly_actions, deletedActionIds, newActions, modifiedActions]);
+
+  const createIdTaken = createId.length > 0 && !isIdAvailable(createId, allCurrentActionIds);
+  const createNameValid = createName.trim().length > 0;
+  const canCreateAction = createNameValid && createId.length > 0 && !createIdTaken;
+
+  const openCreateDialog = () => {
+    setCreateName('');
+    setCreateDescription('');
+    setCreateRole('ceo');
+    setCreateCategory(data.action_categories[0]?.id ?? 'business');
+    setCreateScope('global');
+    setCreateIcon('fas fa-circle');
+    setCreateId('');
+    setCreateIdEdited(false);
+    setShowCreateDialog(true);
+  };
+
+  // Keep the id in sync with the name until the user edits it directly.
+  const handleCreateNameChange = (value: string) => {
+    setCreateName(value);
+    if (!createIdEdited) {
+      setCreateId(slugifyId(value));
+    }
+  };
+
+  const handleCreateIdChange = (value: string) => {
+    setCreateIdEdited(true);
+    setCreateId(value);
+  };
+
+  // Add new action — invoked by the creation dialog's Create button. Replaces the
+  // old instant-append-a-blank-template pattern (playtest feedback: new actions
+  // must appear via a pop-up, at the top of the list, not silently at the bottom).
+  const createAction = () => {
+    if (!canCreateAction) return;
+
+    // requires/reactive_trigger deliberately OMITTED here (not set to empty/none):
+    // absent means always-eligible and never-reactive (spec §2.2d) — the editors
+    // below handle their absence directly.
     const newAction: Action = {
-      id: `action_${Date.now()}`,
-      name: 'New Action',
+      id: createId,
+      name: createName.trim(),
       type: 'role_meeting',
-      icon: 'fas fa-circle',
-      description: '',
-      role_id: 'ceo',
-      meeting_id: `meeting_${Date.now()}`,
-      category: 'business',
-      target_scope: 'global',
+      icon: createIcon,
+      description: createDescription,
+      role_id: createRole,
+      meeting_id: createId,
+      category: createCategory,
+      target_scope: createScope,
       prompt: '',
       choices: [{
         id: 'choice_1',
@@ -520,9 +667,15 @@ export default function ActionsViewer() {
         effects_delayed: {}
       }]
     };
+
+    if (createScope === 'user_selected') {
+      newAction.prompt_before_selection = 'Which artist should be affected by this decision?';
+    }
+
     setNewActions(prev => [...prev, newAction]);
     // Auto-expand the new action
     setExpandedActions(prev => new Set([...Array.from(prev), newAction.id]));
+    setShowCreateDialog(false);
   };
 
   // Delete action
@@ -555,6 +708,7 @@ export default function ActionsViewer() {
     setModifiedActions(new Map());
     setNewActions([]);
     setDeletedActionIds(new Set());
+    setLintIssues([]);
     toast({
       title: "Changes Discarded",
       description: "All unsaved changes have been discarded.",
@@ -577,6 +731,7 @@ export default function ActionsViewer() {
     setModifiedActions(new Map());
     setNewActions([]);
     setDeletedActionIds(new Set());
+    setLintIssues([]);
   };
 
   // Save all changes to the backend
@@ -592,6 +747,7 @@ export default function ActionsViewer() {
     }
 
     setIsSaving(true);
+    setLintIssues([]);
 
     try {
       // Create a new copy of the data with all changes applied
@@ -607,13 +763,28 @@ export default function ActionsViewer() {
         ...newActions
       ];
 
+      // Lint gate FIRST (spec §2.2f): hard-block issues (bad effect key, bad
+      // requires tag, bad reactive_trigger, empty choices, dup ids, weakly-
+      // dominant choices) must all clear before we even attempt the Zod parse.
+      const issues = lintMeetings(updatedActions);
+      if (issues.length > 0) {
+        setLintIssues(issues);
+        toast({
+          title: "Lint Failed",
+          description: `Found ${issues.length} issue${issues.length !== 1 ? 's' : ''} that must be fixed before saving. See the panel below.`,
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
       const updatedConfig = {
         ...data,
         weekly_actions: updatedActions,
         generated: new Date().toISOString()
       };
 
-      // Validate using shared schema BEFORE sending to backend
+      // Validate using shared schema BEFORE sending to backend (second gate)
       try {
         ActionsConfigSchema.parse(updatedConfig);
       } catch (validationError: any) {
@@ -647,15 +818,13 @@ export default function ActionsViewer() {
         variant: "default",
       });
 
-      // Clear all changes and reload the page to reflect changes
+      // Clear all local edit state and refetch the config instead of a full
+      // page reload (spec §2.2e).
       setModifiedActions(new Map());
       setNewActions([]);
       setDeletedActionIds(new Set());
-
-      // Reload the page after a short delay to let user see the success message
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      setLintIssues([]);
+      await queryClient.invalidateQueries({ queryKey: ACTIONS_CONFIG_QUERY_KEY });
 
     } catch (error) {
       console.error('Failed to save actions config:', error);
@@ -669,18 +838,70 @@ export default function ActionsViewer() {
     }
   };
 
+  if (isConfigLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="bg-gray-900/50 border-white/10">
+          <CardContent className="p-8 text-center text-white/60">
+            Loading actions configuration...
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isConfigError) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="bg-red-900/20 border-red-500/30">
+          <CardContent className="p-8 text-center text-red-300">
+            Failed to load actions configuration
+            {configError instanceof Error ? `: ${configError.message}` : '.'}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <GameLayout>
-      <div className="container mx-auto p-6 space-y-6">
+    <>
+    <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="space-y-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">Actions JSON Viewer</h1>
+            <h2 className="text-2xl font-bold text-white">Meetings</h2>
             <p className="text-white/70">
               Version {data.version} • Generated {data.generated} • {data.weekly_actions.length} actions
             </p>
             <p className="text-sm text-white/50">{data.description}</p>
           </div>
+
+          {/* Lint Error Panel (spec §2.2f): grouped by action, scope + message. */}
+          {lintIssues.length > 0 && (
+            <Card className="bg-red-900/20 border-red-500/30">
+              <CardHeader>
+                <CardTitle className="text-lg text-red-300 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Save blocked — {lintIssues.length} lint issue{lintIssues.length !== 1 ? 's' : ''}
+                </CardTitle>
+                <CardDescription className="text-red-200/70">
+                  Fix the issues below before saving. These mirror hard rules the test suite enforces.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {lintIssues.map((issue, idx) => (
+                    <li key={`${issue.scope}-${idx}`} className="text-sm text-red-200">
+                      <Badge variant="outline" className="text-xs bg-red-500/20 text-red-300 border-red-500/30 mr-2">
+                        {issue.scope}
+                      </Badge>
+                      {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Production Warning Banner */}
           {import.meta.env.PROD && (
@@ -733,7 +954,7 @@ export default function ActionsViewer() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={addAction}
+                      onClick={openCreateDialog}
                       className="bg-green-600/10 hover:bg-green-600/20 border-green-500/30 text-green-300"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -1337,7 +1558,87 @@ export default function ActionsViewer() {
                               placeholder="meeting_id"
                             />
                           </div>
+
+                          {/* requires (relevance tags) editor (spec §2.2a) */}
+                          <div className="col-span-2">
+                            <label className="text-xs text-white/60 mb-1 block">
+                              Eligibility Requirements (requires)
+                            </label>
+                            <div className="space-y-1.5 p-2 bg-black/20 rounded border border-white/10">
+                              {RELEVANCE_TAGS.map(tag => {
+                                const currentRequires = (action.requires ?? []) as string[];
+                                const checked = currentRequires.includes(tag);
+                                return (
+                                  <label key={tag} className="flex items-center gap-2 text-xs text-white/80 cursor-pointer">
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(value) => {
+                                        const current = new Set<RelevanceTag>(currentRequires as RelevanceTag[]);
+                                        if (value) {
+                                          current.add(tag);
+                                        } else {
+                                          current.delete(tag);
+                                        }
+                                        const nextRequires = computeRequiresFromChecked(current);
+                                        updateAction(action.id, {
+                                          requires: nextRequires as Action['requires'],
+                                        });
+                                      }}
+                                    />
+                                    {RELEVANCE_TAG_LABELS[tag]}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <div className="text-xs text-white/40 mt-1">
+                              Meeting is only offered when ALL checked conditions are true. Nothing checked = always available.
+                            </div>
+                          </div>
+
+                          {/* reactive_trigger selector (spec §2.2c) */}
+                          <div className="col-span-2">
+                            <label className="text-xs text-white/60 mb-1 block">Reactive Trigger</label>
+                            <Select
+                              value={action.reactive_trigger ?? 'none'}
+                              onValueChange={(value) => {
+                                updateAction(action.id, {
+                                  reactive_trigger: value === 'none' ? undefined : (value as HappeningType),
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs bg-black/30 border-white/10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None (not reactive)</SelectItem>
+                                {HAPPENING_TYPES.map(trigger => (
+                                  <SelectItem key={trigger} value={trigger} title={HAPPENING_TYPE_LABELS[trigger]}>
+                                    {HAPPENING_TYPE_LABELS[trigger]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="text-xs text-white/40 mt-1">
+                              A reactive meeting jumps ahead of the normal draw when its trigger happened this week.
+                            </div>
+                          </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* requires / reactive_trigger badges (view mode) */}
+                    {!editMode && ((action.requires && action.requires.length > 0) || action.reactive_trigger) && (
+                      <div className="flex flex-wrap gap-2">
+                        {(action.requires ?? []).map(tag => (
+                          <Badge key={tag} variant="outline" className="text-xs bg-purple-500/10 text-purple-300 border-purple-500/30">
+                            {RELEVANCE_TAG_LABELS[tag as RelevanceTag] ?? tag}
+                          </Badge>
+                        ))}
+                        {action.reactive_trigger && (
+                          <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-300 border-amber-500/30">
+                            Reactive: {HAPPENING_TYPE_LABELS[action.reactive_trigger as HappeningType] ?? action.reactive_trigger}
+                          </Badge>
+                        )}
                       </div>
                     )}
 
@@ -1467,11 +1768,9 @@ export default function ActionsViewer() {
                                                     <SelectValue />
                                                   </SelectTrigger>
                                                   <SelectContent>
-                                                    {getAllEffectNames.map(effectName => (
-                                                      <SelectItem key={effectName} value={effectName}>
-                                                        <span className={!isEffectConnected(effectName) ? 'text-gray-500' : undefined}>
-                                                          {effectName.replace(/_/g, ' ')} {!isEffectConnected(effectName) && '○'}
-                                                        </span>
+                                                    {getCanonicalEffectOptions().map(opt => (
+                                                      <SelectItem key={opt.value} value={opt.value} title={opt.description}>
+                                                        {opt.label}
                                                       </SelectItem>
                                                     ))}
                                                   </SelectContent>
@@ -1553,11 +1852,9 @@ export default function ActionsViewer() {
                                                     <SelectValue />
                                                   </SelectTrigger>
                                                   <SelectContent>
-                                                    {getAllEffectNames.map(effectName => (
-                                                      <SelectItem key={effectName} value={effectName}>
-                                                        <span className={!isEffectConnected(effectName) ? 'text-gray-500' : undefined}>
-                                                          {effectName.replace(/_/g, ' ')} {!isEffectConnected(effectName) && '○'}
-                                                        </span>
+                                                    {getCanonicalEffectOptions().map(opt => (
+                                                      <SelectItem key={opt.value} value={opt.value} title={opt.description}>
+                                                        {opt.label}
                                                       </SelectItem>
                                                     ))}
                                                   </SelectContent>
@@ -1733,6 +2030,156 @@ export default function ActionsViewer() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </GameLayout>
+
+      {/* Create New Action Dialog (slice 4, playtest feedback): replaces the old
+          instant-append pattern. Create adds the action at the TOP of the display
+          list (see filteredActions ordering above); Cancel creates nothing. */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Action</DialogTitle>
+            <DialogDescription>
+              Fill in the basics below. You can edit choices, effects, and other metadata after creating.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="create-action-name">Name *</Label>
+              <Input
+                id="create-action-name"
+                value={createName}
+                onChange={(e) => handleCreateNameChange(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1"
+                placeholder="e.g. CMO: Viral Push"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="create-action-description">Description</Label>
+              <Textarea
+                id="create-action-description"
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Role</Label>
+                <Select value={createRole} onValueChange={setCreateRole}>
+                  <SelectTrigger className="bg-black/30 border-white/10 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getRoleOptions().map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Category</Label>
+                <Select value={createCategory} onValueChange={setCreateCategory}>
+                  <SelectTrigger className="bg-black/30 border-white/10 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getCategoryOptions().map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <span className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={parseIconClass(opt.icon)} />
+                          {opt.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Target Scope</Label>
+              <Select value={createScope} onValueChange={(value) => setCreateScope(value as 'global' | 'predetermined' | 'user_selected')}>
+                <SelectTrigger className="bg-black/30 border-white/10 mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getTargetScopeOptions().map(opt => (
+                    <SelectItem key={opt.value} value={opt.value} title={opt.description}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-white/40 mt-1">
+                {getTargetScopeOptions().find(opt => opt.value === createScope)?.description}
+              </div>
+            </div>
+
+            <div>
+              <Label>Icon</Label>
+              <div className="flex gap-3 items-start mt-1">
+                <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-brand-gold/20 to-brand-burgundy/20 rounded-lg border-2 border-brand-gold/40">
+                  <FontAwesomeIcon icon={parseIconClass(createIcon)} className="text-brand-gold text-2xl" />
+                </div>
+                <div className="flex-1">
+                  <Select value={createIcon} onValueChange={setCreateIcon}>
+                    <SelectTrigger className="bg-black/30 border-white/10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getIconOptions().map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={parseIconClass(opt.iconClass)} className="text-brand-gold w-4" />
+                            <span className="capitalize">{opt.label}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="create-action-id">ID</Label>
+              <Input
+                id="create-action-id"
+                value={createId}
+                onChange={(e) => handleCreateIdChange(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1 font-mono text-sm"
+              />
+              {createIdTaken && (
+                <div className="text-xs text-red-400 mt-1">This id is already taken.</div>
+              )}
+              {createId.length === 0 && (
+                <div className="text-xs text-white/40 mt-1">Auto-generated from the name; you can edit it.</div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={createAction}
+              disabled={!canCreateAction}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

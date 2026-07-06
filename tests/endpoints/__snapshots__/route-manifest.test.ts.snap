@@ -47,6 +47,22 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
       "requireClerkUser",
       "requireAdmin",
     ],
+    "path": "/api/admin/events-config",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/events-config",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
     "path": "/api/admin/health",
   },
   {

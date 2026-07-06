@@ -21,3 +21,4 @@ Artists, songs, roles, executives, actions, world definitions
   - Quality/variance → `balance/quality.json`
   - Awards / exec-mood modifiers / chart reputation → `balance/progression.json`
 - When authoring changes affect executive meetings, update `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md` to match.
+- `events.json` is editable via the admin Content Editor (`GET`/`POST /api/admin/events-config`, mirroring the actions-config pair). Saves via either admin content endpoint append an id-level diff to `data/content-changelog.json` (`{ timestamp, file, added, modified, deleted }`) for a later docs-sync pass to consume.
