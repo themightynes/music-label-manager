@@ -116,6 +116,33 @@ export class ProjectStageProcessor {
               projectId: project.id
             });
           }
+
+          // Tour-tier1 slice 1: planning-week foreshadow for tours. Deterministic
+          // (no getRandom draw — see TourProcessor.estimatePlanningForeshadow) so
+          // the seeded stream is untouched and this stays byte-identical to the
+          // eventual city-1 reveal's pre-variance numbers.
+          if (project.type === 'Mini-Tour') {
+            try {
+              const artist = await ctx.gameData.getArtistById(project.artistId);
+              const fore = TourProcessor.estimatePlanningForeshadow(ctx, project, artist);
+              const artistName = artist?.name;
+              summary.changes.push({
+                type: 'tour_planning',
+                description: `🎤 ${project.title}: crew booked — ${artistName ?? 'the artist'} plays ${fore.venue} next week (${fore.estTickets.toLocaleString()} of ${fore.capacity.toLocaleString()} tickets expected)`,
+                amount: 0,
+                projectId: project.id,
+                venue: fore.venue,
+                capacity: fore.capacity,
+                estTickets: fore.estTickets,
+                cityNumber: 1,
+                citiesTotal: fore.citiesTotal,
+                artistId: project.artistId,
+                artistName
+              });
+            } catch (error) {
+              console.error(`[TOUR FORESHADOW] Failed to build planning foreshadow for "${project.title}":`, error);
+            }
+          }
         } else if (currentStageIndex === 1) {
           // production -> marketing/completed
           if (!isRecordingProject && project.type === 'Mini-Tour') {
@@ -123,13 +150,26 @@ export class ProjectStageProcessor {
             const citiesPlanned = project.metadata?.cities || 1;
             const weeksInProduction = weeksElapsed - 1; // Subtract planning week
 
-            if (weeksInProduction > citiesPlanned) {
+            if (weeksInProduction >= citiesPlanned) {
+              // Final city: process its revenue AND complete in the SAME pass
+              // (tour-tier1 slice 1 — kills the phantom bookkeeping week that used
+              // to detect completion only on the NEXT advance). Fall through to a
+              // pure completion when weeksInProduction has already passed the
+              // final city (legacy in-flight saves that predate this fix).
+              let tourStats = project.metadata?.tourStats;
+              if (weeksInProduction === citiesPlanned && weeksInProduction > 0) {
+                // processUnifiedTourRevenue returns the UPDATED tourStats
+                // (including this final city) — the project row fetched at loop
+                // start is stale and would miss it, so use the return value for
+                // the completion totals below.
+                tourStats = await new TourProcessor().processUnifiedTourRevenue(ctx, project, weeksInProduction, dbTransaction);
+              }
+
               // Tour complete - skip marketing, go directly to completed
               newStageIndex = 2; // Go directly to 'recorded' which acts as 'completed' for tours
               advancementReason = `Tour completed after ${citiesPlanned} cities (${weeksElapsed} total weeks)`;
 
               // Generate final tour completion summary
-              const tourStats = project.metadata?.tourStats;
               if (tourStats && tourStats.cities) {
                 const totalRevenue = tourStats.cities.reduce((sum: number, city: any) => sum + (city?.revenue || 0), 0);
                 const avgAttendance = Math.round(tourStats.cities.reduce((sum: number, city: any) => sum + (city?.attendanceRate || 0), 0) / tourStats.cities.length);

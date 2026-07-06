@@ -44,7 +44,7 @@ export class TourProcessor {
    * Processes tour revenue using unified FinancialSystem calculations
    * Replaces legacy random-based city revenue system
    */
-  async processUnifiedTourRevenue(ctx: WeekContext, project: any, cityNumber: number, dbTransaction?: any): Promise<void> {
+  async processUnifiedTourRevenue(ctx: WeekContext, project: any, cityNumber: number, dbTransaction?: any): Promise<any> {
     const { summary } = ctx;
     console.log(`[UNIFIED TOUR] Processing city ${cityNumber} for tour "${project.title}"`);
 
@@ -197,12 +197,25 @@ export class TourProcessor {
       }
       summary.revenueBreakdown.tourRevenue += revenue;
 
+      // Structured city fields (tour-tier1 slice 1) so the client can render a
+      // proper tour card. Description string is UNCHANGED — other consumers/tests
+      // still match on it.
       summary.changes.push({
         type: 'revenue',
         description: `${project.title} - City ${cityNumber} performance: $${revenue.toLocaleString()} (${cityData.attendanceRate}% attendance)`,
         amount: revenue,
         projectId: project.id,
-        source: 'tour_performance'
+        source: 'tour_performance',
+        venue: cityData.venue,
+        attendanceRate: cityData.attendanceRate,
+        ticketsSold: cityData.ticketsSold,
+        capacity: cityData.capacity,
+        cityNumber,
+        citiesTotal: currentMetadata.cities || 1,
+        costs: cityData.economics?.costs?.total,
+        netProfit: cityData.economics?.profit,
+        artistId: project.artistId,
+        artistName: artist.name
       });
     }
 
@@ -214,6 +227,66 @@ export class TourProcessor {
     } catch (error) {
       console.error(`[UNIFIED TOUR] Error updating project metadata:`, error);
     }
+
+    // Return the UPDATED tourStats (now including the just-revealed city) so a
+    // same-pass completion summary computes totals from post-processing data, not
+    // the stale project row fetched at loop start. The other call path ignores it.
+    return tourStats;
+  }
+
+  /**
+   * Deterministic planning-week foreshadow for a Mini-Tour advancing
+   * planning → production. Reuses the SAME pre-calculation parameter assembly as
+   * processUnifiedTourRevenue (C41 midpoint capacity fallback, C47 popularity
+   * floor, C48 capacity-based marketing extraction) and takes city 1's
+   * PRE-variance sellThroughRate × capacity as the expected ticket count.
+   *
+   * RNG INVARIANT: makes NO ctx.getRandom draws — the ±20% variance draw happens
+   * only at execution time inside processUnifiedTourRevenue. This helper must not
+   * touch the seeded stream, so preview and future weekly reveals stay in sync
+   * without a shared draw here.
+   */
+  static estimatePlanningForeshadow(ctx: WeekContext, project: any, artist: any): {
+    venue: string;
+    capacity: number;
+    estTickets: number;
+    citiesTotal: number;
+  } {
+    const currentMetadata = project.metadata || {};
+    const venueAccess = currentMetadata.venueAccess || 'none';
+    const artistPopularity = artist?.popularity || 1; // C47 floor
+    const reputation = ctx.gameState.reputation || 0;
+    const totalCities = currentMetadata.cities || 1;
+
+    // C41 midpoint fallback for a missing stored capacity.
+    let venueCapacity = currentMetadata.venueCapacity;
+    if (!venueCapacity) {
+      const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(venueAccess, ctx.gameData);
+      venueCapacity = Math.round((min + max) / 2);
+    }
+
+    // C48 capacity-based marketing extraction (matches execution path).
+    const costBreakdown = ctx.financialSystem.calculateTourCostsWithCapacity(venueCapacity, totalCities, 0);
+    const marketingBudget = Math.max(0, (project.totalCost || 0) - costBreakdown.totalCosts);
+
+    const detailedBreakdown = ctx.financialSystem.calculateDetailedTourBreakdown({
+      venueCapacity,
+      venueTier: venueAccess,
+      artistPopularity,
+      localReputation: reputation,
+      cities: totalCities,
+      marketingBudget
+    });
+
+    const city1 = detailedBreakdown.cities[0];
+    const estTickets = city1 ? Math.round(city1.venueCapacity * city1.sellThroughRate) : 0;
+
+    return {
+      venue: new TourProcessor().getVenueNameFromAccess(venueAccess),
+      capacity: venueCapacity,
+      estTickets,
+      citiesTotal: totalCities
+    };
   }
 
   /**

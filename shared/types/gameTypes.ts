@@ -459,7 +459,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning';
   description: string;
   amount?: number;
   roleId?: string;
@@ -500,6 +500,20 @@ export interface GameChange {
   moodBand?: 'disgruntled' | 'neutral' | 'content' | 'inspired';
   costMultiplier?: number;
   effectMultiplier?: number;
+  // Tour-tier1 slice 1: structured per-city fields on tour_performance revenue
+  // entries and tour_planning foreshadow entries, so the client can render a
+  // proper tour card without re-parsing the description string. All optional/
+  // additive — old saves without them remain valid.
+  venue?: string;
+  attendanceRate?: number;
+  ticketsSold?: number;
+  capacity?: number;
+  cityNumber?: number;
+  citiesTotal?: number;
+  costs?: number; // per-city total costs (economics.costs.total)
+  // netProfit (declared above for tour completion) is reused for per-city profit.
+  estTickets?: number; // deterministic pre-variance ticket estimate (foreshadow)
+  artistName?: string;
 }
 
 export interface EventOccurrence {

@@ -125,6 +125,9 @@ export function classifyChange(
     case 'popularity':
     case 'awareness_gain':
     case 'awareness_decay':
+    // A tour-planning foreshadow is an informational "what's coming next week"
+    // beat — surfaced, but ordinary weekly churn, not a headline.
+    case 'tour_planning':
     case 'error':
       return 'routine';
 
