@@ -74,7 +74,7 @@ Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values
 | **ceo_expansion** (predetermined) — "Three major festivals want your act." | `coachella_prestige` | creative_capital −2, artist_popularity +2, reputation +3 | (none) | All-immediate prestige play, no delayed banking |
 | | `euro_circuit` | money −12000 | reputation +2 | Expensive, slow-burn reputation build |
 | | `profitable_path` | money +25000, reputation −1 | artist_mood −1 | Windfall with a real reputation and mood cost |
-| **ceo_chart_debut_strategy** (global) **[REACTIVE — `chart_debut`]** — "We just charted for the first time… what does this mean for the label's direction?" (Tier 2 PR-2; register distinct from the CMO's press-blitz framing — this is the label-level read) | `double_down_sound` | money −4000 | reputation +2 | Commits to the sound that just worked |
+| **ceo_chart_debut_strategy** (global) **[REACTIVE — `chart_debut`]** — "We just put a song on the charts… what does this mean for the label's direction?" (Tier 2 PR-2; register distinct from the CMO's press-blitz framing — this is the label-level read) | `double_down_sound` | money −4000 | reputation +2 | Commits to the sound that just worked |
 | | `reinvest_catalog` | money −5000 | quality_bonus +2 | Funds the next release instead of banking reputation |
 | | `bank_it` | money +2000 | executive_mood −2 | Conservative windfall; costs exec mood |
 

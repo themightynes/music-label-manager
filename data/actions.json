@@ -992,7 +992,7 @@
       "target_scope": "global",
       "requires": ["music_exists"],
       "reactive_trigger": "chart_debut",
-      "prompt": "We just charted for the first time. Before marketing runs with it - what does this mean for the label's direction?",
+      "prompt": "We just put a song on the charts. Before marketing runs with it - what does this mean for the label's direction?",
       "choices": [
         {
           "id": "double_down_sound",
