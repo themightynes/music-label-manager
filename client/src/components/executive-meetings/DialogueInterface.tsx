@@ -9,6 +9,7 @@ import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft, Shuffle } from 'lucide
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import { EffectBadgeTooltip } from './EffectBadgeTooltip';
+import { getChoiceCreativeCapitalCost } from '../../services/executiveAutoSelect';
 
 // Badge honesty (exec-meetings-revival PR-2): only render a badge for a key the
 // engine actually implements (LIVE_EFFECT_KEYS) or 'executive_mood' (handled
@@ -28,6 +29,18 @@ interface DialogueInterfaceProps {
   onBack: () => void;
   targetScope?: 'global' | 'predetermined' | 'user_selected';
   selectedArtistName?: string;
+  /**
+   * CC affordability gate (playtest bug, 2026-07-05): the player's current
+   * Creative Capital. When provided, a choice whose CC cost (immediate +
+   * delayed, via the same getChoiceCreativeCapitalCost helper AUTO budgets
+   * with) exceeds it is DISABLED with an explanatory note — previously a
+   * CC-costing choice was selectable at 0 CC and the engine's Math.max(0, …)
+   * clamp silently erased the cost (free lunch). Absent = no gating (other
+   * render sites / tests keep their existing behavior). Server clamp remains
+   * the backstop. Known limitation: gates against CURRENT CC only, not net of
+   * other already-queued choices this week (ledger C75).
+   */
+  availableCreativeCapital?: number;
 }
 
 function EffectBadge({
@@ -211,7 +224,8 @@ export function DialogueInterface({
   onSelectChoice,
   onBack,
   targetScope,
-  selectedArtistName
+  selectedArtistName,
+  availableCreativeCapital
 }: DialogueInterfaceProps) {
   // Replace {artistName} placeholder with actual artist name
   const displayPrompt = selectedArtistName
@@ -242,7 +256,13 @@ export function DialogueInterface({
           }}
         >
           <CarouselContent>
-            {dialogue.choices.map((choice) => (
+            {dialogue.choices.map((choice) => {
+              // CC affordability gate: disable a choice the player can't pay
+              // for (same cost math AUTO budgets with). undefined prop = no gate.
+              const ccCost = getChoiceCreativeCapitalCost(choice);
+              const cannotAfford =
+                typeof availableCreativeCapital === 'number' && ccCost > availableCreativeCapital;
+              return (
               <CarouselItem key={choice.id}>
                 <Card className="glass-panel chromatic-hairline relative border-0 transition-all duration-200 hover:shadow-glow-lilac">
                   <BorderTrail
@@ -266,9 +286,21 @@ export function DialogueInterface({
                         selectedArtistName={selectedArtistName}
                       />
 
+                      {cannotAfford && (
+                        <div
+                          data-testid={`cc-gate-${choice.id}`}
+                          className="flex items-center gap-1.5 text-xs font-mono text-warning"
+                        >
+                          <Zap className="h-3 w-3 shrink-0" />
+                          <span>
+                            Needs {ccCost} Creative Capital — you have {availableCreativeCapital}
+                          </span>
+                        </div>
+                      )}
                       <Button
                         onClick={() => onSelectChoice(choice)}
-                        className="w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90"
+                        disabled={cannotAfford}
+                        className="w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                         size="sm"
                       >
                         Choose This Response
@@ -277,7 +309,8 @@ export function DialogueInterface({
                   </CardContent>
                 </Card>
               </CarouselItem>
-            ))}
+              );
+            })}
           </CarouselContent>
           <CarouselPrevious className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
           <CarouselNext className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
