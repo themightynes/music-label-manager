@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ArtistSchema } from '../schemas/artist';
-import { RELEVANCE_TAGS, HAPPENING_TYPES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
 import type {
   GameDataFiles,
   GameArtist,
@@ -71,6 +71,9 @@ const EventChoiceSchema = z.object({
 const SideEventSchema = z.object({
   id: z.string(),
   role_hint: z.string(),
+  // Tier 2 (PR-3): category drives isolated-seed weighted selection + cooldown.
+  // Enum derived from the ONE canonical const in shared/types/gameTypes.ts.
+  category: z.enum(SIDE_EVENT_CATEGORIES),
   prompt: z.string(),
   choices: z.array(EventChoiceSchema)
 });

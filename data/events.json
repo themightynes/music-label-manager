@@ -5,6 +5,7 @@
     {
       "id": "sync_offer",
       "role_hint": "Sync Licensing",
+      "category": "sync_licensing",
       "prompt": "A blockbuster film wants your upcoming single for a key scene.",
       "choices": [
         {
@@ -41,6 +42,7 @@
     {
       "id": "copyright_claim",
       "role_hint": "Copyright Lawyer",
+      "category": "copyright_issues",
       "prompt": "A plagiarism claim hits on release week.",
       "choices": [
         {
@@ -78,6 +80,7 @@
     {
       "id": "data_anomaly",
       "role_hint": "Data Analyst",
+      "category": "platform_opportunities",
       "prompt": "Streams spike in a random midwest city overnight.",
       "choices": [
         {
@@ -113,6 +116,7 @@
     {
       "id": "critic_surprise",
       "role_hint": "Music Critic",
+      "category": "industry_drama",
       "prompt": "A respected critic wants an early listen.",
       "choices": [
         {
@@ -146,6 +150,7 @@
     {
       "id": "platform_beta",
       "role_hint": "Platform Dev",
+      "category": "platform_opportunities",
       "prompt": "A platform offers a discovery beta slot.",
       "choices": [
         {
@@ -176,6 +181,7 @@
     {
       "id": "royalty_discrepancy",
       "role_hint": "Royalty Collector",
+      "category": "business_opportunities",
       "prompt": "A payout report looks off.",
       "choices": [
         {
@@ -209,6 +215,7 @@
     {
       "id": "wardrobe_malfunction",
       "role_hint": "Stylist",
+      "category": "industry_drama",
       "prompt": "Wardrobe malfunction at a televised show.",
       "choices": [
         {
@@ -243,6 +250,7 @@
     {
       "id": "ad_backlash",
       "role_hint": "Advertiser",
+      "category": "business_opportunities",
       "prompt": "Sponsorship offer from a controversial brand.",
       "choices": [
         {
@@ -278,6 +286,7 @@
     {
       "id": "lighting_blackout",
       "role_hint": "Lighting Tech",
+      "category": "technical_problems",
       "prompt": "Blackout mid‑performance—crew improvises.",
       "choices": [
         {
@@ -311,6 +320,7 @@
     {
       "id": "street_team_rogue",
       "role_hint": "Street Team",
+      "category": "industry_drama",
       "prompt": "Rogue flyers cause minor PR trouble.",
       "choices": [
         {
@@ -342,6 +352,7 @@
     {
       "id": "merch_fail",
       "role_hint": "Merch Buyer",
+      "category": "technical_problems",
       "prompt": "A batch of shirts arrives misprinted before a show.",
       "choices": [
         {
@@ -379,6 +390,7 @@
     {
       "id": "content_takedown",
       "role_hint": "Content Moderator",
+      "category": "copyright_issues",
       "prompt": "A false takedown hits your single.",
       "choices": [
         {

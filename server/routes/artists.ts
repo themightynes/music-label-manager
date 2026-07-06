@@ -11,6 +11,7 @@ import { artistService, ArtistServiceError } from '../services/artistService';
 import {
   ArtistDialogueRequestSchema,
   ArtistDialogueResponse,
+  SideEventChoiceRequestSchema,
 } from '@shared/api/contracts';
 
 const router = Router();
@@ -253,6 +254,175 @@ router.post("/api/game/:gameId/artist-dialogue", requireClerkUser, requireGameOw
     } catch (error) {
       console.error('[API] Failed to fetch mood events:', error);
       res.status(500).json({ message: 'Failed to fetch mood events' });
+    }
+  });
+
+  // ========================================
+  // Side Event Choice Endpoint (Tier 2, PR-3)
+  // ========================================
+  //
+  // Resolves the pending side event the engine set on a hit
+  // (game-engine.ts checkForEvents → flags.pending_side_event). Effects apply at
+  // CHOICE-TIME, OUTSIDE the week transaction — the artist-dialogue immediate
+  // path (this file, POST /artist-dialogue above) is the precedent this mirrors:
+  // label-level keys patch gameState, delayed effects bank onto flags with a
+  // triggerWeek for processDelayedEffects to drain.
+  //
+  // ARTIST-MOOD TARGETING: side events are LABEL-LEVEL — there is no single
+  // target artist the way the dialogue path has one. Artist-scoped keys
+  // (artist_mood / artist_energy / artist_popularity) therefore apply to ALL
+  // signed artists, mirroring the executive-meeting `global` target_scope
+  // (ActionProcessor applies global artist effects across the whole roster). A
+  // mood_event row is logged per artist whenever artist_mood is touched, matching
+  // how the mood system records discrete mood changes elsewhere.
+  router.post("/api/game/:gameId/side-event-choice", requireClerkUser, requireGameOwner, async (req, res) => {
+    try {
+      const { gameId } = req.params;
+
+      const validationResult = SideEventChoiceRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid request data",
+          details: validationResult.error.errors,
+        });
+      }
+
+      const { eventId, choiceId } = validationResult.data;
+      const gameState = req.gameState!;
+      const currentWeek = gameState.currentWeek ?? 0;
+      const flags = (gameState.flags || {}) as Record<string, any>;
+
+      // 1. Validate a matching pending event exists for the CURRENT week.
+      const pending = flags.pending_side_event as { eventId: string; week: number } | undefined;
+      if (!pending || pending.eventId !== eventId || pending.week !== currentWeek) {
+        return res.status(409).json({
+          success: false,
+          message: "No matching pending side event for this game's current week",
+        });
+      }
+
+      // 2. Load the event + the chosen choice.
+      await serverGameData.initialize();
+      const event = await serverGameData.getEventById(eventId);
+      if (!event) {
+        return res.status(400).json({ success: false, message: "Unknown side event" });
+      }
+      const choice = event.choices.find((c) => c.id === choiceId);
+      if (!choice) {
+        return res.status(400).json({ success: false, message: "Invalid side event choice" });
+      }
+
+      const clamp = (value: number, min: number, max: number): number =>
+        Math.max(min, Math.min(max, value));
+
+      // 3. Apply immediate effects at choice-time.
+      const effectsImmediate = choice.effects_immediate || {};
+      const effectsApplied: Record<string, number> = {};
+      const gamePatch: Record<string, number> = {};
+
+      // Artist-scoped keys apply to ALL signed artists (label-level / global scope).
+      const artistScopedKeys = ['artist_mood', 'artist_energy', 'artist_popularity'];
+      const hasArtistEffect = Object.keys(effectsImmediate).some((k) => artistScopedKeys.includes(k));
+      const signedArtists = hasArtistEffect ? await storage.getArtistsByGame(gameId) : [];
+
+      for (const [effectKey, rawValue] of Object.entries(effectsImmediate)) {
+        if (typeof rawValue !== 'number') continue;
+        const effectValue = Number(rawValue);
+
+        if (effectKey === 'money') {
+          gamePatch.money = (gameState.money ?? 0) + effectValue;
+          effectsApplied[effectKey] = effectValue;
+        } else if (effectKey === 'reputation') {
+          gamePatch.reputation = clamp((gameState.reputation ?? 0) + effectValue, 0, 100);
+          effectsApplied[effectKey] = effectValue;
+        } else if (effectKey === 'creative_capital') {
+          gamePatch.creativeCapital = (gameState.creativeCapital ?? 0) + effectValue;
+          effectsApplied[effectKey] = effectValue;
+        } else if (effectKey === 'artist_mood') {
+          for (const artist of signedArtists) {
+            const before = artist.mood ?? 50;
+            const after = clamp(before + effectValue, 0, 100);
+            await storage.updateArtist(artist.id, { mood: after });
+            // Log a mood_event per artist (side events are label-level, so the
+            // discrete change is recorded once per affected artist).
+            await storage.createMoodEvent({
+              artistId: artist.id,
+              gameId,
+              eventType: 'side_event',
+              moodChange: after - before,
+              moodBefore: before,
+              moodAfter: after,
+              description: `Side event: ${event.prompt.substring(0, 60)}`,
+              weekOccurred: currentWeek,
+              metadata: { eventId, choiceId },
+            } as any);
+          }
+          effectsApplied[effectKey] = effectValue;
+        } else if (effectKey === 'artist_energy') {
+          for (const artist of signedArtists) {
+            const before = artist.energy ?? 50;
+            const after = clamp(before + effectValue, 0, 100);
+            await storage.updateArtist(artist.id, { energy: after });
+          }
+          effectsApplied[effectKey] = effectValue;
+        } else if (effectKey === 'artist_popularity') {
+          for (const artist of signedArtists) {
+            const before = artist.popularity ?? 50;
+            const after = clamp(before + effectValue, 0, 100);
+            await storage.updateArtist(artist.id, { popularity: after });
+          }
+          effectsApplied[effectKey] = effectValue;
+        }
+        // Any other authored key (press_momentum, quality_bonus, awareness_boost,
+        // variance_up, ...) is a banked/delayed channel — it is not an immediate
+        // gameState mutation, so it is intentionally not applied here. Authoring
+        // routes those through effects_delayed (below); the data-lint guard keeps
+        // all keys canonical.
+      }
+
+      // 4. Apply batched game-state patch.
+      const nextFlags = { ...flags };
+
+      // 5. Store delayed effects on flags (global — no single target artist),
+      //    drained by processDelayedEffects at triggerWeek === currentWeek.
+      //    Key is DETERMINISTIC (week-based, like the dialogue/meeting banked
+      //    keys) — never Date.now(): flags land in save snapshots and the
+      //    engine's determinism discipline expects byte-identical state for
+      //    identical play. Collisions are impossible: one pending event per
+      //    week, cleared on resolve.
+      const effectsDelayed = choice.effects_delayed || {};
+      if (Object.keys(effectsDelayed).length > 0) {
+        const delayedKey = `side-event-${eventId}-${choiceId}-week${currentWeek}`;
+        nextFlags[delayedKey] = {
+          triggerWeek: currentWeek + 1,
+          effects: effectsDelayed,
+        };
+      }
+
+      // 6. Clear the pending event (resolved).
+      delete nextFlags.pending_side_event;
+
+      await storage.updateGameState(gameId, {
+        ...(Object.keys(gamePatch).length > 0 ? gamePatch : {}),
+        flags: nextFlags as any,
+      } as any);
+
+      const response = {
+        success: true,
+        eventId,
+        choiceId,
+        effects: effectsApplied,
+        delayedEffects: effectsDelayed,
+        message: "Side event resolved",
+      };
+      res.json(response);
+    } catch (error) {
+      console.error('Failed to process side event choice:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to process side event choice",
+      });
     }
   });
 

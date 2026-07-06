@@ -431,6 +431,14 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "path": "/api/game/:gameId/releases/preview",
   },
   {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+      "requireGameOwner",
+    ],
+    "path": "/api/game/:gameId/side-event-choice",
+  },
+  {
     "method": "GET",
     "middleware": [
       "requireClerkUser",

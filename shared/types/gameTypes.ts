@@ -88,6 +88,33 @@ export const HAPPENING_TYPES = [
 
 export type HappeningType = (typeof HAPPENING_TYPES)[number];
 
+/**
+ * Tier 2 (PR-3) — the canonical side-event category vocabulary.
+ *
+ * SINGLE SOURCE OF TRUTH for the `category` field on data/events.json events
+ * (the RELEVANCE_TAGS / HAPPENING_TYPES one-source pattern): the SideEvent Zod
+ * schema (shared/utils/dataLoader.ts) derives its `category` enum from this
+ * array, and the data-lint suite (tests/engine/data-lint-side-event-categories.test.ts)
+ * validates data/events.json against it.
+ *
+ * These seven keys MUST stay exactly in sync with the `event_weights` keys in
+ * data/balance/events.json — the isolated-seed weighted selection in
+ * ServerGameData.selectSideEventOnHit looks up each candidate event's weight by
+ * its category. A category with no authored event is permitted (warn-level in
+ * the lint); an authored category absent from the weight table is not.
+ */
+export const SIDE_EVENT_CATEGORIES = [
+  'sync_licensing',
+  'copyright_issues',
+  'platform_opportunities',
+  'industry_drama',
+  'technical_problems',
+  'business_opportunities',
+  'artist_personal',
+] as const;
+
+export type SideEventCategory = (typeof SIDE_EVENT_CATEGORIES)[number];
+
 export interface RoleMeeting {
   id: string;
   name?: string; // Display name for the meeting (e.g., "CEO: Artist Roundtable")
@@ -157,6 +184,8 @@ export interface EventChoice {
 export interface SideEvent {
   id: string;
   role_hint: string;
+  /** Tier 2 (PR-3): weighted-selection + cooldown category. One of SIDE_EVENT_CATEGORIES. */
+  category: SideEventCategory;
   prompt: string;
   choices: EventChoice[];
 }
@@ -477,6 +506,13 @@ export interface EventOccurrence {
   id: string;
   title: string;
   occurred: boolean;
+  // Tier 2 (PR-3): on a side-event hit, the FULL authored payload is attached so
+  // PR-4's WeekSummary beat can render the event card + choices from the weekly
+  // outcome without a second fetch. Optional so the legacy {id,title,occurred}
+  // shape (and any non-side-event occurrence) still satisfies the type.
+  category?: SideEventCategory;
+  prompt?: string;
+  choices?: EventChoice[];
 }
 
 /**
