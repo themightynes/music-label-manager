@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { SIDE_EVENT_CATEGORIES } from '@shared/types/gameTypes';
-import { newEventTemplate, getCategoryOptions } from '@/admin/SideEventsEditor';
+import { newEventTemplate, getCategoryOptions, slugifyIdFromPromptWords } from '@/admin/SideEventsEditor';
 
 describe('newEventTemplate', () => {
   it('produces a valid starter event with one choice and an editable id', () => {
@@ -37,5 +37,31 @@ describe('getCategoryOptions', () => {
       expect(opt).toBeTruthy();
       expect(typeof opt!.weight).toBe('number');
     }
+  });
+});
+
+/**
+ * Content-editor slice 4 (playtest feedback): the creation dialog derives its
+ * default event id from the first ~4 words of the prompt, editable thereafter.
+ */
+describe('slugifyIdFromPromptWords', () => {
+  it('slugifies the first 4 words of the prompt by default', () => {
+    expect(slugifyIdFromPromptWords('A rival label tries to poach your artist')).toBe('a_rival_label_tries');
+  });
+
+  it('uses the whole prompt when it has fewer words than the word count', () => {
+    expect(slugifyIdFromPromptWords('Short prompt')).toBe('short_prompt');
+  });
+
+  it('respects a custom word count', () => {
+    expect(slugifyIdFromPromptWords('One two three four five six', 2)).toBe('one_two');
+  });
+
+  it('returns an empty string for an empty prompt', () => {
+    expect(slugifyIdFromPromptWords('')).toBe('');
+  });
+
+  it('collapses extra whitespace between words', () => {
+    expect(slugifyIdFromPromptWords('  Multiple    spaces   here   now  ')).toBe('multiple_spaces_here_now');
   });
 });

@@ -25,6 +25,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Zap, Clock, Edit, Save, X, AlertCircle, Pencil, Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -38,6 +47,7 @@ import {
 import { EFFECT_CHANNEL_DESCRIPTIONS } from '@shared/engine/processors/ActionProcessor';
 import { RELEVANCE_TAGS, HAPPENING_TYPES, type RelevanceTag, type HappeningType } from '@shared/types/gameTypes';
 import { CANONICAL_EFFECT_KEYS, lintMeetings, type LintIssue } from '@/admin/contentLint';
+import { slugifyId, isIdAvailable, orderWithNewestFirst } from '@/admin/utils';
 
 // Use shared types from contracts
 type Effect = Record<string, number>;
@@ -155,6 +165,18 @@ export default function ActionsViewer() {
   const { toast} = useToast();
   const queryClient = useQueryClient();
 
+  // Creation dialog state (slice 4, playtest feedback: new actions must appear at
+  // the top of the list via a pop-up, not silently appended off-screen at the bottom).
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [createRole, setCreateRole] = useState('ceo');
+  const [createCategory, setCreateCategory] = useState('');
+  const [createScope, setCreateScope] = useState<'global' | 'predetermined' | 'user_selected'>('global');
+  const [createIcon, setCreateIcon] = useState('fas fa-circle');
+  const [createId, setCreateId] = useState('');
+  const [createIdEdited, setCreateIdEdited] = useState(false);
+
   // Data source: fetch via the admin GET endpoint (no static bundle import — the
   // viewer must reflect the live file, including after a save, not build-time data).
   const {
@@ -268,11 +290,13 @@ export default function ActionsViewer() {
 
   // Filter actions based on search and filters
   const filteredActions = useMemo(() => {
-    // Combine original actions (excluding deleted) and new actions
-    const allActions = [
-      ...data.weekly_actions.filter(a => !deletedActionIds.has(a.id)),
-      ...newActions
-    ];
+    // Display order: newest-first new actions on top, then originals — a pure
+    // display-order change (slice 4). The save handler below composes its own
+    // array independently and is unchanged in content/order.
+    const allActions = orderWithNewestFirst(
+      newActions,
+      data.weekly_actions.filter(a => !deletedActionIds.has(a.id)),
+    );
 
     return allActions.filter(action => {
       const matchesSearch = searchTerm === '' ||
@@ -574,21 +598,67 @@ export default function ActionsViewer() {
     updateEffect(actionId, choiceId, effectType, newEffectKey, 0);
   };
 
-  // Add new action
-  const addAction = () => {
+  // All action ids currently in play (originals not deleted + new + modified) —
+  // used by the creation dialog to validate id uniqueness (spec: unique against
+  // ALL current action ids).
+  const allCurrentActionIds = useMemo(() => {
+    const ids = new Set<string>();
+    data.weekly_actions.forEach(a => {
+      if (!deletedActionIds.has(a.id)) ids.add(a.id);
+    });
+    newActions.forEach(a => ids.add(a.id));
+    modifiedActions.forEach((_, id) => ids.add(id));
+    return ids;
+  }, [data.weekly_actions, deletedActionIds, newActions, modifiedActions]);
+
+  const createIdTaken = createId.length > 0 && !isIdAvailable(createId, allCurrentActionIds);
+  const createNameValid = createName.trim().length > 0;
+  const canCreateAction = createNameValid && createId.length > 0 && !createIdTaken;
+
+  const openCreateDialog = () => {
+    setCreateName('');
+    setCreateDescription('');
+    setCreateRole('ceo');
+    setCreateCategory(data.action_categories[0]?.id ?? 'business');
+    setCreateScope('global');
+    setCreateIcon('fas fa-circle');
+    setCreateId('');
+    setCreateIdEdited(false);
+    setShowCreateDialog(true);
+  };
+
+  // Keep the id in sync with the name until the user edits it directly.
+  const handleCreateNameChange = (value: string) => {
+    setCreateName(value);
+    if (!createIdEdited) {
+      setCreateId(slugifyId(value));
+    }
+  };
+
+  const handleCreateIdChange = (value: string) => {
+    setCreateIdEdited(true);
+    setCreateId(value);
+  };
+
+  // Add new action — invoked by the creation dialog's Create button. Replaces the
+  // old instant-append-a-blank-template pattern (playtest feedback: new actions
+  // must appear via a pop-up, at the top of the list, not silently at the bottom).
+  const createAction = () => {
+    if (!canCreateAction) return;
+
     // requires/reactive_trigger deliberately OMITTED here (not set to empty/none):
     // absent means always-eligible and never-reactive (spec §2.2d) — the editors
     // below handle their absence directly.
     const newAction: Action = {
-      id: `action_${Date.now()}`,
-      name: 'New Action',
+      id: createId,
+      name: createName.trim(),
       type: 'role_meeting',
-      icon: 'fas fa-circle',
-      description: '',
-      role_id: 'ceo',
-      meeting_id: `meeting_${Date.now()}`,
-      category: 'business',
-      target_scope: 'global',
+      icon: createIcon,
+      description: createDescription,
+      role_id: createRole,
+      meeting_id: createId,
+      category: createCategory,
+      target_scope: createScope,
       prompt: '',
       choices: [{
         id: 'choice_1',
@@ -597,9 +667,15 @@ export default function ActionsViewer() {
         effects_delayed: {}
       }]
     };
+
+    if (createScope === 'user_selected') {
+      newAction.prompt_before_selection = 'Which artist should be affected by this decision?';
+    }
+
     setNewActions(prev => [...prev, newAction]);
     // Auto-expand the new action
     setExpandedActions(prev => new Set([...Array.from(prev), newAction.id]));
+    setShowCreateDialog(false);
   };
 
   // Delete action
@@ -878,7 +954,7 @@ export default function ActionsViewer() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={addAction}
+                      onClick={openCreateDialog}
                       className="bg-green-600/10 hover:bg-green-600/20 border-green-500/30 text-green-300"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -1954,6 +2030,156 @@ export default function ActionsViewer() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create New Action Dialog (slice 4, playtest feedback): replaces the old
+          instant-append pattern. Create adds the action at the TOP of the display
+          list (see filteredActions ordering above); Cancel creates nothing. */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Action</DialogTitle>
+            <DialogDescription>
+              Fill in the basics below. You can edit choices, effects, and other metadata after creating.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="create-action-name">Name *</Label>
+              <Input
+                id="create-action-name"
+                value={createName}
+                onChange={(e) => handleCreateNameChange(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1"
+                placeholder="e.g. CMO: Viral Push"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="create-action-description">Description</Label>
+              <Textarea
+                id="create-action-description"
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Role</Label>
+                <Select value={createRole} onValueChange={setCreateRole}>
+                  <SelectTrigger className="bg-black/30 border-white/10 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getRoleOptions().map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Category</Label>
+                <Select value={createCategory} onValueChange={setCreateCategory}>
+                  <SelectTrigger className="bg-black/30 border-white/10 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getCategoryOptions().map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <span className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={parseIconClass(opt.icon)} />
+                          {opt.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Target Scope</Label>
+              <Select value={createScope} onValueChange={(value) => setCreateScope(value as 'global' | 'predetermined' | 'user_selected')}>
+                <SelectTrigger className="bg-black/30 border-white/10 mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getTargetScopeOptions().map(opt => (
+                    <SelectItem key={opt.value} value={opt.value} title={opt.description}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-white/40 mt-1">
+                {getTargetScopeOptions().find(opt => opt.value === createScope)?.description}
+              </div>
+            </div>
+
+            <div>
+              <Label>Icon</Label>
+              <div className="flex gap-3 items-start mt-1">
+                <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-brand-gold/20 to-brand-burgundy/20 rounded-lg border-2 border-brand-gold/40">
+                  <FontAwesomeIcon icon={parseIconClass(createIcon)} className="text-brand-gold text-2xl" />
+                </div>
+                <div className="flex-1">
+                  <Select value={createIcon} onValueChange={setCreateIcon}>
+                    <SelectTrigger className="bg-black/30 border-white/10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getIconOptions().map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={parseIconClass(opt.iconClass)} className="text-brand-gold w-4" />
+                            <span className="capitalize">{opt.label}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="create-action-id">ID</Label>
+              <Input
+                id="create-action-id"
+                value={createId}
+                onChange={(e) => handleCreateIdChange(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1 font-mono text-sm"
+              />
+              {createIdTaken && (
+                <div className="text-xs text-red-400 mt-1">This id is already taken.</div>
+              )}
+              {createId.length === 0 && (
+                <div className="text-xs text-white/40 mt-1">Auto-generated from the name; you can edit it.</div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={createAction}
+              disabled={!canCreateAction}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

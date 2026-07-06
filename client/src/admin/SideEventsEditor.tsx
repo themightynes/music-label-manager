@@ -22,6 +22,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Zap, Clock, Edit, Save, X, AlertCircle, Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -33,6 +42,7 @@ import {
 import { EFFECT_CHANNEL_DESCRIPTIONS } from '@shared/engine/processors/ActionProcessor';
 import { SIDE_EVENT_CATEGORIES, type SideEventCategory } from '@shared/types/gameTypes';
 import { CANONICAL_EFFECT_KEYS, lintSideEvents, type LintIssue } from '@/admin/contentLint';
+import { slugifyId, isIdAvailable, orderWithNewestFirst } from '@/admin/utils';
 
 // Read-only balance-knob display context (spec §2.3/fork B): a static import of the
 // authored knob file. This is DISPLAY ONLY — knob edits happen in git, not this tool.
@@ -96,6 +106,16 @@ export function getCategoryOptions(): Array<{ value: SideEventCategory; label: s
   }));
 }
 
+/**
+ * Pure helper: derives a slug seed from the first ~4 words of a prompt, e.g.
+ * "A rival label tries to poach your artist" -> "a_rival_label_tries". Exported
+ * for unit testing without mounting the component.
+ */
+export function slugifyIdFromPromptWords(prompt: string, wordCount: number = 4): string {
+  const words = prompt.trim().split(/\s+/).filter(Boolean).slice(0, wordCount);
+  return slugifyId(words.join(' '));
+}
+
 const getCanonicalEffectOptions = () => {
   return CANONICAL_EFFECT_KEYS.map((key) => ({
     value: key,
@@ -122,6 +142,15 @@ export default function SideEventsEditor() {
   const [lintIssues, setLintIssues] = useState<LintIssue[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Creation dialog state (slice 4, playtest feedback): new events must appear at
+  // the top of the list via a pop-up, not silently appended off-screen at the bottom.
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createPrompt, setCreatePrompt] = useState('');
+  const [createRoleHint, setCreateRoleHint] = useState('');
+  const [createCategory, setCreateCategory] = useState<SideEventCategory>('industry_drama');
+  const [createId, setCreateId] = useState('');
+  const [createIdEdited, setCreateIdEdited] = useState(false);
 
   const {
     data: fetchedConfig,
@@ -159,10 +188,13 @@ export default function SideEventsEditor() {
   }, [data.events, newEvents, deletedEventIds]);
 
   const filteredEvents = useMemo(() => {
-    const allEvents = [
-      ...data.events.filter((e) => !deletedEventIds.has(e.id)),
-      ...newEvents,
-    ];
+    // Display order: newest-first new events on top, then originals — a pure
+    // display-order change (slice 4). The save handler composes its own array
+    // independently and is unchanged in content/order.
+    const allEvents = orderWithNewestFirst(
+      newEvents,
+      data.events.filter((e) => !deletedEventIds.has(e.id)),
+    );
     return allEvents.filter((event) => {
       const matchesSearch =
         searchTerm === '' ||
@@ -317,10 +349,65 @@ export default function SideEventsEditor() {
     updateEffect(eventId, choiceId, effectType, newEffectKey, 0);
   };
 
-  const addEvent = () => {
+  // All event ids currently in play (originals not deleted + new + modified) —
+  // used by the creation dialog to validate id uniqueness.
+  const allCurrentEventIds = useMemo(() => {
+    const ids = new Set<string>();
+    data.events.forEach((e) => {
+      if (!deletedEventIds.has(e.id)) ids.add(e.id);
+    });
+    newEvents.forEach((e) => ids.add(e.id));
+    modifiedEvents.forEach((_, id) => ids.add(id));
+    return ids;
+  }, [data.events, deletedEventIds, newEvents, modifiedEvents]);
+
+  const createIdTaken = createId.length > 0 && !isIdAvailable(createId, allCurrentEventIds);
+  const createPromptValid = createPrompt.trim().length > 0;
+  const canCreateEvent = createPromptValid && createId.length > 0 && !createIdTaken;
+
+  /**
+   * Pure helper: slug seed derived from the first ~4 words of the prompt.
+   * Exported for unit testing.
+   */
+  const openCreateDialog = () => {
+    setCreatePrompt('');
+    setCreateRoleHint('');
+    setCreateCategory('industry_drama');
+    setCreateId('');
+    setCreateIdEdited(false);
+    setShowCreateDialog(true);
+  };
+
+  const handleCreatePromptChange = (value: string) => {
+    setCreatePrompt(value);
+    if (!createIdEdited) {
+      setCreateId(slugifyIdFromPromptWords(value));
+    }
+  };
+
+  const handleCreateIdChange = (value: string) => {
+    setCreateIdEdited(true);
+    setCreateId(value);
+  };
+
+  // Create new event — invoked by the creation dialog's Create button. Replaces
+  // the old instant-append-a-blank-template pattern (playtest feedback: new events
+  // must appear via a pop-up, at the top of the list, not silently at the bottom).
+  const createEvent = () => {
+    if (!canCreateEvent) return;
+
     const template = newEventTemplate();
-    setNewEvents((prev) => [...prev, template]);
-    setExpandedEvents((prev) => new Set([...Array.from(prev), template.id]));
+    const newEvent: Event = {
+      ...template,
+      id: createId,
+      role_hint: createRoleHint,
+      category: createCategory,
+      prompt: createPrompt.trim(),
+    };
+
+    setNewEvents((prev) => [...prev, newEvent]);
+    setExpandedEvents((prev) => new Set([...Array.from(prev), newEvent.id]));
+    setShowCreateDialog(false);
   };
 
   const deleteEvent = (eventId: string) => {
@@ -585,7 +672,7 @@ export default function SideEventsEditor() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={addEvent}
+                    onClick={openCreateDialog}
                     className="bg-green-600/10 hover:bg-green-600/20 border-green-500/30 text-green-300"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -1133,6 +1220,91 @@ export default function SideEventsEditor() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create New Event Dialog (slice 4, playtest feedback): replaces the old
+          instant-append pattern. Create adds the event at the TOP of the display
+          list (see filteredEvents ordering above); Cancel creates nothing. */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Side Event</DialogTitle>
+            <DialogDescription>
+              Fill in the basics below. You can edit choices, effects, and other metadata after creating.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="create-event-prompt">Prompt *</Label>
+              <Textarea
+                id="create-event-prompt"
+                value={createPrompt}
+                onChange={(e) => handleCreatePromptChange(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1"
+                rows={3}
+                placeholder="e.g. A rival label tries to poach your artist..."
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="create-event-role-hint">Role Hint</Label>
+              <Input
+                id="create-event-role-hint"
+                value={createRoleHint}
+                onChange={(e) => setCreateRoleHint(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1"
+                placeholder="e.g. Sync Licensing"
+              />
+            </div>
+
+            <div>
+              <Label>Category</Label>
+              <Select value={createCategory} onValueChange={(value) => setCreateCategory(value as SideEventCategory)}>
+                <SelectTrigger className="bg-black/30 border-white/10 mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getCategoryOptions().map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label} — weight {opt.weight}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="create-event-id">ID</Label>
+              <Input
+                id="create-event-id"
+                value={createId}
+                onChange={(e) => handleCreateIdChange(e.target.value)}
+                className="bg-black/30 border-white/10 mt-1 font-mono text-sm"
+              />
+              {createIdTaken && (
+                <div className="text-xs text-red-400 mt-1">This id is already taken.</div>
+              )}
+              {createId.length === 0 && (
+                <div className="text-xs text-white/40 mt-1">Auto-generated from the prompt; you can edit it.</div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={createEvent}
+              disabled={!canCreateEvent}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
