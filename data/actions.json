@@ -889,6 +889,237 @@
       ]
     },
     {
+      "id": "ar_recent_signing_plan",
+      "name": "A&R: First Week Plan",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Set the first-week plan for a new signing",
+      "role_id": "head_ar",
+      "meeting_id": "anr_recent_signing_plan",
+      "category": "talent",
+      "target_scope": "global",
+      "requires": ["artist_signed"],
+      "reactive_trigger": "recent_signing",
+      "prompt": "The ink's dry on our newest signing. First week sets the tone - how do we start them off?",
+      "choices": [
+        {
+          "id": "studio_immersion",
+          "label": "Studio immersion - get them recording immediately",
+          "effects_immediate": {
+            "money": -3000
+          },
+          "effects_delayed": {
+            "quality_bonus": 3,
+            "artist_mood": 1
+          }
+        },
+        {
+          "id": "relationship_first",
+          "label": "Relationship first - slow onboarding, build trust",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "artist_mood": 3
+          }
+        },
+        {
+          "id": "market_test",
+          "label": "Market test - a small teaser drop to gauge reaction",
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "awareness_boost": 2,
+            "variance_up": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "cmo_chart_debut_press",
+      "name": "CMO: We're On The Board",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "Press-blitz options after a chart debut",
+      "role_id": "cmo",
+      "meeting_id": "pr_chart_debut_press",
+      "category": "marketing",
+      "target_scope": "global",
+      "requires": ["music_exists"],
+      "reactive_trigger": "chart_debut",
+      "prompt": "We're on the board - the charting debut is real leverage. How hard do we push the press cycle?",
+      "choices": [
+        {
+          "id": "full_blitz",
+          "label": "Full blitz - every outlet, right now",
+          "effects_immediate": {
+            "money": -6000
+          },
+          "effects_delayed": {
+            "press_momentum": 2,
+            "awareness_boost": 2
+          }
+        },
+        {
+          "id": "targeted_placements",
+          "label": "Targeted placements - the outlets that matter",
+          "effects_immediate": {
+            "money": -2500
+          },
+          "effects_delayed": {
+            "press_momentum": 1,
+            "reputation": 1
+          }
+        },
+        {
+          "id": "let_it_breathe",
+          "label": "Let it breathe - momentum without the spend",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "press_story_flag": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "ceo_chart_debut_strategy",
+      "name": "CEO: What This Means For Us",
+      "type": "role_meeting",
+      "icon": "fas fa-user-tie",
+      "description": "Label-level read on a chart debut",
+      "role_id": "ceo",
+      "meeting_id": "mgr_chart_debut_strategy",
+      "category": "business",
+      "target_scope": "global",
+      "requires": ["music_exists"],
+      "reactive_trigger": "chart_debut",
+      "prompt": "We just charted for the first time. Before marketing runs with it - what does this mean for the label's direction?",
+      "choices": [
+        {
+          "id": "double_down_sound",
+          "label": "Double down - this is our lane now, build around it",
+          "effects_immediate": {
+            "money": -4000
+          },
+          "effects_delayed": {
+            "reputation": 2
+          }
+        },
+        {
+          "id": "reinvest_catalog",
+          "label": "Reinvest in the catalog - fund what comes next",
+          "effects_immediate": {
+            "money": -5000
+          },
+          "effects_delayed": {
+            "quality_bonus": 2
+          }
+        },
+        {
+          "id": "bank_it",
+          "label": "Bank it - stay conservative, protect the win",
+          "effects_immediate": {
+            "money": 2000
+          },
+          "effects_delayed": {
+            "executive_mood": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "cco_mood_crater_intervention",
+      "name": "CCO: Creative Intervention",
+      "type": "role_meeting",
+      "icon": "fas fa-sliders-h",
+      "description": "Step in for an artist whose mood cratered",
+      "role_id": "cco",
+      "meeting_id": "prod_mood_crater_intervention",
+      "category": "production",
+      "target_scope": "global",
+      "requires": ["artist_signed"],
+      "reactive_trigger": "mood_crater",
+      "prompt": "They're cratering - burned out, checked out, or both. We need to step in before it costs us the work.",
+      "choices": [
+        {
+          "id": "clear_the_schedule",
+          "label": "Clear the schedule - real time off, no negotiating",
+          "effects_immediate": {
+            "money": -3000
+          },
+          "effects_delayed": {
+            "artist_mood": 6
+          }
+        },
+        {
+          "id": "creative_reset",
+          "label": "Creative reset - new collaborator, change the room",
+          "effects_immediate": {
+            "creative_capital": -2,
+            "money": -1500
+          },
+          "effects_delayed": {
+            "artist_mood": 4,
+            "quality_bonus": 2
+          }
+        },
+        {
+          "id": "push_through",
+          "label": "Push through - the deadline doesn't move",
+          "effects_immediate": {
+            "executive_mood": -2
+          },
+          "effects_delayed": {
+            "artist_mood": -3
+          }
+        }
+      ]
+    },
+    {
+      "id": "distribution_release_out_numbers",
+      "name": "Distribution: First Week Numbers",
+      "type": "role_meeting",
+      "icon": "fas fa-list-ul",
+      "description": "Respond to first-week numbers on a release",
+      "role_id": "head_distribution",
+      "meeting_id": "ops_release_out_numbers",
+      "category": "distribution",
+      "target_scope": "global",
+      "requires": ["music_exists"],
+      "reactive_trigger": "release_out",
+      "prompt": "First week numbers are in on the release. Do we chase the trend line or hold steady?",
+      "choices": [
+        {
+          "id": "push_ad_spend",
+          "label": "Push ad spend behind whatever's working",
+          "effects_immediate": {
+            "money": -4000
+          },
+          "effects_delayed": {
+            "awareness_boost": 3
+          }
+        },
+        {
+          "id": "pitch_follow_up",
+          "label": "Pitch the follow-up while the door's open",
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "awareness_boost": 1,
+            "press_story_flag": 1
+          }
+        },
+        {
+          "id": "hold_steady",
+          "label": "Hold steady - let organic numbers set the baseline",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "award_chances": 1
+          }
+        }
+      ]
+    },
+    {
       "id": "action_1760807005433",
       "name": "Employee Effectiveness",
       "type": "role_meeting",

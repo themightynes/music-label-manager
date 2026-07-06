@@ -158,8 +158,13 @@ describe('GET /api/roles/:roleId — Tier 1 weighting under real balance config'
   });
 });
 
-describe('GET /api/roles/:roleId — dark launch: real data/actions.json has zero reactive_trigger meetings', () => {
-  it('no meeting ever carries reactiveContext against the real catalog', async () => {
+describe('GET /api/roles/:roleId — PR-2 authored reactive meetings: no ambient happenings this week', () => {
+  it('no meeting carries reactiveContext when the seeded game has no week N-1 happenings', async () => {
+    // PR-2 authored 5 real reactive_trigger meetings (one per exec — see
+    // data/actions.json), so this no longer proves the catalog is empty; it
+    // proves the injection stage stays dark when nothing actually happened
+    // last week (this seeded game has no charts/mood_events/recent signings
+    // at week 2, the freshness window for a week-3 request).
     const gameId = await seedGame();
     for (const roleId of ['ceo', 'head_ar', 'cmo', 'cco', 'head_distribution']) {
       const res = await request(app).get(`/api/roles/${roleId}`).query({ gameId, week: '3' });
@@ -180,10 +185,16 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
 
   /**
    * Injects one synthetic `mood_crater` reactive meeting into the CCO pool
-   * (alongside the real catalog) by wrapping the real
-   * getWeeklyActionsWithCategories() result — mirrors this file's existing
-   * DB-mocking pattern of monkey-patching the narrowest surface needed
-   * instead of re-mocking the whole data layer.
+   * by wrapping the real getWeeklyActionsWithCategories() result — mirrors
+   * this file's existing DB-mocking pattern of monkey-patching the narrowest
+   * surface needed instead of re-mocking the whole data layer.
+   *
+   * PR-2 authored a REAL cco x mood_crater reactive meeting
+   * (cco_mood_crater_intervention), so this synthetic fixture EXCLUDES it from
+   * the base catalog first — this describe block is testing the injection
+   * MECHANISM in isolation (priority/tie-break/requires), not PR-2's specific
+   * authored content (see the "PR-2 real authored reactive meetings" describe
+   * block below for that).
    */
   function injectSyntheticReactiveMeeting() {
     vi.spyOn(serverGameData, 'getWeeklyActionsWithCategories').mockImplementation(async () => {
@@ -191,7 +202,7 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
       return {
         ...real,
         actions: [
-          ...real.actions,
+          ...real.actions.filter((a: any) => a.id !== 'cco_mood_crater_intervention'),
           {
             id: 'synthetic_cco_mood_crater_reactive',
             type: 'role_meeting',
@@ -333,6 +344,161 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
     expect(res.body.meetings[0].reactiveContext).toEqual({
       trigger: 'recent_signing',
       artistName: 'Fresh Face',
+    });
+  });
+});
+
+describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mocking, actual data/actions.json)', () => {
+  it('head_ar picks the real ar_recent_signing_plan meeting when an artist signed last week', async () => {
+    const gameId = await seedGame();
+    await db.insert(artists).values({
+      id: crypto.randomUUID(),
+      gameId,
+      name: 'New Signee',
+      archetype: 'Workhorse',
+      genre: 'pop',
+      mood: 50,
+      energy: 50,
+      signed: true,
+      signedWeek: 4, // week-5 request → targetWeek 4 → fires
+    });
+
+    const res = await request(app).get('/api/roles/head_ar').query({ gameId, week: '5' });
+    expect(res.status).toBe(200);
+    expect(res.body.meetings).toHaveLength(1);
+    expect(res.body.meetings[0].id).toBe('ar_recent_signing_plan');
+    expect(res.body.meetings[0].reactiveContext).toEqual({
+      trigger: 'recent_signing',
+      artistName: 'New Signee',
+    });
+  });
+
+  it('cmo and ceo both offer their real chart_debut reactive meetings when a song debuted last week (cross-exec duplication permitted)', async () => {
+    const gameId = await seedGame();
+    const artistId = crypto.randomUUID();
+    await db.insert(artists).values({
+      id: artistId,
+      gameId,
+      name: 'Charting Artist',
+      archetype: 'Visionary',
+      genre: 'pop',
+      mood: 50,
+      energy: 50,
+      signed: true,
+    });
+    const songId = crypto.randomUUID();
+    await db.insert(songs).values({
+      id: songId,
+      gameId,
+      artistId,
+      title: 'Neon Nights',
+      quality: 70,
+      isRecorded: true,
+    });
+    const chartWeekDate = (await import('@shared/engine/ChartService')).ChartService.generateChartWeekFromGameWeek(4);
+    await db.insert(chartEntries).values({
+      gameId,
+      songId,
+      chartWeek: chartWeekDate,
+      streams: 100000,
+      position: 42,
+      isDebut: true,
+      isCompetitorSong: false,
+    });
+    const cmoRes = await request(app).get('/api/roles/cmo').query({ gameId, week: '5' });
+    expect(cmoRes.status).toBe(200);
+    expect(cmoRes.body.meetings).toHaveLength(1);
+    expect(cmoRes.body.meetings[0].id).toBe('cmo_chart_debut_press');
+    expect(cmoRes.body.meetings[0].reactiveContext).toEqual({
+      trigger: 'chart_debut',
+      artistName: 'Charting Artist',
+      songTitle: 'Neon Nights',
+    });
+
+    const ceoRes = await request(app).get('/api/roles/ceo').query({ gameId, week: '5' });
+    expect(ceoRes.status).toBe(200);
+    expect(ceoRes.body.meetings).toHaveLength(1);
+    expect(ceoRes.body.meetings[0].id).toBe('ceo_chart_debut_strategy');
+    expect(ceoRes.body.meetings[0].reactiveContext).toEqual({
+      trigger: 'chart_debut',
+      artistName: 'Charting Artist',
+      songTitle: 'Neon Nights',
+    });
+  });
+
+  it('head_distribution picks the real distribution_release_out_numbers meeting when a release went out last week', async () => {
+    const gameId = await seedGame();
+    const artistId = crypto.randomUUID();
+    await db.insert(artists).values({
+      id: artistId,
+      gameId,
+      name: 'Release Artist',
+      archetype: 'Workhorse',
+      genre: 'pop',
+      mood: 50,
+      energy: 50,
+      signed: true,
+    });
+    const { releases } = await import('@shared/schema');
+    await db.insert(songs).values({
+      id: crypto.randomUUID(),
+      gameId,
+      artistId,
+      title: 'EP Track One',
+      quality: 65,
+      isRecorded: true,
+    });
+    await db.insert(releases).values({
+      id: crypto.randomUUID(),
+      gameId,
+      artistId,
+      title: 'Debut EP',
+      type: 'ep',
+      status: 'released',
+      releaseWeek: 4, // week-5 request → targetWeek 4 → fires
+    });
+
+    const res = await request(app).get('/api/roles/head_distribution').query({ gameId, week: '5' });
+    expect(res.status).toBe(200);
+    expect(res.body.meetings).toHaveLength(1);
+    expect(res.body.meetings[0].id).toBe('distribution_release_out_numbers');
+    expect(res.body.meetings[0].reactiveContext).toEqual({
+      trigger: 'release_out',
+      artistName: 'Release Artist',
+    });
+  });
+
+  it('cco picks the real cco_mood_crater_intervention meeting when an artist craters last week', async () => {
+    const gameId = await seedGame();
+    const artistId = crypto.randomUUID();
+    await db.insert(artists).values({
+      id: artistId,
+      gameId,
+      name: 'Cratering Artist',
+      archetype: 'Visionary',
+      genre: 'pop',
+      mood: MOOD_CRATER_THRESHOLD,
+      energy: 50,
+      signed: true,
+    });
+    await db.insert(moodEvents).values({
+      artistId,
+      gameId,
+      eventType: 'executive_meeting',
+      moodChange: -10,
+      moodBefore: MOOD_CRATER_THRESHOLD + 5,
+      moodAfter: MOOD_CRATER_THRESHOLD,
+      description: 'Real catalog mood crater event',
+      weekOccurred: 4,
+    });
+
+    const res = await request(app).get('/api/roles/cco').query({ gameId, week: '5' });
+    expect(res.status).toBe(200);
+    expect(res.body.meetings).toHaveLength(1);
+    expect(res.body.meetings[0].id).toBe('cco_mood_crater_intervention');
+    expect(res.body.meetings[0].reactiveContext).toEqual({
+      trigger: 'mood_crater',
+      artistName: 'Cratering Artist',
     });
   });
 });

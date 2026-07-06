@@ -86,7 +86,11 @@ export async function fetchRoleMeetings(
       prompt: action.prompt,
       prompt_before_selection: action.prompt_before_selection,
       target_scope: action.target_scope || 'global', // Default to 'global' if missing
-      choices: action.choices || []
+      choices: action.choices || [],
+      // Tier 2 (PR-2): additive "why now" context the route attaches ON the
+      // selected meeting when the injection stage picked a reactive meeting.
+      // Absent for every normal weighted pick.
+      reactiveContext: action.reactiveContext,
     }));
 
     return meetings;

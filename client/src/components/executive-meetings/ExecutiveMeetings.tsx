@@ -64,6 +64,15 @@ export function ExecutiveMeetings({
    * what the machine's own fetch would return.
    */
   const [sitOutRoles, setSitOutRoles] = useState<Set<string>>(new Set());
+  /**
+   * Tier 2 (PR-2, Nes amendment 1 — urgency indicator): roles whose prefetched
+   * meeting carries `reactiveContext` this week — a happening fired their
+   * reactive meeting. Zero new requests: piggybacks on the SAME sit-out
+   * prefetch below. The dot signals "something happened" WITHOUT revealing
+   * content (no meeting name/trigger on the card) — the "why now" line is the
+   * payoff on open (MeetingSelector / AutoSelectReviewPanel).
+   */
+  const [reactiveRoles, setReactiveRoles] = useState<Set<string>>(new Set());
 
   const { getAROfficeStatus, selectedActions } = useGameStore();
   // C74: the global GameHeader AUTO button sets this session intent + navigates
@@ -160,7 +169,8 @@ export function ExecutiveMeetings({
   // Meeting-relevance Tier 0 (PR-1): prefetch each role's weekly pool once per
   // (gameId, week) to learn which execs sit out (empty eligible pool). Fetch
   // errors fail OPEN (exec stays selectable) so a transient network problem
-  // never locks a card.
+  // never locks a card. Tier 2 (PR-2): the SAME prefetch also records which
+  // roles' selected meeting carries `reactiveContext` — zero new requests.
   useEffect(() => {
     if (!gameId) return;
     let isCancelled = false;
@@ -171,14 +181,16 @@ export function ExecutiveMeetings({
         roleIds.map(async (roleId) => {
           try {
             const meetings = await fetchRoleMeetings(roleId, gameId, currentWeek);
-            return [roleId, meetings.length] as const;
+            const isReactive = meetings.some((m) => !!m.reactiveContext);
+            return [roleId, meetings.length, isReactive] as const;
           } catch {
-            return [roleId, -1] as const; // unknown → fail open
+            return [roleId, -1, false] as const; // unknown → fail open
           }
         })
       );
       if (isCancelled) return;
       setSitOutRoles(new Set(results.filter(([, count]) => count === 0).map(([roleId]) => roleId)));
+      setReactiveRoles(new Set(results.filter(([, , isReactive]) => isReactive).map(([roleId]) => roleId)));
     })();
 
     return () => {
@@ -488,6 +500,7 @@ export function ExecutiveMeetings({
                     executive={executive}
                     disabled={!hasAvailableSlots || isExecutiveUsed(executive.role)}
                     sitOut={sitOutRoles.has(executive.role)}
+                    hasReactiveMeeting={reactiveRoles.has(executive.role)}
                     onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
                     weeklySalary={roleSalaries[executive.role]}
                     arOfficeStatus={arOfficeStatus}
@@ -512,6 +525,7 @@ export function ExecutiveMeetings({
                     executive={executive}
                     disabled={!hasAvailableSlots || isExecutiveUsed(executive.role)}
                     sitOut={sitOutRoles.has(executive.role)}
+                    hasReactiveMeeting={reactiveRoles.has(executive.role)}
                     onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
                     weeklySalary={roleSalaries[executive.role]}
                     arOfficeStatus={arOfficeStatus}
@@ -531,6 +545,7 @@ export function ExecutiveMeetings({
                     executive={ceoExecutive}
                     disabled={!hasAvailableSlots || isExecutiveUsed(ceoExecutive.role)}
                     sitOut={sitOutRoles.has(ceoExecutive.role)}
+                    hasReactiveMeeting={reactiveRoles.has(ceoExecutive.role)}
                     onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive: ceoExecutive })}
                     weeklySalary={roleSalaries['ceo']}
                     arOfficeStatus={arOfficeStatus}

@@ -2,10 +2,11 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
-import { Check, X, Pencil, Zap } from 'lucide-react';
+import { Check, X, Pencil, Zap, Sparkles } from 'lucide-react';
 import type { RoleMeeting, DialogueChoice, Executive } from '../../../../shared/types/gameTypes';
 import { ChoiceEffects } from './DialogueInterface';
 import { getChoiceCreativeCapitalCost } from '../../services/executiveAutoSelect';
+import { formatWhyNow } from '../../utils/reactiveContextCopy';
 
 /**
  * Meeting-relevance PR-3 — AUTO Option A (propose-then-confirm).
@@ -105,6 +106,15 @@ export function AutoSelectReviewPanel({
                     >
                       {roleLabel(option.executive.role)}
                     </Badge>
+                    {option.meeting.reactiveContext && (
+                      <div
+                        data-testid="why-now-line"
+                        className="mt-2 flex items-center gap-1.5 text-xs font-mono text-neon-cyan"
+                      >
+                        <Sparkles className="h-3 w-3 shrink-0" />
+                        <span>{formatWhyNow(option.meeting.reactiveContext)}</span>
+                      </div>
+                    )}
                     <div className="mt-2 text-sm text-text-primary italic leading-snug">
                       "{meetingLabel(option.meeting)}"
                     </div>
