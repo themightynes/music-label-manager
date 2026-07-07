@@ -30,6 +30,24 @@ export interface WeekChangeCategories {
    * renders — now surfaced as simple ROUTINE-stage line items.
    */
   tourPlanning: GameChange[];
+  /**
+   * Awareness slice 1: weekly awareness movement ('awareness_gain' /
+   * 'awareness_decay'). Kept as a dedicated bucket so these entries never
+   * fall back into `other` (which the Overview never renders). NOT rendered
+   * by WeekSummary anymore — the weekly aggregated "Buzz" line was replaced
+   * by the persistent core-status Buzz stat in MetricsDashboard
+   * (BuzzStatusStat / summarizeCatalogBuzz in lib/releaseBuzz.ts), computed
+   * live from the songs cache (playtest feedback July 6).
+   */
+  awareness: GameChange[];
+  /**
+   * Awareness slice 1: 'breakthrough' moments — rare, quality-gated 🔥
+   * explosions. Kept as a SEPARATE bucket from gain/decay because each one
+   * renders individually inside the "Milestone Moments" hero card (playtest
+   * decision July 6, reversing fork A's notable-line placement), never
+   * aggregated away.
+   */
+  breakthroughs: GameChange[];
   other: GameChange[];
 }
 
@@ -42,6 +60,8 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
     meetings: [],
     tourCities: [],
     tourPlanning: [],
+    awareness: [],
+    breakthroughs: [],
     other: [],
   };
 
@@ -64,6 +84,10 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       change.type === 'delayed_effect'
     ) {
       categories.meetings.push(change);
+    } else if (change.type === 'awareness_gain' || change.type === 'awareness_decay') {
+      categories.awareness.push(change);
+    } else if (change.type === 'breakthrough') {
+      categories.breakthroughs.push(change);
     } else if (change.type === 'project_complete') {
       // Projects go to other category, will be shown in Projects tab
       categories.other.push(change);

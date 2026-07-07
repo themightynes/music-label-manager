@@ -160,7 +160,11 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
   },
   awareness_boost: {
     title: 'Buzz',
-    text: 'Pre-release buzz banked for your next release — it seeds that release with extra early awareness, which drives more streams out of the gate. Applied once to the next release, then spent. Expires unused after about two months.',
+    // Awareness slice 3 (fork C): the closing clause cross-references the OTHER
+    // "Buzz" — a released song's live awareness stat (SongCatalog chip / release
+    // cards), whose tooltip (SONG_BUZZ_TOOLTIP in client/src/lib/releaseBuzz.ts)
+    // points back here. Display copy only; no engine behavior.
+    text: 'Pre-release buzz banked for your next release — it seeds that release with extra early awareness, which drives more streams out of the gate. Applied once to the next release, then spent. Expires unused after about two months. (Separate from a released song\'s live Buzz stat, which this seeds.)',
   },
   variance_up: {
     title: 'Volatility',
