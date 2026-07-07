@@ -196,10 +196,13 @@ export function summarizeAnticipation(songs: any[] | null | undefined): string |
  *
  * PURE display helper backing the "Cancel release" confirmation dialog. It
  * derives the refund PREVIEW the same way the server DELETE endpoint computes
- * the authoritative refund (fork E): the stored launch marketingBudget PLUS the
- * UNSPENT pre-campaign share (preCampaign.totalBudget − spentToDate, clamped to
- * >= 0). The dialog shows this as a preview; the store adopts the server's
- * returned refundedAmount as the source of truth.
+ * the authoritative refund (fork E). The money is ONE POT: the full paid amount
+ * (main marketing + lead single) is stored on `release.marketingBudget`, and the
+ * pre-campaign pot is a SHARE of it. Refund = marketingBudget MINUS the
+ * pre-campaign share already converted to awareness (spentToDate, clamped into
+ * [0, preCampaign.totalBudget]), floored at 0. The dialog shows this as a
+ * preview; the store adopts the server's returned refundedAmount as the source
+ * of truth.
  *
  * The consequence lines are QUALITATIVE (fork E standing rule): no ×N multiplier
  * strings anywhere. `hasPreBuzz` gates whether the "anticipation lost" line is
@@ -207,7 +210,7 @@ export function summarizeAnticipation(songs: any[] | null | undefined): string |
  * gates the "attached Hype lost" line.
  */
 export interface CancelReleasePreview {
-  /** Refund preview in whole currency units (launch budget + unspent pre-campaign). */
+  /** Refund preview in whole currency units (paid budget − converted pre-campaign share). */
   refundAmount: number;
   /** True when this release diverted a pre-campaign share (anticipation was/will be built). */
   hasPreBuzz: boolean;
@@ -223,15 +226,16 @@ export function summarizeCancelRelease(release: any): CancelReleasePreview {
 
   const preCampaign = metadata.preCampaign;
   const hasPreCampaign = !!preCampaign && typeof preCampaign === 'object';
-  const unspentPreCampaign = hasPreCampaign
-    ? Math.max(
-        0,
-        (typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0)
-          - (typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+  // Converted share: spentToDate clamped into [0, totalBudget] so drift can
+  // neither over- nor under-credit (mirrors the server rule exactly).
+  const spentPreCampaign = hasPreCampaign
+    ? Math.min(
+        Math.max(0, typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+        typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0,
       )
     : 0;
 
-  const refundAmount = marketingBudget + unspentPreCampaign;
+  const refundAmount = Math.max(0, marketingBudget - spentPreCampaign);
 
   // A pre-campaign share was diverted → anticipation was (or is being) built.
   const hasPreBuzz = hasPreCampaign

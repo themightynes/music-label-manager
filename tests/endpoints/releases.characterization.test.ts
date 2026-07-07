@@ -528,10 +528,12 @@ describe('DELETE /api/game/:gameId/releases/:releaseId (characterization)', () =
 
 // ---------------------------------------------------------------------------
 // Buzz-v2 slice 4 (C43) — fork-E cancel semantics on the existing DELETE route.
-// Refund now = STORED launch marketingBudget + UNSPENT pre-campaign share
-// (totalBudget − spentToDate); the release's still-unreleased songs have their
-// awareness/peak_awareness ZEROED (pre-buzz dies); attached hype dies with the
-// deleted row and re-credits nothing.
+// The money is ONE POT: the full paid amount is stored on marketingBudget and
+// the pre-campaign pot is a SHARE of it. Refund = marketingBudget − the
+// pre-campaign share already CONVERTED to awareness (spentToDate, clamped into
+// [0, preCampaign.totalBudget]); the release's still-unreleased songs have
+// their awareness/peak_awareness ZEROED (pre-buzz dies); attached hype dies
+// with the deleted row and re-credits nothing.
 // ---------------------------------------------------------------------------
 describe('DELETE .../releases/:releaseId — fork-E cancel (buzz-v2 slice 4)', () => {
   /** Seed a planned release with a partially-spent pre-campaign, attached hype,
@@ -559,12 +561,14 @@ describe('DELETE .../releases/:releaseId — fork-E cancel (buzz-v2 slice 4)', (
       title: 'Pre-Hyped To Cancel',
       type: 'ep',
       status: 'planned',
-      marketingBudget: opts.marketingBudget ?? 4000,
+      // ONE POT: the FULL paid amount (plan handler stores totalBudget whole);
+      // the preCampaign pot below is a 30% SHARE of it, not an extra charge.
+      marketingBudget: opts.marketingBudget ?? 12000,
       metadata: {
         attachedHype: opts.attachedHype ?? 6,
         preCampaign: {
           pct: 30,
-          totalBudget: opts.preCampaignTotal ?? 3600,
+          totalBudget: opts.preCampaignTotal ?? 3600, // 30% of 12000
           budgetPerChannel: { pr: 3000, radio: 600 },
           weeklySpend: 600,
           spentToDate: opts.spentToDate ?? 1200,
@@ -583,12 +587,12 @@ describe('DELETE .../releases/:releaseId — fork-E cancel (buzz-v2 slice 4)', (
     return { gameId, artistId, songIds, releaseId };
   }
 
-  it('refunds launch budget + UNSPENT pre-campaign, zeroes song awareness/peak, unlinks songs', async () => {
+  it('refunds paid budget MINUS converted pre-campaign share, zeroes song awareness/peak, unlinks songs', async () => {
     const { gameId, releaseId, songIds } = await seedPreCampaignRelease({
       money: 50000,
-      marketingBudget: 4000,
-      preCampaignTotal: 3600,
-      spentToDate: 1200, // unspent = 2400
+      marketingBudget: 12000, // full paid pot
+      preCampaignTotal: 3600, // 30% share of the pot
+      spentToDate: 1200, // converted so far
       attachedHype: 6,
       songAwareness: 18,
       songPeak: 22,
@@ -597,12 +601,12 @@ describe('DELETE .../releases/:releaseId — fork-E cancel (buzz-v2 slice 4)', (
     const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
 
     expect(res.status).toBe(200);
-    // Refund = 4000 launch + (3600 - 1200) unspent pre-campaign = 6400.
-    expect(res.body.refundedAmount).toBe(6400);
+    // Refund = 12000 paid − 1200 converted = 10800 (never more than was paid).
+    expect(res.body.refundedAmount).toBe(10800);
 
-    // Money credited by exactly the combined refund.
+    // Money credited by exactly the corrected refund.
     const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-    expect(gs.money).toBe(50000 + 6400);
+    expect(gs.money).toBe(50000 + 10800);
 
     // Release gone.
     const remaining = await db.select().from(releases).where(eq(releases.id, releaseId));
@@ -617,19 +621,32 @@ describe('DELETE .../releases/:releaseId — fork-E cancel (buzz-v2 slice 4)', (
     }
   });
 
-  it('a fully-spent pre-campaign refunds ONLY the launch budget (unspent share is 0)', async () => {
+  it('a fully-spent pre-campaign deducts the WHOLE share: refund = marketingBudget − preCampaign.totalBudget', async () => {
     const { gameId, releaseId } = await seedPreCampaignRelease({
       money: 10000,
-      marketingBudget: 4000,
+      marketingBudget: 12000,
       preCampaignTotal: 3600,
-      spentToDate: 3600, // fully spent → unspent = 0
+      spentToDate: 3600, // fully converted → deduct the whole 3600 share
     });
 
     const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
     expect(res.status).toBe(200);
-    expect(res.body.refundedAmount).toBe(4000);
+    expect(res.body.refundedAmount).toBe(12000 - 3600);
     const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-    expect(gs.money).toBe(10000 + 4000);
+    expect(gs.money).toBe(10000 + 8400);
+  });
+
+  it('a drifted spentToDate above totalBudget deducts at most the share (clamp guards)', async () => {
+    const { gameId, releaseId } = await seedPreCampaignRelease({
+      money: 10000,
+      marketingBudget: 12000,
+      preCampaignTotal: 3600,
+      spentToDate: 5000, // drifted above the share → clamp to 3600
+    });
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.refundedAmount).toBe(8400);
   });
 
   it('cancelling a hyped release does NOT restore any flags pools (attached hype dies)', async () => {

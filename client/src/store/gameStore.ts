@@ -1396,8 +1396,8 @@ export const useGameStore = create<GameStore>()(
 
       // Cancel a PLANNED release (buzz-v2 slice 4, C43). Mirrors cancelProject's
       // response-field balance-adoption precedent: the DELETE endpoint returns
-      // the server-authoritative `refundedAmount` (launch budget + unspent
-      // pre-campaign share, fork E), which we add onto the spine money via the
+      // the server-authoritative `refundedAmount` (paid marketing budget minus
+      // the converted pre-campaign share, fork E), which we add onto the spine money via the
       // commitGameState funnel — the endpoint does NOT return a full newBalance,
       // and the refund is the only field that changed. Then invalidate the
       // releases / release-songs / songs caches so the planned card disappears and

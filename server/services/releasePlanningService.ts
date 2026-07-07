@@ -440,15 +440,22 @@ export class ReleasePlanningService {
    * Delete a planned release and free up its songs, refunding the STORED
    * marketing budget (never a client-supplied amount) back to the game's money.
    *
-   * Buzz-v2 slice 4 (C43) — fork E cancel semantics. The pre-existing rule
-   * refunded ONLY `release.marketingBudget` (the LAUNCH-phase pot). A planned
-   * release can now also carry a pre-campaign pot (metadata.preCampaign) which
-   * is a SEPARATE reservation the plan handler did NOT add to marketingBudget —
-   * it is the diverted anticipation share, converted week-by-week over the
-   * lead-up. On cancel:
-   *   - the UNSPENT pre-campaign share (totalBudget − spentToDate) is refunded on
-   *     top of the launch budget; the SPENT share is gone (already converted to
-   *     awareness that we are about to destroy — fork E: pre-buzz dies).
+   * Buzz-v2 slice 4 (C43) — fork E cancel semantics. THE MONEY IS ONE POT: at
+   * plan time the player pays `totalBudget` (main marketing + lead single)
+   * exactly ONCE, and that full paid amount is stored whole on
+   * `release.marketingBudget` (planRelease, ~line 189/282/335). The pre-campaign
+   * pot (metadata.preCampaign.totalBudget = pct% of the MAIN marketing total) is
+   * a SHARE of that already-paid-and-stored total — not an extra charge — which
+   * the weekly engine converts to song awareness over the lead-up weeks,
+   * advancing `spentToDate`. On cancel:
+   *   - the player gets back everything they paid EXCEPT the pre-campaign share
+   *     already CONVERTED to awareness: refund = marketingBudget −
+   *     min(max(0, spentToDate), preCampaign.totalBudget), floored at 0. The
+   *     clamps mean spentToDate drift can neither over- nor under-credit. The
+   *     converted share is gone — it bought the pre-buzz we are about to destroy
+   *     (fork E: pre-buzz dies).
+   *   - legacy / pct-0 releases have no preCampaign key → converted share 0 →
+   *     full marketingBudget refund, byte-identical to the pre-slice-4 rule.
    *   - the release's still-unreleased songs have their `awareness` and
    *     `peak_awareness` ZEROED. Those points were built purely by this release's
    *     pre-campaign; leaving them would recreate the buzz-farming exploit fork E
@@ -458,8 +465,13 @@ export class ReleasePlanningService {
    *     this release row, which is deleted, and nothing re-credits any pool.
    * Everything below runs in ONE transaction with the refund.
    *
-   * Returns the same payload shape the original DELETE handler sent, with
-   * `refundedAmount` now the COMBINED total (launch + unspent pre-campaign).
+   * KNOWN PRE-EXISTING OVER-REFUND (deliberately NOT changed here; orchestrator
+   * is logging it as debt): the refund includes the lead-single budget share even
+   * when the lead single already shipped and its marketing converted — that
+   * behavior predates this arc.
+   *
+   * Returns the same payload shape the original DELETE handler sent;
+   * `refundedAmount` is the paid pot minus the converted pre-campaign share.
    */
   async deleteRelease(userId: string | undefined, gameId: string, releaseId: string) {
     // Get the release to return marketing budget
@@ -480,19 +492,19 @@ export class ReleasePlanningService {
       });
     }
 
-    // Fork E: compute the UNSPENT pre-campaign refund component. Absent
-    // preCampaign (pct 0 / legacy release) contributes 0 — byte-identical to the
-    // old launch-only refund. Clamp to >= 0 so a drifted spentToDate can never
-    // credit more than was reserved.
+    // Fork E: the paid pot (marketingBudget) comes back MINUS the pre-campaign
+    // share already converted to awareness. spentToDate is clamped into
+    // [0, preCampaign.totalBudget] so drift can neither over- nor under-credit;
+    // the final refund is floored at 0. Absent preCampaign (pct 0 / legacy
+    // release) deducts nothing — byte-identical to the old full-budget refund.
     const preCampaign = (release.metadata as any)?.preCampaign;
-    const unspentPreCampaign = preCampaign
-      ? Math.max(
-          0,
-          (typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0)
-            - (typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+    const spentPreCampaign = preCampaign
+      ? Math.min(
+          Math.max(0, typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+          typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0,
         )
       : 0;
-    const refundedAmount = (release.marketingBudget || 0) + unspentPreCampaign;
+    const refundedAmount = Math.max(0, (release.marketingBudget || 0) - spentPreCampaign);
 
     // Execute deletion in transaction
     const result = await this.db.transaction(async (tx) => {
@@ -504,8 +516,8 @@ export class ReleasePlanningService {
         .where(eq(songs.releaseId, releaseId))
         .returning();
 
-      // Refund launch budget + unspent pre-campaign (from STORED release data,
-      // never client input).
+      // Refund the paid pot minus the converted pre-campaign share (from STORED
+      // release data, never client input).
       const [gameState] = await tx.select().from(gameStates)
         .where(eq(gameStates.id, gameId));
 
