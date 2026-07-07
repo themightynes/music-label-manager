@@ -1,11 +1,51 @@
+import React from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
+import { useSongs } from '@/hooks/useSongs';
+import { findHottestTrack } from '@/lib/releaseBuzz';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { fetchMeetingDialogue } from '@/services/executiveService';
 import { AnimatedNumber } from '@/components/motion-primitives/animated-number';
+
+/**
+ * "Hottest track" stat — awareness slice 3 (C42). The catalog-wide
+ * max-awareness RELEASED song (fork D: max, not average), its live Buzz value
+ * (N/100), and 🔥 when that song broke through. Quiet em-dash placeholder when
+ * no released song has awareness > 0 — the slot stays, matching how the other
+ * stats render zeros rather than vanishing.
+ *
+ * Exported presentational piece (house preference, mirrors TourStatusStrip /
+ * ReleaseBuzzSection) so it unit-tests from plain song fixtures without
+ * mounting the full dashboard.
+ */
+export function HottestTrackStat({ songs, className = '' }: { songs: any[] | undefined; className?: string }) {
+  const hottest = findHottestTrack(songs);
+
+  return (
+    <div className={`min-w-0 ${className}`} data-testid="hottest-track-stat">
+      <div className="font-mono font-semibold text-xl leading-none text-neon-cyan">
+        {hottest ? (
+          <>
+            {hottest.breakthrough && (
+              <span className="mr-1" role="img" aria-label="breakthrough">🔥</span>
+            )}
+            {Math.round(hottest.awareness)}
+            <span className="text-text-muted text-sm">/100</span>
+          </>
+        ) : (
+          <span className="text-text-muted">—</span>
+        )}
+      </div>
+      <div className="text-[11.5px] text-text-muted mt-1.5 truncate max-w-[160px]">
+        Hottest track
+        {hottest && <span className="text-text-body"> · {hottest.title}</span>}
+      </div>
+    </div>
+  );
+}
 
 interface SelectedChoice {
   executiveName: string;
@@ -24,6 +64,8 @@ interface ImpactPreview {
 export function MetricsDashboard() {
   const gameState = useGameState();
   const { selectedActions } = useGameStore();
+  // Awareness slice 3: catalog-wide songs for the "Hottest track" stat.
+  const { data: songs } = useSongs();
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},
     delayed: {},
@@ -417,6 +459,7 @@ export function MetricsDashboard() {
                   />
                   <div className="text-[11.5px] text-text-muted mt-1.5">{netProfitLoss >= 0 ? 'Profit' : 'Loss'}</div>
                 </div>
+                <HottestTrackStat songs={songs} />
               </div>
             </div>
 
@@ -488,7 +531,7 @@ export function MetricsDashboard() {
               <h3 className="font-mono text-[10px] font-semibold text-text-label uppercase tracking-[0.2em] mb-2">
                 Weekly Performance
               </h3>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-6 gap-2">
                 <div className="text-center p-2 bg-surface-inner/50 rounded-chip">
                   <div className="text-base font-mono font-semibold text-text-primary">{stats.streams.toLocaleString()}</div>
                   <div className="text-xs text-text-muted">plays</div>
@@ -529,6 +572,7 @@ export function MetricsDashboard() {
                   </div>
                   <div className="text-xs text-text-muted">net</div>
                 </div>
+                <HottestTrackStat songs={songs} className="text-center p-2 bg-surface-inner/50 rounded-chip" />
               </div>
             </div>
 
@@ -629,6 +673,7 @@ export function MetricsDashboard() {
                   </div>
                   <div className="text-xs text-text-muted">net {netProfitLoss >= 0 ? 'profit' : 'loss'}</div>
                 </div>
+                <HottestTrackStat songs={songs} className="text-center p-2 bg-surface-inner/50 rounded-chip col-span-2" />
               </div>
 
               {/* Secondary Metrics */}

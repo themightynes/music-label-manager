@@ -52,6 +52,49 @@ export const BUZZ_PHASE_LABELS = {
 } as const;
 
 /**
+ * SongCatalog Buzz chip tooltip copy — awareness slice 3, fork C (decided):
+ * both mechanics keep the name "Buzz" with MUTUALLY-disambiguating tooltips.
+ * This is the song-level live-awareness side; the other side is the meetings
+ * `awareness_boost` channel copy in EFFECT_CHANNEL_DESCRIPTIONS (ActionProcessor),
+ * which cross-references back here. Fork E: qualitative only — NO multiplier
+ * numbers in this copy.
+ */
+export const SONG_BUZZ_TOOLTIP =
+  'Cultural buzz (0–100). Builds from marketing in release weeks 1–4, can break ' +
+  'through, then fades. While it lasts, this song’s weekly streams ride the buzz. ' +
+  '(Different from the meeting “Buzz” effect, which banks hype for your NEXT release.)';
+
+/** Cross-cutting shape for the dashboard "Hottest track" stat (slice 3). */
+export interface HottestTrack {
+  title: string;
+  awareness: number;
+  breakthrough: boolean;
+}
+
+/**
+ * Pick the max-awareness RELEASED song across the whole catalog — the
+ * MetricsDashboard "Hottest track" stat (slice 3; fork D max-not-average).
+ * Returns null when no released song has awareness > 0 (the stat then renders
+ * its quiet em-dash placeholder). Tolerates both drizzle-property and
+ * raw-column shapes, mirroring summarizeReleaseBuzz.
+ */
+export function findHottestTrack(songs: any[] | null | undefined): HottestTrack | null {
+  let hottest: HottestTrack | null = null;
+  for (const song of songs ?? []) {
+    if (!song || !(song.isReleased ?? song.is_released)) continue;
+    const awareness = typeof song.awareness === 'number' ? song.awareness : 0;
+    if (awareness > 0 && (!hottest || awareness > hottest.awareness)) {
+      hottest = {
+        title: song.title ?? 'Untitled',
+        awareness,
+        breakthrough: Boolean(song.breakthrough_achieved ?? song.breakthroughAchieved),
+      };
+    }
+  }
+  return hottest;
+}
+
+/**
  * Aggregate a release's songs into the card Buzz summary.
  *
  * @param songs the release's songs (already joined by releaseId upstream)
