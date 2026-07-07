@@ -4,6 +4,47 @@
 
 ---
 
+## 📅 Session Log — July 6, 2026, late evening addendum (Awareness Surfacing / C42 EXECUTED: breakthroughs visible, release Buzz, hottest track — verifier all-10-CONFIRMED; PR #151 stacked on #149, UNMERGED pending playtest)
+
+**The C42 build ran the same evening** (Nes approved starting the design pass in parallel with the tour playtest window). Deep recon first, with the headline find: **the 🔥 BREAKTHROUGH moment was 100% invisible** — computed, pushed to `summary.changes`, even classified `'hero'` (Phase 4), but swallowed by WeekSummary's never-rendered `other` bucket along with all weekly `awareness_gain`/`awareness_decay` entries. Even PENDING-DECISIONS' "WeekSummary keeps celebrating a stat…" framing was stale — nothing celebrated. Other recon facts: the only engine read is the weeks-5+ streaming multiplier (cap 2.0×, `FinancialSystem.ts:1019-1049`); charts don't consume awareness; `breakthrough_thresholds` config is a dead block (hardcoded in ReleaseProcessor → C79); no release-level aggregation existed anywhere; two different mechanics both display as "Buzz" (song's live awareness vs the meetings channel banking a next-release seed).
+
+**Design → checkpoint → all six forks decided by Nes** (`[READY] awareness-surfacing-plan.md`): **A** breakthrough = NOTABLE line, deliberately NOT a hero card (demotion from unrendered-hero); **B** one aggregated weekly buzz line, suppressed when total |Δ| < 3; **C** both keep the "Buzz" name with mutually cross-referencing tooltips; **D** hottest-song (max) aggregation; **E** **qualitative language only — no ×N multiplier numbers anywhere** (test-pinned with leakage regex guards); **F** dead config logged (C79), arc stays engine-free.
+
+**Factory: 3 Sonnet slices on `feat/awareness-surfacing` (stacked on `feat/tour-experience-tier1` — both touch WeekSummary; retarget after #149 merges):**
+- **Slice 1 (`b27c114`)** — `awareness`/`breakthroughs` buckets in `categorizeChanges.ts`; breakthrough NOTABLE lines + the aggregated `🎯 Buzz: 3 songs building (+12) · 2 fading` ROUTINE line; `breakthrough` reclassified `notable` in `changeImportance.ts`. Finding: awareness change entries are **description-only** (no songId/delta fields) → tolerant regex parsing, structured fields logged as **C80**. Suite 1,530 → 1,545.
+- **Slice 2 (`8d44f08`)** — `ReleaseBuzzSection` on released cards via pure `summarizeReleaseBuzz` helper (`client/src/lib/releaseBuzz.ts`): hottest song + bar, 🔥 count, phase bands ("building — week N of 4" / ≥70 "sustaining strongly" / 30–69 "sustaining" / 1–29 "fading"); zero-awareness → no section. **Live-verified in a running week-52 game** (all 5 cards correct). Suite → 1,565.
+- **Slice 3 (`c0028c0`)** — `HottestTrackStat` in all three MetricsDashboard layouts; SongCatalog Buzz chip finally gets a tooltip (new copy); `EFFECT_CHANNEL_DESCRIPTIONS.awareness_boost` gains a cross-reference clause (string literal only; [REFERENCE] doc verified to not quote the text — no sync needed). Suite → **1,578 green**.
+
+**Fresh-context adversarial verifier (Opus): ALL 10 items CONFIRMED, no bugs** — engine containment exact (shared/ = importance classification + one display string), GM zero content deltas, fork-E no-numbers sweep clean, full gates reproduced (tsc clean, 1,578/1,578).
+
+**Open threads:** Nes playtests #149 + #151 together (one dev-server checkout of `feat/awareness-surfacing` shows BOTH arcs); merge order #149 → retarget #151 → merge. Ledger: C79/C80 added (80 = 59 + 3 + 18 ✓). Unblocked once merged: Release-Experience Tier 2, the awareness design doc's surfacing chapter, effect-legibility Buzz channel (B1 direction).
+
+---
+
+## 📅 Session Log — July 6, 2026, evening (Tour Experience Tier 1: no phantom week, city cards, live status — verifier all-13-CONFIRMED; PR #149 UNMERGED pending Nes playtest)
+
+**How the pick happened:** after the Content Editor arc merged (#146/#147; docs pass #148 still awaiting Nes's button), Nes asked for the next feature "but only after an Opus agent reviews other possibilities in the planning docs." The survey inventoried every candidate (planning specs, 08-future-features, pending debt, research case files) and found: **C42's framing was stale** (awareness engine already live at up to ~2× streaming; only the surfacing fork remained) and **Tour Tier 1 + Release Tier 1 outranked it on readiness × impact** (fully specced, decision-free). Two of the reviewer's claims didn't survive orchestrator verification: C40 (client-trusted refundAmount) and C41 (venueCapacity crash) were **already fixed pre-session** (PRs #66/#68 — the tour plan's bug list was stale; corrected this session). **Nes decided: build Tour Tier 1 now, and resolved C42 = wire awareness fully player-facing** (build queued as a next arc; PENDING-DECISIONS §2 removed, decision recorded in backlog C42).
+
+**Factory: 3 slices + follow-up on `feat/tour-experience-tier1` (Opus for the engine slice, Sonnet for client; orchestrator diff-review before each dispatch):**
+- **Slice 1 (`b01e812`, engine, Opus)** — **phantom third week removed**: tour completion check `>` → `>=`, the final city's revenue processes AND the tour completes in the SAME advance (completion totals from the tourStats RETURNED by `processUnifiedTourRevenue` — the loop-start row is stale; legacy in-flight saves keep the old fall-through). 1-city tour = 2 advances, 3-city = 4. Plus 10 structured city fields on the `tour_performance` change entry (description unchanged) and a **deterministic planning-week foreshadow** (`tour_planning` entry; `TourProcessor.estimatePlanningForeshadow` reuses the C41/C47/C48 param assembly with ZERO getRandom draws — the spec's "sell-through already known at planning" premise was wrong, pre-calc happens on the first production week). GM re-blessed additively (revenue amounts byte-identical), double-run zero updates. Suite 1,507 → 1,513.
+- **Slice 1b (`93818d8`, orchestrator follow-up)** — artist reaction (`moodChange`/`popularityChange`) attached to the city entry itself so the client never re-matches separate entries or re-derives engine attendance thresholds. GM: exactly +2 fields, consistent with the pre-existing separate mood/popularity entries.
+- **Slice 2 (`9d08d3c`, WeekSummary, Sonnet)** — categorization extracted to a pure module (`week-summary/categorizeChanges.ts`); `TourCityCard` in the NOTABLE reveal stage (attendance bar, gross/costs/net in money styling, reaction line, completion footer when the tour wraps that week); city entries de-duplicated out of the flat revenue list; `tour_planning` rendered in ROUTINE (was falling into the never-rendered `other` bucket). Financial figures verified decoupled (they read summary totals, not buckets). Suite → 1,522.
+- **Slice 3 (`cf1937a`, dashboard, Sonnet)** — `TourStatusStrip` in the ActiveTours header: "🎤 Nova on tour — plays Theater Venues this week (city 2 of 4)" + last night's result; pure `deriveTourStatuses` helper; venue-name map deliberately duplicated locally (no engine-processor import into the client) → C78. Suite → **1,530 green**.
+- **Sanctioned spec deviations:** no city-reveal toast (Phase 4 removed advance-time toasts as redundant with the modal — the card is the moment); foreshadow is a pre-variance estimate (see slice 1).
+
+**Fresh-context adversarial verifier (Opus): ALL 13 items CONFIRMED, no bugs** — independent GM double-run (zero snapshot updates), RNG-stream audit (no added/removed/reordered draws in `git diff main...HEAD -- shared/`), scope containment exact (13 files), full gates reproduced (tsc clean, 1,530/1,530).
+
+**Doc-sync (on the PR):** tour plan status header → Tier 1 EXECUTED with deviations; stale C40/C41 bug list corrected; sequencing struck through steps 1–3. Ledger: **C77** (tour-completion fixtures only exercise the legacy fall-through path) + **C78** (venue-name map duplicated engine/client) added; C42 decision annotated; a second header-drift fixed (the Pending line had said 13 without absorbing C76); arithmetic now **78 = 59 + 3 deferred + 16 pending ✓**.
+
+**Open threads / next steps:**
+- **Nes: playtest [PR #149](https://github.com/themightynes/music-label-manager/pull/149)** (book a 1-city tour → should be book → play → done in 2 advances, with the city card in WeekSummary, the foreshadow line on the planning advance, and the live strip in ActiveTours). ⚠️ Restart the dev server after checking out the branch — engine changes don't hot-reload. Then decide merge.
+- **PR #148** (Content Editor post-merge docs pass) still open awaiting Nes.
+- **Queued next arc: C42 awareness surfacing** (decided: wire fully — release page + dashboard readouts per `[FUTURE] awareness-system-design.md`; 1–2 UI slices, engine already live).
+- Tour Tier 2 (roll each city on its own week, momentum, knobs → config) pairs with the game-feel track; Tier 3 (mid-tour decision) needs a PRD.
+- Carry-overs: reactive meetings/side-events full-loop playtest, feel knobs untouched, C75/C76, first copywriter session exercising the changelog → doc-pass loop, Phase 4 audio audition.
+
+---
+
 ## 📅 Session Log — July 6, 2026 (Content Editor: no-code side-events & meetings editing — designed, forked, built, verifier-CONFIRMED; branch UNMERGED pending Nes playtest)
 
 **Goal (Nes):** upgrade the Actions JSON Viewer so a game designer/copywriter can edit side events AND meetings without code. **Merge authority: local-only this session — PR OK, NO merge until Nes finalizes + playtests.**
