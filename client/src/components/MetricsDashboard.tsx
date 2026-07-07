@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { useSongs } from '@/hooks/useSongs';
-import { summarizeCatalogBuzz } from '@/lib/releaseBuzz';
+import { summarizeCatalogBuzz, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
@@ -27,14 +27,28 @@ import { AnimatedNumber } from '@/components/motion-primitives/animated-number';
 export function BuzzStatusStat({
   songs,
   currentWeek,
+  bankedHype = 0,
+  bankedHypeWeek,
   className = '',
 }: {
   songs: any[] | undefined;
   currentWeek: number;
+  /** flags.pendingAwarenessBoost — banked-hype pool (buzz-v2 slice 1). */
+  bankedHype?: number;
+  /** flags.pendingAwarenessBoostWeek — week the pool was last stamped. */
+  bankedHypeWeek?: number | null;
   className?: string;
 }) {
   const { building, fading } = summarizeCatalogBuzz(songs, currentWeek);
   const hasBuzz = building > 0 || fading > 0;
+
+  // Buzz-v2 slice 1: banked-hype chip. Only the POSITIVE banked channel gets a
+  // "seeds your next release" chip (a negative pool suppresses discovery — not a
+  // resource to advertise). Expiry week = stamped week + N (mirrors the engine's
+  // pending_awareness_boost_expiry_weeks); omit the countdown if we can't date it.
+  const showBankedHype = bankedHype > 0;
+  const fadesWeek =
+    typeof bankedHypeWeek === 'number' ? bankedHypeWeek + BANKED_HYPE_EXPIRY_WEEKS : null;
 
   return (
     <div className={`min-w-0 ${className}`} data-testid="buzz-status-stat">
@@ -63,6 +77,25 @@ export function BuzzStatusStat({
         )}
       </div>
       <div className="text-[11.5px] text-text-muted mt-1.5">Buzz</div>
+      {showBankedHype && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                data-testid="banked-hype-chip"
+                className="text-[11.5px] font-mono text-money mt-1 whitespace-nowrap cursor-help"
+                aria-label={`Banked Hype: ${BANKED_HYPE_TOOLTIP}`}
+              >
+                +{bankedHype} Hype banked
+                {fadesWeek !== null && (
+                  <span className="text-text-muted"> · fades wk {fadesWeek}</span>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">{BANKED_HYPE_TOOLTIP}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   );
 }
@@ -86,6 +119,18 @@ export function MetricsDashboard() {
   const { selectedActions } = useGameStore();
   // Catalog-wide songs for the core-status "Buzz" stat (live derivation).
   const { data: songs } = useSongs();
+  // Buzz-v2 slice 1: banked-hype pool (flags.pendingAwarenessBoost) + its stamp
+  // week, read via the useGameState() façade (NEVER useGameStore for spine
+  // fields). Feeds the "+N Hype banked · fades wk W" chip on BuzzStatusStat.
+  const bankedHypeFlags = (gameState?.flags || {}) as Record<string, any>;
+  const bankedHype =
+    typeof bankedHypeFlags.pendingAwarenessBoost === 'number'
+      ? bankedHypeFlags.pendingAwarenessBoost
+      : 0;
+  const bankedHypeWeek =
+    typeof bankedHypeFlags.pendingAwarenessBoostWeek === 'number'
+      ? bankedHypeFlags.pendingAwarenessBoostWeek
+      : null;
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},
     delayed: {},
@@ -429,7 +474,12 @@ export function MetricsDashboard() {
                   <div className="font-mono font-semibold text-xl leading-none text-text-accent">{gameState.creativeCapital || 0}</div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">Creative Capital</div>
                 </div>
-                <BuzzStatusStat songs={songs} currentWeek={gameState.currentWeek || 1} />
+                <BuzzStatusStat
+                  songs={songs}
+                  currentWeek={gameState.currentWeek || 1}
+                  bankedHype={bankedHype}
+                  bankedHypeWeek={bankedHypeWeek}
+                />
               </div>
             </div>
 
@@ -550,6 +600,8 @@ export function MetricsDashboard() {
                 <BuzzStatusStat
                   songs={songs}
                   currentWeek={gameState.currentWeek || 1}
+                  bankedHype={bankedHype}
+                  bankedHypeWeek={bankedHypeWeek}
                   className="text-center p-2 bg-surface-inner/50 rounded-chip"
                 />
               </div>
@@ -685,6 +737,8 @@ export function MetricsDashboard() {
                 <BuzzStatusStat
                   songs={songs}
                   currentWeek={gameState.currentWeek || 1}
+                  bankedHype={bankedHype}
+                  bankedHypeWeek={bankedHypeWeek}
                   className="text-center p-2 bg-surface-inner/50 rounded-chip"
                 />
               </div>

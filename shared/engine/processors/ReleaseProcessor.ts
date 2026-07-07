@@ -1148,6 +1148,20 @@ export class ReleaseProcessor {
               : `Suppressed discovery: ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness on "${release.title}"`,
             amount: bankedAwarenessBoost
           });
+          // Buzz-v2 slice 1: STRUCTURED payoff attribution (notable). Additive to
+          // the 'meeting' entry above; this one drives the notable-stage Hype line
+          // so the player sees WHICH release the banked pool seeded. `amount` is the
+          // seeded Buzz points (signed); hypeUnits is the raw pool consumed.
+          summary.changes.push({
+            type: 'hype_applied',
+            description: bankedAwarenessBoost > 0
+              ? `🚀 Banked Hype seeded "${release.title}" with +${bankedAwarenessBoost * awarenessPointsPerUnit} starting Buzz`
+              : `🚀 Banked negative Hype suppressed "${release.title}" starting Buzz by ${bankedAwarenessBoost * awarenessPointsPerUnit}`,
+            amount: bankedAwarenessBoost * awarenessPointsPerUnit,
+            hypeUnits: bankedAwarenessBoost,
+            releaseId: release.id,
+            releaseName: release.title,
+          });
           console.log(`[AWARENESS BOOST] Consumed banked boost (${bankedAwarenessBoost}) -> seeded ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness into "${release.title}", pool zeroed`);
         }
 

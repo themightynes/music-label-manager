@@ -966,6 +966,19 @@ export class ActionProcessor {
             amount: value,
             appliedEffects: { awareness_boost: value }
           });
+          // Buzz-v2 slice 1: STRUCTURED banked-hype attribution entry (routine).
+          // Additive to the existing 'meeting' entry above (which carries the
+          // effect badge in the meetings card); this one drives the routine-stage
+          // Hype line + the core-status "N Hype banked" chip. Only emit for actual
+          // banks (value !== 0) so byte-stable no-op choices add nothing.
+          if (value !== 0) {
+            summary.changes.push({
+              type: 'hype_banked',
+              description: `📦 Banked ${value > 0 ? '+' : ''}${value} Hype for your next release`,
+              amount: value,
+              hypeTotal: flags.pendingAwarenessBoost,
+            });
+          }
           console.log(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingAwarenessBoost}, stamped week ${flags.pendingAwarenessBoostWeek})`);
           break;
         }
@@ -1248,9 +1261,20 @@ export class ActionProcessor {
         const expiryWeeks = ctx.gameData.getAwarenessBoostConfigSync().pending_awareness_boost_expiry_weeks;
         const currentWeek = ctx.gameState.currentWeek || 0;
         if (currentWeek - stampedWeek >= expiryWeeks) {
+          const expiredAmount = flags.pendingAwarenessBoost;
           console.log(`[AWARENESS BOOST] Expired unconsumed boost (${flags.pendingAwarenessBoost}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingAwarenessBoost = 0;
           delete flags.pendingAwarenessBoostWeek;
+          // Buzz-v2 slice 1: STRUCTURED expiry attribution (notable). Before this
+          // slice, an unconsumed pool aged out silently (console-log only) — a
+          // player could bank +6 across meetings and lose it all invisibly.
+          if (summary && Array.isArray(summary.changes)) {
+            summary.changes.push({
+              type: 'hype_expired',
+              description: `💨 ${expiredAmount > 0 ? '+' : ''}${expiredAmount} banked Hype faded away unused (no release shipped in ${expiryWeeks} weeks)`,
+              amount: expiredAmount,
+            });
+          }
         }
       }
 

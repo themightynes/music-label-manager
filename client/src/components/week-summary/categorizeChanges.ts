@@ -48,6 +48,19 @@ export interface WeekChangeCategories {
    * aggregated away.
    */
   breakthroughs: GameChange[];
+  /**
+   * Buzz-v2 (Hype & Pre-Marketing) slice 1: banked-hype lifecycle entries that
+   * pay off or expire ('hype_applied' / 'hype_expired'). Rendered as simple
+   * notable-stage lines so the player sees banked hype seeding a release (or
+   * fading unused) instead of it happening invisibly. Kept OUT of `other`
+   * (never rendered — this repo's recurring swallow-bug).
+   */
+  hypeNotable: GameChange[];
+  /**
+   * Buzz-v2 slice 1: banking hype ('hype_banked') — routine-stage line, the
+   * ordinary "a meeting choice topped up the pool" beat.
+   */
+  hypeRoutine: GameChange[];
   other: GameChange[];
 }
 
@@ -62,6 +75,8 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
     tourPlanning: [],
     awareness: [],
     breakthroughs: [],
+    hypeNotable: [],
+    hypeRoutine: [],
     other: [],
   };
 
@@ -88,6 +103,10 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       categories.awareness.push(change);
     } else if (change.type === 'breakthrough') {
       categories.breakthroughs.push(change);
+    } else if (change.type === 'hype_applied' || change.type === 'hype_expired') {
+      categories.hypeNotable.push(change);
+    } else if (change.type === 'hype_banked') {
+      categories.hypeRoutine.push(change);
     } else if (change.type === 'project_complete') {
       // Projects go to other category, will be shown in Projects tab
       categories.other.push(change);

@@ -20,7 +20,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { summarizeCatalogBuzz, SONG_BUZZ_TOOLTIP } from '@/lib/releaseBuzz';
+import { summarizeCatalogBuzz, SONG_BUZZ_TOOLTIP, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
 import { BuzzStatusStat } from '@/components/MetricsDashboard';
 import { SongBuzzChip } from '@/components/SongCatalog';
 import { EFFECT_CHANNEL_DESCRIPTIONS } from '@shared/engine/processors/ActionProcessor';
@@ -139,6 +139,42 @@ describe('BuzzStatusStat', () => {
   it('never shows a multiplier number (fork E: qualitative only)', () => {
     render(<BuzzStatusStat songs={[song({ releaseWeek: 11, awareness: 80 })]} currentWeek={12} />);
     expect(screen.getByTestId('buzz-status-stat').textContent).not.toMatch(/[×x]\s*\d/);
+  });
+});
+
+describe('BuzzStatusStat banked-hype chip (buzz-v2 slice 1)', () => {
+  it('renders "+N Hype banked · fades wk W" when a positive pool is banked', () => {
+    render(
+      <BuzzStatusStat songs={[]} currentWeek={5} bankedHype={4} bankedHypeWeek={5} />
+    );
+    const chip = screen.getByTestId('banked-hype-chip');
+    expect(chip).toHaveTextContent('+4 Hype banked');
+    // Expiry week = stamped week + BANKED_HYPE_EXPIRY_WEEKS (mirrors the engine).
+    expect(chip).toHaveTextContent(`fades wk ${5 + BANKED_HYPE_EXPIRY_WEEKS}`);
+    expect(chip).toHaveAttribute('aria-label', `Banked Hype: ${BANKED_HYPE_TOOLTIP}`);
+  });
+
+  it('omits the countdown when the stamp week is unknown', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={2} bankedHypeWeek={null} />);
+    const chip = screen.getByTestId('banked-hype-chip');
+    expect(chip).toHaveTextContent('+2 Hype banked');
+    expect(chip).not.toHaveTextContent('fades wk');
+  });
+
+  it('renders no chip when nothing is banked', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={0} />);
+    expect(screen.queryByTestId('banked-hype-chip')).toBeNull();
+  });
+
+  it('renders no chip for a negative pool (suppression is not advertised)', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={-3} bankedHypeWeek={5} />);
+    expect(screen.queryByTestId('banked-hype-chip')).toBeNull();
+  });
+
+  it('never leaks a multiplier number in the chip (fork E: qualitative only)', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={6} bankedHypeWeek={5} />);
+    expect(screen.getByTestId('banked-hype-chip').textContent).not.toMatch(/[×x]\s*\d/);
+    expect(BANKED_HYPE_TOOLTIP).not.toMatch(/[×x]\s*\d/);
   });
 });
 

@@ -64,6 +64,29 @@ export const SONG_BUZZ_TOOLTIP =
   'through, then fades. While it lasts, this song’s weekly streams ride the buzz. ' +
   '(Different from the meeting “Buzz” effect, which banks hype for your NEXT release.)';
 
+/**
+ * Banked-Hype chip copy — buzz-v2 (Hype & Pre-Marketing) slice 1. The meeting
+ * "Buzz" channel banks awareness_boost into a label-global pool
+ * (flags.pendingAwarenessBoost) that seeds the NEXT release you ship as starting
+ * Buzz, and expires unused after 8 weeks. This chip is the first time that pool
+ * is visible while banked. Fork E (standing rule): qualitative only — a point
+ * value ("+N Hype") is fine, but NO multiplier numbers.
+ */
+/**
+ * Weeks an unconsumed banked-hype pool survives before it expires. DISPLAY-ONLY
+ * mirror of the engine knob `pending_awareness_boost_expiry_weeks`
+ * (data/balance/markets.json → market_formulas.awareness_system, currently 8),
+ * used to render the chip's "fades wk W" countdown synchronously without an
+ * async balance fetch. HARDCODED: if the balance knob changes, update this too
+ * (same mirror-the-engine pattern as BUZZ_BUILDING_WEEKS above).
+ */
+export const BANKED_HYPE_EXPIRY_WEEKS = 8;
+
+export const BANKED_HYPE_TOOLTIP =
+  'Banked Hype from your executive meetings. It seeds the next release you ship ' +
+  'with extra starting Buzz, then it’s spent. Unused, it fades after a while. ' +
+  '(Different from a released song’s live Buzz stat.)';
+
 /** Catalog-wide counts backing the MetricsDashboard core-status "Buzz" stat. */
 export interface CatalogBuzzStatus {
   /** Released songs in the building window (weeks 1-4 since release) with awareness > 0. */

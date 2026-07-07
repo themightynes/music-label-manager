@@ -43,6 +43,9 @@ const ALL_CHANGE_TYPES: GameChange['type'][] = [
   'awareness_gain',
   'awareness_decay',
   'tour_planning',
+  'hype_banked',
+  'hype_applied',
+  'hype_expired',
 ];
 
 function change(type: GameChange['type'], over: Partial<GameChange> = {}): GameChange {
@@ -73,7 +76,7 @@ describe('classifyChange', () => {
   it('covers the full union (guards against a new type slipping in untested)', () => {
     // The classifier switch is exhaustive at compile time; this asserts the test
     // list itself matches the real union size so new members force a test update.
-    expect(new Set(ALL_CHANGE_TYPES).size).toBe(20);
+    expect(new Set(ALL_CHANGE_TYPES).size).toBe(23);
   });
 
   // --- HERO -----------------------------------------------------------------
@@ -86,6 +89,15 @@ describe('classifyChange', () => {
   });
 
   // --- NOTABLE --------------------------------------------------------------
+  it('classifies hype payoff/expiry as notable (buzz-v2 slice 1)', () => {
+    expect(classifyChange(change('hype_applied'))).toBe('notable');
+    expect(classifyChange(change('hype_expired'))).toBe('notable');
+  });
+
+  it('classifies banking hype as routine (buzz-v2 slice 1)', () => {
+    expect(classifyChange(change('hype_banked'))).toBe('routine');
+  });
+
   it('classifies release / song_release / project_complete as notable', () => {
     expect(classifyChange(change('release'))).toBe('notable');
     expect(classifyChange(change('song_release'))).toBe('notable');
@@ -156,6 +168,7 @@ describe('classifyChange', () => {
       'awareness_gain',
       'awareness_decay',
       'tour_planning',
+      'hype_banked',
       'error',
     ];
     for (const type of routineTypes) {
