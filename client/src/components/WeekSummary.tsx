@@ -21,7 +21,12 @@ import { queryClient } from '@/lib/queryClient';
 import { artistsQueryKey } from '@/hooks/useArtists';
 import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate, EventOccurrence, SideEventCategory } from '../../../shared/types/gameTypes';
 import type { SideEventChoiceResponse } from '../../../shared/api/contracts';
-import { categorizeWeekChanges, findTourCompletion } from './week-summary/categorizeChanges';
+import {
+  categorizeWeekChanges,
+  findTourCompletion,
+  aggregateAwarenessBuzz,
+  formatBuzzLine,
+} from './week-summary/categorizeChanges';
 import { TourCityCard } from './week-summary/TourCityCard';
 
 interface WeekSummaryProps {
@@ -455,6 +460,11 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   const changes = weeklyStats?.changes || [];
   const categorizedChanges = categorizeWeekChanges(changes);
 
+  // Awareness slice 1 (fork B): ONE aggregated routine "Buzz" line for the
+  // week's awareness_gain/awareness_decay churn. Null when total movement is
+  // under the suppression threshold — quiet weeks render nothing.
+  const buzzLine = formatBuzzLine(aggregateAwarenessBuzz(categorizedChanges.awareness));
+
   // Player-facing chart updates (competitor rows are ambient noise).
   const playerChartUpdates = useMemo(
     () => (weeklyStats?.chartUpdates || []).filter((u: ChartUpdate) => !u.isCompetitorSong),
@@ -528,7 +538,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   const hasNotableContent =
     playerChartUpdates.length > 0 ||
     nonUnlockAchievements.length > 0 ||
-    categorizedChanges.tourCities.length > 0;
+    categorizedChanges.tourCities.length > 0 ||
+    categorizedChanges.breakthroughs.length > 0;
   const notableChimePlayed = useRef(false);
   useEffect(() => {
     if (instant) return; // reduced-motion / skip toggle → no stage chime
@@ -732,6 +743,29 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             />
           </RevealGroup>
         ))}
+
+        {/* Breakthrough moments (stage 3, NOTABLE — awareness slice 1, fork A:
+            a distinct accented line item, deliberately NOT a hero card so hero
+            inventory stays scarce). The engine description already carries the
+            🔥 + title + N/100 readout; the payoff clause is QUALITATIVE only —
+            no multiplier numbers anywhere (fork E). */}
+        {categorizedChanges.breakthroughs.length > 0 && (
+          <RevealGroup revealed={currentStage >= STAGE_NOTABLE} instant={instant}>
+            <div className="space-y-2">
+              {categorizedChanges.breakthroughs.map((change: GameChange, index: number) => (
+                <div
+                  key={index}
+                  className="p-3 rounded-[12px] border border-neon-magenta/30 border-l-4 border-l-neon-magenta bg-neon-magenta/[0.08]"
+                >
+                  <span className="text-sm font-semibold text-text-primary">{change.description}</span>
+                  <p className="text-xs text-neon-magenta/80 mt-0.5">
+                    Its streams will ride the buzz while it lasts.
+                  </p>
+                </div>
+              ))}
+            </div>
+          </RevealGroup>
+        )}
 
         {/* Achievements (stage 3, notable) — unlocks already shown as heroes above */}
         {nonUnlockAchievements.length > 0 && (
@@ -962,6 +996,18 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                   <span className="text-sm font-medium text-white/80">{change.description}</span>
                 </div>
               ))}
+            </div>
+          </RevealGroup>
+        )}
+
+        {/* Aggregated buzz line (stage 4, routine) — awareness slice 1, fork B:
+            the week's awareness_gain/decay churn as ONE line, suppressed when
+            total movement is under the threshold (formatBuzzLine returns null).
+            These entries previously fell into the never-rendered `other` bucket. */}
+        {buzzLine && (
+          <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
+            <div className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40">
+              <span className="text-sm font-medium text-white/80">{buzzLine}</span>
             </div>
           </RevealGroup>
         )}

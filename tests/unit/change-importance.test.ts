@@ -42,6 +42,7 @@ const ALL_CHANGE_TYPES: GameChange['type'][] = [
   'breakthrough',
   'awareness_gain',
   'awareness_decay',
+  'tour_planning',
 ];
 
 function change(type: GameChange['type'], over: Partial<GameChange> = {}): GameChange {
@@ -72,7 +73,7 @@ describe('classifyChange', () => {
   it('covers the full union (guards against a new type slipping in untested)', () => {
     // The classifier switch is exhaustive at compile time; this asserts the test
     // list itself matches the real union size so new members force a test update.
-    expect(new Set(ALL_CHANGE_TYPES).size).toBe(19);
+    expect(new Set(ALL_CHANGE_TYPES).size).toBe(20);
   });
 
   // --- HERO -----------------------------------------------------------------
@@ -80,11 +81,11 @@ describe('classifyChange', () => {
     expect(classifyChange(change('unlock'))).toBe('hero');
   });
 
-  it('classifies breakthrough as hero', () => {
-    expect(classifyChange(change('breakthrough'))).toBe('hero');
+  // --- NOTABLE --------------------------------------------------------------
+  it('classifies breakthrough as notable (awareness slice 1, fork A: line item, not hero card)', () => {
+    expect(classifyChange(change('breakthrough'))).toBe('notable');
   });
 
-  // --- NOTABLE --------------------------------------------------------------
   it('classifies release / song_release / project_complete as notable', () => {
     expect(classifyChange(change('release'))).toBe('notable');
     expect(classifyChange(change('song_release'))).toBe('notable');
@@ -154,6 +155,7 @@ describe('classifyChange', () => {
       'popularity',
       'awareness_gain',
       'awareness_decay',
+      'tour_planning',
       'error',
     ];
     for (const type of routineTypes) {
