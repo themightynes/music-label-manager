@@ -374,6 +374,11 @@ describe('POST .../releases/plan — attach-at-plan hype (buzz-v2 slice 2)', () 
     expect(res.body.hypeApplied).toBeNull();
     const [rel] = await db.select().from(releases).where(eq(releases.gameId, gameId));
     expect((rel.metadata as any).attachedHype).toBe(0);
+
+    // Follow-up guard: a never-banked game's flags stay byte-stable — the drain
+    // must not plant a stray `pendingAwarenessBoost: 0` key or write flags at all.
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.flags).toEqual({});
   });
 });
 

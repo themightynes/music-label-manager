@@ -137,10 +137,20 @@ describe('commit funnel: balance-adopting writers', () => {
     expect(readRecord('game-1').money).toBe(27500);
   });
 
-  it('adoptServerBalances (via planRelease) commits the two-field merge to the cache', async () => {
-    seedGame(baseGameState({ id: 'game-1', money: 100000, creativeCapital: 4, musicLabel: { name: 'Keep' } }));
+  // Buzz-v2 slice 2 follow-up: planRelease now reconciles via the WIDER sibling
+  // adoptServerPlanReleaseResolution (money + creativeCapital + flags), because
+  // attach-at-plan drains hype flags server-side and the chip must see it.
+  it('adoptServerPlanReleaseResolution (via planRelease) commits money + creativeCapital + flags to the cache', async () => {
+    seedGame(baseGameState({
+      id: 'game-1',
+      money: 100000,
+      creativeCapital: 4,
+      musicLabel: { name: 'Keep' },
+      flags: { pendingAwarenessBoost: 3, pendingAwarenessBoostWeek: 2 },
+    } as any));
     routeApiRequest([
-      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 55000, creativeCapital: 1 } } },
+      // Server drained the hype pool during attach-at-plan.
+      { match: (u) => /\/api\/game\/[^/]+$/.test(u), body: { gameState: { money: 55000, creativeCapital: 1, flags: { pendingAwarenessBoost: 0 } } } },
       { match: (u) => u.includes('/releases/plan'), body: { ok: true } },
     ]);
 
@@ -149,6 +159,8 @@ describe('commit funnel: balance-adopting writers', () => {
     const cached = readRecord('game-1');
     expect(cached.money).toBe(55000);
     expect(cached.creativeCapital).toBe(1);
+    // Drained flags adopted — the "+N Hype banked" chip must clear immediately.
+    expect((cached as any).flags).toEqual({ pendingAwarenessBoost: 0 });
     expect(cached.musicLabel).toEqual({ name: 'Keep' }); // preserved, not clobbered
   });
 });

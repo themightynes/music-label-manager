@@ -220,25 +220,32 @@ export class ReleasePlanningService {
       const flags = (gameState.flags && typeof gameState.flags === 'object')
         ? { ...(gameState.flags as Record<string, any>) }
         : {};
+      // Follow-up guard: only drain (and only WRITE flags) when there is actually
+      // something to drain — never-banked games keep byte-stable flags (no stray
+      // `pendingAwarenessBoost: 0` key) and skip a pointless gameStates UPDATE.
+      const hasLabelPool = typeof flags.pendingAwarenessBoost === 'number' && flags.pendingAwarenessBoost !== 0;
+      const artistPools = (flags.hypeArtistPools && typeof flags.hypeArtistPools === 'object')
+        ? flags.hypeArtistPools as Record<string, { amount: number; week: number }>
+        : null;
+      const artistPool = artistPools ? artistPools[artistId] : undefined;
+      const hasArtistPool = !!artistPool && typeof artistPool.amount === 'number' && artistPool.amount !== 0;
       let attachedHype = 0;
-      // Label pool (whole).
-      if (typeof flags.pendingAwarenessBoost === 'number' && flags.pendingAwarenessBoost !== 0) {
-        attachedHype += flags.pendingAwarenessBoost;
-      }
-      flags.pendingAwarenessBoost = 0;
-      delete flags.pendingAwarenessBoostWeek;
-      // This artist's pool (drained; other artists' pools untouched).
-      if (flags.hypeArtistPools && typeof flags.hypeArtistPools === 'object') {
-        const pools = flags.hypeArtistPools as Record<string, { amount: number; week: number }>;
-        const pool = pools[artistId];
-        if (pool && typeof pool.amount === 'number' && pool.amount !== 0) {
-          attachedHype += pool.amount;
+      if (hasLabelPool || hasArtistPool) {
+        // Label pool (whole, fork B: first-planned takes all).
+        if (hasLabelPool) {
+          attachedHype += flags.pendingAwarenessBoost;
+          flags.pendingAwarenessBoost = 0;
+          delete flags.pendingAwarenessBoostWeek;
         }
-        delete pools[artistId];
-        if (Object.keys(pools).length === 0) delete flags.hypeArtistPools;
+        // This artist's pool (drained; other artists' pools untouched).
+        if (hasArtistPool && artistPools) {
+          attachedHype += artistPool!.amount;
+          delete artistPools[artistId];
+          if (Object.keys(artistPools).length === 0) delete flags.hypeArtistPools;
+        }
+        // Persist the drained flags back onto the game state row.
+        await tx.update(gameStates).set({ flags }).where(eq(gameStates.id, gameId));
       }
-      // Persist the drained flags back onto the game state row.
-      await tx.update(gameStates).set({ flags }).where(eq(gameStates.id, gameId));
 
       // Create release record
       const [newRelease] = await tx.insert(releases).values({
