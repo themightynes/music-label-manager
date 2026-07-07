@@ -32,6 +32,14 @@ const expired: GameChange = {
   description: '💨 +3 banked Hype faded away unused (no release shipped in 8 weeks)',
   amount: 3,
 };
+const preCampaign: GameChange = {
+  type: 'pre_campaign',
+  description: '📣 Anticipation building for "Neon Nights" — 3 weeks to launch',
+  amount: 2,
+  releaseId: 'r1',
+  releaseName: 'Neon Nights',
+  weeksToLaunch: 3,
+};
 
 describe('categorizeWeekChanges (buzz-v2 hype routing)', () => {
   it('routes hype_applied and hype_expired into hypeNotable, NOT other', () => {
@@ -50,6 +58,15 @@ describe('categorizeWeekChanges (buzz-v2 hype routing)', () => {
   it('keeps the three hype types out of the meetings bucket', () => {
     const categories = categorizeWeekChanges([banked, applied, expired]);
     expect(categories.meetings).toEqual([]);
+    expect(categories.other).toEqual([]);
+  });
+
+  // Buzz-v2 slice 3: pre_campaign shares the routine hypeRoutine bucket, and must
+  // NOT fall into the never-rendered `other` bucket.
+  it('routes pre_campaign into hypeRoutine, NOT other', () => {
+    const categories = categorizeWeekChanges([preCampaign]);
+    expect(categories.hypeRoutine).toEqual([preCampaign]);
+    expect(categories.hypeNotable).toEqual([]);
     expect(categories.other).toEqual([]);
   });
 });

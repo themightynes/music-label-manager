@@ -459,7 +459,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign';
   description: string;
   amount?: number;
   roleId?: string;
@@ -528,8 +528,13 @@ export interface GameChange {
   // carries the signed hype units for banked/applied/expired.
   hypeTotal?: number;   // hype_banked: label pool size AFTER this bank
   hypeUnits?: number;   // hype_applied: signed units consumed from the pool
-  releaseId?: string;   // hype_applied: the release the pool seeded
-  releaseName?: string; // hype_applied: that release's title
+  releaseId?: string;   // hype_applied / pre_campaign: the release the entry concerns
+  releaseName?: string; // hype_applied / pre_campaign: that release's title
+  // Buzz-v2 slice 3: pre-release marketing ('pre_campaign'). One entry per planned
+  // release per week while its pre-campaign is converting. `amount` (declared above)
+  // carries the signed awareness points added this week; `weeksToLaunch` is how many
+  // weeks remain until the release ships. Structured from day one (C80 lesson).
+  weeksToLaunch?: number;
 }
 
 export interface EventOccurrence {

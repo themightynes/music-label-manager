@@ -76,6 +76,42 @@ type SongUpdatePatch = {
   awareness_decay_rate?: number;
 };
 
+/**
+ * Buzz-v2 slice 3 — stored pre-campaign metadata shape (mirrors what
+ * releasePlanningService writes onto release.metadata.preCampaign). Present ONLY
+ * when the player diverted a share (pct > 0) of the marketing budget to a
+ * pre-release anticipation ramp.
+ */
+interface PreCampaignMetadata {
+  pct: number;
+  totalBudget: number;
+  budgetPerChannel: Record<string, number>;
+  weeklySpend: number;
+  spentToDate: number;
+}
+
+/**
+ * Buzz-v2 slice 3 — scale a release's LAUNCH-phase (weeks 1-4) marketing breakdown
+ * DOWN by the pre-campaign's remaining (1-pct) share, at READ time. When no
+ * pre-campaign exists (or pct is absent/0), the breakdown passes through unchanged
+ * (golden-master path — byte-identical). Never mutates the stored breakdown; returns
+ * a fresh per-channel object so the auditable plan-time data is preserved.
+ */
+export function scaleLaunchBreakdown(
+  breakdown: Record<string, number> | undefined | null,
+  preCampaign: PreCampaignMetadata | undefined | null,
+): Record<string, number> | undefined | null {
+  if (!breakdown) return breakdown;
+  const pct = preCampaign && typeof preCampaign.pct === 'number' ? preCampaign.pct : 0;
+  if (pct <= 0) return breakdown;
+  const launchShare = 1 - pct / 100;
+  const scaled: Record<string, number> = {};
+  for (const [channel, value] of Object.entries(breakdown)) {
+    scaled[channel] = (typeof value === 'number' ? value : 0) * launchShare;
+  }
+  return scaled;
+}
+
 export class ReleaseProcessor {
   /**
    * Calculates streaming revenue for a release
@@ -677,7 +713,15 @@ export class ReleaseProcessor {
                 // Fallback to individual lookup if not in cache
                 release = await ctx.storage.getRelease(song.releaseId, dbTransaction);
               }
-              const marketingBreakdown = release?.metadata?.marketingBudgetBreakdown;
+              // Buzz-v2 slice 3: when a pre-release campaign diverted a share (pct)
+              // of the MARKETING budget to the anticipation ramp, the launch phase
+              // (weeks 1-4) converts only the REMAINING (1-pct) share. Scale the
+              // per-channel breakdown DOWN at READ time — the stored
+              // marketingBudgetBreakdown is never mutated, so the data stays
+              // auditable. Releases without a preCampaign read the full breakdown
+              // (golden-master path, byte-identical).
+              const rawBreakdown = release?.metadata?.marketingBudgetBreakdown;
+              const marketingBreakdown = scaleLaunchBreakdown(rawBreakdown, release?.metadata?.preCampaign);
 
               if (marketingBreakdown) {
               const awarenessGain = await ctx.financialSystem.calculateAwarenessGain(song, marketingBreakdown);
@@ -897,6 +941,152 @@ export class ReleaseProcessor {
       
     } catch (error) {
       console.error('[INDIVIDUAL SONG DECAY] Error processing released songs:', error);
+    }
+  }
+
+  /**
+   * Buzz-v2 (Hype & Pre-Marketing) slice 3 — the pre-release anticipation build.
+   *
+   * A NEW weekly engine write path for PLANNED, not-yet-released releases carrying
+   * a `metadata.preCampaign` block (only present when the player diverted a share
+   * of the marketing budget to a pre-release campaign). Each such release, while it
+   * still has budget to convert (spentToDate < totalBudget), builds awareness on its
+   * songs during the lead-up weeks — turning "planning early" into a real strategy.
+   *
+   * DETERMINISTIC, ZERO RNG DRAWS (tour-foreshadow precedent): the awareness gain
+   * reuses FinancialSystem.calculateAwarenessGain (the SAME channel-coefficient
+   * formula as the launch path — never duplicated here) fed the per-week channel
+   * amounts, then scaled by:
+   *   - fork D diminishing factor: full strength when ≤ diminishing_after_weeks from
+   *     launch, × diminishing_factor when further out (mega-early planning doesn't
+   *     dominate). The existing +25/wk cap (inside calculateAwarenessGain) still applies.
+   *   - fork F lead-single conduit factor: full strength only while the release's
+   *     lead single is ALREADY out this week; × lead_single_conduit_factor otherwise
+   *     (no lead single planned, or not yet released) — makes the lead single matter.
+   *
+   * The gain is applied to EACH of the release's songs' awareness (peak bumped like
+   * the other paths), spentToDate advanced, and ONE structured 'pre_campaign' summary
+   * change emitted per release per week. Composes automatically with the ship-time
+   * attachedHype seed (slice 2): the seed is additive to whatever awareness the song
+   * already built here.
+   */
+  async processPreCampaigns(ctx: WeekContext, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const currentWeek = ctx.gameState.currentWeek || 1;
+
+    try {
+      const allReleases = await ctx.gameData.getReleasesByGame(ctx.gameState.id, dbTransaction) || [];
+      const plannedReleases = allReleases.filter((r: any) => {
+        if (r.status !== 'planned') return false;
+        const pc = r.metadata?.preCampaign;
+        return pc && typeof pc.pct === 'number' && pc.pct > 0
+          && typeof pc.totalBudget === 'number' && pc.totalBudget > 0;
+      });
+
+      if (plannedReleases.length === 0) return;
+
+      const preCampaignConfig = ctx.gameData.getPreCampaignConfigSync();
+      const diminishingAfterWeeks = preCampaignConfig.diminishing_after_weeks;
+      const diminishingFactor = preCampaignConfig.diminishing_factor;
+      const conduitFactor = preCampaignConfig.lead_single_conduit_factor;
+
+      for (const release of plannedReleases) {
+        const metadata = release.metadata as any;
+        const preCampaign = metadata.preCampaign as PreCampaignMetadata;
+
+        const totalBudget = preCampaign.totalBudget;
+        const spentToDate = typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0;
+        const remaining = totalBudget - spentToDate;
+        if (remaining <= 0) continue; // fully converted already
+
+        const weeksUntilRelease = (release.releaseWeek || 0) - currentWeek;
+        // Only build BEFORE the release week (a release shipping this week or in the
+        // past converts in the launch path, not here). Zero-lead-up plans are
+        // rejected at plan time, so this is a safety guard.
+        if (weeksUntilRelease < 1) continue;
+
+        // This week's spend: the pinned weeklySpend, but never more than remains
+        // (final lead-up week spends the remainder). weeklySpend was computed once
+        // at plan time to avoid drift.
+        const weeklySpend = Math.min(
+          typeof preCampaign.weeklySpend === 'number' ? preCampaign.weeklySpend : remaining,
+          remaining,
+        );
+        if (weeklySpend <= 0) continue;
+
+        // Per-channel amounts for THIS week: scale the plan-time per-channel mix by
+        // (weeklySpend / totalBudget) so the channel coefficients apply proportionally.
+        const spendFraction = weeklySpend / totalBudget;
+        const weeklyBreakdown: Record<string, number> = {};
+        for (const [channel, value] of Object.entries(preCampaign.budgetPerChannel || {})) {
+          weeklyBreakdown[channel] = (typeof value === 'number' ? value : 0) * spendFraction;
+        }
+
+        // fork D: diminishing returns when planning far ahead.
+        const diminishing = weeksUntilRelease <= diminishingAfterWeeks ? 1.0 : diminishingFactor;
+
+        // fork F: lead-single conduit. Full strength only while the lead single is
+        // ALREADY out this week (its release week has arrived). Otherwise (no lead
+        // single, or not yet released) the build is weaker.
+        const leadSingleStrategy = metadata.leadSingleStrategy;
+        const leadSingleOut = !!leadSingleStrategy
+          && typeof leadSingleStrategy.leadSingleReleaseWeek === 'number'
+          && currentWeek >= leadSingleStrategy.leadSingleReleaseWeek;
+        const conduit = leadSingleOut ? 1.0 : conduitFactor;
+
+        const rampFactor = diminishing * conduit;
+
+        const releaseSongs = await ctx.gameData.getSongsByRelease(release.id, dbTransaction) || [];
+        if (releaseSongs.length === 0) continue;
+
+        const songUpdates: SongUpdatePatch[] = [];
+        let appliedGainInt = 0;
+        for (const song of releaseSongs) {
+          // Reuse the launch-path awareness formula (channel coefficients ×
+          // quality × popularity, +25/wk cap) — never duplicated here.
+          const baseGain = await ctx.financialSystem.calculateAwarenessGain(song, weeklyBreakdown);
+          const scaledGain = baseGain * rampFactor;
+          if (scaledGain <= 0) continue;
+
+          const currentAwareness = song.awareness || 0;
+          const newAwareness = Math.round(Math.min(currentAwareness + scaledGain, 100));
+          if (newAwareness === currentAwareness) continue;
+
+          appliedGainInt = newAwareness - currentAwareness; // signed int; songs share quality-driven gain, report the last
+          songUpdates.push({
+            songId: song.id,
+            awareness: newAwareness,
+            peak_awareness: Math.round(Math.max(song.peak_awareness || 0, newAwareness)),
+          });
+        }
+
+        // Advance spentToDate on the stored metadata regardless of whether awareness
+        // moved (the budget converts; a fully-capped/zero-quality song just yields no
+        // visible awareness). Persist via a release-metadata update.
+        const newSpentToDate = spentToDate + weeklySpend;
+        const updatedMetadata = {
+          ...metadata,
+          preCampaign: { ...preCampaign, spentToDate: newSpentToDate },
+        };
+
+        if (songUpdates.length > 0 && ctx.gameData.updateSongs) {
+          await ctx.gameData.updateSongs(songUpdates, dbTransaction);
+        }
+        if (ctx.storage?.updateRelease) {
+          await ctx.storage.updateRelease(release.id, { metadata: updatedMetadata }, dbTransaction);
+        }
+
+        // ONE structured summary change per release per week (routine).
+        summary.changes.push({
+          type: 'pre_campaign',
+          description: `📣 Anticipation building for "${release.title}" — ${weeksUntilRelease} week${weeksUntilRelease === 1 ? '' : 's'} to launch`,
+          amount: appliedGainInt,
+          releaseId: release.id,
+          releaseName: release.title,
+          weeksToLaunch: weeksUntilRelease,
+        });
+      }
+    } catch (error) {
+      console.error('[PRE-CAMPAIGN] Error processing pre-release campaigns:', error);
     }
   }
 

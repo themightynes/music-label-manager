@@ -169,6 +169,29 @@ export function summarizeCatalogBuzz(
 }
 
 /**
+ * Buzz-v2 slice 3 — pre-release anticipation strength word, derived from the
+ * PLANNED release's songs' current (pre-built) awareness. Reuses the same
+ * display bands as the released-song sustain language (BUZZ_SUSTAIN_STRONG_MIN /
+ * BUZZ_SUSTAIN_MIN) so the vocabulary stays consistent — NO new thresholds, and
+ * (fork E) strictly qualitative, no numbers. The headline is the HOTTEST song's
+ * awareness (max), matching summarizeReleaseBuzz's fork-D "hottest, not average".
+ *
+ * Returns null when no song has any pre-built awareness yet (the card then shows
+ * the plain "anticipation building" line without a strength word).
+ */
+export function summarizeAnticipation(songs: any[] | null | undefined): string | null {
+  let maxAwareness = 0;
+  for (const song of songs ?? []) {
+    const awareness = typeof song?.awareness === 'number' ? song.awareness : 0;
+    if (awareness > maxAwareness) maxAwareness = awareness;
+  }
+  if (maxAwareness <= 0) return null;
+  if (maxAwareness >= BUZZ_SUSTAIN_STRONG_MIN) return 'strong';
+  if (maxAwareness >= BUZZ_SUSTAIN_MIN) return 'building';
+  return 'early';
+}
+
+/**
  * Aggregate a release's songs into the card Buzz summary.
  *
  * @param songs the release's songs (already joined by releaseId upstream)

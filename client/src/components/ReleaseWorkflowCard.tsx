@@ -32,6 +32,7 @@ import {
   type CampaignOutcome
 } from '@/lib/releaseAnalytics';
 import { ReleaseBuzzSection } from './ReleaseBuzzSection';
+import { summarizeAnticipation } from '@/lib/releaseBuzz';
 import {
   formatChartPosition,
   formatChartMovement,
@@ -65,6 +66,17 @@ export function ReleaseWorkflowCard({
 
   // Get release songs for enhanced analytics
   const releaseSongs = getReleaseSongs(release.id, songs);
+
+  // Buzz-v2 slice 3 — pre-release anticipation ramp. Shown on a PLANNED (not yet
+  // released) release that diverted marketing to a pre-campaign. weeksToLaunch is
+  // release.releaseWeek − currentWeek; the strength word comes from the songs'
+  // current pre-built awareness (qualitative bands in releaseBuzz.ts).
+  const preCampaign = metadata?.preCampaign;
+  const weeksToLaunch = (release.releaseWeek || 0) - currentWeek;
+  const showAnticipation =
+    !!preCampaign && typeof preCampaign.pct === 'number' && preCampaign.pct > 0
+    && release.status !== 'released' && weeksToLaunch >= 1;
+  const anticipationStrength = showAnticipation ? summarizeAnticipation(releaseSongs) : null;
   const campaignData = extractCampaignData(release);
 
   // Calculate actual totals from songs if release totals are missing
@@ -587,6 +599,17 @@ export function ReleaseWorkflowCard({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Buzz-v2 slice 3 — Pre-release anticipation ramp (planned releases only).
+            Compact qualitative line; NO multiplier numbers (fork E). */}
+        {showAnticipation && (
+          <div className="pt-2 border-t border-white/[0.08] flex items-center space-x-2 text-sm">
+            <TrendingUp className="w-4 h-4 text-neon-lilac" />
+            <span className="text-[rgba(233,230,244,0.75)]">
+              Anticipation building{anticipationStrength ? ` (${anticipationStrength})` : ''} — {weeksToLaunch} week{weeksToLaunch === 1 ? '' : 's'} to launch
+            </span>
           </div>
         )}
 

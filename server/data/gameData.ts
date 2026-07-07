@@ -523,6 +523,36 @@ export class ServerGameData {
     };
   }
 
+  // Buzz-v2 (Hype & Pre-Marketing) slice 3 — pre-release marketing knobs.
+  // Lives in data/balance/markets.json under market_formulas.pre_campaign.
+  //   - max_pct: hard cap on the share of the marketing budget the player may
+  //     allocate to the pre-release campaign (fork D safety rail; UI + server
+  //     validation both clamp to this).
+  //   - diminishing_after_weeks / diminishing_factor: fork D — anticipation ramp
+  //     builds at full strength within this many weeks of launch, then at the
+  //     diminishing factor when further out (mega-early planning doesn't dominate).
+  //   - lead_single_conduit_factor: fork F — the pre-campaign converts at full
+  //     strength only while a lead single is already out; without one, awareness
+  //     builds at this factor. Same hardcoded-fallback pattern as the C1/C3 knobs.
+  getPreCampaignConfigSync() {
+    if (!this.balanceData) {
+      return {
+        max_pct: 50,
+        diminishing_after_weeks: 4,
+        diminishing_factor: 0.5,
+        lead_single_conduit_factor: 0.5
+      };
+    }
+
+    const preCampaign = (this.balanceData.market_formulas?.pre_campaign || {}) as Record<string, any>;
+    return {
+      max_pct: preCampaign.max_pct ?? 50,
+      diminishing_after_weeks: preCampaign.diminishing_after_weeks ?? 4,
+      diminishing_factor: preCampaign.diminishing_factor ?? 0.5,
+      lead_single_conduit_factor: preCampaign.lead_single_conduit_factor ?? 0.5
+    };
+  }
+
   // Exec-meetings-revival PR-6 (C4): variance-channel knobs — how much a banked
   // pendingVariance point widens the next song's variance band and raises the
   // outlier-roll chance, plus its unconsumed-bank expiry (same pattern as C1).

@@ -93,6 +93,7 @@ export class ReleasePlanningService {
       marketingBudget,
       leadSingleStrategy,
       metadata,
+      preCampaignPct,
     } = body;
 
     // Validate inputs
@@ -141,6 +142,45 @@ export class ReleasePlanningService {
           leadSingleReleaseWeek: leadSingleStrategy.leadSingleReleaseWeek,
           details: [
             { field: 'leadSingleReleaseWeek', error: `Must be greater than current week (${currentWeek})` },
+          ],
+        });
+      }
+    }
+
+    // Buzz-v2 slice 3 — pre-release campaign share validation. `preCampaignPct` is
+    // the share of the MAIN marketing budget diverted to a pre-release anticipation
+    // ramp (0/10/20/30/40/50; hard-capped at the balance knob max_pct). Default 0 =
+    // exact current behavior (no preCampaign key stored, launch path unscaled). A
+    // nonzero pct requires at least one lead-up week (plan → release), because a
+    // release shipping the very next week has no pre-release window — its pre-campaign
+    // would have nowhere to convert.
+    const preCampaignConfig = serverGameData.getPreCampaignConfigSync();
+    const rawPct = typeof preCampaignPct === 'number' && Number.isFinite(preCampaignPct)
+      ? Math.round(preCampaignPct)
+      : 0;
+    if (rawPct !== 0) {
+      const validStep = rawPct % 10 === 0;
+      if (!validStep || rawPct < 0 || rawPct > preCampaignConfig.max_pct) {
+        throw new ReleaseServiceError('INVALID_PRE_CAMPAIGN_PCT', 400, {
+          error: 'INVALID_PRE_CAMPAIGN_PCT',
+          message: `preCampaignPct must be 0 or a multiple of 10 up to ${preCampaignConfig.max_pct}`,
+          details: [
+            { field: 'preCampaignPct', error: `Must be 0 or a 10-step share, 0..${preCampaignConfig.max_pct}` },
+          ],
+        });
+      }
+      // Lead-up weeks = scheduledReleaseWeek − currentWeek. A next-week release
+      // (gap of 1, i.e. no full lead-up week before the release week) cannot carry
+      // a pre-campaign. scheduledReleaseWeek is already validated > currentWeek above.
+      const leadUpWeeks = (scheduledReleaseWeek || 0) - currentWeek;
+      if (leadUpWeeks < 2) {
+        throw new ReleaseServiceError('PRE_CAMPAIGN_NO_LEADUP', 400, {
+          error: 'PRE_CAMPAIGN_NO_LEADUP',
+          message: 'A pre-release campaign needs at least one lead-up week before the release week',
+          currentWeek,
+          scheduledReleaseWeek,
+          details: [
+            { field: 'preCampaignPct', error: 'Set 0 when the release is scheduled for next week' },
           ],
         });
       }
@@ -195,6 +235,43 @@ export class ReleasePlanningService {
           { action: 'CHOOSE_DIFFERENT_SONGS', description: 'Select different songs for this release' },
         ],
       });
+    }
+
+    // Buzz-v2 slice 3 — build the pre-campaign metadata block (only when pct > 0;
+    // pct 0 stores NOTHING, keeping the golden-master path byte-identical). This
+    // block is what the engine's weekly pre-campaign pass reads (ReleaseProcessor):
+    //   - pct: the diverted share (10..max_pct)
+    //   - totalBudget: round(pct% of the MAIN marketing total) — the anticipation
+    //     pot, converted over the lead-up weeks
+    //   - budgetPerChannel: each MAIN channel scaled by pct% (the per-channel mix the
+    //     ramp uses, so the anticipation build honors channel coefficients)
+    //   - weeklySpend: totalBudget / leadUpWeeks, computed ONCE at plan time to
+    //     avoid week-to-week drift (final week spends the remainder)
+    //   - spentToDate: 0 — advances each week the ramp fires
+    // The launch-phase (weeks 1-4) conversion scales its breakdown DOWN by (1-pct)
+    // at READ time (ReleaseProcessor), never mutating the stored marketingBudgetBreakdown.
+    let preCampaign: {
+      pct: number;
+      totalBudget: number;
+      budgetPerChannel: Record<string, number>;
+      weeklySpend: number;
+      spentToDate: number;
+    } | null = null;
+    if (rawPct > 0) {
+      const share = rawPct / 100;
+      const preTotalBudget = Math.round(marketingTotal * share);
+      const budgetPerChannel: Record<string, number> = {};
+      for (const [channel, raw] of Object.entries(marketingBudget || {})) {
+        budgetPerChannel[channel] = (raw as number) * share;
+      }
+      const leadUpWeeks = (scheduledReleaseWeek || 0) - currentWeek;
+      preCampaign = {
+        pct: rawPct,
+        totalBudget: preTotalBudget,
+        budgetPerChannel,
+        weeklySpend: leadUpWeeks > 0 ? preTotalBudget / leadUpWeeks : preTotalBudget,
+        spentToDate: 0,
+      };
     }
 
     // Create the planned release in a transaction
@@ -267,6 +344,11 @@ export class ReleasePlanningService {
           // expires) instead of the legacy label-pool fallback. Stored even when 0
           // so the release is unambiguously "slice-2 planned".
           attachedHype,
+          // Buzz-v2 slice 3: pre-release campaign block. ONLY present when pct > 0 —
+          // its ABSENCE is the golden-master containment (releases without a
+          // pre-campaign never enter the new engine path, and the launch-phase
+          // awareness conversion reads the full unscaled breakdown).
+          ...(preCampaign ? { preCampaign } : {}),
           leadSingleStrategy: leadSingleStrategy ? {
             ...leadSingleStrategy,
             leadSingleBudgetBreakdown: leadSingleStrategy.leadSingleBudget || {}, // Store per-channel breakdown for lead single too

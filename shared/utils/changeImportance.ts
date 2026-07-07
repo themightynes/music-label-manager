@@ -137,6 +137,10 @@ export function classifyChange(
     // Buzz-v2 slice 1: banking hype (a meeting choice's delayed buzz landing in
     // the pool) is ordinary weekly churn — surfaced as a routine-stage line.
     case 'hype_banked':
+    // Buzz-v2 slice 3: pre-release anticipation build — one line per planned
+    // release per week while the pre-campaign converts. Informational "what's
+    // building" churn, like the tour_planning foreshadow above.
+    case 'pre_campaign':
     case 'error':
       return 'routine';
 

@@ -382,6 +382,97 @@ describe('POST .../releases/plan — attach-at-plan hype (buzz-v2 slice 2)', () 
   });
 });
 
+describe('POST .../releases/plan — pre-release campaign (buzz-v2 slice 3)', () => {
+  it('stores metadata.preCampaign when preCampaignPct > 0 (share, scaled channels, pinned weeklySpend)', async () => {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID,
+      money: 100000,
+      creativeCapital: 5,
+      currentWeek: 1,
+    });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/releases/plan`)
+      .send({
+        artistId,
+        title: 'Pre-Hyped',
+        type: 'single',
+        songIds: [songIds[0]],
+        scheduledReleaseWeek: 7, // 6 lead-up weeks from currentWeek 1
+        marketingBudget: { pr: 10000, radio: 2000 },
+        preCampaignPct: 30,
+      });
+
+    expect(res.status).toBe(201);
+    const [rel] = await db.select().from(releases).where(eq(releases.gameId, gameId));
+    const pc = (rel.metadata as any).preCampaign;
+    expect(pc.pct).toBe(30);
+    // totalBudget = round(30% of 12000) = 3600.
+    expect(pc.totalBudget).toBe(3600);
+    // budgetPerChannel = each channel × 0.30.
+    expect(pc.budgetPerChannel).toEqual({ pr: 3000, radio: 600 });
+    // weeklySpend = 3600 / 6 lead-up weeks = 600.
+    expect(pc.weeklySpend).toBe(600);
+    expect(pc.spentToDate).toBe(0);
+    // Launch-phase breakdown stored UNSCALED (auditable; scaled at read time).
+    expect((rel.metadata as any).marketingBudgetBreakdown).toEqual({ pr: 10000, radio: 2000 });
+  });
+
+  it('stores NO preCampaign key when preCampaignPct is 0 / omitted (golden-master containment)', async () => {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID,
+      money: 100000,
+      creativeCapital: 5,
+      currentWeek: 1,
+    });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/releases/plan`)
+      .send({
+        artistId,
+        title: 'No Pre',
+        type: 'single',
+        songIds: [songIds[0]],
+        scheduledReleaseWeek: 7,
+        marketingBudget: { pr: 10000 },
+        // preCampaignPct omitted
+      });
+
+    expect(res.status).toBe(201);
+    const [rel] = await db.select().from(releases).where(eq(releases.gameId, gameId));
+    expect((rel.metadata as any)).not.toHaveProperty('preCampaign');
+  });
+
+  it('400 INVALID_PRE_CAMPAIGN_PCT for a non-10-step or over-cap pct', async () => {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID, money: 100000, creativeCapital: 5, currentWeek: 1,
+    });
+    const res = await request(app)
+      .post(`/api/game/${gameId}/releases/plan`)
+      .send({
+        artistId, title: 'Bad Pct', type: 'single', songIds: [songIds[0]],
+        scheduledReleaseWeek: 7, marketingBudget: { pr: 10000 }, preCampaignPct: 60,
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('INVALID_PRE_CAMPAIGN_PCT');
+  });
+
+  it('400 PRE_CAMPAIGN_NO_LEADUP when the release is scheduled for next week', async () => {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID, money: 100000, creativeCapital: 5, currentWeek: 4,
+    });
+    const res = await request(app)
+      .post(`/api/game/${gameId}/releases/plan`)
+      .send({
+        artistId, title: 'Next Week', type: 'single', songIds: [songIds[0]],
+        scheduledReleaseWeek: 5, // only 1 week out — no lead-up window
+        marketingBudget: { pr: 10000 }, preCampaignPct: 20,
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('PRE_CAMPAIGN_NO_LEADUP');
+  });
+});
+
 describe('DELETE /api/game/:gameId/releases/:releaseId (characterization)', () => {
   async function seedPlannedRelease(ownerId: string, money = 50000, refund = 5000) {
     const { gameId, artistId, songIds } = await seedGameWithSongs({
