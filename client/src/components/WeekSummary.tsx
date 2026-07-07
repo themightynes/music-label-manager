@@ -24,8 +24,6 @@ import type { SideEventChoiceResponse } from '../../../shared/api/contracts';
 import {
   categorizeWeekChanges,
   findTourCompletion,
-  aggregateAwarenessBuzz,
-  formatBuzzLine,
 } from './week-summary/categorizeChanges';
 import { TourCityCard } from './week-summary/TourCityCard';
 
@@ -459,11 +457,6 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   const netIncome = revenue - expenses;
   const changes = weeklyStats?.changes || [];
   const categorizedChanges = categorizeWeekChanges(changes);
-
-  // Awareness slice 1 (fork B): ONE aggregated routine "Buzz" line for the
-  // week's awareness_gain/awareness_decay churn. Null when total movement is
-  // under the suppression threshold — quiet weeks render nothing.
-  const buzzLine = formatBuzzLine(aggregateAwarenessBuzz(categorizedChanges.awareness));
 
   // Player-facing chart updates (competitor rows are ambient noise).
   const playerChartUpdates = useMemo(
@@ -1007,17 +1000,6 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </RevealGroup>
         )}
 
-        {/* Aggregated buzz line (stage 4, routine) — awareness slice 1, fork B:
-            the week's awareness_gain/decay churn as ONE line, suppressed when
-            total movement is under the threshold (formatBuzzLine returns null).
-            These entries previously fell into the never-rendered `other` bucket. */}
-        {buzzLine && (
-          <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
-            <div className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40">
-              <span className="text-sm font-medium text-white/80">{buzzLine}</span>
-            </div>
-          </RevealGroup>
-        )}
       </div>
 
       {/* Performance Summary (stage 4, routine) */}

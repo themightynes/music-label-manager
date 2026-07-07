@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { useSongs } from '@/hooks/useSongs';
-import { findHottestTrack } from '@/lib/releaseBuzz';
+import { summarizeCatalogBuzz } from '@/lib/releaseBuzz';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
@@ -11,38 +11,58 @@ import { fetchMeetingDialogue } from '@/services/executiveService';
 import { AnimatedNumber } from '@/components/motion-primitives/animated-number';
 
 /**
- * "Hottest track" stat — awareness slice 3 (C42). The catalog-wide
- * max-awareness RELEASED song (fork D: max, not average), its live Buzz value
- * (N/100), and 🔥 when that song broke through. Quiet em-dash placeholder when
- * no released song has awareness > 0 — the slot stays, matching how the other
+ * Core-status "Buzz" stat — playtest feedback (July 6): replaced the weekly
+ * WeekSummary buzz line AND the "Hottest track" stat with one persistent,
+ * always-visible readout. Computed LIVE from the songs cache (not weekly
+ * summary entries): building = released songs in release weeks 1-4 with
+ * awareness > 0; fading = weeks 5+ with awareness >= 1 (summarizeCatalogBuzz).
+ * Qualitative only (fork E) — counts, never multiplier numbers. Quiet em-dash
+ * when nothing is building or fading — the slot stays, matching how sibling
  * stats render zeros rather than vanishing.
  *
  * Exported presentational piece (house preference, mirrors TourStatusStrip /
  * ReleaseBuzzSection) so it unit-tests from plain song fixtures without
  * mounting the full dashboard.
  */
-export function HottestTrackStat({ songs, className = '' }: { songs: any[] | undefined; className?: string }) {
-  const hottest = findHottestTrack(songs);
+export function BuzzStatusStat({
+  songs,
+  currentWeek,
+  className = '',
+}: {
+  songs: any[] | undefined;
+  currentWeek: number;
+  className?: string;
+}) {
+  const { building, fading } = summarizeCatalogBuzz(songs, currentWeek);
+  const hasBuzz = building > 0 || fading > 0;
 
   return (
-    <div className={`min-w-0 ${className}`} data-testid="hottest-track-stat">
-      <div className="font-mono font-semibold text-xl leading-none text-neon-cyan">
-        {hottest ? (
+    <div className={`min-w-0 ${className}`} data-testid="buzz-status-stat">
+      {/* Segments are atomic (nowrap) but the line may break BETWEEN them, so
+          narrow cells (mobile grid) stack "3 building" over "2 fading"
+          instead of clipping. */}
+      <div className="font-mono font-semibold text-xl leading-tight text-neon-cyan">
+        {hasBuzz ? (
           <>
-            {hottest.breakthrough && (
-              <span className="mr-1" role="img" aria-label="breakthrough">🔥</span>
+            {building > 0 && (
+              <span className="whitespace-nowrap">
+                {building}
+                <span className="text-text-muted text-sm"> building</span>
+              </span>
             )}
-            {Math.round(hottest.awareness)}
-            <span className="text-text-muted text-sm">/100</span>
+            {building > 0 && fading > 0 && <span className="text-text-muted text-sm"> · </span>}
+            {fading > 0 && (
+              <span className="whitespace-nowrap">
+                {fading}
+                <span className="text-text-muted text-sm"> fading</span>
+              </span>
+            )}
           </>
         ) : (
           <span className="text-text-muted">—</span>
         )}
       </div>
-      <div className="text-[11.5px] text-text-muted mt-1.5 truncate max-w-[160px]">
-        Hottest track
-        {hottest && <span className="text-text-body"> · {hottest.title}</span>}
-      </div>
+      <div className="text-[11.5px] text-text-muted mt-1.5">Buzz</div>
     </div>
   );
 }
@@ -64,7 +84,7 @@ interface ImpactPreview {
 export function MetricsDashboard() {
   const gameState = useGameState();
   const { selectedActions } = useGameStore();
-  // Awareness slice 3: catalog-wide songs for the "Hottest track" stat.
+  // Catalog-wide songs for the core-status "Buzz" stat (live derivation).
   const { data: songs } = useSongs();
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},
@@ -384,12 +404,15 @@ export function MetricsDashboard() {
         <div className="hidden lg:block mb-6">
           <div className="glass-panel chromatic-hairline hud-ticks flex items-stretch">
 
-            {/* Core Status Section */}
-            <div className="flex-1 min-w-0 p-6">
+            {/* Core Status Section — flex-[1.4] (was flex-1): gained the Buzz
+                stat from Weekly Performance's former "Hottest track" slot, so
+                the rail split rebalances toward it. Wrap keeps narrow lg
+                viewports from clipping the Buzz counts. */}
+            <div className="flex-[1.4] min-w-0 p-6">
               <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-text-label mb-[18px]">
                 Core Status
               </div>
-              <div className="flex gap-8">
+              <div className="flex flex-wrap gap-x-6 gap-y-4">
                 <div>
                   <div className="font-mono font-semibold text-xl leading-none text-text-primary">{gameState.reputation || 0}</div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">
@@ -406,13 +429,15 @@ export function MetricsDashboard() {
                   <div className="font-mono font-semibold text-xl leading-none text-text-accent">{gameState.creativeCapital || 0}</div>
                   <div className="text-[11.5px] text-text-muted mt-1.5">Creative Capital</div>
                 </div>
+                <BuzzStatusStat songs={songs} currentWeek={gameState.currentWeek || 1} />
               </div>
             </div>
 
             <div className="w-px bg-white/[0.07]" />
 
-            {/* Weekly Performance Section */}
-            <div className="flex-[1.5] min-w-0 p-6">
+            {/* Weekly Performance Section — flex-[1.2] (was flex-[1.5]): one
+                stat fewer since "Hottest track" was dropped (playtest). */}
+            <div className="flex-[1.2] min-w-0 p-6">
               <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-text-label mb-[18px]">
                 Weekly Performance
               </div>
@@ -459,7 +484,6 @@ export function MetricsDashboard() {
                   />
                   <div className="text-[11.5px] text-text-muted mt-1.5">{netProfitLoss >= 0 ? 'Profit' : 'Loss'}</div>
                 </div>
-                <HottestTrackStat songs={songs} />
               </div>
             </div>
 
@@ -502,7 +526,7 @@ export function MetricsDashboard() {
               <h3 className="font-mono text-[10px] font-semibold text-text-label uppercase tracking-[0.2em] mb-2">
                 Core Status
               </h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="text-center p-2 bg-surface-inner/50 rounded-chip">
                   <div className="text-lg font-mono font-semibold text-text-primary">{gameState.reputation || 0}</div>
                   <div className="text-xs text-text-muted">Reputation</div>
@@ -523,6 +547,11 @@ export function MetricsDashboard() {
                   <div className="text-lg font-mono font-semibold text-text-accent">{gameState.creativeCapital || 0}</div>
                   <div className="text-xs text-text-muted">Creative Capital</div>
                 </div>
+                <BuzzStatusStat
+                  songs={songs}
+                  currentWeek={gameState.currentWeek || 1}
+                  className="text-center p-2 bg-surface-inner/50 rounded-chip"
+                />
               </div>
             </div>
 
@@ -531,7 +560,7 @@ export function MetricsDashboard() {
               <h3 className="font-mono text-[10px] font-semibold text-text-label uppercase tracking-[0.2em] mb-2">
                 Weekly Performance
               </h3>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 <div className="text-center p-2 bg-surface-inner/50 rounded-chip">
                   <div className="text-base font-mono font-semibold text-text-primary">{stats.streams.toLocaleString()}</div>
                   <div className="text-xs text-text-muted">plays</div>
@@ -572,7 +601,6 @@ export function MetricsDashboard() {
                   </div>
                   <div className="text-xs text-text-muted">net</div>
                 </div>
-                <HottestTrackStat songs={songs} className="text-center p-2 bg-surface-inner/50 rounded-chip" />
               </div>
             </div>
 
@@ -632,7 +660,7 @@ export function MetricsDashboard() {
               <h4 className="font-mono text-[10px] font-semibold text-text-label uppercase tracking-[0.2em] mb-2">
                 Core Status
               </h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="text-center p-2 bg-surface-inner/50 rounded-chip">
                   <div className="text-base font-mono font-semibold text-text-primary">{gameState.reputation || 0}</div>
                   <div className="text-xs text-text-muted">Reputation</div>
@@ -654,6 +682,11 @@ export function MetricsDashboard() {
                   <div className="text-xs text-text-muted">Creative</div>
                   <div className="text-xs text-text-body">capital</div>
                 </div>
+                <BuzzStatusStat
+                  songs={songs}
+                  currentWeek={gameState.currentWeek || 1}
+                  className="text-center p-2 bg-surface-inner/50 rounded-chip"
+                />
               </div>
             </div>
 
@@ -673,7 +706,6 @@ export function MetricsDashboard() {
                   </div>
                   <div className="text-xs text-text-muted">net {netProfitLoss >= 0 ? 'profit' : 'loss'}</div>
                 </div>
-                <HottestTrackStat songs={songs} className="text-center p-2 bg-surface-inner/50 rounded-chip col-span-2" />
               </div>
 
               {/* Secondary Metrics */}

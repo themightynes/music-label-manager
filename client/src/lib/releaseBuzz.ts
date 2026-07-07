@@ -64,34 +64,46 @@ export const SONG_BUZZ_TOOLTIP =
   'through, then fades. While it lasts, this song’s weekly streams ride the buzz. ' +
   '(Different from the meeting “Buzz” effect, which banks hype for your NEXT release.)';
 
-/** Cross-cutting shape for the dashboard "Hottest track" stat (slice 3). */
-export interface HottestTrack {
-  title: string;
-  awareness: number;
-  breakthrough: boolean;
+/** Catalog-wide counts backing the MetricsDashboard core-status "Buzz" stat. */
+export interface CatalogBuzzStatus {
+  /** Released songs in the building window (weeks 1-4 since release) with awareness > 0. */
+  building: number;
+  /** Released songs past the building window (weeks 5+) with awareness >= 1. */
+  fading: number;
 }
 
 /**
- * Pick the max-awareness RELEASED song across the whole catalog — the
- * MetricsDashboard "Hottest track" stat (slice 3; fork D max-not-average).
- * Returns null when no released song has awareness > 0 (the stat then renders
- * its quiet em-dash placeholder). Tolerates both drizzle-property and
- * raw-column shapes, mirroring summarizeReleaseBuzz.
+ * Derive the persistent core-status "Buzz" stat (playtest feedback July 6:
+ * replaced both the WeekSummary routine buzz line and the "Hottest track"
+ * stat) LIVE from the songs cache — counts, not per-song lines, and (fork E)
+ * strictly qualitative: no multiplier numbers anywhere.
+ *
+ * Phase convention mirrors summarizeReleaseBuzz / ReleaseProcessor:
+ * weeksSinceRelease = currentWeek - releaseWeek; gain runs weeks 1-4
+ * (BUZZ_BUILDING_WEEKS, week 0 counts as building), decay runs weeks 5+.
+ * Unreleased songs and songs with an unknown release week are excluded.
+ * Tolerates both drizzle-property and raw-column shapes, mirroring
+ * summarizeReleaseBuzz.
  */
-export function findHottestTrack(songs: any[] | null | undefined): HottestTrack | null {
-  let hottest: HottestTrack | null = null;
+export function summarizeCatalogBuzz(
+  songs: any[] | null | undefined,
+  currentWeek: number
+): CatalogBuzzStatus {
+  let building = 0;
+  let fading = 0;
   for (const song of songs ?? []) {
     if (!song || !(song.isReleased ?? song.is_released)) continue;
+    const releaseWeek = song.releaseWeek ?? song.release_week ?? null;
+    if (typeof releaseWeek !== 'number') continue; // can't date the buzz
     const awareness = typeof song.awareness === 'number' ? song.awareness : 0;
-    if (awareness > 0 && (!hottest || awareness > hottest.awareness)) {
-      hottest = {
-        title: song.title ?? 'Untitled',
-        awareness,
-        breakthrough: Boolean(song.breakthrough_achieved ?? song.breakthroughAchieved),
-      };
+    const weeksSinceRelease = currentWeek - releaseWeek;
+    if (weeksSinceRelease <= BUZZ_BUILDING_WEEKS) {
+      if (awareness > 0) building++;
+    } else if (awareness >= 1) {
+      fading++;
     }
   }
-  return hottest;
+  return { building, fading };
 }
 
 /**
