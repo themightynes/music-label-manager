@@ -1,6 +1,6 @@
-# [DRAFT] Content Editor — Side Events & Meetings (Actions JSON Viewer v2)
+# [COMPLETE] Content Editor — Side Events & Meetings (Actions JSON Viewer v2)
 
-*Drafted July 6, 2026. Status: READY — all four §6 forks decided by Nes on July 6, 2026 (A3 changelog, B1 read-only knobs, C2 dominance hard-block, D1 full event CRUD); decisions folded into §2/§3 below.*
+*Drafted July 6, 2026. Status: **COMPLETE** — executed same day as 4 slices on `feat/content-editor-side-events`, merged to main as PR #146 (`9b025b0`) after Nes's live playtest. All four §6 forks decided by Nes (A3 changelog, B1 read-only knobs, C2 dominance hard-block, D1 full event CRUD). Execution deviations from the 3-slice plan: (1) a 4th slice (`8adf014`) added same-day from playtest feedback — creation via pop-up dialog with auto-slugged unique IDs, new items top-of-list; (2) `lintSideEvents` deliberately omits the dominance hard-block (fork C is meetings-only in practice) because real `data/events.json` contains a weakly-dominant pair — logged as C76. Fresh-context adversarial verifier: all 13 items CONFIRMED, none refuted. Final suite: 1,507 green.*
 
 **Goal (Nes):** an updated Actions JSON Viewer that lets a game designer / copywriter edit **side events and meetings without code**.
 
