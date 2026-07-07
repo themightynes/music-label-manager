@@ -1,7 +1,14 @@
 # [FUTURE] Tour Experience Improvement Plan
 
-**Status**: Deferred — blocked on Phase 1 server-routes refactor (tour routes live in `server/routes.ts`, which is mid-decomposition). Revisit after the tour-domain route-move PR lands.
+**Status**: **Tier 1 EXECUTED July 6, 2026** on `feat/tour-experience-tier1` (3 slices + verifier, all 13 checklist items CONFIRMED; suite 1,530 green, GM re-blessed additively with revenue amounts byte-identical). Tiers 2–3 remain future — Tier 3 needs a PRD (product decision). The original blocker (tour routes mid-decomposition) cleared before this session: tour routes live in `server/routes/tour.ts`, cancellation in `server/routes/projects.ts`.
 *Created: July 2, 2026 (from a two-agent code trace of the full tour system)*
+
+**Tier 1 execution deviations** (July 6, 2026):
+- **No city-reveal toast** — Phase 4 (July 2026) deliberately removed advance-time toasts as redundant with the WeekSummary modal; the new tour city card in the staged reveal IS the moment (`client/src/components/week-summary/TourCityCard.tsx`, NOTABLE stage).
+- **Planning-week foreshadow is a deterministic pre-variance estimate** (`TourProcessor.estimatePlanningForeshadow`) — the plan's "sell-through is already known" premise was wrong: pre-calculation happens on the first production week, not at planning. The foreshadow reuses the same C41/C47/C48 parameter assembly with zero RNG draws.
+- **Artist reactions ride the city change entry** (`moodChange`/`popularityChange` structured fields) so the client never re-derives engine attendance thresholds.
+- The dashboard status strip landed inside the ActiveTours section header (`client/src/components/TourStatusStrip.tsx`) rather than as a separate Dashboard card — zero new data plumbing.
+- New debt: C77 (legacy-path-only tour-completion fixtures), C78 (venue-name map duplicated engine/client).
 
 ---
 
@@ -65,16 +72,16 @@ Duration formula: 1 planning week + 1 week per city + 1 bookkeeping week that ex
 
 ## Bugs found in passing (tracked in technical-debt-backlog.md)
 
-- **C40 (High)**: Server trusts client-supplied `refundAmount` on tour cancellation — no server-side recomputation or cap. Fix as its own small PR once the tour-domain route move (Phase 1) lands.
-- **C41 (Medium)**: Missing `project.metadata.venueCapacity` hard-crashes tour processing (`game-engine.ts:3680`) — no fallback for legacy/pre-Phase-3 tours.
-- Cosmetic: "Single Show" and "Mini-Tour" are the same backend type (`Mini-Tour`, `cities: 1`) with no visual distinction in Completed Tours.
+- **C40 (High)**: ~~Server trusts client-supplied `refundAmount` on tour cancellation~~ — **FIXED pre-Tier-1** (PRs #66/#68): the cancel handler in `server/routes/projects.ts` recomputes the refund server-side from the stored row and ignores `body.refundAmount`.
+- **C41 (Medium)**: ~~Missing `project.metadata.venueCapacity` hard-crashes tour processing~~ — **FIXED pre-Tier-1**: `TourProcessor` falls back to the deterministic midpoint of the stored tier's capacity range.
+- Cosmetic: "Single Show" and "Mini-Tour" are the same backend type (`Mini-Tour`, `cities: 1`) with no visual distinction in Completed Tours. (Still open.)
 
 ---
 
 ## Sequencing
 
-1. **Now**: nothing — Phase 1 route moves are active; this plan intentionally waits.
-2. **After tour-domain route-move PR merges**: fix C40 (server-side refund validation) as a standalone PR.
-3. **Then Tier 1** (one PR: surfacing + week-count fix) — removes most perceived clunkiness; engine already computes everything a satisfying weekly beat needs.
-4. **Tier 2** pairs naturally with the Phase 4 "game feel / week-advance moment" track.
+1. ~~**Now**: nothing — Phase 1 route moves are active; this plan intentionally waits.~~ ✅ Route moves landed.
+2. ~~**After tour-domain route-move PR merges**: fix C40 (server-side refund validation) as a standalone PR.~~ ✅ Fixed (PRs #66/#68).
+3. ~~**Then Tier 1** (one PR: surfacing + week-count fix)~~ ✅ **EXECUTED July 6, 2026** (`feat/tour-experience-tier1`, 3 slices — see status header for deviations).
+4. **Tier 2** pairs naturally with the Phase 4 "game feel / week-advance moment" track. ← next open step
 5. **Tier 3** is a product design conversation (new decision point) — spec via PRD when ready.

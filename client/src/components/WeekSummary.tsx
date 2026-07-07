@@ -21,6 +21,8 @@ import { queryClient } from '@/lib/queryClient';
 import { artistsQueryKey } from '@/hooks/useArtists';
 import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate, EventOccurrence, SideEventCategory } from '../../../shared/types/gameTypes';
 import type { SideEventChoiceResponse } from '../../../shared/api/contracts';
+import { categorizeWeekChanges, findTourCompletion } from './week-summary/categorizeChanges';
+import { TourCityCard } from './week-summary/TourCityCard';
 
 interface WeekSummaryProps {
   weeklyStats: WeekSummaryType;
@@ -443,50 +445,15 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     }
   };
 
-  const categorizeChanges = (changes: GameChange[]) => {
-    const categories = {
-      revenue: [] as GameChange[],
-      expenses: [] as GameChange[],
-      achievements: [] as GameChange[],
-      mood: [] as GameChange[],
-      // Exec-meetings-revival PR-2: meeting/executive-interaction/delayed-effect
-      // changes get their own bucket so exec decay notices (previously silently
-      // dropped into "other" and never rendered) become visible for the first time.
-      meetings: [] as GameChange[],
-      other: [] as GameChange[]
-    };
-
-    changes.forEach(change => {
-      if (change.type === 'revenue' || change.type === 'ongoing_revenue' || change.type === 'release') {
-        categories.revenue.push(change);
-      } else if (change.type === 'expense') {
-        categories.expenses.push(change);
-      } else if (change.type === 'unlock' || change.type === 'reputation') {
-        categories.achievements.push(change);
-      } else if (change.type === 'mood') {
-        categories.mood.push(change);
-      } else if (
-        change.type === 'meeting' ||
-        change.type === 'executive_interaction' ||
-        change.type === 'delayed_effect'
-      ) {
-        categories.meetings.push(change);
-      } else if (change.type === 'project_complete') {
-        // Projects go to other category, will be shown in Projects tab
-        categories.other.push(change);
-      } else {
-        categories.other.push(change);
-      }
-    });
-
-    return categories;
-  };
-
+  // Tour-tier1 slice 2: categorization extracted to a pure module
+  // (./week-summary/categorizeChanges) so bucket routing is unit-testable.
+  // Display-only — revenue/expenses/netIncome below read summary totals, not
+  // these buckets, so recategorizing tour entries cannot change any figure.
   const revenue = weeklyStats?.revenue || 0;
   const expenses = weeklyStats?.expenses || 0;
   const netIncome = revenue - expenses;
   const changes = weeklyStats?.changes || [];
-  const categorizedChanges = categorizeChanges(changes);
+  const categorizedChanges = categorizeWeekChanges(changes);
 
   // Player-facing chart updates (competitor rows are ambient noise).
   const playerChartUpdates = useMemo(
@@ -558,7 +525,10 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   // straight to complete, so the staged chime is intentionally silent). The
   // audio manager itself de-dupes to the highest-priority sound; notable-chime
   // is not one the store fires, so there is no conflict with the week sting.
-  const hasNotableContent = playerChartUpdates.length > 0 || nonUnlockAchievements.length > 0;
+  const hasNotableContent =
+    playerChartUpdates.length > 0 ||
+    nonUnlockAchievements.length > 0 ||
+    categorizedChanges.tourCities.length > 0;
   const notableChimePlayed = useRef(false);
   useEffect(() => {
     if (instant) return; // reduced-motion / skip toggle → no stage chime
@@ -744,6 +714,24 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             </Card>
           </RevealGroup>
         )}
+
+        {/* Tour city results (stage 3, notable) — one card per city played this
+            week (multi-city weeks with multiple concurrent tours are possible).
+            Tour-tier1 slice 2: these tour_performance entries are pulled OUT of
+            the Revenue Sources list above (see categorizeWeekChanges), so the
+            card is the single display of that entry — no duplicate flat line. */}
+        {categorizedChanges.tourCities.map((change: GameChange, index: number) => (
+          <RevealGroup
+            key={`tour-city-${index}`}
+            revealed={currentStage >= STAGE_NOTABLE}
+            instant={instant}
+          >
+            <TourCityCard
+              entry={change}
+              completion={findTourCompletion(changes, change.projectId)}
+            />
+          </RevealGroup>
+        ))}
 
         {/* Achievements (stage 3, notable) — unlocks already shown as heroes above */}
         {nonUnlockAchievements.length > 0 && (
@@ -957,6 +945,24 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                 })}
               </CardContent>
             </Card>
+          </RevealGroup>
+        )}
+
+        {/* Tour foreshadow (stage 4, routine) — tour_planning entries were
+            previously routed to the never-rendered `other` bucket. Simple line
+            items (descriptions are already player-ready, 🎤 included). */}
+        {categorizedChanges.tourPlanning.length > 0 && (
+          <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
+            <div className="space-y-2">
+              {categorizedChanges.tourPlanning.map((change: GameChange, index: number) => (
+                <div
+                  key={index}
+                  className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40"
+                >
+                  <span className="text-sm font-medium text-white/80">{change.description}</span>
+                </div>
+              ))}
+            </div>
           </RevealGroup>
         )}
       </div>
