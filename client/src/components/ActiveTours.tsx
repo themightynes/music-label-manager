@@ -12,6 +12,7 @@ import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, DollarSign, Users, Calculator, Route } from 'lucide-react';
 import { getTourMetadata, getTourStats, getCompletedCities, getCityCounts } from '@/utils/tourHelpers';
+import { TourStatusStrip, deriveTourStatuses } from '@/components/TourStatusStrip';
 
 // Completed Tours Table Component (integrated into main Tours UI)
 function CompletedToursTable({ completedTours, getArtistName }: { completedTours: any[], getArtistName: (id: string) => string }) {
@@ -411,6 +412,9 @@ export function ActiveTours() {
   const activeTours = getActiveTours();
   const completedTours = getCompletedTours();
   const currentTours = activeTab === 'active' ? activeTours : completedTours;
+  // Slice 3: live per-tour status lines (booked / plays X this week) shown
+  // above the tabs so tour state is readable without scanning the table.
+  const tourStatuses = deriveTourStatuses(projects, getArtistName);
 
   return (
     <>
@@ -435,6 +439,9 @@ export function ActiveTours() {
               </Button>
             </div>
           </div>
+
+          {/* Live tour status strip (tour-tier1 slice 3) */}
+          <TourStatusStrip statuses={tourStatuses} />
 
           {/* Tab Navigation */}
           <div className="flex space-x-1 mb-4 bg-surface-inner/40 p-1 rounded-button">

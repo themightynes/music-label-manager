@@ -5,10 +5,12 @@
  * emitted in a `WeekSummary` into one of three tiers:
  *
  *   - `hero`    — the moments worth fanfare: a No. 1 chart debut/climb, a first-ever
- *                 chart entry, a tier/access/focus-slot unlock, an artist breakthrough,
+ *                 chart entry, a tier/access/focus-slot unlock, a song breakthrough
+ *                 (playtest decision July 6: renders in the Milestone Moments card),
  *                 or campaign-completion-scale events.
  *   - `notable` — meaningful but not showstopping: a top-10 chart debut/movement,
- *                 a release executed, a project completed, a significant reputation gain.
+ *                 a release executed, a project completed, a significant reputation
+ *                 gain.
  *   - `routine` — the ordinary weekly churn: mood/popularity drift, expenses, ongoing
  *                 revenue, small chart movements, marketing, meetings, awareness shifts.
  *
@@ -82,7 +84,11 @@ export function classifyChange(
     // always surface them with hero weight.
     case 'unlock':
       return 'hero';
-    // An artist breakthrough is a marquee career moment.
+
+    // A song breakthrough is a milestone-card moment: it renders inside the
+    // WeekSummary "Milestone Moments" hero card alongside unlocks and No. 1s
+    // (playtest decision July 6 — reverses the fork-A demotion to 'notable'
+    // and restores the original Phase 4 'hero' classification).
     case 'breakthrough':
       return 'hero';
 
@@ -125,6 +131,9 @@ export function classifyChange(
     case 'popularity':
     case 'awareness_gain':
     case 'awareness_decay':
+    // A tour-planning foreshadow is an informational "what's coming next week"
+    // beat — surfaced, but ordinary weekly churn, not a headline.
+    case 'tour_planning':
     case 'error':
       return 'routine';
 

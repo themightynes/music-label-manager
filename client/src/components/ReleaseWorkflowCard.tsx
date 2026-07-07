@@ -31,6 +31,7 @@ import {
   type TrackBreakdown,
   type CampaignOutcome
 } from '@/lib/releaseAnalytics';
+import { ReleaseBuzzSection } from './ReleaseBuzzSection';
 import {
   formatChartPosition,
   formatChartMovement,
@@ -609,6 +610,10 @@ export function ReleaseWorkflowCard({
                 </div>
               </div>
             </div>
+
+            {/* Buzz (awareness slice 2, C42) — hottest song + qualitative phase.
+                Renders nothing when no released song has awareness > 0. */}
+            <ReleaseBuzzSection songs={releaseSongs} currentWeek={currentWeek} />
 
             {/* Campaign Summary - Always shows for released items */}
             {renderCampaignSummary()}

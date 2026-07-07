@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Music, Calendar, TrendingUp, DollarSign, PlayCircle, Award, Target } from 'lucide-react';
 import { useGameState } from '@/hooks/useGameState';
+import { SONG_BUZZ_TOOLTIP } from '@/lib/releaseBuzz';
 import { apiRequest } from '@/lib/queryClient';
 import {
   getChartPositionColor,
@@ -49,6 +51,48 @@ interface SongCatalogProps {
   artistId: string;
   gameId: string;
   className?: string;
+}
+
+/**
+ * The song-level Buzz chip with its disambiguating tooltip — awareness slice 3,
+ * fork C: this chip is LIVE per-song awareness (0-100), a different mechanic
+ * from the meetings `awareness_boost` channel that also displays as "Buzz"
+ * (banked hype for the NEXT release, described in EFFECT_CHANNEL_DESCRIPTIONS).
+ * Each tooltip cross-references the other so the two stop reading as one stat.
+ *
+ * Follows the EffectBadgeTooltip idiom: local TooltipProvider (safe anywhere,
+ * Radix providers nest harmlessly), cursor-help affordance, aria-label carrying
+ * the full copy so tests don't fight Radix's portaled content.
+ *
+ * Exported for the render test (house preference: presentational piece testable
+ * without mounting the fetching catalog).
+ */
+export function SongBuzzChip({ awareness }: { awareness: number }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="inline-flex cursor-help"
+            data-testid="song-buzz-chip"
+            aria-label={`Buzz: ${SONG_BUZZ_TOOLTIP}`}
+          >
+            <Badge
+              variant="outline"
+              className="text-xs font-mono rounded-pill flex items-center gap-1 text-neon-cyan bg-neon-cyan/10 border-neon-cyan/40"
+            >
+              <Target className="w-3 h-3" />
+              {Math.round(awareness)}
+            </Badge>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="font-semibold text-text-primary">Buzz</p>
+          <p className="mt-1 text-text-body">{SONG_BUZZ_TOOLTIP}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogProps) {
@@ -419,17 +463,12 @@ export function SongCatalog({ artistId, gameId, className = '' }: SongCatalogPro
                   {/* Exec-meetings-revival PR-5 (C3): minimal Buzz (awareness) readout.
                       Awareness multiplies weekly streams up to 2× and is the sink a
                       banked awareness_boost seeds — surfacing it here makes that channel
-                      visible on the release. */}
+                      visible on the release. Awareness slice 3 (fork C): the chip now
+                      carries a disambiguating tooltip — see SongBuzzChip. */}
                   {typeof song.awareness === 'number' && song.awareness > 0 && (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-text-muted">Buzz:</span>
-                      <Badge
-                        variant="outline"
-                        className="text-xs font-mono rounded-pill flex items-center gap-1 text-neon-cyan bg-neon-cyan/10 border-neon-cyan/40"
-                      >
-                        <Target className="w-3 h-3" />
-                        {Math.round(song.awareness)}
-                      </Badge>
+                      <SongBuzzChip awareness={song.awareness} />
                     </div>
                   )}
                 </div>

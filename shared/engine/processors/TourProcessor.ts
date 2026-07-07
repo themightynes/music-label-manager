@@ -44,7 +44,7 @@ export class TourProcessor {
    * Processes tour revenue using unified FinancialSystem calculations
    * Replaces legacy random-based city revenue system
    */
-  async processUnifiedTourRevenue(ctx: WeekContext, project: any, cityNumber: number, dbTransaction?: any): Promise<void> {
+  async processUnifiedTourRevenue(ctx: WeekContext, project: any, cityNumber: number, dbTransaction?: any): Promise<any> {
     const { summary } = ctx;
     console.log(`[UNIFIED TOUR] Processing city ${cityNumber} for tour "${project.title}"`);
 
@@ -180,7 +180,7 @@ export class TourProcessor {
 
       // Apply artist mood and popularity impacts based on performance
       console.log(`[TOUR IMPACTS] About to apply impacts for artist ${project.artistId}, city data:`, cityData);
-      await this.applyTourPerformanceImpacts(ctx, project.artistId, cityData, dbTransaction);
+      const reaction = await this.applyTourPerformanceImpacts(ctx, project.artistId, cityData, dbTransaction);
       console.log(`[TOUR IMPACTS] Completed applying impacts for artist ${project.artistId}`);
 
       // Add revenue to weekly summary
@@ -197,12 +197,29 @@ export class TourProcessor {
       }
       summary.revenueBreakdown.tourRevenue += revenue;
 
+      // Structured city fields (tour-tier1 slice 1) so the client can render a
+      // proper tour card. Description string is UNCHANGED — other consumers/tests
+      // still match on it.
       summary.changes.push({
         type: 'revenue',
         description: `${project.title} - City ${cityNumber} performance: $${revenue.toLocaleString()} (${cityData.attendanceRate}% attendance)`,
         amount: revenue,
         projectId: project.id,
-        source: 'tour_performance'
+        source: 'tour_performance',
+        venue: cityData.venue,
+        attendanceRate: cityData.attendanceRate,
+        ticketsSold: cityData.ticketsSold,
+        capacity: cityData.capacity,
+        cityNumber,
+        citiesTotal: currentMetadata.cities || 1,
+        costs: cityData.economics?.costs?.total,
+        netProfit: cityData.economics?.profit,
+        artistId: project.artistId,
+        artistName: artist.name,
+        // Slice 1b: artist reaction attached to the city entry itself, so the
+        // client card doesn't re-match the separate mood/popularity entries.
+        moodChange: reaction.moodChange,
+        popularityChange: reaction.popularityChange
       });
     }
 
@@ -214,6 +231,66 @@ export class TourProcessor {
     } catch (error) {
       console.error(`[UNIFIED TOUR] Error updating project metadata:`, error);
     }
+
+    // Return the UPDATED tourStats (now including the just-revealed city) so a
+    // same-pass completion summary computes totals from post-processing data, not
+    // the stale project row fetched at loop start. The other call path ignores it.
+    return tourStats;
+  }
+
+  /**
+   * Deterministic planning-week foreshadow for a Mini-Tour advancing
+   * planning → production. Reuses the SAME pre-calculation parameter assembly as
+   * processUnifiedTourRevenue (C41 midpoint capacity fallback, C47 popularity
+   * floor, C48 capacity-based marketing extraction) and takes city 1's
+   * PRE-variance sellThroughRate × capacity as the expected ticket count.
+   *
+   * RNG INVARIANT: makes NO ctx.getRandom draws — the ±20% variance draw happens
+   * only at execution time inside processUnifiedTourRevenue. This helper must not
+   * touch the seeded stream, so preview and future weekly reveals stay in sync
+   * without a shared draw here.
+   */
+  static estimatePlanningForeshadow(ctx: WeekContext, project: any, artist: any): {
+    venue: string;
+    capacity: number;
+    estTickets: number;
+    citiesTotal: number;
+  } {
+    const currentMetadata = project.metadata || {};
+    const venueAccess = currentMetadata.venueAccess || 'none';
+    const artistPopularity = artist?.popularity || 1; // C47 floor
+    const reputation = ctx.gameState.reputation || 0;
+    const totalCities = currentMetadata.cities || 1;
+
+    // C41 midpoint fallback for a missing stored capacity.
+    let venueCapacity = currentMetadata.venueCapacity;
+    if (!venueCapacity) {
+      const { min, max } = VenueCapacityManager.getCapacityRangeFromTier(venueAccess, ctx.gameData);
+      venueCapacity = Math.round((min + max) / 2);
+    }
+
+    // C48 capacity-based marketing extraction (matches execution path).
+    const costBreakdown = ctx.financialSystem.calculateTourCostsWithCapacity(venueCapacity, totalCities, 0);
+    const marketingBudget = Math.max(0, (project.totalCost || 0) - costBreakdown.totalCosts);
+
+    const detailedBreakdown = ctx.financialSystem.calculateDetailedTourBreakdown({
+      venueCapacity,
+      venueTier: venueAccess,
+      artistPopularity,
+      localReputation: reputation,
+      cities: totalCities,
+      marketingBudget
+    });
+
+    const city1 = detailedBreakdown.cities[0];
+    const estTickets = city1 ? Math.round(city1.venueCapacity * city1.sellThroughRate) : 0;
+
+    return {
+      venue: new TourProcessor().getVenueNameFromAccess(venueAccess),
+      capacity: venueCapacity,
+      estTickets,
+      citiesTotal: totalCities
+    };
   }
 
   /**
@@ -232,20 +309,25 @@ export class TourProcessor {
   /**
    * Apply artist mood and popularity impacts based on tour performance
    * Uses summary accumulation pattern to avoid conflicts with processWeeklyMoodChanges
+   *
+   * Returns the computed deltas (tour-tier1 slice 1b) so the caller can attach
+   * the artist reaction to the tour_performance change entry itself — the client
+   * card then doesn't have to re-match the separate mood/popularity entries or
+   * re-derive the attendance thresholds. Zeros on the not-found/error paths.
    */
   async applyTourPerformanceImpacts(
     ctx: WeekContext,
     artistId: string,
     cityData: any,
     dbTransaction: any
-  ): Promise<void> {
+  ): Promise<{ moodChange: number; popularityChange: number }> {
     const { summary } = ctx;
     try {
       // Get artist data from storage since this.artists is not initialized
       const artist = await ctx.storage?.getArtist?.(artistId, dbTransaction);
       if (!artist) {
         console.warn(`[TOUR IMPACTS] Artist ${artistId} not found`);
-        return;
+        return { moodChange: 0, popularityChange: 0 };
       }
 
       const attendanceRate = cityData.attendanceRate || 0;
@@ -320,8 +402,10 @@ export class TourProcessor {
 
       console.log(`[TOUR IMPACTS] ${artist.name}: Mood ${moodChange > 0 ? '+' : ''}${moodChange} (${attendanceRate}% attendance), Popularity +${popularityChange} (${actualAttendees} attendees) - accumulated in summary`);
 
+      return { moodChange, popularityChange };
     } catch (error) {
       console.error(`[TOUR IMPACTS] Error applying performance impacts:`, error);
+      return { moodChange: 0, popularityChange: 0 };
     }
   }
 }

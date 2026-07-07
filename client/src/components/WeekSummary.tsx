@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3, Flame } from 'lucide-react';
 import { ChartPerformanceCard } from './ChartPerformanceCard';
 import { AnimatedNumber } from './motion-primitives/animated-number';
 import { GlowEffect } from './motion-primitives/glow-effect';
@@ -21,6 +21,11 @@ import { queryClient } from '@/lib/queryClient';
 import { artistsQueryKey } from '@/hooks/useArtists';
 import { WeekSummary as WeekSummaryType, GameChange, ChartUpdate, EventOccurrence, SideEventCategory } from '../../../shared/types/gameTypes';
 import type { SideEventChoiceResponse } from '../../../shared/api/contracts';
+import {
+  categorizeWeekChanges,
+  findTourCompletion,
+} from './week-summary/categorizeChanges';
+import { TourCityCard } from './week-summary/TourCityCard';
 
 interface WeekSummaryProps {
   weeklyStats: WeekSummaryType;
@@ -38,7 +43,7 @@ interface WeekSummaryProps {
 // is active:
 //   0: net income hero figure (AnimatedNumber count-up) + financial bar (the frame)
 //   1: revenue sources
-//   2: HERO moments (chart No. 1s, tier unlocks — moved INTO the modal)
+//   2: HERO moments (chart No. 1s, tier unlocks, breakthroughs — moved INTO the modal)
 //   3: notable changes (chart highlights, notable achievements/releases)
 //   4: routine (mood, routine achievements, performance summary)
 const STAGE_REVENUE = 1;
@@ -443,50 +448,15 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     }
   };
 
-  const categorizeChanges = (changes: GameChange[]) => {
-    const categories = {
-      revenue: [] as GameChange[],
-      expenses: [] as GameChange[],
-      achievements: [] as GameChange[],
-      mood: [] as GameChange[],
-      // Exec-meetings-revival PR-2: meeting/executive-interaction/delayed-effect
-      // changes get their own bucket so exec decay notices (previously silently
-      // dropped into "other" and never rendered) become visible for the first time.
-      meetings: [] as GameChange[],
-      other: [] as GameChange[]
-    };
-
-    changes.forEach(change => {
-      if (change.type === 'revenue' || change.type === 'ongoing_revenue' || change.type === 'release') {
-        categories.revenue.push(change);
-      } else if (change.type === 'expense') {
-        categories.expenses.push(change);
-      } else if (change.type === 'unlock' || change.type === 'reputation') {
-        categories.achievements.push(change);
-      } else if (change.type === 'mood') {
-        categories.mood.push(change);
-      } else if (
-        change.type === 'meeting' ||
-        change.type === 'executive_interaction' ||
-        change.type === 'delayed_effect'
-      ) {
-        categories.meetings.push(change);
-      } else if (change.type === 'project_complete') {
-        // Projects go to other category, will be shown in Projects tab
-        categories.other.push(change);
-      } else {
-        categories.other.push(change);
-      }
-    });
-
-    return categories;
-  };
-
+  // Tour-tier1 slice 2: categorization extracted to a pure module
+  // (./week-summary/categorizeChanges) so bucket routing is unit-testable.
+  // Display-only — revenue/expenses/netIncome below read summary totals, not
+  // these buckets, so recategorizing tour entries cannot change any figure.
   const revenue = weeklyStats?.revenue || 0;
   const expenses = weeklyStats?.expenses || 0;
   const netIncome = revenue - expenses;
   const changes = weeklyStats?.changes || [];
-  const categorizedChanges = categorizeChanges(changes);
+  const categorizedChanges = categorizeWeekChanges(changes);
 
   // Player-facing chart updates (competitor rows are ambient noise).
   const playerChartUpdates = useMemo(
@@ -516,6 +486,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   // HERO moments now live IN the modal (fixing the missable-toast gap):
   //  - tier/access unlocks (always hero per the changeImportance classifier)
   //  - No. 1 chart outcomes (debut at #1 or climb to #1)
+  //  - song breakthroughs (playtest decision July 6: promoted back into the
+  //    Milestone Moments card from a standalone notable line)
   const heroUnlocks = useMemo(
     () => changes.filter((c) => c.type === 'unlock'),
     [changes]
@@ -524,7 +496,10 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     () => playerChartUpdates.filter((u) => classifyChartUpdate(u) === 'hero'),
     [playerChartUpdates]
   );
-  const hasHeroMoments = heroUnlocks.length > 0 || heroChartUpdates.length > 0;
+  const hasHeroMoments =
+    heroUnlocks.length > 0 ||
+    heroChartUpdates.length > 0 ||
+    categorizedChanges.breakthroughs.length > 0;
 
   // The achievements card keeps reputation lines; unlocks are pulled out into
   // the celebrated hero section above so they are never missed.
@@ -558,7 +533,10 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   // straight to complete, so the staged chime is intentionally silent). The
   // audio manager itself de-dupes to the highest-priority sound; notable-chime
   // is not one the store fires, so there is no conflict with the week sting.
-  const hasNotableContent = playerChartUpdates.length > 0 || nonUnlockAchievements.length > 0;
+  const hasNotableContent =
+    playerChartUpdates.length > 0 ||
+    nonUnlockAchievements.length > 0 ||
+    categorizedChanges.tourCities.length > 0;
   const notableChimePlayed = useRef(false);
   useEffect(() => {
     if (instant) return; // reduced-motion / skip toggle → no stage chime
@@ -650,7 +628,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </RevealGroup>
         )}
 
-        {/* HERO MOMENTS (stage 2): tier unlocks + No. 1 chart outcomes.
+        {/* HERO MOMENTS (stage 2): tier unlocks + No. 1 chart outcomes + song
+            breakthroughs (playtest decision July 6).
             Elevated treatment via GlowEffect + .text-aberration. Moved into the
             modal so a player reading results never misses an unlock. */}
         {hasHeroMoments && (
@@ -717,6 +696,31 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                     </Badge>
                   </div>
                 ))}
+                {/* Song breakthroughs (playtest decision July 6: rendered here
+                    in the hero card, restoring the original Phase 4 'hero'
+                    classification; previously a standalone NOTABLE line). The
+                    engine description already carries the 🔥 + title + N/100
+                    readout; the payoff clause stays QUALITATIVE only — no
+                    multiplier numbers anywhere (fork E). */}
+                {categorizedChanges.breakthroughs.map((change: GameChange, index: number) => (
+                  <div
+                    key={`breakthrough-${index}`}
+                    className="flex items-center justify-between p-3 rounded-[12px] border border-neon-magenta/40 bg-gradient-to-r from-neon-magenta/[0.16] to-neon-amber/[0.10] shadow-glow-purple"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-full bg-neon-magenta/20 border border-neon-magenta/40">
+                        <Flame className="h-4 w-4 text-neon-magenta" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-neon-magenta/80">Breakthrough</div>
+                        <span className="text-sm font-semibold text-text-primary">{change.description}</span>
+                        <p className="text-xs text-neon-magenta/80 mt-0.5">
+                          Its streams will ride the buzz while it lasts.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </RevealGroup>
@@ -744,6 +748,24 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             </Card>
           </RevealGroup>
         )}
+
+        {/* Tour city results (stage 3, notable) — one card per city played this
+            week (multi-city weeks with multiple concurrent tours are possible).
+            Tour-tier1 slice 2: these tour_performance entries are pulled OUT of
+            the Revenue Sources list above (see categorizeWeekChanges), so the
+            card is the single display of that entry — no duplicate flat line. */}
+        {categorizedChanges.tourCities.map((change: GameChange, index: number) => (
+          <RevealGroup
+            key={`tour-city-${index}`}
+            revealed={currentStage >= STAGE_NOTABLE}
+            instant={instant}
+          >
+            <TourCityCard
+              entry={change}
+              completion={findTourCompletion(changes, change.projectId)}
+            />
+          </RevealGroup>
+        ))}
 
         {/* Achievements (stage 3, notable) — unlocks already shown as heroes above */}
         {nonUnlockAchievements.length > 0 && (
@@ -959,6 +981,25 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             </Card>
           </RevealGroup>
         )}
+
+        {/* Tour foreshadow (stage 4, routine) — tour_planning entries were
+            previously routed to the never-rendered `other` bucket. Simple line
+            items (descriptions are already player-ready, 🎤 included). */}
+        {categorizedChanges.tourPlanning.length > 0 && (
+          <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
+            <div className="space-y-2">
+              {categorizedChanges.tourPlanning.map((change: GameChange, index: number) => (
+                <div
+                  key={index}
+                  className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40"
+                >
+                  <span className="text-sm font-medium text-white/80">{change.description}</span>
+                </div>
+              ))}
+            </div>
+          </RevealGroup>
+        )}
+
       </div>
 
       {/* Performance Summary (stage 4, routine) */}
