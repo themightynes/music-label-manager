@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 6, 2026
-- **Total Items**: 80 (C1–C80, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76)
+- **Total Items**: 82 (C1–C82, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76)
 - **Completed**: 59
 - **Deferred by decision**: 3 (C32, C42 — decided July 6, 2026: wire awareness fully player-facing; build EXECUTED same evening on `feat/awareness-surfacing`, held with PR #149 pending playtest; C43)
 - **In Progress**: 0
-- **Pending**: 18 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C65, C66, C75 — CC gate ignores queued choices, July 5, 2026, C76 — royalty_discrepancy dominant choice, July 6, 2026, C77–C78 — tour-tier1 session finds, July 6, 2026, C79–C80 — awareness-surfacing session finds, July 6, 2026) — C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
+- **Pending**: 20 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C65, C66, C75 — CC gate ignores queued choices, July 5, 2026, C76 — royalty_discrepancy dominant choice, July 6, 2026, C77–C78 — tour-tier1 session finds, July 6, 2026, C79–C80 — awareness-surfacing session finds, July 6, 2026, C81–C82 — buzz-v2 slice-1 finds, July 6, 2026) — C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1285,19 +1285,45 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
+### [ ] Comment 81 (C81): hype lifecycle moments double-listed (generic `meeting` entry + structured `hype_*` entry) 🔵
+**Priority**: 🔵 Low
+**Impact**: Banking hype emits BOTH the pre-existing generic `type:'meeting'` entry (drives the meetings-card effect badge, asserted by `awareness-channel.test.ts`) AND the new structured `hype_banked` entry (routine Hype line); consumption likewise emits `meeting` + `hype_applied`. One event, two WeekSummary appearances. Cleanup = fold the generic awareness `meeting` entries into the `hype_*` types (carrying `appliedEffects` so the badge survives) and delete the duplicates — deferred in buzz-v2 slice 1 to stay strictly additive and keep existing tests green.
+**Effort**: Small (engine consolidation + retarget `awareness-channel.test.ts` assertions + GM re-bless)
+
+**Relevant Files**:
+- [shared/engine/processors/ActionProcessor.ts](shared/engine/processors/ActionProcessor.ts)
+- [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts)
+
+*Identified July 6, 2026 during buzz-v2 (hype & pre-marketing) slice 1.*
+
+---
+
+### [ ] Comment 82 (C82): `BANKED_HYPE_EXPIRY_WEEKS` client mirror has no drift tripwire 🔵
+**Priority**: 🔵 Low
+**Impact**: The core-status chip's "fades wk W" countdown uses `BANKED_HYPE_EXPIRY_WEEKS = 8` in `client/src/lib/releaseBuzz.ts`, a display-only HARDCODED mirror of the engine knob `pending_awareness_boost_expiry_weeks` (`data/balance/markets.json`). Nothing enforces they stay equal — unlike the exec-mood-modifier mirror, which has a tripwire test. Same pre-existing class as the `BUZZ_BUILDING_WEEKS` mirror in the same file; a single tripwire test importing the markets.json value could pin all the mirrors at once.
+**Effort**: Tiny (one tripwire test)
+
+**Relevant Files**:
+- [client/src/lib/releaseBuzz.ts](client/src/lib/releaseBuzz.ts)
+- [data/balance/markets.json](data/balance/markets.json)
+
+*Identified July 6, 2026 during buzz-v2 (hype & pre-marketing) slice 1.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42 — decided July 6, 2026: wire awareness fully player-facing, build queued; C43 — product decision open, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 17 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63, C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C79–C80 — awareness-surfacing session finds, July 6, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 19 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63, C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C79–C80 — awareness-surfacing session finds, July 6, 2026; C81–C82 — buzz-v2 slice-1 finds, July 6, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2)
 
 ### By Status
 - ✅ Completed: 59 items (73.8% of 80; 59 + 3 deferred + 18 pending = 80 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42 — decided July 6, 2026: wire awareness fully player-facing (Nes); build EXECUTED same evening on `feat/awareness-surfacing`, held pending playtest; C43)
-- 📋 Pending: 18 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C79–C80 — awareness-surfacing session finds, July 6, 2026; all low except C62 medium, not scheduled). C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
+- 📋 Pending: 20 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C79–C80 — awareness-surfacing session finds, July 6, 2026; C81–C82 — buzz-v2 slice-1 finds, July 6, 2026; all low except C62 medium, not scheduled). C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
 
 ---
 
