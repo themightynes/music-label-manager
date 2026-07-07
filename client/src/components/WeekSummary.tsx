@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3, Flame } from 'lucide-react';
 import { ChartPerformanceCard } from './ChartPerformanceCard';
 import { AnimatedNumber } from './motion-primitives/animated-number';
 import { GlowEffect } from './motion-primitives/glow-effect';
@@ -45,7 +45,7 @@ interface WeekSummaryProps {
 // is active:
 //   0: net income hero figure (AnimatedNumber count-up) + financial bar (the frame)
 //   1: revenue sources
-//   2: HERO moments (chart No. 1s, tier unlocks — moved INTO the modal)
+//   2: HERO moments (chart No. 1s, tier unlocks, breakthroughs — moved INTO the modal)
 //   3: notable changes (chart highlights, notable achievements/releases)
 //   4: routine (mood, routine achievements, performance summary)
 const STAGE_REVENUE = 1;
@@ -493,6 +493,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   // HERO moments now live IN the modal (fixing the missable-toast gap):
   //  - tier/access unlocks (always hero per the changeImportance classifier)
   //  - No. 1 chart outcomes (debut at #1 or climb to #1)
+  //  - song breakthroughs (playtest decision July 6: promoted back into the
+  //    Milestone Moments card from a standalone notable line)
   const heroUnlocks = useMemo(
     () => changes.filter((c) => c.type === 'unlock'),
     [changes]
@@ -501,7 +503,10 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     () => playerChartUpdates.filter((u) => classifyChartUpdate(u) === 'hero'),
     [playerChartUpdates]
   );
-  const hasHeroMoments = heroUnlocks.length > 0 || heroChartUpdates.length > 0;
+  const hasHeroMoments =
+    heroUnlocks.length > 0 ||
+    heroChartUpdates.length > 0 ||
+    categorizedChanges.breakthroughs.length > 0;
 
   // The achievements card keeps reputation lines; unlocks are pulled out into
   // the celebrated hero section above so they are never missed.
@@ -538,8 +543,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   const hasNotableContent =
     playerChartUpdates.length > 0 ||
     nonUnlockAchievements.length > 0 ||
-    categorizedChanges.tourCities.length > 0 ||
-    categorizedChanges.breakthroughs.length > 0;
+    categorizedChanges.tourCities.length > 0;
   const notableChimePlayed = useRef(false);
   useEffect(() => {
     if (instant) return; // reduced-motion / skip toggle → no stage chime
@@ -631,7 +635,8 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </RevealGroup>
         )}
 
-        {/* HERO MOMENTS (stage 2): tier unlocks + No. 1 chart outcomes.
+        {/* HERO MOMENTS (stage 2): tier unlocks + No. 1 chart outcomes + song
+            breakthroughs (playtest decision July 6).
             Elevated treatment via GlowEffect + .text-aberration. Moved into the
             modal so a player reading results never misses an unlock. */}
         {hasHeroMoments && (
@@ -698,6 +703,31 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                     </Badge>
                   </div>
                 ))}
+                {/* Song breakthroughs (playtest decision July 6: rendered here
+                    in the hero card, restoring the original Phase 4 'hero'
+                    classification; previously a standalone NOTABLE line). The
+                    engine description already carries the 🔥 + title + N/100
+                    readout; the payoff clause stays QUALITATIVE only — no
+                    multiplier numbers anywhere (fork E). */}
+                {categorizedChanges.breakthroughs.map((change: GameChange, index: number) => (
+                  <div
+                    key={`breakthrough-${index}`}
+                    className="flex items-center justify-between p-3 rounded-[12px] border border-neon-magenta/40 bg-gradient-to-r from-neon-magenta/[0.16] to-neon-amber/[0.10] shadow-glow-purple"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-full bg-neon-magenta/20 border border-neon-magenta/40">
+                        <Flame className="h-4 w-4 text-neon-magenta" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-neon-magenta/80">Breakthrough</div>
+                        <span className="text-sm font-semibold text-text-primary">{change.description}</span>
+                        <p className="text-xs text-neon-magenta/80 mt-0.5">
+                          Its streams will ride the buzz while it lasts.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </RevealGroup>
@@ -743,29 +773,6 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             />
           </RevealGroup>
         ))}
-
-        {/* Breakthrough moments (stage 3, NOTABLE — awareness slice 1, fork A:
-            a distinct accented line item, deliberately NOT a hero card so hero
-            inventory stays scarce). The engine description already carries the
-            🔥 + title + N/100 readout; the payoff clause is QUALITATIVE only —
-            no multiplier numbers anywhere (fork E). */}
-        {categorizedChanges.breakthroughs.length > 0 && (
-          <RevealGroup revealed={currentStage >= STAGE_NOTABLE} instant={instant}>
-            <div className="space-y-2">
-              {categorizedChanges.breakthroughs.map((change: GameChange, index: number) => (
-                <div
-                  key={index}
-                  className="p-3 rounded-[12px] border border-neon-magenta/30 border-l-4 border-l-neon-magenta bg-neon-magenta/[0.08]"
-                >
-                  <span className="text-sm font-semibold text-text-primary">{change.description}</span>
-                  <p className="text-xs text-neon-magenta/80 mt-0.5">
-                    Its streams will ride the buzz while it lasts.
-                  </p>
-                </div>
-              ))}
-            </div>
-          </RevealGroup>
-        )}
 
         {/* Achievements (stage 3, notable) — unlocks already shown as heroes above */}
         {nonUnlockAchievements.length > 0 && (

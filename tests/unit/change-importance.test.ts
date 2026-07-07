@@ -81,11 +81,11 @@ describe('classifyChange', () => {
     expect(classifyChange(change('unlock'))).toBe('hero');
   });
 
-  // --- NOTABLE --------------------------------------------------------------
-  it('classifies breakthrough as notable (awareness slice 1, fork A: line item, not hero card)', () => {
-    expect(classifyChange(change('breakthrough'))).toBe('notable');
+  it('classifies breakthrough as hero (playtest July 6: renders in the Milestone Moments card)', () => {
+    expect(classifyChange(change('breakthrough'))).toBe('hero');
   });
 
+  // --- NOTABLE --------------------------------------------------------------
   it('classifies release / song_release / project_complete as notable', () => {
     expect(classifyChange(change('release'))).toBe('notable');
     expect(classifyChange(change('song_release'))).toBe('notable');

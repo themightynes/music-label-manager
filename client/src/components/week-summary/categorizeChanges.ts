@@ -41,8 +41,9 @@ export interface WeekChangeCategories {
   /**
    * Awareness slice 1: 'breakthrough' moments — rare, quality-gated 🔥
    * explosions. Kept as a SEPARATE bucket from gain/decay because each one
-   * renders individually as a distinct NOTABLE-stage line item (fork A: not
-   * a hero card — hero inventory stays scarce), never aggregated away.
+   * renders individually inside the "Milestone Moments" hero card (playtest
+   * decision July 6, reversing fork A's notable-line placement), never
+   * aggregated away.
    */
   breakthroughs: GameChange[];
   other: GameChange[];
