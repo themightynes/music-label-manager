@@ -256,6 +256,34 @@ export function summarizeCancelRelease(release: any): CancelReleasePreview {
 }
 
 /**
+ * Buzz-v2 slice 5 — marketing channel personality copy for the release-planning
+ * page. Purely descriptive, grounded in the REAL engine behavior
+ * (FinancialSystem.calculateAwarenessGain's per-channel awareness coefficients:
+ * pr 0.4 / influencer 0.3 / digital 0.2 / radio 0.1 per $1k spend, before the
+ * quality multiplier) — PR and influencer build the most lasting awareness per
+ * dollar, radio and digital lag on awareness but still contribute to launch-week
+ * reach via the separate ReleaseProcessor marketing-boost/streams path. Fork E
+ * (standing rule, awareness arc): QUALITATIVE ONLY — no formulas, no
+ * coefficients, no "×N" multiplier numbers anywhere in this copy.
+ */
+export const MARKETING_CHANNEL_PERSONALITIES: Record<string, string> = {
+  pr: 'Slow to build, but the longest-lasting buzz per dollar spent.',
+  influencer: 'Builds lasting buzz almost as well as PR, with a social-momentum edge.',
+  digital: 'Steady and broad — more about reach than lasting buzz.',
+  radio: 'Launch-week punch, but the least lasting buzz of the four channels.',
+};
+
+/**
+ * Buzz-v2 slice 5 — quality legibility note for release planning. The engine
+ * multiplies awareness gain by (song quality / 100) — see
+ * FinancialSystem.calculateAwarenessGain's qualityMultiplier — so a low-quality
+ * song blunts every marketing dollar and a high-quality one amplifies it.
+ * Qualitative only (fork E): no multiplier number in the copy.
+ */
+export const MARKETING_QUALITY_NOTE =
+  'Higher-quality songs get more out of every marketing dollar — weaker songs blunt the same spend.';
+
+/**
  * Aggregate a release's songs into the card Buzz summary.
  *
  * @param songs the release's songs (already joined by releaseId upstream)

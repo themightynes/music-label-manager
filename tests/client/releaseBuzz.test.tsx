@@ -20,6 +20,8 @@ import {
   BUZZ_PHASE_LABELS,
   BUZZ_SUSTAIN_STRONG_MIN,
   BUZZ_SUSTAIN_MIN,
+  MARKETING_CHANNEL_PERSONALITIES,
+  MARKETING_QUALITY_NOTE,
 } from '@/lib/releaseBuzz';
 import { ReleaseBuzzSection } from '@/components/ReleaseBuzzSection';
 
@@ -231,5 +233,35 @@ describe('summarizeAnticipation (buzz-v2 slice 3)', () => {
       const word = summarizeAnticipation([{ awareness: a }]);
       expect(word).not.toMatch(/[×x]\s*\d/);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Buzz-v2 slice 5 — marketing channel personality + quality legibility copy.
+// Fork E (standing rule): qualitative only — no formulas, no coefficients, no
+// "×N" multiplier numbers, no dollar-figure formulas anywhere in this copy.
+// ---------------------------------------------------------------------------
+describe('MARKETING_CHANNEL_PERSONALITIES (buzz-v2 slice 5)', () => {
+  const REAL_CHANNEL_KEYS = ['pr', 'influencer', 'digital', 'radio'];
+
+  it('has a non-empty personality line for every real engine channel key', () => {
+    for (const key of REAL_CHANNEL_KEYS) {
+      expect(MARKETING_CHANNEL_PERSONALITIES[key]).toBeTruthy();
+      expect(typeof MARKETING_CHANNEL_PERSONALITIES[key]).toBe('string');
+      expect(MARKETING_CHANNEL_PERSONALITIES[key].length).toBeGreaterThan(0);
+    }
+  });
+
+  it('emits no multiplier numbers or dollar-formula figures in any channel line', () => {
+    for (const line of Object.values(MARKETING_CHANNEL_PERSONALITIES)) {
+      expect(line).not.toMatch(/[×x]\s*\d/);
+      expect(line).not.toMatch(/\$\d/);
+    }
+  });
+
+  it('quality note is qualitative only (fork E guard)', () => {
+    expect(MARKETING_QUALITY_NOTE).toBeTruthy();
+    expect(MARKETING_QUALITY_NOTE).not.toMatch(/[×x]\s*\d/);
+    expect(MARKETING_QUALITY_NOTE).not.toMatch(/\$\d/);
   });
 });

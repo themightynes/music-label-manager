@@ -33,6 +33,7 @@ import {
   type MarketingChannel,
   type ReleaseType
 } from '@shared/utils/marketingUtils';
+import { MARKETING_CHANNEL_PERSONALITIES, MARKETING_QUALITY_NOTE } from '@/lib/releaseBuzz';
 
 // Mock data types
 interface Song {
@@ -1093,6 +1094,12 @@ export default function PlanReleasePage() {
                     </span>
                   </div>
 
+                  {/* Buzz-v2 slice 5 — qualitative quality legibility note (fork E: no
+                      multiplier numbers). Static, applies to the whole budget below. */}
+                  <p className="text-xs text-[rgba(233,230,244,0.5)] mb-3">
+                    {MARKETING_QUALITY_NOTE}
+                  </p>
+
                   <div className="space-y-3">
                     {marketingChannels.map(channel => {
                       const budget = channelBudgets[channel.id] || 0;
@@ -1137,6 +1144,12 @@ export default function PlanReleasePage() {
                               </span>
                               <span className="font-mono">${channel.maxBudget.toLocaleString()} max</span>
                             </div>
+                            {/* Buzz-v2 slice 5 — channel personality, qualitative only (fork E). */}
+                            {MARKETING_CHANNEL_PERSONALITIES[channel.id] && (
+                              <p className="text-xs text-[rgba(233,230,244,0.45)] italic">
+                                {MARKETING_CHANNEL_PERSONALITIES[channel.id]}
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
