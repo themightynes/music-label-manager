@@ -526,6 +526,177 @@ describe('DELETE /api/game/:gameId/releases/:releaseId (characterization)', () =
   });
 });
 
+// ---------------------------------------------------------------------------
+// Buzz-v2 slice 4 (C43) — fork-E cancel semantics on the existing DELETE route.
+// Refund now = STORED launch marketingBudget + UNSPENT pre-campaign share
+// (totalBudget − spentToDate); the release's still-unreleased songs have their
+// awareness/peak_awareness ZEROED (pre-buzz dies); attached hype dies with the
+// deleted row and re-credits nothing.
+// ---------------------------------------------------------------------------
+describe('DELETE .../releases/:releaseId — fork-E cancel (buzz-v2 slice 4)', () => {
+  /** Seed a planned release with a partially-spent pre-campaign, attached hype,
+   *  and songs already carrying pre-built awareness/peak. */
+  async function seedPreCampaignRelease(opts: {
+    money?: number;
+    marketingBudget?: number;
+    preCampaignTotal?: number;
+    spentToDate?: number;
+    attachedHype?: number;
+    songAwareness?: number;
+    songPeak?: number;
+  }) {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID,
+      money: opts.money ?? 50000,
+      creativeCapital: 5,
+      songCount: 2,
+    });
+    const releaseId = crypto.randomUUID();
+    await db.insert(releases).values({
+      id: releaseId,
+      gameId,
+      artistId,
+      title: 'Pre-Hyped To Cancel',
+      type: 'ep',
+      status: 'planned',
+      marketingBudget: opts.marketingBudget ?? 4000,
+      metadata: {
+        attachedHype: opts.attachedHype ?? 6,
+        preCampaign: {
+          pct: 30,
+          totalBudget: opts.preCampaignTotal ?? 3600,
+          budgetPerChannel: { pr: 3000, radio: 600 },
+          weeklySpend: 600,
+          spentToDate: opts.spentToDate ?? 1200,
+        },
+      },
+    });
+    // Reserve both songs and give them pre-built awareness/peak (all songs in
+    // this freshly-seeded game belong to this release).
+    await db.update(songs)
+      .set({
+        releaseId,
+        awareness: opts.songAwareness ?? 18,
+        peak_awareness: opts.songPeak ?? 22,
+      })
+      .where(eq(songs.gameId, gameId));
+    return { gameId, artistId, songIds, releaseId };
+  }
+
+  it('refunds launch budget + UNSPENT pre-campaign, zeroes song awareness/peak, unlinks songs', async () => {
+    const { gameId, releaseId, songIds } = await seedPreCampaignRelease({
+      money: 50000,
+      marketingBudget: 4000,
+      preCampaignTotal: 3600,
+      spentToDate: 1200, // unspent = 2400
+      attachedHype: 6,
+      songAwareness: 18,
+      songPeak: 22,
+    });
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+
+    expect(res.status).toBe(200);
+    // Refund = 4000 launch + (3600 - 1200) unspent pre-campaign = 6400.
+    expect(res.body.refundedAmount).toBe(6400);
+
+    // Money credited by exactly the combined refund.
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(50000 + 6400);
+
+    // Release gone.
+    const remaining = await db.select().from(releases).where(eq(releases.id, releaseId));
+    expect(remaining).toHaveLength(0);
+
+    // Songs unlinked (plannable again) AND pre-buzz zeroed (fork E).
+    for (const songId of songIds) {
+      const [song] = await db.select().from(songs).where(eq(songs.id, songId));
+      expect(song.releaseId).toBeNull();
+      expect(song.awareness).toBe(0);
+      expect(song.peak_awareness).toBe(0);
+    }
+  });
+
+  it('a fully-spent pre-campaign refunds ONLY the launch budget (unspent share is 0)', async () => {
+    const { gameId, releaseId } = await seedPreCampaignRelease({
+      money: 10000,
+      marketingBudget: 4000,
+      preCampaignTotal: 3600,
+      spentToDate: 3600, // fully spent → unspent = 0
+    });
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.refundedAmount).toBe(4000);
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(10000 + 4000);
+  });
+
+  it('cancelling a hyped release does NOT restore any flags pools (attached hype dies)', async () => {
+    const { gameId, releaseId } = await seedPreCampaignRelease({ attachedHype: 9 });
+    // Pre-existing flags must be untouched by the cancel (no re-credit).
+    await db.update(gameStates).set({ flags: { pendingAwarenessBoost: 0 } }).where(eq(gameStates.id, gameId));
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+    expect(res.status).toBe(200);
+
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    const flags = (gs.flags as any) || {};
+    // No pool was created or credited from the dead attached hype.
+    expect(flags.pendingAwarenessBoost).toBe(0);
+    expect(flags.hypeArtistPools).toBeUndefined();
+  });
+
+  it("cancelling one release leaves ANOTHER release's pre-campaign untouched", async () => {
+    const { gameId, artistId } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID, money: 50000, creativeCapital: 5, songCount: 4,
+    });
+    const allSongs = await db.select().from(songs).where(eq(songs.gameId, gameId));
+
+    const relA = crypto.randomUUID();
+    const relB = crypto.randomUUID();
+    for (const [id, spent] of [[relA, 1000], [relB, 500]] as const) {
+      await db.insert(releases).values({
+        id, gameId, artistId, title: `Rel ${id.slice(0, 4)}`, type: 'single',
+        status: 'planned', marketingBudget: 2000,
+        metadata: { attachedHype: 0, preCampaign: { pct: 20, totalBudget: 2000, budgetPerChannel: { pr: 2000 }, weeklySpend: 500, spentToDate: spent } },
+      });
+    }
+    await db.update(songs).set({ releaseId: relA, awareness: 10, peak_awareness: 10 }).where(eq(songs.id, allSongs[0].id));
+    await db.update(songs).set({ releaseId: relB, awareness: 15, peak_awareness: 15 }).where(eq(songs.id, allSongs[1].id));
+
+    await request(app).delete(`/api/game/${gameId}/releases/${relA}`);
+
+    // Release B and its pre-campaign / song awareness are intact.
+    const [rb] = await db.select().from(releases).where(eq(releases.id, relB));
+    expect(rb).toBeTruthy();
+    expect((rb.metadata as any).preCampaign.spentToDate).toBe(500);
+    const [songB] = await db.select().from(songs).where(eq(songs.id, allSongs[1].id));
+    expect(songB.releaseId).toBe(relB);
+    expect(songB.awareness).toBe(15);
+  });
+
+  it('a legacy planned release with NO pre-campaign refunds exactly marketingBudget (byte-identical old rule)', async () => {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID, money: 20000, creativeCapital: 5,
+    });
+    const releaseId = crypto.randomUUID();
+    await db.insert(releases).values({
+      id: releaseId, gameId, artistId, title: 'Legacy', type: 'single',
+      status: 'planned', marketingBudget: 3000, metadata: {},
+    });
+    await db.update(songs).set({ releaseId, awareness: 5, peak_awareness: 5 }).where(eq(songs.id, songIds[0]));
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.refundedAmount).toBe(3000);
+    // Song still gets its awareness zeroed on unlink (fork E applies to any planned cancel).
+    const [song] = await db.select().from(songs).where(eq(songs.id, songIds[0]));
+    expect(song.releaseId).toBeNull();
+    expect(song.awareness).toBe(0);
+  });
+});
+
 describe('POST /api/game/:gameId/releases (plain create, characterization)', () => {
   it('happy path: creates a release and links songs', async () => {
     const { gameId, artistId, songIds } = await seedGameWithSongs({ ownerId: TEST_USER_ID });

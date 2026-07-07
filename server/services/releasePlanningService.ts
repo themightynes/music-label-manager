@@ -440,8 +440,26 @@ export class ReleasePlanningService {
    * Delete a planned release and free up its songs, refunding the STORED
    * marketing budget (never a client-supplied amount) back to the game's money.
    *
-   * Returns the exact response payload the original DELETE handler sent (the
-   * route wraps it as res.json(payload)).
+   * Buzz-v2 slice 4 (C43) — fork E cancel semantics. The pre-existing rule
+   * refunded ONLY `release.marketingBudget` (the LAUNCH-phase pot). A planned
+   * release can now also carry a pre-campaign pot (metadata.preCampaign) which
+   * is a SEPARATE reservation the plan handler did NOT add to marketingBudget —
+   * it is the diverted anticipation share, converted week-by-week over the
+   * lead-up. On cancel:
+   *   - the UNSPENT pre-campaign share (totalBudget − spentToDate) is refunded on
+   *     top of the launch budget; the SPENT share is gone (already converted to
+   *     awareness that we are about to destroy — fork E: pre-buzz dies).
+   *   - the release's still-unreleased songs have their `awareness` and
+   *     `peak_awareness` ZEROED. Those points were built purely by this release's
+   *     pre-campaign; leaving them would recreate the buzz-farming exploit fork E
+   *     rejected. (Songs are unreleased/unreserved here — they only re-enter the
+   *     awareness economy via a fresh plan.)
+   *   - attached hype (metadata.attachedHype) dies implicitly: it lives only on
+   *     this release row, which is deleted, and nothing re-credits any pool.
+   * Everything below runs in ONE transaction with the refund.
+   *
+   * Returns the same payload shape the original DELETE handler sent, with
+   * `refundedAmount` now the COMBINED total (launch + unspent pre-campaign).
    */
   async deleteRelease(userId: string | undefined, gameId: string, releaseId: string) {
     // Get the release to return marketing budget
@@ -462,28 +480,46 @@ export class ReleasePlanningService {
       });
     }
 
+    // Fork E: compute the UNSPENT pre-campaign refund component. Absent
+    // preCampaign (pct 0 / legacy release) contributes 0 — byte-identical to the
+    // old launch-only refund. Clamp to >= 0 so a drifted spentToDate can never
+    // credit more than was reserved.
+    const preCampaign = (release.metadata as any)?.preCampaign;
+    const unspentPreCampaign = preCampaign
+      ? Math.max(
+          0,
+          (typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0)
+            - (typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+        )
+      : 0;
+    const refundedAmount = (release.marketingBudget || 0) + unspentPreCampaign;
+
     // Execute deletion in transaction
     const result = await this.db.transaction(async (tx) => {
-      // Free up songs reserved for this release
+      // Free up songs reserved for this release AND zero the pre-buzz they were
+      // seeded with (fork E: built pre-buzz dies with cancellation). These songs
+      // are unreleased, so peak_awareness held only pre-campaign build too.
       const freedSongs = await tx.update(songs)
-        .set({ releaseId: null })
+        .set({ releaseId: null, awareness: 0, peak_awareness: 0 })
         .where(eq(songs.releaseId, releaseId))
         .returning();
 
-      // Return marketing budget to player (from STORED release data, not client)
+      // Refund launch budget + unspent pre-campaign (from STORED release data,
+      // never client input).
       const [gameState] = await tx.select().from(gameStates)
         .where(eq(gameStates.id, gameId));
 
       if (gameState) {
         await tx.update(gameStates)
-          .set({ money: (gameState.money || 0) + (release.marketingBudget || 0) })
+          .set({ money: (gameState.money || 0) + refundedAmount })
           .where(eq(gameStates.id, gameId));
       }
 
-      // Delete the planned release
+      // Delete the planned release. Attached hype dies here — it lives only on
+      // this row and nothing re-credits any pool.
       await tx.delete(releases).where(eq(releases.id, releaseId));
 
-      return { freedSongs, refundedAmount: release.marketingBudget || 0 };
+      return { freedSongs, refundedAmount };
     });
 
     return {

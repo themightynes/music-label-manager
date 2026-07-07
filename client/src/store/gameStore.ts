@@ -473,6 +473,7 @@ interface GameStore {
   
   // Release management
   planRelease: (releaseData: any) => Promise<any>;
+  cancelRelease: (releaseId: string) => Promise<{ refundedAmount: number }>;
   
   // Save management
   saveGame: (name: string, options?: { isAutosave?: boolean }) => Promise<void>;
@@ -1389,6 +1390,44 @@ export const useGameStore = create<GameStore>()(
           return result;
         } catch (error) {
           console.error('Failed to plan release:', error);
+          throw error;
+        }
+      },
+
+      // Cancel a PLANNED release (buzz-v2 slice 4, C43). Mirrors cancelProject's
+      // response-field balance-adoption precedent: the DELETE endpoint returns
+      // the server-authoritative `refundedAmount` (launch budget + unspent
+      // pre-campaign share, fork E), which we add onto the spine money via the
+      // commitGameState funnel — the endpoint does NOT return a full newBalance,
+      // and the refund is the only field that changed. Then invalidate the
+      // releases / release-songs / songs caches so the planned card disappears and
+      // the freed songs (awareness/peak zeroed server-side) become plannable again.
+      cancelRelease: async (releaseId: string) => {
+        const gameState = readGameState(get);
+        if (!gameState) return { refundedAmount: 0 };
+
+        try {
+          const response = await apiRequest(
+            'DELETE',
+            `/api/game/${gameState.id}/releases/${releaseId}`,
+          );
+          const result = await response.json();
+          const refundedAmount = typeof result?.refundedAmount === 'number' ? result.refundedAmount : 0;
+
+          // Adopt the refund onto money (server-authoritative refund, applied to
+          // the current committed balance) through the dual-write funnel.
+          commitGameState(set, {
+            ...gameState,
+            money: (gameState.money || 0) + refundedAmount,
+          });
+
+          await queryClient.invalidateQueries({ queryKey: releasesQueryKey(gameState.id) });
+          await queryClient.invalidateQueries({ queryKey: releaseSongsQueryKey(gameState.id) });
+          await queryClient.invalidateQueries({ queryKey: songsQueryKey(gameState.id) });
+
+          return { refundedAmount };
+        } catch (error) {
+          console.error('Failed to cancel release:', error);
           throw error;
         }
       },

@@ -192,6 +192,66 @@ export function summarizeAnticipation(songs: any[] | null | undefined): string |
 }
 
 /**
+ * Buzz-v2 slice 4 (C43) — cancel-confirmation copy for a PLANNED release.
+ *
+ * PURE display helper backing the "Cancel release" confirmation dialog. It
+ * derives the refund PREVIEW the same way the server DELETE endpoint computes
+ * the authoritative refund (fork E): the stored launch marketingBudget PLUS the
+ * UNSPENT pre-campaign share (preCampaign.totalBudget − spentToDate, clamped to
+ * >= 0). The dialog shows this as a preview; the store adopts the server's
+ * returned refundedAmount as the source of truth.
+ *
+ * The consequence lines are QUALITATIVE (fork E standing rule): no ×N multiplier
+ * strings anywhere. `hasPreBuzz` gates whether the "anticipation lost" line is
+ * shown (a plan with no pre-campaign built nothing to lose); `hasAttachedHype`
+ * gates the "attached Hype lost" line.
+ */
+export interface CancelReleasePreview {
+  /** Refund preview in whole currency units (launch budget + unspent pre-campaign). */
+  refundAmount: number;
+  /** True when this release diverted a pre-campaign share (anticipation was/will be built). */
+  hasPreBuzz: boolean;
+  /** True when banked hype was attached at plan time (dies on cancel, no pool return). */
+  hasAttachedHype: boolean;
+  /** Qualitative consequence lines to render in the dialog (no numbers/multipliers). */
+  consequences: string[];
+}
+
+export function summarizeCancelRelease(release: any): CancelReleasePreview {
+  const metadata = (release?.metadata ?? {}) as Record<string, any>;
+  const marketingBudget = typeof release?.marketingBudget === 'number' ? release.marketingBudget : 0;
+
+  const preCampaign = metadata.preCampaign;
+  const hasPreCampaign = !!preCampaign && typeof preCampaign === 'object';
+  const unspentPreCampaign = hasPreCampaign
+    ? Math.max(
+        0,
+        (typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0)
+          - (typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+      )
+    : 0;
+
+  const refundAmount = marketingBudget + unspentPreCampaign;
+
+  // A pre-campaign share was diverted → anticipation was (or is being) built.
+  const hasPreBuzz = hasPreCampaign
+    && typeof preCampaign.pct === 'number' && preCampaign.pct > 0;
+  // attachedHype is a signed number stored at plan time; nonzero means hype rode in.
+  const hasAttachedHype = typeof metadata.attachedHype === 'number' && metadata.attachedHype !== 0;
+
+  const consequences: string[] = [];
+  if (hasPreBuzz) {
+    consequences.push('Any anticipation your pre-campaign built is lost.');
+  }
+  if (hasAttachedHype) {
+    consequences.push('Attached Hype is lost — it does not return to any pool.');
+  }
+  consequences.push('The songs return to your catalog, ready to plan again.');
+
+  return { refundAmount, hasPreBuzz, hasAttachedHype, consequences };
+}
+
+/**
  * Aggregate a release's songs into the card Buzz summary.
  *
  * @param songs the release's songs (already joined by releaseId upstream)
