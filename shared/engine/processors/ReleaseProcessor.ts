@@ -1051,7 +1051,7 @@ export class ReleaseProcessor {
           const newAwareness = Math.round(Math.min(currentAwareness + scaledGain, 100));
           if (newAwareness === currentAwareness) continue;
 
-          appliedGainInt = newAwareness - currentAwareness; // signed int; songs share quality-driven gain, report the last
+          appliedGainInt += newAwareness - currentAwareness; // signed int, summed across the release's songs
           songUpdates.push({
             songId: song.id,
             awareness: newAwareness,
