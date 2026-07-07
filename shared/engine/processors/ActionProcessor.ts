@@ -164,7 +164,7 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
     // "Buzz" — a released song's live awareness stat (SongCatalog chip / release
     // cards), whose tooltip (SONG_BUZZ_TOOLTIP in client/src/lib/releaseBuzz.ts)
     // points back here. Display copy only; no engine behavior.
-    text: 'Pre-release buzz banked for your next release — it seeds that release with extra early awareness, which drives more streams out of the gate. Applied once to the next release, then spent. Expires unused after about two months. (Separate from a released song\'s live Buzz stat, which this seeds.)',
+    text: 'Pre-release buzz banked as Hype — it seeds a release with extra early awareness, which drives more streams out of the gate. When this meeting targets an artist, the Hype banks for THAT artist\'s next planned release; otherwise it banks for your label\'s next planned release. Applied when you plan that release, then spent. Expires unused after about two months. (Separate from a released song\'s live Buzz stat, which this seeds.)',
   },
   variance_up: {
     title: 'Volatility',
@@ -944,20 +944,56 @@ export class ActionProcessor {
 
         case 'awareness_boost': {
           // Exec-meetings-revival PR-5 (C3) — next-release awareness channel. Signed
-          // authored points bank into flags.pendingAwarenessBoost; consumed at a
-          // planned release's release-week path (ReleaseProcessor.processPlannedReleases
-          // / the lead-single path), where each released song's INITIAL awareness is
-          // seeded by pendingAwarenessBoost × awareness_boost_points_per_unit (×8),
-          // clamped at 0 (a negative pool suppresses discovery but never drives
-          // awareness below zero), then the pool zeroes. Riding the live awareness
-          // economy, that seed multiplies weekly streams up to 2× (weeks 1-4 build path
-          // + the awareness stream multiplier). Stamps pendingAwarenessBoostWeek so
-          // processDelayedEffects can expire an unconsumed bank after N weeks
+          // authored points bank into a hype pool; consumed at PLAN time
+          // (releasePlanningService.planRelease attaches the pool onto the release
+          // metadata) OR — for legacy releases planned before buzz-v2 slice 2 — at
+          // the release-week path (ReleaseProcessor.processPlannedReleases), where
+          // each released song's INITIAL awareness is seeded by the attached/banked
+          // pool × awareness_boost_points_per_unit (×8), clamped at 0 (a negative
+          // pool suppresses discovery but never drives awareness below zero). Riding
+          // the live awareness economy, that seed multiplies weekly streams up to 2×
+          // (weeks 1-4 build path + the awareness stream multiplier). Stamps a week
+          // so processDelayedEffects can expire an unconsumed bank after N weeks
           // (pending_awareness_boost_expiry_weeks, data/balance/markets.json).
+          //
+          // Buzz-v2 slice 2 (fork A) — ARTIST SCOPING. When this meeting targets a
+          // specific artist (target_scope: user_selected, so `artistId` is the
+          // player-picked artist), the boost banks to THAT artist's pool
+          // (flags.hypeArtistPools[artistId] = { amount, week }); only that artist's
+          // next-planned release consumes it. Truly global meetings (no user_selected
+          // artist) keep banking to the label-wide pool (flags.pendingAwarenessBoost),
+          // consumed by whichever release is planned first (fork B: first-planned
+          // takes all). Artist pools are a NEW additive key; the label pool keys are
+          // unchanged so old saves and existing tests keep working.
           const flags = (ctx.gameState.flags || {}) as Record<string, any>;
-          const previous = typeof flags.pendingAwarenessBoost === 'number' ? flags.pendingAwarenessBoost : 0;
-          flags.pendingAwarenessBoost = previous + value;
-          flags.pendingAwarenessBoostWeek = ctx.gameState.currentWeek || 0;
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const artistScoped = targetScope === 'user_selected' && !!artistId;
+
+          let poolTotal: number;
+          let scopeLabel: string;
+          if (artistScoped) {
+            const pools = (flags.hypeArtistPools && typeof flags.hypeArtistPools === 'object')
+              ? flags.hypeArtistPools as Record<string, { amount: number; week: number }>
+              : {};
+            const prev = typeof pools[artistId!]?.amount === 'number' ? pools[artistId!].amount : 0;
+            pools[artistId!] = { amount: prev + value, week: currentWeek };
+            flags.hypeArtistPools = pools;
+            poolTotal = pools[artistId!].amount;
+            // Fetch the artist's display name for attribution (best-effort; the pure
+            // per-key loop has no dbTransaction, and unit-test stubs pass storage:{}).
+            let artistName = 'this artist';
+            try {
+              const artist = await ctx.storage?.getArtist?.(artistId);
+              if (artist?.name) artistName = artist.name;
+            } catch { /* name is cosmetic — never block banking */ }
+            scopeLabel = `${artistName}'s next release`;
+          } else {
+            const previous = typeof flags.pendingAwarenessBoost === 'number' ? flags.pendingAwarenessBoost : 0;
+            flags.pendingAwarenessBoost = previous + value;
+            flags.pendingAwarenessBoostWeek = currentWeek;
+            poolTotal = flags.pendingAwarenessBoost;
+            scopeLabel = 'your label\'s next planned release';
+          }
           ctx.gameState.flags = flags;
 
           summary.changes.push({
@@ -971,15 +1007,17 @@ export class ActionProcessor {
           // effect badge in the meetings card); this one drives the routine-stage
           // Hype line + the core-status "N Hype banked" chip. Only emit for actual
           // banks (value !== 0) so byte-stable no-op choices add nothing.
+          // Slice 2: the description now names WHERE the hype landed (artist pool vs
+          // label pool); hypeTotal carries the pool total after this bank.
           if (value !== 0) {
             summary.changes.push({
               type: 'hype_banked',
-              description: `📦 Banked ${value > 0 ? '+' : ''}${value} Hype for your next release`,
+              description: `📦 Banked ${value > 0 ? '+' : ''}${value} Hype for ${scopeLabel}`,
               amount: value,
-              hypeTotal: flags.pendingAwarenessBoost,
+              hypeTotal: poolTotal,
             });
           }
-          console.log(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingAwarenessBoost}, stamped week ${flags.pendingAwarenessBoostWeek})`);
+          console.log(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} banked to ${artistScoped ? `artist ${artistId}` : 'label'} pool (now ${poolTotal}, stamped week ${currentWeek})`);
           break;
         }
 
@@ -1275,6 +1313,43 @@ export class ActionProcessor {
               amount: expiredAmount,
             });
           }
+        }
+      }
+
+      // Buzz-v2 slice 2 (fork C) — per-ARTIST-POOL expiry. Each artist pool ages
+      // independently from its own last-bank week (matching the single-pool stamp
+      // behavior above); attached hype (moved onto a release at plan time) never
+      // reaches this sweep. Emits one hype_expired per expired pool, naming the
+      // artist so the player knows whose banked hype faded. UNATTACHED pools only.
+      if (flags.hypeArtistPools && typeof flags.hypeArtistPools === 'object') {
+        const pools = flags.hypeArtistPools as Record<string, { amount: number; week: number }>;
+        const expiryWeeks = ctx.gameData.getAwarenessBoostConfigSync().pending_awareness_boost_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        for (const [poolArtistId, pool] of Object.entries(pools)) {
+          if (!pool || typeof pool.amount !== 'number' || pool.amount === 0) continue;
+          const stampedWeek = typeof pool.week === 'number' ? pool.week : currentWeek;
+          if (currentWeek - stampedWeek >= expiryWeeks) {
+            const expiredAmount = pool.amount;
+            // Best-effort artist name (cosmetic; unit-test stubs pass storage:{}).
+            let artistName = 'an artist';
+            try {
+              const artist = await ctx.storage?.getArtist?.(poolArtistId, ctx.dbTransaction);
+              if (artist?.name) artistName = artist.name;
+            } catch { /* name is cosmetic — never block expiry */ }
+            console.log(`[AWARENESS BOOST] Expired unconsumed artist pool for ${poolArtistId} (${expiredAmount}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+            delete pools[poolArtistId];
+            if (summary && Array.isArray(summary.changes)) {
+              summary.changes.push({
+                type: 'hype_expired',
+                description: `💨 ${expiredAmount > 0 ? '+' : ''}${expiredAmount} banked Hype for ${artistName} faded away unused (no release shipped in ${expiryWeeks} weeks)`,
+                amount: expiredAmount,
+              });
+            }
+          }
+        }
+        // Drop the container entirely if it emptied, to keep no-op games byte-stable.
+        if (Object.keys(pools).length === 0) {
+          delete flags.hypeArtistPools;
         }
       }
 

@@ -23,6 +23,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db as dbSingleton } from '../db';
 import { gameStates, releases, releaseSongs, songs } from '@shared/schema';
+import { serverGameData } from '../data/gameData';
 
 /**
  * A coded error whose `body` is the EXACT JSON payload the original route
@@ -208,6 +209,37 @@ export class ReleasePlanningService {
 
       console.log(`[PLAN RELEASE] Deducted $${totalBudget} and 1 creative capital for release planning`);
 
+      // Buzz-v2 slice 2 — ATTACH-AT-PLAN. Drain the planning artist's hype pool
+      // (flags.hypeArtistPools[artistId]) PLUS the entire label pool
+      // (flags.pendingAwarenessBoost, fork B: first-planned takes all) onto this
+      // release NOW, stored on release.metadata.attachedHype (signed units). At
+      // ship time ReleaseProcessor seeds starting Buzz from this attached number,
+      // NOT from reading global flags — so attached hype never expires and can't be
+      // stolen by a later release. flags live in a jsonb COLUMN on game_states.
+      // Re-read flags off the owner-verified gameState row (not a stale copy).
+      const flags = (gameState.flags && typeof gameState.flags === 'object')
+        ? { ...(gameState.flags as Record<string, any>) }
+        : {};
+      let attachedHype = 0;
+      // Label pool (whole).
+      if (typeof flags.pendingAwarenessBoost === 'number' && flags.pendingAwarenessBoost !== 0) {
+        attachedHype += flags.pendingAwarenessBoost;
+      }
+      flags.pendingAwarenessBoost = 0;
+      delete flags.pendingAwarenessBoostWeek;
+      // This artist's pool (drained; other artists' pools untouched).
+      if (flags.hypeArtistPools && typeof flags.hypeArtistPools === 'object') {
+        const pools = flags.hypeArtistPools as Record<string, { amount: number; week: number }>;
+        const pool = pools[artistId];
+        if (pool && typeof pool.amount === 'number' && pool.amount !== 0) {
+          attachedHype += pool.amount;
+        }
+        delete pools[artistId];
+        if (Object.keys(pools).length === 0) delete flags.hypeArtistPools;
+      }
+      // Persist the drained flags back onto the game state row.
+      await tx.update(gameStates).set({ flags }).where(eq(gameStates.id, gameId));
+
       // Create release record
       const [newRelease] = await tx.insert(releases).values({
         gameId,
@@ -223,6 +255,11 @@ export class ReleasePlanningService {
           scheduledReleaseWeek,
           marketingChannels: Object.keys(marketingBudget || {}),
           marketingBudgetBreakdown: marketingBudget || {}, // CRITICAL FIX: Store per-channel budgets for release execution
+          // Buzz-v2 slice 2: hype attached at plan time (signed units). Presence of
+          // this field routes ReleaseProcessor to seed from it (attached, never
+          // expires) instead of the legacy label-pool fallback. Stored even when 0
+          // so the release is unambiguously "slice-2 planned".
+          attachedHype,
           leadSingleStrategy: leadSingleStrategy ? {
             ...leadSingleStrategy,
             leadSingleBudgetBreakdown: leadSingleStrategy.leadSingleBudget || {}, // Store per-channel breakdown for lead single too
@@ -248,8 +285,21 @@ export class ReleasePlanningService {
       await tx.insert(releaseSongs).values(releaseSongEntries);
       console.log(`[PLAN RELEASE] Created ${releaseSongEntries.length} junction table entries for release ${newRelease.id}`);
 
-      return newRelease;
+      return { newRelease, attachedHype };
     });
+
+    const { newRelease: resultRelease, attachedHype } = result;
+
+    // Buzz-v2 slice 2 — plan-summary attribution. There is no weekly summary at
+    // plan time, so surface the applied hype in the plan response instead: the
+    // client shows "Hype applied: +N starting Buzz" in the planning confirmation.
+    // `units` is the raw pool (signed); `buzzPoints` is units × points-per-unit,
+    // exactly what ReleaseProcessor seeds at ship time. serverGameData's sync
+    // accessor has a safe hardcoded fallback if balance data isn't loaded.
+    const pointsPerUnit = serverGameData.getAwarenessBoostConfigSync().awareness_boost_points_per_unit;
+    const hypeApplied = attachedHype !== 0
+      ? { units: attachedHype, buzzPoints: attachedHype * pointsPerUnit }
+      : null;
 
     // Get updated game state and planned releases
     const [updatedGameState] = await this.db.select().from(gameStates).where(eq(gameStates.id, gameId));
@@ -258,11 +308,12 @@ export class ReleasePlanningService {
 
     return {
       success: true,
+      hypeApplied,
       release: {
-        id: result.id,
-        title: result.title,
-        type: result.type,
-        artistId: result.artistId,
+        id: resultRelease.id,
+        title: resultRelease.title,
+        type: resultRelease.type,
+        artistId: resultRelease.artistId,
         artistName: 'Artist Name', // Would need artist lookup
         songIds,
         leadSingleId,
@@ -274,7 +325,7 @@ export class ReleasePlanningService {
           roi: metadata?.projectedROI || 0,
           chartPotential: 50,
         },
-        createdAt: result.createdAt?.toISOString(),
+        createdAt: resultRelease.createdAt?.toISOString(),
         createdByWeek: updatedGameState.currentWeek,
       },
       updatedGameState: {

@@ -83,9 +83,48 @@ export const SONG_BUZZ_TOOLTIP =
 export const BANKED_HYPE_EXPIRY_WEEKS = 8;
 
 export const BANKED_HYPE_TOOLTIP =
-  'Banked Hype from your executive meetings. It seeds the next release you ship ' +
-  'with extra starting Buzz, then it’s spent. Unused, it fades after a while. ' +
-  '(Different from a released song’s live Buzz stat.)';
+  'Banked Hype from your executive meetings. It seeds a release with extra ' +
+  'starting Buzz when you plan it — an artist-targeted meeting banks for that ' +
+  'artist’s next planned release, otherwise for your next planned release. ' +
+  'Unused, it fades after a while. (Different from a released song’s live Buzz stat.)';
+
+/**
+ * Buzz-v2 slice 2 — sum ALL unattached hype pools for the core-status chip. As
+ * of slice 2 there is a label pool (flags.pendingAwarenessBoost, stamped by
+ * flags.pendingAwarenessBoostWeek) AND per-artist pools
+ * (flags.hypeArtistPools[artistId] = { amount, week }). The chip shows the total
+ * banked positive hype and the SOONEST fade week across all contributing pools.
+ * Attached hype (moved onto a release at plan time) is NOT in flags and never
+ * appears here. Only POSITIVE pools count toward the advertised total (a negative
+ * pool suppresses discovery — not a resource to surface); a pool's fade week only
+ * counts if it contributes to the positive total.
+ */
+export interface BankedHypeSummary {
+  /** Sum of all positive unattached pools (label + per-artist). */
+  total: number;
+  /** Soonest last-bank week among the positive contributing pools, or null. */
+  soonestWeek: number | null;
+}
+
+export function summarizeBankedHype(flags: Record<string, any> | undefined | null): BankedHypeSummary {
+  let total = 0;
+  let soonestWeek: number | null = null;
+  const consider = (amount: unknown, week: unknown) => {
+    if (typeof amount !== 'number' || amount <= 0) return;
+    total += amount;
+    if (typeof week === 'number' && (soonestWeek === null || week < soonestWeek)) {
+      soonestWeek = week;
+    }
+  };
+  const f = flags || {};
+  consider(f.pendingAwarenessBoost, f.pendingAwarenessBoostWeek);
+  if (f.hypeArtistPools && typeof f.hypeArtistPools === 'object') {
+    for (const pool of Object.values(f.hypeArtistPools as Record<string, any>)) {
+      consider(pool?.amount, pool?.week);
+    }
+  }
+  return { total, soonestWeek };
+}
 
 /** Catalog-wide counts backing the MetricsDashboard core-status "Buzz" stat. */
 export interface CatalogBuzzStatus {

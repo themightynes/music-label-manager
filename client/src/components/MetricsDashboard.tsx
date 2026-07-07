@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { useSongs } from '@/hooks/useSongs';
-import { summarizeCatalogBuzz, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
+import { summarizeCatalogBuzz, summarizeBankedHype, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
@@ -119,18 +119,14 @@ export function MetricsDashboard() {
   const { selectedActions } = useGameStore();
   // Catalog-wide songs for the core-status "Buzz" stat (live derivation).
   const { data: songs } = useSongs();
-  // Buzz-v2 slice 1: banked-hype pool (flags.pendingAwarenessBoost) + its stamp
-  // week, read via the useGameState() façade (NEVER useGameStore for spine
-  // fields). Feeds the "+N Hype banked · fades wk W" chip on BuzzStatusStat.
-  const bankedHypeFlags = (gameState?.flags || {}) as Record<string, any>;
-  const bankedHype =
-    typeof bankedHypeFlags.pendingAwarenessBoost === 'number'
-      ? bankedHypeFlags.pendingAwarenessBoost
-      : 0;
-  const bankedHypeWeek =
-    typeof bankedHypeFlags.pendingAwarenessBoostWeek === 'number'
-      ? bankedHypeFlags.pendingAwarenessBoostWeek
-      : null;
+  // Buzz-v2 slice 1+2: banked-hype pools read via the useGameState() façade
+  // (NEVER useGameStore for spine fields). Slice 2 sums ALL unattached pools —
+  // the label pool (flags.pendingAwarenessBoost) AND every per-artist pool
+  // (flags.hypeArtistPools) — and shows the soonest fade week among them, feeding
+  // the "+N Hype banked · fades wk W" chip on BuzzStatusStat.
+  const bankedHypeSummary = summarizeBankedHype(gameState?.flags as Record<string, any> | undefined);
+  const bankedHype = bankedHypeSummary.total;
+  const bankedHypeWeek = bankedHypeSummary.soonestWeek;
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},
     delayed: {},

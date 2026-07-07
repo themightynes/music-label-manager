@@ -435,7 +435,7 @@ interface GameStore {
   cancelProject: (projectId: string, cancellationData: { refundAmount: number }) => Promise<void>;
   
   // Release management
-  planRelease: (releaseData: any) => Promise<void>;
+  planRelease: (releaseData: any) => Promise<any>;
   
   // Save management
   saveGame: (name: string, options?: { isAutosave?: boolean }) => Promise<void>;

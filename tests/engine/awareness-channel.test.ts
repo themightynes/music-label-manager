@@ -260,7 +260,15 @@ function stubOutcome(proc: ReleaseProcessor) {
   });
 }
 
-describe('ReleaseProcessor.processPlannedReleases — awareness_boost consumption', () => {
+// NOTE (buzz-v2 slice 2): as of slice 2, hype attaches at PLAN time
+// (release.metadata.attachedHype) and ReleaseProcessor seeds from that number.
+// The releases in THIS block carry `metadata: {}` (no attachedHype), so they
+// exercise the LEGACY FALLBACK path — a release planned before slice 2 still
+// consumes the label-wide flags.pendingAwarenessBoost pool with the original
+// "first-planned takes all" semantics. These assertions are intentionally
+// preserved to lock that safety net. The attached-hype path is covered in
+// hype-scoping-slice2.test.ts.
+describe('ReleaseProcessor.processPlannedReleases — awareness_boost consumption (legacy fallback)', () => {
   it('seeds released song awareness by boost × points-per-unit, then zeroes the pool', async () => {
     const proc = new ReleaseProcessor();
     stubOutcome(proc);

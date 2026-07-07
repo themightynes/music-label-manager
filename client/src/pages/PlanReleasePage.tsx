@@ -495,9 +495,20 @@ export default function PlanReleasePage() {
         return song?.title || 'Unknown Song';
       }).join(', ');
 
+      // Buzz-v2 slice 2: surface plan-time hype attach. There's no weekly summary at
+      // plan time, so the applied hype (drained from the artist + label pools onto
+      // this release) is reported here. Qualitative-only per the standing rule: a
+      // point value is fine, no multiplier numbers.
+      const hypeApplied = result?.hypeApplied;
+      const hypeLine = hypeApplied
+        ? (hypeApplied.buzzPoints >= 0
+            ? ` Hype applied: +${hypeApplied.buzzPoints} starting Buzz.`
+            : ` Hype applied: ${hypeApplied.buzzPoints} starting Buzz (suppressed).`)
+        : '';
+
       toast({
         title: `Release "${releaseData.title}" planned successfully!`,
-        description: `Scheduled songs: ${scheduledSongTitles}. These songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`,
+        description: `Scheduled songs: ${scheduledSongTitles}.${hypeLine} These songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`,
       });
 
       // Refresh game data to load the new planned release

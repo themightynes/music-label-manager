@@ -1039,23 +1039,30 @@ export class ReleaseProcessor {
         return;
       }
 
-      // Exec-meetings-revival PR-5 (C3) — snapshot the banked awareness boost BEFORE
-      // seeding any release this week. A meeting choice banks signed authored points
-      // into flags.pendingAwarenessBoost (ActionProcessor); here they SEED the next
-      // release's per-song initial awareness (× awareness_boost_points_per_unit, ×8),
-      // clamped at 0 — a negative pool (viral_kill / reach_limitation) suppresses
-      // discovery but never drives awareness below zero. The seed rides the live
-      // awareness economy (weeks 1-4 build path + the up-to-2× stream multiplier).
-      // Consumed by the FIRST release that actually releases songs this week, then
-      // the pool zeroes so it can't seed a second release or carry into future weeks.
-      // Only touch flags at all when a boost is banked, so games that never use the
-      // channel stay byte-stable (no stray flags keys in golden-master snapshots).
+      // Exec-meetings-revival PR-5 (C3) + Buzz-v2 slice 2 — awareness-boost seed at
+      // ship time. As of slice 2, hype is ATTACHED at PLAN time
+      // (releasePlanningService.planRelease drains the planning artist's pool + the
+      // whole label pool onto release.metadata.attachedHype). At ship time we simply
+      // read that stored number and seed each released song's initial awareness
+      // (× awareness_boost_points_per_unit, ×8), clamped at 0 — a negative pool
+      // suppresses discovery but never drives awareness below zero. The seed rides
+      // the live awareness economy (weeks 1-4 build path + the up-to-2× stream
+      // multiplier).
+      //
+      // LEGACY FALLBACK (releases planned BEFORE slice 2): those rows have no
+      // `attachedHype` field. For them we keep the OLD behavior — consume the
+      // label-wide flags.pendingAwarenessBoost pool, "first-planned takes all",
+      // zeroing it after the first release seeds songs this week. This safety net
+      // only fires for a release with no attachedHype field AND a nonzero legacy
+      // label pool; new releases always carry attachedHype (even 0) so they never
+      // touch the label pool here. Only touch flags when the legacy path actually
+      // consumes, so games that never use the channel stay byte-stable.
       const awarenessFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
-      const bankedAwarenessBoost = typeof awarenessFlagsSnapshot.pendingAwarenessBoost === 'number'
+      const legacyLabelPool = typeof awarenessFlagsSnapshot.pendingAwarenessBoost === 'number'
         ? awarenessFlagsSnapshot.pendingAwarenessBoost
         : 0;
       const awarenessPointsPerUnit = ctx.gameData.getAwarenessBoostConfigSync().awareness_boost_points_per_unit;
-      let awarenessBoostConsumed = false;
+      let legacyLabelPoolConsumed = false;
 
       // Process planned releases
 
@@ -1103,14 +1110,29 @@ export class ReleaseProcessor {
           releaseArtist
         );
 
-        // Exec-meetings-revival PR-5 (C3) — seed each released song's initial
-        // awareness from the banked boost (× points-per-unit, clamped at 0). Applied
-        // to THIS release only if the pool is still unconsumed; consumed once, then
-        // zeroed below. The seed is additive to whatever awareness the song already
-        // had (0 for a fresh song) and is the value the weeks-1-4 build path grows
+        // Buzz-v2 slice 2 — determine THIS release's hype seed. Prefer the
+        // plan-time attached hype (metadata.attachedHype, a signed number). If the
+        // field is ABSENT (legacy release planned before slice 2), fall back to the
+        // label-wide pool "first-planned takes all". A present attachedHype of 0
+        // means "attached, nothing to seed" and MUST NOT trip the legacy path.
+        const hasAttachedHype = metadata != null
+          && Object.prototype.hasOwnProperty.call(metadata, 'attachedHype')
+          && typeof metadata.attachedHype === 'number';
+        let releaseHype = 0;
+        let usedLegacyLabelPool = false;
+        if (hasAttachedHype) {
+          releaseHype = metadata.attachedHype as number;
+        } else if (legacyLabelPool !== 0 && !legacyLabelPoolConsumed) {
+          releaseHype = legacyLabelPool;
+          usedLegacyLabelPool = true;
+        }
+
+        // Seed each released song's initial awareness from this release's hype
+        // (× points-per-unit, clamped at 0). Additive to whatever awareness the song
+        // already had (0 for a fresh song); the value the weeks-1-4 build path grows
         // from (ReleaseProcessor's awareness loop reads song.awareness).
-        const awarenessSeed = (bankedAwarenessBoost !== 0 && !awarenessBoostConsumed)
-          ? Math.max(0, (songsToRelease[0]?.awareness || 0) + bankedAwarenessBoost * awarenessPointsPerUnit)
+        const awarenessSeed = (releaseHype !== 0)
+          ? Math.max(0, (songsToRelease[0]?.awareness || 0) + releaseHype * awarenessPointsPerUnit)
           : null;
 
         // Prepare song updates using sophisticated breakdown
@@ -1127,42 +1149,46 @@ export class ReleaseProcessor {
           };
           if (awarenessSeed !== null) {
             const song = songsToRelease.find(s => s.id === songResult.songId);
-            base.awareness = Math.max(0, (song?.awareness || 0) + bankedAwarenessBoost * awarenessPointsPerUnit);
+            base.awareness = Math.max(0, (song?.awareness || 0) + releaseHype * awarenessPointsPerUnit);
             base.peak_awareness = Math.round(Math.max(song?.peak_awareness || 0, base.awareness));
           }
           return base;
         });
 
-        // Consume the banked boost on the first release that seeds songs this week.
+        // Emit the payoff attribution + consume the legacy label pool if this
+        // release used it (attached-hype releases have nothing to zero here — the
+        // pools were drained at plan time).
         if (awarenessSeed !== null) {
-          awarenessBoostConsumed = true;
-          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
-          flags.pendingAwarenessBoost = 0;
-          delete flags.pendingAwarenessBoostWeek;
-          ctx.gameState.flags = flags;
+          if (usedLegacyLabelPool) {
+            legacyLabelPoolConsumed = true;
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+            flags.pendingAwarenessBoost = 0;
+            delete flags.pendingAwarenessBoostWeek;
+            ctx.gameState.flags = flags;
+          }
 
           summary.changes.push({
             type: 'meeting',
-            description: bankedAwarenessBoost > 0
-              ? `Buzz paid off: +${bankedAwarenessBoost * awarenessPointsPerUnit} awareness seeded into "${release.title}"`
-              : `Suppressed discovery: ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness on "${release.title}"`,
-            amount: bankedAwarenessBoost
+            description: releaseHype > 0
+              ? `Buzz paid off: +${releaseHype * awarenessPointsPerUnit} awareness seeded into "${release.title}"`
+              : `Suppressed discovery: ${releaseHype * awarenessPointsPerUnit} awareness on "${release.title}"`,
+            amount: releaseHype
           });
           // Buzz-v2 slice 1: STRUCTURED payoff attribution (notable). Additive to
           // the 'meeting' entry above; this one drives the notable-stage Hype line
-          // so the player sees WHICH release the banked pool seeded. `amount` is the
+          // so the player sees WHICH release the hype seeded. `amount` is the
           // seeded Buzz points (signed); hypeUnits is the raw pool consumed.
           summary.changes.push({
             type: 'hype_applied',
-            description: bankedAwarenessBoost > 0
-              ? `🚀 Banked Hype seeded "${release.title}" with +${bankedAwarenessBoost * awarenessPointsPerUnit} starting Buzz`
-              : `🚀 Banked negative Hype suppressed "${release.title}" starting Buzz by ${bankedAwarenessBoost * awarenessPointsPerUnit}`,
-            amount: bankedAwarenessBoost * awarenessPointsPerUnit,
-            hypeUnits: bankedAwarenessBoost,
+            description: releaseHype > 0
+              ? `🚀 Banked Hype seeded "${release.title}" with +${releaseHype * awarenessPointsPerUnit} starting Buzz`
+              : `🚀 Banked negative Hype suppressed "${release.title}" starting Buzz by ${releaseHype * awarenessPointsPerUnit}`,
+            amount: releaseHype * awarenessPointsPerUnit,
+            hypeUnits: releaseHype,
             releaseId: release.id,
             releaseName: release.title,
           });
-          console.log(`[AWARENESS BOOST] Consumed banked boost (${bankedAwarenessBoost}) -> seeded ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness into "${release.title}", pool zeroed`);
+          console.log(`[AWARENESS BOOST] ${usedLegacyLabelPool ? 'Legacy label pool' : 'Attached hype'} (${releaseHype}) -> seeded ${releaseHype * awarenessPointsPerUnit} awareness into "${release.title}"`);
         }
 
         // Handle marketing investment allocation - use actual charged amount including seasonal adjustments

@@ -301,6 +301,82 @@ describe('POST /api/game/:gameId/releases/plan (characterization)', () => {
   });
 });
 
+describe('POST .../releases/plan — attach-at-plan hype (buzz-v2 slice 2)', () => {
+  it('drains the planning artist pool + the whole label pool onto release.metadata.attachedHype and reports it', async () => {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID,
+      money: 100000,
+      creativeCapital: 5,
+      currentWeek: 1,
+    });
+
+    // Bank a label pool (+2) and this artist's pool (+3), plus a DIFFERENT
+    // artist's pool (+9) that must NOT be drained.
+    await db.update(gameStates).set({
+      flags: {
+        pendingAwarenessBoost: 2,
+        pendingAwarenessBoostWeek: 1,
+        hypeArtistPools: {
+          [artistId]: { amount: 3, week: 1 },
+          'other-artist-id': { amount: 9, week: 1 },
+        },
+      },
+    }).where(eq(gameStates.id, gameId));
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/releases/plan`)
+      .send({
+        artistId,
+        title: 'Hyped Single',
+        type: 'single',
+        songIds: [songIds[0]],
+        scheduledReleaseWeek: 5,
+        marketingBudget: { radio: 1000 },
+      });
+
+    expect(res.status).toBe(201);
+    // 2 (label) + 3 (this artist) = 5 units; buzzPoints = 5 × 8 = 40.
+    expect(res.body.hypeApplied).toEqual({ units: 5, buzzPoints: 40 });
+
+    // Stored on the release metadata.
+    const [rel] = await db.select().from(releases).where(eq(releases.gameId, gameId));
+    expect((rel.metadata as any).attachedHype).toBe(5);
+
+    // Flags: label pool drained, this artist's pool removed, OTHER artist intact.
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    const flags = gs.flags as any;
+    expect(flags.pendingAwarenessBoost).toBe(0);
+    expect(flags.pendingAwarenessBoostWeek).toBeUndefined();
+    expect(flags.hypeArtistPools[artistId]).toBeUndefined();
+    expect(flags.hypeArtistPools['other-artist-id']).toEqual({ amount: 9, week: 1 });
+  });
+
+  it('attaches 0 (and reports no hypeApplied) when no pools are banked', async () => {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID,
+      money: 100000,
+      creativeCapital: 5,
+      currentWeek: 1,
+    });
+
+    const res = await request(app)
+      .post(`/api/game/${gameId}/releases/plan`)
+      .send({
+        artistId,
+        title: 'No Hype',
+        type: 'single',
+        songIds: [songIds[0]],
+        scheduledReleaseWeek: 5,
+        marketingBudget: { radio: 1000 },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.hypeApplied).toBeNull();
+    const [rel] = await db.select().from(releases).where(eq(releases.gameId, gameId));
+    expect((rel.metadata as any).attachedHype).toBe(0);
+  });
+});
+
 describe('DELETE /api/game/:gameId/releases/:releaseId (characterization)', () => {
   async function seedPlannedRelease(ownerId: string, money = 50000, refund = 5000) {
     const { gameId, artistId, songIds } = await seedGameWithSongs({
