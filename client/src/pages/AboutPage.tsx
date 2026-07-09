@@ -87,7 +87,7 @@ export default function AboutPage() {
 
         <section aria-labelledby="guide-heading" className="mb-6">
           <span className="block font-mono text-[10px] uppercase tracking-[0.28em] text-text-label mb-1.5">
-            The Centerpiece
+            How to Play
           </span>
           <h2
             id="guide-heading"
