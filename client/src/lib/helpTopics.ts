@@ -166,7 +166,6 @@ export const HELP_TOPICS: HelpTopic[] = [
     veteranNotes: [
       'A meeting that lets you name the artist tends to bank its payoff toward THAT artist\'s next release, while a label-wide call banks toward your label generally. When you are setting up a specific act, the targeted meetings are the ones that pull in the same direction as your plan.',
     ],
-    terms: ['creative-capital'],
   },
   {
     id: 'getting-heard',
@@ -206,7 +205,6 @@ export const HELP_TOPICS: HelpTopic[] = [
     veteranNotes: [
       'The lead single is more than a taster — it is the conduit your pre-release campaign works through. With a lead single out ahead, your setup builds at full strength; without one, the same effort does less. If you are planning to build anticipation, drop the single first.',
     ],
-    terms: ['money', 'hype'],
   },
   {
     id: 'on-the-road',
@@ -223,7 +221,6 @@ export const HELP_TOPICS: HelpTopic[] = [
       'Venue tiers unlock with [[reputation]]: clubs, then theaters, then arenas. Bigger rooms, bigger takes.',
       'It runs city by city over weeks — commit the calendar, and only book rooms your artist can actually fill.',
     ],
-    terms: ['money', 'reputation'],
   },
   {
     id: 'reading-the-charts',
@@ -240,6 +237,5 @@ export const HELP_TOPICS: HelpTopic[] = [
       'Read the debut for how a song entered, and the week-to-week movement for where it is heading.',
       'Competitor songs share the board and keep moving, and a strong run here builds [[reputation]] too, so judge your position against a field that is not standing still.',
     ],
-    terms: ['reputation'],
   },
 ];

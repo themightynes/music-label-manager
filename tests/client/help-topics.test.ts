@@ -147,6 +147,13 @@ describe('helpTopics — scanning-cue term tokens (about-help slice 3)', () => {
     expect(topic).toBeDefined();
     expect(topic!.terms).toEqual(['money', 'reputation', 'creative-capital']);
   });
+
+  it('header chips appear ONLY on the topics that INTRODUCE their terms (designer rule, 2026-07-09)', () => {
+    // Chips are introductions, not tags — repeating them on every topic that
+    // merely mentions a term dilutes the scanning cue.
+    const topicsWithChips = HELP_TOPICS.filter(t => (t.terms ?? []).length > 0).map(t => t.id);
+    expect(topicsWithChips).toEqual(['three-currencies', 'getting-heard']);
+  });
 });
 
 describe('helpTopics — consistency spot-check', () => {
