@@ -215,7 +215,7 @@ export default function MainMenuPage() {
     { key: 'new-game', label: 'New Game', onClick: handleNewGame, side: 'right', y: -120, x: -16 },
     { key: 'load', label: 'Load Game', onClick: handleLoadGame, side: 'left', y: 0, x: 28 },
     { key: 'options', label: 'Options', disabled: true, note: 'coming soon', side: 'right', y: 0, x: 28 },
-    { key: 'about', label: 'About', disabled: true, note: 'coming soon', side: 'right', y: 120, x: -16 },
+    { key: 'about', label: 'About', onClick: () => setLocation('/about'), side: 'right', y: 120, x: -16 },
     ...(isAdmin
       ? [{ key: 'admin', label: 'Admin', onClick: () => setLocation('/admin'), side: 'left' as const, y: 120, x: -16 }]
       : []),

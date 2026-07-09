@@ -15,6 +15,7 @@ import ArtistPage from "@/pages/ArtistPage";
 import ExecutiveSuitePage from "@/pages/ExecutiveSuitePage";
 import AROfficePage from "@/pages/AROffice";
 import OfficePage from "@/pages/OfficePage";
+import AboutPage from "@/pages/AboutPage";
 import QualityTester from "@/pages/QualityTester";
 import TourVarianceTesterPage from "@/pages/TourVarianceTesterPage";
 import PopularityTester from "@/pages/PopularityTester";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/executives" component={ExecutiveSuitePage} />
       <Route path="/ar-office" component={AROfficePage} />
       <Route path="/office" component={OfficePage} />
+      <Route path="/about" component={AboutPage} />
       <Route path="/recording-session" component={RecordingSessionPage} />
       <Route path="/live-performance" component={LivePerformancePage} />
 
