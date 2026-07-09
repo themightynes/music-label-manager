@@ -3,7 +3,7 @@
  * (client/src/lib/helpTopics.ts, about-help slice 1).
  *
  * The copy is a data-only contract with players. These tests pin its SHAPE
- * (7 topics in journey order, required fields non-empty, paragraph/rule counts)
+ * (topics in journey order, required fields non-empty, paragraph/rule counts)
  * and its VOICE constraints (fork-E precedent from the awareness arc: no engine
  * numbers — multipliers, decay rates, thresholds, percentages — leak into copy).
  */
@@ -16,6 +16,7 @@ const EXPECTED_IDS = [
   'executive-team',
   'getting-heard',
   'putting-out-a-record',
+  'streams-and-money',
   'on-the-road',
   'reading-the-charts',
 ] as const;
@@ -42,7 +43,7 @@ function stripTermTokens(text: string): string {
 const ALL_TEXT_STRIPPED = stripTermTokens(ALL_TEXT);
 
 describe('helpTopics — structure', () => {
-  it('has exactly 7 topics, in the expected journey order', () => {
+  it('has exactly 8 topics, in the expected journey order', () => {
     expect(HELP_TOPICS).toHaveLength(EXPECTED_IDS.length);
     expect(HELP_TOPICS.map(t => t.id)).toEqual([...EXPECTED_IDS]);
   });
