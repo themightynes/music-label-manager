@@ -8,7 +8,7 @@
  * numbers — multipliers, decay rates, thresholds, percentages — leak into copy).
  */
 import { describe, it, expect } from 'vitest';
-import { HELP_TOPICS, HELP_PREAMBLE, type HelpTopic } from '@/lib/helpTopics';
+import { HELP_TOPICS, HELP_PREAMBLE, HELP_TERMS, type HelpTopic } from '@/lib/helpTopics';
 
 const EXPECTED_IDS = [
   'weekly-grind',
@@ -30,6 +30,16 @@ const ALL_TEXT = [
   ...HELP_PREAMBLE.body,
   ...HELP_TOPICS.map(topicText),
 ].join('\n');
+
+/** Matches [[key]] or [[key|Display Text]] scanning-cue tokens (about-help slice 3). */
+const TERM_TOKEN_RE = /\[\[([a-z-]+)(?:\|([^\]]+))?\]\]/g;
+
+/** Strips [[key|Display]] / [[key]] tokens down to the text a player actually reads. */
+function stripTermTokens(text: string): string {
+  return text.replace(TERM_TOKEN_RE, (_full, key: string, display?: string) => display ?? key);
+}
+
+const ALL_TEXT_STRIPPED = stripTermTokens(ALL_TEXT);
 
 describe('helpTopics — structure', () => {
   it('has exactly 7 topics, in the expected journey order', () => {
@@ -82,26 +92,60 @@ describe('helpTopics — structure', () => {
 });
 
 describe('helpTopics — voice leakage guards (fork-E precedent)', () => {
+  // Guards run on TOKEN-STRIPPED text (markup removed, display text kept) so they
+  // police what the player actually reads, not the [[key|...]] markup syntax itself.
+
   it('has no multiplier-number leakage (e.g. "2x", "1.5×")', () => {
     // Matches a number immediately followed by x/×, the multiplier tell.
-    expect(ALL_TEXT).not.toMatch(/\d+(\.\d+)?\s*[x×]/i);
+    expect(ALL_TEXT_STRIPPED).not.toMatch(/\d+(\.\d+)?\s*[x×]/i);
   });
 
   it('has no engine-jargon leakage', () => {
-    expect(ALL_TEXT).not.toMatch(/multiplier|decay rate|RNG|seed|config|threshold/i);
+    expect(ALL_TEXT_STRIPPED).not.toMatch(/multiplier|decay rate|RNG|seed|config|threshold/i);
   });
 
   it('has no percentages anywhere', () => {
-    expect(ALL_TEXT).not.toContain('%');
+    expect(ALL_TEXT_STRIPPED).not.toContain('%');
   });
 
   it('only uses plainly-visible game numbers (52, focus-slot counts, Top 100)', () => {
     // Allowlist: the campaign length, the 3/4 focus slots, and "Top 100" are the
     // only bare numbers the voice rules permit. Any OTHER numeral is a leak.
     const ALLOWED = new Set(['52', '100', '3', '4']);
-    const numbers = ALL_TEXT.match(/\d+(\.\d+)?/g) ?? [];
+    const numbers = ALL_TEXT_STRIPPED.match(/\d+(\.\d+)?/g) ?? [];
     const offenders = numbers.filter(n => !ALLOWED.has(n));
     expect(offenders, `unexpected numerals in copy: ${offenders.join(', ')}`).toEqual([]);
+  });
+});
+
+describe('helpTopics — scanning-cue term tokens (about-help slice 3)', () => {
+  it('every [[key]] token in the copy resolves to a HELP_TERMS key', () => {
+    const offenders: string[] = [];
+    let m: RegExpExecArray | null;
+    const re = new RegExp(TERM_TOKEN_RE.source, 'g');
+    while ((m = re.exec(ALL_TEXT)) !== null) {
+      const key = m[1];
+      if (!(key in HELP_TERMS)) offenders.push(key);
+    }
+    expect(offenders, `unknown term keys used in copy: ${offenders.join(', ')}`).toEqual([]);
+  });
+
+  it('at least one [[...]] token exists (sanity check the markup is actually used)', () => {
+    expect(ALL_TEXT).toMatch(TERM_TOKEN_RE);
+  });
+
+  it('every topic\'s terms array (when present) contains only valid HELP_TERMS keys', () => {
+    for (const t of HELP_TOPICS) {
+      for (const key of t.terms ?? []) {
+        expect(key in HELP_TERMS, `topic ${t.id} has unknown term key "${key}"`).toBe(true);
+      }
+    }
+  });
+
+  it('three-currencies has exactly the three currency term chips', () => {
+    const topic = HELP_TOPICS.find(t => t.id === 'three-currencies');
+    expect(topic).toBeDefined();
+    expect(topic!.terms).toEqual(['money', 'reputation', 'creative-capital']);
   });
 });
 

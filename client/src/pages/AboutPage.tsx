@@ -1,5 +1,6 @@
+import { Fragment, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
-import { HELP_PREAMBLE, HELP_TOPICS } from '@/lib/helpTopics';
+import { HELP_PREAMBLE, HELP_TOPICS, HELP_TERMS } from '@/lib/helpTopics';
 import {
   Accordion,
   AccordionContent,
@@ -12,6 +13,76 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
+
+/**
+ * Inline scanning-cue renderer (about-help slice 3). Splits copy on
+ * `[[key]]` / `[[key|Display Text]]` tokens and renders known HELP_TERMS
+ * keys with their game-matching color treatment. Unknown keys degrade to
+ * plain text defensively — content is a data contract, not a hard type.
+ */
+const TERM_TOKEN = /\[\[([a-z-]+)(?:\|([^\]]+))?\]\]/g;
+
+function HelpText({ text }: { text: string }) {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  TERM_TOKEN.lastIndex = 0;
+  while ((match = TERM_TOKEN.exec(text)) !== null) {
+    const [full, termKey, display] = match;
+    if (match.index > lastIndex) {
+      nodes.push(<Fragment key={key++}>{text.slice(lastIndex, match.index)}</Fragment>);
+    }
+    const term = HELP_TERMS[termKey];
+    if (term) {
+      nodes.push(
+        <span key={key++} className={term.inlineClassName}>
+          {display ?? term.label}
+        </span>
+      );
+    } else {
+      // Defensive: unknown key — render literally so a typo doesn't vanish text.
+      nodes.push(<Fragment key={key++}>{display ?? full}</Fragment>);
+    }
+    lastIndex = match.index + full.length;
+  }
+  if (lastIndex < text.length) {
+    nodes.push(<Fragment key={key++}>{text.slice(lastIndex)}</Fragment>);
+  }
+  return <>{nodes}</>;
+}
+
+/** Small header chip showing a term's icon + label, matching its in-game hue. */
+function TermChip({ termKey }: { termKey: string }) {
+  const term = HELP_TERMS[termKey];
+  if (!term) return null;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide leading-none ${chipClassName(termKey)}`}
+    >
+      {term.icon && <span aria-hidden="true">{term.icon}</span>}
+      {term.label}
+    </span>
+  );
+}
+
+/** Chip container classes per term — mirrors the game's real chip treatments (e.g. SongBuzzChip). */
+function chipClassName(termKey: string): string {
+  switch (termKey) {
+    case 'buzz':
+    case 'awareness':
+      return 'text-neon-cyan bg-neon-cyan/10 border-neon-cyan/40';
+    case 'money':
+    case 'hype':
+      return 'text-money bg-money/10 border-money/40';
+    case 'creative-capital':
+      return 'text-text-accent bg-text-accent/10 border-text-accent/40';
+    case 'reputation':
+    default:
+      return 'text-text-primary bg-white/5 border-white/15';
+  }
+}
 
 /**
  * About page — reachable from the MAIN MENU, possibly before any game exists.
@@ -106,7 +177,7 @@ export default function AboutPage() {
           <div className="space-y-3">
             {HELP_PREAMBLE.body.map((paragraph, i) => (
               <p key={i} className="text-[13.5px] sm:text-sm leading-relaxed text-text-body font-sans">
-                {paragraph}
+                <HelpText text={paragraph} />
               </p>
             ))}
           </div>
@@ -117,20 +188,29 @@ export default function AboutPage() {
           {HELP_TOPICS.map((topic) => (
             <AccordionItem key={topic.id} value={topic.id} className="border-white/10">
               <AccordionTrigger className="font-display text-[15px] sm:text-base text-text-primary hover:no-underline hover:text-money">
-                {topic.title}
+                <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-left">
+                  <span>{topic.title}</span>
+                  {topic.terms && topic.terms.length > 0 && (
+                    <span className="flex flex-wrap items-center gap-1">
+                      {topic.terms.map((termKey) => (
+                        <TermChip key={termKey} termKey={termKey} />
+                      ))}
+                    </span>
+                  )}
+                </span>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4">
                   <p className="text-[13.5px] sm:text-sm font-semibold text-text-primary leading-relaxed">
-                    {topic.tldr}
+                    <HelpText text={topic.tldr} />
                   </p>
                   <p className="text-[13px] sm:text-[13.5px] italic text-text-muted leading-relaxed">
-                    {topic.hook}
+                    <HelpText text={topic.hook} />
                   </p>
                   <div className="space-y-3">
                     {topic.body.map((paragraph, i) => (
                       <p key={i} className="text-[13.5px] sm:text-sm leading-relaxed text-text-body font-sans max-w-[62ch]">
-                        {paragraph}
+                        <HelpText text={paragraph} />
                       </p>
                     ))}
                   </div>
@@ -142,7 +222,7 @@ export default function AboutPage() {
                       {topic.rules.map((rule, i) => (
                         <li key={i} className="flex gap-2 text-[13px] sm:text-[13.5px] leading-relaxed text-text-body font-sans">
                           <span aria-hidden="true" className="text-neon-amber shrink-0">▸</span>
-                          <span>{rule}</span>
+                          <span><HelpText text={rule} /></span>
                         </li>
                       ))}
                     </ul>
@@ -157,7 +237,7 @@ export default function AboutPage() {
                       <CollapsibleContent className="mt-3 space-y-3 border-l-2 border-neon-amber/30 pl-4">
                         {topic.veteranNotes.map((paragraph, i) => (
                           <p key={i} className="text-[13px] sm:text-[13.5px] leading-relaxed text-text-muted font-sans max-w-[62ch]">
-                            {paragraph}
+                            <HelpText text={paragraph} />
                           </p>
                         ))}
                       </CollapsibleContent>
