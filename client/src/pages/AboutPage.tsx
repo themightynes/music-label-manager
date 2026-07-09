@@ -131,10 +131,19 @@ export default function AboutPage() {
       {/* Slim header */}
       <header className="relative z-10 flex items-center justify-between px-8 sm:px-12 pt-8 pb-2">
         <button
-          onClick={() => setLocation('/')}
+          onClick={() => {
+            // Reachable from BOTH the main menu and the in-game dock's More menu —
+            // go back to wherever the player came from; fall back to the main menu
+            // when opened directly (no in-app history).
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              setLocation('/');
+            }
+          }}
           className="font-mono text-[12px] uppercase tracking-[0.22em] text-text-muted hover:text-money transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(212,163,115,0.7)] rounded-sm"
         >
-          ◂ Main Menu
+          ◂ Back
         </button>
       </header>
 
