@@ -144,9 +144,28 @@ export const HELP_TOPICS: HelpTopic[] = [
       'Keep some [[creative-capital|creative capital]] in reserve — being out of it stops the art cold, cash or no cash.',
     ],
     veteranNotes: [
-      'Access tiers are the real reason reputation compounds: each level you cross opens playlists, press, and venues that were simply closed before. A move that looks like a pure standing play is often really an investment in what you will be allowed to do later.',
+      'Access tiers are the real reason reputation compounds: each level you cross opens playlists, press, and venues that were simply closed before (see "Access: The Doors Reputation Opens"). A move that looks like a pure standing play is often really an investment in what you will be allowed to do later.',
     ],
     terms: ['money', 'reputation', 'creative-capital'],
+  },
+  {
+    id: 'access-tiers',
+    title: 'Access: The Doors Reputation Opens',
+    hook: 'The record was good and the marketing was real, but it went nowhere — because the rooms that matter were not taking your calls yet.',
+    tldr: 'Your [[reputation]] unlocks three ladders of industry access — playlists, press, and venues — and each rung is a step-change in what the same work can achieve.',
+    body: [
+      'This business runs on who will take your call, and that is what access is. There are three ladders, and your [[reputation]] climbs all of them for you: playlists, from niche placements up to the flagship lists; press, from blogs up to national outlets; and venues, from clubs up to arenas. You do not apply for a rung. When your standing clears the bar, the door opens on its own — and the game tells you the week it happens.',
+      'Each ladder gates a different part of the machine. Playlist access is reach: the same release travels further from a higher shelf, so a tier jump lifts every record you put out after it. Press access is attention: higher tiers mean the story of your label gets picked up more often, and covered more warmly — and coverage feeds the [[reputation]] that got you there. Venue access is the ceiling on your touring money (see "On the Road").',
+      'Treat these as step-changes, not a slow slope. The week you cross into a new tier, the math behind your releases and tours genuinely changes — which is why a [[reputation]] play that looks modest on its own can be the most valuable move on the board when you are sitting just under a door.',
+    ],
+    rules: [
+      'Three ladders — playlists, press, venues — all climbed by [[reputation]] automatically. No one hands you a form.',
+      'Tier jumps are step-changes: the same record or tour simply does more from a higher rung.',
+      'Playlists carry your streams, press carries your name, venues carry your tours — know which door your plan needs next.',
+    ],
+    veteranNotes: [
+      'These doors swing both ways. Access follows your CURRENT standing, so a label that lets its reputation slide can watch a door quietly close on it. Protect the standing that got you into the room.',
+    ],
   },
   {
     id: 'executive-team',

@@ -13,6 +13,7 @@ import { HELP_TOPICS, HELP_PREAMBLE, HELP_TERMS, type HelpTopic } from '@/lib/he
 const EXPECTED_IDS = [
   'weekly-grind',
   'three-currencies',
+  'access-tiers',
   'executive-team',
   'getting-heard',
   'putting-out-a-record',
@@ -43,7 +44,7 @@ function stripTermTokens(text: string): string {
 const ALL_TEXT_STRIPPED = stripTermTokens(ALL_TEXT);
 
 describe('helpTopics — structure', () => {
-  it('has exactly 8 topics, in the expected journey order', () => {
+  it('has exactly 9 topics, in the expected journey order', () => {
     expect(HELP_TOPICS).toHaveLength(EXPECTED_IDS.length);
     expect(HELP_TOPICS.map(t => t.id)).toEqual([...EXPECTED_IDS]);
   });
