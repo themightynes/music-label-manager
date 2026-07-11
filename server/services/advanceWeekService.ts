@@ -83,7 +83,7 @@ export class AdvanceWeekService {
    * requireGameOwner in the route. Returns the exact response envelope the
    * original handler returned ({ gameState, summary, campaignResults, debug }).
    */
-  async advanceWeek(gameId: string, selectedActions: any[], expectedCurrentWeek?: number) {
+  async advanceWeek(gameId: string, selectedActions: any[], expectedCurrentWeek?: number, sideEventChoice?: { eventId: string; choiceId: string } | null) {
     // D6 PR-3 review fix: load balance config BEFORE the transaction so the
     // FOR UPDATE row lock is never held across disk I/O. Neither call touches
     // the DB or depends on tx: getStartingValues() reads balance JSON, and
@@ -129,6 +129,37 @@ export class AdvanceWeekService {
           currentWeek: gameState.currentWeek ?? 1,
           expectedCurrentWeek,
         });
+      }
+
+      // Mandatory Side Events ("Crisis on the Desk"): a pending crisis MUST be
+      // resolved before the week can advance. Enforced INSIDE the FOR UPDATE lock
+      // off the freshly-read row (never the middleware's unlocked read), mirroring
+      // the C58 stale-week guard above. When the kill-switch is off, the pending
+      // event lapses the legacy way and this gate is inert.
+      const mandatorySideEvents = this.serverGameData.getMandatorySideEventsConfigSync().enabled;
+      const pendingCrisis = (gameState.flags as any)?.pending_side_event as
+        | { eventId: string; week: number }
+        | undefined;
+      // Don't gate a campaign that has already ended (week >= 52 + completed) —
+      // that path takes the campaign-results early return below and would never
+      // reach the engine to clear the crisis, so gating it would brick the end
+      // screen. A live campaign at week 52 (completed still false) IS gated: the
+      // player resolves the crisis, then the advance completes the campaign.
+      const campaignAlreadyEnded = (gameState.currentWeek ?? 1) >= 52 && !!gameState.campaignCompleted;
+      if (mandatorySideEvents && pendingCrisis?.eventId && !campaignAlreadyEnded) {
+        const provided = sideEventChoice ?? null;
+        let valid = false;
+        if (provided && provided.eventId === pendingCrisis.eventId) {
+          const crisisEvent = await this.serverGameData.getEventById(pendingCrisis.eventId);
+          valid = !!crisisEvent?.choices.some((c) => c.id === provided.choiceId);
+        }
+        if (!valid) {
+          throw new AdvanceWeekConflictError(400, {
+            error: 'PENDING_SIDE_EVENT',
+            message: 'A crisis is on your desk — choose how to handle it before advancing the week.',
+            eventId: pendingCrisis.eventId,
+          });
+        }
       }
 
       // Load current artists for mood calculations
@@ -301,7 +332,12 @@ export class AdvanceWeekService {
         console.log('[DEBUG] Starting GameEngine processing...');
 
         try {
-          weekResult = await gameEngine.advanceWeek(formattedActions, tx); // Pass transaction context
+          weekResult = await gameEngine.advanceWeek(formattedActions, tx, {
+            // Mandatory Side Events: carry the validated crisis resolution into the
+            // engine so its effects apply DURING this advance (queued like a weekly
+            // action). The gate above already verified it against the pending flag.
+            sideEventChoice: sideEventChoice ?? null,
+          }); // Pass transaction context
           console.log('[DEBUG] Week advancement completed successfully');
           console.log('[DEBUG] WeekResult received from GameEngine:', {
             weekResult,

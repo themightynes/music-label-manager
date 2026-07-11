@@ -39,9 +39,9 @@ const router = Router();
     try {
       // Validate request using shared contract
       const request = validateRequest(AdvanceWeekRequest, req.body);
-      const { gameId, selectedActions, expectedCurrentWeek } = request;
+      const { gameId, selectedActions, expectedCurrentWeek, sideEventChoice } = request;
 
-      const finalResult = await advanceWeekService.advanceWeek(gameId, selectedActions, expectedCurrentWeek);
+      const finalResult = await advanceWeekService.advanceWeek(gameId, selectedActions, expectedCurrentWeek, sideEventChoice ?? null);
 
       res.json(finalResult);
     } catch (error) {

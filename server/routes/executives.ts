@@ -237,7 +237,14 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
 
       // Check if focus slots are available
       const usedSlots = gameState.usedFocusSlots || 0;
-      const totalSlots = gameState.focusSlots || 3;
+      // Mandatory Side Events ("Crisis on the Desk"): a pending crisis occupies
+      // ONE focus slot, so the effective ceiling for meeting selection drops by
+      // one while it is unresolved (mirrors the client's crisis-slot math). This
+      // is the server enforcement of the reduced slot count the selection pipeline
+      // must respect.
+      const mandatorySideEvents = serverGameData.getMandatorySideEventsConfigSync().enabled;
+      const crisisPending = mandatorySideEvents && !!(gameState.flags as any)?.pending_side_event?.eventId;
+      const totalSlots = (gameState.focusSlots || 3) - (crisisPending ? 1 : 0);
 
       if (usedSlots >= totalSlots) {
         return res.status(400).json({
