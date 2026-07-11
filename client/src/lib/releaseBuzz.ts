@@ -126,6 +126,152 @@ export function summarizeBankedHype(flags: Record<string, any> | undefined | nul
   return { total, soonestWeek };
 }
 
+// ---------------------------------------------------------------------------
+// Hype-board UX arc (July 2026, playtest feedback) — per-pool banked-hype
+// surfacing. All DISPLAY-ONLY: these helpers re-read the SAME client-visible
+// flag fields summarizeBankedHype already reads (flags.pendingAwarenessBoost +
+// flags.hypeArtistPools) — no engine math is re-derived anywhere.
+// ---------------------------------------------------------------------------
+
+/**
+ * Qualitative strength band over banked hype units (display labels only —
+ * tuning these changes wording, never mechanics). HARDCODED display bands:
+ * meetings bank a few units at a time, so 6+ across pools reads as "strong".
+ */
+export const HYPE_STRENGTH_STRONG_MIN = 6;
+export const HYPE_STRENGTH_SOLID_MIN = 3;
+
+export type HypeStrengthBand = 'strong' | 'solid' | 'modest';
+
+export function hypeStrengthBand(amount: number): HypeStrengthBand | null {
+  if (typeof amount !== 'number' || amount <= 0) return null;
+  if (amount >= HYPE_STRENGTH_STRONG_MIN) return 'strong';
+  if (amount >= HYPE_STRENGTH_SOLID_MIN) return 'solid';
+  return 'modest';
+}
+
+/** One unattached banked-hype pool, named for display. */
+export interface BankedHypePool {
+  scope: 'label' | 'artist';
+  /** Present for artist pools. */
+  artistId?: string;
+  /** Display name — the artist's name from the roster cache, or 'Label'. */
+  name: string;
+  /** Signed pool amount (a negative pool suppresses discovery). */
+  amount: number;
+  /** Last-bank week the expiry countdown runs from, or null if undated. */
+  week: number | null;
+  /** week + BANKED_HYPE_EXPIRY_WEEKS, or null when undated (display mirror). */
+  fadesWeek: number | null;
+  /** Qualitative band for positive pools; null for zero/negative pools. */
+  strength: HypeStrengthBand | null;
+}
+
+/**
+ * List every nonzero unattached pool (label + per-artist) with display names.
+ * Reads the exact same flag fields as summarizeBankedHype — the two must stay
+ * consistent (the chip total is the sum of these pools' positive amounts).
+ * Unknown artist ids fall back to 'an artist' (name is cosmetic, never blocks).
+ */
+export function listBankedHypePools(
+  flags: Record<string, any> | undefined | null,
+  artistNameById: Record<string, string> = {}
+): BankedHypePool[] {
+  const pools: BankedHypePool[] = [];
+  const f = flags || {};
+  const toPool = (
+    scope: 'label' | 'artist',
+    name: string,
+    amount: unknown,
+    week: unknown,
+    artistId?: string
+  ): BankedHypePool | null => {
+    if (typeof amount !== 'number' || amount === 0) return null;
+    const stampedWeek = typeof week === 'number' ? week : null;
+    return {
+      scope,
+      ...(artistId ? { artistId } : {}),
+      name,
+      amount,
+      week: stampedWeek,
+      fadesWeek: stampedWeek === null ? null : stampedWeek + BANKED_HYPE_EXPIRY_WEEKS,
+      strength: hypeStrengthBand(amount),
+    };
+  };
+  const label = toPool('label', 'Label', f.pendingAwarenessBoost, f.pendingAwarenessBoostWeek);
+  if (label) pools.push(label);
+  if (f.hypeArtistPools && typeof f.hypeArtistPools === 'object') {
+    for (const [artistId, pool] of Object.entries(f.hypeArtistPools as Record<string, any>)) {
+      const entry = toPool(
+        'artist',
+        artistNameById[artistId] || 'an artist',
+        pool?.amount,
+        pool?.week,
+        artistId
+      );
+      if (entry) pools.push(entry);
+    }
+  }
+  return pools;
+}
+
+/**
+ * Task 1 (banked-hype preview at release planning) — which pools will attach
+ * to a release planned NOW for this artist. Mirrors the server attach rule
+ * (releasePlanningService: the selected artist's pool PLUS the entire label
+ * pool — first-planned takes all) for DISPLAY only; the server result
+ * (hypeApplied) stays the source of truth at confirm time. Qualitative
+ * strength band per the standing fork-E rule: a point value is fine, no
+ * multiplier numbers.
+ */
+export interface HypeAttachPreview {
+  /** The pools that will drain onto this release at plan time (nonzero only). */
+  pools: BankedHypePool[];
+  /** Signed sum across those pools (negative = suppression). */
+  total: number;
+  /** Band over the positive total, or null when total <= 0. */
+  strength: HypeStrengthBand | null;
+  /** True when the net attached hype is negative (suppresses starting Buzz). */
+  suppressed: boolean;
+}
+
+export function summarizeHypeAttachPreview(
+  flags: Record<string, any> | undefined | null,
+  artistId: string | null | undefined,
+  artistNameById: Record<string, string> = {}
+): HypeAttachPreview {
+  const all = listBankedHypePools(flags, artistNameById);
+  const pools = all.filter(
+    (p) => p.scope === 'label' || (artistId != null && p.artistId === artistId)
+  );
+  const total = pools.reduce((sum, p) => sum + p.amount, 0);
+  return {
+    pools,
+    total,
+    strength: hypeStrengthBand(total),
+    suppressed: total < 0,
+  };
+}
+
+/**
+ * Task 2 (weekly hype-build readout) — momentum band for a 'pre_campaign'
+ * WeekSummary entry. `amount` is the entry's applied awareness gain for the
+ * week (structured field on the engine's pre_campaign change); the band turns
+ * it into a direction + word so the rendered line stays qualitative — the raw
+ * gain number is NEVER rendered. HARDCODED display bands (wording only).
+ */
+export const ANTICIPATION_SURGE_MIN = 4;
+
+export function anticipationMomentum(amount: unknown): {
+  direction: 'up' | 'steady';
+  word: string;
+} {
+  const gain = typeof amount === 'number' ? amount : 0;
+  if (gain >= ANTICIPATION_SURGE_MIN) return { direction: 'up', word: 'surging' };
+  if (gain >= 1) return { direction: 'up', word: 'building' };
+  return { direction: 'steady', word: 'holding' };
+}
+
 /** Catalog-wide counts backing the MetricsDashboard core-status "Buzz" stat. */
 export interface CatalogBuzzStatus {
   /** Released songs in the building window (weeks 1-4 since release) with awareness > 0. */

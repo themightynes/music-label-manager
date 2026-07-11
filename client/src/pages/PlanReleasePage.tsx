@@ -17,6 +17,7 @@ import { apiRequest } from '@/lib/queryClient';
 import GameLayout from '@/layouts/GameLayout';
 import { MusicCalendar } from '@/components/MusicCalendar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { BankedHypeAttachPreview } from '@/components/BankedHypeAttachPreview';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
@@ -1436,6 +1437,17 @@ export default function PlanReleasePage() {
                 )}
               </section>
             )}
+
+            {/* Hype-board UX Task 1 — banked-hype attach preview. Shows BEFORE
+                confirm which pool(s) will drain onto this release at plan time
+                (selected artist's pool + entire label pool — mirrors the server
+                attach rule for display only; the server's hypeApplied stays the
+                source of truth). Renders nothing when no pool would attach. */}
+            <BankedHypeAttachPreview
+              flags={gameState?.flags as Record<string, any> | undefined}
+              artistId={selectedArtist || null}
+              artistNameById={Object.fromEntries(artists.map(a => [a.id, a.name]))}
+            />
 
             {/* Validation & Submit */}
             <section className="glass-panel chromatic-hairline p-5">

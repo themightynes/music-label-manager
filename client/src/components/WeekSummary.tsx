@@ -26,6 +26,7 @@ import {
   findTourCompletion,
 } from './week-summary/categorizeChanges';
 import { TourCityCard } from './week-summary/TourCityCard';
+import { AnticipationLine } from './week-summary/AnticipationLine';
 
 interface WeekSummaryProps {
   weeklyStats: WeekSummaryType;
@@ -1016,14 +1017,22 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
         {categorizedChanges.hypeRoutine.length > 0 && (
           <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
             <div className="space-y-2">
-              {categorizedChanges.hypeRoutine.map((change: GameChange, index: number) => (
-                <div
-                  key={`hype-routine-${index}`}
-                  className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40"
-                >
-                  <span className="text-sm font-medium text-white/80">{change.description}</span>
-                </div>
-              ))}
+              {/* Hype-board UX Task 2: 'pre_campaign' entries render as the
+                  structured momentum readout (AnticipationLine — qualitative
+                  band + direction arrow, never the raw gain number); other
+                  hype-routine entries (hype_banked) keep the plain line. */}
+              {categorizedChanges.hypeRoutine.map((change: GameChange, index: number) =>
+                change.type === 'pre_campaign' ? (
+                  <AnticipationLine key={`hype-routine-${index}`} change={change} />
+                ) : (
+                  <div
+                    key={`hype-routine-${index}`}
+                    className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40"
+                  >
+                    <span className="text-sm font-medium text-white/80">{change.description}</span>
+                  </div>
+                )
+              )}
             </div>
           </RevealGroup>
         )}

@@ -3,7 +3,7 @@ import { useMachine } from '@xstate/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { executiveMeetingMachine } from '../../machines/executiveMeetingMachine';
 import { makeCachedFetchExecutives } from '../../hooks/useExecutives';
-import { ExecutiveCard, roleConfig } from './ExecutiveCard';
+import { ExecutiveCard, roleConfig, meetingDisplayName, snippetOf } from './ExecutiveCard';
 import { MeetingSelector } from './MeetingSelector';
 import { DialogueInterface } from './DialogueInterface';
 import { AutoSelectReviewPanel } from './AutoSelectReviewPanel';
@@ -109,6 +109,17 @@ export function ExecutiveMeetings({
    * payoff on open (MeetingSelector / AutoSelectReviewPanel).
    */
   const [reactiveRoles, setReactiveRoles] = useState<Set<string>>(new Set());
+  /**
+   * Hype-board UX Task 4 (playtest feedback): the console strip's open-channel
+   * state should preview WHAT is waiting, not just that something is. Piggybacks
+   * on the SAME sit-out/urgency prefetch below — zero new requests. Stores the
+   * pool's first meeting's name + a one-line prompt snippet per role (the
+   * reactive "why now" TRIGGER copy still only reveals on open — see
+   * MeetingSelector's WhyNowLine).
+   */
+  const [meetingPreviews, setMeetingPreviews] = useState<
+    Record<string, { name: string; snippet: string; moreCount: number }>
+  >({});
 
   const { getAROfficeStatus, selectedActions } = useGameStore();
   // C74: the global GameHeader AUTO button sets this session intent + navigates
@@ -225,15 +236,31 @@ export function ExecutiveMeetings({
           try {
             const meetings = await fetchRoleMeetings(roleId, gameId, currentWeek);
             const isReactive = meetings.some((m) => !!m.reactiveContext);
-            return [roleId, meetings.length, isReactive] as const;
+            // Task 4: brief preview from the SAME response — first meeting's
+            // display name + prompt snippet. Fetch errors fall through to no
+            // preview (the strip keeps its generic open-channel copy).
+            const first = meetings[0];
+            const preview = first
+              ? {
+                  name: meetingDisplayName(first),
+                  snippet: snippetOf(first.prompt_before_selection || first.prompt),
+                  moreCount: meetings.length - 1,
+                }
+              : null;
+            return [roleId, meetings.length, isReactive, preview] as const;
           } catch {
-            return [roleId, -1, false] as const; // unknown → fail open
+            return [roleId, -1, false, null] as const; // unknown → fail open
           }
         })
       );
       if (isCancelled) return;
       setSitOutRoles(new Set(results.filter(([, count]) => count === 0).map(([roleId]) => roleId)));
       setReactiveRoles(new Set(results.filter(([, , isReactive]) => isReactive).map(([roleId]) => roleId)));
+      setMeetingPreviews(
+        Object.fromEntries(
+          results.filter(([, , , preview]) => !!preview).map(([roleId, , , preview]) => [roleId, preview!])
+        )
+      );
     })();
 
     return () => {
@@ -545,6 +572,7 @@ export function ExecutiveMeetings({
                 queued={isExecutiveUsed('ceo')}
                 sitOut={sitOutRoles.has('ceo')}
                 hasReactiveMeeting={reactiveRoles.has('ceo')}
+                meetingPreview={meetingPreviews['ceo']}
                 onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive: orderedExecutives.ceo! })}
                 weeklySalary={roleSalaries['ceo']}
                 arOfficeStatus={arOfficeStatus}
@@ -562,6 +590,7 @@ export function ExecutiveMeetings({
               queued={isExecutiveUsed(executive.role)}
               sitOut={sitOutRoles.has(executive.role)}
               hasReactiveMeeting={reactiveRoles.has(executive.role)}
+              meetingPreview={meetingPreviews[executive.role]}
               onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
               weeklySalary={roleSalaries[executive.role]}
               arOfficeStatus={arOfficeStatus}

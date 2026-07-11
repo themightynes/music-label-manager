@@ -20,7 +20,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { summarizeCatalogBuzz, summarizeBankedHype, SONG_BUZZ_TOOLTIP, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
+import { summarizeCatalogBuzz, summarizeBankedHype, listBankedHypePools, SONG_BUZZ_TOOLTIP, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
 import { BuzzStatusStat } from '@/components/MetricsDashboard';
 import { SongBuzzChip } from '@/components/SongCatalog';
 import { EFFECT_CHANNEL_DESCRIPTIONS } from '@shared/engine/processors/ActionProcessor';
@@ -187,39 +187,93 @@ describe('summarizeBankedHype (buzz-v2 slice 2 — chip aggregation)', () => {
   });
 });
 
-describe('BuzzStatusStat banked-hype chip (buzz-v2 slice 1)', () => {
-  it('renders "+N Hype banked · fades wk W" when a positive pool is banked', () => {
+describe('BuzzStatusStat banked-hype pools (hype-board UX Task 3 — re-pinned from the buzz-v2 slice 1 aggregate chip)', () => {
+  // Task 3 de-genericized the readout: named per-pool lines (label + artists)
+  // with per-pool expiry hints replace the single summed "+N Hype banked" chip.
+  const pools = (flags: any, names: Record<string, string> = {}) =>
+    listBankedHypePools(flags, names);
+
+  it('renders one named line per positive pool with its own fade hint', () => {
     render(
-      <BuzzStatusStat songs={[]} currentWeek={5} bankedHype={4} bankedHypeWeek={5} />
+      <BuzzStatusStat
+        songs={[]}
+        currentWeek={5}
+        pools={pools(
+          {
+            pendingAwarenessBoost: 2,
+            pendingAwarenessBoostWeek: 5,
+            hypeArtistPools: { a1: { amount: 3, week: 6 } },
+          },
+          { a1: 'Nova' }
+        )}
+      />
     );
     const chip = screen.getByTestId('banked-hype-chip');
-    expect(chip).toHaveTextContent('+4 Hype banked');
-    // Expiry week = stamped week + BANKED_HYPE_EXPIRY_WEEKS (mirrors the engine).
-    expect(chip).toHaveTextContent(`fades wk ${5 + BANKED_HYPE_EXPIRY_WEEKS}`);
+    const lines = screen.getAllByTestId('banked-hype-pool');
+    expect(lines).toHaveLength(2);
+    expect(chip).toHaveTextContent('+2 Hype — Label');
+    expect(chip).toHaveTextContent(`fading wk ${5 + BANKED_HYPE_EXPIRY_WEEKS} if unused`);
+    expect(chip).toHaveTextContent('+3 Hype — Nova');
+    expect(chip).toHaveTextContent(`fading wk ${6 + BANKED_HYPE_EXPIRY_WEEKS} if unused`);
     expect(chip).toHaveAttribute('aria-label', `Banked Hype: ${BANKED_HYPE_TOOLTIP}`);
   });
 
-  it('omits the countdown when the stamp week is unknown', () => {
-    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={2} bankedHypeWeek={null} />);
+  it('omits the fade hint when a pool cannot be dated', () => {
+    render(
+      <BuzzStatusStat songs={[]} currentWeek={5} pools={pools({ pendingAwarenessBoost: 2 })} />
+    );
     const chip = screen.getByTestId('banked-hype-chip');
-    expect(chip).toHaveTextContent('+2 Hype banked');
-    expect(chip).not.toHaveTextContent('fades wk');
+    expect(chip).toHaveTextContent('+2 Hype — Label');
+    expect(chip).not.toHaveTextContent('fading wk');
   });
 
-  it('renders no chip when nothing is banked', () => {
-    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={0} />);
+  it('renders no block when nothing is banked', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} pools={[]} />);
     expect(screen.queryByTestId('banked-hype-chip')).toBeNull();
   });
 
-  it('renders no chip for a negative pool (suppression is not advertised)', () => {
-    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={-3} bankedHypeWeek={5} />);
+  it('renders no line for a negative pool (suppression is not advertised)', () => {
+    render(
+      <BuzzStatusStat songs={[]} currentWeek={5} pools={pools({ pendingAwarenessBoost: -3, pendingAwarenessBoostWeek: 5 })} />
+    );
     expect(screen.queryByTestId('banked-hype-chip')).toBeNull();
   });
 
-  it('never leaks a multiplier number in the chip (fork E: qualitative only)', () => {
-    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={6} bankedHypeWeek={5} />);
+  it('never leaks a multiplier number (fork E: qualitative only)', () => {
+    render(
+      <BuzzStatusStat songs={[]} currentWeek={5} pools={pools({ pendingAwarenessBoost: 6, pendingAwarenessBoostWeek: 5 })} />
+    );
     expect(screen.getByTestId('banked-hype-chip').textContent).not.toMatch(/[×x]\s*\d/);
     expect(BANKED_HYPE_TOOLTIP).not.toMatch(/[×x]\s*\d/);
+  });
+});
+
+describe('BuzzStatusStat anticipation lines (hype-board UX Task 3)', () => {
+  it('names each planned release building anticipation with a strength word and launch week', () => {
+    render(
+      <BuzzStatusStat
+        songs={[]}
+        currentWeek={10}
+        anticipations={[
+          { releaseId: 'r1', title: 'Neon Nights', strength: 'strong', weeksToLaunch: 3 },
+          { releaseId: 'r2', title: 'Afterglow', strength: null, weeksToLaunch: 2 },
+        ]}
+      />
+    );
+    const lines = screen.getAllByTestId('anticipation-status-line');
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toHaveTextContent('Neon Nights');
+    expect(lines[0]).toHaveTextContent('strong anticipation');
+    expect(lines[0]).toHaveTextContent('launches wk 13');
+    // No strength word yet (no pre-built awareness) -> plain building copy.
+    expect(lines[1]).toHaveTextContent('Afterglow');
+    expect(lines[1]).toHaveTextContent('anticipation building');
+    expect(lines[1]).toHaveTextContent('launches wk 12');
+  });
+
+  it('renders no anticipation lines when nothing is building', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={10} anticipations={[]} />);
+    expect(screen.queryByTestId('anticipation-status-line')).toBeNull();
   });
 });
 
