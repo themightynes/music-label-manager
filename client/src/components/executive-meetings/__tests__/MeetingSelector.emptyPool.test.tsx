@@ -48,7 +48,8 @@ describe('ExecutiveCard — sitOut prop', () => {
 
     expect(screen.getByTestId('sit-out-head_distribution')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/Distro - Patricia Williams/i));
+    // Console redesign: the whole channel strip is the click target.
+    fireEvent.click(screen.getByTestId('exec-strip-head_distribution'));
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -58,7 +59,7 @@ describe('ExecutiveCard — sitOut prop', () => {
 
     expect(screen.queryByTestId('sit-out-head_distribution')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/Distro - Patricia Williams/i));
+    fireEvent.click(screen.getByTestId('exec-strip-head_distribution'));
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 });

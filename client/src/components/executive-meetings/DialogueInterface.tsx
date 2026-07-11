@@ -1,11 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Card, CardContent } from '../ui/card';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
-import { BorderTrail } from '../motion-primitives/border-trail';
-import { GlowEffect } from '../motion-primitives/glow-effect';
-import { TrendingUp, TrendingDown, Clock, Zap, ArrowLeft, Shuffle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Zap, Shuffle } from 'lucide-react';
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import { EffectBadgeTooltip } from './EffectBadgeTooltip';
@@ -219,6 +215,12 @@ export function ChoiceEffects({
   );
 }
 
+/**
+ * Exec Console redesign (2026-07-11): the dialogue step renders all takes SIDE
+ * BY SIDE ("your three takes" in the console design) instead of a carousel —
+ * the player compares responses at a glance. Behavior is unchanged: same
+ * ChoiceEffects badge honesty, same CC affordability gate + testids.
+ */
 export function DialogueInterface({
   dialogue,
   onSelectChoice,
@@ -234,87 +236,77 @@ export function DialogueInterface({
 
   return (
     <div className="space-y-6">
-      <Card className="glass-panel chromatic-hairline relative overflow-hidden w-full max-w-md mx-auto border-0">
-        <GlowEffect
-          mode="static"
-          colors={['#a05af0', '#4a6bff', '#c8a6ff', '#ff4d8d']}
-          blur="medium"
-        />
-        <CardContent className="p-4 relative z-10">
-          <p className="text-base italic leading-relaxed text-text-primary">
-            "{displayPrompt}"
-          </p>
-        </CardContent>
-      </Card>
+      {/* prompt quote panel */}
+      <div className="chromatic-hairline relative rounded-card border border-neon-pink/20 bg-gradient-to-br from-action-pink/15 to-action-purple/15 px-6 py-5">
+        <p className="text-[15.5px] italic leading-relaxed text-text-primary">
+          "{displayPrompt}"
+        </p>
+        {selectedArtistName && (
+          <div className="mt-2.5 inline-flex items-center gap-2 rounded-pill border border-neon-lilac/30 bg-neon-lilac/10 px-3 py-1 text-[11px] text-neon-lilac">
+            Re: {selectedArtistName}
+          </div>
+        )}
+      </div>
 
-      <div className="space-y-4">
+      <div>
+        <div className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.24em] text-text-muted">
+          your takes
+        </div>
+        <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {dialogue.choices.map((choice) => {
+            // CC affordability gate: disable a choice the player can't pay
+            // for (same cost math AUTO budgets with). undefined prop = no gate.
+            const ccCost = getChoiceCreativeCapitalCost(choice);
+            const cannotAfford =
+              typeof availableCreativeCapital === 'number' && ccCost > availableCreativeCapital;
+            return (
+              <div
+                key={choice.id}
+                className={`chromatic-hairline relative flex flex-col rounded-card border bg-surface-inner/60 p-5 ${
+                  cannotAfford ? 'border-negative/25 opacity-80' : 'border-white/10'
+                }`}
+              >
+                <div className="mb-3.5 flex items-start justify-between gap-2.5">
+                  <div className="text-sm font-semibold leading-snug text-text-primary">
+                    {choice.label}
+                  </div>
+                  <span className="flex flex-shrink-0 items-center gap-1.5 rounded-pill border border-neon-lilac/30 bg-neon-lilac/10 px-2.5 py-1 font-mono text-[10.5px] text-neon-lilac">
+                    <Zap className="h-2.5 w-2.5" />
+                    {ccCost === 0 ? 'Free' : `${ccCost} CC`}
+                  </span>
+                </div>
 
-        <Carousel
-          className="w-full max-w-md mx-auto"
-          opts={{
-            loop: true,
-          }}
-        >
-          <CarouselContent>
-            {dialogue.choices.map((choice) => {
-              // CC affordability gate: disable a choice the player can't pay
-              // for (same cost math AUTO budgets with). undefined prop = no gate.
-              const ccCost = getChoiceCreativeCapitalCost(choice);
-              const cannotAfford =
-                typeof availableCreativeCapital === 'number' && ccCost > availableCreativeCapital;
-              return (
-              <CarouselItem key={choice.id}>
-                <Card className="glass-panel chromatic-hairline relative border-0 transition-all duration-200 hover:shadow-glow-lilac">
-                  <BorderTrail
-                    size={180}
-                    className="bg-gradient-to-l from-action-pink via-money to-neon-lilac"
-                    transition={{
-                      repeat: Infinity,
-                      duration: 4,
-                      ease: "linear"
-                    }}
-                  />
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="font-medium text-sm leading-relaxed text-text-primary">
-                        {choice.label}
-                      </div>
+                <ChoiceEffects
+                  choice={choice}
+                  targetScope={targetScope}
+                  selectedArtistName={selectedArtistName}
+                />
 
-                      <ChoiceEffects
-                        choice={choice}
-                        targetScope={targetScope}
-                        selectedArtistName={selectedArtistName}
-                      />
+                <div className="flex-1" />
 
-                      {cannotAfford && (
-                        <div
-                          data-testid={`cc-gate-${choice.id}`}
-                          className="flex items-center gap-1.5 text-xs font-mono text-warning"
-                        >
-                          <Zap className="h-3 w-3 shrink-0" />
-                          <span>
-                            Needs {ccCost} Creative Capital — you have {availableCreativeCapital}
-                          </span>
-                        </div>
-                      )}
-                      <Button
-                        onClick={() => onSelectChoice(choice)}
-                        disabled={cannotAfford}
-                        className="w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                        size="sm"
-                      >
-                        Choose This Response
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-              );
-            })}
-          </CarouselContent>
-          <CarouselPrevious className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
-          <CarouselNext className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
-        </Carousel>
+                {cannotAfford && (
+                  <div
+                    data-testid={`cc-gate-${choice.id}`}
+                    className="mt-3.5 flex items-center gap-1.5 rounded-lg border border-negative/30 bg-negative/10 px-3 py-2 text-xs font-mono text-negative"
+                  >
+                    <Zap className="h-3 w-3 shrink-0" />
+                    <span>
+                      Needs {ccCost} Creative Capital — you have {availableCreativeCapital}
+                    </span>
+                  </div>
+                )}
+                <Button
+                  onClick={() => onSelectChoice(choice)}
+                  disabled={cannotAfford}
+                  className="mt-3.5 w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  size="sm"
+                >
+                  {cannotAfford ? 'Locked' : 'Choose'}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
