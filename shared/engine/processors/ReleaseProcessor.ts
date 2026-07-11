@@ -59,6 +59,7 @@ import type { WeekContext } from './types';
 import type { WeekSummary } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../../utils/seasonalCalculations';
+import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
 
 // Patch type for song updates applied during weekly processing. Mirrors the
 // module-level SongUpdatePatch in game-engine.ts: `processReleasedProjects`'s
@@ -663,9 +664,16 @@ export class ReleaseProcessor {
     // Cap total bonus at reasonable level (per song)
     const cappedPoints = Math.min(streamPoints, maxStreamPoints);
 
-    // Apply diminishing returns multiplier
-    const baseMultiplier = 1 / (1 + Math.pow(currentPopularity / saturationPoint, saturationExponent));
-    const multiplier = diminishingBase + (baseMultiplier * diminishingRange); // Scales from 1.5x to 0.2x
+    // Apply diminishing returns multiplier. Balance-integrity slice 6 extracted
+    // this curve into a shared pure helper (shared/utils/popularitySaturation.ts)
+    // so tour popularity gains reuse the SAME formula rather than duplicating it.
+    // Byte-identical: satPoint/exponent/base/range are the same knobs read above.
+    const multiplier = popularitySaturationMultiplier(currentPopularity, {
+      saturation_point: saturationPoint,
+      saturation_exponent: saturationExponent,
+      diminishing_multiplier_base: diminishingBase,
+      diminishing_multiplier_range: diminishingRange,
+    }); // Scales from 1.5x to 0.2x
 
     const finalBonus = Math.max(minBonus, cappedPoints * multiplier);
 

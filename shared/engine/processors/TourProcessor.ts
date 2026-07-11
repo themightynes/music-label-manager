@@ -38,6 +38,7 @@
  */
 import type { WeekContext } from './types';
 import { VenueCapacityManager } from '../FinancialSystem';
+import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
 
 export class TourProcessor {
   /**
@@ -378,12 +379,30 @@ export class TourProcessor {
           ];
       let popularityChange = 0;
       if (attendanceRate > (popCfg.attendance_threshold ?? 70)) {
+        let rawGain = 0;
         for (const tier of popTiers) {
           if (tier.max_attendees == null || actualAttendees < tier.max_attendees) {
-            popularityChange = tier.gain;
+            rawGain = tier.gain;
             break;
           }
         }
+        // Balance-integrity slice 6: run the raw tour-table gain through the SAME
+        // diminishing-returns curve that streaming popularity gains respect, so
+        // touring can't farm popularity for an already-famous act. Config is the
+        // shared markets.json popularity_saturation block (slice 1); the curve
+        // lives in one place (shared/utils/popularitySaturation.ts).
+        //
+        // DEVIATION FROM NAIVE REUSE: the streaming curve returns up to 1.5x at
+        // pop 0 (a super-charger for unknowns). The tour reaction table was
+        // authored as the FULL gain, so we clamp with Math.min(1, ...) — the
+        // table stays the MAXIMUM and saturation may only REDUCE the gain, never
+        // amplify it. Floor at 0: a sold-out arena for a 90-pop star can
+        // legitimately move nothing. No new RNG draws.
+        const satCfg = (ctx.gameData.getBalanceConfigSync?.()?.market_formulas?.popularity_saturation) as
+          | Parameters<typeof popularitySaturationMultiplier>[1]
+          | undefined;
+        const satMult = Math.min(1, popularitySaturationMultiplier(artist.popularity || 0, satCfg));
+        popularityChange = Math.max(0, Math.round(rawGain * satMult));
       }
 
       // FIXED: Accumulate changes in summary using per-artist object pattern
