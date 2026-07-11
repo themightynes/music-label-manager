@@ -547,3 +547,129 @@ export type EventsConfig = z.infer<typeof EventsConfigSchema>;
 export type SaveEventsConfigRequest = z.infer<typeof SaveEventsConfigRequestSchema>;
 export type SaveEventsConfigResponse = z.infer<typeof SaveEventsConfigResponseSchema>;
 export type GetEventsConfigResponse = z.infer<typeof GetEventsConfigResponseSchema>;
+
+// ========================================
+// Admin Playtest Feedback Schemas (2026-07-11 form)
+// ========================================
+// Recording surface for docs/01-planning/PLAYTEST_FEEDBACK_2026-07-11.md.
+// The markdown stays the printable source; responses persist as JSON at
+// docs/01-planning/playtest-feedback-2026-07-11.responses.json via the
+// /api/admin/playtest-feedback endpoint pair (validate → backup → write,
+// mirroring the actions-config pattern). Unanswered fields are simply
+// empty/null — this is a self-report form, nothing is required.
+
+export const PLAYTEST_FEEDBACK_FORM_ID = 'playtest-feedback-2026-07-11' as const;
+
+// Canonical section ids, in the form's order (§1–§11). The client-side form
+// definition (client/src/admin/playtestFeedbackForm.ts) must use exactly
+// these ids; the server writes `sections` keys in this order for a stable,
+// diffable JSON file.
+export const PLAYTEST_SECTION_IDS = [
+  'flop_penalty',
+  'mood_recording_variance',
+  'energy_tour_sellthrough',
+  'tour_popularity_saturation',
+  'loss_leader_marketing',
+  'hype_pools_premarketing',
+  'awareness_surfacing',
+  'reactive_meetings_side_events',
+  'tour_tier1',
+  'the_board_reskin',
+  'phase4_game_feel',
+] as const;
+
+// Canonical §12 knob-strength rows, in table order.
+export const PLAYTEST_KNOB_IDS = [
+  'flop_reputation_penalty',
+  'low_mood_recording_variance',
+  'energy_tour_sellthrough',
+  'tour_popularity_saturation',
+  'hype_pools_premarketing',
+  'side_event_frequency',
+  'meeting_relevance_why_now',
+  'staged_reveal_pacing',
+] as const;
+
+// The Feel scale used everywhere in the form: dead / flat / works / sings.
+export const PlaytestFeelSchema = z.enum(['dead', 'flat', 'works', 'sings']);
+
+// §12 strength read per system: too weak / about right / too strong.
+export const PlaytestStrengthSchema = z.enum(['too_weak', 'about_right', 'too_strong']);
+
+// One mechanic section (§1–§11): exposure ticks (ids of ticked options —
+// single- vs multi-tick is a client-side rendering rule mirroring the
+// markdown), the feel rating, the "anything off" line, and one free-text
+// answer per designer question (positional, matching the form definition).
+export const PlaytestSectionResponseSchema = z.object({
+  exposure: z.array(z.string()).default([]),
+  feel: PlaytestFeelSchema.nullable().default(null),
+  anythingOff: z.string().default(''),
+  designerAnswers: z.array(z.string()).default([]),
+});
+
+// Full response document. `savedAt` is stamped server-side on save.
+export const PlaytestFeedbackResponsesSchema = z.object({
+  formId: z.literal(PLAYTEST_FEEDBACK_FORM_ID).default(PLAYTEST_FEEDBACK_FORM_ID),
+  savedAt: z.string().nullable().default(null),
+  sections: z.record(z.string(), PlaytestSectionResponseSchema).default({}),
+  knobStrength: z.record(z.string(), PlaytestStrengthSchema.nullable()).default({}),
+  oneKnobChange: z.string().default(''),
+  topPriorities: z.array(z.string()).length(3).default(['', '', '']),
+  pullBack: z.string().default(''),
+  gutCheck: z.string().default(''),
+});
+
+// Admin endpoints for playtest feedback
+export const adminPlaytestFeedbackEndpoints = {
+  getResponses: '/api/admin/playtest-feedback',
+  saveResponses: '/api/admin/playtest-feedback',
+} as const;
+
+// Request schema for saving playtest feedback responses
+export const SavePlaytestFeedbackRequestSchema = z.object({
+  responses: PlaytestFeedbackResponsesSchema,
+});
+
+// Response schema for saving playtest feedback responses
+export const SavePlaytestFeedbackResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  backupCreated: z.boolean().optional(),
+  savedAt: z.string().optional(),
+});
+
+// Response schema for getting playtest feedback responses
+export const GetPlaytestFeedbackResponseSchema = PlaytestFeedbackResponsesSchema;
+
+// Builds the empty default response document (GET returns this when the
+// responses file does not exist yet), with every canonical section/knob key
+// present in stable order so the client can prefill without guessing keys.
+export function buildEmptyPlaytestFeedbackResponses(): PlaytestFeedbackResponses {
+  const sections: Record<string, PlaytestSectionResponse> = {};
+  for (const id of PLAYTEST_SECTION_IDS) {
+    sections[id] = { exposure: [], feel: null, anythingOff: '', designerAnswers: [] };
+  }
+  const knobStrength: Record<string, PlaytestStrength | null> = {};
+  for (const id of PLAYTEST_KNOB_IDS) {
+    knobStrength[id] = null;
+  }
+  return {
+    formId: PLAYTEST_FEEDBACK_FORM_ID,
+    savedAt: null,
+    sections,
+    knobStrength,
+    oneKnobChange: '',
+    topPriorities: ['', '', ''],
+    pullBack: '',
+    gutCheck: '',
+  };
+}
+
+// Export TypeScript types
+export type PlaytestFeel = z.infer<typeof PlaytestFeelSchema>;
+export type PlaytestStrength = z.infer<typeof PlaytestStrengthSchema>;
+export type PlaytestSectionResponse = z.infer<typeof PlaytestSectionResponseSchema>;
+export type PlaytestFeedbackResponses = z.infer<typeof PlaytestFeedbackResponsesSchema>;
+export type SavePlaytestFeedbackRequest = z.infer<typeof SavePlaytestFeedbackRequestSchema>;
+export type SavePlaytestFeedbackResponse = z.infer<typeof SavePlaytestFeedbackResponseSchema>;
+export type GetPlaytestFeedbackResponse = z.infer<typeof GetPlaytestFeedbackResponseSchema>;

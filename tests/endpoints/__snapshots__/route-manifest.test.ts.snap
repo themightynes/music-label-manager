@@ -66,6 +66,22 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "path": "/api/admin/health",
   },
   {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/playtest-feedback",
+  },
+  {
+    "method": "POST",
+    "middleware": [
+      "requireClerkUser",
+      "requireAdmin",
+    ],
+    "path": "/api/admin/playtest-feedback",
+  },
+  {
     "method": "POST",
     "middleware": [
       "requireClerkUser",
