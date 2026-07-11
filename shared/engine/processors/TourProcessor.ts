@@ -333,31 +333,46 @@ export class TourProcessor {
       const attendanceRate = cityData.attendanceRate || 0;
       const actualAttendees = Math.round((cityData.capacity || 0) * (attendanceRate / 100));
 
+      // Balance-integrity slice 1 (knob liberation): the attendance→mood and
+      // attendance→popularity reaction tables were HARDCODED here; now read from
+      // markets.json market_formulas.tour_revenue.{mood_reactions,popularity_reactions}
+      // with the original literals as fallback defaults (byte-identical).
+      const tourFormulas = ((ctx.gameData.getBalanceConfigSync?.()?.market_formulas?.tour_revenue) || {}) as Record<string, any>;
+      const moodCfg = (tourFormulas.mood_reactions || {}) as Record<string, any>;
+      const poorThreshold = moodCfg.poor_threshold ?? 30;
+      const neutralMax = moodCfg.neutral_max ?? 50;
+      const goodMax = moodCfg.good_max ?? 85;
+
       // Calculate mood impact based on attendance rate
       let moodChange = 0;
-      if (attendanceRate < 30) {
-        moodChange = -3; // Disappointing show
-      } else if (attendanceRate >= 30 && attendanceRate <= 50) {
-        moodChange = 0; // Neutral
-      } else if (attendanceRate > 50 && attendanceRate <= 85) {
-        moodChange = 5; // Good show
-      } else if (attendanceRate > 85) {
-        moodChange = 8; // Amazing show
+      if (attendanceRate < poorThreshold) {
+        moodChange = moodCfg.poor_delta ?? -3; // Disappointing show
+      } else if (attendanceRate >= poorThreshold && attendanceRate <= neutralMax) {
+        moodChange = moodCfg.neutral_delta ?? 0; // Neutral
+      } else if (attendanceRate > neutralMax && attendanceRate <= goodMax) {
+        moodChange = moodCfg.good_delta ?? 5; // Good show
+      } else if (attendanceRate > goodMax) {
+        moodChange = moodCfg.great_delta ?? 8; // Amazing show
       }
 
       // Calculate popularity impact based on attendance rate and venue size
+      const popCfg = (tourFormulas.popularity_reactions || {}) as Record<string, any>;
+      const popTiers: Array<{ max_attendees: number | null; gain: number }> = Array.isArray(popCfg.tiers) && popCfg.tiers.length > 0
+        ? popCfg.tiers
+        : [
+            { max_attendees: 500, gain: 1 },
+            { max_attendees: 2000, gain: 2 },
+            { max_attendees: 5000, gain: 3 },
+            { max_attendees: 10000, gain: 5 },
+            { max_attendees: null, gain: 7 }
+          ];
       let popularityChange = 0;
-      if (attendanceRate > 70) {
-        if (actualAttendees < 500) {
-          popularityChange = 1;
-        } else if (actualAttendees < 2000) {
-          popularityChange = 2;
-        } else if (actualAttendees < 5000) {
-          popularityChange = 3;
-        } else if (actualAttendees < 10000) {
-          popularityChange = 5;
-        } else {
-          popularityChange = 7;
+      if (attendanceRate > (popCfg.attendance_threshold ?? 70)) {
+        for (const tier of popTiers) {
+          if (tier.max_attendees == null || actualAttendees < tier.max_attendees) {
+            popularityChange = tier.gain;
+            break;
+          }
         }
       }
 

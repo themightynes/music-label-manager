@@ -334,6 +334,14 @@ export interface BalanceConfig {
   quality_system: Record<string, any>;
   producer_tier_system: Record<string, ProducerTierData>;
   time_investment_system: Record<string, TimeInvestmentData>;
+  /**
+   * Balance-integrity slice 1 (knob liberation). Song-QUALITY formula constants
+   * (producer skill map, time multipliers, popularity/fatigue/mood factors,
+   * variance band, outlier chances). DISTINCT from producer_tier_system /
+   * time_investment_system multipliers (which feed cost/duration). Optional —
+   * absent ⇒ SongGenerationProcessor read-site literal fallbacks apply.
+   */
+  song_quality_formula?: Record<string, any>;
   ui_constants: Record<string, number>;
   save_system: Record<string, any>;
   difficulty_modifiers: Record<string, Record<string, number>>;

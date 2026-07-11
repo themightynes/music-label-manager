@@ -243,9 +243,13 @@ export class GameDataLoader {
       
       // Producer tier system
       producer_tier_system: quality.producer_tier_system,
-      
+
       // Time investment system
       time_investment_system: quality.time_investment_system,
+
+      // Song-quality formula constants (balance-integrity slice 1 — knob liberation).
+      // DISTINCT from producer_tier_system/time_investment_system multipliers (cost/duration).
+      song_quality_formula: quality.song_quality_formula,
       
       // UI constants
       ui_constants: config.ui_constants,
