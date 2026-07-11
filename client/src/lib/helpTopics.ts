@@ -252,7 +252,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     body: [
       'Touring is how you turn an audience into [[money]] you can use this stretch, and into popularity that follows the artist afterward. It is the move when the bank is thin but the fans are real. A record earns slowly over time; a tour pays more directly, on the road.',
       'Where you can play depends on your standing. Access to venues climbs with [[reputation]] — clubs first, then theaters, then arenas — and the bigger the room, the bigger the take. That is another reason your reputation climb is never just vanity: it is literally what lets you book rooms that pay.',
-      'A tour is not a single click. It plays out city by city over several weeks, and each stop reports back before the next. Book it when you have the weeks to spare and an artist with the popularity to fill the rooms you can reach — an empty room in a big venue is a bad night for everyone.',
+      'A tour is not a single click. It plays out city by city over several weeks, and each stop reports back before the next. Book it when you have the weeks to spare and an artist with the popularity to fill the rooms you can reach — an empty room in a big venue is a bad night for everyone. Watch their energy too: a rested act sells the room harder, so do not send an exhausted artist out to fill it.',
     ],
     rules: [
       'A tour is [[money|cash]] now plus lasting popularity — reach for it when the bank is thin and the fans are real.',

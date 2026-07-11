@@ -27,6 +27,32 @@ export interface TourCalculationParams {
   localReputation: number;
   cities: number;
   marketingBudget: number;
+  // Balance-integrity slice 5 (energy -> tour effectiveness): artist energy (0-100).
+  // Missing/null is treated as 50 (the schema default) inside computeEnergyFactor.
+  energy?: number | null;
+}
+
+/**
+ * Balance-integrity slice 5 — pure, RNG-free helper mapping an artist's energy
+ * (0-100) to a tour sell-through multiplier. Exported for tests + the Systems Map.
+ *
+ *   energyFactor = min + (max - min) * (energy / 100)     [linear in energy]
+ *
+ * Applied MULTIPLICATIVELY to the summed sell-through BEFORE the 1.0 cap (see
+ * calculateSellThroughBreakdown / calculateTourRevenueWithCapacity). With the
+ * default band {min: 0.90, max: 1.05}: energy 0 -> 0.90, 50 -> 0.975, 100 -> 1.05.
+ * A missing/null energy is treated as 50. `enabled: false` short-circuits to 1.0.
+ */
+export function computeEnergyFactor(
+  energy: number | null | undefined,
+  cfg: { enabled?: boolean; min?: number; max?: number }
+): number {
+  if (cfg?.enabled === false) return 1.0;
+  const min = cfg?.min ?? 0.90;
+  const max = cfg?.max ?? 1.05;
+  const e = (energy === null || energy === undefined) ? 50 : energy;
+  const clamped = Math.max(0, Math.min(100, e));
+  return min + (max - min) * (clamped / 100);
 }
 
 export interface CityBreakdown {
@@ -498,6 +524,9 @@ export class FinancialSystem {
   private getTourFormulas() {
     const tf = ((this.gameData.getBalanceConfigSync?.()?.market_formulas?.tour_revenue) || {}) as Record<string, any>;
     const vs = (tf.venue_scaling || {}) as Record<string, any>;
+    // Balance-integrity slice 5: energy -> tour sell-through band. Fallback
+    // defaults identical to markets.json (slice-1 config pattern).
+    const ee = (tf.energy_effectiveness || {}) as Record<string, any>;
     return {
       venue_fee_per_capacity: tf.venue_fee_per_capacity ?? 4,
       production_fee_per_capacity: tf.production_fee_per_capacity ?? 2.7,
@@ -507,7 +536,12 @@ export class FinancialSystem {
       venue_size_bonus: vs.venue_size_bonus ?? this.CONSTANTS.VENUE_SCALING.venue_size_bonus,
       ticket_price_capacity_multiplier: vs.ticket_price_capacity_multiplier ?? this.CONSTANTS.VENUE_SCALING.ticket_price_capacity_multiplier,
       ticket_scarcity_max_multiplier: tf.ticket_scarcity_max_multiplier ?? 2.5,
-      ticket_scarcity_position_penalty: tf.ticket_scarcity_position_penalty ?? 2.0
+      ticket_scarcity_position_penalty: tf.ticket_scarcity_position_penalty ?? 2.0,
+      energy_effectiveness: {
+        enabled: ee.enabled ?? true,
+        min: ee.min ?? 0.90,
+        max: ee.max ?? 1.05
+      }
     };
   }
 
@@ -597,7 +631,8 @@ export class FinancialSystem {
       params.localReputation,
       params.cities,
       params.marketingBudget,
-      params.venueTier
+      params.venueTier,
+      params.energy // Balance-integrity slice 5: thread energy into the total-revenue path
     );
 
     // Return detailed breakdown with city-by-city data
@@ -695,8 +730,12 @@ export class FinancialSystem {
       ? (marketingBudgetPerCity / venueCapacity) * tourF.budget_sell_through_coefficient / 100 * tourF.budget_sell_through_scale
       : 0;
 
-    // Add venue size modifier to final calculation
-    const finalRate = Math.min(1.0, baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier);
+    // Balance-integrity slice 5: artist energy multiplies the summed sell-through
+    // BEFORE the 1.0 cap (rested acts sell the room harder). Cap ordering: factor
+    // applied to the sum, THEN Math.min(1.0, ...) — so a high-energy act can push
+    // an already-strong show toward capacity but never over 100%.
+    const energyFactor = computeEnergyFactor(params.energy, tourF.energy_effectiveness);
+    const finalRate = Math.min(1.0, (baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier) * energyFactor);
 
     return {
       baseRate,
@@ -938,7 +977,8 @@ export class FinancialSystem {
     localReputation: number,
     cities: number,
     marketingBudgetTotal: number = 0,
-    venueTier?: string
+    venueTier?: string,
+    energy?: number | null // Balance-integrity slice 5: artist energy (0-100), null -> 50
   ): number {
     const config = this.gameData.getTourConfigSync();
     const tourF = this.getTourFormulas();
@@ -955,7 +995,11 @@ export class FinancialSystem {
     const adjustedPopularityBonus = (artistPopularity / 100) * config.local_popularity_weight * popularityEffectiveness;
     const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * tourF.budget_sell_through_coefficient / 100 * tourF.budget_sell_through_scale : 0;
 
-    const sellThrough = Math.min(1.0, baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier);
+    // Balance-integrity slice 5: energy multiplies the summed sell-through before
+    // the 1.0 cap — must stay in lockstep with calculateSellThroughBreakdown so
+    // total revenue matches the sum of per-city breakdowns.
+    const energyFactor = computeEnergyFactor(energy, tourF.energy_effectiveness);
+    const sellThrough = Math.min(1.0, (baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier) * energyFactor);
 
     // ENHANCED: Calculate revenue per show using scarcity-based pricing
     const ticketPrice = this.calculateTicketPrice(venueCapacity, artistPopularity, config, venueTier);

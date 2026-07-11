@@ -218,7 +218,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 2,
-    description: `DISPLAY-ONLY. Set/clamped by meetings & dialogue (ActionProcessor.ts:765) but has NO consumer anywhere in the reviewed engine paths — confirmed dead end (see non-edges).`,
+    description: `Default 50. Drives TOUR sell-through (balance-integrity slice 5): energyFactor = min + (max−min)×(energy/100) multiplies sell-through before the 1.0 cap (edge e-energy-tour). Still has NO effect on song_quality or streams (see non-edges). Set/clamped by meetings & dialogue (ActionProcessor.ts:765).`,
   },
   {
     id: 'song_quality',
@@ -713,6 +713,20 @@ export const EDGES: SystemEdge[] = [
     ref: 'FinancialSystem.ts:818',
   },
   {
+    id: 'e-energy-tour',
+    from: 'artist_energy',
+    to: 'tour_revenue',
+    mechanism: 'Sell-through — energy effectiveness multiplier',
+    formula: 'energyFactor = energy_min + (energy_max − energy_min) × (energy/100); sellThrough = min(1.0, (base + reputation + popularity + budget + venueSize) × energyFactor)',
+    values: [
+      { label: 'enabled', value: String(tourRevenue.energy_effectiveness.enabled), source: 'live', configPath: 'markets.market_formulas.tour_revenue.energy_effectiveness.enabled' },
+      { label: 'min / max (energy 0 → min, 100 → max, default 50 → 0.975)', value: `${tourRevenue.energy_effectiveness.min} / ${tourRevenue.energy_effectiveness.max}`, source: 'live', configPath: 'markets.market_formulas.tour_revenue.energy_effectiveness', ref: 'FinancialSystem.computeEnergyFactor' },
+    ],
+    hardcoded: false,
+    ref: 'FinancialSystem.ts calculateSellThroughBreakdown / calculateTourRevenueWithCapacity',
+    note: 'Balance-integrity slice 5: artist energy finally consumed. Multiplies the summed sell-through BEFORE the 1.0 cap — a rested act (energy 100 → ×1.05) sells the room harder; a run-down one (energy 10 → ×0.915) does not. Threaded through TourProcessor execution + estimatePlanningForeshadow so preview matches the roll.',
+  },
+  {
     id: 'e-money-tour',
     from: 'money',
     to: 'tour_revenue',
@@ -948,13 +962,6 @@ export const NON_EDGES: NonEdge[] = [
     to: 'streams',
     claim: 'Artist energy should affect streaming performance.',
     evidence: 'No consumer anywhere in the streaming formulas (FinancialSystem.ts:726-789, 935-1063). Display-only, confirmed.',
-  },
-  {
-    id: 'ne-energy-tour',
-    from: 'artist_energy',
-    to: 'tour_revenue',
-    claim: 'Artist energy should affect tour performance/sell-through.',
-    evidence: 'No consumer in TourProcessor.ts or FinancialSystem.ts:796-928. Display-only, confirmed.',
   },
   {
     id: 'ne-reputation-decay',

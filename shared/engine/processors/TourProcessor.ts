@@ -76,6 +76,11 @@ export class TourProcessor {
       // default (server/routes/tour.ts, backlog C47) or preview diverges from
       // execution.
       const artistPopularity = artist.popularity || 1;
+      // Balance-integrity slice 5: artist energy drives tour sell-through. Missing/
+      // null energy -> 50 (schema default). MUST stay in lockstep with the
+      // estimatePlanningForeshadow default below so preview == execution (C41/C47/C48
+      // param-assembly precedent).
+      const energy = artist.energy ?? 50;
       const reputation = ctx.gameState.reputation || 0;
       const totalCities = currentMetadata.cities || 1;
 
@@ -114,7 +119,8 @@ export class TourProcessor {
         artistPopularity,
         localReputation: reputation,
         cities: totalCities,
-        marketingBudget
+        marketingBudget,
+        energy // Balance-integrity slice 5
       });
 
       // Store pre-calculated cities - NO MANUAL CALCULATIONS
@@ -259,6 +265,9 @@ export class TourProcessor {
     const currentMetadata = project.metadata || {};
     const venueAccess = currentMetadata.venueAccess || 'none';
     const artistPopularity = artist?.popularity || 1; // C47 floor
+    // Balance-integrity slice 5: same energy default as the execution path above
+    // so the planning foreshadow's sell-through matches the actual roll.
+    const energy = artist?.energy ?? 50;
     const reputation = ctx.gameState.reputation || 0;
     const totalCities = currentMetadata.cities || 1;
 
@@ -279,7 +288,8 @@ export class TourProcessor {
       artistPopularity,
       localReputation: reputation,
       cities: totalCities,
-      marketingBudget
+      marketingBudget,
+      energy // Balance-integrity slice 5
     });
 
     const city1 = detailedBreakdown.cities[0];

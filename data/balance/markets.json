@@ -60,6 +60,12 @@
       },
       "ticket_scarcity_max_multiplier": 2.5,
       "ticket_scarcity_position_penalty": 2.0,
+      "energy_effectiveness": {
+        "enabled": true,
+        "min": 0.90,
+        "max": 1.05,
+        "_note": "Balance-integrity slice 5: artist energy multiplies tour sell-through BEFORE the 1.0 cap. energyFactor = min + (max-min)*(energy/100), linear in energy. Default energy 50 -> 0.975 (a rested act sells the room harder; a run-down one doesn't). enabled:false short-circuits to factor 1.0."
+      },
       "mood_reactions": {
         "poor_threshold": 30,
         "poor_delta": -3,
