@@ -1,6 +1,25 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 6, 2026*
+*Updated: July 11, 2026*
+
+---
+
+## 📅 Session Log — July 9–11, 2026 (About/Help + Systems Map + Balance-Integrity arcs — MERGE DAY: #152/#154/#155/#156 all landed on main)
+
+**One extended session, three stacked arcs, closed by a four-PR merge train** (Nes granted the merge via `/session-end and merge all branches into main`): **#152** (buzz-v2 hype & pre-marketing, built overnight 07-06/07, held for playtest — its arc details live in the PR description and the buzz-v2 spec) → **#154** (About page + Label Head's Guide) → **#155** (Systems Map admin tool) → **#156** (systems balance & integrity). Each retargeted to main and merged in order; merged main independently verified **tsc clean + 1,712/1,712 tests green**.
+
+**Arc 1 — About page + The Label Head's Guide (#154).** Replaced the main-menu "Coming soon" About stub with `/about`: an in-fiction help section (research-driven design: CK3 game-concepts, NN/g progressive disclosure, journey ordering) — exec-voice preamble + **9 topics** (weekly loop, three currencies, access tiers, exec team, buzz/hype/awareness, releases, streaming economics, tours, charts). Content is data-only (`client/src/lib/helpTopics.ts`) with fork-E-style no-engine-numbers regex guards; scanning cues via a `HELP_TERMS` registry mirroring real UI colors ([[term]] markup + header chips ONLY on the topics that introduce their terms — Nes rule, test-pinned). Also: CommandDock ⋯ menu About link + came-from-aware back button. **C85** logged (topic expansion: A&R, mood, side events, saves).
+
+**Arc 2 — Systems Map admin tool (#155).** `/admin/systems-map`: interactive SVG diagram of the whole engine — 23 nodes / 41 verified edges (each with formula + live balance values via static JSON imports + file:line ref), HARDCODED badges on code-literal knobs, and a **non-edges panel** (assumed-but-missing connections, verified: energy display-only, dead flop/decay config, C79-class shadowed configs, CC in no formula). Built from a fresh Opus engine recon, not docs. Detail panel + non-edges sit side-by-side under a full-width diagram (Nes layout feedback, 2 iterations).
+
+**Arc 3 — Systems balance & integrity (#156).** Design review (`docs/98-research/SYSTEMS_BALANCE_REVIEW_2026-07-10.md`) → Nes approved all six recommendations ("spec all, fix everything; #3 as loss-leader view") → specced + EXECUTED same day, 6 sequential factory slices: (1) **knob liberation** — every flagged hardcoded constant → `data/balance/` config, byte-identical GM double-run, **C79 RESOLVED**; (2) **flop penalty** — reputation finally two-way (release-week revenue < 10% of ≥$10k investment → −3 rep once, renders in Achievements card); (3) **loss-leader view** — marketing economics surfaced on PlanReleasePage + help guide + ROI tooltip (economics untouched, Nes fork); (4) **low mood widens recording variance** (up to ×1.4 at mood 0, never narrows above baseline); (5) **artist energy drives tour sell-through** (×0.90–1.05 — energy's first engine consumer ever); (6) **tour popularity gains respect the saturation curve** via `min(1, satMult)` (orchestrator catch: naive curve reuse would have super-charged unknowns 1.5×). Per-slice GM policy held: byte-identical where required, audited explainable re-blesses (tour-estimate ×0.975 uniform; slice-6 popularity-only) elsewhere; zero RNG-stream changes. 28 new engine tests. Wrap: spec → `COMPLETED/[COMPLETE] systems-balance-integrity-plan.md`, ledger **88 = 60 + 3 + 25** (C79 done; **C86** GM fixtures skirt the new ranges, **C87** touring doesn't drain energy, **C88** marketing attribution as structured data), plus a doc-sync sweep (`def02fd`) fixing 5 stale descriptive docs (headline: database-design.md's "energy does not alter economic calculations") with positive clean-attestation on the rest.
+
+**Open threads / next steps:**
+- **Playtest the merged mechanics** (⚠️ restart the dev server first — engine changes, no tsx watch): trigger a flop (≥$10k release returning <10%), feel low-mood volatility, tired-artist tours, saturated tour popularity; verify the PlanReleasePage loss-leader note + ROI tooltip live (never rendered in-session — the save had no signed artists).
+- The Systems Map is now the living engine record + doc-sync target — re-verify edges when formulas change; tuning knobs are all liberated but **values deliberately untouched** this arc.
+- C86 (GM fixture coverage for flop/low-mood/under-cap-tour ranges) is the natural next small slice; C87 (energy drain on tour) pairs with any tour feel work; C85 (help-topic expansion) whenever.
+- Pre-existing `WeekTransition` setState-in-render warning (every GameLayout page) — a fix-task chip was spawned 07-10, still pending.
+- Carry-overs: reactive meetings/side-events full-loop playtest, feel knobs untouched, C75/C76, Phase 4 audio audition, first copywriter changelog→doc-pass loop.
 
 ---
 
