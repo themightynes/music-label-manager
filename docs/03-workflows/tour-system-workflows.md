@@ -193,14 +193,19 @@ Ticket Price Calculation:
     base_price (25) + (capacity × 0.03)
 
 Sell-Through Rate Calculation:
-    base_rate (0.15)
+    (base_rate (0.15)
     + reputation_bonus (reputation × 0.05)
     + popularity_bonus (artist.popularity × weight)
-    + marketing_bonus (budget_quality × factor)
+    + marketing_bonus (budget_quality × factor))
+    × energy_factor
 
 Merchandise Revenue:
     ticket_revenue × 0.15
 ```
+
+> **Artist energy factor (balance-integrity slice 5, July 2026):** the summed rate above is multiplied by `energyFactor = min + (max - min) × (energy / 100)` — 0.90 at energy 0, 1.05 at energy 100, config at `markets.json` `market_formulas.tour_revenue.energy_effectiveness` (`computeEnergyFactor` in `shared/engine/FinancialSystem.ts`). A rested artist sells the room harder; a run-down one sells it worse. Missing/null energy is treated as 50 (factor 0.975). Applied consistently in the tour foreshadow calculation, city-by-city execution, and the `/api/tour/estimate` route.
+
+> **Tour popularity gains are saturation-capped (balance-integrity slice 6, July 2026):** attendance-based popularity gains (`market_formulas.tour_revenue.popularity_reactions` tiers) are scaled by `min(1, popularitySaturationMultiplier(artist.popularity))` (`shared/utils/popularitySaturation.ts`, floor 0) before being applied — the same diminishing-returns curve streaming already used, now shared by tours so a already-popular artist gains less from a sold-out show than a rising one does.
 
 ### **Cost Calculation**
 ```

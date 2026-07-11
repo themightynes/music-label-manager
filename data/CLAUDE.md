@@ -20,5 +20,8 @@ Artists, songs, roles, executives, actions, world definitions
   - Press/awareness → `balance/markets.json`
   - Quality/variance → `balance/quality.json`
   - Awards / exec-mood modifiers / chart reputation → `balance/progression.json`
+  - Streaming/tour revenue formulas (`streaming_calculation`, `ongoing_streams`, `popularity_saturation`, `ongoing_marketing_factor`, `tour_revenue` incl. `energy_effectiveness`/`mood_reactions`/`popularity_reactions`) → `balance/markets.json` `market_formulas`
+  - Song-quality formula (`song_quality_formula`: mood/talent/producer/time factors, `mood_variance_widening_max`) → `balance/quality.json` — distinct from `producer_tier_system`/`time_investment_system`, which feed cost/duration only
+  - Reputation flop penalty (`flop_penalty`/`flop_revenue_ratio`/`flop_investment_floor`) → `balance/progression.json` `reputation_system`
 - When authoring changes affect executive meetings, update `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md` to match.
 - `events.json` is editable via the admin Content Editor (`GET`/`POST /api/admin/events-config`, mirroring the actions-config pair). Saves via either admin content endpoint append an id-level diff to `data/content-changelog.json` (`{ timestamp, file, added, modified, deleted }`) for a later docs-sync pass to consume.

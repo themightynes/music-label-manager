@@ -260,6 +260,8 @@ interface ArtistChoice extends DialogueChoice {
 ```
 
 > **Note (verified July 4, 2026 — corrects an outdated claim):** `artist_effects.energy` is NOT display-only. Dialogue's `artist_energy` effect is a live engine key: `server/routes/artists.ts` (`/api/game/:gameId/artist-dialogue`) reads `effectKey === 'artist_energy'`, clamps `artist.energy + value`, and persists it via `storage.updateArtist(artistId, { energy: newEnergy })` (~lines 111-114). The same key is also live in the executive-meetings path (`ActionProcessor.ts` `case 'artist_energy'`, ~line 594) — see `LIVE_EFFECT_KEYS` in `shared/engine/processors/ActionProcessor.ts`.
+>
+> **Update (balance-integrity arc, July 2026):** beyond being a persisted stat, `artist.energy` now feeds an actual economic formula — it multiplies tour sell-through (×0.90–1.05, `markets.json` `market_formulas.tour_revenue.energy_effectiveness`, `computeEnergyFactor` in `shared/engine/FinancialSystem.ts`). It still has no effect on song quality or streaming.
 
 ### **Example Dialogue**
 ```json

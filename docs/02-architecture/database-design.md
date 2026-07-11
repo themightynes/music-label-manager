@@ -136,10 +136,10 @@ CREATE INDEX idx_artists_game_id ON artists(game_id);
 
 The database tracks two separate relationship metrics:
 
-- **Artist Energy** (`artists.energy`): A display-focused stat that reflects an artist's current enthusiasm. It is surfaced in UI, narrative beats, and notifications, but it does **not** alter project outcomes or economic calculations.
+- **Artist Energy** (`artists.energy`): Surfaced in UI, narrative beats, and notifications, and — as of the balance-integrity arc (July 2026) — also live in the economy: it multiplies tour sell-through (×0.90–1.05 linear in energy, `computeEnergyFactor` in `shared/engine/FinancialSystem.ts`, config at `markets.json` `market_formulas.tour_revenue.energy_effectiveness`) applied consistently across tour foreshadow, execution, and the `/api/tour/estimate` route. It still does **not** affect song quality or streaming outcomes — those read `artist.mood`, not `artist.energy`.
 - **Executive Loyalty** (`executives.loyalty`): A gameplay-impacting system. Executives gain loyalty when assigned and lose it after sustained inactivity. Loyalty influences executive availability and future narrative hooks.
 
-This separation keeps artist presentation flavorful while preserving the strategic depth of the executive relationship loop.
+This separation keeps the two metrics distinct — energy is now a real (if narrow) economic lever for tours specifically, while loyalty remains the broader executive-relationship mechanic.
 
 #### **projects** - Music Production Projects
 ```sql
