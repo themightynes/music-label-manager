@@ -157,7 +157,7 @@ export default function SystemsMapPage() {
 
   return (
     <GameLayout>
-      <div className="container mx-auto px-4 pt-6 space-y-4">
+      <div className="w-full max-w-none px-4 pt-6 space-y-4">
         <div className="glass-panel rounded-card border border-white/10 p-4 space-y-2">
           <h1 className="text-2xl font-bold text-text-primary font-display">Systems Map</h1>
           <p className="text-sm text-text-body">
@@ -202,9 +202,9 @@ export default function SystemsMapPage() {
           </label>
         </div>
 
-        <div className="flex gap-4 items-start">
-          {/* Diagram */}
-          <div className="glass-panel rounded-card border border-white/10 p-2 overflow-x-auto flex-1 min-w-0">
+        <div className="flex flex-col gap-4">
+          {/* Diagram — full width; detail panel sits BELOW so the diagram gets the whole viewport width */}
+          <div className="glass-panel rounded-card border border-white/10 p-2 overflow-x-auto w-full">
             <svg
               viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
               width={VIEW_W * zoom}
@@ -342,7 +342,7 @@ export default function SystemsMapPage() {
           </div>
 
           {/* Detail panel */}
-          <div className="w-[380px] shrink-0 glass-panel rounded-card border border-white/10 p-4 max-h-[70vh] overflow-y-auto space-y-3">
+          <div className="w-full glass-panel rounded-card border border-white/10 p-4 max-h-[45vh] overflow-y-auto space-y-3">
             {!panel && (
               <p className="text-sm text-text-muted">
                 Hover a node to see its connections. Click a node or an edge for full detail — mechanism, formula,
@@ -471,7 +471,7 @@ function NodePanel({
         <div className="text-xs font-semibold text-text-label uppercase tracking-wide mb-1.5">
           Inbound ({inbound.length})
         </div>
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5">
           {inbound.length === 0 && <div className="text-xs text-text-muted italic">None modeled.</div>}
           {inbound.map((e) => (
             <EdgeRow key={e.id} edge={e} direction="in" onSelect={() => onSelectEdge(e.id)} />
@@ -483,7 +483,7 @@ function NodePanel({
         <div className="text-xs font-semibold text-text-label uppercase tracking-wide mb-1.5">
           Outbound ({outbound.length})
         </div>
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5">
           {outbound.length === 0 && <div className="text-xs text-text-muted italic">None modeled.</div>}
           {outbound.map((e) => (
             <EdgeRow key={e.id} edge={e} direction="out" onSelect={() => onSelectEdge(e.id)} />
