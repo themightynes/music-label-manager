@@ -126,13 +126,18 @@ export default function ExecutiveSuitePage({
         </header>
 
         {/* ===== console deck ===== */}
-        <section className="chromatic-hairline hud-ticks glass-panel relative overflow-hidden rounded-card p-6 md:p-8">
+        {/* overflow-clip (not -hidden): a hidden-overflow box is still programmatically
+            scrollable, and the blooms' offscreen extent let focus/scrollIntoView shift
+            the whole deck sideways (scrollLeft > 0 → left edge visually cut). clip
+            forbids scrolling entirely; the blooms use transforms, which never create
+            scrollable overflow in the first place. */}
+        <section className="chromatic-hairline hud-ticks glass-panel relative overflow-clip rounded-card p-6 md:p-8">
           {/* corner brackets */}
           <div className="pointer-events-none absolute left-[11px] top-[11px] h-[13px] w-[13px] border-l border-t border-neon-purple/50" aria-hidden />
           <div className="pointer-events-none absolute bottom-[11px] right-[11px] h-[13px] w-[13px] border-b border-r border-neon-cyan/50" aria-hidden />
-          {/* ambient blooms */}
-          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-neon-purple/15 blur-3xl" aria-hidden />
-          <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-neon-magenta/10 blur-3xl" aria-hidden />
+          {/* ambient blooms (transform-offset, see note above) */}
+          <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 -translate-y-32 translate-x-16 rounded-full bg-neon-purple/15 blur-3xl" aria-hidden />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-80 w-80 -translate-x-10 translate-y-40 rounded-full bg-neon-magenta/10 blur-3xl" aria-hidden />
 
           <div className="relative z-10">
             <ExecutiveMeetings
