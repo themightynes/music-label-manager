@@ -232,12 +232,12 @@ export const HELP_TOPICS: HelpTopic[] = [
     tldr: 'Streams are where a record\'s [[money]] comes from. What you did before the drop decides the opening; [[buzz|Buzz]] decides how long it keeps paying.',
     body: [
       'Nearly everything that decides an opening week was settled before release day. The song\'s quality. The playlists your access can reach. Your label\'s standing — [[reputation]] pulls streams on its own. The marketing you put behind it. And the artist\'s own pull: a popular act moves more streams with the same song, and the bigger the star, the harder that works. Then the market adds its own swing — no one calls a hit to the decimal, not even me.',
-      'A word on marketing spend: it works every time, but each extra dollar buys less than the last. Doubling the budget does not double the opening. Size the spend to the record instead of trying to buy your way past a weak one.',
+      'A word on marketing spend: it works every time, but each extra dollar buys less than the last. Doubling the budget does not double the opening. Size the spend to the record instead of trying to buy your way past a weak one. And don\'t expect the streams to pay it back alone — most of that spend earns its keep in the opening, the charts, and the reputation they build.',
       'Every stream pays, and the shape of the payout is always the same: a launch spike, then a weekly trickle that shrinks — unless the record\'s live [[buzz|Buzz]] keeps it in the conversation and stretches the tail (see "Getting Heard"). And a hit pays twice. The [[money]] is the first half; the second is the scoreboard — streams are what put a song on the charts, big chart moments build [[reputation]], and a strong run lifts the artist\'s popularity, which makes the NEXT record open bigger. A flop costs what you spent and nothing more — read what was weak, and cut the next one smarter.',
     ],
     rules: [
       'The opening is decided before release day: quality, playlist access, [[reputation]], marketing, and the artist\'s pull.',
-      'Marketing has diminishing returns — each extra dollar buys less than the last. Size the spend to the record.',
+      'Marketing is a loss-leader on streams alone — it pays back in charts, [[reputation]], and the record\'s tail, not the receipt. Spend it to break the record, not to buy revenue; each extra dollar still buys less than the last.',
       'Streams fade week over week; live [[buzz|Buzz]] stretches the tail. [[money|Money]] follows streams — and so do the charts.',
     ],
     veteranNotes: [
