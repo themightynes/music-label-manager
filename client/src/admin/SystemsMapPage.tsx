@@ -37,7 +37,7 @@ const DOMAIN_TW: Record<DomainId, { text: string; stroke: string; fill: string; 
 
 const COL_WIDTH = 270;
 const ROW_HEIGHT = 96;
-const NODE_W = 200;
+const NODE_W = 180;
 const NODE_H = 56;
 const PAD_X = 40;
 const PAD_TOP = 60;
@@ -341,8 +341,10 @@ export default function SystemsMapPage() {
             </svg>
           </div>
 
+          {/* Explainer + non-edges side by side under the diagram */}
+          <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Detail panel */}
-          <div className="w-full glass-panel rounded-card border border-white/10 p-4 max-h-[45vh] overflow-y-auto space-y-3">
+          <div className="w-full lg:flex-1 min-w-0 glass-panel rounded-card border border-white/10 p-4 max-h-[45vh] overflow-y-auto space-y-3">
             {!panel && (
               <p className="text-sm text-text-muted">
                 Hover a node to see its connections. Click a node or an edge for full detail — mechanism, formula,
@@ -365,10 +367,9 @@ export default function SystemsMapPage() {
 
             {selectedNonEdge && <NonEdgePanel nonEdge={selectedNonEdge} />}
           </div>
-        </div>
 
-        {/* Non-edges collapsible panel (always available, independent of the toggle) */}
-        <div className="glass-panel rounded-card border border-white/10">
+          {/* Non-edges collapsible panel (always available, independent of the toggle) */}
+          <div className="w-full lg:flex-1 min-w-0 glass-panel rounded-card border border-white/10 max-h-[45vh] overflow-y-auto">
           <button
             className="w-full flex items-center justify-between p-3 text-left"
             onClick={() => setNonEdgesPanelOpen((v) => !v)}
@@ -400,6 +401,8 @@ export default function SystemsMapPage() {
               ))}
             </div>
           )}
+          </div>
+          </div>
         </div>
       </div>
     </GameLayout>
