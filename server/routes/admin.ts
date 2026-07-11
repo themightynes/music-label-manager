@@ -2,7 +2,15 @@ import { Router } from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { z } from 'zod';
-import { ActionsConfigSchema, EventsConfigSchema } from '@shared/api/contracts';
+import {
+  ActionsConfigSchema,
+  EventsConfigSchema,
+  PlaytestFeedbackResponsesSchema,
+  PLAYTEST_SECTION_IDS,
+  PLAYTEST_KNOB_IDS,
+  buildEmptyPlaytestFeedbackResponses,
+  type PlaytestFeedbackResponses,
+} from '@shared/api/contracts';
 import { gameStates } from '@shared/schema';
 import { db } from '../db';
 import { sql, inArray } from 'drizzle-orm';
@@ -182,6 +190,130 @@ router.post('/api/admin/events-config', requireClerkUser, requireAdmin, async (r
       });
     }
   });
+
+// Playtest feedback endpoints (Admin only) — recording surface for
+// docs/01-planning/PLAYTEST_FEEDBACK_2026-07-11.md. Mirrors the
+// actions-config pattern (validate → backup → write); persists at
+// docs/01-planning/playtest-feedback-2026-07-11.responses.json. The markdown
+// form stays untouched as the printable source. No dataLoader cache clear or
+// content changelog here — this is not game content.
+
+const PLAYTEST_RESPONSES_FILENAME = 'playtest-feedback-2026-07-11.responses.json';
+
+function playtestResponsesPath(): string {
+  return path.join(process.cwd(), 'docs', '01-planning', PLAYTEST_RESPONSES_FILENAME);
+}
+
+// Rebuilds the response document with keys in canonical order (formId first,
+// sections/knobs in form order, extras appended) so the pretty-printed JSON
+// file is stable and diffable across saves.
+function stablePlaytestResponses(parsed: PlaytestFeedbackResponses): PlaytestFeedbackResponses {
+  const sections: PlaytestFeedbackResponses['sections'] = {};
+  for (const id of PLAYTEST_SECTION_IDS) {
+    if (parsed.sections[id]) sections[id] = parsed.sections[id];
+  }
+  for (const id of Object.keys(parsed.sections)) {
+    if (!(id in sections)) sections[id] = parsed.sections[id];
+  }
+  const knobStrength: PlaytestFeedbackResponses['knobStrength'] = {};
+  for (const id of PLAYTEST_KNOB_IDS) {
+    if (id in parsed.knobStrength) knobStrength[id] = parsed.knobStrength[id];
+  }
+  for (const id of Object.keys(parsed.knobStrength)) {
+    if (!(id in knobStrength)) knobStrength[id] = parsed.knobStrength[id];
+  }
+  return {
+    formId: parsed.formId,
+    savedAt: parsed.savedAt,
+    sections,
+    knobStrength,
+    oneKnobChange: parsed.oneKnobChange,
+    topPriorities: parsed.topPriorities,
+    pullBack: parsed.pullBack,
+    gutCheck: parsed.gutCheck,
+  };
+}
+
+router.get('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, async (req, res) => {
+  try {
+    const responsesPath = playtestResponsesPath();
+    let raw: string;
+    try {
+      raw = await fs.readFile(responsesPath, 'utf8');
+    } catch (readError: any) {
+      if (readError?.code === 'ENOENT') {
+        // No responses saved yet — return the empty default so the page can
+        // prefill every field.
+        return res.json(buildEmptyPlaytestFeedbackResponses());
+      }
+      throw readError;
+    }
+    const responses = PlaytestFeedbackResponsesSchema.parse(JSON.parse(raw));
+    res.json(responses);
+  } catch (error) {
+    console.error('Failed to load playtest feedback responses:', error);
+    res.status(500).json({ error: 'Failed to load playtest feedback responses' });
+  }
+});
+
+router.post('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, async (req, res) => {
+  try {
+    const { responses } = req.body;
+
+    if (!responses) {
+      return res.status(400).json({ error: 'Responses data is required' });
+    }
+
+    // Validate using shared schema from contracts
+    let parsed: PlaytestFeedbackResponses;
+    try {
+      parsed = PlaytestFeedbackResponsesSchema.parse(responses);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        return res.status(400).json({
+          error: 'Invalid playtest feedback structure',
+          details: validationError.errors
+        });
+      }
+      throw validationError;
+    }
+
+    const responsesPath = playtestResponsesPath();
+
+    // Create backup before overwriting (actions-config precedent; the very
+    // first save has nothing to back up, which is fine).
+    const backupPath = `${responsesPath}.backup`;
+    let backupCreated = false;
+    try {
+      const existingData = await fs.readFile(responsesPath, 'utf8');
+      await fs.writeFile(backupPath, existingData, 'utf8');
+      backupCreated = true;
+      console.log('Created backup at', backupPath);
+    } catch (backupError: any) {
+      if (backupError?.code !== 'ENOENT') {
+        console.warn('Failed to create backup, continuing with save:', backupError);
+      }
+    }
+
+    // Stamp savedAt server-side and write pretty-printed, stable key order.
+    const savedAt = new Date().toISOString();
+    const stable = stablePlaytestResponses({ ...parsed, savedAt });
+    await fs.writeFile(responsesPath, JSON.stringify(stable, null, 2), 'utf8');
+
+    res.json({
+      success: true,
+      message: 'Playtest feedback saved',
+      backupCreated,
+      savedAt
+    });
+  } catch (error) {
+    console.error('Failed to save playtest feedback responses:', error);
+    res.status(500).json({
+      error: 'Failed to save playtest feedback responses',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // Database health monitoring endpoints (Admin only) - PRD-0006
 router.get('/api/admin/database-stats', requireClerkUser, requireAdmin, async (req, res) => {

@@ -1,4 +1,6 @@
-# [READY] Hype & Pre-Marketing Plan (Buzz v2 — link the systems)
+# [COMPLETE] Hype & Pre-Marketing Plan (Buzz v2 — link the systems)
+
+> ✅ **MERGED as PR #152 on 2026-07-11** (merge-day train #152 → #154 → #155 → #156). File moved to `COMPLETED/` 2026-07-11.
 
 *Drafted July 6, 2026, late evening, from Nes's playtest design conversation. Status: **EXECUTED July 6–7, 2026** — all seven product calls made by Nes (banked hype attaches at PLAN time; forks A–F per recommendation, §5 is the decision record; fork E also greenlit the C43 cancel UI). Built as 5 slices + 3 orchestrator-review follow-ups on `feat/hype-premarketing` (off main after #149/#151 merged): slice 1 `ddbee1b` visibility/attribution, slice 2 `ce9e464`+`5550d6f` artist pools + attach-at-plan (follow-up: drained flags now reach the client spine via `adoptServerPlanReleaseResolution`), slice 3 `1f44ad0`+`7e21c17` pre-release build, slice 4 `dbed1af`+`cf6a883` C43 cancel (follow-up fixed an orchestrator-caught **over-refund money bug**: refund is the paid pot MINUS the converted pre-campaign share, never plus), slice 5 `3797653` channel-personality copy. Fresh-context adversarial verifier: **ALL 15 items CONFIRMED** (incl. independent GM double-run, RNG-stream audit, over-refund probe). Suite 1,578 → 1,656 green; zero GM content deltas; zero new RNG draws. Debt: C81–C83 logged. UNMERGED pending Nes playtest. Move to COMPLETED/[COMPLETE] post-merge.*
 

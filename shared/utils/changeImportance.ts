@@ -128,6 +128,8 @@ export function classifyChange(
     case 'meeting':
     case 'delayed_effect':
     case 'mood':
+    // C87: tour energy drain — ordinary road wear, rendered on the mood card.
+    case 'energy':
     case 'popularity':
     case 'awareness_gain':
     case 'awareness_decay':

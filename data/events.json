@@ -188,10 +188,10 @@
           "id": "audit",
           "label": "Audit rights and metadata",
           "effects_immediate": {
-            "money": -1000
+            "money": -500
           },
           "effects_delayed": {
-            "money": 500
+            "reputation": 2
           }
         },
         {

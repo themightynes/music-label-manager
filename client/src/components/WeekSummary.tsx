@@ -384,6 +384,11 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
   // NEW: Determine the scope of a mood change
   type MoodScope = 'global' | 'predetermined' | 'user_selected' | 'routine';
   const determineMoodScope = (change: GameChange): MoodScope => {
+    // C87: tour energy-drain entries share the mood card; they are routine
+    // road wear, not a meeting outcome — never suffix them "(Most Popular)".
+    if (change.type === 'energy') {
+      return 'routine';
+    }
     // Check source field directly for scope value
     if (change.source) {
       if (change.source === 'user_selected') {
@@ -831,7 +836,9 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                 {categorizedChanges.mood.map((change: GameChange, index: number) => {
                   const scope = determineMoodScope(change);
                   const scopeIcon = getScopeIcon(scope);
-                  const moodDelta = change.moodChange || 0;
+                  // C87: energy entries carry their delta in `amount` (no
+                  // moodChange field) — mood entries keep the original read.
+                  const moodDelta = change.type === 'energy' ? (change.amount || 0) : (change.moodChange || 0);
                   const isPositive = moodDelta >= 0;
 
                   // Determine scope-specific styling
