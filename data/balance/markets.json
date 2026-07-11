@@ -236,7 +236,9 @@
       "breakthrough_effects": {
         "awareness_multiplier": 2.5,
         "stream_growth_duration": 4,
-        "enhanced_decay_rate": 0.92
+        "enhanced_decay_rate": 0.92,
+        "artist_mood_bonus": 5,
+        "_artist_mood_bonus_note": "Volatility-economy slice 2: when a song breaks through (the public catches on harder than expected), its artist gets a morale lift. Applied to summary.artistChanges[song.artistId].mood at the breakthrough site in ReleaseProcessor, clamped 0-100 downstream. Zero RNG (the breakthrough roll itself is the existing deterministic sin-seed)."
       },
       "max_awareness_modifier": 2.0
     },

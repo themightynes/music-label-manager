@@ -253,6 +253,11 @@ export class ArtistStateProcessor {
     const projects = ctx.storage.getProjectsByGame ?
       await ctx.storage.getProjectsByGame(ctx.gameState.id, dbTransaction) : [];
 
+    // Volatility-economy slice 2 (knob liberation): the natural-drift bands +
+    // amount were HARDCODED (±3, 55/45). Now read from artists.json
+    // artist_stats.mood_drift with the original literals as fallback defaults.
+    const moodDriftCfg = ((ctx.gameData.getBalanceConfigSync?.()?.artist_stats?.mood_drift) || {}) as Record<string, any>;
+
     // Process each artist
     for (const artist of artists) {
       const currentMood = artist.mood || 50;
@@ -261,7 +266,7 @@ export class ArtistStateProcessor {
       const releaseMoodBoost = this.calculateReleaseMoodBoost(artist, summary);
       const workloadPenalty = this.calculateWorkloadStressPenalty(artist, projects, summary);
       const moodAfterImmediate = currentMood + releaseMoodBoost + workloadPenalty;
-      const naturalDrift = this.calculateNaturalMoodDrift(artist, moodAfterImmediate, summary);
+      const naturalDrift = this.calculateNaturalMoodDrift(artist, moodAfterImmediate, summary, moodDriftCfg);
 
       // Calculate total mood change
       const totalMoodChange = releaseMoodBoost + workloadPenalty + naturalDrift;
@@ -366,15 +371,24 @@ export class ArtistStateProcessor {
   calculateNaturalMoodDrift(
     artist: any,
     moodAfterImmediate: number,
-    summary: WeekSummary
+    summary: WeekSummary,
+    driftCfg?: Record<string, any>
   ): number {
-    // Natural drift toward 50 (by 3 points max)
+    // Volatility-economy slice 2: bands + magnitude are config-driven (liberated
+    // from the old hardcoded ±3 / 55-45), amplified to 5 (~1.5×). Fallback
+    // defaults preserve the pre-liberation literals when the config is absent.
+    const cfg = driftCfg || {};
+    const thresholdHigh = cfg.threshold_high ?? 55;
+    const thresholdLow = cfg.threshold_low ?? 45;
+    const amount = cfg.drift_amount ?? 3;
+
+    // Natural drift toward neutral (by `amount` points max)
     let driftAmount = 0;
 
-    if (moodAfterImmediate > 55) {
-      driftAmount = -3;
-    } else if (moodAfterImmediate < 45) {
-      driftAmount = 3;
+    if (moodAfterImmediate > thresholdHigh) {
+      driftAmount = -amount;
+    } else if (moodAfterImmediate < thresholdLow) {
+      driftAmount = amount;
     }
 
     // Log drift as separate change entry if it occurred

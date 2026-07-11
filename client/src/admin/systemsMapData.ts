@@ -213,7 +213,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 1,
-    description: `Default 50. Feeds song_quality at generation time only (snapshotted — see non-edges for why it never moves an already-released song's streams). Set by meeting/dialogue choices (ActionProcessor.ts:660) and tour attendance (TourProcessor.ts:338-345).`,
+    description: `Default 50. Feeds song_quality at generation time only (snapshotted — see non-edges for why it never moves an already-released song's streams). Set by meeting/dialogue choices (ActionProcessor.ts:660) and tour attendance (TourProcessor.ts:338-345). Also moved by RELEASE OUTCOMES (volatility-economy slice 2): a flop wounds the release artist (edge e-flop-artist-mood) and a breakthrough lifts the song artist (edge e-breakthrough-artist-mood). PASSIVE WEEKLY DRIFT toward neutral (liberated to config + amplified, slice 2): mood above threshold_high drifts down by drift_amount, below threshold_low drifts up — artists.json artist_stats.mood_drift { threshold_high 55, threshold_low 45, drift_amount 5 (~1.5× the old hardcoded 3) }, ArtistStateProcessor.calculateNaturalMoodDrift.`,
   },
   {
     id: 'artist_energy',
@@ -841,6 +841,32 @@ export const EDGES: SystemEdge[] = [
     hardcoded: false,
     ref: 'ReleaseProcessor.processPlannedReleases (flop penalty block)',
     note: 'RESOLVED 2026-07-10 (balance-integrity slice 2): was non-edge ne-flop-reputation (flop_penalty dead). Now the game\'s first reputation SINK — a record whose release-week revenue falls below flop_revenue_ratio of its production+marketing investment (and clears the flop_investment_floor) costs the label flop_penalty reputation, once.',
+  },
+  {
+    id: 'e-flop-artist-mood',
+    from: 'streams',
+    to: 'artist_mood',
+    mechanism: 'Flop morale wound on the release artist (volatility-economy slice 2)',
+    formula: 'On the SAME flop condition as e-flop-reputation: summary.artistChanges[release.artistId].mood += flop_artist_mood_penalty (signed, negative), once per release (same flop gate), clamped 0-100 downstream.',
+    values: [
+      { label: 'flop_artist_mood_penalty', value: reputationSystem.flop_artist_mood_penalty, source: 'live', configPath: 'progression.reputation_system.flop_artist_mood_penalty', ref: 'ReleaseProcessor.processPlannedReleases (flop block)' },
+    ],
+    hardcoded: false,
+    ref: 'ReleaseProcessor.processPlannedReleases (flop penalty block)',
+    note: 'Volatility-economy slice 2: a flop no longer only costs label reputation (e-flop-reputation) — it also wounds the release artist\'s morale, fired inside the same once-only flop flag gate. Zero RNG.',
+  },
+  {
+    id: 'e-breakthrough-artist-mood',
+    from: 'awareness',
+    to: 'artist_mood',
+    mechanism: 'Breakthrough morale lift on the song artist (volatility-economy slice 2)',
+    formula: 'When a song breaks through (existing deterministic sin-seed roll, weeks 3-6): summary.artistChanges[song.artistId].mood += artist_mood_bonus, clamped 0-100 downstream.',
+    values: [
+      { label: 'artist_mood_bonus', value: awarenessSystem.breakthrough_effects.artist_mood_bonus, source: 'live', configPath: 'markets.market_formulas.awareness_system.breakthrough_effects.artist_mood_bonus', ref: 'ReleaseProcessor.processReleasedProjects (breakthrough block)' },
+    ],
+    hardcoded: false,
+    ref: 'ReleaseProcessor.processReleasedProjects (breakthrough block)',
+    note: 'Volatility-economy slice 2: a breakthrough lifts the song artist\'s morale. No new RNG — the breakthrough itself is the existing deterministic sin-seed roll (see e-quality-awareness-breakthrough).',
   },
   {
     id: 'e-reputation-access',

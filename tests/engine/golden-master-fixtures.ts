@@ -56,6 +56,7 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
   const config = JSON.parse(fs.readFileSync(path.join(balanceDir, 'config.json'), 'utf-8'));
   const markets = JSON.parse(fs.readFileSync(path.join(balanceDir, 'markets.json'), 'utf-8'));
   const quality = JSON.parse(fs.readFileSync(path.join(balanceDir, 'quality.json'), 'utf-8'));
+  const artistsBalance = JSON.parse(fs.readFileSync(path.join(balanceDir, 'artists.json'), 'utf-8'));
 
   markets.venue_capacities = progression.access_tier_system.venue_access;
 
@@ -82,6 +83,10 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     // Balance-integrity slice 1 (knob liberation) — mirror ServerGameData's
     // assembled balance so getBalanceConfigSync().song_quality_formula resolves.
     song_quality_formula: quality.song_quality_formula,
+    // Volatility-economy slice 2: mirror ServerGameData's assembled balance so
+    // getBalanceConfigSync().artist_stats.mood_drift resolves (the ONLY engine
+    // reader of artist_stats — the amplified natural-drift bands/magnitude).
+    artist_stats: artistsBalance.artist_stats,
     ...config,
   };
   const streaming = marketFormulas?.streaming_calculation;
