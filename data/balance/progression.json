@@ -119,7 +119,8 @@
   },
   
   "weekly_meeting_selection": {
-    "relevance_weight": 2.0,
+    "relevance_weight": 3.0,
+    "_relevance_weight_note": "Volatility-economy slice 4: raised 2.0 -> 3.0 so recently-relevant meetings surface more strongly (playtest: meeting relevance was too subtle to notice). Recency window unchanged.",
     "recency_window_weeks": 4
   },
 
