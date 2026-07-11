@@ -416,6 +416,14 @@ interface GameStore {
 
   // UI state
   selectedActions: string[];
+  /**
+   * Mandatory Side Events ("Crisis on the Desk"): the player's picked resolution
+   * for the pending crisis card, held in session state (persisted like
+   * selectedActions) and sent WITH the next advanceWeek request. Cleared after a
+   * successful advance. `null` until the player picks. */
+  pendingSideEventChoice: { eventId: string; choiceId: string } | null;
+  setSideEventChoice: (eventId: string, choiceId: string) => void;
+  clearSideEventChoice: () => void;
   isAdvancingWeek: boolean;
   weeklyOutcome: any | null;
   campaignResults: any | null;
@@ -497,6 +505,7 @@ export const useGameStore = create<GameStore>()(
       executives: [],
       moodEvents: [],
       selectedActions: [],
+      pendingSideEventChoice: null,
       isAdvancingWeek: false,
       weeklyOutcome: null,
       campaignResults: null,
@@ -946,11 +955,22 @@ export const useGameStore = create<GameStore>()(
       },
 
       // Advance week
+      // Mandatory Side Events ("Crisis on the Desk"): record / clear the player's
+      // picked resolution. Held in session state and sent with the next advance.
+      setSideEventChoice: (eventId: string, choiceId: string) => {
+        set({ pendingSideEventChoice: { eventId, choiceId } });
+      },
+      clearSideEventChoice: () => {
+        set({ pendingSideEventChoice: null });
+      },
+
       advanceWeek: async () => {
-        const { selectedActions } = get();
+        const { selectedActions, pendingSideEventChoice } = get();
         const gameState = readGameState(get);
-        // Allow advancing the week if either there are selected actions OR an A&R operation is consuming a slot
-        if (!gameState || (selectedActions.length === 0 && !gameState.arOfficeSlotUsed)) return;
+        // Allow advancing the week if there are selected actions, an A&R operation
+        // is consuming a slot, OR a mandatory crisis resolution has been picked (a
+        // crisis-only week can legitimately have zero meeting actions).
+        if (!gameState || (selectedActions.length === 0 && !gameState.arOfficeSlotUsed && !pendingSideEventChoice)) return;
 
         set({ isAdvancingWeek: true });
 
@@ -965,6 +985,10 @@ export const useGameStore = create<GameStore>()(
             // second request 409s instead of silently advancing two weeks
             // (server enforces inside the FOR UPDATE lock, advanceWeekService.ts).
             expectedCurrentWeek: gameState.currentWeek,
+            // Mandatory Side Events: carry the picked crisis resolution with the
+            // advance so its effects apply during the week (server validates it
+            // against the pending flag before advancing). Omitted when none picked.
+            ...(pendingSideEventChoice ? { sideEventChoice: pendingSideEventChoice } : {}),
             selectedActions: selectedActions.map(actionStr => {
               // Parse the JSON string to get our structured data
               let actionData: any;
@@ -1070,6 +1094,9 @@ export const useGameStore = create<GameStore>()(
             weeklyOutcome: result.summary,
             campaignResults: result.campaignResults,
             selectedActions: [],
+            // Mandatory Side Events: the crisis was resolved during this advance
+            // (server applied it) — clear the session pick so it can't re-send.
+            pendingSideEventChoice: null,
             isAdvancingWeek: false,
             weeklyOutcomeAutoShow: true
           });
@@ -1627,6 +1654,9 @@ export const useGameStore = create<GameStore>()(
       partialize: (state) => ({
         gameState: state.gameState ? { id: state.gameState.id } : null,
         selectedActions: state.selectedActions,
+        // Mandatory Side Events: persist the crisis pick so a mid-week reload keeps
+        // the resolution the player already made (parallels selectedActions).
+        pendingSideEventChoice: state.pendingSideEventChoice,
         isAdvancingWeek: state.isAdvancingWeek
       })
     }

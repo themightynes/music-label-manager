@@ -9,6 +9,8 @@ import { TrendingUp, TrendingDown, Clock, Zap, BarChart3, X, Rocket, Loader2, Se
 import logger from '@/lib/logger';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import { EffectBadgeTooltip } from '@/components/executive-meetings/EffectBadgeTooltip';
+import { useCrisisSideEvent } from '@/hooks/useCrisisSideEvent';
+import { CrisisSideEventCard } from '@/components/CrisisSideEventCard';
 
 // Badge honesty (exec-meetings-revival PR-2): same whitelist as DialogueInterface —
 // only render a badge for a key the engine actually implements, or 'executive_mood'
@@ -99,7 +101,11 @@ export function SelectionSummary({
   const { cancelAROfficeOperation } = useGameStore();
   const gameState = useGameState();
   const totalSlots = gameState?.focusSlots || 3;
-  const usedSlots = gameState?.usedFocusSlots || 0;
+  // Mandatory Side Events ("Crisis on the Desk"): a pending crisis occupies one
+  // focus slot on top of selectedActions + the A&R slot. Fold it into the used
+  // count so the slot UI, the badge, and "remaining" all read correctly.
+  const crisis = useCrisisSideEvent();
+  const usedSlots = (gameState?.usedFocusSlots || 0) + crisis.crisisSlotUsed;
   const availableSlots = totalSlots - usedSlots;
 
   logger.debug('SelectionSummary - selectedActions:', selectedActions);
@@ -220,7 +226,7 @@ export function SelectionSummary({
     }
   });
 
-  const filledSlotsCount = selectedActionObjects.length + (arOfficeActive ? 1 : 0);
+  const filledSlotsCount = selectedActionObjects.length + (arOfficeActive ? 1 : 0) + crisis.crisisSlotUsed;
   const progress = (usedSlots / totalSlots) * 100;
 
   const handleDragEnd = (result: any) => {
@@ -335,6 +341,16 @@ export function SelectionSummary({
                     </div>
                   )}
 
+                  {crisis.crisisActive && crisis.crisis && (
+                    <div className="flex-1 min-w-[260px]">
+                      <CrisisSideEventCard
+                        crisis={crisis.crisis}
+                        chosenChoiceId={crisis.chosenChoiceId}
+                        slotNumber={selectedActionObjects.length + (arOfficeActive ? 1 : 0) + 1}
+                      />
+                    </div>
+                  )}
+
                   {/* Empty slots */}
                   {Array.from({ length: Math.max(0, totalSlots - filledSlotsCount) }).map((_, index) => (
                     <div
@@ -417,9 +433,14 @@ export function SelectionSummary({
 
         {/* Advance Week Button */}
         <div className="space-y-3">
+          {crisis.blocksAdvance && (
+            <p className="text-xs text-negative font-medium text-center">
+              A crisis is on your desk — choose how to handle it before advancing.
+            </p>
+          )}
           <Button
             onClick={onAdvanceWeek}
-            disabled={(selectedActions.length === 0 && !arOfficeActive) || isAdvancing}
+            disabled={(selectedActions.length === 0 && !arOfficeActive && !crisis.crisisActive) || crisis.blocksAdvance || isAdvancing}
             className="relative overflow-hidden w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white hover:opacity-90 py-3 font-semibold shadow-action"
             size="lg"
           >

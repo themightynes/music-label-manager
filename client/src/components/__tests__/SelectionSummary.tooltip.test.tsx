@@ -28,6 +28,20 @@ vi.mock('@/hooks/useGameState', () => ({
   useGameState: () => ({ focusSlots: 3, usedFocusSlots: 1, arOfficeSlotUsed: false }),
 }));
 
+// Mandatory Side Events: SelectionSummary now reads the crisis-slot derivation
+// (which hits a TanStack query). Rendered here without a QueryClientProvider, so
+// stub the hook to the inert "no crisis" default.
+vi.mock('@/hooks/useCrisisSideEvent', () => ({
+  useCrisisSideEvent: () => ({
+    crisisActive: false,
+    crisis: null,
+    choicePicked: false,
+    chosenChoiceId: null,
+    crisisSlotUsed: 0,
+    blocksAdvance: false,
+  }),
+}));
+
 // @hello-pangea/dnd reads a global React; stub the drag-drop primitives to plain
 // pass-throughs so the render doesn't depend on DnD internals (irrelevant to the
 // Impact Preview badges under test).
