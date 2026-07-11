@@ -187,6 +187,44 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
   },
   {
+    id: 'ar-office',
+    title: 'The A&R Office',
+    hook: 'The roster you have is the label you are. Somewhere out there is the act that changes that — if you spend the week looking.',
+    tldr: 'A&R is the front of the machine: sourcing costs a focus slot, discovery surfaces prospects, and signing puts an artist on your payroll — a bet on their ceiling, not their present.',
+    body: [
+      'Everything this label will ever release starts with who you sign, and who you sign starts in the A&R office. Sourcing is real work: committing the office to a search costs you a focus slot for the week, the same attention you could have spent in a meeting. That is the first lesson — finding talent is not free, and treating it as an afterthought is how labels end up with nothing to record.',
+      'When the search lands, it surfaces prospects: artists you can look over before anyone commits to anything. Read them the way you would read a deal. What they can do today matters less than what they could become with your machine behind them — a modest act with real talent and a work ethic can outgrow a polished one who has already peaked.',
+      'Signing is where it becomes serious. The signing fee is the visible cost; the payroll is the real one, because every artist on the roster draws money week after week whether they are earning or not. So sign like an investor, not a collector. Every act you carry should have a job in your plan — a record coming, a tour worth booking, an audience worth building. A roster full of maybes is a burn rate, not a label.',
+    ],
+    rules: [
+      'Sourcing costs a focus slot — budget the search like any other move, and search before the cupboard is bare.',
+      'Judge prospects on ceiling, not polish: talent and work ethic compound under your machine; a peak already reached does not.',
+      'Every signing joins the payroll and burns [[money]] weekly — sign acts you have a plan for, not acts you merely like.',
+    ],
+    veteranNotes: [
+      'Different sourcing postures trade speed against reach. When you need a body in the studio next month, take the direct road; when you can afford to wait, a wider search tends to turn up the act you did not know to look for.',
+    ],
+  },
+  {
+    id: 'roster-health',
+    title: 'Keeping Your Roster Healthy',
+    hook: 'Same artist, same songs — but this month the takes are flat and the rooms feel half-asleep. The talent did not change. Their condition did.',
+    tldr: 'Artists run on mood and energy. A happy artist records sharper; a rested one sells the room harder. The road drains energy and nothing refills it for free — so resting an act is a real decision, not lost time.',
+    body: [
+      'Your artists are not machines with a fixed output. They run on two things you can watch and influence: mood — how they feel about the work and about you — and energy — how much of themselves they have left to give. Both move with what you put them through, and both show up in the results before they show up anywhere else.',
+      'Mood is the studio stat. A happy artist records sharper, and an unhappy one gets erratic — low morale does not just drag the work down, it makes it unpredictable, and unpredictable is the enemy of a label trying to plan releases. Watch what your choices do to the people making the music; the meeting that saves money by burning an artist rarely prices in what it costs the next record.',
+      'Energy is the road stat. A rested act sells the room harder — and the road is exactly what wears energy down, city after city. Here is the part that catches new label heads: nothing refills energy for free. There is no quiet week that magically restores an exhausted artist; putting them back on their feet takes a deliberate move from you. So the tour that looks like pure profit is also spending down an asset, and choosing to rest an act before the next run is a real decision with a real payoff, not dead air on the calendar.',
+    ],
+    rules: [
+      'Mood drives the studio: happy artists record sharper, unhappy ones get erratic — protect morale like it is quality, because it is.',
+      'Energy drives the road: the tour that fills your bank also drains the act, and the drain does not undo itself.',
+      'Rest is a move, not a gap — an exhausted artist sent back out sells fewer seats than the calendar suggests.',
+    ],
+    veteranNotes: [
+      'Read condition before you book, not after. The moment to check an artist\'s energy is when you are pricing the tour; the moment to check their mood is when you are scheduling the sessions. By the time poor condition shows up in the numbers, you already paid for it.',
+    ],
+  },
+  {
     id: 'getting-heard',
     title: 'Getting Heard: Buzz, Hype & Awareness',
     hook: 'It is week thirty. The record is good, the numbers are quiet, and you cannot tell whether anyone knows it exists.',
@@ -261,6 +299,22 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
   },
   {
+    id: 'side-events',
+    title: 'When the Week Fights Back: Side Events',
+    hook: 'You had the week planned to the hour. Then a payout report looks off, a rival makes a move, and suddenly the plan has company.',
+    tldr: 'Side events are the world reacting to you — not your executives\' agenda. Read each choice for the trade it is offering, and remember that "ignore it" is also a choice, with a price.',
+    body: [
+      'Your meetings are the agenda you set; side events are the industry setting one for you. They arrive uninvited — a licensing offer, a billing dispute, a mess that happened on someone else\'s stage — and they do not wait for a convenient week. This is not noise. It is the world responding to the label you are building, and the labels that do well treat these moments as decisions, not interruptions.',
+      'When one lands, slow down and read the trade. Every option in a side event is offering you something and asking for something — cash now against standing later, a quick exit against a slower play that compounds. The right answer depends on what your label needs this stretch, not on which line sounds boldest. A cash-poor week and a reputation-rich week can make opposite choices correct on the same event.',
+      'And do not mistake walking away for staying neutral. Declining to engage is an answer the industry hears, and it usually carries its own cost — quieter than the flashy options, but real. Sometimes eating that cost is right; just make sure you chose it, rather than drifted into it.',
+    ],
+    rules: [
+      'Side events are the world\'s agenda, not yours — they arrive on their schedule, and they still deserve a real read.',
+      'Every option is a trade: name what it gives and what it takes before you pick, and match it to what this stretch of the run needs.',
+      '"Ignore it" is a choice with a price — walking away quietly costs you too, so walk away on purpose or not at all.',
+    ],
+  },
+  {
     id: 'reading-the-charts',
     title: 'Reading the Charts',
     hook: 'Your single lands on the Top 100 and you want to know whether that number means anything.',
@@ -274,6 +328,22 @@ export const HELP_TOPICS: HelpTopic[] = [
       'The charts are a scoreboard, not a lever — you influence them through records and setup, never directly.',
       'Read the debut for how a song entered, and the week-to-week movement for where it is heading.',
       'Competitor songs share the board and keep moving, and a strong run here builds [[reputation]] too, so judge your position against a field that is not standing still.',
+    ],
+  },
+  {
+    id: 'saving-the-run',
+    title: 'Saving the Run',
+    hook: 'You are about to bet a quarter of the bank on one release. Before you pull that lever, make sure this exact moment is somewhere you can come back to.',
+    tldr: 'A save snapshots the whole label — roster, catalog, money, momentum, all of it. Save before the big irreversible bets, and export the runs you are proud of so they outlive the machine they were played on.',
+    body: [
+      'A save is not a bookmark; it is the entire label frozen in place. The roster and their condition, every song in the catalog, the releases in flight, the bank balance, the standing you have built — all of it, captured as one moment you can return to. When you load it back, you are not resuming a story, you are reopening the business exactly as you left it.',
+      'The discipline worth building is simple: save before the big irreversible bets. This game resolves everything when the week turns, and some of what resolves cannot be walked back — the record drops, the money is spent, the weeks are gone. The moment before a heavy commitment is the moment a snapshot earns its keep. Not because you should undo every stumble — absorbing a flop is part of the craft — but because a fifty-two week run deserves better than dying to a slip of the finger.',
+      'And when a run turns into something you are proud of, export it. An exported save is yours — a file that lives outside the machine, a label you can bring back, hand around, or shelve like a gold record. Campaigns end; the ones worth remembering do not have to.',
+    ],
+    rules: [
+      'A save is the whole label in one snapshot — roster, catalog, [[money]], standing — not just a checkpoint marker.',
+      'Save before the big irreversible bet: once the week turns, what resolved stays resolved.',
+      'Export the runs you are proud of — a file outside the game survives anything that happens inside it.',
     ],
   },
 ];

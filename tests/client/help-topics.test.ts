@@ -15,11 +15,19 @@ const EXPECTED_IDS = [
   'three-currencies',
   'access-tiers',
   'executive-team',
+  // C85 expansion (2026-07-11): A&R + roster care slot in after the exec team
+  // (build the roster before you market it)…
+  'ar-office',
+  'roster-health',
   'getting-heard',
   'putting-out-a-record',
   'streams-and-money',
   'on-the-road',
+  // …side events after the road (the world reacting to an active label)…
+  'side-events',
   'reading-the-charts',
+  // …and saving the run closes the journey.
+  'saving-the-run',
 ] as const;
 
 /** Every string a topic contributes to player-facing copy, flattened. */
@@ -44,7 +52,7 @@ function stripTermTokens(text: string): string {
 const ALL_TEXT_STRIPPED = stripTermTokens(ALL_TEXT);
 
 describe('helpTopics — structure', () => {
-  it('has exactly 9 topics, in the expected journey order', () => {
+  it('has exactly 13 topics, in the expected journey order', () => {
     expect(HELP_TOPICS).toHaveLength(EXPECTED_IDS.length);
     expect(HELP_TOPICS.map(t => t.id)).toEqual([...EXPECTED_IDS]);
   });
