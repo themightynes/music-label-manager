@@ -33,6 +33,7 @@ import UXPrototypesPage from '@/pages/UXPrototypesPage';
 import MoodSystemPrototypePage from '@/pages/prototypes/MoodSystemPrototypePage';
 import AdminHome from "@/admin/AdminLayout";
 import ContentEditorPage from "@/admin/ContentEditorPage";
+import SystemsMapPage from "@/admin/SystemsMapPage";
 import { withAdmin } from "@/admin/withAdmin";
 
 function Router() {
@@ -62,6 +63,7 @@ function Router() {
       <Route path="/admin/tours-test" component={withAdmin(ToursTest)} />
       <Route path="/admin/bug-reports" component={withAdmin(BugReportsPage)} />
       <Route path="/admin/database-health" component={withAdmin(AdminDatabaseHealthPage)} />
+      <Route path="/admin/systems-map" component={withAdmin(SystemsMapPage)} />
 
       {/* Prototype routes */}
       <Route path="/prototypes" component={withAdmin(UXPrototypesPage)} />
