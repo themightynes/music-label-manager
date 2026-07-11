@@ -99,7 +99,10 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       // ⭐ line, so the flop cause is visible and never falls into the never-rendered
       // `other` bucket (the awareness-arc invisible-event failure class).
       categories.achievements.push(change);
-    } else if (change.type === 'mood') {
+    } else if (change.type === 'mood' || change.type === 'energy') {
+      // C87: tour energy drain entries ride the mood bucket (the artist-state
+      // home) so they actually render — `other` is never rendered (this repo's
+      // recurring swallow-bug class).
       categories.mood.push(change);
     } else if (
       change.type === 'meeting' ||

@@ -424,7 +424,30 @@ export class TourProcessor {
         artistChange.popularity = (artistChange.popularity || 0) + popularityChange;
       }
 
+      // C87: touring consumes artist energy — flat drain per city reveal, read
+      // from markets.json market_formulas.tour_revenue.energy_cost (same accessor
+      // as mood_reactions above, fallback defaults so a missing block behaves as
+      // default). Accumulated into summary.artistChanges like mood; the DB write
+      // + 0–100 clamp happen downstream in ArtistStateProcessor — no separate
+      // floor here. Counterweight to energy_effectiveness: tour revenue is
+      // pre-calculated from starting energy on city 1, so the drain never
+      // retroactively changes this tour's revenue (golden-master byte-identity).
+      const energyCfg = (tourFormulas.energy_cost || {}) as Record<string, any>;
+      const energyCostPerCity = energyCfg.enabled !== false ? (energyCfg.per_city ?? 6) : 0;
+      if (energyCostPerCity !== 0) {
+        artistChange.energy = (artistChange.energy || 0) - energyCostPerCity;
+      }
+
       // Add changes to summary for player visibility
+      if (energyCostPerCity !== 0) {
+        summary.changes.push({
+          type: 'energy',
+          description: `${artist.name}: -${energyCostPerCity} energy from the road`,
+          amount: -energyCostPerCity,
+          artistId: artistId
+        });
+      }
+
       if (moodChange !== 0) {
         summary.changes.push({
           type: 'mood',

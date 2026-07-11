@@ -66,6 +66,7 @@
         "max": 1.05,
         "_note": "Balance-integrity slice 5: artist energy multiplies tour sell-through BEFORE the 1.0 cap. energyFactor = min + (max-min)*(energy/100), linear in energy. Default energy 50 -> 0.975 (a rested act sells the room harder; a run-down one doesn't). enabled:false short-circuits to factor 1.0."
       },
+      "energy_cost": { "enabled": true, "per_city": 6, "_note": "C87: each tour city drains this much artist energy on reveal, accumulated into summary.artistChanges and clamped 0-100 by ArtistStateProcessor. Flat per city. enabled:false short-circuits to 0. Counterweight to energy_effectiveness. No passive energy recovery exists, so the road cost is permanent until a meeting restores it." },
       "mood_reactions": {
         "poor_threshold": 30,
         "poor_delta": -3,

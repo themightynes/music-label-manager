@@ -1644,7 +1644,7 @@ exports[`GameEngine.advanceWeek — golden master > legacy-tour-week: Mini-Tour 
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 44,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -2087,6 +2087,13 @@ Performance Indicators:
       },
     },
     "changes": [
+      {
+        "amount": -6,
+        "artistId": "<id>",
+        "description": "Legacy Tourer: -6 energy from the road",
+        "importance": "routine",
+        "type": "energy",
+      },
       {
         "amount": 8,
         "artistId": "<id>",
@@ -4277,7 +4284,7 @@ exports[`GameEngine.advanceWeek — golden master > tour-week: active Mini-Tour 
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 44,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -4721,6 +4728,13 @@ Performance Indicators:
       },
     },
     "changes": [
+      {
+        "amount": -6,
+        "artistId": "<id>",
+        "description": "Touring Act: -6 energy from the road",
+        "importance": "routine",
+        "type": "energy",
+      },
       {
         "amount": 8,
         "artistId": "<id>",
