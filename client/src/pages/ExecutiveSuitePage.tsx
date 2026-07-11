@@ -1,8 +1,6 @@
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
-import { AlertCircle, Loader2, Briefcase } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { SelectionSummary } from '../components/SelectionSummary';
 import { ExecutiveMeetings } from '../components/executive-meetings/ExecutiveMeetings';
 import { useGameContext } from '@/contexts/GameContext';
@@ -10,6 +8,13 @@ import GameLayout from '@/layouts/GameLayout';
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import logger from '@/lib/logger';
+
+/**
+ * Exec Console redesign (2026-07-11, "Exec Meetings — Console" direction): the
+ * Executive Suite renders as "The Board" — a mixing-console deck. The page owns
+ * the slim HUD header (title, week line, focus-slot pips, CC meter) and the
+ * console deck framing; ExecutiveMeetings owns the screens inside it.
+ */
 
 interface SelectedChoice {
   executiveName: string;
@@ -46,9 +51,6 @@ export default function ExecutiveSuitePage({
     selectedChoices: []
   });
 
-  const loading = false;
-  const error: string | null = null;
-
   // Fallback advance week function if not provided
   const handleAdvanceWeek = onAdvanceWeek || (async () => {
     try {
@@ -68,87 +70,97 @@ export default function ExecutiveSuitePage({
 
   if (!gameState || !gameId) return null;
 
+  const totalSlots = gameState.focusSlots || 3;
+  const usedSlots = gameState.usedFocusSlots || 0;
+  const slotsLeft = totalSlots - usedSlots;
+  const creativeCapital = gameState.creativeCapital ?? 0;
+  const gridHint = slotsLeft > 0
+    ? `${slotsLeft} focus slot${slotsLeft === 1 ? '' : 's'} remaining`
+    : 'all slots committed — advance the week';
+
   return (
     <GameLayout>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <header className="mb-10 flex items-start justify-between">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {/* ===== slim HUD header ===== */}
+        <header className="mb-8 flex flex-wrap items-center justify-between gap-6">
           <div>
-            <div className="text-label text-[10px] uppercase tracking-[0.24em] text-neon-lilac/60 mb-1 flex items-center gap-2">
-              <Briefcase className="w-3 h-3" />
-              Week {gameState.currentWeek}
+            <div className="flex items-center gap-3">
+              <h1 className="font-display text-2xl md:text-[26px] text-text-primary text-aberration">the board</h1>
+              <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-neon-cyan">executive console</span>
             </div>
-            <h1 className="font-display text-2xl md:text-[28px] text-text-primary text-aberration">Executive Meetings</h1>
-            <div className="shimmer-bar w-40 mt-2" />
-            <p className="mt-3 text-sm md:text-base text-text-body flex items-center gap-2">
-              Allocate {(gameState?.focusSlots || 3) - (gameState?.usedFocusSlots || 0)} of {gameState?.focusSlots || 3} focus slots to strategic actions
-              {gameState?.focusSlots === 4 && (
-                <span className="inline-flex items-center gap-1 rounded-pill bg-positive/10 border border-positive/40 text-positive px-3 py-0.5 font-mono text-[11px]">
-                  4th Slot Unlocked
+            <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted/70">
+              week {gameState.currentWeek} · {gridHint}
+              {totalSlots === 4 && (
+                <span className="ml-3 inline-flex items-center gap-1 rounded-pill bg-positive/10 border border-positive/40 text-positive px-2.5 py-0.5 normal-case tracking-normal text-[10px]">
+                  4th slot unlocked
                 </span>
               )}
-            </p>
+            </div>
+            <div className="shimmer-bar w-40 mt-2" />
           </div>
-          <div className="inline-flex items-center gap-2 rounded-pill border border-white/10 bg-white/5 px-4 py-2 text-label text-[10px] font-semibold uppercase tracking-[0.4em] text-text-muted">
-            Executive Suite
+
+          <div className="flex items-center gap-3">
+            {/* focus slot pips */}
+            <div className="chromatic-hairline relative flex items-center gap-3 overflow-hidden rounded-card border border-white/[0.08] bg-gradient-to-b from-surface-panel/85 to-surface-inner/85 px-4 py-2.5">
+              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-text-muted">Focus</span>
+              <div className="flex gap-1.5">
+                {Array.from({ length: totalSlots }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`h-[7px] w-[22px] rounded-full border ${
+                      i < usedSlots
+                        ? 'border-neon-purple/70 bg-gradient-to-r from-action-pink to-neon-purple shadow-[0_0_12px_rgba(160,90,240,0.6)]'
+                        : 'border-white/15 bg-white/5'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="font-mono text-sm font-semibold text-text-primary">{usedSlots}/{totalSlots}</span>
+            </div>
+            {/* creative capital meter */}
+            <div className="relative flex items-center gap-2 overflow-hidden rounded-card border border-white/[0.09] bg-gradient-to-br from-neon-purple/15 to-neon-blue/10 px-4 py-2.5">
+              <Zap className="h-3 w-3 text-neon-lilac/80" />
+              <span className="font-mono text-sm font-semibold text-neon-lilac">{creativeCapital} CC</span>
+            </div>
           </div>
         </header>
 
-        <section
-          className="glass-panel chromatic-hairline hud-ticks relative overflow-hidden p-8 bg-contain bg-top bg-no-repeat min-h-[600px]"
-          style={{ backgroundImage: "url('/executivesuite_background.png')" }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-surface-panel/70 via-transparent to-surface-panel-alt/80" aria-hidden />
-          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-neon-purple/20 blur-3xl" aria-hidden />
-          <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-neon-amber/10 blur-3xl" aria-hidden />
+        {/* ===== console deck ===== */}
+        <section className="chromatic-hairline hud-ticks glass-panel relative overflow-hidden rounded-card p-6 md:p-8">
+          {/* corner brackets */}
+          <div className="pointer-events-none absolute left-[11px] top-[11px] h-[13px] w-[13px] border-l border-t border-neon-purple/50" aria-hidden />
+          <div className="pointer-events-none absolute bottom-[11px] right-[11px] h-[13px] w-[13px] border-b border-r border-neon-cyan/50" aria-hidden />
+          {/* ambient blooms */}
+          <div className="absolute -top-32 -right-16 h-72 w-72 rounded-full bg-neon-purple/15 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-40 -left-10 h-80 w-80 rounded-full bg-neon-magenta/10 blur-3xl" aria-hidden />
 
           <div className="relative z-10">
-            {/* Two Row Layout - Executive Meetings Top, Focus Slots Bottom */}
-            <div className="space-y-6">
-              {/* Top Row - Executive Meetings */}
-              <div>
-                {loading ? (
-                  <div className="text-center py-8">
-                    <Loader2 className="w-8 h-8 text-neon-purple mx-auto mb-4 animate-spin" />
-                    <p className="text-text-body">Loading available actions...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-8 h-8 text-negative mx-auto mb-4" />
-                    <p className="text-negative mb-4">Failed to load actions</p>
-                    <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-                      Try Again
-                    </Button>
-                  </div>
-                ) : (
-                  <ExecutiveMeetings
-                    gameId={gameId}
-                    currentWeek={gameState.currentWeek}
-                    onActionSelected={selectAction}
-                    focusSlots={{
-                      total: gameState.focusSlots || 3,
-                      used: gameState.usedFocusSlots || 0,
-                    }}
-                    creativeCapital={gameState.creativeCapital ?? 0}
-                    arOfficeStatus={getAROfficeStatus()}
-                    onImpactPreviewUpdate={setImpactPreview}
-                  />
-                )}
-              </div>
-
-              {/* Bottom Row - Focus Slots / Selection Summary */}
-              <div>
-                <SelectionSummary
-                  selectedActions={selectedActions}
-                  onRemoveAction={removeAction}
-                  onReorderActions={reorderActions}
-                  onAdvanceWeek={handleAdvanceWeek}
-                  isAdvancing={handleIsAdvancing}
-                  impactPreview={impactPreview}
-                />
-              </div>
-            </div>
+            <ExecutiveMeetings
+              gameId={gameId}
+              currentWeek={gameState.currentWeek}
+              onActionSelected={selectAction}
+              focusSlots={{
+                total: totalSlots,
+                used: usedSlots,
+              }}
+              creativeCapital={creativeCapital}
+              arOfficeStatus={getAROfficeStatus()}
+              onImpactPreviewUpdate={setImpactPreview}
+            />
           </div>
         </section>
+
+        {/* ===== focus slots / selection summary ===== */}
+        <div className="mt-6">
+          <SelectionSummary
+            selectedActions={selectedActions}
+            onRemoveAction={removeAction}
+            onReorderActions={reorderActions}
+            onAdvanceWeek={handleAdvanceWeek}
+            isAdvancing={handleIsAdvancing}
+            impactPreview={impactPreview}
+          />
+        </div>
       </main>
     </GameLayout>
   );

@@ -72,8 +72,9 @@ describe('MeetingSelector — why-now line', () => {
         onBack={vi.fn()}
       />
     );
-    // Enter the artist-selection view by selecting the meeting.
-    screen.getByText('Select Artist').click();
+    // Enter the artist-picker view by starting the meeting (console redesign:
+    // the brief's CTA reads "Start Meeting — pick an artist").
+    screen.getByText('Start Meeting — pick an artist').click();
     expect(screen.getByTestId('why-now-line')).toHaveTextContent('Because Aurora is in crisis');
   });
 });

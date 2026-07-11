@@ -54,16 +54,18 @@ describe('DialogueInterface — CC affordability gate', () => {
     expect(screen.getByTestId('cc-gate-creative_reset')).toHaveTextContent(
       'Needs 2 Creative Capital — you have 0'
     );
-    const buttons = screen.getAllByRole('button', { name: 'Choose This Response' });
-    // Carousel renders both cards; the CC-costing one is disabled, the free one is not.
-    expect(buttons.some((b) => (b as HTMLButtonElement).disabled)).toBe(true);
-    expect(buttons.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    // Console redesign: takes render side by side; the gated one reads "Locked"
+    // and is disabled, the free one stays a live "Choose".
+    const locked = screen.getByRole('button', { name: 'Locked' }) as HTMLButtonElement;
+    expect(locked.disabled).toBe(true);
+    const choose = screen.getByRole('button', { name: 'Choose' }) as HTMLButtonElement;
+    expect(choose.disabled).toBe(false);
   });
 
   it('does not gate an affordable CC choice', () => {
     renderDialogue(5);
     expect(screen.queryByTestId('cc-gate-creative_reset')).toBeNull();
-    const buttons = screen.getAllByRole('button', { name: 'Choose This Response' });
+    const buttons = screen.getAllByRole('button', { name: 'Choose' });
     expect(buttons.every((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
   });
 
@@ -75,7 +77,7 @@ describe('DialogueInterface — CC affordability gate', () => {
   it('absent prop = legacy behavior, nothing gated (other render sites unchanged)', () => {
     renderDialogue(undefined);
     expect(screen.queryByTestId('cc-gate-creative_reset')).toBeNull();
-    const buttons = screen.getAllByRole('button', { name: 'Choose This Response' });
+    const buttons = screen.getAllByRole('button', { name: 'Choose' });
     expect(buttons.every((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
   });
 });

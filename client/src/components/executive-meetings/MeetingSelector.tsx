@@ -1,68 +1,29 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
-import { Clock, DollarSign, Zap, Globe, Star, User, Sparkles } from 'lucide-react';
+import { Globe, Star, User, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { RoleMeeting, GameArtist } from '../../../../shared/types/gameTypes';
-import { ArtistSelector } from './ArtistSelector';
 import { formatWhyNow } from '../../utils/reactiveContextCopy';
+
+/**
+ * Exec Console redesign (2026-07-11): the meeting step renders as the solo
+ * channel's BRIEF — "this week's meeting" label, meeting title, the exec's
+ * prompt as a quote panel, and a Start Meeting CTA. `user_selected` meetings
+ * route through the console ARTIST PICKER step (cards with mood/energy/
+ * popularity meters — picking an artist starts the meeting immediately).
+ *
+ * Behavior contracts preserved from the pre-redesign selector:
+ * - empty eligible pool → calm sit-out state (`meeting-pool-empty` testid + copy)
+ * - `user_selected` meetings hidden when no artists are signed (FR-12)
+ * - Tier 2 "why now" line renders when the meeting carries `reactiveContext`
+ * - multiple meetings in the pool stay reachable (pager instead of carousel)
+ */
 
 interface MeetingSelectorProps {
   meetings: RoleMeeting[];
   signedArtists: GameArtist[];
   onSelectMeeting: (meeting: RoleMeeting, selectedArtistId?: string) => void;
   onBack: () => void;
-}
-
-function ChoicePreview({ choices }: { choices: RoleMeeting['choices'] }) {
-  const totalChoices = choices.length;
-  const hasImmediateEffects = choices.some(choice =>
-    Object.keys(choice.effects_immediate).length > 0
-  );
-  const hasDelayedEffects = choices.some(choice =>
-    Object.keys(choice.effects_delayed).length > 0
-  );
-
-  return (
-    <div className="flex items-center gap-2 text-sm text-text-muted">
-      <span>{totalChoices} choices</span>
-      {hasImmediateEffects && (
-        <Badge variant="outline" className="text-xs font-mono rounded-pill border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac">
-          <Zap className="h-3 w-3 mr-1" />
-          Immediate
-        </Badge>
-      )}
-      {hasDelayedEffects && (
-        <Badge variant="outline" className="text-xs font-mono rounded-pill border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac">
-          <Clock className="h-3 w-3 mr-1" />
-          Delayed
-        </Badge>
-      )}
-    </div>
-  );
-}
-
-function MeetingCostEstimate({ choices }: { choices: RoleMeeting['choices'] }) {
-  const costs = choices
-    .map(choice => choice.effects_immediate.money || 0)
-    .filter(cost => cost < 0);
-
-  if (costs.length === 0) return null;
-
-  const minCost = Math.min(...costs);
-  const maxCost = Math.max(...costs);
-
-  return (
-    <div className="flex items-center gap-1 text-sm text-money font-mono">
-      <DollarSign className="h-3 w-3" />
-      {minCost === maxCost ? (
-        <span>Cost: ${Math.abs(minCost).toLocaleString()}</span>
-      ) : (
-        <span>Cost: ${Math.abs(maxCost).toLocaleString()} - ${Math.abs(minCost).toLocaleString()}</span>
-      )}
-    </div>
-  );
 }
 
 function ScopeBadge({ scope }: { scope: string }) {
@@ -107,17 +68,29 @@ function WhyNowLine({ meeting }: { meeting: RoleMeeting }) {
   return (
     <div
       data-testid="why-now-line"
-      className="flex items-center gap-1.5 text-xs font-mono text-neon-cyan"
+      className="inline-flex items-center gap-2 rounded-pill border border-neon-cyan/30 bg-neon-cyan/10 px-3 py-1.5 text-[11.5px] text-neon-cyan"
     >
-      <Sparkles className="h-3 w-3 shrink-0" />
-      <span>{formatWhyNow(meeting.reactiveContext)}</span>
+      <Sparkles className="h-3 w-3 shrink-0 animate-pulse" />
+      <span className="font-mono">{formatWhyNow(meeting.reactiveContext)}</span>
     </div>
   );
 }
 
+function meetingTitle(meeting: RoleMeeting): string {
+  return meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function StatChip({ label, value, className }: { label: string; value: number; className: string }) {
+  return (
+    <span className={`font-mono text-[10.5px] ${className}`}>
+      {label} {Math.max(0, Math.min(100, value))}%
+    </span>
+  );
+}
+
 export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBack }: MeetingSelectorProps) {
-  const [selectedMeetingIndex, setSelectedMeetingIndex] = useState<number | null>(null);
-  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  const [meetingIndex, setMeetingIndex] = useState(0);
+  const [pickingArtistFor, setPickingArtistFor] = useState<RoleMeeting | null>(null);
 
   // Filter out user_selected meetings if no artists are signed (FR-12)
   const filteredMeetings = signedArtists.length === 0
@@ -141,128 +114,123 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
     );
   }
 
-  const handleSelectMeeting = (meeting: RoleMeeting, index: number) => {
-    // If user_selected and no artist selected yet, show artist selector
-    if (meeting.target_scope === 'user_selected' && signedArtists.length > 0) {
-      setSelectedMeetingIndex(index);
-      setSelectedArtistId(null);
-    } else {
-      // For global or predetermined meetings, proceed immediately
-      onSelectMeeting(meeting);
-    }
-  };
-
-  const handleArtistSelected = (artistId: string) => {
-    setSelectedArtistId(artistId);
-  };
-
-  const handleConfirmMeeting = () => {
-    if (selectedMeetingIndex !== null && selectedArtistId) {
-      const meeting = meetings[selectedMeetingIndex];
-      onSelectMeeting(meeting, selectedArtistId);
-    }
-  };
-
-  const handleBackFromArtistSelection = () => {
-    setSelectedMeetingIndex(null);
-    setSelectedArtistId(null);
-  };
-
-  // If showing artist selection
-  if (selectedMeetingIndex !== null) {
-    const meeting = filteredMeetings[selectedMeetingIndex];
-    const selectedArtist = signedArtists.find(a => a.id === selectedArtistId);
-    const displayPrompt = selectedArtist
-      ? meeting.prompt.replace('{artistName}', selectedArtist.name)
-      : meeting.prompt;
-
+  // ── step: artist picker ──────────────────────────────────────────────────
+  if (pickingArtistFor) {
+    const meeting = pickingArtistFor;
     return (
-      <div className="w-full max-w-md mx-auto space-y-4">
-        <Card className="glass-panel chromatic-hairline border-0">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-text-primary">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
-              <ScopeBadge scope={meeting.target_scope} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <WhyNowLine meeting={meeting} />
-            <ArtistSelector
-              artists={signedArtists}
-              selectedArtistId={selectedArtistId}
-              onSelectArtist={handleArtistSelected}
-              prompt={meeting.prompt_before_selection}
-            />
-
-            {selectedArtistId && (
-              <div className="p-3 bg-neon-lilac/10 border border-neon-lilac/30 rounded-card">
-                <p className="text-sm text-text-body italic">
-                  "{displayPrompt}"
-                </p>
+      <div data-screen-label="Artist picker">
+        <h2 className="m-0 mb-1.5 text-[22px] font-semibold text-text-primary">Which artist is this about?</h2>
+        <div className="mb-3 text-[13px] text-text-muted">{meetingTitle(meeting)}</div>
+        <div className="mb-4 empty:hidden">
+          <WhyNowLine meeting={meeting} />
+        </div>
+        {meeting.prompt_before_selection && (
+          <p className="mb-6 text-sm italic text-text-body">"{meeting.prompt_before_selection}"</p>
+        )}
+        <div className="flex flex-wrap gap-4">
+          {signedArtists.map((artist) => (
+            <div
+              key={artist.id}
+              data-testid={`console-artist-pick-${artist.id}`}
+              onClick={() => onSelectMeeting(meeting, artist.id)}
+              className="chromatic-hairline relative w-full max-w-[250px] cursor-pointer rounded-card border border-white/10 bg-surface-inner/50 px-5 py-5 text-center transition-all duration-200 hover:-translate-y-1 hover:border-neon-lilac/50"
+            >
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-card bg-gradient-to-br from-neon-purple to-neon-blue font-display text-xl text-white shadow-panel">
+                {artist.name
+                  .split(/\s+/)
+                  .map(part => part[0])
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .join('')
+                  .toLowerCase()}
               </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button
-                onClick={handleBackFromArtistSelection}
-                variant="outline"
-                className="flex-1 rounded-button border border-white/10 bg-white/[0.02] text-text-body hover:bg-white/5"
-              >
-                Back
-              </Button>
-              <Button
-                onClick={handleConfirmMeeting}
-                disabled={!selectedArtistId}
-                className="flex-1 rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90"
-              >
-                Start Meeting
-              </Button>
+              <div className="text-[14.5px] font-semibold text-text-primary">{artist.name}</div>
+              {artist.archetype && (
+                <div className="mt-0.5 text-[11.5px] text-neon-lilac">{artist.archetype}</div>
+              )}
+              <div className="mt-2.5 flex justify-center gap-3">
+                <StatChip label="M" value={artist.mood ?? 50} className="text-warning" />
+                <StatChip label="E" value={artist.energy ?? 50} className="text-positive" />
+                <StatChip label="P" value={artist.popularity ?? 0} className="text-neon-pink" />
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
+        <Button
+          onClick={() => setPickingArtistFor(null)}
+          variant="outline"
+          className="mt-6 rounded-button border border-white/10 bg-white/[0.02] text-text-body hover:bg-white/5"
+        >
+          Back
+        </Button>
       </div>
     );
   }
 
-  // Default carousel view
+  // ── step: meeting brief ──────────────────────────────────────────────────
+  const safeIndex = Math.min(meetingIndex, filteredMeetings.length - 1);
+  const meeting = filteredMeetings[safeIndex];
+  const isUserSelected = meeting.target_scope === 'user_selected' && signedArtists.length > 0;
+  const briefPrompt = meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
+    ? meeting.prompt_before_selection
+    : meeting.prompt;
+
+  const handleStart = () => {
+    if (isUserSelected) {
+      setPickingArtistFor(meeting);
+    } else {
+      onSelectMeeting(meeting);
+    }
+  };
+
   return (
-    <Carousel
-      className="w-full max-w-md mx-auto"
-      opts={{
-        loop: true,
-      }}
-    >
-      <CarouselContent>
-        {filteredMeetings.map((meeting, index) => (
-          <CarouselItem key={meeting.id}>
-            <Card className="glass-panel chromatic-hairline border-0 transition-all duration-200 hover:shadow-glow-lilac">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg text-text-primary">{meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
-                  <ScopeBadge scope={meeting.target_scope} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <WhyNowLine meeting={meeting} />
-                <p className="text-sm text-text-body italic">
-                  "{meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
-                    ? meeting.prompt_before_selection
-                    : meeting.prompt}"
-                </p>
-                <Button
-                  onClick={() => handleSelectMeeting(meeting, index)}
-                  size="sm"
-                  className="w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple text-white shadow-action hover:opacity-90"
-                >
-                  {meeting.target_scope === 'user_selected' ? 'Select Artist' : 'Start Meeting'}
-                </Button>
-              </CardContent>
-            </Card>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
-      <CarouselNext className="bg-neon-lilac/10 hover:bg-neon-lilac/20 border-neon-lilac/40 text-neon-lilac" />
-    </Carousel>
+    <div data-screen-label="Meeting card">
+      <div className="mb-2.5 flex items-center justify-between">
+        <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-text-muted">
+          this week's meeting
+        </div>
+        <ScopeBadge scope={meeting.target_scope} />
+      </div>
+      <h2 className="m-0 mb-3 text-[25px] font-semibold text-text-primary">{meetingTitle(meeting)}</h2>
+      <div className="mb-5">
+        <WhyNowLine meeting={meeting} />
+      </div>
+      <div className="chromatic-hairline relative mb-7 rounded-card border border-neon-pink/20 bg-gradient-to-br from-action-pink/15 to-action-purple/15 px-7 py-6">
+        <div className="text-[17px] italic leading-relaxed text-text-primary/90">
+          "{briefPrompt}"
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <Button
+          onClick={handleStart}
+          className="w-[340px] max-w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple py-6 text-[15px] font-semibold text-white shadow-action hover:opacity-90"
+        >
+          {isUserSelected ? 'Start Meeting — pick an artist' : 'Start Meeting'}
+        </Button>
+        {filteredMeetings.length > 1 && (
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Previous meeting"
+              onClick={() => setMeetingIndex((safeIndex - 1 + filteredMeetings.length) % filteredMeetings.length)}
+              className="h-7 w-7 p-0 text-text-muted hover:text-text-primary"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span>{safeIndex + 1} / {filteredMeetings.length}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Next meeting"
+              onClick={() => setMeetingIndex((safeIndex + 1) % filteredMeetings.length)}
+              className="h-7 w-7 p-0 text-text-muted hover:text-text-primary"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

@@ -3,17 +3,32 @@ import { useMachine } from '@xstate/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { executiveMeetingMachine } from '../../machines/executiveMeetingMachine';
 import { makeCachedFetchExecutives } from '../../hooks/useExecutives';
-import { ExecutiveCard } from './ExecutiveCard';
+import { ExecutiveCard, roleConfig } from './ExecutiveCard';
 import { MeetingSelector } from './MeetingSelector';
 import { DialogueInterface } from './DialogueInterface';
 import { AutoSelectReviewPanel } from './AutoSelectReviewPanel';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { ArrowLeft, Loader2, Zap } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Wand2 } from 'lucide-react';
 import { fetchRoleMeetings, fetchMeetingDialogue, fetchAllRoles } from '../../services/executiveService';
 import { useGameStore } from '../../store/gameStore';
 import { useArtists } from '../../hooks/useArtists';
+import type { Executive } from '../../../../shared/types/gameTypes';
+
+/**
+ * Exec Console redesign (2026-07-11, "Exec Meetings — Console" design direction):
+ * the meeting flow renders as a mixing console. Screen layout:
+ *
+ * - GRID (machine idle): the console deck — CEO master strip + a channel strip
+ *   per executive (loyalty/mood faders, live status readout, queued chips).
+ * - SOLO (selectingMeeting → inDialogue): a mini channel rail on the left keeps
+ *   every exec one click away (SELECT_EXECUTIVE is legal from solo states); the
+ *   solo panel walks brief → (artist) → dialogue takes.
+ * - AUTO review (reviewingAutoSelections): the "proposed patch list" modal
+ *   overlay (AutoSelectReviewPanel) over whatever screen is behind it.
+ *
+ * ALL machine wiring, prefetches, and slot/CC sync are unchanged from the
+ * pre-redesign component — this is a presentation restructure only.
+ */
 
 interface ExecutiveMeetingsProps {
   gameId: string;
@@ -44,6 +59,27 @@ interface ExecutiveMeetingsProps {
       effects_delayed: Record<string, number>;
     }>;
   }) => void;
+}
+
+function execConfig(role: string) {
+  return (
+    roleConfig[role as keyof typeof roleConfig] ?? {
+      shortTitle: role.replace(/_/g, ' ').toUpperCase(),
+      name: role.replace(/_/g, ' '),
+      title: role.replace(/_/g, ' '),
+      avatar: undefined,
+      roleText: 'text-text-muted',
+    }
+  );
+}
+
+function SoloLoader({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-12">
+      <Loader2 className="mb-2 h-6 w-6 animate-spin text-neon-lilac" />
+      <span className="text-text-body">{label}</span>
+    </div>
+  );
 }
 
 export function ExecutiveMeetings({
@@ -295,287 +331,287 @@ export function ExecutiveMeetings({
     }
   }, [context.impactPreview, onImpactPreviewUpdate]);
 
-  // Render middle column content based on state
-  const renderMiddleColumn = () => {
-    // Meeting-relevance PR-3 (AUTO Option A): review AUTO's proposed picks before
-    // they commit. Execs that sat out never made it into autoOptions, so they
-    // never appear here.
-    if (state.matches('reviewingAutoSelections')) {
+  // ── screen selection ───────────────────────────────────────────────────────
+  const isSoloScreen =
+    (state.matches('selectingMeeting') ||
+      state.matches('loadingMeetings') ||
+      state.matches('loadingDialogue') ||
+      state.matches('inDialogue') ||
+      state.matches('processingChoice')) &&
+    !!context.selectedExecutive;
+
+  const canOpenExecutive = (executive: Executive) => {
+    const isArBusy = executive.role === 'head_ar' && !!arOfficeStatus?.arOfficeSlotUsed;
+    return (
+      hasAvailableSlots &&
+      !isExecutiveUsed(executive.role) &&
+      !sitOutRoles.has(executive.role) &&
+      !isArBusy
+    );
+  };
+
+  const orderedExecutives = useMemo(() => {
+    const ceo = executives.find(exec => exec.role === 'ceo');
+    const rest = executives.filter(exec => exec.role !== 'ceo');
+    return { ceo, rest, all: ceo ? [ceo, ...rest] : rest };
+  }, [executives]);
+
+  // ── solo view (brief / artist / dialogue) ──────────────────────────────────
+  const renderSoloContent = () => {
+    if (state.matches('loadingMeetings')) return <SoloLoader label="Loading meetings..." />;
+    if (state.matches('loadingDialogue')) return <SoloLoader label="Loading dialogue..." />;
+    if (state.matches('processingChoice')) return <SoloLoader label="Committing your call..." />;
+
+    if (state.matches('selectingMeeting')) {
       return (
+        <MeetingSelector
+          meetings={context.availableMeetings}
+          signedArtists={artists.filter(a => a.signed) as any}
+          onSelectMeeting={(meeting, selectedArtistId) => send({ type: 'SELECT_MEETING', meeting, selectedArtistId })}
+          onBack={() => send({ type: 'BACK_TO_EXECUTIVES' })}
+        />
+      );
+    }
+
+    if (state.matches('inDialogue') && context.currentDialogue) {
+      return (
+        <DialogueInterface
+          dialogue={context.currentDialogue}
+          onSelectChoice={(choice) => send({ type: 'SELECT_CHOICE', choice })}
+          onBack={() => send({ type: 'BACK_TO_MEETINGS' })}
+          availableCreativeCapital={creativeCapital}
+          targetScope={context.selectedMeeting?.target_scope}
+          selectedArtistName={
+            context.selectedArtistId
+              ? artists.find(a => a.id === context.selectedArtistId)?.name
+              : undefined
+          }
+        />
+      );
+    }
+
+    return null;
+  };
+
+  const renderSoloView = () => {
+    const activeExec = context.selectedExecutive!;
+    const config = execConfig(activeExec.role);
+    const stepLabel = state.matches('inDialogue') || state.matches('loadingDialogue')
+      ? 'step 2 · response'
+      : state.matches('processingChoice')
+        ? 'committing'
+        : 'step 1 · brief';
+
+    return (
+      <div className="flex gap-6" data-screen-label="Solo channel">
+        {/* mini channel rail */}
+        <div className="flex w-[86px] flex-shrink-0 flex-col gap-3">
+          {orderedExecutives.all.map((executive) => {
+            const railConfig = execConfig(executive.role);
+            const isActive = activeExec.role === executive.role;
+            const clickable = !isActive && canOpenExecutive(executive);
+            const queued = isExecutiveUsed(executive.role);
+            return (
+              <div
+                key={executive.role}
+                title={`${railConfig.shortTitle} — ${railConfig.name}`}
+                data-testid={`rail-${executive.role}`}
+                onClick={clickable ? () => send({ type: 'SELECT_EXECUTIVE', executive }) : undefined}
+                className={`relative flex h-[86px] flex-col items-center justify-center gap-1.5 rounded-card border bg-gradient-to-b from-surface-panel/85 to-surface-inner/90 transition-colors ${
+                  isActive
+                    ? 'border-neon-lilac/50 opacity-100'
+                    : clickable
+                      ? 'cursor-pointer border-white/10 opacity-80 hover:border-white/25'
+                      : 'border-white/10 opacity-40'
+                }`}
+              >
+                <div className="h-10 w-10 overflow-hidden rounded-full shadow-panel">
+                  {railConfig.avatar ? (
+                    <img src={railConfig.avatar} alt="" className="h-full w-full object-cover object-top" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-money to-action-pink font-display text-[11px] text-white">
+                      {railConfig.shortTitle}
+                    </div>
+                  )}
+                </div>
+                <span className="font-mono text-[8px] uppercase tracking-[0.14em] text-text-muted">
+                  {executive.role === 'ceo' ? 'mstr' : 'ch'}
+                </span>
+                {queued && (
+                  <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-neon-green/50 bg-neon-green/20">
+                    <Check className="h-2 w-2 text-neon-green" />
+                  </span>
+                )}
+                {isActive && (
+                  <span className="absolute -left-px bottom-4 top-4 w-[3px] rounded-full bg-gradient-to-b from-neon-pink via-neon-purple to-neon-cyan shadow-[0_0_10px_rgba(160,90,240,0.7)]" />
+                )}
+              </div>
+            );
+          })}
+          <Button
+            variant="outline"
+            aria-label="Back to executives"
+            onClick={() => send({ type: 'BACK_TO_EXECUTIVES' })}
+            className="h-[52px] rounded-card border border-white/10 bg-white/[0.02] text-text-muted hover:border-white/25 hover:text-text-primary"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* solo channel content */}
+        <div className="chromatic-hairline hud-ticks relative flex-1 overflow-hidden rounded-card border border-white/10 bg-gradient-to-b from-surface-panel/85 to-surface-inner/95 p-6 shadow-panel md:p-8">
+          {/* solo header */}
+          <div className="mb-6 flex items-center gap-4">
+            <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-full shadow-panel">
+              {config.avatar ? (
+                <img src={config.avatar} alt={`${config.title} avatar`} className="h-full w-full object-cover object-top" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-money to-action-pink font-display text-base text-white">
+                  {config.shortTitle}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-lg font-semibold text-text-primary">{config.name}</span>
+                <span className={`rounded-pill border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.2em] ${config.roleText}`}>
+                  {config.title}
+                </span>
+                <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-neon-pink">
+                  <span className="h-1.5 w-1.5 rounded-full bg-neon-magenta shadow-[0_0_8px_1px_rgba(255,61,110,0.8)]" />
+                  solo
+                </span>
+              </div>
+            </div>
+            {state.matches('inDialogue') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => send({ type: 'BACK_TO_MEETINGS' })}
+                aria-label="Back to meeting list"
+                className="text-text-muted hover:text-text-primary"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div className="text-right font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted">
+              {stepLabel}
+            </div>
+          </div>
+
+          {renderSoloContent()}
+        </div>
+      </div>
+    );
+  };
+
+  // ── grid view (console deck) ───────────────────────────────────────────────
+  const renderGridView = () => (
+    <div data-screen-label="Exec selection console">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-text-muted">
+          executive channels · patch a meeting into a focus slot
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted/70">
+            <span className="h-1.5 w-1.5 rounded-full bg-neon-green shadow-[0_0_8px_1px_rgba(87,255,143,0.8)]" />
+            console live
+          </div>
+          {hasAvailableSlots && !isAutoFlowActive && (
+            <Button
+              size="sm"
+              onClick={() => send({ type: 'AUTO_SELECT' })}
+              disabled={!hasAvailableSlots || executives.length === 0}
+              className="gap-1.5 rounded-button bg-gradient-to-br from-action-pink to-action-purple font-semibold text-white shadow-action hover:opacity-90"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              AUTO
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {executivesLoading && executives.length === 0 ? (
+        <SoloLoader label="Loading executives..." />
+      ) : (
+        <div className="flex flex-col items-stretch gap-4 lg:flex-row">
+          {orderedExecutives.ceo && (
+            <>
+              <ExecutiveCard
+                key="ceo"
+                executive={orderedExecutives.ceo}
+                disabled={!hasAvailableSlots}
+                noSlots={!hasAvailableSlots}
+                queued={isExecutiveUsed('ceo')}
+                sitOut={sitOutRoles.has('ceo')}
+                hasReactiveMeeting={reactiveRoles.has('ceo')}
+                onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive: orderedExecutives.ceo! })}
+                weeklySalary={roleSalaries['ceo']}
+                arOfficeStatus={arOfficeStatus}
+              />
+              <div className="hidden w-px flex-shrink-0 bg-white/[0.07] lg:block" />
+            </>
+          )}
+          {orderedExecutives.rest.map((executive, index) => (
+            <ExecutiveCard
+              key={executive.role}
+              executive={executive}
+              channelNumber={index + 1}
+              disabled={!hasAvailableSlots}
+              noSlots={!hasAvailableSlots}
+              queued={isExecutiveUsed(executive.role)}
+              sitOut={sitOutRoles.has(executive.role)}
+              hasReactiveMeeting={reactiveRoles.has(executive.role)}
+              onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
+              weeklySalary={roleSalaries[executive.role]}
+              arOfficeStatus={arOfficeStatus}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (executivesError && executives.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <div className="p-3 bg-negative/10 border border-negative/30 rounded-card mb-4">
+          <p className="text-sm text-negative">Failed to load executives: {executivesError}</p>
+          <p className="text-xs text-text-muted mt-1">Please refresh to try again</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      {isSoloScreen ? renderSoloView() : renderGridView()}
+
+      {/* AUTO computing overlay */}
+      {state.matches('autoSelecting') && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface-app/70 backdrop-blur-lg">
+          <Loader2 className="mb-2 h-6 w-6 animate-spin text-neon-cyan" />
+          <span className="text-text-body">AUTO is choosing meetings...</span>
+        </div>
+      )}
+
+      {/* Meeting-relevance PR-3 (AUTO Option A): review AUTO's proposed picks
+          before they commit. Execs that sat out never made it into autoOptions,
+          so they never appear here. Renders as the console's modal overlay. */}
+      {state.matches('reviewingAutoSelections') && (
         <AutoSelectReviewPanel
           options={context.autoOptions}
           onConfirmAll={() => send({ type: 'CONFIRM_AUTO_SELECT' })}
           onCancel={() => send({ type: 'CANCEL_AUTO_SELECT' })}
           onOverrideRow={(executive) => send({ type: 'OVERRIDE_AUTO_ROW', executive })}
         />
-      );
-    }
+      )}
 
-    if (state.matches('autoSelecting')) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-neon-cyan mb-2" />
-          <span className="text-text-body">AUTO is choosing meetings...</span>
+      {context.error && (
+        <div className="mt-4 p-3 bg-negative/10 border border-negative/30 rounded-card">
+          <p className="text-sm text-negative">{context.error}</p>
         </div>
-      );
-    }
-
-    if (state.matches('loadingMeetings')) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
-          <span className="text-text-body">Loading meetings...</span>
-        </div>
-      );
-    }
-
-    if (state.matches('selectingMeeting')) {
-      const roleConfig = {
-        ceo: { shortTitle: 'CEO', name: 'You' },
-        head_ar: { shortTitle: 'A&R', name: 'Marcus Rodriguez' },
-        cco: { shortTitle: 'CCO', name: 'Dante Washington' },
-        cmo: { shortTitle: 'CMO', name: 'Samara Chen' },
-        head_distribution: { shortTitle: 'Distro', name: 'Patricia Williams' },
-      } as const;
-
-      const config = context.selectedExecutive?.role
-        ? roleConfig[context.selectedExecutive.role as keyof typeof roleConfig]
-        : null;
-
-      return (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => send({ type: 'BACK_TO_EXECUTIVES' })}
-              aria-label="Back to executive list"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            {config && (
-              <Badge
-                variant="secondary"
-                className="text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill"
-              >
-                {config.shortTitle} - {config.name}
-              </Badge>
-            )}
-          </div>
-          <MeetingSelector
-            meetings={context.availableMeetings}
-            signedArtists={artists.filter(a => a.signed) as any}
-            onSelectMeeting={(meeting, selectedArtistId) => send({ type: 'SELECT_MEETING', meeting, selectedArtistId })}
-            onBack={() => send({ type: 'BACK_TO_EXECUTIVES' })}
-          />
-        </div>
-      );
-    }
-
-    if (state.matches('loadingDialogue')) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
-          <span className="text-text-body">Loading dialogue...</span>
-        </div>
-      );
-    }
-
-    if (state.matches('inDialogue')) {
-      const roleConfig = {
-        ceo: { shortTitle: 'CEO', name: 'You' },
-        head_ar: { shortTitle: 'A&R', name: 'Marcus Rodriguez' },
-        cco: { shortTitle: 'CCO', name: 'Dante Washington' },
-        cmo: { shortTitle: 'CMO', name: 'Samara Chen' },
-        head_distribution: { shortTitle: 'Distro', name: 'Patricia Williams' },
-      } as const;
-
-      const config = context.selectedExecutive?.role
-        ? roleConfig[context.selectedExecutive.role as keyof typeof roleConfig]
-        : null;
-
-      return (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => send({ type: 'BACK_TO_MEETINGS' })}
-              aria-label="Back to meeting list"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            {config && (
-              <Badge
-                variant="secondary"
-                className="text-xs px-3 py-1 font-mono uppercase tracking-wide bg-neon-lilac/10 text-neon-lilac border border-neon-lilac/40 rounded-pill"
-              >
-                {config.shortTitle} - {config.name}
-              </Badge>
-            )}
-          </div>
-          {context.currentDialogue && (
-            <DialogueInterface
-              dialogue={context.currentDialogue}
-              onSelectChoice={(choice) => send({ type: 'SELECT_CHOICE', choice })}
-              onBack={() => send({ type: 'BACK_TO_MEETINGS' })}
-              availableCreativeCapital={creativeCapital}
-              targetScope={context.selectedMeeting?.target_scope}
-              selectedArtistName={
-                context.selectedArtistId
-                  ? artists.find(a => a.id === context.selectedArtistId)?.name
-                  : undefined
-              }
-            />
-          )}
-        </div>
-      );
-    }
-
-    if (state.matches('processingChoice')) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
-          <span className="text-text-body">Processing your choice...</span>
-        </div>
-      );
-    }
-
-    if (state.matches('complete')) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <div className="text-positive font-medium">Meeting completed!</div>
-          <p className="text-sm text-text-muted mt-1">Returning to executives...</p>
-        </div>
-      );
-    }
-
-    // Default idle state - show loading if executives haven't loaded yet
-    if (executivesLoading && executives.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-neon-lilac mb-2" />
-          <span className="text-text-body">Loading executives...</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center justify-center text-text-muted">
-        Select an executive
-      </div>
-    );
-  };
-
-  return (
-    <Card className="w-full bg-transparent border-none">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between text-text-primary font-display text-lg">
-          Executive Meetings
-          <div className="flex items-center gap-3">
-            {hasAvailableSlots && !isAutoFlowActive && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => send({ type: 'AUTO_SELECT' })}
-                disabled={!hasAvailableSlots || executives.length === 0}
-                className="flex items-center gap-1.5 rounded-button border border-neon-cyan/35 bg-neon-cyan/[0.06] text-neon-cyan hover:bg-neon-cyan/10 hover:text-neon-cyan"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                AUTO
-              </Button>
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-0">
-        {executivesError ? (
-          <div className="text-center p-8">
-            <div className="p-3 bg-negative/10 border border-negative/30 rounded-card mb-4">
-              <p className="text-sm text-negative">Failed to load executives: {executivesError}</p>
-              <p className="text-xs text-text-muted mt-1">Please refresh to try again</p>
-            </div>
-          </div>
-        ) : (
-          (() => {
-            const nonCeoExecutives = executives.filter(exec => exec.role !== 'ceo');
-            const ceoExecutive = executives.find(exec => exec.role === 'ceo');
-
-            return (
-              <div className="grid grid-cols-[auto_1fr_auto] gap-12 w-full px-6">
-              {/* Left Column - First 2 Executives */}
-              <div className="space-y-6">
-                {nonCeoExecutives.slice(0, 2).map((executive) => (
-                  <ExecutiveCard
-                    key={executive.role}
-                    executive={executive}
-                    disabled={!hasAvailableSlots || isExecutiveUsed(executive.role)}
-                    sitOut={sitOutRoles.has(executive.role)}
-                    hasReactiveMeeting={reactiveRoles.has(executive.role)}
-                    onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
-                    weeklySalary={roleSalaries[executive.role]}
-                    arOfficeStatus={arOfficeStatus}
-                    flipAvatar={true}
-                    alignContent="left"
-                    isSelected={context.selectedExecutive?.role === executive.role}
-                    compactBadges={!!context.selectedExecutive}
-                  />
-                ))}
-              </div>
-
-              {/* Middle Column - Dynamic content based on state */}
-              <div className="flex items-start justify-center px-8">
-                {renderMiddleColumn()}
-              </div>
-
-              {/* Right Column - Next 2 Executives */}
-              <div className="space-y-6">
-                {nonCeoExecutives.slice(2, 4).map((executive) => (
-                  <ExecutiveCard
-                    key={executive.role}
-                    executive={executive}
-                    disabled={!hasAvailableSlots || isExecutiveUsed(executive.role)}
-                    sitOut={sitOutRoles.has(executive.role)}
-                    hasReactiveMeeting={reactiveRoles.has(executive.role)}
-                    onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive })}
-                    weeklySalary={roleSalaries[executive.role]}
-                    arOfficeStatus={arOfficeStatus}
-                    badgesOnLeft={true}
-                    alignContent="right"
-                    isSelected={context.selectedExecutive?.role === executive.role}
-                    compactBadges={!!context.selectedExecutive}
-                  />
-                ))}
-              </div>
-
-              {/* Bottom Row - CEO Badge Only */}
-              <div className="col-span-3 flex items-center justify-center mt-8">
-                {ceoExecutive && (
-                  <ExecutiveCard
-                    key="ceo"
-                    executive={ceoExecutive}
-                    disabled={!hasAvailableSlots || isExecutiveUsed(ceoExecutive.role)}
-                    sitOut={sitOutRoles.has(ceoExecutive.role)}
-                    hasReactiveMeeting={reactiveRoles.has(ceoExecutive.role)}
-                    onSelect={() => send({ type: 'SELECT_EXECUTIVE', executive: ceoExecutive })}
-                    weeklySalary={roleSalaries['ceo']}
-                    arOfficeStatus={arOfficeStatus}
-                    isSelected={context.selectedExecutive?.role === ceoExecutive.role}
-                    compactBadges={!!context.selectedExecutive}
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })())
-        }
-
-        {context.error && (
-          <div className="mt-4 p-3 bg-negative/10 border border-negative/30 rounded-card">
-            <p className="text-sm text-negative">{context.error}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
