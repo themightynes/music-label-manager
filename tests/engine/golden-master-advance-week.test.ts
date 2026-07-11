@@ -51,6 +51,11 @@ const IDS = {
   actions: '00000000-0000-4000-8000-000000000008',
   tourLegacy: '00000000-0000-4000-8000-000000000009',
   multiArtistRelease: '00000000-0000-4000-8000-00000000000a',
+  // C86 additive fixtures (2026-07-11): balance-integrity arc coverage.
+  flopRelease: '00000000-0000-4000-8000-00000000000b',
+  lowMoodRecording: '00000000-0000-4000-8000-00000000000c',
+  underEnergyTour: '00000000-0000-4000-8000-00000000000d',
+  saturatedTour: '00000000-0000-4000-8000-00000000000e',
 };
 
 let db: TestDb;
@@ -423,6 +428,161 @@ describe('GameEngine.advanceWeek — golden master', () => {
     ];
 
     const snap = await runScenario(IDS.actions, { id: IDS.actions, currentWeek: 4 }, actions);
+    expect(snap).toMatchSnapshot();
+  });
+
+  // -------------------------------------------------------------------------
+  // C86 — additive fixtures for the balance-integrity arc (2026-07-11).
+  // Pre-existing snapshots above must remain byte-identical; these four only
+  // ADD coverage for paths the arc made live: the flop reputation penalty,
+  // low-mood variance widening, energy-driven tour sell-through, and the
+  // tour-popularity saturation clamp.
+  // -------------------------------------------------------------------------
+
+  it('flop-release-week: release revenue under the flop ratio of investment fires the reputation penalty', async () => {
+    // Mirrors release-week, but authored to FLOP: total investment 20000 (>= the
+    // flop_investment_floor of 10000), song quality 20, artist popularity 5 —
+    // release-week revenue lands under flop_revenue_ratio × investment, so the
+    // balance-integrity slice-2 penalty (flop change entry + reputation sink)
+    // fires under the fixed seed.
+    //
+    // AUTHORING NOTE: the brief's original shape (all 12000 as marketingBudget)
+    // does NOT flop — that much marketing pushes release-week revenue (~2400)
+    // over the 10% threshold (1200). The investment is therefore split the way
+    // a real overspent flop looks: 19000 sunk into production (song
+    // production_budget, which ReleaseProcessor sums into totalInvestment) +
+    // 1000 marketing, so revenue stays under the ratio while the floor is met.
+    await seedGame(IDS.flopRelease, 4);
+    const artistId = await seedArtist(IDS.flopRelease, { name: 'Flop Releaser', popularity: 5 });
+    // FIXED release id: the flop once-only flag key is
+    // flop_penalty_applied_<releaseId>, and the normalizer cannot neutralize a
+    // UUID embedded in a PREFIXED object key — a random id here made the
+    // snapshot unstable across runs.
+    const releaseId = '00000000-0000-4000-8000-0000000000fb';
+    const songId = crypto.randomUUID();
+    await db.insert(schema.songs).values({
+      id: songId,
+      gameId: IDS.flopRelease,
+      artistId,
+      title: 'Doomed Track',
+      quality: 20,
+      genre: 'pop',
+      isRecorded: true,
+      isReleased: false,
+      productionBudget: 19000,
+    });
+    await db.insert(schema.releases).values({
+      id: releaseId,
+      gameId: IDS.flopRelease,
+      artistId,
+      title: 'Doomed Single',
+      type: 'single',
+      status: 'planned',
+      releaseWeek: 5, // == advanced week (seed currentWeek 4 -> advances to 5)
+      marketingBudget: 1000,
+      metadata: { marketingBudget: 1000, totalInvestment: 20000 },
+    });
+    await db.insert(schema.releaseSongs).values({
+      releaseId,
+      songId,
+      trackNumber: 1,
+      isSingle: true,
+    });
+
+    const snap = await runScenario(IDS.flopRelease, { id: IDS.flopRelease, currentWeek: 4 });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('low-mood-recording-week: artist mood below 30 widens the song-quality variance band', async () => {
+    // Mirrors recording-week with artist mood 20 (< the widening threshold), so
+    // the mood→variance path (balance-integrity slice 4,
+    // mood_variance_widening_max) is exercised under the fixed seed.
+    await seedGame(IDS.lowMoodRecording, 2);
+    const artistId = await seedArtist(IDS.lowMoodRecording, { name: 'Gloomy Recorder', mood: 20 });
+    await db.insert(schema.projects).values({
+      id: crypto.randomUUID(),
+      gameId: IDS.lowMoodRecording,
+      artistId,
+      title: 'Gloomy Single',
+      type: 'Single',
+      stage: 'production',
+      songCount: 2,
+      songsCreated: 0,
+      startWeek: 2,
+      totalCost: 8000,
+      budgetPerSong: 4000,
+      producerTier: 'local',
+      timeInvestment: 'standard',
+      quality: 0,
+    });
+
+    const snap = await runScenario(IDS.lowMoodRecording, { id: IDS.lowMoodRecording, currentWeek: 2 });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('under-energy-tour-week: low artist energy bites tour sell-through (and city 1 drains energy)', async () => {
+    // Energy 10 → energyFactor near the band floor; popularity 20 keeps the base
+    // sell-through well under the 1.0 cap so the factor is NOT absorbed by the
+    // cap (balance-integrity slice 5). Authored post-C87: city 1's reveal also
+    // shows the flat -6 energy drain (10 → 4 in the artist digest).
+    await seedGame(IDS.underEnergyTour, 3);
+    const artistId = await seedArtist(IDS.underEnergyTour, {
+      name: 'Exhausted Act',
+      popularity: 20,
+      energy: 10,
+    });
+    await db.insert(schema.projects).values({
+      id: crypto.randomUUID(),
+      gameId: IDS.underEnergyTour,
+      artistId,
+      title: 'Fumes Tour',
+      type: 'Mini-Tour',
+      stage: 'production',
+      startWeek: 2, // advanced week 4 -> weeksElapsed=2 -> weeksInProduction=1 -> city 1
+      totalCost: 30000,
+      quality: 50,
+      metadata: {
+        cities: 3,
+        venueAccess: 'clubs',
+        venueCapacity: 500,
+      },
+    });
+
+    const snap = await runScenario(IDS.underEnergyTour, { id: IDS.underEnergyTour, currentWeek: 3, venueAccess: 'clubs' });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('saturated-tour-week: a 95-popularity star selling out a small room has the popularity gain saturation-clamped', async () => {
+    // Popularity 95 + a small club room (300 cap) + heavy marketing → attendance
+    // clears the 70% popularity_reactions threshold, but the slice-6 saturation
+    // clamp (min(1, satMult) on the raw tier gain) reduces the gain for an
+    // already-famous act. PINNED OUTCOME: at pop 95 satMult ≈ 0.22, so the
+    // club-tier raw gain of 1 rounds to 0 — the snapshot shows NO popularity
+    // entry and the artist digest stays at 95 (pre-clamp behavior would have
+    // been +1 with a visible entry). City 1 also shows the C87 -6 drain.
+    await seedGame(IDS.saturatedTour, 3);
+    const artistId = await seedArtist(IDS.saturatedTour, {
+      name: 'Megastar Act',
+      popularity: 95,
+    });
+    await db.insert(schema.projects).values({
+      id: crypto.randomUUID(),
+      gameId: IDS.saturatedTour,
+      artistId,
+      title: 'Victory Lap Tour',
+      type: 'Mini-Tour',
+      stage: 'production',
+      startWeek: 2, // advanced week 4 -> weeksElapsed=2 -> weeksInProduction=1 -> city 1
+      totalCost: 30000,
+      quality: 50,
+      metadata: {
+        cities: 3,
+        venueAccess: 'clubs',
+        venueCapacity: 300,
+      },
+    });
+
+    const snap = await runScenario(IDS.saturatedTour, { id: IDS.saturatedTour, currentWeek: 3, venueAccess: 'clubs' });
     expect(snap).toMatchSnapshot();
   });
 });
