@@ -39,6 +39,7 @@ import {
   Play,
   Save,
   Bug,
+  Info,
   Shield,
   Volume2,
   VolumeX,
@@ -439,6 +440,10 @@ export function CommandDock({ onShowSaveModal }: CommandDockProps) {
               <DropdownMenuItem onSelect={() => setLocation('/')}>
                 <Play className="mr-2 h-4 w-4" aria-hidden="true" />
                 Main Menu
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation('/about')}>
+                <Info className="mr-2 h-4 w-4" aria-hidden="true" />
+                About
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() =>
