@@ -224,6 +224,14 @@ export class GameEngine {
     // Process weekly charts after releases
     await this.processWeeklyCharts(summary, dbTransaction);
 
+    // Volatility-economy slice 1: passive artist-energy lifecycle (recording drain
+    // + idle recovery). MUST run BEFORE advanceProjectStages so project stages are
+    // read as they were DURING the week (a recording project that completes this
+    // week still spent the week in the studio; a tour in 'production' is not idle).
+    // Accumulates into summary.artistChanges.energy — flushed at the
+    // applyArtistChangesToDatabase call below (line ~234), alongside tour drains.
+    await this.processWeeklyEnergyLifecycle(summary, dbTransaction);
+
     // PHASE 1 MIGRATION: Handle project stage advancement within GameEngine
     await this.advanceProjectStages(summary, dbTransaction);
 
@@ -952,6 +960,14 @@ export class GameEngine {
    */
   private async processWeeklyMoodChanges(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     return new ArtistStateProcessor().processWeeklyMoodChanges(this.weekContext(summary, dbTransaction));
+  }
+
+  /**
+   * Volatility-economy slice 1: passive artist-energy lifecycle
+   * (recording drain + idle recovery). Delegates to ArtistStateProcessor.
+   */
+  private async processWeeklyEnergyLifecycle(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    return new ArtistStateProcessor().processWeeklyEnergyLifecycle(this.weekContext(summary, dbTransaction));
   }
 
   /**

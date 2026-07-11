@@ -165,6 +165,78 @@ export class ArtistStateProcessor {
   }
 
   /**
+   * Volatility-economy slice 1 — passive artist-energy lifecycle.
+   *
+   * The counterweight to the C87 tour drain (TourProcessor drains energy per city
+   * on reveal; before this there was NO passive recovery and recording was free).
+   * Two flat, arithmetic-only, zero-RNG effects accumulated into summary.artistChanges
+   * exactly like the tour drain — the DB write + 0-100 clamp happen downstream in
+   * applyArtistChangesToDatabase:
+   *   - recording_drain: an artist with any recording-type project (Single/EP) in
+   *     the 'production' stage loses recording_drain_per_week energy ("from the studio").
+   *   - idle_recovery: an artist with NO active project (no Mini-Tour in production,
+   *     no recording project in production) recovers idle_recovery_per_week ("a week
+   *     to breathe").
+   * An artist can't be BOTH (recording implies an active production project), so the
+   * two branches are mutually exclusive. Touring artists get neither here (their
+   * energy already moved via the tour drain).
+   *
+   * Config: markets.json market_formulas.energy_lifecycle (enabled flag + per-knob
+   * values + fallback defaults in code so a missing block = defaults). enabled:false
+   * short-circuits both effects to 0.
+   *
+   * MUST run BEFORE advanceProjectStages so project stages are read as they were
+   * DURING the week (a recording project that completes this week still spent the
+   * week in the studio; a tour still in 'production' this week is not "idle").
+   */
+  async processWeeklyEnergyLifecycle(ctx: WeekContext): Promise<void> {
+    const { summary } = ctx;
+    const dbTransaction = ctx.dbTransaction;
+
+    const cfg = ((ctx.gameData.getBalanceConfigSync?.()?.market_formulas?.energy_lifecycle) || {}) as Record<string, any>;
+    if (cfg.enabled === false) return;
+    const recordingDrain = cfg.recording_drain_per_week ?? 4;
+    const idleRecovery = cfg.idle_recovery_per_week ?? 3;
+
+    if (!ctx.storage || !ctx.storage.getArtistsByGame) return;
+    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, dbTransaction);
+    if (!artists || artists.length === 0) return;
+    const projects = ctx.storage.getProjectsByGame
+      ? await ctx.storage.getProjectsByGame(ctx.gameState.id, dbTransaction)
+      : [];
+
+    if (!summary.artistChanges) summary.artistChanges = {};
+
+    for (const artist of artists) {
+      const artistProjects = projects.filter((p: any) => p.artistId === artist.id);
+      const isRecording = artistProjects.some(
+        (p: any) => ['Single', 'EP'].includes(p.type || '') && p.stage === 'production'
+      );
+      const isTouring = artistProjects.some(
+        (p: any) => p.type === 'Mini-Tour' && p.stage === 'production'
+      );
+
+      if (isRecording && recordingDrain !== 0) {
+        ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, -recordingDrain);
+        summary.changes.push({
+          type: 'energy',
+          description: `${artist.name}: -${recordingDrain} energy from the studio`,
+          amount: -recordingDrain,
+          artistId: artist.id
+        });
+      } else if (!isRecording && !isTouring && idleRecovery !== 0) {
+        ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, idleRecovery);
+        summary.changes.push({
+          type: 'energy',
+          description: `${artist.name}: +${idleRecovery} energy — a week to breathe`,
+          amount: idleRecovery,
+          artistId: artist.id
+        });
+      }
+    }
+  }
+
+  /**
    * Process weekly mood changes for all artists
    * Orchestrates mood calculations from multiple sources:
    * 1. Release-based changes (success/failure)

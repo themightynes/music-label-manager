@@ -209,16 +209,16 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'roster-health',
     title: 'Keeping Your Roster Healthy',
     hook: 'Same artist, same songs — but this month the takes are flat and the rooms feel half-asleep. The talent did not change. Their condition did.',
-    tldr: 'Artists run on mood and energy. A happy artist records sharper; a rested one sells the room harder. The road drains energy and nothing refills it for free — so resting an act is a real decision, not lost time.',
+    tldr: 'Artists run on mood and energy. A happy artist records sharper; a rested one sells the room harder. A quiet week gives energy back on its own, but the road and the studio both drain it faster than rest returns it — so resting an act is a real decision, not lost time.',
     body: [
       'Your artists are not machines with a fixed output. They run on two things you can watch and influence: mood — how they feel about the work and about you — and energy — how much of themselves they have left to give. Both move with what you put them through, and both show up in the results before they show up anywhere else.',
       'Mood is the studio stat. A happy artist records sharper, and an unhappy one gets erratic — low morale does not just drag the work down, it makes it unpredictable, and unpredictable is the enemy of a label trying to plan releases. Watch what your choices do to the people making the music; the meeting that saves money by burning an artist rarely prices in what it costs the next record.',
-      'Energy is the road stat. A rested act sells the room harder — and the road is exactly what wears energy down, city after city. Here is the part that catches new label heads: nothing refills energy for free. There is no quiet week that magically restores an exhausted artist; putting them back on their feet takes a deliberate move from you. So the tour that looks like pure profit is also spending down an asset, and choosing to rest an act before the next run is a real decision with a real payoff, not dead air on the calendar.',
+      'Energy is the road stat. A rested act sells the room harder — and the road is exactly what wears energy down, city after city, with long studio stretches taking their own quieter toll. A genuinely idle week does hand some energy back on its own, so time off is never wasted. But here is the part that catches new label heads: the road and the studio pull energy down far faster than a quiet week returns it, so an exhausted act will not claw its way back between back-to-back runs on idle time alone. So the tour that looks like pure profit is also spending down an asset, and deliberately clearing a run-down artist\'s calendar before the next run is a real decision with a real payoff, not dead air.',
     ],
     rules: [
       'Mood drives the studio: happy artists record sharper, unhappy ones get erratic — protect morale like it is quality, because it is.',
-      'Energy drives the road: the tour that fills your bank also drains the act, and the drain does not undo itself.',
-      'Rest is a move, not a gap — an exhausted artist sent back out sells fewer seats than the calendar suggests.',
+      'Energy drives the road and the studio: the tour that fills your bank drains the act, and a long recording stretch quietly does too — a quiet week gives some back, but never as fast as work takes it.',
+      'Rest is a move, not a gap — a genuinely idle week refills energy slowly, so an exhausted artist sent straight back out still sells fewer seats than the calendar suggests.',
     ],
     veteranNotes: [
       'Read condition before you book, not after. The moment to check an artist\'s energy is when you are pricing the tour; the moment to check their mood is when you are scheduling the sessions. By the time poor condition shows up in the numbers, you already paid for it.',

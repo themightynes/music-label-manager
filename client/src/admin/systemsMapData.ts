@@ -221,7 +221,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 2,
-    description: `Default 50. Drives TOUR sell-through (balance-integrity slice 5): energyFactor = min + (max−min)×(energy/100) multiplies sell-through before the 1.0 cap (edge e-energy-tour). Still has NO effect on song_quality or streams (see non-edges). Set/clamped by meetings & dialogue (ActionProcessor.ts:765).`,
+    description: `Default 50. Drives TOUR sell-through (balance-integrity slice 5): energyFactor = min + (max−min)×(energy/100) multiplies sell-through before the 1.0 cap (edge e-energy-tour). Still has NO effect on song_quality or streams (see non-edges). PASSIVE WEEKLY LIFECYCLE (volatility-economy slice 1 + C87), modeled here on the node like the mood/exec drift self-corrections rather than as edges — all clamped 0–100 in ArtistStateProcessor.applyArtistChangesToDatabase, zero RNG: (a) TOUR DRAIN −tour_revenue.energy_cost.per_city per city reveal (C87, TourProcessor.ts applyTourPerformanceImpacts); (b) RECORDING DRAIN −energy_lifecycle.recording_drain_per_week while any Single/EP project sits in the 'production' stage ("from the studio"); (c) IDLE RECOVERY +energy_lifecycle.idle_recovery_per_week when the artist has NO Mini-Tour in production and NO recording project in production ("a week to breathe"). Recording drain + idle recovery live in ArtistStateProcessor.processWeeklyEnergyLifecycle, config markets.json market_formulas.energy_lifecycle (enabled flag short-circuits both). Set/clamped also by meetings & dialogue (ActionProcessor.ts:765).`,
   },
   {
     id: 'song_quality',
