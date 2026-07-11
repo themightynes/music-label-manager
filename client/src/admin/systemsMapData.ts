@@ -653,14 +653,15 @@ export const EDGES: SystemEdge[] = [
     id: 'e-mood-quality',
     from: 'artist_mood',
     to: 'song_quality',
-    mechanism: 'Mood multiplier (snapshotted at generation)',
-    formula: 'quality *= 0.9 + 0.2 × (mood/100)',
+    mechanism: 'Mood multiplier + variance widening (snapshotted at generation)',
+    formula: 'quality *= 0.9 + 0.2 × (mood/100)  •  varianceBand *= 1 + max(0, (mood_baseline − mood)/mood_baseline) × mood_variance_widening_max',
     values: [
       { label: 'mood multiplier coefficients', value: `${songQualityFormula.mood_factor_base} / ${songQualityFormula.mood_factor_range}`, source: 'live', configPath: 'quality.song_quality_formula.mood_factor_base / mood_factor_range', ref: 'SongGenerationProcessor.ts:445' },
+      { label: 'variance widening (baseline / max)', value: `${songQualityFormula.mood_baseline} / ${songQualityFormula.mood_variance_widening_max}`, source: 'live', configPath: 'quality.song_quality_formula.mood_baseline / mood_variance_widening_max', ref: 'SongGenerationProcessor.calculateEnhancedSongQuality (computeMoodVarianceWiden)' },
     ],
     hardcoded: false,
     ref: 'SongGenerationProcessor.ts:445',
-    note: 'Knob liberation (slice 1): mood quality coefficients moved to quality.json song_quality_formula.',
+    note: 'Two distinct effects. (1) Knob liberation (slice 1): mood quality coefficients moved to quality.json song_quality_formula — the unchanged 0.9–1.1 mean multiplier. (2) Mood → variance widening (slice 4): low mood WIDENS the variance band (volatile, not uniformly worse); mood ≥ mood_baseline (50) → ×1.0 (no narrowing above baseline), mood 0 → ×1.4. No RNG draw added/reordered — only the band width scales.',
   },
   {
     id: 'e-variance-quality',

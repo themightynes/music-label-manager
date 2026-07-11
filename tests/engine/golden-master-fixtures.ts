@@ -148,6 +148,8 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
         fatigue_free_songs: sqf.fatigue_free_songs ?? 3,
         mood_factor_base: sqf.mood_factor_base ?? 0.9,
         mood_factor_range: sqf.mood_factor_range ?? 0.2,
+        mood_baseline: sqf.mood_baseline ?? 50,
+        mood_variance_widening_max: sqf.mood_variance_widening_max ?? 0.4,
         base_variance_max: sqf.base_variance_max ?? 35,
         base_variance_skill_reduction: sqf.base_variance_skill_reduction ?? 30,
         breakout_base_chance: sqf.breakout_base_chance ?? 0.05,

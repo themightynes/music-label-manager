@@ -39,6 +39,30 @@ import type { WeekContext } from './types';
 import type { WeekSummary } from '../../types/gameTypes';
 import { FinancialSystem } from '../FinancialSystem';
 
+/**
+ * Balance-integrity slice 4 (mood → variance widening) — pure, RNG-free helper.
+ *
+ * Low artist mood makes recording outcomes VOLATILE (wider variance band), not
+ * uniformly worse. Returns the multiplicative factor applied to the skill-derived
+ * variance band:
+ *
+ *   moodWiden = 1 + max(0, (mood_baseline − mood) / mood_baseline) × mood_variance_widening_max
+ *
+ * - mood ≥ mood_baseline (default 50) → 1.0 exactly (NO narrowing above baseline;
+ *   skill already narrows).
+ * - mood 0 with default config → 1.4.
+ *
+ * The unchanged 0.9–1.1 mood_factor quality multiplier is a SEPARATE mechanism.
+ */
+export function computeMoodVarianceWiden(
+  mood: number,
+  cfg: { mood_baseline?: number; mood_variance_widening_max?: number } = {}
+): number {
+  const moodBaseline = cfg.mood_baseline ?? 50;
+  const moodVarianceWideningMax = cfg.mood_variance_widening_max ?? 0.4;
+  return 1 + Math.max(0, (moodBaseline - mood) / moodBaseline) * moodVarianceWideningMax;
+}
+
 export class SongGenerationProcessor {
   async processRecordingProjects(ctx: WeekContext, dbTransaction?: any): Promise<void> {
     const { summary } = ctx;
@@ -473,6 +497,20 @@ export class SongGenerationProcessor {
     // High skill (75): ±10% base variance (was 5%)
     // Max skill (100): ±5% base variance (was 2%)
     let baseVarianceRange = (qf.base_variance_max ?? 35) - ((qf.base_variance_skill_reduction ?? 30) * (combinedSkill / 100)); // 35% down to 5%
+
+    // Balance-integrity slice 4 (mood → variance widening). Low artist mood makes
+    // the recording VOLATILE: it multiplicatively WIDENS the skill-derived variance
+    // band (it does NOT shift the mean — the 0.9–1.1 moodFactor above still owns that
+    // permanent quality nudge). mood ≥ mood_baseline (50) → ×1.0 exactly (no narrowing
+    // above baseline; skill already narrows). mood 0 → ×1.4 with defaults. This scales
+    // the band the SAME normal-variance draw (line below) is mapped onto — no RNG draw
+    // is added, removed, or reordered; only the band WIDTH changes.
+    // Composition order on the band: skill-derived × moodWiden × pendingVarianceWiden.
+    const moodWiden = computeMoodVarianceWiden(artistMood, {
+      mood_baseline: qf.mood_baseline ?? 50,
+      mood_variance_widening_max: qf.mood_variance_widening_max ?? 0.4,
+    });
+    baseVarianceRange *= moodWiden;
 
     // Exec-meetings-revival PR-6 (C4) — outcome variance/risk channel. A banked
     // meeting bonus (flags.pendingVariance, signed points) widens the variance

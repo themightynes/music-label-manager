@@ -500,6 +500,11 @@ export class ServerGameData {
       fatigue_free_songs: 3,
       mood_factor_base: 0.9,
       mood_factor_range: 0.2,
+      // Balance-integrity slice 4 (mood → variance widening): low mood WIDENS the
+      // variance band (volatile, not uniformly worse). Distinct from the mood_factor_*
+      // above, which is the unchanged 0.9–1.1 quality multiplier.
+      mood_baseline: 50,
+      mood_variance_widening_max: 0.4,
       base_variance_max: 35,
       base_variance_skill_reduction: 30,
       breakout_base_chance: 0.05,
@@ -520,6 +525,8 @@ export class ServerGameData {
       fatigue_free_songs: cfg.fatigue_free_songs ?? defaults.fatigue_free_songs,
       mood_factor_base: cfg.mood_factor_base ?? defaults.mood_factor_base,
       mood_factor_range: cfg.mood_factor_range ?? defaults.mood_factor_range,
+      mood_baseline: cfg.mood_baseline ?? defaults.mood_baseline,
+      mood_variance_widening_max: cfg.mood_variance_widening_max ?? defaults.mood_variance_widening_max,
       base_variance_max: cfg.base_variance_max ?? defaults.base_variance_max,
       base_variance_skill_reduction: cfg.base_variance_skill_reduction ?? defaults.base_variance_skill_reduction,
       breakout_base_chance: cfg.breakout_base_chance ?? defaults.breakout_base_chance,

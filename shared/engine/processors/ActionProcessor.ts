@@ -131,7 +131,7 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
   },
   artist_mood: {
     title: 'Mood',
-    text: 'How happy the affected artist is, applied instantly. Happier artists perform better; unhappy ones drift.',
+    text: 'How happy the affected artist is, applied instantly. Happier artists perform better; unhappy ones drift, and low mood also makes recordings less predictable.',
   },
   artist_energy: {
     title: 'Energy',
