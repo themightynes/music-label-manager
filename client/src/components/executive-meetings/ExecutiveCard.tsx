@@ -33,6 +33,16 @@ interface ExecutiveCardProps {
    * line is the payoff on open).
    */
   hasReactiveMeeting?: boolean;
+  /**
+   * Hype-board UX Task 4 (playtest feedback): the open-channel state previews
+   * WHAT is waiting — the pool's first meeting's name + a one-line prompt
+   * snippet, prefetched by ExecutiveMeetings' existing sit-out/urgency sweep
+   * (zero new requests). This deliberately revises the earlier "no meeting
+   * name on the card" stance for the MEETING itself; the reactive TRIGGER
+   * ("why now" copy) still only reveals on open — the urgency dot stays a
+   * content-free pulse.
+   */
+  meetingPreview?: { name: string; snippet: string; moreCount?: number };
   onSelect: () => void;
   weeklySalary?: number;
   arOfficeStatus?: {
@@ -106,6 +116,25 @@ export const roleConfig = {
   },
 } as const;
 
+/**
+ * Display name for a meeting (Task 4 preview) — same fallback rule as
+ * MeetingSelector's meetingTitle: prefer the authored name, else prettify id.
+ */
+export function meetingDisplayName(meeting: { id: string; name?: string }): string {
+  return meeting.name || meeting.id.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+/** One-line prompt snippet for the strip preview — word-boundary truncation. */
+export const MEETING_SNIPPET_MAX = 90;
+
+export function snippetOf(text: string | undefined | null, max: number = MEETING_SNIPPET_MAX): string {
+  const clean = (text || '').trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max + 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${cut.slice(0, lastSpace > 40 ? lastSpace : max).trimEnd()}…`;
+}
+
 function VerticalFader({ value, label, fillClass, valueClass }: {
   value: number;
   label: string;
@@ -132,6 +161,7 @@ export function ExecutiveCard({
   disabled = false,
   sitOut = false,
   hasReactiveMeeting = false,
+  meetingPreview,
   onSelect,
   weeklySalary,
   arOfficeStatus,
@@ -185,8 +215,10 @@ export function ExecutiveCard({
           };
 
   // Console status readout (foot of the strip) — precedence mirrors the design:
-  // busy > queued > sit-out > no-slots > open for business.
-  const status = isArBusy
+  // busy > queued > sit-out > no-slots > open for business. Task 4: the open
+  // state previews the waiting brief (meeting name + prompt snippet) when the
+  // prefetch supplied one; generic copy is the fail-open fallback.
+  const status: { text: string; className: string; snippet?: string; moreCount?: number } = isArBusy
     ? { text: 'Running a scouting op — back next week', className: 'bg-neon-amber/10 border-neon-amber/30 text-neon-amber' }
     : queued
       ? { text: 'Meeting queued for this week', className: 'bg-neon-green/10 border-neon-green/30 text-neon-green' }
@@ -194,7 +226,14 @@ export function ExecutiveCard({
         ? { text: isCEO ? 'Nothing needs your call this week' : 'Nothing needs their call this week', className: 'bg-white/[0.03] border-white/10 text-text-muted' }
         : noSlots
           ? { text: 'No focus slots remaining', className: 'bg-negative/10 border-negative/25 text-negative' }
-          : { text: 'Has something for you', className: 'bg-neon-purple/10 border-neon-purple/35 text-neon-lilac' };
+          : meetingPreview
+            ? {
+                text: meetingPreview.name,
+                snippet: meetingPreview.snippet,
+                moreCount: meetingPreview.moreCount,
+                className: 'bg-neon-purple/10 border-neon-purple/35 text-neon-lilac',
+              }
+            : { text: 'Has something for you', className: 'bg-neon-purple/10 border-neon-purple/35 text-neon-lilac' };
 
   const queuedChip = (
     <span className="flex items-center gap-1.5 rounded-pill border border-neon-green/40 bg-neon-green/15 px-2 py-0.5 font-mono text-[9px] font-semibold text-neon-green">
@@ -229,6 +268,17 @@ export function ExecutiveCard({
         <div className="mt-1 text-center font-mono text-[9px] uppercase tracking-[0.16em] text-money/70">
           {queued ? 'meeting queued' : noSlots ? 'no slots left' : 'quarterly vision'}
         </div>
+        {/* Task 4: the master strip previews the waiting brief's name too
+            (narrow strip — name only; the prompt snippet lives on the wider
+            exec channel strips). */}
+        {!queued && !sitOut && !noSlots && meetingPreview && (
+          <div
+            data-testid="meeting-preview-ceo"
+            className="mt-2 line-clamp-2 text-center text-[10.5px] font-medium text-text-primary"
+          >
+            {meetingPreview.name}
+          </div>
+        )}
         <div className="flex-1 min-h-4" />
         {queued ? (
           queuedChip
@@ -323,9 +373,25 @@ export function ExecutiveCard({
 
       <div className="flex-1" />
 
-      {/* status readout */}
-      <div className={`flex min-h-[44px] w-full items-center justify-center rounded-lg border px-2.5 py-1.5 text-center text-[11px] leading-snug ${status.className}`}>
-        {status.text}
+      {/* status readout (Task 4: open state previews the waiting brief) */}
+      <div
+        data-testid={`status-readout-${executive.role}`}
+        className={`flex min-h-[44px] w-full flex-col items-center justify-center gap-0.5 rounded-lg border px-2.5 py-1.5 text-center text-[11px] leading-snug ${status.className}`}
+      >
+        <span className={status.snippet ? 'font-semibold' : undefined}>{status.text}</span>
+        {status.snippet && (
+          <span
+            data-testid={`meeting-preview-snippet-${executive.role}`}
+            className="line-clamp-2 text-[10px] text-text-muted"
+          >
+            {status.snippet}
+          </span>
+        )}
+        {typeof status.moreCount === 'number' && status.moreCount > 0 && (
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted">
+            +{status.moreCount} more brief{status.moreCount === 1 ? '' : 's'}
+          </span>
+        )}
       </div>
 
       {/* Meeting-relevance Tier 0 (PR-1): sit-out testid anchor (copy lives in the

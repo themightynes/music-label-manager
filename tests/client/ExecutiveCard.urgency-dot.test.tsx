@@ -2,9 +2,15 @@
  * Tier 2 (PR-2, Nes amendment 1) — urgency indicator on the exec card.
  *
  * `hasReactiveMeeting` shows a small dot/pulse signaling "something happened"
- * this week, WITHOUT revealing the meeting's content (no name/trigger text on
- * the card itself — that's the "why now" line's job once the player opens the
- * meeting). Suppressed when the exec is sitting out (no meeting to open).
+ * this week, WITHOUT revealing the reactive TRIGGER (the "why now" line stays
+ * a reveal-on-open payoff). Suppressed when the exec is sitting out (no
+ * meeting to open).
+ *
+ * Hype-board UX Task 4 (July 2026 playtest) revised the ORIGINAL "no meeting
+ * name on the card" stance: the strip's open state may now preview the waiting
+ * meeting's name + prompt snippet (ExecutiveCard.meetingPreview.test.tsx) —
+ * but the trigger/why-now copy still never leaks onto the card, which is what
+ * this file pins.
  */
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
