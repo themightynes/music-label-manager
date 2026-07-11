@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import {
   ArrowLeft, Music, Calendar, DollarSign, Target, TrendingUp, Users, Star, Award,
   Play, Check, Loader2, AlertCircle, Edit2, X, Radio, Megaphone, Newspaper,
-  ExternalLink, Sparkles
+  ExternalLink, Sparkles, Info
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { useLocation } from 'wouter';
@@ -33,7 +34,12 @@ import {
   type MarketingChannel,
   type ReleaseType
 } from '@shared/utils/marketingUtils';
-import { MARKETING_CHANNEL_PERSONALITIES, MARKETING_QUALITY_NOTE } from '@/lib/releaseBuzz';
+import {
+  MARKETING_CHANNEL_PERSONALITIES,
+  MARKETING_QUALITY_NOTE,
+  MARKETING_LOSS_LEADER_NOTE,
+  MARKETING_LOSS_LEADER_TOOLTIP
+} from '@/lib/releaseBuzz';
 
 // Mock data types
 interface Song {
@@ -1096,9 +1102,24 @@ export default function PlanReleasePage() {
 
                   {/* Buzz-v2 slice 5 — qualitative quality legibility note (fork E: no
                       multiplier numbers). Static, applies to the whole budget below. */}
-                  <p className="text-xs text-[rgba(233,230,244,0.5)] mb-3">
+                  <p className="text-xs text-[rgba(233,230,244,0.5)] mb-1">
                     {MARKETING_QUALITY_NOTE}
                   </p>
+
+                  {/* Systems-balance-integrity slice 3 — loss-leader view. Marketing
+                      economics are unchanged; this surfaces them honestly (qualitative
+                      only, fork E standing rule: no formulas/multipliers/percentages). */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-xs text-[rgba(233,230,244,0.5)] mb-3 flex items-center gap-1.5 cursor-help w-fit">
+                          <Info className="w-3.5 h-3.5 text-neon-lilac shrink-0" />
+                          <span>{MARKETING_LOSS_LEADER_NOTE}</span>
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">{MARKETING_LOSS_LEADER_TOOLTIP}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
                   <div className="space-y-3">
                     {marketingChannels.map(channel => {

@@ -59,6 +59,7 @@ import type { WeekContext } from './types';
 import type { WeekSummary } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../../utils/seasonalCalculations';
+import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
 
 // Patch type for song updates applied during weekly processing. Mirrors the
 // module-level SongUpdatePatch in game-engine.ts: `processReleasedProjects`'s
@@ -619,13 +620,38 @@ export class ReleaseProcessor {
   private calculateStreamingPopularityBonus(
     weeklyStreams: number,
     currentPopularity: number,
-    baseThreshold: number = 3000,
-    useDynamicThreshold: boolean = true,
-    saturationPoint: number = 35
+    config?: {
+      base_threshold?: number;
+      dynamic_threshold_exponent_base?: number;
+      dynamic_threshold_divisor?: number;
+      max_stream_points?: number;
+      saturation_point?: number;
+      saturation_exponent?: number;
+      diminishing_multiplier_base?: number;
+      diminishing_multiplier_range?: number;
+      min_bonus?: number;
+    },
+    useDynamicThreshold: boolean = true
   ): number {
+    // Balance-integrity slice 1 (knob liberation): baseThreshold (3000),
+    // saturationPoint (35) and the internal shape constants (2^, /25, cap 10,
+    // 0.2 + 1.3, ^4, floor 0.1) were engine literals; now read from markets.json
+    // market_formulas.popularity_saturation with the original literals as fallback
+    // defaults (byte-identical). Slice 6 reuses this same config for tour saturation.
+    const cfg = config || {};
+    const baseThreshold = cfg.base_threshold ?? 3000;
+    const expBase = cfg.dynamic_threshold_exponent_base ?? 2;
+    const thresholdDivisor = cfg.dynamic_threshold_divisor ?? 25;
+    const maxStreamPoints = cfg.max_stream_points ?? 10;
+    const saturationPoint = cfg.saturation_point ?? 35;
+    const saturationExponent = cfg.saturation_exponent ?? 4;
+    const diminishingBase = cfg.diminishing_multiplier_base ?? 0.2;
+    const diminishingRange = cfg.diminishing_multiplier_range ?? 1.3;
+    const minBonus = cfg.min_bonus ?? 0.1;
+
     // Calculate dynamic threshold based on popularity (exponential scaling)
     const actualThreshold = useDynamicThreshold
-      ? Math.round(baseThreshold * Math.pow(2, currentPopularity / 25))
+      ? Math.round(baseThreshold * Math.pow(expBase, currentPopularity / thresholdDivisor))
       : baseThreshold;
 
     // Convert streams to popularity points using logarithmic scaling
@@ -636,13 +662,20 @@ export class ReleaseProcessor {
     const streamPoints = Math.log10(weeklyStreams / actualThreshold);
 
     // Cap total bonus at reasonable level (per song)
-    const cappedPoints = Math.min(streamPoints, 10);
+    const cappedPoints = Math.min(streamPoints, maxStreamPoints);
 
-    // Apply diminishing returns multiplier
-    const baseMultiplier = 1 / (1 + Math.pow(currentPopularity / saturationPoint, 4));
-    const multiplier = 0.2 + (baseMultiplier * 1.3); // Scales from 1.5x to 0.2x
+    // Apply diminishing returns multiplier. Balance-integrity slice 6 extracted
+    // this curve into a shared pure helper (shared/utils/popularitySaturation.ts)
+    // so tour popularity gains reuse the SAME formula rather than duplicating it.
+    // Byte-identical: satPoint/exponent/base/range are the same knobs read above.
+    const multiplier = popularitySaturationMultiplier(currentPopularity, {
+      saturation_point: saturationPoint,
+      saturation_exponent: saturationExponent,
+      diminishing_multiplier_base: diminishingBase,
+      diminishing_multiplier_range: diminishingRange,
+    }); // Scales from 1.5x to 0.2x
 
-    const finalBonus = Math.max(0.1, cappedPoints * multiplier);
+    const finalBonus = Math.max(minBonus, cappedPoints * multiplier);
 
     return finalBonus;
   }
@@ -733,14 +766,24 @@ export class ReleaseProcessor {
                 const awarenessConfig = balanceConfig?.market_formulas?.awareness_system;
 
                 if (awarenessConfig?.enabled) {
+                  // Balance-integrity slice 1 (knob liberation, C79): these tier
+                  // thresholds previously SHADOWED markets.json
+                  // awareness_system.breakthrough_thresholds — the config existed but
+                  // was ignored. Now read from it, with the original literals as
+                  // fallback defaults (values match the config exactly ⇒ byte-identical).
+                  const bt = awarenessConfig.breakthrough_thresholds || {};
+                  const hq = bt.high_quality || {};
+                  const mq = bt.medium_quality || {};
+                  const lq = bt.low_quality || {};
+
                   // Calculate breakthrough potential
                   let breakthroughPotential = 0;
-                  if (song.quality >= 80) {
-                    breakthroughPotential = Math.min(newAwareness / 40, 1) * 0.65;
-                  } else if (song.quality >= 70) {
-                    breakthroughPotential = Math.min(newAwareness / 60, 1) * 0.35;
-                  } else if (song.quality >= 60) {
-                    breakthroughPotential = Math.min(newAwareness / 80, 1) * 0.15;
+                  if (song.quality >= (hq.min_quality ?? 80)) {
+                    breakthroughPotential = Math.min(newAwareness / (hq.awareness_needed ?? 40), 1) * (hq.base_chance ?? 0.65);
+                  } else if (song.quality >= (mq.min_quality ?? 70)) {
+                    breakthroughPotential = Math.min(newAwareness / (mq.awareness_needed ?? 60), 1) * (mq.base_chance ?? 0.35);
+                  } else if (song.quality >= (lq.min_quality ?? 60)) {
+                    breakthroughPotential = Math.min(newAwareness / (lq.awareness_needed ?? 80), 1) * (lq.base_chance ?? 0.15);
                   }
 
                   // Roll for breakthrough (deterministic based on song properties)
@@ -855,12 +898,12 @@ export class ReleaseProcessor {
               }
 
               if (artist) {
+                const popularitySaturationConfig = ctx.gameData.getBalanceConfigSync?.()?.market_formulas?.popularity_saturation;
                 const popularityBonus = this.calculateStreamingPopularityBonus(
                   weeklyStreams,
                   artist.popularity || 0,
-                  3000, // baseThreshold
-                  true, // useDynamicThreshold
-                  35   // saturationPoint
+                  popularitySaturationConfig, // knob liberation: markets.json popularity_saturation (fallbacks match old 3000/35 literals)
+                  true // useDynamicThreshold
                 );
 
                 if (popularityBonus > 0) {
@@ -1484,7 +1527,78 @@ export class ReleaseProcessor {
               (summary.reputationChanges[release.artistId] || 0) + reputationGain;
           }
         }
-        
+
+        // Balance-integrity slice 2 — FLOP PENALTY (reputation becomes two-way).
+        // The game's first reputation SINK: a record that badly underperforms its
+        // investment costs the label standing. Evaluated ONCE, here, on the
+        // release week (never on catalog weeks). Consumes the previously-dead
+        // progression.json reputation_system.flop_penalty (3), gated by two new
+        // config keys. DETERMINISTIC — no RNG draw (audit: no getRandom added).
+        //
+        // totalInvestment aggregation (documented): the sum of every release song's
+        // production_budget (song.productionBudget, default 0) PLUS the release's
+        // marketing_budget (release.marketingBudget) — the two authored spend fields
+        // that already exist on these rows. Both lead singles and same-week songs
+        // count toward the record's production cost. releaseWeekRevenue is this
+        // week's release revenue (sophisticatedResults.totalRevenue) — catalog
+        // decay revenue is NOT included (that lands via processReleasedProjects in
+        // later weeks).
+        try {
+          const flopFlagKey = `flop_penalty_applied_${release.id}`;
+          const flopFlags = (ctx.gameState.flags || {}) as Record<string, any>;
+          if (!flopFlags[flopFlagKey]) {
+            const repSystem = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system || {};
+            const flopPenalty = repSystem.flop_penalty ?? 3;
+            const flopRevenueRatio = repSystem.flop_revenue_ratio ?? 0.10;
+            const flopInvestmentFloor = repSystem.flop_investment_floor ?? 10000;
+
+            const productionInvestment = releaseSongs.reduce(
+              (sum: number, s: any) => sum + (s.productionBudget || 0),
+              0,
+            );
+            const marketingInvestment = release.marketingBudget || 0;
+            const totalInvestment = productionInvestment + marketingInvestment;
+            const releaseWeekRevenue = totalRevenue;
+
+            const isFlop =
+              totalInvestment >= flopInvestmentFloor &&
+              releaseWeekRevenue < flopRevenueRatio * totalInvestment;
+
+            if (isFlop) {
+              // Mark once-only FIRST (deterministic key, no Date.now/Math.random)
+              // so a re-processing pass never double-penalizes.
+              flopFlags[flopFlagKey] = true;
+              ctx.gameState.flags = flopFlags;
+
+              const repBefore = ctx.gameState.reputation || 0;
+              const repAfter = Math.max(0, repBefore - flopPenalty);
+              const repDelta = repAfter - repBefore; // ≤ 0 (0 only if already floored)
+              ctx.gameState.reputation = repAfter;
+
+              // C34: reputation is label-wide — accumulate the ACTUAL applied delta
+              // into summary.reputationChanges so the single aggregated ⭐ weekly
+              // line reflects it. Do NOT push a separate type:'reputation' change
+              // (that would double the reputation line). The structured 'flop' entry
+              // below shows the EVENT itself (categorizeChanges routes it to the
+              // rendered Achievements bucket, never the swallowed `other` bucket).
+              summary.reputationChanges[release.artistId] =
+                (summary.reputationChanges[release.artistId] || 0) + repDelta;
+
+              summary.changes.push({
+                type: 'flop',
+                description: `📉 "${release.title}" flopped — the industry noticed (${repDelta} reputation)`,
+                amount: repDelta,
+                releaseId: release.id,
+                releaseName: release.title,
+              });
+
+              console.log(`[FLOP] "${release.title}" flopped — revenue $${releaseWeekRevenue} < ${flopRevenueRatio}×$${totalInvestment}; reputation ${repBefore} -> ${repAfter}`);
+            }
+          }
+        } catch (flopError) {
+          console.warn('[FLOP] Error evaluating flop penalty:', flopError);
+        }
+
         // Release completed successfully
       }
       

@@ -323,6 +323,14 @@ export interface BalanceConfig {
     hit_single_bonus: number;
     number_one_bonus: number;
     flop_penalty: number;
+    // Balance-integrity slice 2 (flop penalty): a released record FLOPS when its
+    // release-week revenue < flop_revenue_ratio × totalInvestment (production +
+    // marketing), evaluated once at release-week processing, only when
+    // totalInvestment ≥ flop_investment_floor (zero/low-budget drops are exempt).
+    // On a flop, reputation −flop_penalty (clamp ≥0). Optional — absent ⇒
+    // ReleaseProcessor read-site literal fallbacks (0.10 / 10000) apply.
+    flop_revenue_ratio?: number;
+    flop_investment_floor?: number;
     regional_barriers: Record<string, number>;
     decay_rate: number;
   };
@@ -334,6 +342,14 @@ export interface BalanceConfig {
   quality_system: Record<string, any>;
   producer_tier_system: Record<string, ProducerTierData>;
   time_investment_system: Record<string, TimeInvestmentData>;
+  /**
+   * Balance-integrity slice 1 (knob liberation). Song-QUALITY formula constants
+   * (producer skill map, time multipliers, popularity/fatigue/mood factors,
+   * variance band, outlier chances). DISTINCT from producer_tier_system /
+   * time_investment_system multipliers (which feed cost/duration). Optional —
+   * absent ⇒ SongGenerationProcessor read-site literal fallbacks apply.
+   */
+  song_quality_formula?: Record<string, any>;
   ui_constants: Record<string, number>;
   save_system: Record<string, any>;
   difficulty_modifiers: Record<string, Record<string, number>>;
@@ -459,7 +475,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign' | 'flop';
   description: string;
   amount?: number;
   roleId?: string;

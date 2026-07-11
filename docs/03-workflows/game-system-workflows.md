@@ -110,6 +110,8 @@ Low (40-59)           +5 quality bonus       Lower revenue       Risk of mood de
 Poor (0-39)           No bonus/penalty       Poor revenue        Relationship strain
 ```
 
+> **Actual formula (`song_quality_formula` in `data/balance/quality.json`, `SongGenerationProcessor.calculateEnhancedSongQuality`):** mood contributes a `0.9–1.1` multiplier (`mood_factor_base`/`mood_factor_range`), not the flat per-tier bonus table above (illustrative only). As of the balance-integrity arc (July 2026), low mood **additionally widens quality variance**: the random-roll spread scales up to ×1.4 as mood falls from `mood_baseline` (50) toward 0 (`mood_variance_widening_max: 0.4`) — a struggling artist's songs get less predictable, not just lower-average, while a happy artist's output stays tight around the mean.
+
 ---
 
 ## 🎵 Project System Workflow
@@ -162,6 +164,8 @@ complete                           releases          venue access)       catalog
 ```
 
 > **Streaming decay:** each release retains **85% of streams per week** (`weekly_decay_rate: 0.85` in `data/balance/markets.json`), i.e. ~15% decay *per week* — applied as `0.85^weeksSinceRelease` and zeroed after **24 weeks** (`max_decay_weeks`). Revenue is `streams × $0.05` (`revenue_per_stream`). *(The previous "15% monthly" figure was incorrect on both rate and cadence.)*
+
+> **Flop penalty (balance-integrity arc, July 2026):** reputation is no longer monotonically non-decreasing. A release "flops" when its release-week revenue falls below `flop_revenue_ratio` (0.10) × investment, gated to releases with investment ≥ `flop_investment_floor` ($10,000) so cheap/no-budget releases can't trigger it. A flop costs **−3 reputation** (`flop_penalty`, `data/balance/progression.json` `reputation_system`), applied once per release. This is in addition to the existing dialogue/action reputation deltas (immediate `+/-`) — it's the first *automatic, outcome-driven* reputation loss tied to release performance.
 
 ### **Expense Processing Workflow**
 

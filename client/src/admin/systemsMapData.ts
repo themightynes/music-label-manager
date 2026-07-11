@@ -1,6 +1,13 @@
 // Systems Map — data module (admin dev tool)
 //
-// Hand-verified snapshot of shared/engine as of 2026-07-10. Every edge cites the
+// Hand-verified snapshot of shared/engine as of 2026-07-10, updated for the
+// full balance-integrity arc (6 slices, same day): slice 1 "knob liberation" —
+// every balance constant that was previously a HARDCODED engine literal is now
+// read from data/balance/*.json (byte-identical values) and its edge flips to
+// source 'live' — plus 4 new/changed edges from slices 2, 4, 5, 6: flop penalty
+// (e-flop-reputation, reputation's first sink), mood → variance widening, energy
+// → tour sell-through (energy_effectiveness), and tour-popularity gains routed
+// through the shared saturation curve. Every edge cites the
 // engine code that implements it; every "live" value is read straight out of the
 // authored balance JSON via a static import (same precedent as the read-only knobs
 // strip in client/src/admin/SideEventsEditor.tsx), so the diagram always reflects
@@ -106,11 +113,18 @@ const releasePlanning = mf.release_planning;
 const chartSystem = mf.chart_system;
 const pressCoverage = mf.press_coverage;
 const tourRevenue = mf.tour_revenue;
+// Balance-integrity slice 1 (knob liberation) — newly config-driven blocks.
+const popularitySaturation = mf.popularity_saturation;
+const ongoingMarketingFactor = mf.ongoing_marketing_factor;
+const tourVenueScaling = tourRevenue.venue_scaling;
 
 const qualitySystem = (quality as any).quality_system;
 const budgetQualitySystem = qualitySystem.budget_quality_system;
 const producerTierSystem = (quality as any).producer_tier_system;
 const timeInvestmentSystem = (quality as any).time_investment_system;
+// Balance-integrity slice 1 (knob liberation) — the song-QUALITY formula block
+// (DISTINCT from producer_tier_system/time_investment_system cost/duration multipliers).
+const songQualityFormula = (quality as any).song_quality_formula;
 
 const reputationSystem = (progression as any).reputation_system;
 const accessTierSystem = (progression as any).access_tier_system;
@@ -207,7 +221,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 2,
-    description: `DISPLAY-ONLY. Set/clamped by meetings & dialogue (ActionProcessor.ts:765) but has NO consumer anywhere in the reviewed engine paths — confirmed dead end (see non-edges).`,
+    description: `Default 50. Drives TOUR sell-through (balance-integrity slice 5): energyFactor = min + (max−min)×(energy/100) multiplies sell-through before the 1.0 cap (edge e-energy-tour). Still has NO effect on song_quality or streams (see non-edges). Set/clamped by meetings & dialogue (ActionProcessor.ts:765).`,
   },
   {
     id: 'song_quality',
@@ -215,7 +229,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 3,
-    description: `25-98, computed once at generation (SongGenerationProcessor.calculateEnhancedSongQuality, SongGenerationProcessor.ts:385-573). Most factors are HARDCODED in-function rather than read from quality.json (see edges + non-edges for the specific shadowed knobs).`,
+    description: `25-98, computed once at generation (SongGenerationProcessor.calculateEnhancedSongQuality, SongGenerationProcessor.ts:385-573). As of slice 1 (knob liberation) the formula factors are read from quality.json song_quality_formula (a block DISTINCT from producer_tier_system/time_investment_system, which feed cost/duration) — see the quality edges.`,
   },
 
   // Production
@@ -233,7 +247,7 @@ export const NODES: SystemNode[] = [
     domain: 'production',
     col: 3,
     row: 1,
-    description: `rushed / standard / extended / perfectionist. quality.json's time_investment_system.multiplier and duration_modifier feed cost/duration only — the quality formula hardcodes its own multiplier set (see non-edges).`,
+    description: `rushed / standard / extended / perfectionist. quality.json's time_investment_system.multiplier and duration_modifier feed cost/duration only — the quality formula reads its OWN distinct set from quality.json song_quality_formula.time_multipliers (slice 1 knob liberation; see non-edges).`,
   },
 
   // Release & Marketing
@@ -337,11 +351,12 @@ export const EDGES: SystemEdge[] = [
     values: [
       { label: 'quality_weight', value: streamingCalc.quality_weight, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.quality_weight', ref: 'FinancialSystem.ts:748' },
       { label: 'first_week_multiplier', value: streamingCalc.first_week_multiplier, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.first_week_multiplier', ref: 'FinancialSystem.ts:777' },
-      { label: 'variance range (rand)', value: '[0.9, 1.1]', source: 'hardcoded', ref: 'FinancialSystem.ts:451-454 (VARIANCE_RANGE)' },
-      { label: 'base_streams_per_point', value: 1000, source: 'hardcoded', ref: 'server/data/gameData.ts:462 — ⚠ NOT markets.json, a same-value literal lives there independently' },
+      { label: 'variance range (rand)', value: JSON.stringify(streamingCalc.variance_range), source: 'live', configPath: 'markets.market_formulas.streaming_calculation.variance_range', ref: 'FinancialSystem.calculateStreamingOutcome' },
+      { label: 'base_streams_per_point', value: streamingCalc.base_streams_per_point, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.base_streams_per_point', ref: 'server/data/gameData.ts getStreamingConfigSync' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'FinancialSystem.calculateStreamingOutcome, FinancialSystem.ts:726-789',
+    note: 'Knob liberation (slice 1): variance_range + base_streams_per_point moved to markets.json streaming_calculation; the gameData.ts:462 literal shadow is resolved.',
   },
   {
     id: 'e-access-streams-playlist',
@@ -351,11 +366,12 @@ export const EDGES: SystemEdge[] = [
     formula: 'component = reach_multiplier × playlist_weight × PLAYLIST_COMPONENT_SCALE',
     values: [
       { label: 'playlist_weight', value: streamingCalc.playlist_weight, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.playlist_weight', ref: 'FinancialSystem.ts:749' },
-      { label: 'PLAYLIST_COMPONENT_SCALE', value: 100, source: 'hardcoded', ref: 'FinancialSystem.ts:446' },
+      { label: 'playlist_component_scale', value: streamingCalc.playlist_component_scale, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.playlist_component_scale', ref: 'FinancialSystem.calculateStreamingOutcome' },
       { label: 'reach_multiplier (none/niche/mid/flagship)', value: '0.1 / 0.4 / 0.8 / 1.5', source: 'live', configPath: 'progression.access_tier_system.playlist_access.*.reach_multiplier' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'FinancialSystem.calculateStreamingOutcome, FinancialSystem.ts:749',
+    note: 'Knob liberation (slice 1): PLAYLIST_COMPONENT_SCALE moved to markets.json streaming_calculation.playlist_component_scale.',
   },
   {
     id: 'e-reputation-streams-base',
@@ -377,11 +393,12 @@ export const EDGES: SystemEdge[] = [
     formula: 'component = sqrt(adSpend / 1000) × marketing_weight × 50',
     values: [
       { label: 'marketing_weight', value: streamingCalc.marketing_weight, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.marketing_weight', ref: 'FinancialSystem.ts:751' },
-      { label: 'divisor', value: 1000, source: 'hardcoded', ref: 'FinancialSystem.ts:447' },
-      { label: 'multiplier', value: 50, source: 'hardcoded', ref: 'FinancialSystem.ts:450' },
+      { label: 'divisor', value: streamingCalc.marketing_scale_divisor, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.marketing_scale_divisor', ref: 'FinancialSystem.calculateStreamingOutcome' },
+      { label: 'multiplier', value: streamingCalc.marketing_scale_multiplier, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.marketing_scale_multiplier', ref: 'FinancialSystem.calculateStreamingOutcome' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'FinancialSystem.calculateStreamingOutcome, FinancialSystem.ts:751',
+    note: 'Knob liberation (slice 1): MARKETING_SCALE divisor/multiplier moved to markets.json streaming_calculation.',
   },
   {
     id: 'e-popularity-streams-base',
@@ -460,11 +477,12 @@ export const EDGES: SystemEdge[] = [
     mechanism: 'Ongoing revenue — reputation bonus',
     formula: 'bonus = 1 + (reputation - 50) × reputation_bonus_factor',
     values: [
-      { label: 'baseline', value: 50, source: 'hardcoded', ref: 'FinancialSystem.ts:455' },
+      { label: 'baseline', value: ongoingStreams.reputation_baseline, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.ongoing_streams.reputation_baseline', ref: 'FinancialSystem.calculateDecayRevenue' },
       { label: 'reputation_bonus_factor', value: ongoingStreams.reputation_bonus_factor, source: 'live', configPath: 'markets.market_formulas.streaming_calculation.ongoing_streams.reputation_bonus_factor', ref: 'FinancialSystem.ts:973' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'FinancialSystem.calculateDecayRevenue, FinancialSystem.ts:973',
+    note: 'Knob liberation (slice 1): REPUTATION_BASELINE moved to markets.json ongoing_streams.reputation_baseline.',
   },
   {
     id: 'e-access-streams-ongoing',
@@ -483,12 +501,17 @@ export const EDGES: SystemEdge[] = [
     from: 'marketing_channels',
     to: 'streams',
     mechanism: 'Ongoing revenue — weeks 2-4 channel bonuses',
-    formula: 'radio: (spend/10000) × 0.85 × 0.2; digital: (spend/8000) × 0.92 × 0.25; pr peaks week 3',
+    formula: 'radio: (spend/divisor) × effectiveness × scale; digital similar; pr peaks week 3 (×week3_multiplier), else ×off_peak_multiplier; total capped at max_boost',
     values: [
-      { label: 'radio/digital/pr week-2-4 formula', value: 'see formula', source: 'hardcoded', ref: 'FinancialSystem.ts:1085-1099' },
+      { label: 'radio (divisor/effectiveness/scale)', value: `${ongoingMarketingFactor.radio.divisor} / ${ongoingMarketingFactor.radio.effectiveness} / ${ongoingMarketingFactor.radio.scale}`, source: 'live', configPath: 'markets.market_formulas.ongoing_marketing_factor.radio', ref: 'FinancialSystem.calculateMarketingFactor' },
+      { label: 'digital (divisor/effectiveness/scale)', value: `${ongoingMarketingFactor.digital.divisor} / ${ongoingMarketingFactor.digital.effectiveness} / ${ongoingMarketingFactor.digital.scale}`, source: 'live', configPath: 'markets.market_formulas.ongoing_marketing_factor.digital' },
+      { label: 'pr (divisor/effectiveness/scale/wk3×/off-peak×)', value: `${ongoingMarketingFactor.pr.divisor} / ${ongoingMarketingFactor.pr.effectiveness} / ${ongoingMarketingFactor.pr.scale} / ${ongoingMarketingFactor.pr.week3_multiplier} / ${ongoingMarketingFactor.pr.off_peak_multiplier}`, source: 'live', configPath: 'markets.market_formulas.ongoing_marketing_factor.pr' },
+      { label: 'influencer (divisor/effectiveness/scale)', value: `${ongoingMarketingFactor.influencer.divisor} / ${ongoingMarketingFactor.influencer.effectiveness} / ${ongoingMarketingFactor.influencer.scale}`, source: 'live', configPath: 'markets.market_formulas.ongoing_marketing_factor.influencer' },
+      { label: 'max_boost', value: ongoingMarketingFactor.max_boost, source: 'live', configPath: 'markets.market_formulas.ongoing_marketing_factor.max_boost' },
     ],
-    hardcoded: true,
-    ref: 'FinancialSystem.calculateDecayRevenue, FinancialSystem.ts:1085-1099',
+    hardcoded: false,
+    ref: 'FinancialSystem.calculateMarketingFactor, FinancialSystem.ts:1085-1111',
+    note: 'Knob liberation (slice 1): weeks-2-4 per-channel coefficients + cap moved to markets.json ongoing_marketing_factor.',
   },
   {
     id: 'e-awareness-streams-ongoing',
@@ -535,13 +558,15 @@ export const EDGES: SystemEdge[] = [
     mechanism: 'Breakthrough roll (weeks 3-6) + decay reduction',
     formula: 'potential = min(awareness/needed, 1) × baseChance; roll = (sin(seed)+1)/2; on hit awareness × 2.5. Also: decay rate −0.01 if quality ≥ 85.',
     values: [
-      { label: 'thresholds (q≥80 → /40×0.65, q≥70 → /60×0.35, q≥60 → /80×0.15)', value: 'see formula', source: 'hardcoded', ref: 'ReleaseProcessor.ts:738-743' },
-      { label: 'awareness multiplier on hit', value: 2.5, source: 'hardcoded', ref: 'ReleaseProcessor.ts:757' },
+      { label: 'high_quality (min_quality / awareness_needed / base_chance)', value: `${awarenessSystem.breakthrough_thresholds.high_quality.min_quality} / ${awarenessSystem.breakthrough_thresholds.high_quality.awareness_needed} / ${awarenessSystem.breakthrough_thresholds.high_quality.base_chance}`, source: 'live', configPath: 'markets.market_formulas.awareness_system.breakthrough_thresholds.high_quality', ref: 'ReleaseProcessor.ts:738-743' },
+      { label: 'medium_quality (min_quality / awareness_needed / base_chance)', value: `${awarenessSystem.breakthrough_thresholds.medium_quality.min_quality} / ${awarenessSystem.breakthrough_thresholds.medium_quality.awareness_needed} / ${awarenessSystem.breakthrough_thresholds.medium_quality.base_chance}`, source: 'live', configPath: 'markets.market_formulas.awareness_system.breakthrough_thresholds.medium_quality' },
+      { label: 'low_quality (min_quality / awareness_needed / base_chance)', value: `${awarenessSystem.breakthrough_thresholds.low_quality.min_quality} / ${awarenessSystem.breakthrough_thresholds.low_quality.awareness_needed} / ${awarenessSystem.breakthrough_thresholds.low_quality.base_chance}`, source: 'live', configPath: 'markets.market_formulas.awareness_system.breakthrough_thresholds.low_quality' },
+      { label: 'awareness multiplier on hit', value: awarenessSystem.breakthrough_effects.awareness_multiplier, source: 'live', configPath: 'markets.market_formulas.awareness_system.breakthrough_effects.awareness_multiplier', ref: 'ReleaseProcessor.ts:757' },
       { label: 'decay reduction at quality≥85', value: awarenessSystem.awareness_decay_rates.quality_bonus_reduction, source: 'live', configPath: 'markets.market_formulas.awareness_system.awareness_decay_rates.quality_bonus_reduction', ref: 'ReleaseProcessor.ts:801-816' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'ReleaseProcessor.ts:738-757, 801-816',
-    note: 'C79: thresholds SHADOW markets.json awareness_system.breakthrough_thresholds — editing that JSON does nothing (see non-edges).',
+    note: 'C79 RESOLVED (slice 1, knob liberation): the breakthrough tier thresholds now READ markets.json awareness_system.breakthrough_thresholds (values were byte-identical to the old literals) — the shadow is gone.',
   },
   {
     id: 'e-hype-awareness-attach',
@@ -560,13 +585,17 @@ export const EDGES: SystemEdge[] = [
     from: 'streams',
     to: 'artist_popularity',
     mechanism: 'Log-scaled popularity growth',
-    formula: 'threshold = 3000 × 2^(pop/25); points = min(10, log10(streams/threshold)); mult = 0.2 + 1.3/(1+(pop/35)^4)',
+    formula: 'threshold = base × exp_base^(pop/divisor); points = min(cap, log10(streams/threshold)); mult = dim_base + dim_range/(1+(pop/saturation)^exp)',
     values: [
-      { label: 'baseThreshold', value: 3000, source: 'hardcoded', ref: 'ReleaseProcessor.ts:861-863' },
-      { label: 'saturationPoint', value: 35, source: 'hardcoded', ref: 'ReleaseProcessor.ts:861-863' },
+      { label: 'base_threshold', value: popularitySaturation.base_threshold, source: 'live', configPath: 'markets.market_formulas.popularity_saturation.base_threshold', ref: 'ReleaseProcessor.calculateStreamingPopularityBonus' },
+      { label: 'saturation_point', value: popularitySaturation.saturation_point, source: 'live', configPath: 'markets.market_formulas.popularity_saturation.saturation_point' },
+      { label: 'threshold exp_base / divisor', value: `${popularitySaturation.dynamic_threshold_exponent_base} / ${popularitySaturation.dynamic_threshold_divisor}`, source: 'live', configPath: 'markets.market_formulas.popularity_saturation' },
+      { label: 'max_stream_points / saturation_exponent', value: `${popularitySaturation.max_stream_points} / ${popularitySaturation.saturation_exponent}`, source: 'live', configPath: 'markets.market_formulas.popularity_saturation' },
+      { label: 'diminishing base / range / min_bonus', value: `${popularitySaturation.diminishing_multiplier_base} / ${popularitySaturation.diminishing_multiplier_range} / ${popularitySaturation.min_bonus}`, source: 'live', configPath: 'markets.market_formulas.popularity_saturation' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'ReleaseProcessor.ts:619-648, 861-863',
+    note: 'Knob liberation (slice 1): baseThreshold/saturationPoint + shape constants moved to markets.json popularity_saturation (Slice 6 reuses this block for tour saturation).',
   },
   {
     id: 'e-producer-quality',
@@ -575,12 +604,12 @@ export const EDGES: SystemEdge[] = [
     mechanism: 'Talent/producer skill blend',
     formula: 'quality = talent × 0.65 + producerSkill × 0.35',
     values: [
-      { label: 'weights (talent/producer)', value: '0.65 / 0.35', source: 'hardcoded', ref: 'SongGenerationProcessor.ts:395-405' },
-      { label: 'skill map (local/regional/national/legendary)', value: '40 / 55 / 75 / 95', source: 'hardcoded', ref: 'SongGenerationProcessor.ts:395-405' },
+      { label: 'weights (talent/producer)', value: `${songQualityFormula.talent_weight} / ${songQualityFormula.producer_weight}`, source: 'live', configPath: 'quality.song_quality_formula.talent_weight / producer_weight', ref: 'SongGenerationProcessor.calculateEnhancedSongQuality' },
+      { label: 'skill map (local/regional/national/legendary)', value: `${songQualityFormula.producer_skill_map.local} / ${songQualityFormula.producer_skill_map.regional} / ${songQualityFormula.producer_skill_map.national} / ${songQualityFormula.producer_skill_map.legendary}`, source: 'live', configPath: 'quality.song_quality_formula.producer_skill_map' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'SongGenerationProcessor.calculateEnhancedSongQuality, SongGenerationProcessor.ts:395-405',
-    note: 'C79-class: quality.json producer_tier_system.multiplier is NOT read here (see non-edges) — it only affects cost/duration.',
+    note: 'Knob liberation (slice 1): the quality skill-map + weights now live in quality.json song_quality_formula (DISTINCT from producer_tier_system.multiplier, which still only feeds cost/duration — see non-edges).',
   },
   {
     id: 'e-time-quality',
@@ -589,12 +618,12 @@ export const EDGES: SystemEdge[] = [
     mechanism: 'Time multiplier + work ethic',
     formula: 'quality *= timeMult × (1 + workEthic/100 × 0.3)',
     values: [
-      { label: 'timeMult (rushed/standard/extended/perfectionist)', value: '0.7 / 1.0 / 1.1 / 1.2', source: 'hardcoded', ref: 'SongGenerationProcessor.ts:409-418' },
-      { label: 'work ethic scale', value: 0.3, source: 'hardcoded', ref: 'SongGenerationProcessor.ts:409-418' },
+      { label: 'timeMult (rushed/standard/extended/perfectionist)', value: `${songQualityFormula.time_multipliers.rushed} / ${songQualityFormula.time_multipliers.standard} / ${songQualityFormula.time_multipliers.extended} / ${songQualityFormula.time_multipliers.perfectionist}`, source: 'live', configPath: 'quality.song_quality_formula.time_multipliers', ref: 'SongGenerationProcessor.calculateEnhancedSongQuality' },
+      { label: 'work ethic scale', value: songQualityFormula.work_ethic_max_bonus, source: 'live', configPath: 'quality.song_quality_formula.work_ethic_max_bonus' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'SongGenerationProcessor.ts:409-418',
-    note: 'C79-class: quality.json time_investment_system.multiplier is NOT read here (see non-edges) — it only affects cost/duration.',
+    note: 'Knob liberation (slice 1): the quality TIME multipliers now live in quality.json song_quality_formula.time_multipliers (DISTINCT from time_investment_system.multiplier, which still only feeds cost/duration — see non-edges).',
   },
   {
     id: 'e-popularity-quality',
@@ -603,11 +632,12 @@ export const EDGES: SystemEdge[] = [
     mechanism: 'Popularity bonus + release fatigue',
     formula: 'quality *= 0.95 + 0.1 × sqrt(pop/100); fatigue *= 0.97^max(0, releaseCount-3)',
     values: [
-      { label: 'popularity bonus coefficients', value: '0.95 / 0.1', source: 'hardcoded', ref: 'SongGenerationProcessor.ts:423' },
-      { label: 'fatigue base / free releases', value: '0.97 / 3', source: 'hardcoded', ref: 'SongGenerationProcessor.ts:429' },
+      { label: 'popularity bonus coefficients', value: `${songQualityFormula.popularity_factor_base} / ${songQualityFormula.popularity_factor_range}`, source: 'live', configPath: 'quality.song_quality_formula.popularity_factor_base / popularity_factor_range', ref: 'SongGenerationProcessor.ts:423' },
+      { label: 'fatigue base / free releases', value: `${songQualityFormula.fatigue_base} / ${songQualityFormula.fatigue_free_songs}`, source: 'live', configPath: 'quality.song_quality_formula.fatigue_base / fatigue_free_songs', ref: 'SongGenerationProcessor.ts:429' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'SongGenerationProcessor.ts:423,429',
+    note: 'Knob liberation (slice 1): popularity + fatigue quality coefficients moved to quality.json song_quality_formula.',
   },
   {
     id: 'e-money-quality',
@@ -626,13 +656,15 @@ export const EDGES: SystemEdge[] = [
     id: 'e-mood-quality',
     from: 'artist_mood',
     to: 'song_quality',
-    mechanism: 'Mood multiplier (snapshotted at generation)',
-    formula: 'quality *= 0.9 + 0.2 × (mood/100)',
+    mechanism: 'Mood multiplier + variance widening (snapshotted at generation)',
+    formula: 'quality *= 0.9 + 0.2 × (mood/100)  •  varianceBand *= 1 + max(0, (mood_baseline − mood)/mood_baseline) × mood_variance_widening_max',
     values: [
-      { label: 'mood multiplier coefficients', value: '0.9 / 0.2', source: 'hardcoded', ref: 'SongGenerationProcessor.ts:445' },
+      { label: 'mood multiplier coefficients', value: `${songQualityFormula.mood_factor_base} / ${songQualityFormula.mood_factor_range}`, source: 'live', configPath: 'quality.song_quality_formula.mood_factor_base / mood_factor_range', ref: 'SongGenerationProcessor.ts:445' },
+      { label: 'variance widening (baseline / max)', value: `${songQualityFormula.mood_baseline} / ${songQualityFormula.mood_variance_widening_max}`, source: 'live', configPath: 'quality.song_quality_formula.mood_baseline / mood_variance_widening_max', ref: 'SongGenerationProcessor.calculateEnhancedSongQuality (computeMoodVarianceWiden)' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'SongGenerationProcessor.ts:445',
+    note: 'Two distinct effects. (1) Knob liberation (slice 1): mood quality coefficients moved to quality.json song_quality_formula — the unchanged 0.9–1.1 mean multiplier. (2) Mood → variance widening (slice 4): low mood WIDENS the variance band (volatile, not uniformly worse); mood ≥ mood_baseline (50) → ×1.0 (no narrowing above baseline), mood 0 → ×1.4. No RNG draw added/reordered — only the band width scales.',
   },
   {
     id: 'e-variance-quality',
@@ -684,6 +716,20 @@ export const EDGES: SystemEdge[] = [
     ref: 'FinancialSystem.ts:818',
   },
   {
+    id: 'e-energy-tour',
+    from: 'artist_energy',
+    to: 'tour_revenue',
+    mechanism: 'Sell-through — energy effectiveness multiplier',
+    formula: 'energyFactor = energy_min + (energy_max − energy_min) × (energy/100); sellThrough = min(1.0, (base + reputation + popularity + budget + venueSize) × energyFactor)',
+    values: [
+      { label: 'enabled', value: String(tourRevenue.energy_effectiveness.enabled), source: 'live', configPath: 'markets.market_formulas.tour_revenue.energy_effectiveness.enabled' },
+      { label: 'min / max (energy 0 → min, 100 → max, default 50 → 0.975)', value: `${tourRevenue.energy_effectiveness.min} / ${tourRevenue.energy_effectiveness.max}`, source: 'live', configPath: 'markets.market_formulas.tour_revenue.energy_effectiveness', ref: 'FinancialSystem.computeEnergyFactor' },
+    ],
+    hardcoded: false,
+    ref: 'FinancialSystem.ts calculateSellThroughBreakdown / calculateTourRevenueWithCapacity',
+    note: 'Balance-integrity slice 5: artist energy finally consumed. Multiplies the summed sell-through BEFORE the 1.0 cap — a rested act (energy 100 → ×1.05) sells the room harder; a run-down one (energy 10 → ×0.915) does not. Threaded through TourProcessor execution + estimatePlanningForeshadow so preview matches the roll.',
+  },
+  {
     id: 'e-money-tour',
     from: 'money',
     to: 'tour_revenue',
@@ -691,10 +737,12 @@ export const EDGES: SystemEdge[] = [
     formula: 'sellThrough = sell_through_base + (budget/capacity) × 11/100 × 0.15',
     values: [
       { label: 'sell_through_base', value: tourRevenue.sell_through_base, source: 'live', configPath: 'markets.market_formulas.tour_revenue.sell_through_base' },
-      { label: 'budget scale (11/100 × 0.15)', value: '11/100 × 0.15', source: 'hardcoded', ref: 'FinancialSystem.ts:819' },
+      { label: 'budget_sell_through_coefficient', value: tourRevenue.budget_sell_through_coefficient, source: 'live', configPath: 'markets.market_formulas.tour_revenue.budget_sell_through_coefficient', ref: 'FinancialSystem.ts:819' },
+      { label: 'budget_sell_through_scale', value: tourRevenue.budget_sell_through_scale, source: 'live', configPath: 'markets.market_formulas.tour_revenue.budget_sell_through_scale' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'FinancialSystem.ts:819',
+    note: 'Knob liberation (slice 1): budget sell-through coefficients (11, 0.15) moved to markets.json tour_revenue; formula is (budget/capacity) × coeff/100 × scale.',
   },
   {
     id: 'e-access-tour-scaling',
@@ -703,12 +751,13 @@ export const EDGES: SystemEdge[] = [
     mechanism: 'Venue capacity scaling + ticket price',
     formula: 'venueSizeModifier = (1-posInTier) × 0.5; popularityEffectiveness = 1-posInTier × 0.3; ticket = ticket_price_base × (1 + (pop/100) × (2.5 - posInTier×2)), cap-mult 0.003',
     values: [
-      { label: 'venueSizeModifier / popularityEffectiveness coefficients', value: '0.5 / 0.3', source: 'hardcoded', ref: 'FinancialSystem.ts:461-462' },
+      { label: 'venue_size_bonus / popularity_scaling_factor', value: `${tourVenueScaling.venue_size_bonus} / ${tourVenueScaling.popularity_scaling_factor}`, source: 'live', configPath: 'markets.market_formulas.tour_revenue.venue_scaling', ref: 'FinancialSystem.getTourFormulas' },
       { label: 'ticket_price_base', value: tourRevenue.ticket_price_base, source: 'live', configPath: 'markets.market_formulas.tour_revenue.ticket_price_base', ref: 'FinancialSystem.ts:463' },
-      { label: 'ticket formula scaling (2.5, cap-mult 0.003)', value: '2.5 / 0.003', source: 'hardcoded', ref: 'FinancialSystem.ts:463,643' },
+      { label: 'ticket scarcity (max_multiplier / position_penalty) + capacity mult', value: `${tourRevenue.ticket_scarcity_max_multiplier} / ${tourRevenue.ticket_scarcity_position_penalty} / ${tourVenueScaling.ticket_price_capacity_multiplier}`, source: 'live', configPath: 'markets.market_formulas.tour_revenue.ticket_scarcity_max_multiplier / ticket_scarcity_position_penalty / venue_scaling.ticket_price_capacity_multiplier', ref: 'FinancialSystem.calculateTicketPrice' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'FinancialSystem.ts:461-463, 643',
+    note: 'Knob liberation (slice 1): VENUE_SCALING + ticket scarcity constants moved to markets.json tour_revenue.venue_scaling / ticket_scarcity_*.',
   },
   {
     id: 'e-tour-aggregation',
@@ -718,34 +767,40 @@ export const EDGES: SystemEdge[] = [
     formula: 'revenue = capacity × sellThrough × ticket × (1 + merch_percentage) × cities; costs = venue cap×4 + production cap×2.7 per city',
     values: [
       { label: 'merch_percentage', value: tourRevenue.merch_percentage, source: 'live', configPath: 'markets.market_formulas.tour_revenue.merch_percentage', ref: 'FinancialSystem.ts:825-829' },
-      { label: 'venue cost / production cost multipliers', value: '×4 / ×2.7', source: 'hardcoded', ref: 'FinancialSystem.ts:807-808' },
+      { label: 'venue cost / production cost per-capacity', value: `×${tourRevenue.venue_fee_per_capacity} / ×${tourRevenue.production_fee_per_capacity}`, source: 'live', configPath: 'markets.market_formulas.tour_revenue.venue_fee_per_capacity / production_fee_per_capacity', ref: 'FinancialSystem.ts:807-808' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'FinancialSystem.ts:807-808, 825-829',
+    note: 'Knob liberation (slice 1): per-city venue/production cost multipliers moved to markets.json tour_revenue.',
   },
   {
     id: 'e-tour-mood',
     from: 'tour_revenue',
     to: 'artist_mood',
     mechanism: 'Attendance-based mood swing',
-    formula: '<30% → -3; 30-50% → 0; 50-85% → +5; >85% → +8',
+    formula: `<${tourRevenue.mood_reactions.poor_threshold}% → ${tourRevenue.mood_reactions.poor_delta}; –${tourRevenue.mood_reactions.neutral_max}% → ${tourRevenue.mood_reactions.neutral_delta}; –${tourRevenue.mood_reactions.good_max}% → +${tourRevenue.mood_reactions.good_delta}; >${tourRevenue.mood_reactions.good_max}% → +${tourRevenue.mood_reactions.great_delta}`,
     values: [
-      { label: 'attendance bands → mood delta', value: '-3 / 0 / +5 / +8', source: 'hardcoded', ref: 'TourProcessor.ts:338-345' },
+      { label: 'thresholds (poor/neutral_max/good_max)', value: `${tourRevenue.mood_reactions.poor_threshold} / ${tourRevenue.mood_reactions.neutral_max} / ${tourRevenue.mood_reactions.good_max}`, source: 'live', configPath: 'markets.market_formulas.tour_revenue.mood_reactions', ref: 'TourProcessor.ts:338-345' },
+      { label: 'deltas (poor/neutral/good/great)', value: `${tourRevenue.mood_reactions.poor_delta} / ${tourRevenue.mood_reactions.neutral_delta} / ${tourRevenue.mood_reactions.good_delta} / ${tourRevenue.mood_reactions.great_delta}`, source: 'live', configPath: 'markets.market_formulas.tour_revenue.mood_reactions' },
     ],
-    hardcoded: true,
+    hardcoded: false,
     ref: 'TourProcessor.ts:338-345',
+    note: 'Knob liberation (slice 1): attendance→mood reaction table moved to markets.json tour_revenue.mood_reactions.',
   },
   {
     id: 'e-tour-popularity',
     from: 'tour_revenue',
     to: 'artist_popularity',
-    mechanism: 'Attendance-based popularity gain',
-    formula: 'only attendance >70%: +1..+7 scaled by crowd size',
+    mechanism: 'Attendance-based popularity gain (saturation-limited)',
+    formula: `only attendance >${tourRevenue.popularity_reactions.attendance_threshold}%: gain = round(tableGain(crowd size, ${tourRevenue.popularity_reactions.tiers.map((t: any) => t.gain).join('..+')}) × min(1, satMult(pop))), floor 0; satMult(pop) = ${popularitySaturation.diminishing_multiplier_base} + ${popularitySaturation.diminishing_multiplier_range}/(1+(pop/${popularitySaturation.saturation_point})^${popularitySaturation.saturation_exponent})`,
     values: [
-      { label: 'attendance threshold / gain range', value: '>70% / +1..+7', source: 'hardcoded', ref: 'TourProcessor.ts:350-361' },
+      { label: 'attendance_threshold', value: tourRevenue.popularity_reactions.attendance_threshold, source: 'live', configPath: 'markets.market_formulas.tour_revenue.popularity_reactions.attendance_threshold', ref: 'TourProcessor.ts:350-361' },
+      { label: 'crowd-size tiers (max_attendees → gain)', value: tourRevenue.popularity_reactions.tiers.map((t: any) => `${t.max_attendees ?? '∞'}:+${t.gain}`).join(' / '), source: 'live', configPath: 'markets.market_formulas.tour_revenue.popularity_reactions.tiers' },
+      { label: 'saturation (base/range/point/exp) — min(1,·) so table is the max', value: `${popularitySaturation.diminishing_multiplier_base} / ${popularitySaturation.diminishing_multiplier_range} / ${popularitySaturation.saturation_point} / ${popularitySaturation.saturation_exponent}`, source: 'live', configPath: 'markets.market_formulas.popularity_saturation', ref: 'shared/utils/popularitySaturation.ts' },
     ],
-    hardcoded: true,
-    ref: 'TourProcessor.ts:350-361',
+    hardcoded: false,
+    ref: 'TourProcessor.ts:350-361 (saturation), shared/utils/popularitySaturation.ts',
+    note: 'Slice 6: tour popularity gains now run through the SAME diminishing-returns curve as streaming (shared/utils/popularitySaturation.ts), clamped min(1, satMult) so the reaction table stays the MAXIMUM — saturation only reduces gains for already-famous acts, floor 0. Table itself moved to config in slice 1.',
   },
   {
     id: 'e-streams-chart',
@@ -771,6 +826,21 @@ export const EDGES: SystemEdge[] = [
     ],
     hardcoded: false,
     ref: 'game-engine.ts:1150-1190',
+  },
+  {
+    id: 'e-flop-reputation',
+    from: 'streams',
+    to: 'reputation',
+    mechanism: 'Flop penalty — reputation sink on an underperforming release (balance-integrity slice 2)',
+    formula: 'FLOP if releaseWeekRevenue < flop_revenue_ratio × totalInvestment AND totalInvestment ≥ flop_investment_floor, where totalInvestment = Σ song.productionBudget + release.marketingBudget. On flop: reputation −flop_penalty (clamp ≥0), once per release (flags.flop_penalty_applied_<releaseId>).',
+    values: [
+      { label: 'flop_penalty', value: reputationSystem.flop_penalty, source: 'live', configPath: 'progression.reputation_system.flop_penalty', ref: 'ReleaseProcessor.ts processPlannedReleases (flop block)' },
+      { label: 'flop_revenue_ratio', value: reputationSystem.flop_revenue_ratio, source: 'live', configPath: 'progression.reputation_system.flop_revenue_ratio' },
+      { label: 'flop_investment_floor', value: reputationSystem.flop_investment_floor, source: 'live', configPath: 'progression.reputation_system.flop_investment_floor' },
+    ],
+    hardcoded: false,
+    ref: 'ReleaseProcessor.processPlannedReleases (flop penalty block)',
+    note: 'RESOLVED 2026-07-10 (balance-integrity slice 2): was non-edge ne-flop-reputation (flop_penalty dead). Now the game\'s first reputation SINK — a record whose release-week revenue falls below flop_revenue_ratio of its production+marketing investment (and clears the flop_investment_floor) costs the label flop_penalty reputation, once.',
   },
   {
     id: 'e-reputation-access',
@@ -898,13 +968,6 @@ export const NON_EDGES: NonEdge[] = [
     evidence: 'No consumer anywhere in the streaming formulas (FinancialSystem.ts:726-789, 935-1063). Display-only, confirmed.',
   },
   {
-    id: 'ne-energy-tour',
-    from: 'artist_energy',
-    to: 'tour_revenue',
-    claim: 'Artist energy should affect tour performance/sell-through.',
-    evidence: 'No consumer in TourProcessor.ts or FinancialSystem.ts:796-928. Display-only, confirmed.',
-  },
-  {
     id: 'ne-reputation-decay',
     from: 'reputation',
     to: 'reputation',
@@ -912,32 +975,25 @@ export const NON_EDGES: NonEdge[] = [
     evidence: 'progression.json reputation_system.decay_rate (0.1) is not consumed anywhere in the engine — reputation never decays in code.',
   },
   {
-    id: 'ne-flop-reputation',
-    from: 'streams',
+    id: 'ne-goal-failure-reputation',
+    from: 'reputation',
     to: 'reputation',
-    claim: 'A flop release (low streams/chart failure) should cost reputation.',
-    evidence: 'progression.json reputation_system.flop_penalty (3) and goal_failure_penalty (2) are configured but dead — no engine code applies them.',
-  },
-  {
-    id: 'ne-breakthrough-thresholds-shadowed',
-    from: 'song_quality',
-    to: 'awareness',
-    claim: 'Editing markets.json breakthrough_thresholds should retune the breakthrough roll.',
-    evidence: 'SHADOWED (C79): ReleaseProcessor.ts:738-743 hardcodes its own 80/70/60 thresholds instead of reading markets.json market_formulas.awareness_system.breakthrough_thresholds. Same debt class: base_streams_per_point is hardcoded at server/data/gameData.ts:462, independent of markets.json.',
+    claim: 'Missing a campaign/tier goal should cost reputation, per goal_failure_penalty.',
+    evidence: 'progression.json reputation_system.goal_failure_penalty (2) is still configured but dead — no engine code applies it. (The sibling flop_penalty is now LIVE — see edge e-flop-reputation, resolved balance-integrity slice 2 2026-07-10.)',
   },
   {
     id: 'ne-producer-multiplier-shadowed',
     from: 'producer_tier',
     to: 'song_quality',
     claim: 'quality.json producer_tier_system.multiplier should scale song quality.',
-    evidence: 'NOT used by the quality formula — SongGenerationProcessor.ts:395-405 hardcodes its own skill map (local 40/regional 55/national 75/legendary 95). The JSON multiplier only feeds cost/duration.',
+    evidence: 'Still NOT the right knob — producer_tier_system.multiplier feeds cost/duration ONLY. As of slice 1 (knob liberation), the quality skill-map IS tunable, but via a DISTINCT block: quality.json song_quality_formula.producer_skill_map (local 40/regional 55/national 75/legendary 95). Tune that, not producer_tier_system.multiplier. See edge e-producer-quality.',
   },
   {
     id: 'ne-time-multiplier-shadowed',
     from: 'time_investment',
     to: 'song_quality',
     claim: 'quality.json time_investment_system.multiplier should scale song quality.',
-    evidence: 'NOT used by the quality formula — SongGenerationProcessor.ts:409-418 hardcodes its own multiplier set (rushed 0.7/standard 1.0/extended 1.1/perfectionist 1.2). The JSON multiplier only feeds cost/duration.',
+    evidence: 'Still NOT the right knob — time_investment_system.multiplier feeds cost/duration ONLY. As of slice 1 (knob liberation), the quality time multipliers ARE tunable, but via a DISTINCT block: quality.json song_quality_formula.time_multipliers (rushed 0.7/standard 1.0/extended 1.1/perfectionist 1.2). Tune that, not time_investment_system.multiplier. See edge e-time-quality.',
   },
   {
     id: 'ne-mood-streams-live',

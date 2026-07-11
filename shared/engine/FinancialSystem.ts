@@ -27,6 +27,32 @@ export interface TourCalculationParams {
   localReputation: number;
   cities: number;
   marketingBudget: number;
+  // Balance-integrity slice 5 (energy -> tour effectiveness): artist energy (0-100).
+  // Missing/null is treated as 50 (the schema default) inside computeEnergyFactor.
+  energy?: number | null;
+}
+
+/**
+ * Balance-integrity slice 5 — pure, RNG-free helper mapping an artist's energy
+ * (0-100) to a tour sell-through multiplier. Exported for tests + the Systems Map.
+ *
+ *   energyFactor = min + (max - min) * (energy / 100)     [linear in energy]
+ *
+ * Applied MULTIPLICATIVELY to the summed sell-through BEFORE the 1.0 cap (see
+ * calculateSellThroughBreakdown / calculateTourRevenueWithCapacity). With the
+ * default band {min: 0.90, max: 1.05}: energy 0 -> 0.90, 50 -> 0.975, 100 -> 1.05.
+ * A missing/null energy is treated as 50. `enabled: false` short-circuits to 1.0.
+ */
+export function computeEnergyFactor(
+  energy: number | null | undefined,
+  cfg: { enabled?: boolean; min?: number; max?: number }
+): number {
+  if (cfg?.enabled === false) return 1.0;
+  const min = cfg?.min ?? 0.90;
+  const max = cfg?.max ?? 1.05;
+  const e = (energy === null || energy === undefined) ? 50 : energy;
+  const clamped = Math.max(0, Math.min(100, e));
+  return min + (max - min) * (clamped / 100);
 }
 
 export interface CityBreakdown {
@@ -487,6 +513,39 @@ export class FinancialSystem {
   }
 
   /**
+   * Balance-integrity slice 1 (knob liberation): tour cost/scaling constants that
+   * were FinancialSystem.CONSTANTS.VENUE_SCALING literals and per-city ×4 / ×2.7 /
+   * budget 11×0.15 / scarcity 2.5/2.0 literals. Now read from markets.json
+   * market_formulas.tour_revenue, each with the original engine literal as the
+   * code-side fallback default so behavior is byte-identical. Read via
+   * getBalanceConfigSync (optional-chained) so thin client contexts without it fall
+   * back cleanly.
+   */
+  private getTourFormulas() {
+    const tf = ((this.gameData.getBalanceConfigSync?.()?.market_formulas?.tour_revenue) || {}) as Record<string, any>;
+    const vs = (tf.venue_scaling || {}) as Record<string, any>;
+    // Balance-integrity slice 5: energy -> tour sell-through band. Fallback
+    // defaults identical to markets.json (slice-1 config pattern).
+    const ee = (tf.energy_effectiveness || {}) as Record<string, any>;
+    return {
+      venue_fee_per_capacity: tf.venue_fee_per_capacity ?? 4,
+      production_fee_per_capacity: tf.production_fee_per_capacity ?? 2.7,
+      budget_sell_through_coefficient: tf.budget_sell_through_coefficient ?? 11,
+      budget_sell_through_scale: tf.budget_sell_through_scale ?? 0.15,
+      popularity_scaling_factor: vs.popularity_scaling_factor ?? this.CONSTANTS.VENUE_SCALING.popularity_scaling_factor,
+      venue_size_bonus: vs.venue_size_bonus ?? this.CONSTANTS.VENUE_SCALING.venue_size_bonus,
+      ticket_price_capacity_multiplier: vs.ticket_price_capacity_multiplier ?? this.CONSTANTS.VENUE_SCALING.ticket_price_capacity_multiplier,
+      ticket_scarcity_max_multiplier: tf.ticket_scarcity_max_multiplier ?? 2.5,
+      ticket_scarcity_position_penalty: tf.ticket_scarcity_position_penalty ?? 2.0,
+      energy_effectiveness: {
+        enabled: ee.enabled ?? true,
+        min: ee.min ?? 0.90,
+        max: ee.max ?? 1.05
+      }
+    };
+  }
+
+  /**
    * Validates tour calculation parameters with strict validation - NO FALLBACKS
    * PHASE 1: Input validation that throws errors for invalid inputs
    */
@@ -572,7 +631,8 @@ export class FinancialSystem {
       params.localReputation,
       params.cities,
       params.marketingBudget,
-      params.venueTier
+      params.venueTier,
+      params.energy // Balance-integrity slice 5: thread energy into the total-revenue path
     );
 
     // Return detailed breakdown with city-by-city data
@@ -636,11 +696,13 @@ export class FinancialSystem {
     // Use VenueCapacityManager for position calculation
     const venuePositionInTier = VenueCapacityManager.calculatePositionInTier(venueCapacity, venueTier, this.gameData);
 
+    const tourF = this.getTourFormulas();
+
     // Base price calculation using enhanced multiplier
-    const basePrice = config.ticket_price_base + (venueCapacity * this.CONSTANTS.VENUE_SCALING.ticket_price_capacity_multiplier);
+    const basePrice = config.ticket_price_base + (venueCapacity * tourF.ticket_price_capacity_multiplier);
 
     // Scarcity-based pricing: Popular artists in smaller venues charge premium
-    const scarcityMultiplier = 1 + (artistPopularity / 100) * (2.5 - venuePositionInTier * 2.0);
+    const scarcityMultiplier = 1 + (artistPopularity / 100) * (tourF.ticket_scarcity_max_multiplier - venuePositionInTier * tourF.ticket_scarcity_position_penalty);
 
     return basePrice * scarcityMultiplier;
   }
@@ -652,9 +714,10 @@ export class FinancialSystem {
     const marketingBudgetPerCity = params.marketingBudget > 0 ? params.marketingBudget / params.cities : 0;
 
     // Use VenueCapacityManager for position calculation
+    const tourF = this.getTourFormulas();
     const venuePositionInTier = VenueCapacityManager.calculatePositionInTier(venueCapacity, venueTier, this.gameData);
-    const popularityEffectiveness = 1.0 - (venuePositionInTier * this.CONSTANTS.VENUE_SCALING.popularity_scaling_factor);
-    const venueSizeModifier = (1 - venuePositionInTier) * this.CONSTANTS.VENUE_SCALING.venue_size_bonus;
+    const popularityEffectiveness = 1.0 - (venuePositionInTier * tourF.popularity_scaling_factor);
+    const venueSizeModifier = (1 - venuePositionInTier) * tourF.venue_size_bonus;
 
     // Base calculations
     const baseRate = config.sell_through_base;
@@ -664,11 +727,15 @@ export class FinancialSystem {
     const adjustedPopularityBonus = (params.artistPopularity / 100) * config.local_popularity_weight * popularityEffectiveness;
 
     const budgetQualityBonus = marketingBudgetPerCity > 0
-      ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15
+      ? (marketingBudgetPerCity / venueCapacity) * tourF.budget_sell_through_coefficient / 100 * tourF.budget_sell_through_scale
       : 0;
 
-    // Add venue size modifier to final calculation
-    const finalRate = Math.min(1.0, baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier);
+    // Balance-integrity slice 5: artist energy multiplies the summed sell-through
+    // BEFORE the 1.0 cap (rested acts sell the room harder). Cap ordering: factor
+    // applied to the sum, THEN Math.min(1.0, ...) — so a high-energy act can push
+    // an already-strong show toward capacity but never over 100%.
+    const energyFactor = computeEnergyFactor(params.energy, tourF.energy_effectiveness);
+    const finalRate = Math.min(1.0, (baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier) * energyFactor);
 
     return {
       baseRate,
@@ -743,12 +810,19 @@ export class FinancialSystem {
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
     // console.log(`[DEBUG] Access multiplier for ${playlistAccess}:`, playlistMultiplier);
     
+    // Balance-integrity slice 1 (knob liberation): these scaling constants were
+    // FinancialSystem.CONSTANTS literals; now read from streaming_calculation
+    // config with the original literal as the fallback default (byte-identical).
+    const playlistComponentScale = config.playlist_component_scale ?? this.CONSTANTS.PLAYLIST_COMPONENT_SCALE;
+    const marketingScaleDivisor = config.marketing_scale_divisor ?? this.CONSTANTS.MARKETING_SCALE.DIVISOR;
+    const marketingScaleMultiplier = config.marketing_scale_multiplier ?? this.CONSTANTS.MARKETING_SCALE.MULTIPLIER;
+
     // Calculate base streams using updated formula with popularity
     const baseStreams =
       (quality * config.quality_weight) +
-      (playlistMultiplier * config.playlist_weight * this.CONSTANTS.PLAYLIST_COMPONENT_SCALE) +
+      (playlistMultiplier * config.playlist_weight * playlistComponentScale) +
       (reputation * config.reputation_weight) +
-      (Math.sqrt(adSpend / this.CONSTANTS.MARKETING_SCALE.DIVISOR) * config.marketing_weight * this.CONSTANTS.MARKETING_SCALE.MULTIPLIER) +
+      (Math.sqrt(adSpend / marketingScaleDivisor) * config.marketing_weight * marketingScaleMultiplier) +
       (artistPopularity * config.popularity_weight);
     
     // Apply star power amplification if enabled
@@ -770,8 +844,10 @@ export class FinancialSystem {
     //   amplifiedStreams: amplifiedStreams
     // });
 
-    // Apply RNG variance from balance config
-    const variance = this.getRandom(this.CONSTANTS.VARIANCE_RANGE.MIN, this.CONSTANTS.VARIANCE_RANGE.MAX);
+    // Apply RNG variance from balance config (knob liberation: was
+    // CONSTANTS.VARIANCE_RANGE; now streaming_calculation.variance_range).
+    const varianceRange = config.variance_range ?? [this.CONSTANTS.VARIANCE_RANGE.MIN, this.CONSTANTS.VARIANCE_RANGE.MAX];
+    const variance = this.getRandom(varianceRange[0], varianceRange[1]);
     
     // Apply first week multiplier using amplified streams
     const streams = amplifiedStreams * variance * config.first_week_multiplier * config.base_streams_per_point;
@@ -801,11 +877,12 @@ export class FinancialSystem {
     marketingBudgetTotal: number = 0
   ): number {
     const config = this.gameData.getTourConfigSync();
+    const tourF = this.getTourFormulas();
     const venueCapacity = VenueCapacityManager.generateCapacityFromTier(venueTier, this.gameData, this.rng);
-    
+
     // Fixed costs per city
-    const venueFeePerCity = venueCapacity * 4;        // Infrastructure cost
-    const productionFeePerCity = venueCapacity * 2.7; // Production cost
+    const venueFeePerCity = venueCapacity * tourF.venue_fee_per_capacity;        // Infrastructure cost
+    const productionFeePerCity = venueCapacity * tourF.production_fee_per_capacity; // Production cost
 
     // Marketing budget per city (affects quality)
     const marketingBudgetPerCity = marketingBudgetTotal > 0 ? marketingBudgetTotal / cities : 0;
@@ -816,7 +893,7 @@ export class FinancialSystem {
     const baseRate = config.sell_through_base;
     const reputationBonus = (localReputation / 100) * config.reputation_modifier;
     const popularityBonus = (artistPopularity / 100) * config.local_popularity_weight;
-    const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15 : 0;
+    const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * tourF.budget_sell_through_coefficient / 100 * tourF.budget_sell_through_scale : 0;
     
     const sellThrough = Math.min(1.0, baseRate + reputationBonus + popularityBonus + budgetQualityBonus);
     
@@ -842,9 +919,10 @@ export class FinancialSystem {
     cities: number,
     marketingBudgetTotal: number = 0
   ): { totalCosts: number; venueFees: number; productionFees: number; marketingBudget: number; breakdown: { venueFeePerCity: number; productionFeePerCity: number; marketingBudgetPerCity: number } } {
+    const tourF = this.getTourFormulas();
     const venueCapacity = VenueCapacityManager.generateCapacityFromTier(venueTier, this.gameData, this.rng);
-    const venueFeePerCity = venueCapacity * 4;
-    const productionFeePerCity = venueCapacity * 2.7;
+    const venueFeePerCity = venueCapacity * tourF.venue_fee_per_capacity;
+    const productionFeePerCity = venueCapacity * tourF.production_fee_per_capacity;
     const totalVenueFees = venueFeePerCity * cities;
     const totalProductionFees = productionFeePerCity * cities;
     const marketingBudgetPerCity = marketingBudgetTotal / cities;
@@ -870,8 +948,9 @@ export class FinancialSystem {
     cities: number,
     marketingBudgetTotal: number = 0
   ): { totalCosts: number; venueFees: number; productionFees: number; marketingBudget: number; breakdown: { venueFeePerCity: number; productionFeePerCity: number; marketingBudgetPerCity: number } } {
-    const venueFeePerCity = Math.round(venueCapacity * 4);
-    const productionFeePerCity = Math.round(venueCapacity * 2.7);
+    const tourF = this.getTourFormulas();
+    const venueFeePerCity = Math.round(venueCapacity * tourF.venue_fee_per_capacity);
+    const productionFeePerCity = Math.round(venueCapacity * tourF.production_fee_per_capacity);
     const totalVenueFees = venueFeePerCity * cities;
     const totalProductionFees = productionFeePerCity * cities;
     const marketingBudgetPerCity = marketingBudgetTotal / cities;
@@ -898,23 +977,29 @@ export class FinancialSystem {
     localReputation: number,
     cities: number,
     marketingBudgetTotal: number = 0,
-    venueTier?: string
+    venueTier?: string,
+    energy?: number | null // Balance-integrity slice 5: artist energy (0-100), null -> 50
   ): number {
     const config = this.gameData.getTourConfigSync();
+    const tourF = this.getTourFormulas();
     const marketingBudgetPerCity = marketingBudgetTotal > 0 ? marketingBudgetTotal / cities : 0;
 
     // ENHANCED: Use venue size effects for sell-through calculation
     const venuePositionInTier = VenueCapacityManager.calculatePositionInTier(venueCapacity, venueTier, this.gameData);
-    const popularityEffectiveness = 1.0 - (venuePositionInTier * this.CONSTANTS.VENUE_SCALING.popularity_scaling_factor);
-    const venueSizeModifier = (1 - venuePositionInTier) * this.CONSTANTS.VENUE_SCALING.venue_size_bonus;
+    const popularityEffectiveness = 1.0 - (venuePositionInTier * tourF.popularity_scaling_factor);
+    const venueSizeModifier = (1 - venuePositionInTier) * tourF.venue_size_bonus;
 
     // Enhanced sell-through calculation
     const baseRate = config.sell_through_base;
     const reputationBonus = (localReputation / 100) * config.reputation_modifier;
     const adjustedPopularityBonus = (artistPopularity / 100) * config.local_popularity_weight * popularityEffectiveness;
-    const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * 11 / 100 * 0.15 : 0;
+    const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * tourF.budget_sell_through_coefficient / 100 * tourF.budget_sell_through_scale : 0;
 
-    const sellThrough = Math.min(1.0, baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier);
+    // Balance-integrity slice 5: energy multiplies the summed sell-through before
+    // the 1.0 cap — must stay in lockstep with calculateSellThroughBreakdown so
+    // total revenue matches the sum of per-city breakdowns.
+    const energyFactor = computeEnergyFactor(energy, tourF.energy_effectiveness);
+    const sellThrough = Math.min(1.0, (baseRate + reputationBonus + adjustedPopularityBonus + budgetQualityBonus + venueSizeModifier) * energyFactor);
 
     // ENHANCED: Calculate revenue per show using scarcity-based pricing
     const ticketPrice = this.calculateTicketPrice(venueCapacity, artistPopularity, config, venueTier);
@@ -969,8 +1054,10 @@ export class FinancialSystem {
       return 0;
     }
     
-    // Apply reputation and access tier bonuses
-    const reputationBonus = 1 + (reputation - this.CONSTANTS.REPUTATION_BASELINE) * reputationBonusFactor;
+    // Apply reputation and access tier bonuses (knob liberation: reputation
+    // baseline was CONSTANTS.REPUTATION_BASELINE; now ongoing_streams.reputation_baseline).
+    const reputationBaseline = ongoingConfig.reputation_baseline ?? this.CONSTANTS.REPUTATION_BASELINE;
+    const reputationBonus = 1 + (reputation - reputationBaseline) * reputationBonusFactor;
     const playlistMultiplier = this.getAccessMultiplier('playlist', playlistAccess);
     const accessBonus = 1 + (playlistMultiplier - 1) * accessTierBonusFactor;
 
@@ -1082,33 +1169,43 @@ export class FinancialSystem {
       // accumulation happens in ReleaseProcessor, which is the sole live caller.
       // Keeping the dead call meant an extra (now-async) artist fetch for nothing.
 
+      // Balance-integrity slice 1 (knob liberation): the weeks-2-4 per-channel
+      // divisor/effectiveness/scale coefficients + the cap were engine literals;
+      // now read from markets.json market_formulas.ongoing_marketing_factor with
+      // the original literals as fallback defaults (byte-identical).
+      const omf = ((this.gameData.getBalanceConfigSync?.()?.market_formulas?.ongoing_marketing_factor) || {}) as Record<string, any>;
+      const radioCfg = omf.radio || {};
+      const digitalCfg = omf.digital || {};
+      const prCfg = omf.pr || {};
+      const influencerCfg = omf.influencer || {};
+
       // Radio: 85% effectiveness, sustained discovery (weeks 2-4)
       const radioSpend = marketingBreakdown.radio || 0;
       if (radioSpend > 0) {
-        totalMarketingBoost += (radioSpend / 10000) * 0.85 * 0.2; // Up to 20% boost for $10k
+        totalMarketingBoost += (radioSpend / (radioCfg.divisor ?? 10000)) * (radioCfg.effectiveness ?? 0.85) * (radioCfg.scale ?? 0.2); // Up to 20% boost for $10k
       }
 
       // Digital: 92% effectiveness, algorithm feeding
       const digitalSpend = marketingBreakdown.digital || 0;
       if (digitalSpend > 0) {
-        totalMarketingBoost += (digitalSpend / 8000) * 0.92 * 0.25; // Up to 25% boost for $8k
+        totalMarketingBoost += (digitalSpend / (digitalCfg.divisor ?? 8000)) * (digitalCfg.effectiveness ?? 0.92) * (digitalCfg.scale ?? 0.25); // Up to 25% boost for $8k
       }
 
       // PR: 78% effectiveness, peaks in week 3
       const prSpend = marketingBreakdown.pr || 0;
       if (prSpend > 0) {
-        const prWeekMultiplier = weeksSinceRelease === 3 ? 1.2 : 0.8; // PR peaks week 3
-        totalMarketingBoost += (prSpend / 6000) * 0.78 * 0.3 * prWeekMultiplier;
+        const prWeekMultiplier = weeksSinceRelease === 3 ? (prCfg.week3_multiplier ?? 1.2) : (prCfg.off_peak_multiplier ?? 0.8); // PR peaks week 3
+        totalMarketingBoost += (prSpend / (prCfg.divisor ?? 6000)) * (prCfg.effectiveness ?? 0.78) * (prCfg.scale ?? 0.3) * prWeekMultiplier;
       }
 
       // Influencer: 88% effectiveness, social momentum
       const influencerSpend = marketingBreakdown.influencer || 0;
       if (influencerSpend > 0) {
-        totalMarketingBoost += (influencerSpend / 5000) * 0.88 * 0.22; // Up to 22% boost for $5k
+        totalMarketingBoost += (influencerSpend / (influencerCfg.divisor ?? 5000)) * (influencerCfg.effectiveness ?? 0.88) * (influencerCfg.scale ?? 0.22); // Up to 22% boost for $5k
       }
 
       // Cap total marketing boost at 50%
-      return Math.min(totalMarketingBoost, 1.5);
+      return Math.min(totalMarketingBoost, omf.max_boost ?? 1.5);
     } catch (error) {
       console.warn(`[MARKETING FACTOR] Failed to calculate marketing factor for song ${song.id}:`, error);
       return 1.0; // Fallback to no boost

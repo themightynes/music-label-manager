@@ -79,6 +79,9 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     // lets the recording-week scenario actually exercise the quality path.
     quality_system: quality.quality_system,
     producer_tier_system: quality.producer_tier_system,
+    // Balance-integrity slice 1 (knob liberation) — mirror ServerGameData's
+    // assembled balance so getBalanceConfigSync().song_quality_formula resolves.
+    song_quality_formula: quality.song_quality_formula,
     ...config,
   };
   const streaming = marketFormulas?.streaming_calculation;
@@ -116,10 +119,43 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       marketing_weight: streaming.marketing_weight,
       popularity_weight: streaming.popularity_weight,
       first_week_multiplier: streaming.first_week_multiplier,
-      base_streams_per_point: 1000,
+      // Balance-integrity slice 1 (knob liberation) — mirror ServerGameData:
+      // these are now config-driven with the original literals as fallback.
+      base_streams_per_point: streaming.base_streams_per_point ?? 1000,
+      playlist_component_scale: streaming.playlist_component_scale ?? 100,
+      marketing_scale_divisor: streaming.marketing_scale_divisor ?? 1000,
+      marketing_scale_multiplier: streaming.marketing_scale_multiplier ?? 50,
+      variance_range: streaming.variance_range ?? [0.9, 1.1],
       star_power_amplification: streaming.star_power_amplification,
       ongoing_streams: streaming.ongoing_streams,
     }),
+    // Mirror ServerGameData.getSongQualityFormulaConfigSync (balance-integrity
+    // slice 1 — knob liberation). Reads quality.json song_quality_formula with the
+    // original engine literals as fallback defaults.
+    getSongQualityFormulaConfigSync: () => {
+      const sqf = (quality.song_quality_formula ?? {}) as Record<string, any>;
+      return {
+        talent_weight: sqf.talent_weight ?? 0.65,
+        producer_weight: sqf.producer_weight ?? 0.35,
+        producer_skill_map: sqf.producer_skill_map ?? { local: 40, regional: 55, national: 75, legendary: 95 },
+        default_producer_skill: sqf.default_producer_skill ?? 40,
+        time_multipliers: sqf.time_multipliers ?? { rushed: 0.7, standard: 1.0, extended: 1.1, perfectionist: 1.2 },
+        default_time_multiplier: sqf.default_time_multiplier ?? 1.0,
+        work_ethic_max_bonus: sqf.work_ethic_max_bonus ?? 0.3,
+        popularity_factor_base: sqf.popularity_factor_base ?? 0.95,
+        popularity_factor_range: sqf.popularity_factor_range ?? 0.1,
+        fatigue_base: sqf.fatigue_base ?? 0.97,
+        fatigue_free_songs: sqf.fatigue_free_songs ?? 3,
+        mood_factor_base: sqf.mood_factor_base ?? 0.9,
+        mood_factor_range: sqf.mood_factor_range ?? 0.2,
+        mood_baseline: sqf.mood_baseline ?? 50,
+        mood_variance_widening_max: sqf.mood_variance_widening_max ?? 0.4,
+        base_variance_max: sqf.base_variance_max ?? 35,
+        base_variance_skill_reduction: sqf.base_variance_skill_reduction ?? 30,
+        breakout_base_chance: sqf.breakout_base_chance ?? 0.05,
+        failure_base_chance: sqf.failure_base_chance ?? 0.1,
+      };
+    },
     // Mirror ServerGameData.getPressConfigSync (server/data/gameData.ts:468)
     getPressConfigSync: () => ({
       base_chance: press.base_chance,

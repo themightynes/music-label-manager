@@ -1656,7 +1656,7 @@ exports[`GameEngine.advanceWeek — golden master > legacy-tour-week: Mini-Tour 
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Legacy Tourer",
-        "popularity": 61,
+        "popularity": 60,
         "signed": true,
         "signedWeek": null,
         "signingCost": null,
@@ -2084,7 +2084,6 @@ Performance Indicators:
       "<uuid-key>": {
         "energy": 0,
         "mood": 0,
-        "popularity": 1,
       },
     },
     "changes": [
@@ -2095,13 +2094,6 @@ Performance Indicators:
         "importance": "routine",
         "moodChange": 8,
         "type": "mood",
-      },
-      {
-        "amount": 1,
-        "artistId": "<id>",
-        "description": "Legacy Tourer: +1 popularity from 270 attendees (98% capacity)",
-        "importance": "routine",
-        "type": "popularity",
       },
       {
         "amount": 12889,
@@ -2116,7 +2108,7 @@ Performance Indicators:
         "importance": "routine",
         "moodChange": 8,
         "netProfit": 2889,
-        "popularityChange": 1,
+        "popularityChange": 0,
         "projectId": "<id>",
         "source": "tour_performance",
         "ticketsSold": 269,
@@ -2131,12 +2123,6 @@ Performance Indicators:
         "moodChange": -3,
         "source": "weekly_drift",
         "type": "mood",
-      },
-      {
-        "amount": 1,
-        "description": "Legacy Tourer's popularity increased (+1.0)",
-        "importance": "routine",
-        "type": "popularity",
       },
       {
         "amount": -3532,
@@ -4303,7 +4289,7 @@ exports[`GameEngine.advanceWeek — golden master > tour-week: active Mini-Tour 
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Touring Act",
-        "popularity": 61,
+        "popularity": 60,
         "signed": true,
         "signedWeek": null,
         "signingCost": null,
@@ -4732,7 +4718,6 @@ Performance Indicators:
       "<uuid-key>": {
         "energy": 0,
         "mood": 0,
-        "popularity": 1,
       },
     },
     "changes": [
@@ -4743,13 +4728,6 @@ Performance Indicators:
         "importance": "routine",
         "moodChange": 8,
         "type": "mood",
-      },
-      {
-        "amount": 1,
-        "artistId": "<id>",
-        "description": "Touring Act: +1 popularity from 470 attendees (94% capacity)",
-        "importance": "routine",
-        "type": "popularity",
       },
       {
         "amount": 16403,
@@ -4764,7 +4742,7 @@ Performance Indicators:
         "importance": "routine",
         "moodChange": 8,
         "netProfit": 6403,
-        "popularityChange": 1,
+        "popularityChange": 0,
         "projectId": "<id>",
         "source": "tour_performance",
         "ticketsSold": 469,
@@ -4779,12 +4757,6 @@ Performance Indicators:
         "moodChange": -3,
         "source": "weekly_drift",
         "type": "mood",
-      },
-      {
-        "amount": 1,
-        "description": "Touring Act's popularity increased (+1.0)",
-        "importance": "routine",
-        "type": "popularity",
       },
       {
         "amount": -3384,

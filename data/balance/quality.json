@@ -45,6 +45,39 @@
     }
   },
 
+  "song_quality_formula": {
+    "_note": "DISTINCT from producer_tier_system.multiplier / time_investment_system.multiplier, which feed cost/duration ONLY. These keys feed the song-QUALITY formula (SongGenerationProcessor.calculateEnhancedSongQuality). Do not conflate the two multiplier sets — see systemsMapData non-edges ne-producer-multiplier-shadowed / ne-time-multiplier-shadowed.",
+    "talent_weight": 0.65,
+    "producer_weight": 0.35,
+    "producer_skill_map": {
+      "local": 40,
+      "regional": 55,
+      "national": 75,
+      "legendary": 95
+    },
+    "default_producer_skill": 40,
+    "time_multipliers": {
+      "rushed": 0.7,
+      "standard": 1.0,
+      "extended": 1.1,
+      "perfectionist": 1.2
+    },
+    "default_time_multiplier": 1.0,
+    "work_ethic_max_bonus": 0.3,
+    "popularity_factor_base": 0.95,
+    "popularity_factor_range": 0.1,
+    "fatigue_base": 0.97,
+    "fatigue_free_songs": 3,
+    "mood_factor_base": 0.9,
+    "mood_factor_range": 0.2,
+    "mood_baseline": 50,
+    "mood_variance_widening_max": 0.4,
+    "base_variance_max": 35,
+    "base_variance_skill_reduction": 30,
+    "breakout_base_chance": 0.05,
+    "failure_base_chance": 0.1
+  },
+
   "producer_tier_system": {
     "local": {
       "multiplier": 1.0,

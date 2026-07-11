@@ -39,6 +39,30 @@ import type { WeekContext } from './types';
 import type { WeekSummary } from '../../types/gameTypes';
 import { FinancialSystem } from '../FinancialSystem';
 
+/**
+ * Balance-integrity slice 4 (mood → variance widening) — pure, RNG-free helper.
+ *
+ * Low artist mood makes recording outcomes VOLATILE (wider variance band), not
+ * uniformly worse. Returns the multiplicative factor applied to the skill-derived
+ * variance band:
+ *
+ *   moodWiden = 1 + max(0, (mood_baseline − mood) / mood_baseline) × mood_variance_widening_max
+ *
+ * - mood ≥ mood_baseline (default 50) → 1.0 exactly (NO narrowing above baseline;
+ *   skill already narrows).
+ * - mood 0 with default config → 1.4.
+ *
+ * The unchanged 0.9–1.1 mood_factor quality multiplier is a SEPARATE mechanism.
+ */
+export function computeMoodVarianceWiden(
+  mood: number,
+  cfg: { mood_baseline?: number; mood_variance_widening_max?: number } = {}
+): number {
+  const moodBaseline = cfg.mood_baseline ?? 50;
+  const moodVarianceWideningMax = cfg.mood_variance_widening_max ?? 0.4;
+  return 1 + Math.max(0, (moodBaseline - mood) / moodBaseline) * moodVarianceWideningMax;
+}
+
 export class SongGenerationProcessor {
   async processRecordingProjects(ctx: WeekContext, dbTransaction?: any): Promise<void> {
     const { summary } = ctx;
@@ -391,22 +415,30 @@ export class SongGenerationProcessor {
     budgetAmount?: number,
     songCount?: number
   ): number {
+    // Balance-integrity slice 1 (knob liberation): every constant in this quality
+    // formula was HARDCODED here, SHADOWING quality.json. Now read from
+    // quality.json song_quality_formula via getSongQualityFormulaConfigSync (which
+    // returns a fully-defaulted object). Optional-chained + inline literal fallbacks
+    // keep it byte-identical even in thin contexts that lack the getter. DISTINCT
+    // from producer_tier_system/time_investment_system multipliers (cost/duration).
+    const qf = (ctx.gameData.getSongQualityFormulaConfigSync?.() ?? {}) as Record<string, any>;
+
     // 1. BASE QUALITY (Talent + Producer Skill hybrid)
-    const producerSkillMap: Record<string, number> = {
+    const producerSkillMap: Record<string, number> = qf.producer_skill_map ?? {
       'local': 40,
       'regional': 55,
       'national': 75,
       'legendary': 95
     };
-    const producerSkill = producerSkillMap[producerTier] || 40;
+    const producerSkill = producerSkillMap[producerTier] || (qf.default_producer_skill ?? 40);
 
     // Weighted average: talent matters more than producer
     const artistTalent = artist.talent || 50;
-    const baseQuality = (artistTalent * 0.65 + producerSkill * 0.35);
+    const baseQuality = (artistTalent * (qf.talent_weight ?? 0.65) + producerSkill * (qf.producer_weight ?? 0.35));
 
     // 2. WORK ETHIC & TIME SYNERGY
     // Work ethic amplifies time investment effectiveness
-    const timeMultipliers: Record<string, number> = {
+    const timeMultipliers: Record<string, number> = qf.time_multipliers ?? {
       'rushed': 0.7,      // 70% efficiency
       'standard': 1.0,    // 100% efficiency (baseline)
       'extended': 1.1,    // 110% efficiency
@@ -414,19 +446,19 @@ export class SongGenerationProcessor {
     };
 
     const artistWorkEthic = artist.workEthic || 50;
-    const workEthicBonus = (artistWorkEthic / 100) * 0.3; // up to 30% bonus
-    const timeFactor = (timeMultipliers[timeInvestment] || 1.0) * (1 + workEthicBonus);
+    const workEthicBonus = (artistWorkEthic / 100) * (qf.work_ethic_max_bonus ?? 0.3); // up to 30% bonus
+    const timeFactor = (timeMultipliers[timeInvestment] || (qf.default_time_multiplier ?? 1.0)) * (1 + workEthicBonus);
 
     // 3. POPULARITY IMPACT
     // Popularity attracts better session musicians, engineers, features
     const artistPopularity = artist.popularity || 0;
-    const popularityFactor = 0.95 + 0.1 * Math.sqrt(artistPopularity / 100);
+    const popularityFactor = (qf.popularity_factor_base ?? 0.95) + (qf.popularity_factor_range ?? 0.1) * Math.sqrt(artistPopularity / 100);
     // Results in 0.95x to 1.05x multiplier (10% total swing, more balanced)
 
     // 4. SESSION FATIGUE
     // Quality drops 3% per song after 3rd song
     const actualSongCount = songCount || project.songCount || 1;
-    const focusFactor = Math.pow(0.97, Math.max(0, actualSongCount - 3));
+    const focusFactor = Math.pow(qf.fatigue_base ?? 0.97, Math.max(0, actualSongCount - (qf.fatigue_free_songs ?? 3)));
 
     // 5. BUDGET IMPACT (using new multiplier method)
     const totalBudget = budgetAmount || project.totalCost || project.budgetPerSong || 0;
@@ -442,7 +474,7 @@ export class SongGenerationProcessor {
     // 6. MOOD IMPACT (reduced influence)
     // Mood is temporary, shouldn't dominate permanent attributes
     const artistMood = artist.mood || 50;
-    const moodFactor = 0.9 + 0.2 * (artistMood / 100); // 0.9x to 1.1x
+    const moodFactor = (qf.mood_factor_base ?? 0.9) + (qf.mood_factor_range ?? 0.2) * (artistMood / 100); // 0.9x to 1.1x
 
     // 7. COMBINE WITH MULTIPLICATIVE APPROACH
     let quality = baseQuality;
@@ -464,7 +496,21 @@ export class SongGenerationProcessor {
     // Medium skill (50): ±20% base variance (was 10%)
     // High skill (75): ±10% base variance (was 5%)
     // Max skill (100): ±5% base variance (was 2%)
-    let baseVarianceRange = 35 - (30 * (combinedSkill / 100)); // 35% down to 5%
+    let baseVarianceRange = (qf.base_variance_max ?? 35) - ((qf.base_variance_skill_reduction ?? 30) * (combinedSkill / 100)); // 35% down to 5%
+
+    // Balance-integrity slice 4 (mood → variance widening). Low artist mood makes
+    // the recording VOLATILE: it multiplicatively WIDENS the skill-derived variance
+    // band (it does NOT shift the mean — the 0.9–1.1 moodFactor above still owns that
+    // permanent quality nudge). mood ≥ mood_baseline (50) → ×1.0 exactly (no narrowing
+    // above baseline; skill already narrows). mood 0 → ×1.4 with defaults. This scales
+    // the band the SAME normal-variance draw (line below) is mapped onto — no RNG draw
+    // is added, removed, or reordered; only the band WIDTH changes.
+    // Composition order on the band: skill-derived × moodWiden × pendingVarianceWiden.
+    const moodWiden = computeMoodVarianceWiden(artistMood, {
+      mood_baseline: qf.mood_baseline ?? 50,
+      mood_variance_widening_max: qf.mood_variance_widening_max ?? 0.4,
+    });
+    baseVarianceRange *= moodWiden;
 
     // Exec-meetings-revival PR-6 (C4) — outcome variance/risk channel. A banked
     // meeting bonus (flags.pendingVariance, signed points) widens the variance
@@ -493,8 +539,8 @@ export class SongGenerationProcessor {
     const outlierBonus = pendingVariance !== 0
       ? Math.max(0, pendingVariance * varianceConfig.outlier_chance_bonus_per_point)
       : 0;
-    const breakoutThreshold = Math.min(0.45, 0.05 + outlierBonus);
-    const failureThreshold = Math.min(0.90, 0.10 + outlierBonus * 2);
+    const breakoutThreshold = Math.min(0.45, (qf.breakout_base_chance ?? 0.05) + outlierBonus);
+    const failureThreshold = Math.min(0.90, (qf.failure_base_chance ?? 0.10) + outlierBonus * 2);
 
     // Check for outlier events (10% chance, widened by pendingVariance above)
     // Seeded RNG: getRandom(0, 1) is uniform [0,1), equivalent to Math.random() (Phase 2 PR-1)

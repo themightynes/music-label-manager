@@ -376,6 +376,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       case 'artist': return '🎤';
       case 'mood': return '💭'; // Mood changes
       case 'reputation': return '⭐'; // Reputation changes
+      case 'flop': return '📉'; // Balance-integrity slice 2: flop reputation penalty
       default: return '📊';
     }
   };

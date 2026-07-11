@@ -1,4 +1,14 @@
 import React from 'react';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Systems-balance-integrity slice 3 — loss-leader view. This ROI figure only
+// captures direct stream/tour revenue against production+marketing spend; a
+// meaningful share of marketing's return (chart positions, reputation,
+// awareness/Buzz tail, artist popularity growth) lands outside this number.
+// Qualitative only (fork E standing rule): no formulas/multipliers/percentages.
+const ROI_TOOLTIP =
+  'This is direct revenue against spend — it doesn\'t count marketing\'s other returns: the chart positions, the reputation those charts pay, the Buzz/awareness tail, and the artist\'s own popularity growth.';
 
 // Component to display performance metrics with backend ROI
 function PerformanceMetricsComponent({
@@ -78,7 +88,17 @@ function PerformanceMetricsComponent({
 
           {/* ROI - spans full width */}
           <div className={`col-span-2 p-3.5 rounded-chip flex items-center justify-between ${overallROI >= 0 ? 'bg-positive/[0.08] border border-positive/[0.22]' : 'bg-negative/[0.08] border border-negative/[0.22]'}`}>
-            <span className="text-xs text-text-muted">Return on Investment</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs text-text-muted flex items-center gap-1 cursor-help">
+                    Return on Investment
+                    <Info className="w-3 h-3 shrink-0" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{ROI_TOOLTIP}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <div className={`font-mono text-xl font-semibold ${overallROI >= 0 ? 'text-positive' : 'text-negative'}`}>
               {overallROI > 0 ? '+' : ''}{overallROI.toFixed(0)}%
             </div>

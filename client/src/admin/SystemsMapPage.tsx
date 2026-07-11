@@ -161,8 +161,9 @@ export default function SystemsMapPage() {
         <div className="glass-panel rounded-card border border-white/10 p-4 space-y-2">
           <h1 className="text-2xl font-bold text-text-primary font-display">Systems Map</h1>
           <p className="text-sm text-text-body">
-            Hand-verified snapshot of shared/engine as of 2026-07-10 — edges cite code; config values read live from
-            data/balance. Doc-sync: re-verify when engine formulas change.
+            Hand-verified snapshot of shared/engine as of 2026-07-10 (balance-integrity arc: knob liberation + 4
+            new/changed edges) — edges cite code; config values read live from data/balance. Doc-sync: re-verify
+            when engine formulas change.
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-2 text-xs">
             <span className="text-text-label uppercase tracking-wide">Legend:</span>

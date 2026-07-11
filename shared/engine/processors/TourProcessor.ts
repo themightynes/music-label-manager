@@ -38,6 +38,7 @@
  */
 import type { WeekContext } from './types';
 import { VenueCapacityManager } from '../FinancialSystem';
+import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
 
 export class TourProcessor {
   /**
@@ -76,6 +77,11 @@ export class TourProcessor {
       // default (server/routes/tour.ts, backlog C47) or preview diverges from
       // execution.
       const artistPopularity = artist.popularity || 1;
+      // Balance-integrity slice 5: artist energy drives tour sell-through. Missing/
+      // null energy -> 50 (schema default). MUST stay in lockstep with the
+      // estimatePlanningForeshadow default below so preview == execution (C41/C47/C48
+      // param-assembly precedent).
+      const energy = artist.energy ?? 50;
       const reputation = ctx.gameState.reputation || 0;
       const totalCities = currentMetadata.cities || 1;
 
@@ -114,7 +120,8 @@ export class TourProcessor {
         artistPopularity,
         localReputation: reputation,
         cities: totalCities,
-        marketingBudget
+        marketingBudget,
+        energy // Balance-integrity slice 5
       });
 
       // Store pre-calculated cities - NO MANUAL CALCULATIONS
@@ -259,6 +266,9 @@ export class TourProcessor {
     const currentMetadata = project.metadata || {};
     const venueAccess = currentMetadata.venueAccess || 'none';
     const artistPopularity = artist?.popularity || 1; // C47 floor
+    // Balance-integrity slice 5: same energy default as the execution path above
+    // so the planning foreshadow's sell-through matches the actual roll.
+    const energy = artist?.energy ?? 50;
     const reputation = ctx.gameState.reputation || 0;
     const totalCities = currentMetadata.cities || 1;
 
@@ -279,7 +289,8 @@ export class TourProcessor {
       artistPopularity,
       localReputation: reputation,
       cities: totalCities,
-      marketingBudget
+      marketingBudget,
+      energy // Balance-integrity slice 5
     });
 
     const city1 = detailedBreakdown.cities[0];
@@ -333,32 +344,65 @@ export class TourProcessor {
       const attendanceRate = cityData.attendanceRate || 0;
       const actualAttendees = Math.round((cityData.capacity || 0) * (attendanceRate / 100));
 
+      // Balance-integrity slice 1 (knob liberation): the attendance→mood and
+      // attendance→popularity reaction tables were HARDCODED here; now read from
+      // markets.json market_formulas.tour_revenue.{mood_reactions,popularity_reactions}
+      // with the original literals as fallback defaults (byte-identical).
+      const tourFormulas = ((ctx.gameData.getBalanceConfigSync?.()?.market_formulas?.tour_revenue) || {}) as Record<string, any>;
+      const moodCfg = (tourFormulas.mood_reactions || {}) as Record<string, any>;
+      const poorThreshold = moodCfg.poor_threshold ?? 30;
+      const neutralMax = moodCfg.neutral_max ?? 50;
+      const goodMax = moodCfg.good_max ?? 85;
+
       // Calculate mood impact based on attendance rate
       let moodChange = 0;
-      if (attendanceRate < 30) {
-        moodChange = -3; // Disappointing show
-      } else if (attendanceRate >= 30 && attendanceRate <= 50) {
-        moodChange = 0; // Neutral
-      } else if (attendanceRate > 50 && attendanceRate <= 85) {
-        moodChange = 5; // Good show
-      } else if (attendanceRate > 85) {
-        moodChange = 8; // Amazing show
+      if (attendanceRate < poorThreshold) {
+        moodChange = moodCfg.poor_delta ?? -3; // Disappointing show
+      } else if (attendanceRate >= poorThreshold && attendanceRate <= neutralMax) {
+        moodChange = moodCfg.neutral_delta ?? 0; // Neutral
+      } else if (attendanceRate > neutralMax && attendanceRate <= goodMax) {
+        moodChange = moodCfg.good_delta ?? 5; // Good show
+      } else if (attendanceRate > goodMax) {
+        moodChange = moodCfg.great_delta ?? 8; // Amazing show
       }
 
       // Calculate popularity impact based on attendance rate and venue size
+      const popCfg = (tourFormulas.popularity_reactions || {}) as Record<string, any>;
+      const popTiers: Array<{ max_attendees: number | null; gain: number }> = Array.isArray(popCfg.tiers) && popCfg.tiers.length > 0
+        ? popCfg.tiers
+        : [
+            { max_attendees: 500, gain: 1 },
+            { max_attendees: 2000, gain: 2 },
+            { max_attendees: 5000, gain: 3 },
+            { max_attendees: 10000, gain: 5 },
+            { max_attendees: null, gain: 7 }
+          ];
       let popularityChange = 0;
-      if (attendanceRate > 70) {
-        if (actualAttendees < 500) {
-          popularityChange = 1;
-        } else if (actualAttendees < 2000) {
-          popularityChange = 2;
-        } else if (actualAttendees < 5000) {
-          popularityChange = 3;
-        } else if (actualAttendees < 10000) {
-          popularityChange = 5;
-        } else {
-          popularityChange = 7;
+      if (attendanceRate > (popCfg.attendance_threshold ?? 70)) {
+        let rawGain = 0;
+        for (const tier of popTiers) {
+          if (tier.max_attendees == null || actualAttendees < tier.max_attendees) {
+            rawGain = tier.gain;
+            break;
+          }
         }
+        // Balance-integrity slice 6: run the raw tour-table gain through the SAME
+        // diminishing-returns curve that streaming popularity gains respect, so
+        // touring can't farm popularity for an already-famous act. Config is the
+        // shared markets.json popularity_saturation block (slice 1); the curve
+        // lives in one place (shared/utils/popularitySaturation.ts).
+        //
+        // DEVIATION FROM NAIVE REUSE: the streaming curve returns up to 1.5x at
+        // pop 0 (a super-charger for unknowns). The tour reaction table was
+        // authored as the FULL gain, so we clamp with Math.min(1, ...) — the
+        // table stays the MAXIMUM and saturation may only REDUCE the gain, never
+        // amplify it. Floor at 0: a sold-out arena for a 90-pop star can
+        // legitimately move nothing. No new RNG draws.
+        const satCfg = (ctx.gameData.getBalanceConfigSync?.()?.market_formulas?.popularity_saturation) as
+          | Parameters<typeof popularitySaturationMultiplier>[1]
+          | undefined;
+        const satMult = Math.min(1, popularitySaturationMultiplier(artist.popularity || 0, satCfg));
+        popularityChange = Math.max(0, Math.round(rawGain * satMult));
       }
 
       // FIXED: Accumulate changes in summary using per-artist object pattern

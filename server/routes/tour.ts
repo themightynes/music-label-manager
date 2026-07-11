@@ -97,7 +97,11 @@ const router = Router();
         artistPopularity: artist.popularity || 1,
         localReputation: gameState.reputation || 0,
         cities,
-        marketingBudget: totalMarketingBudget
+        marketingBudget: totalMarketingBudget,
+        // Balance-integrity slice 5: energy drives sell-through; missing/null -> 50.
+        // In lockstep with TourProcessor's execution/foreshadow defaults so the
+        // planning estimate matches the executed tour (C47 preview↔execution rule).
+        energy: artist.energy ?? 50
       });
 
       // Get the bookable capacity range for the response using VenueCapacityManager.

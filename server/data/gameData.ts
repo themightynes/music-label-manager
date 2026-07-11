@@ -439,18 +439,23 @@ export class ServerGameData {
         marketing_weight: 0.20,
         first_week_multiplier: 2.5,
         base_streams_per_point: 1000,
+        playlist_component_scale: 100,
+        marketing_scale_divisor: 1000,
+        marketing_scale_multiplier: 50,
+        variance_range: [0.9, 1.1],
         ongoing_streams: {
           weekly_decay_rate: 0.85,
           revenue_per_stream: 0.003,
           ongoing_factor: 0.1,
           reputation_bonus_factor: 0.002,
+          reputation_baseline: 50,
           access_tier_bonus_factor: 0.1,
           minimum_revenue_threshold: 1,
           max_decay_weeks: 24
         }
       };
     }
-    
+
     const streaming = this.balanceData.market_formulas.streaming_calculation;
     return {
       quality_weight: streaming.quality_weight,
@@ -459,9 +464,73 @@ export class ServerGameData {
       marketing_weight: streaming.marketing_weight,
       popularity_weight: streaming.popularity_weight,
       first_week_multiplier: streaming.first_week_multiplier,
-      base_streams_per_point: 1000,
+      // Balance-integrity slice 1 (knob liberation): these were engine literals
+      // (base_streams_per_point at gameData.ts, PLAYLIST_COMPONENT_SCALE /
+      // MARKETING_SCALE / VARIANCE_RANGE in FinancialSystem.CONSTANTS). Now config,
+      // with the original literal as the code-side fallback default.
+      base_streams_per_point: streaming.base_streams_per_point ?? 1000,
+      playlist_component_scale: streaming.playlist_component_scale ?? 100,
+      marketing_scale_divisor: streaming.marketing_scale_divisor ?? 1000,
+      marketing_scale_multiplier: streaming.marketing_scale_multiplier ?? 50,
+      variance_range: streaming.variance_range ?? [0.9, 1.1],
       star_power_amplification: streaming.star_power_amplification,
       ongoing_streams: streaming.ongoing_streams
+    };
+  }
+
+  // Balance-integrity slice 1 (knob liberation): the song-quality formula
+  // constants that were HARDCODED inside SongGenerationProcessor.calculate-
+  // EnhancedSongQuality. Lives in data/balance/quality.json under
+  // song_quality_formula. DISTINCT from producer_tier_system.multiplier /
+  // time_investment_system.multiplier (those feed cost/duration, not quality).
+  // Every field falls back to the original engine literal so behavior is
+  // byte-identical whether or not the JSON block is present.
+  getSongQualityFormulaConfigSync() {
+    const defaults = {
+      talent_weight: 0.65,
+      producer_weight: 0.35,
+      producer_skill_map: { local: 40, regional: 55, national: 75, legendary: 95 } as Record<string, number>,
+      default_producer_skill: 40,
+      time_multipliers: { rushed: 0.7, standard: 1.0, extended: 1.1, perfectionist: 1.2 } as Record<string, number>,
+      default_time_multiplier: 1.0,
+      work_ethic_max_bonus: 0.3,
+      popularity_factor_base: 0.95,
+      popularity_factor_range: 0.1,
+      fatigue_base: 0.97,
+      fatigue_free_songs: 3,
+      mood_factor_base: 0.9,
+      mood_factor_range: 0.2,
+      // Balance-integrity slice 4 (mood → variance widening): low mood WIDENS the
+      // variance band (volatile, not uniformly worse). Distinct from the mood_factor_*
+      // above, which is the unchanged 0.9–1.1 quality multiplier.
+      mood_baseline: 50,
+      mood_variance_widening_max: 0.4,
+      base_variance_max: 35,
+      base_variance_skill_reduction: 30,
+      breakout_base_chance: 0.05,
+      failure_base_chance: 0.1
+    };
+    const cfg = ((this.balanceData as any)?.song_quality_formula || {}) as Record<string, any>;
+    return {
+      talent_weight: cfg.talent_weight ?? defaults.talent_weight,
+      producer_weight: cfg.producer_weight ?? defaults.producer_weight,
+      producer_skill_map: cfg.producer_skill_map ?? defaults.producer_skill_map,
+      default_producer_skill: cfg.default_producer_skill ?? defaults.default_producer_skill,
+      time_multipliers: cfg.time_multipliers ?? defaults.time_multipliers,
+      default_time_multiplier: cfg.default_time_multiplier ?? defaults.default_time_multiplier,
+      work_ethic_max_bonus: cfg.work_ethic_max_bonus ?? defaults.work_ethic_max_bonus,
+      popularity_factor_base: cfg.popularity_factor_base ?? defaults.popularity_factor_base,
+      popularity_factor_range: cfg.popularity_factor_range ?? defaults.popularity_factor_range,
+      fatigue_base: cfg.fatigue_base ?? defaults.fatigue_base,
+      fatigue_free_songs: cfg.fatigue_free_songs ?? defaults.fatigue_free_songs,
+      mood_factor_base: cfg.mood_factor_base ?? defaults.mood_factor_base,
+      mood_factor_range: cfg.mood_factor_range ?? defaults.mood_factor_range,
+      mood_baseline: cfg.mood_baseline ?? defaults.mood_baseline,
+      mood_variance_widening_max: cfg.mood_variance_widening_max ?? defaults.mood_variance_widening_max,
+      base_variance_max: cfg.base_variance_max ?? defaults.base_variance_max,
+      base_variance_skill_reduction: cfg.base_variance_skill_reduction ?? defaults.base_variance_skill_reduction,
+      breakout_base_chance: cfg.breakout_base_chance ?? defaults.breakout_base_chance,
+      failure_base_chance: cfg.failure_base_chance ?? defaults.failure_base_chance
     };
   }
 

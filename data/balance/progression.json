@@ -7,6 +7,8 @@
     "hit_single_bonus": 5,
     "number_one_bonus": 10,
     "flop_penalty": 3,
+    "flop_revenue_ratio": 0.10,
+    "flop_investment_floor": 10000,
 
     "award_chance_per_point": 0.08,
     "award_chance_cap": 0.8,

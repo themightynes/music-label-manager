@@ -284,6 +284,22 @@ export const MARKETING_QUALITY_NOTE =
   'Higher-quality songs get more out of every marketing dollar — weaker songs blunt the same spend.';
 
 /**
+ * Systems-balance-integrity slice 3 — loss-leader framing for the marketing
+ * budget section. Ground truth: at the engine's per-stream payout, marketing
+ * spend rarely earns back its own cost in direct streams (verified in
+ * docs/98-research/SYSTEMS_BALANCE_REVIEW_2026-07-10.md); its real return is
+ * the bigger opening, the chart positions that follow, the reputation those
+ * charts pay, and the Buzz/awareness tail that keeps the record earning.
+ * Qualitative only (fork E standing rule): no formulas, multipliers, or
+ * percentages anywhere in this copy.
+ */
+export const MARKETING_LOSS_LEADER_NOTE =
+  'Marketing rarely pays for itself in streams alone — it buys the opening, the charts, and the record\'s tail.';
+
+export const MARKETING_LOSS_LEADER_TOOLTIP =
+  'Don\'t judge this spend by the stream count. It works in three other places: a bigger opening week, the chart positions that follow (and the reputation milestones those charts pay), and the Buzz/awareness that keeps the record earning after the launch spike fades.';
+
+/**
  * Aggregate a release's songs into the card Buzz summary.
  *
  * @param songs the release's songs (already joined by releaseId upstream)
