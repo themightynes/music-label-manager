@@ -151,6 +151,13 @@ export function classifyChange(
     case 'hype_expired':
       return 'notable';
 
+    // Balance-integrity slice 2: a FLOP is the game's first reputation SINK — a
+    // released record underperformed its investment and cost the label standing.
+    // A meaningful, attributable negative beat (the anti-milestone), surfaced in
+    // the notable stage rather than lost in routine churn.
+    case 'flop':
+      return 'notable';
+
     default:
       return assertNever(change.type);
   }

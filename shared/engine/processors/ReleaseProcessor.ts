@@ -1519,7 +1519,78 @@ export class ReleaseProcessor {
               (summary.reputationChanges[release.artistId] || 0) + reputationGain;
           }
         }
-        
+
+        // Balance-integrity slice 2 — FLOP PENALTY (reputation becomes two-way).
+        // The game's first reputation SINK: a record that badly underperforms its
+        // investment costs the label standing. Evaluated ONCE, here, on the
+        // release week (never on catalog weeks). Consumes the previously-dead
+        // progression.json reputation_system.flop_penalty (3), gated by two new
+        // config keys. DETERMINISTIC — no RNG draw (audit: no getRandom added).
+        //
+        // totalInvestment aggregation (documented): the sum of every release song's
+        // production_budget (song.productionBudget, default 0) PLUS the release's
+        // marketing_budget (release.marketingBudget) — the two authored spend fields
+        // that already exist on these rows. Both lead singles and same-week songs
+        // count toward the record's production cost. releaseWeekRevenue is this
+        // week's release revenue (sophisticatedResults.totalRevenue) — catalog
+        // decay revenue is NOT included (that lands via processReleasedProjects in
+        // later weeks).
+        try {
+          const flopFlagKey = `flop_penalty_applied_${release.id}`;
+          const flopFlags = (ctx.gameState.flags || {}) as Record<string, any>;
+          if (!flopFlags[flopFlagKey]) {
+            const repSystem = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system || {};
+            const flopPenalty = repSystem.flop_penalty ?? 3;
+            const flopRevenueRatio = repSystem.flop_revenue_ratio ?? 0.10;
+            const flopInvestmentFloor = repSystem.flop_investment_floor ?? 10000;
+
+            const productionInvestment = releaseSongs.reduce(
+              (sum: number, s: any) => sum + (s.productionBudget || 0),
+              0,
+            );
+            const marketingInvestment = release.marketingBudget || 0;
+            const totalInvestment = productionInvestment + marketingInvestment;
+            const releaseWeekRevenue = totalRevenue;
+
+            const isFlop =
+              totalInvestment >= flopInvestmentFloor &&
+              releaseWeekRevenue < flopRevenueRatio * totalInvestment;
+
+            if (isFlop) {
+              // Mark once-only FIRST (deterministic key, no Date.now/Math.random)
+              // so a re-processing pass never double-penalizes.
+              flopFlags[flopFlagKey] = true;
+              ctx.gameState.flags = flopFlags;
+
+              const repBefore = ctx.gameState.reputation || 0;
+              const repAfter = Math.max(0, repBefore - flopPenalty);
+              const repDelta = repAfter - repBefore; // ≤ 0 (0 only if already floored)
+              ctx.gameState.reputation = repAfter;
+
+              // C34: reputation is label-wide — accumulate the ACTUAL applied delta
+              // into summary.reputationChanges so the single aggregated ⭐ weekly
+              // line reflects it. Do NOT push a separate type:'reputation' change
+              // (that would double the reputation line). The structured 'flop' entry
+              // below shows the EVENT itself (categorizeChanges routes it to the
+              // rendered Achievements bucket, never the swallowed `other` bucket).
+              summary.reputationChanges[release.artistId] =
+                (summary.reputationChanges[release.artistId] || 0) + repDelta;
+
+              summary.changes.push({
+                type: 'flop',
+                description: `📉 "${release.title}" flopped — the industry noticed (${repDelta} reputation)`,
+                amount: repDelta,
+                releaseId: release.id,
+                releaseName: release.title,
+              });
+
+              console.log(`[FLOP] "${release.title}" flopped — revenue $${releaseWeekRevenue} < ${flopRevenueRatio}×$${totalInvestment}; reputation ${repBefore} -> ${repAfter}`);
+            }
+          }
+        } catch (flopError) {
+          console.warn('[FLOP] Error evaluating flop penalty:', flopError);
+        }
+
         // Release completed successfully
       }
       

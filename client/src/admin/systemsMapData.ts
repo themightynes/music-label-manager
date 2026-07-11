@@ -809,6 +809,21 @@ export const EDGES: SystemEdge[] = [
     ref: 'game-engine.ts:1150-1190',
   },
   {
+    id: 'e-flop-reputation',
+    from: 'streams',
+    to: 'reputation',
+    mechanism: 'Flop penalty — reputation sink on an underperforming release (balance-integrity slice 2)',
+    formula: 'FLOP if releaseWeekRevenue < flop_revenue_ratio × totalInvestment AND totalInvestment ≥ flop_investment_floor, where totalInvestment = Σ song.productionBudget + release.marketingBudget. On flop: reputation −flop_penalty (clamp ≥0), once per release (flags.flop_penalty_applied_<releaseId>).',
+    values: [
+      { label: 'flop_penalty', value: reputationSystem.flop_penalty, source: 'live', configPath: 'progression.reputation_system.flop_penalty', ref: 'ReleaseProcessor.ts processPlannedReleases (flop block)' },
+      { label: 'flop_revenue_ratio', value: reputationSystem.flop_revenue_ratio, source: 'live', configPath: 'progression.reputation_system.flop_revenue_ratio' },
+      { label: 'flop_investment_floor', value: reputationSystem.flop_investment_floor, source: 'live', configPath: 'progression.reputation_system.flop_investment_floor' },
+    ],
+    hardcoded: false,
+    ref: 'ReleaseProcessor.processPlannedReleases (flop penalty block)',
+    note: 'RESOLVED 2026-07-10 (balance-integrity slice 2): was non-edge ne-flop-reputation (flop_penalty dead). Now the game\'s first reputation SINK — a record whose release-week revenue falls below flop_revenue_ratio of its production+marketing investment (and clears the flop_investment_floor) costs the label flop_penalty reputation, once.',
+  },
+  {
     id: 'e-reputation-access',
     from: 'reputation',
     to: 'access_tiers',
@@ -948,11 +963,11 @@ export const NON_EDGES: NonEdge[] = [
     evidence: 'progression.json reputation_system.decay_rate (0.1) is not consumed anywhere in the engine — reputation never decays in code.',
   },
   {
-    id: 'ne-flop-reputation',
-    from: 'streams',
+    id: 'ne-goal-failure-reputation',
+    from: 'reputation',
     to: 'reputation',
-    claim: 'A flop release (low streams/chart failure) should cost reputation.',
-    evidence: 'progression.json reputation_system.flop_penalty (3) and goal_failure_penalty (2) are configured but dead — no engine code applies them.',
+    claim: 'Missing a campaign/tier goal should cost reputation, per goal_failure_penalty.',
+    evidence: 'progression.json reputation_system.goal_failure_penalty (2) is still configured but dead — no engine code applies it. (The sibling flop_penalty is now LIVE — see edge e-flop-reputation, resolved balance-integrity slice 2 2026-07-10.)',
   },
   {
     id: 'ne-producer-multiplier-shadowed',
