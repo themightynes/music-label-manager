@@ -153,7 +153,7 @@ export const NODES: SystemNode[] = [
     domain: 'resources',
     col: 0,
     row: 1,
-    description: `0-100, starts at ${reputationSystem.starting_reputation} (progression.json reputation_system.starting_reputation), master gate for access tiers, producer tiers, and the 4th focus slot. Meeting choices can also apply a seeded rep_swing (ActionProcessor.ts:1049) and reputation itself never decays in code (see non-edges) despite a configured decay_rate.`,
+    description: `0-100, starts at ${reputationSystem.starting_reputation} (progression.json reputation_system.starting_reputation), master gate for access tiers, producer tiers, and the 4th focus slot. Meeting choices can also apply a seeded rep_swing (ActionProcessor.ts:1049) and reputation itself never decays in code (see non-edges) despite a configured decay_rate. GLOBAL GAIN DAMPER (volatility-economy slice 3): every POSITIVE reputation gain is multiplied by reputation_gain_scaling (${reputationSystem.reputation_gain_scaling}) and rounded — applied per-source (no single chokepoint) at chart milestones (e-chart-reputation), release press coverage, PR-push/digital-ads marketing, and meeting immediate/delayed effects, via shared/utils/reputationScaling.scaleReputationGain. LOSSES ARE NOT SCALED (the flop penalty e-flop-reputation and negative meeting/rep-swing outcomes bite at full magnitude). C65 FIXED: the release press-coverage path — formerly the ONLY reputation write that skipped the 0-100 clamp — is now clamped to max_reputation (${reputationSystem.max_reputation}) like every other path.`,
   },
   {
     id: 'creative_capital',
@@ -213,7 +213,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 1,
-    description: `Default 50. Feeds song_quality at generation time only (snapshotted — see non-edges for why it never moves an already-released song's streams). Set by meeting/dialogue choices (ActionProcessor.ts:660) and tour attendance (TourProcessor.ts:338-345).`,
+    description: `Default 50. Feeds song_quality at generation time only (snapshotted — see non-edges for why it never moves an already-released song's streams). Set by meeting/dialogue choices (ActionProcessor.ts:660) and tour attendance (TourProcessor.ts:338-345). Also moved by RELEASE OUTCOMES (volatility-economy slice 2): a flop wounds the release artist (edge e-flop-artist-mood) and a breakthrough lifts the song artist (edge e-breakthrough-artist-mood). PASSIVE WEEKLY DRIFT toward neutral (liberated to config + amplified, slice 2): mood above threshold_high drifts down by drift_amount, below threshold_low drifts up — artists.json artist_stats.mood_drift { threshold_high 55, threshold_low 45, drift_amount 5 (~1.5× the old hardcoded 3) }, ArtistStateProcessor.calculateNaturalMoodDrift.`,
   },
   {
     id: 'artist_energy',
@@ -221,7 +221,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 2,
-    description: `Default 50. Drives TOUR sell-through (balance-integrity slice 5): energyFactor = min + (max−min)×(energy/100) multiplies sell-through before the 1.0 cap (edge e-energy-tour). Still has NO effect on song_quality or streams (see non-edges). Set/clamped by meetings & dialogue (ActionProcessor.ts:765).`,
+    description: `Default 50. Drives TOUR sell-through (balance-integrity slice 5): energyFactor = min + (max−min)×(energy/100) multiplies sell-through before the 1.0 cap (edge e-energy-tour). Still has NO effect on song_quality or streams (see non-edges). PASSIVE WEEKLY LIFECYCLE (volatility-economy slice 1 + C87), modeled here on the node like the mood/exec drift self-corrections rather than as edges — all clamped 0–100 in ArtistStateProcessor.applyArtistChangesToDatabase, zero RNG: (a) TOUR DRAIN −tour_revenue.energy_cost.per_city per city reveal (C87, TourProcessor.ts applyTourPerformanceImpacts); (b) RECORDING DRAIN −energy_lifecycle.recording_drain_per_week while any Single/EP project sits in the 'production' stage ("from the studio"); (c) IDLE RECOVERY +energy_lifecycle.idle_recovery_per_week when the artist has NO Mini-Tour in production and NO recording project in production ("a week to breathe"). Recording drain + idle recovery live in ArtistStateProcessor.processWeeklyEnergyLifecycle, config markets.json market_formulas.energy_lifecycle (enabled flag short-circuits both). Set/clamped also by meetings & dialogue (ActionProcessor.ts:765).`,
   },
   {
     id: 'song_quality',
@@ -819,13 +819,15 @@ export const EDGES: SystemEdge[] = [
     from: 'chart_position',
     to: 'reputation',
     mechanism: 'Chart milestone reputation bonus (once per song)',
-    formula: 'first top-10 → +hit_single_bonus; first No.1 → +number_one_bonus',
+    formula: 'first top-10 → +round(hit_single_bonus × reputation_gain_scaling); first No.1 → +round(number_one_bonus × reputation_gain_scaling)',
     values: [
       { label: 'hit_single_bonus', value: reputationSystem.hit_single_bonus, source: 'live', configPath: 'progression.reputation_system.hit_single_bonus', ref: 'game-engine.ts:1150-1190' },
       { label: 'number_one_bonus', value: reputationSystem.number_one_bonus, source: 'live', configPath: 'progression.reputation_system.number_one_bonus' },
+      { label: 'reputation_gain_scaling (positive-gain damper)', value: reputationSystem.reputation_gain_scaling, source: 'live', configPath: 'progression.reputation_system.reputation_gain_scaling', ref: 'shared/utils/reputationScaling.ts' },
     ],
     hardcoded: false,
     ref: 'game-engine.ts:1150-1190',
+    note: 'Volatility-economy slice 3: the chart-milestone bonus (a "release success" reputation GAIN) is throttled by the global reputation_gain_scaling damper before it lands. Same damper applies to press-coverage + marketing + meeting reputation gains; losses (flop) are exempt.',
   },
   {
     id: 'e-flop-reputation',
@@ -841,6 +843,32 @@ export const EDGES: SystemEdge[] = [
     hardcoded: false,
     ref: 'ReleaseProcessor.processPlannedReleases (flop penalty block)',
     note: 'RESOLVED 2026-07-10 (balance-integrity slice 2): was non-edge ne-flop-reputation (flop_penalty dead). Now the game\'s first reputation SINK — a record whose release-week revenue falls below flop_revenue_ratio of its production+marketing investment (and clears the flop_investment_floor) costs the label flop_penalty reputation, once.',
+  },
+  {
+    id: 'e-flop-artist-mood',
+    from: 'streams',
+    to: 'artist_mood',
+    mechanism: 'Flop morale wound on the release artist (volatility-economy slice 2)',
+    formula: 'On the SAME flop condition as e-flop-reputation: summary.artistChanges[release.artistId].mood += flop_artist_mood_penalty (signed, negative), once per release (same flop gate), clamped 0-100 downstream.',
+    values: [
+      { label: 'flop_artist_mood_penalty', value: reputationSystem.flop_artist_mood_penalty, source: 'live', configPath: 'progression.reputation_system.flop_artist_mood_penalty', ref: 'ReleaseProcessor.processPlannedReleases (flop block)' },
+    ],
+    hardcoded: false,
+    ref: 'ReleaseProcessor.processPlannedReleases (flop penalty block)',
+    note: 'Volatility-economy slice 2: a flop no longer only costs label reputation (e-flop-reputation) — it also wounds the release artist\'s morale, fired inside the same once-only flop flag gate. Zero RNG.',
+  },
+  {
+    id: 'e-breakthrough-artist-mood',
+    from: 'awareness',
+    to: 'artist_mood',
+    mechanism: 'Breakthrough morale lift on the song artist (volatility-economy slice 2)',
+    formula: 'When a song breaks through (existing deterministic sin-seed roll, weeks 3-6): summary.artistChanges[song.artistId].mood += artist_mood_bonus, clamped 0-100 downstream.',
+    values: [
+      { label: 'artist_mood_bonus', value: awarenessSystem.breakthrough_effects.artist_mood_bonus, source: 'live', configPath: 'markets.market_formulas.awareness_system.breakthrough_effects.artist_mood_bonus', ref: 'ReleaseProcessor.processReleasedProjects (breakthrough block)' },
+    ],
+    hardcoded: false,
+    ref: 'ReleaseProcessor.processReleasedProjects (breakthrough block)',
+    note: 'Volatility-economy slice 2: a breakthrough lifts the song artist\'s morale. No new RNG — the breakthrough itself is the existing deterministic sin-seed roll (see e-quality-awareness-breakthrough).',
   },
   {
     id: 'e-reputation-access',

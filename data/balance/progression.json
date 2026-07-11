@@ -6,9 +6,13 @@
     "goal_failure_penalty": 2,
     "hit_single_bonus": 5,
     "number_one_bonus": 10,
-    "flop_penalty": 3,
+    "reputation_gain_scaling": 0.7,
+    "_reputation_gain_scaling_note": "Volatility-economy slice 3: a global damper on how fast reputation is EARNED (playtest: rep hit 100 by week ~21 of 52). Multiplies every POSITIVE reputation gain (rounded) at each source — there is no single chokepoint, so it is applied per-source via shared/utils/reputationScaling.scaleReputationGain at: chart milestones (game-engine), press coverage (ReleaseProcessor), PR-push + digital-ads marketing (ActionProcessor), and meeting immediate + delayed rep effects (ActionProcessor). LOSSES ARE NOT SCALED (flop penalty, negative meeting/rep-swing outcomes apply at full magnitude). 1.0 = no damping.",
+    "flop_penalty": 5,
     "flop_revenue_ratio": 0.10,
     "flop_investment_floor": 10000,
+    "flop_artist_mood_penalty": -8,
+    "_flop_artist_mood_penalty_note": "Volatility-economy slice 2: a flop doesn't just cost the label reputation (flop_penalty) — it wounds the release artist's morale. Applied ONCE, alongside the flop reputation sink (same once-only flag, same deterministic gate), to summary.artistChanges[release.artistId].mood; clamped 0-100 downstream. Signed value (negative = a drop). Zero RNG.",
 
     "award_chance_per_point": 0.08,
     "award_chance_cap": 0.8,
@@ -115,7 +119,8 @@
   },
   
   "weekly_meeting_selection": {
-    "relevance_weight": 2.0,
+    "relevance_weight": 3.0,
+    "_relevance_weight_note": "Volatility-economy slice 4: raised 2.0 -> 3.0 so recently-relevant meetings surface more strongly (playtest: meeting relevance was too subtle to notice). Recency window unchanged.",
     "recency_window_weeks": 4
   },
 

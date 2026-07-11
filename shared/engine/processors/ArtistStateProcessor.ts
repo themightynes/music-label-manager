@@ -165,6 +165,78 @@ export class ArtistStateProcessor {
   }
 
   /**
+   * Volatility-economy slice 1 — passive artist-energy lifecycle.
+   *
+   * The counterweight to the C87 tour drain (TourProcessor drains energy per city
+   * on reveal; before this there was NO passive recovery and recording was free).
+   * Two flat, arithmetic-only, zero-RNG effects accumulated into summary.artistChanges
+   * exactly like the tour drain — the DB write + 0-100 clamp happen downstream in
+   * applyArtistChangesToDatabase:
+   *   - recording_drain: an artist with any recording-type project (Single/EP) in
+   *     the 'production' stage loses recording_drain_per_week energy ("from the studio").
+   *   - idle_recovery: an artist with NO active project (no Mini-Tour in production,
+   *     no recording project in production) recovers idle_recovery_per_week ("a week
+   *     to breathe").
+   * An artist can't be BOTH (recording implies an active production project), so the
+   * two branches are mutually exclusive. Touring artists get neither here (their
+   * energy already moved via the tour drain).
+   *
+   * Config: markets.json market_formulas.energy_lifecycle (enabled flag + per-knob
+   * values + fallback defaults in code so a missing block = defaults). enabled:false
+   * short-circuits both effects to 0.
+   *
+   * MUST run BEFORE advanceProjectStages so project stages are read as they were
+   * DURING the week (a recording project that completes this week still spent the
+   * week in the studio; a tour still in 'production' this week is not "idle").
+   */
+  async processWeeklyEnergyLifecycle(ctx: WeekContext): Promise<void> {
+    const { summary } = ctx;
+    const dbTransaction = ctx.dbTransaction;
+
+    const cfg = ((ctx.gameData.getBalanceConfigSync?.()?.market_formulas?.energy_lifecycle) || {}) as Record<string, any>;
+    if (cfg.enabled === false) return;
+    const recordingDrain = cfg.recording_drain_per_week ?? 4;
+    const idleRecovery = cfg.idle_recovery_per_week ?? 3;
+
+    if (!ctx.storage || !ctx.storage.getArtistsByGame) return;
+    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, dbTransaction);
+    if (!artists || artists.length === 0) return;
+    const projects = ctx.storage.getProjectsByGame
+      ? await ctx.storage.getProjectsByGame(ctx.gameState.id, dbTransaction)
+      : [];
+
+    if (!summary.artistChanges) summary.artistChanges = {};
+
+    for (const artist of artists) {
+      const artistProjects = projects.filter((p: any) => p.artistId === artist.id);
+      const isRecording = artistProjects.some(
+        (p: any) => ['Single', 'EP'].includes(p.type || '') && p.stage === 'production'
+      );
+      const isTouring = artistProjects.some(
+        (p: any) => p.type === 'Mini-Tour' && p.stage === 'production'
+      );
+
+      if (isRecording && recordingDrain !== 0) {
+        ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, -recordingDrain);
+        summary.changes.push({
+          type: 'energy',
+          description: `${artist.name}: -${recordingDrain} energy from the studio`,
+          amount: -recordingDrain,
+          artistId: artist.id
+        });
+      } else if (!isRecording && !isTouring && idleRecovery !== 0) {
+        ArtistChangeHelpers.addEnergy(summary.artistChanges, artist.id, idleRecovery);
+        summary.changes.push({
+          type: 'energy',
+          description: `${artist.name}: +${idleRecovery} energy — a week to breathe`,
+          amount: idleRecovery,
+          artistId: artist.id
+        });
+      }
+    }
+  }
+
+  /**
    * Process weekly mood changes for all artists
    * Orchestrates mood calculations from multiple sources:
    * 1. Release-based changes (success/failure)
@@ -181,6 +253,11 @@ export class ArtistStateProcessor {
     const projects = ctx.storage.getProjectsByGame ?
       await ctx.storage.getProjectsByGame(ctx.gameState.id, dbTransaction) : [];
 
+    // Volatility-economy slice 2 (knob liberation): the natural-drift bands +
+    // amount were HARDCODED (±3, 55/45). Now read from artists.json
+    // artist_stats.mood_drift with the original literals as fallback defaults.
+    const moodDriftCfg = ((ctx.gameData.getBalanceConfigSync?.()?.artist_stats?.mood_drift) || {}) as Record<string, any>;
+
     // Process each artist
     for (const artist of artists) {
       const currentMood = artist.mood || 50;
@@ -189,7 +266,7 @@ export class ArtistStateProcessor {
       const releaseMoodBoost = this.calculateReleaseMoodBoost(artist, summary);
       const workloadPenalty = this.calculateWorkloadStressPenalty(artist, projects, summary);
       const moodAfterImmediate = currentMood + releaseMoodBoost + workloadPenalty;
-      const naturalDrift = this.calculateNaturalMoodDrift(artist, moodAfterImmediate, summary);
+      const naturalDrift = this.calculateNaturalMoodDrift(artist, moodAfterImmediate, summary, moodDriftCfg);
 
       // Calculate total mood change
       const totalMoodChange = releaseMoodBoost + workloadPenalty + naturalDrift;
@@ -294,15 +371,24 @@ export class ArtistStateProcessor {
   calculateNaturalMoodDrift(
     artist: any,
     moodAfterImmediate: number,
-    summary: WeekSummary
+    summary: WeekSummary,
+    driftCfg?: Record<string, any>
   ): number {
-    // Natural drift toward 50 (by 3 points max)
+    // Volatility-economy slice 2: bands + magnitude are config-driven (liberated
+    // from the old hardcoded ±3 / 55-45), amplified to 5 (~1.5×). Fallback
+    // defaults preserve the pre-liberation literals when the config is absent.
+    const cfg = driftCfg || {};
+    const thresholdHigh = cfg.threshold_high ?? 55;
+    const thresholdLow = cfg.threshold_low ?? 45;
+    const amount = cfg.drift_amount ?? 3;
+
+    // Natural drift toward neutral (by `amount` points max)
     let driftAmount = 0;
 
-    if (moodAfterImmediate > 55) {
-      driftAmount = -3;
-    } else if (moodAfterImmediate < 45) {
-      driftAmount = 3;
+    if (moodAfterImmediate > thresholdHigh) {
+      driftAmount = -amount;
+    } else if (moodAfterImmediate < thresholdLow) {
+      driftAmount = amount;
     }
 
     // Log drift as separate change entry if it occurred

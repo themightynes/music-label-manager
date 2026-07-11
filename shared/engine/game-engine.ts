@@ -19,6 +19,7 @@ import { AchievementsEngine } from './AchievementsEngine';
 import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
 import { ArtistChangeHelpers } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
+import { scaleReputationGain } from '../utils/reputationScaling';
 import { selectSideEvent } from './sideEventSelection';
 import { classifyChange, classifyChartUpdate } from '../utils/changeImportance';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
@@ -223,6 +224,14 @@ export class GameEngine {
 
     // Process weekly charts after releases
     await this.processWeeklyCharts(summary, dbTransaction);
+
+    // Volatility-economy slice 1: passive artist-energy lifecycle (recording drain
+    // + idle recovery). MUST run BEFORE advanceProjectStages so project stages are
+    // read as they were DURING the week (a recording project that completes this
+    // week still spent the week in the studio; a tour in 'production' is not idle).
+    // Accumulates into summary.artistChanges.energy — flushed at the
+    // applyArtistChangesToDatabase call below (line ~234), alongside tour drains.
+    await this.processWeeklyEnergyLifecycle(summary, dbTransaction);
 
     // PHASE 1 MIGRATION: Handle project stage advancement within GameEngine
     await this.advanceProjectStages(summary, dbTransaction);
@@ -955,6 +964,14 @@ export class GameEngine {
   }
 
   /**
+   * Volatility-economy slice 1: passive artist-energy lifecycle
+   * (recording drain + idle recovery). Delegates to ArtistStateProcessor.
+   */
+  private async processWeeklyEnergyLifecycle(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    return new ArtistStateProcessor().processWeeklyEnergyLifecycle(this.weekContext(summary, dbTransaction));
+  }
+
+  /**
    * Process weekly popularity changes for all artists
    * UNIFIED FORMAT: Now reads from per-artist objects (artistChanges[artistId].popularity)
    * Mirrors processWeeklyMoodChanges pattern for consistency
@@ -1177,16 +1194,19 @@ export class GameEngine {
         milestones[songId] = record;
         milestonesChanged = true;
 
-        this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + bonus));
+        // Volatility-economy slice 3: throttle chart-milestone reputation (a
+        // "release success" gain) through the shared global gain-scaling helper.
+        const scaledBonus = scaleReputationGain(bonus, reputationSystem);
+        this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + scaledBonus));
         if (!summary.reputationChanges) summary.reputationChanges = {};
-        summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + bonus;
+        summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + scaledBonus;
 
         summary.changes.push({
           type: 'reputation',
           description: `Chart smash: ${entry.songTitle} hit the ${labels.join(' and ')}`,
-          amount: bonus
+          amount: scaledBonus
         });
-        console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${bonus} reputation (${labels.join(', ')})`);
+        console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${scaledBonus} reputation (raw ${bonus}) (${labels.join(', ')})`);
       }
     }
 

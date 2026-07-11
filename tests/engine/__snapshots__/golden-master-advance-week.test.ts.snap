@@ -9,7 +9,7 @@ exports[`GameEngine.advanceWeek — golden master > actions-week: role meeting +
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -291,7 +291,7 @@ Immediate attention recommended.
       "before": "none",
     },
     "reputation": {
-      "after": 15,
+      "after": 13,
       "before": 10,
     },
   },
@@ -299,11 +299,17 @@ Immediate attention recommended.
     "arOffice": {
       "completed": false,
     },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
     "changes": [
       {
         "appliedEffects": {
           "money": -1000,
-          "reputation": 2,
+          "reputation": 1,
         },
         "choiceId": "<id>",
         "choiceLabel": "Choice choice_a",
@@ -315,9 +321,16 @@ Immediate attention recommended.
       },
       {
         "amount": -3200,
-        "description": "Digital campaign boosted online presence (+3 reputation)",
+        "description": "Digital campaign boosted online presence (+2 reputation)",
         "importance": "routine",
         "type": "expense",
+      },
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Roster Artist: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
       },
       {
         "amount": -5,
@@ -351,8 +364,8 @@ Immediate attention recommended.
         "type": "unlock",
       },
       {
-        "amount": 2,
-        "description": "+2 reputation points",
+        "amount": 1,
+        "description": "+1 reputation points",
         "importance": "routine",
         "type": "reputation",
       },
@@ -376,7 +389,7 @@ Immediate attention recommended.
     "financialBreakdown": "$500,000 - $1,733 (operations) - $1,200 (artists) - $3,200 (marketing) - $1,000 (role costs) = $492,867",
     "generatedEmails": 3,
     "reputationChanges": {
-      "global": 2,
+      "global": 1,
     },
     "revenue": 0,
     "usedExecutives": {},
@@ -394,7 +407,7 @@ exports[`GameEngine.advanceWeek — golden master > ar-office-week: sourcing slo
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -769,12 +782,25 @@ Immediate attention recommended.
       "discoveredArtistId": "<id>",
       "sourcingType": "active",
     },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
     "changes": [
       {
         "amount": 0,
         "description": "A&R sourcing (active) completed. Discovered Discovery One.",
         "importance": "hero",
         "type": "unlock",
+      },
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Signed Local: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
       },
       {
         "amount": -3375,
@@ -830,7 +856,7 @@ exports[`GameEngine.advanceWeek — golden master > empty-week: burn, salaries, 
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -1098,7 +1124,20 @@ Immediate attention recommended.
     "arOffice": {
       "completed": false,
     },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
     "changes": [
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Golden Artist: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
+      },
       {
         "amount": -3191,
         "description": "Weekly operational costs",
@@ -1153,7 +1192,7 @@ exports[`GameEngine.advanceWeek — golden master > flop-release-week: release r
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -1161,7 +1200,7 @@ exports[`GameEngine.advanceWeek — golden master > flop-release-week: release r
         "lastAttentionWeek": 1,
         "lastMoodEvent": null,
         "massAppeal": 50,
-        "mood": 55,
+        "mood": 47,
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Flop Releaser",
@@ -1261,122 +1300,6 @@ Per our projections,
         "sender": "Patricia "Pat" Williams, PhD",
         "senderRoleId": "<id>",
         "subject": "🎉 Released: "Doomed Single" (single) – Distribution Complete",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
-          "amount": 0,
-          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-          "greeting": "Boss,",
-          "narrative": "Revenue threshold achieved. New distribution tier unlocked.
-
-TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
-
-New capabilities are live:
-• Expanded playlist access
-• Higher inclusion probability
-
-System automatically grants access. No action required.",
-          "narrativeBody": "Boss,
-
-Revenue threshold achieved. New distribution tier unlocked.
-
-TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
-
-New capabilities are live:
-• Expanded playlist access
-• Higher inclusion probability
-
-System automatically grants access. No action required.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "signOff": "Per our projections,
-- Patricia Williams, PhD",
-          "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-Revenue threshold achieved. New distribution tier unlocked.
-
-TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
-
-New capabilities are live:
-• Expanded playlist access
-• Higher inclusion probability
-
-System automatically grants access. No action required.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "tierKind": "playlist",
-        },
-        "preview": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        "sender": "Patricia "Pat" Williams, PhD",
-        "senderRoleId": "<id>",
-        "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
-          "amount": 0,
-          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-          "greeting": "Boss,",
-          "narrative": "You just opened doors most labels take years to access.
-
-NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
-
-Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.",
-          "narrativeBody": "Boss,
-
-You just opened doors most labels take years to access.
-
-NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
-
-Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
-
-By the numbers,
-- Samara Chen",
-          "signOff": "By the numbers,
-- Samara Chen",
-          "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-You just opened doors most labels take years to access.
-
-NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
-
-Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
-
-By the numbers,
-- Samara Chen",
-          "tierKind": "press",
-        },
-        "preview": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-        "sender": "Samara "Sam" Chen",
-        "senderRoleId": "<id>",
-        "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
         "updatedAt": "<timestamp>",
         "week": 5,
       },
@@ -1559,13 +1482,9 @@ Immediate attention recommended.
       "after": 478385,
       "before": 500000,
     },
-    "playlistAccess": {
-      "after": "niche",
-      "before": "none",
-    },
-    "pressAccess": {
-      "after": "blogs",
-      "before": "none",
+    "reputation": {
+      "after": 7,
+      "before": 10,
     },
   },
   "summary": {
@@ -1592,12 +1511,27 @@ Immediate attention recommended.
         "type": "marketing",
       },
       {
-        "amount": -3,
-        "description": "📉 "Doomed Single" flopped — the industry noticed (-3 reputation)",
+        "amount": -5,
+        "description": "📉 "Doomed Single" flopped — the industry noticed (-5 reputation)",
         "importance": "notable",
         "releaseId": "<id>",
         "releaseName": "Doomed Single",
         "type": "flop",
+      },
+      {
+        "amount": -8,
+        "artistId": "<id>",
+        "description": "Doomed Single flopped — the artist took it hard (-8 mood)",
+        "importance": "routine",
+        "moodChange": -8,
+        "type": "mood",
+      },
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Flop Releaser: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
       },
       {
         "amount": -3134,
@@ -1606,16 +1540,10 @@ Immediate attention recommended.
         "type": "expense",
       },
       {
-        "amount": 0,
-        "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        "importance": "hero",
-        "type": "unlock",
-      },
-      {
-        "amount": 0,
-        "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-        "importance": "hero",
-        "type": "unlock",
+        "amount": -3,
+        "description": "-3 reputation points",
+        "importance": "routine",
+        "type": "reputation",
       },
     ],
     "chartUpdates": {
@@ -1647,10 +1575,10 @@ Immediate attention recommended.
     },
     "expenses": 23134,
     "financialBreakdown": "$500,000 - $1,934 (operations) - $1,200 (artists) - $20,000 (marketing) + $1,519 (streaming) = $478,385",
-    "generatedEmails": 4,
+    "generatedEmails": 2,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 0,
+      "<uuid-key>": -3,
     },
     "revenue": 1519,
     "streams": 30374,
@@ -1669,7 +1597,7 @@ exports[`GameEngine.advanceWeek — golden master > lead-single-week: leadSingle
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -2086,12 +2014,25 @@ Performance Indicators:
     "arOffice": {
       "completed": false,
     },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
     "changes": [
       {
         "amount": 9434,
         "description": "🎵 Lead Single: "Lead Cut" (from upcoming "Upcoming EP")",
         "importance": "notable",
         "type": "release",
+      },
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "LeadArtist: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
       },
       {
         "amount": -3683,
@@ -2168,7 +2109,7 @@ exports[`GameEngine.advanceWeek — golden master > legacy-tour-week: Mini-Tour 
         "lastAttentionWeek": 1,
         "lastMoodEvent": null,
         "massAppeal": 50,
-        "mood": 55,
+        "mood": 53,
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Legacy Tourer",
@@ -2639,11 +2580,11 @@ Performance Indicators:
         "venue": "Club Venues",
       },
       {
-        "amount": -3,
+        "amount": -5,
         "artistId": "<id>",
         "description": "Legacy Tourer's mood naturally decreased (drift toward 50)",
         "importance": "routine",
-        "moodChange": -3,
+        "moodChange": -5,
         "source": "weekly_drift",
         "type": "mood",
       },
@@ -2708,7 +2649,7 @@ exports[`GameEngine.advanceWeek — golden master > low-mood-recording-week: art
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 46,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -2716,7 +2657,7 @@ exports[`GameEngine.advanceWeek — golden master > low-mood-recording-week: art
         "lastAttentionWeek": 1,
         "lastMoodEvent": null,
         "massAppeal": 50,
-        "mood": 23,
+        "mood": 25,
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Gloomy Recorder",
@@ -3113,6 +3054,12 @@ Immediate attention recommended.
     "arOffice": {
       "completed": false,
     },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
     "changes": [
       {
         "amount": 0,
@@ -3148,11 +3095,18 @@ Immediate attention recommended.
         "type": "project_complete",
       },
       {
-        "amount": 3,
+        "amount": -4,
+        "artistId": "<id>",
+        "description": "Gloomy Recorder: -4 energy from the studio",
+        "importance": "routine",
+        "type": "energy",
+      },
+      {
+        "amount": 5,
         "artistId": "<id>",
         "description": "Gloomy Recorder's mood naturally improved (drift toward 50)",
         "importance": "routine",
-        "moodChange": 3,
+        "moodChange": 5,
         "source": "weekly_drift",
         "type": "mood",
       },
@@ -3210,7 +3164,7 @@ exports[`GameEngine.advanceWeek — golden master > multi-artist-release-week: r
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -3237,7 +3191,7 @@ exports[`GameEngine.advanceWeek — golden master > multi-artist-release-week: r
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -3471,58 +3425,6 @@ P.S. – Already have three story angles ready to deploy.",
       },
       {
         "body": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "greeting": "Boss,",
-          "narrative": "Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "signOff": "Per our projections,
-- Patricia Williams, PhD",
-          "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "tierKind": "venue",
-        },
-        "preview": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "sender": "Patricia "Pat" Williams, PhD",
-        "senderRoleId": "<id>",
-        "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
           "expenseBreakdown": {
             "artistSalaries": 2400,
             "executiveSalaries": 0,
@@ -3705,12 +3607,8 @@ Performance Indicators:
       "before": "none",
     },
     "reputation": {
-      "after": 22,
+      "after": 18,
       "before": 10,
-    },
-    "venueAccess": {
-      "after": "theaters",
-      "before": "clubs",
     },
   },
   "summary": {
@@ -3718,7 +3616,11 @@ Performance Indicators:
       "completed": false,
     },
     "artistChanges": {
-      "<uuid-key>": {
+      "<uuid-key-0>": {
+        "energy": 0,
+        "mood": 0,
+      },
+      "<uuid-key-1>": {
         "energy": 0,
         "mood": 0,
       },
@@ -3735,6 +3637,20 @@ Performance Indicators:
         "description": "📢 Marketing campaign for "Star Single"",
         "importance": "routine",
         "type": "marketing",
+      },
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Bystander Act: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
+      },
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Star Releaser: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
       },
       {
         "amount": -4258,
@@ -3755,14 +3671,8 @@ Performance Indicators:
         "type": "unlock",
       },
       {
-        "amount": 0,
-        "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "importance": "hero",
-        "type": "unlock",
-      },
-      {
-        "amount": 12,
-        "description": "+12 reputation points",
+        "amount": 8,
+        "description": "+8 reputation points",
         "importance": "notable",
         "type": "reputation",
       },
@@ -3796,10 +3706,10 @@ Performance Indicators:
     },
     "expenses": 9258,
     "financialBreakdown": "$500,000 - $1,858 (operations) - $2,400 (artists) - $5,000 (marketing) + $11,628 (streaming) = $502,370",
-    "generatedEmails": 5,
+    "generatedEmails": 4,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 12,
+      "<uuid-key>": 8,
     },
     "revenue": 11628,
     "streams": 232553,
@@ -3818,7 +3728,7 @@ exports[`GameEngine.advanceWeek — golden master > recording-week: production p
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 46,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -4218,6 +4128,12 @@ Immediate attention recommended.
     "arOffice": {
       "completed": false,
     },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
     "changes": [
       {
         "amount": 0,
@@ -4251,6 +4167,13 @@ Immediate attention recommended.
         "importance": "notable",
         "projectId": "<id>",
         "type": "project_complete",
+      },
+      {
+        "amount": -4,
+        "artistId": "<id>",
+        "description": "Recorder: -4 energy from the studio",
+        "importance": "routine",
+        "type": "energy",
       },
       {
         "amount": -3122,
@@ -4306,7 +4229,7 @@ exports[`GameEngine.advanceWeek — golden master > release-week: planned releas
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -4540,58 +4463,6 @@ P.S. – Already have three story angles ready to deploy.",
       },
       {
         "body": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "greeting": "Boss,",
-          "narrative": "Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "signOff": "Per our projections,
-- Patricia Williams, PhD",
-          "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "tierKind": "venue",
-        },
-        "preview": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "sender": "Patricia "Pat" Williams, PhD",
-        "senderRoleId": "<id>",
-        "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
           "expenseBreakdown": {
             "artistSalaries": 1200,
             "executiveSalaries": 0,
@@ -4777,12 +4648,8 @@ Immediate attention recommended.
       "before": "none",
     },
     "reputation": {
-      "after": 22,
+      "after": 18,
       "before": 10,
-    },
-    "venueAccess": {
-      "after": "theaters",
-      "before": "clubs",
     },
   },
   "summary": {
@@ -4809,6 +4676,13 @@ Immediate attention recommended.
         "type": "marketing",
       },
       {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Releaser: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
+      },
+      {
         "amount": -3643,
         "description": "Weekly operational costs",
         "importance": "routine",
@@ -4827,14 +4701,8 @@ Immediate attention recommended.
         "type": "unlock",
       },
       {
-        "amount": 0,
-        "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "importance": "hero",
-        "type": "unlock",
-      },
-      {
-        "amount": 12,
-        "description": "+12 reputation points",
+        "amount": 8,
+        "description": "+8 reputation points",
         "importance": "notable",
         "type": "reputation",
       },
@@ -4868,10 +4736,10 @@ Immediate attention recommended.
     },
     "expenses": 8643,
     "financialBreakdown": "$500,000 - $2,443 (operations) - $1,200 (artists) - $5,000 (marketing) + $7,818 (streaming) = $499,175",
-    "generatedEmails": 5,
+    "generatedEmails": 4,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 12,
+      "<uuid-key>": 8,
     },
     "revenue": 7818,
     "streams": 156368,
@@ -4890,7 +4758,7 @@ exports[`GameEngine.advanceWeek — golden master > released-catalog-week: previ
         "archetype": "Workhorse",
         "bio": null,
         "creativity": 50,
-        "energy": 50,
+        "energy": 53,
         "experience": 0,
         "gameId": "<id>",
         "genre": "pop",
@@ -5224,6 +5092,13 @@ Immediate attention recommended.
         "type": "ongoing_revenue",
       },
       {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Catalog Artist: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
+      },
+      {
         "amount": 0.1,
         "description": "Catalog Artist's popularity increased (+0.1)",
         "importance": "routine",
@@ -5310,7 +5185,7 @@ exports[`GameEngine.advanceWeek — golden master > saturated-tour-week: a 95-po
         "lastAttentionWeek": 1,
         "lastMoodEvent": null,
         "massAppeal": 50,
-        "mood": 55,
+        "mood": 53,
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Megastar Act",
@@ -5782,11 +5657,11 @@ Performance Indicators:
         "venue": "Club Venues",
       },
       {
-        "amount": -3,
+        "amount": -5,
         "artistId": "<id>",
         "description": "Megastar Act's mood naturally decreased (drift toward 50)",
         "importance": "routine",
-        "moodChange": -3,
+        "moodChange": -5,
         "source": "weekly_drift",
         "type": "mood",
       },
@@ -5859,7 +5734,7 @@ exports[`GameEngine.advanceWeek — golden master > tour-week: active Mini-Tour 
         "lastAttentionWeek": 1,
         "lastMoodEvent": null,
         "massAppeal": 50,
-        "mood": 55,
+        "mood": 53,
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Touring Act",
@@ -6331,11 +6206,11 @@ Performance Indicators:
         "venue": "Club Venues",
       },
       {
-        "amount": -3,
+        "amount": -5,
         "artistId": "<id>",
         "description": "Touring Act's mood naturally decreased (drift toward 50)",
         "importance": "routine",
-        "moodChange": -3,
+        "moodChange": -5,
         "source": "weekly_drift",
         "type": "mood",
       },
@@ -6408,7 +6283,7 @@ exports[`GameEngine.advanceWeek — golden master > under-energy-tour-week: low 
         "lastAttentionWeek": 1,
         "lastMoodEvent": null,
         "massAppeal": 50,
-        "mood": 55,
+        "mood": 53,
         "moodHistory": [],
         "moodTrend": 0,
         "name": "Exhausted Act",
@@ -6893,11 +6768,11 @@ Performance Indicators:
         "venue": "Club Venues",
       },
       {
-        "amount": -3,
+        "amount": -5,
         "artistId": "<id>",
         "description": "Exhausted Act's mood naturally decreased (drift toward 50)",
         "importance": "routine",
-        "moodChange": -3,
+        "moodChange": -5,
         "source": "weekly_drift",
         "type": "mood",
       },

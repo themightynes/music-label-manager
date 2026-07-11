@@ -60,6 +60,7 @@ import type { WeekSummary } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../../utils/seasonalCalculations';
 import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
+import { scaleReputationGain } from '../../utils/reputationScaling';
 
 // Patch type for song updates applied during weekly processing. Mirrors the
 // module-level SongUpdatePatch in game-engine.ts: `processReleasedProjects`'s
@@ -805,6 +806,25 @@ export class ReleaseProcessor {
                         amount: 0
                       });
 
+                      // Volatility-economy slice 2: a breakthrough lifts the song
+                      // artist's morale. Config knob markets.json awareness_system.
+                      // breakthrough_effects.artist_mood_bonus (default 5), applied to
+                      // summary.artistChanges[song.artistId].mood (accumulated like every
+                      // other mood source; clamped 0-100 downstream). No new RNG — the
+                      // breakthrough itself is the existing deterministic sin-seed roll.
+                      const breakthroughMoodBonus = breakthroughEffects.artist_mood_bonus ?? 5;
+                      if (song.artistId && breakthroughMoodBonus !== 0) {
+                        if (!summary.artistChanges) summary.artistChanges = {};
+                        ArtistChangeHelpers.addMood(summary.artistChanges, song.artistId, breakthroughMoodBonus);
+                        summary.changes.push({
+                          type: 'mood',
+                          description: `"${song.title}" broke through — the artist is flying (+${breakthroughMoodBonus} mood)`,
+                          amount: breakthroughMoodBonus,
+                          moodChange: breakthroughMoodBonus,
+                          artistId: song.artistId,
+                        });
+                      }
+
                       awarenessUpdate = {
                         awareness: newAwareness,
                         peak_awareness: Math.round(Math.max(song.peak_awareness || 0, newAwareness)),
@@ -1516,8 +1536,15 @@ export class ReleaseProcessor {
             // (the dashboard displayed a hardcoded 0 before this).
             summary.pressMentions = (summary.pressMentions || 0) + pressOutcome.pickups;
 
-            const reputationGain = pressOutcome.reputationGain;
-            ctx.gameState.reputation = (ctx.gameState.reputation || 0) + reputationGain;
+            // Volatility-economy slice 3: throttle the press-coverage reputation
+            // gain through the shared global gain-scaling helper (positive-only).
+            const repSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
+            const reputationGain = scaleReputationGain(pressOutcome.reputationGain, repSystemCfg);
+            // C65 FIX: this was the ONLY reputation write path that skipped the
+            // 0-100 clamp every other path enforces (ActionProcessor, chart
+            // milestones, flop). Clamp here too, honoring max_reputation.
+            const maxReputation = repSystemCfg?.max_reputation ?? 100;
+            ctx.gameState.reputation = Math.min(maxReputation, (ctx.gameState.reputation || 0) + reputationGain);
 
             // C34: Do NOT push a per-source `type: 'reputation'` change here.
             // Reputation is label-wide; a single aggregated ⭐ Achievement line is
@@ -1592,7 +1619,26 @@ export class ReleaseProcessor {
                 releaseName: release.title,
               });
 
-              console.log(`[FLOP] "${release.title}" flopped — revenue $${releaseWeekRevenue} < ${flopRevenueRatio}×$${totalInvestment}; reputation ${repBefore} -> ${repAfter}`);
+              // Volatility-economy slice 2: a flop also wounds the release artist's
+              // morale. Config knob progression.json reputation_system.flop_artist_mood_penalty
+              // (signed, default -8), applied to summary.artistChanges[release.artistId].mood
+              // (accumulated like every other mood source; clamped 0-100 downstream in
+              // applyArtistChangesToDatabase). Fires ONCE, inside the same once-only flop
+              // flag gate. No RNG.
+              const flopMoodPenalty = repSystem.flop_artist_mood_penalty ?? -8;
+              if (release.artistId && flopMoodPenalty !== 0) {
+                if (!summary.artistChanges) summary.artistChanges = {};
+                ArtistChangeHelpers.addMood(summary.artistChanges, release.artistId, flopMoodPenalty);
+                summary.changes.push({
+                  type: 'mood',
+                  description: `${release.title} flopped — the artist took it hard (${flopMoodPenalty} mood)`,
+                  amount: flopMoodPenalty,
+                  moodChange: flopMoodPenalty,
+                  artistId: release.artistId,
+                });
+              }
+
+              console.log(`[FLOP] "${release.title}" flopped — revenue $${releaseWeekRevenue} < ${flopRevenueRatio}×$${totalInvestment}; reputation ${repBefore} -> ${repAfter}, mood ${flopMoodPenalty}`);
             }
           }
         } catch (flopError) {

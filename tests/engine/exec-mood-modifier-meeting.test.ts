@@ -77,6 +77,11 @@ function buildMeetingContext(setup: MeetingSetup) {
         effects_delayed: setup.effects_delayed ?? {},
       }),
       getExecMoodModifierConfigSync: () => EXEC_MOOD_CONFIG,
+      // Isolate these exec-mood-modifier assertions from the volatility-economy
+      // slice 3 global reputation-gain damper (default 0.7) — set scaling to 1.0
+      // so reputation lands at full magnitude and the exec ×1.20/×0.90 modifier is
+      // the ONLY transform under test.
+      getBalanceConfigSync: () => ({ reputation_system: { reputation_gain_scaling: 1.0 } }),
     } as any,
     storage: { getExecutive, updateExecutive } as any,
     financialSystem: {} as any,

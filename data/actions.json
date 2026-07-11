@@ -1140,7 +1140,7 @@
             "money": -3500
           },
           "effects_delayed": {
-            "creative_capital": 3
+            "creative_capital": 5
           }
         },
         {
@@ -1152,7 +1152,7 @@
           },
           "effects_delayed": {
             "artist_mood": 10,
-            "creative_capital": 6
+            "creative_capital": 9
           }
         }
       ],

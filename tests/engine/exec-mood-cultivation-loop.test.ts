@@ -70,6 +70,9 @@ describe('Exec mood cultivation loop (DB-backed)', () => {
         getActionById: async () => ({ id: 'meeting_x', target_scope: 'global' }),
         getChoiceById: async () => ({ id: 'choice_x', label: 'Do the thing', effects_immediate, effects_delayed }),
         getExecMoodModifierConfigSync: () => EXEC_MOOD_CONFIG,
+        // Isolate from the volatility-economy slice 3 reputation-gain damper —
+        // scaling 1.0 so the exec ×1.20 magnitude modifier is the only transform.
+        getBalanceConfigSync: () => ({ reputation_system: { reputation_gain_scaling: 1.0 } }),
       } as any,
       storage: storage as any,
       financialSystem: {} as any,
