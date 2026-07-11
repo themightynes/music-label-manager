@@ -87,6 +87,12 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     // getBalanceConfigSync().artist_stats.mood_drift resolves (the ONLY engine
     // reader of artist_stats — the amplified natural-drift bands/magnitude).
     artist_stats: artistsBalance.artist_stats,
+    // Volatility-economy slice 3: mirror ServerGameData (dataLoader exposes
+    // reputation_system on getBalanceConfigSync). Previously omitted, so the flop
+    // penalty + reputation_gain_scaling fell back to code defaults instead of the
+    // configured values — the flop fixture silently used flop_penalty 3, not the
+    // authored value. Now the GM reflects progression.json.
+    reputation_system: progression.reputation_system,
     ...config,
   };
   const streaming = marketFormulas?.streaming_calculation;

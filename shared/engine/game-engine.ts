@@ -19,6 +19,7 @@ import { AchievementsEngine } from './AchievementsEngine';
 import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
 import { ArtistChangeHelpers } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
+import { scaleReputationGain } from '../utils/reputationScaling';
 import { selectSideEvent } from './sideEventSelection';
 import { classifyChange, classifyChartUpdate } from '../utils/changeImportance';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
@@ -1193,16 +1194,19 @@ export class GameEngine {
         milestones[songId] = record;
         milestonesChanged = true;
 
-        this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + bonus));
+        // Volatility-economy slice 3: throttle chart-milestone reputation (a
+        // "release success" gain) through the shared global gain-scaling helper.
+        const scaledBonus = scaleReputationGain(bonus, reputationSystem);
+        this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + scaledBonus));
         if (!summary.reputationChanges) summary.reputationChanges = {};
-        summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + bonus;
+        summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + scaledBonus;
 
         summary.changes.push({
           type: 'reputation',
           description: `Chart smash: ${entry.songTitle} hit the ${labels.join(' and ')}`,
-          amount: bonus
+          amount: scaledBonus
         });
-        console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${bonus} reputation (${labels.join(', ')})`);
+        console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${scaledBonus} reputation (raw ${bonus}) (${labels.join(', ')})`);
       }
     }
 

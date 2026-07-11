@@ -45,6 +45,7 @@ import { ArtistChangeHelpers } from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
 import { seededRandom } from '../../utils/seededRandom';
+import { scaleReputationGain } from '../../utils/reputationScaling';
 import {
   getMoodModifiers,
   applyMoodModifiersToEffects,
@@ -370,6 +371,17 @@ export class ActionProcessor {
         }
       }
       await this.applyEffects(ctx, immediateToApply, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+
+      // Volatility-economy slice 3: applyEffects throttles POSITIVE reputation
+      // gains through the global scaling helper. Reflect the SAME scaled value back
+      // into appliedEffects (the meeting badge) so it shows what actually landed,
+      // not the pre-scaling magnitude. Done AFTER applyEffects so we never mutate
+      // the value it consumes (immediateToApply === appliedEffects when there is no
+      // mood modifier — mutating before would double-scale). Losses are untouched.
+      if (typeof appliedEffects.reputation === 'number') {
+        const repCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
+        appliedEffects.reputation = scaleReputationGain(appliedEffects.reputation, repCfg);
+      }
     }
 
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
@@ -645,15 +657,21 @@ export class ActionProcessor {
             summary.expenseBreakdown.roleMeetingCosts += Math.abs(value);
           }
           break;
-        case 'reputation':
-          ctx.gameState.reputation = Math.max(0, Math.min(100, (ctx.gameState.reputation || 0) + value));
+        case 'reputation': {
+          // Volatility-economy slice 3: throttle POSITIVE meeting reputation gains
+          // through the shared global gain-scaling helper. A negative meeting effect
+          // (reputation loss) passes through unscaled.
+          const repSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
+          const scaledValue = scaleReputationGain(value, repSystemCfg);
+          ctx.gameState.reputation = Math.max(0, Math.min(100, (ctx.gameState.reputation || 0) + scaledValue));
           // Track reputation changes in summary for analysis
           if (!summary.reputationChanges) {
             summary.reputationChanges = {};
           }
           const targetKey = artistId || 'global';
-          summary.reputationChanges[targetKey] = (summary.reputationChanges[targetKey] || 0) + value;
+          summary.reputationChanges[targetKey] = (summary.reputationChanges[targetKey] || 0) + scaledValue;
           break;
+        }
         case 'creative_capital':
           ctx.gameState.creativeCapital = Math.max(0, (ctx.gameState.creativeCapital || 0) + value);
           break;
@@ -1060,9 +1078,15 @@ export class ActionProcessor {
           const magnitude = Math.abs(value);
           const roll = seededRandom(seed); // [0, 1)
           // Map [0,1) to a uniform integer in [-magnitude, +magnitude] (2*magnitude+1 buckets).
-          const rolledValue = magnitude === 0
+          const rawRolledValue = magnitude === 0
             ? 0
             : Math.floor(roll * (2 * magnitude + 1)) - magnitude;
+
+          // Volatility-economy slice 3: a rep-swing that PAYS OFF is a reputation
+          // GAIN and is throttled by the shared global scaling; a swing that
+          // BACKFIRES is a loss and applies at full magnitude (positive-only helper).
+          const repSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
+          const rolledValue = scaleReputationGain(rawRolledValue, repSystemCfg);
 
           const previousReputation = ctx.gameState.reputation || 0;
           ctx.gameState.reputation = Math.max(0, Math.min(100, previousReputation + rolledValue));
@@ -1084,7 +1108,7 @@ export class ActionProcessor {
             amount: rolledValue,
             appliedEffects: { rep_swing: rolledValue }
           });
-          console.log(`[EFFECT PROCESSING] rep_swing effect: gambled ±${magnitude}, rolled ${rolledValue > 0 ? '+' : ''}${rolledValue} (seed: ${seed})`);
+          console.log(`[EFFECT PROCESSING] rep_swing effect: gambled ±${magnitude}, rolled ${rawRolledValue > 0 ? '+' : ''}${rawRolledValue} → applied ${rolledValue > 0 ? '+' : ''}${rolledValue} (seed: ${seed})`);
           break;
         }
 
@@ -1436,7 +1460,10 @@ export class ActionProcessor {
           pressMomentumForPush
         );
         if (pressPickups > 0) {
-          ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + pressPickups);
+          // Volatility-economy slice 3: throttle the PR-push reputation gain.
+          const prRepSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
+          const prRepGain = scaleReputationGain(pressPickups, prRepSystemCfg);
+          ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + prRepGain);
           // C45: count pickups so weeklyStats.pressMentions reflects reality.
           summary.pressMentions = (summary.pressMentions || 0) + pressPickups;
           effectDescription = `PR campaign generated ${pressPickups} press mentions`;
@@ -1446,12 +1473,16 @@ export class ActionProcessor {
         break;
       }
 
-      case 'digital_ads':
+      case 'digital_ads': {
         // Digital ads improve streaming potential
-        const streamingBoost = Math.floor(campaignCost / 1000); // $1k = 1 reputation point
+        const rawStreamingBoost = Math.floor(campaignCost / 1000); // $1k = 1 reputation point
+        // Volatility-economy slice 3: throttle the digital-ads reputation gain.
+        const digitalRepSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
+        const streamingBoost = scaleReputationGain(rawStreamingBoost, digitalRepSystemCfg);
         ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + streamingBoost);
         effectDescription = `Digital campaign boosted online presence (+${streamingBoost} reputation)`;
         break;
+      }
 
       default:
         effectDescription = `${marketingType} campaign completed`;

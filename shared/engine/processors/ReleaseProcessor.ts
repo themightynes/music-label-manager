@@ -60,6 +60,7 @@ import type { WeekSummary } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../../utils/seasonalCalculations';
 import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
+import { scaleReputationGain } from '../../utils/reputationScaling';
 
 // Patch type for song updates applied during weekly processing. Mirrors the
 // module-level SongUpdatePatch in game-engine.ts: `processReleasedProjects`'s
@@ -1535,8 +1536,15 @@ export class ReleaseProcessor {
             // (the dashboard displayed a hardcoded 0 before this).
             summary.pressMentions = (summary.pressMentions || 0) + pressOutcome.pickups;
 
-            const reputationGain = pressOutcome.reputationGain;
-            ctx.gameState.reputation = (ctx.gameState.reputation || 0) + reputationGain;
+            // Volatility-economy slice 3: throttle the press-coverage reputation
+            // gain through the shared global gain-scaling helper (positive-only).
+            const repSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
+            const reputationGain = scaleReputationGain(pressOutcome.reputationGain, repSystemCfg);
+            // C65 FIX: this was the ONLY reputation write path that skipped the
+            // 0-100 clamp every other path enforces (ActionProcessor, chart
+            // milestones, flop). Clamp here too, honoring max_reputation.
+            const maxReputation = repSystemCfg?.max_reputation ?? 100;
+            ctx.gameState.reputation = Math.min(maxReputation, (ctx.gameState.reputation || 0) + reputationGain);
 
             // C34: Do NOT push a per-source `type: 'reputation'` change here.
             // Reputation is label-wide; a single aggregated ⭐ Achievement line is

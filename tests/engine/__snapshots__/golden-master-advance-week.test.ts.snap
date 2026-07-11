@@ -291,7 +291,7 @@ Immediate attention recommended.
       "before": "none",
     },
     "reputation": {
-      "after": 15,
+      "after": 13,
       "before": 10,
     },
   },
@@ -309,7 +309,7 @@ Immediate attention recommended.
       {
         "appliedEffects": {
           "money": -1000,
-          "reputation": 2,
+          "reputation": 1,
         },
         "choiceId": "<id>",
         "choiceLabel": "Choice choice_a",
@@ -321,7 +321,7 @@ Immediate attention recommended.
       },
       {
         "amount": -3200,
-        "description": "Digital campaign boosted online presence (+3 reputation)",
+        "description": "Digital campaign boosted online presence (+2 reputation)",
         "importance": "routine",
         "type": "expense",
       },
@@ -364,8 +364,8 @@ Immediate attention recommended.
         "type": "unlock",
       },
       {
-        "amount": 2,
-        "description": "+2 reputation points",
+        "amount": 1,
+        "description": "+1 reputation points",
         "importance": "routine",
         "type": "reputation",
       },
@@ -389,7 +389,7 @@ Immediate attention recommended.
     "financialBreakdown": "$500,000 - $1,733 (operations) - $1,200 (artists) - $3,200 (marketing) - $1,000 (role costs) = $492,867",
     "generatedEmails": 3,
     "reputationChanges": {
-      "global": 2,
+      "global": 1,
     },
     "revenue": 0,
     "usedExecutives": {},
@@ -1305,122 +1305,6 @@ Per our projections,
       },
       {
         "body": {
-          "amount": 0,
-          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-          "greeting": "Boss,",
-          "narrative": "Revenue threshold achieved. New distribution tier unlocked.
-
-TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
-
-New capabilities are live:
-• Expanded playlist access
-• Higher inclusion probability
-
-System automatically grants access. No action required.",
-          "narrativeBody": "Boss,
-
-Revenue threshold achieved. New distribution tier unlocked.
-
-TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
-
-New capabilities are live:
-• Expanded playlist access
-• Higher inclusion probability
-
-System automatically grants access. No action required.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "signOff": "Per our projections,
-- Patricia Williams, PhD",
-          "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-Revenue threshold achieved. New distribution tier unlocked.
-
-TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
-
-New capabilities are live:
-• Expanded playlist access
-• Higher inclusion probability
-
-System automatically grants access. No action required.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "tierKind": "playlist",
-        },
-        "preview": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        "sender": "Patricia "Pat" Williams, PhD",
-        "senderRoleId": "<id>",
-        "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
-          "amount": 0,
-          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-          "greeting": "Boss,",
-          "narrative": "You just opened doors most labels take years to access.
-
-NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
-
-Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.",
-          "narrativeBody": "Boss,
-
-You just opened doors most labels take years to access.
-
-NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
-
-Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
-
-By the numbers,
-- Samara Chen",
-          "signOff": "By the numbers,
-- Samara Chen",
-          "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-You just opened doors most labels take years to access.
-
-NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
-
-Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
-
-By the numbers,
-- Samara Chen",
-          "tierKind": "press",
-        },
-        "preview": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-        "sender": "Samara "Sam" Chen",
-        "senderRoleId": "<id>",
-        "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
           "expenseBreakdown": {
             "artistSalaries": 1200,
             "executiveSalaries": 0,
@@ -1598,13 +1482,9 @@ Immediate attention recommended.
       "after": 478385,
       "before": 500000,
     },
-    "playlistAccess": {
-      "after": "niche",
-      "before": "none",
-    },
-    "pressAccess": {
-      "after": "blogs",
-      "before": "none",
+    "reputation": {
+      "after": 7,
+      "before": 10,
     },
   },
   "summary": {
@@ -1631,8 +1511,8 @@ Immediate attention recommended.
         "type": "marketing",
       },
       {
-        "amount": -3,
-        "description": "📉 "Doomed Single" flopped — the industry noticed (-3 reputation)",
+        "amount": -5,
+        "description": "📉 "Doomed Single" flopped — the industry noticed (-5 reputation)",
         "importance": "notable",
         "releaseId": "<id>",
         "releaseName": "Doomed Single",
@@ -1660,16 +1540,10 @@ Immediate attention recommended.
         "type": "expense",
       },
       {
-        "amount": 0,
-        "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
-        "importance": "hero",
-        "type": "unlock",
-      },
-      {
-        "amount": 0,
-        "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
-        "importance": "hero",
-        "type": "unlock",
+        "amount": -3,
+        "description": "-3 reputation points",
+        "importance": "routine",
+        "type": "reputation",
       },
     ],
     "chartUpdates": {
@@ -1701,10 +1575,10 @@ Immediate attention recommended.
     },
     "expenses": 23134,
     "financialBreakdown": "$500,000 - $1,934 (operations) - $1,200 (artists) - $20,000 (marketing) + $1,519 (streaming) = $478,385",
-    "generatedEmails": 4,
+    "generatedEmails": 2,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 0,
+      "<uuid-key>": -3,
     },
     "revenue": 1519,
     "streams": 30374,
@@ -3551,58 +3425,6 @@ P.S. – Already have three story angles ready to deploy.",
       },
       {
         "body": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "greeting": "Boss,",
-          "narrative": "Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "signOff": "Per our projections,
-- Patricia Williams, PhD",
-          "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "tierKind": "venue",
-        },
-        "preview": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "sender": "Patricia "Pat" Williams, PhD",
-        "senderRoleId": "<id>",
-        "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
           "expenseBreakdown": {
             "artistSalaries": 2400,
             "executiveSalaries": 0,
@@ -3785,12 +3607,8 @@ Performance Indicators:
       "before": "none",
     },
     "reputation": {
-      "after": 22,
+      "after": 18,
       "before": 10,
-    },
-    "venueAccess": {
-      "after": "theaters",
-      "before": "clubs",
     },
   },
   "summary": {
@@ -3853,14 +3671,8 @@ Performance Indicators:
         "type": "unlock",
       },
       {
-        "amount": 0,
-        "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "importance": "hero",
-        "type": "unlock",
-      },
-      {
-        "amount": 12,
-        "description": "+12 reputation points",
+        "amount": 8,
+        "description": "+8 reputation points",
         "importance": "notable",
         "type": "reputation",
       },
@@ -3894,10 +3706,10 @@ Performance Indicators:
     },
     "expenses": 9258,
     "financialBreakdown": "$500,000 - $1,858 (operations) - $2,400 (artists) - $5,000 (marketing) + $11,628 (streaming) = $502,370",
-    "generatedEmails": 5,
+    "generatedEmails": 4,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 12,
+      "<uuid-key>": 8,
     },
     "revenue": 11628,
     "streams": 232553,
@@ -4651,58 +4463,6 @@ P.S. – Already have three story angles ready to deploy.",
       },
       {
         "body": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "greeting": "Boss,",
-          "narrative": "Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "signOff": "Per our projections,
-- Patricia Williams, PhD",
-          "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        },
-        "category": "financial",
-        "createdAt": "<timestamp>",
-        "gameId": "<id>",
-        "id": "<id>",
-        "isRead": false,
-        "metadata": {
-          "amount": 0,
-          "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-          "moodBand": "neutral",
-          "narrativeBody": "Boss,
-
-Capacity threshold cleared. New venue tier is online.
-
-TIER: 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.
-
-Larger rooms, better routing math, higher gross ceilings. The dashboard reflects the new booking parameters.
-
-Per our projections,
-- Patricia Williams, PhD",
-          "tierKind": "venue",
-        },
-        "preview": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "sender": "Patricia "Pat" Williams, PhD",
-        "senderRoleId": "<id>",
-        "subject": "Venue Tier Unlocked – 🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "updatedAt": "<timestamp>",
-        "week": 5,
-      },
-      {
-        "body": {
           "expenseBreakdown": {
             "artistSalaries": 1200,
             "executiveSalaries": 0,
@@ -4888,12 +4648,8 @@ Immediate attention recommended.
       "before": "none",
     },
     "reputation": {
-      "after": 22,
+      "after": 18,
       "before": 10,
-    },
-    "venueAccess": {
-      "after": "theaters",
-      "before": "clubs",
     },
   },
   "summary": {
@@ -4945,14 +4701,8 @@ Immediate attention recommended.
         "type": "unlock",
       },
       {
-        "amount": 0,
-        "description": "🎭 Venue Access Upgraded: Theater Venues unlocked! Your artists can now perform at larger venues.",
-        "importance": "hero",
-        "type": "unlock",
-      },
-      {
-        "amount": 12,
-        "description": "+12 reputation points",
+        "amount": 8,
+        "description": "+8 reputation points",
         "importance": "notable",
         "type": "reputation",
       },
@@ -4986,10 +4736,10 @@ Immediate attention recommended.
     },
     "expenses": 8643,
     "financialBreakdown": "$500,000 - $2,443 (operations) - $1,200 (artists) - $5,000 (marketing) + $7,818 (streaming) = $499,175",
-    "generatedEmails": 5,
+    "generatedEmails": 4,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 12,
+      "<uuid-key>": 8,
     },
     "revenue": 7818,
     "streams": 156368,

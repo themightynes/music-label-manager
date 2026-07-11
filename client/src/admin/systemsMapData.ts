@@ -153,7 +153,7 @@ export const NODES: SystemNode[] = [
     domain: 'resources',
     col: 0,
     row: 1,
-    description: `0-100, starts at ${reputationSystem.starting_reputation} (progression.json reputation_system.starting_reputation), master gate for access tiers, producer tiers, and the 4th focus slot. Meeting choices can also apply a seeded rep_swing (ActionProcessor.ts:1049) and reputation itself never decays in code (see non-edges) despite a configured decay_rate.`,
+    description: `0-100, starts at ${reputationSystem.starting_reputation} (progression.json reputation_system.starting_reputation), master gate for access tiers, producer tiers, and the 4th focus slot. Meeting choices can also apply a seeded rep_swing (ActionProcessor.ts:1049) and reputation itself never decays in code (see non-edges) despite a configured decay_rate. GLOBAL GAIN DAMPER (volatility-economy slice 3): every POSITIVE reputation gain is multiplied by reputation_gain_scaling (${reputationSystem.reputation_gain_scaling}) and rounded — applied per-source (no single chokepoint) at chart milestones (e-chart-reputation), release press coverage, PR-push/digital-ads marketing, and meeting immediate/delayed effects, via shared/utils/reputationScaling.scaleReputationGain. LOSSES ARE NOT SCALED (the flop penalty e-flop-reputation and negative meeting/rep-swing outcomes bite at full magnitude). C65 FIXED: the release press-coverage path — formerly the ONLY reputation write that skipped the 0-100 clamp — is now clamped to max_reputation (${reputationSystem.max_reputation}) like every other path.`,
   },
   {
     id: 'creative_capital',
@@ -819,13 +819,15 @@ export const EDGES: SystemEdge[] = [
     from: 'chart_position',
     to: 'reputation',
     mechanism: 'Chart milestone reputation bonus (once per song)',
-    formula: 'first top-10 → +hit_single_bonus; first No.1 → +number_one_bonus',
+    formula: 'first top-10 → +round(hit_single_bonus × reputation_gain_scaling); first No.1 → +round(number_one_bonus × reputation_gain_scaling)',
     values: [
       { label: 'hit_single_bonus', value: reputationSystem.hit_single_bonus, source: 'live', configPath: 'progression.reputation_system.hit_single_bonus', ref: 'game-engine.ts:1150-1190' },
       { label: 'number_one_bonus', value: reputationSystem.number_one_bonus, source: 'live', configPath: 'progression.reputation_system.number_one_bonus' },
+      { label: 'reputation_gain_scaling (positive-gain damper)', value: reputationSystem.reputation_gain_scaling, source: 'live', configPath: 'progression.reputation_system.reputation_gain_scaling', ref: 'shared/utils/reputationScaling.ts' },
     ],
     hardcoded: false,
     ref: 'game-engine.ts:1150-1190',
+    note: 'Volatility-economy slice 3: the chart-milestone bonus (a "release success" reputation GAIN) is throttled by the global reputation_gain_scaling damper before it lands. Same damper applies to press-coverage + marketing + meeting reputation gains; losses (flop) are exempt.',
   },
   {
     id: 'e-flop-reputation',
