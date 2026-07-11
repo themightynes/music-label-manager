@@ -1,5 +1,7 @@
 # Systems Balance Review — 2026-07-10
 
+> **EXECUTED 2026-07-10.** The companion spec (all six slices) ran the same day on `feat/systems-balance-integrity` and moved to `docs/01-planning/implementation-specs/COMPLETED/[COMPLETE] systems-balance-integrity-plan.md`.
+
 *Dated design case file. Produced from the code-verified Systems Map recon (PR #155, `client/src/admin/systemsMapData.ts` — every claim carries a file:line ref there). Point-in-time snapshot; the companion spec is `[READY] systems-balance-integrity-plan.md`.*
 
 ## Headline findings

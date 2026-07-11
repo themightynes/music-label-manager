@@ -8,12 +8,12 @@
 ## 📋 **Document Information**
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
-- **Last Updated**: July 9, 2026
-- **Total Items**: 85 (C1–C85, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76)
-- **Completed**: 59
+- **Last Updated**: July 10, 2026
+- **Total Items**: 88 (C1–C88, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76; C86–C88 added July 10, 2026 during the balance-integrity arc closure)
+- **Completed**: 60 — C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1 (knob liberation, commit `f065637`)
 - **Deferred by decision**: 3 (C32, C42 — decided July 6, 2026: wire awareness fully player-facing; build EXECUTED same evening on `feat/awareness-surfacing`, held with PR #149 pending playtest; C43)
 - **In Progress**: 0
-- **Pending**: 23 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C65, C66, C75 — CC gate ignores queued choices, July 5, 2026, C76 — royalty_discrepancy dominant choice, July 6, 2026, C77–C78 — tour-tier1 session finds, July 6, 2026, C79–C80 — awareness-surfacing session finds, July 6, 2026, C81–C84 — buzz-v2 arc finds, July 6–7, 2026, C85 — help-topic expansion, July 9, 2026) — C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
+- **Pending**: 25 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C65, C66, C75 — CC gate ignores queued choices, July 5, 2026, C76 — royalty_discrepancy dominant choice, July 6, 2026, C77–C78 — tour-tier1 session finds, July 6, 2026, C80 — awareness-surfacing session find, July 6, 2026, C81–C84 — buzz-v2 arc finds, July 6–7, 2026, C85 — help-topic expansion, July 9, 2026, C86–C88 — balance-integrity arc finds, July 10, 2026) — C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1258,17 +1258,20 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 79 (C79): awareness dead-config spots — `breakthrough_thresholds` never read, `weeks_1_2` factor unused 🔵
+### [x] ~~Comment 79 (C79): awareness dead-config spots — `breakthrough_thresholds` never read, `weeks_1_2` factor unused~~ ✅ RESOLVED 🔵
 **Priority**: 🔵 Low
+**Status**: ✅ **RESOLVED** (July 10, 2026 — balance-integrity arc slice 1, "knob liberation", commit `f065637`)
 **Impact**: `data/balance/markets.json` `awareness_system.breakthrough_thresholds` is a dead block — the breakthrough tiers/divisors/chances are hardcoded in `ReleaseProcessor.ts` (~694-700, quality-tiered deterministic sin-based roll) and never read from config. Likewise `awareness_impact_factors.weeks_1_2` (0.1) is configured but never read (the streaming modifier only applies weeks 5+). A designer tuning these knobs sees no effect. Wiring them is an engine change (golden-master re-bless territory) for zero player-visible gain today — deliberately kept OUT of the awareness-surfacing arc (fork F, Nes, July 6, 2026).
 **Effort**: Small-medium (read config in ReleaseProcessor + decide weeks_1_2 semantics; GM discipline)
+
+**Resolution**: the balance-integrity arc's slice 1 wired the previously-dead `breakthrough_thresholds` and `weeks_1_2` config blocks into `ReleaseProcessor.ts` / `FinancialSystem.ts` so the JSON knobs now drive the live calculation, byte-identical to the prior hardcoded output (golden master unchanged).
 
 **Relevant Files**:
 - [data/balance/markets.json](data/balance/markets.json)
 - [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts)
 - [shared/engine/FinancialSystem.ts](shared/engine/FinancialSystem.ts)
 
-*Identified July 6, 2026 during the awareness-surfacing (C42) recon.*
+*Identified July 6, 2026 during the awareness-surfacing (C42) recon; resolved July 10, 2026 on `feat/systems-balance-integrity` slice 1.*
 
 ---
 
@@ -1351,19 +1354,60 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
+### [ ] Comment 86 (C86): golden-master fixtures skirt the interesting engine ranges 🔵
+**Priority**: 🔵 Low
+**Impact**: During the balance-integrity arc, three new mechanics landed with the golden master unchanged because the GM fixtures never exercise them: flop penalty (fixture investment $5k is under the $10k floor), mood-variance widening (fixture artist mood sits at the 50 baseline), energy sell-through factor (fixture tour sell-through caps at ≥1.0 pre-factor, so the multiplier never bites). Each mechanic IS covered by its own unit test, but the GM suite — the thing meant to catch unintended engine drift — is structurally blind to all three. Same class as C77 (tour-completion fixtures only exercising the legacy fall-through path).
+**Effort**: Small-Medium (add/extend GM fixtures: one flopping release, one low-mood recording, one under-cap tour; re-bless once, then the new ranges are covered going forward)
+
+**Relevant Files**:
+- [tests/engine/golden-master-fixtures.ts](tests/engine/golden-master-fixtures.ts)
+- [tests/engine/flop-penalty.test.ts](tests/engine/flop-penalty.test.ts)
+- [tests/engine/mood-variance.test.ts](tests/engine/mood-variance.test.ts)
+- [tests/engine/tour-energy.test.ts](tests/engine/tour-energy.test.ts)
+
+*Identified July 10, 2026 during the balance-integrity arc (slices 2, 4, 5).*
+
+---
+
+### [ ] Comment 87 (C87): touring does not consume artist energy 🔵
+**Priority**: 🔵 Low
+**Impact**: Balance-integrity slice 5 made energy DRIVE tour sell-through (`data/balance/markets.json` `tour_revenue.energy_effectiveness`), but nothing drains energy on the road — energy is set only by meeting/dialogue effects, never by touring itself. A player can run an artist through an indefinite tour circuit at whatever energy level meetings left them, with no in-fiction cost for the road. The new effectiveness factor is a one-way lever (energy affects touring, touring never affects energy).
+**Effort**: Medium (design a per-city or per-week energy cost during active tours, balanced against the new effectiveness factor; GM re-bless)
+
+**Relevant Files**:
+- [shared/engine/processors/TourProcessor.ts](shared/engine/processors/TourProcessor.ts)
+- [data/balance/markets.json](data/balance/markets.json)
+
+*Identified July 10, 2026 during the balance-integrity arc (slice 5).*
+
+---
+
+### [ ] Comment 88 (C88): marketing attribution not surfaced as structured data 🔵
+**Priority**: 🔵 Low
+**Impact**: The loss-leader view shipped in balance-integrity slice 3 is qualitative copy only (honest framing of marketing spend as a loss-leader, no numbers). A future engine surface could emit structured marketing-attributed stream/revenue estimates on release change entries so the UI could show real attributed numbers instead of prose. Engine-additive and GM-affecting, so deliberately out of scope for slice 3.
+**Effort**: Medium (new change-entry fields + attribution estimate in the release/financial processors + GM re-bless + UI to consume the fields)
+
+**Relevant Files**:
+- [shared/engine/FinancialSystem.ts](shared/engine/FinancialSystem.ts)
+- [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts)
+
+*Identified July 10, 2026 during the balance-integrity arc (slice 3).*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42 — decided July 6, 2026: wire awareness fully player-facing, build queued; C43 — product decision open, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 22 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63, C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C79–C80 — awareness-surfacing session finds, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C85 — help-topic expansion, July 9, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 24 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63, C65 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C85 — help-topic expansion, July 9, 2026; C86–C88 — balance-integrity arc finds, July 10, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
 
 ### By Status
-- ✅ Completed: 59 items (73.8% of 80; 59 + 3 deferred + 18 pending = 80 ✓)
+- ✅ Completed: 60 items (68.2% of 88; 60 + 3 deferred + 25 pending = 88 ✓)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42 — decided July 6, 2026: wire awareness fully player-facing (Nes); build EXECUTED same evening on `feat/awareness-surfacing`, held pending playtest; C43)
-- 📋 Pending: 23 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C79–C80 — awareness-surfacing session finds, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C85 — help-topic expansion, July 9, 2026; all low except C62 medium, not scheduled). C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026
+- 📋 Pending: 25 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C76 — royalty_discrepancy dominant choice, July 6, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C85 — help-topic expansion, July 9, 2026; C86–C88 — balance-integrity arc finds, July 10, 2026; all low except C62 medium, not scheduled). C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
 
 ---
 

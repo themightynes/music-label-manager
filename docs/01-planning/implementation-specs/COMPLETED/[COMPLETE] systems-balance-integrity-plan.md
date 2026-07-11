@@ -1,6 +1,14 @@
-# [READY] Systems Balance & Integrity Plan
+# [COMPLETE] Systems Balance & Integrity Plan
 
-*Status: READY — all forks decided by Nes 2026-07-10 ("spec all — orchestrate an entire session to fix everything; #3 like loss leader view"). Basis: `docs/98-research/SYSTEMS_BALANCE_REVIEW_2026-07-10.md` + the Systems Map recon (PR #155). Branch: `feat/systems-balance-integrity`, stacked on `feat/admin-systems-map` (#155 → this); merge order #152 → #154 → #155 → this.*
+*Status: EXECUTED 2026-07-10 — all six slices landed on `feat/systems-balance-integrity`, stacked on `feat/admin-systems-map`. Commits: slice 1 `f065637`, slice 2 `893cb49`, slice 3 `d36abef`, slice 4 `2d75908`, slice 5 `5cdc5f2`, slice 6 `5cc7cbc`. Forks decided by Nes 2026-07-10 ("spec all — orchestrate an entire session to fix everything; #3 like loss leader view"). Basis: `docs/98-research/SYSTEMS_BALANCE_REVIEW_2026-07-10.md` + the Systems Map recon (PR #155).*
+
+## Execution deviations from plan
+
+- **Slice 2 (flop penalty)**: golden master unchanged — the GM fixtures' release investment ($5k) sits under the `flop_investment_floor` ($10k), so the new flop-penalty branch never fires in the GM run. Mechanic coverage comes entirely from `tests/engine/flop-penalty.test.ts`. A new `'flop'` change-entry type was routed into the Achievements bucket in `categorizeChanges.ts` (not called out explicitly in the plan). Logged as part of C86 (GM fixture-coverage gap).
+- **Slice 4 (mood → variance widening)**: golden master unchanged — the GM fixtures' artist mood sits at the 50 baseline (`mood_baseline`), where `widenFactor` reduces to 1 (no-op). `EFFECT_CHANNEL_DESCRIPTIONS.artist_mood` was extended by one clause to describe the variance effect; this did not trigger the `[REFERENCE]`-doc sync rule (no `data/actions.json` / `LIVE_EFFECT_KEYS` change). Logged as part of C86.
+- **Slice 5 (energy → tour effectiveness)**: main golden master unchanged — the GM fixtures' tour sell-through caps at ≥1.0 pre-factor, so `energyFactor` never has room to move the result. The separate tour-estimate characterization snapshot WAS re-blessed (uniform ×0.975 shift across all rows, consistent with the new effectiveness multiplier). Logged as part of C86.
+- **Slice 6 (tour-popularity saturation)**: added a `min(1, satMult)` cap on the saturation multiplier applied to tour popularity gains — the raw saturation curve reaches 1.5× at population 0, which would let tour gains exceed the authored +1..+7 table's stated maximum; the table stays the ceiling. Golden master re-blessed; diff audited and confirmed popularity-field-only.
+- **Follow-ups logged to the debt backlog** (`docs/09-troubleshooting/technical-debt-backlog.md`): C86 (GM fixtures skirt the interesting engine ranges — the slice 2/4/5 fixture gaps above, plus slice 1/6's clean bill), C87 (touring does not consume artist energy — slice 5's NOT-in-scope item), C88 (marketing attribution not surfaced as structured data — slice 3's qualitative-only scope). C79 (awareness dead-config spots) marked RESOLVED by slice 1.
 
 ## Decisions on record
 

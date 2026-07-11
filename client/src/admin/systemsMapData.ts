@@ -1,10 +1,13 @@
 // Systems Map — data module (admin dev tool)
 //
 // Hand-verified snapshot of shared/engine as of 2026-07-10, updated for the
-// balance-integrity slice 1 "knob liberation" pass (2026-07-10): every balance
-// constant that was previously a HARDCODED engine literal is now read from
-// data/balance/*.json (byte-identical values) and its edge flips to source 'live'.
-// Every edge cites the
+// full balance-integrity arc (6 slices, same day): slice 1 "knob liberation" —
+// every balance constant that was previously a HARDCODED engine literal is now
+// read from data/balance/*.json (byte-identical values) and its edge flips to
+// source 'live' — plus 4 new/changed edges from slices 2, 4, 5, 6: flop penalty
+// (e-flop-reputation, reputation's first sink), mood → variance widening, energy
+// → tour sell-through (energy_effectiveness), and tour-popularity gains routed
+// through the shared saturation curve. Every edge cites the
 // engine code that implements it; every "live" value is read straight out of the
 // authored balance JSON via a static import (same precedent as the read-only knobs
 // strip in client/src/admin/SideEventsEditor.tsx), so the diagram always reflects
