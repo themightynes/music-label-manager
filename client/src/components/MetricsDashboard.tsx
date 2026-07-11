@@ -2,7 +2,16 @@ import React from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { useSongs } from '@/hooks/useSongs';
-import { summarizeCatalogBuzz, summarizeBankedHype, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
+import {
+  summarizeCatalogBuzz,
+  listBankedHypePools,
+  summarizeAnticipation,
+  BANKED_HYPE_TOOLTIP,
+  type BankedHypePool,
+} from '@/lib/releaseBuzz';
+import { getReleaseSongs } from '@/lib/releaseAnalytics';
+import { useArtists } from '@/hooks/useArtists';
+import { useReleases } from '@/hooks/useReleases';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Clock, Zap, BarChart3 } from 'lucide-react';
@@ -24,31 +33,38 @@ import { AnimatedNumber } from '@/components/motion-primitives/animated-number';
  * ReleaseBuzzSection) so it unit-tests from plain song fixtures without
  * mounting the full dashboard.
  */
+export interface AnticipationPreviewEntry {
+  releaseId: string;
+  title: string;
+  /** Qualitative strength word from summarizeAnticipation, or null (early). */
+  strength: string | null;
+  weeksToLaunch: number;
+}
+
 export function BuzzStatusStat({
   songs,
   currentWeek,
-  bankedHype = 0,
-  bankedHypeWeek,
+  pools = [],
+  anticipations = [],
   className = '',
 }: {
   songs: any[] | undefined;
   currentWeek: number;
-  /** flags.pendingAwarenessBoost — banked-hype pool (buzz-v2 slice 1). */
-  bankedHype?: number;
-  /** flags.pendingAwarenessBoostWeek — week the pool was last stamped. */
-  bankedHypeWeek?: number | null;
+  /**
+   * Hype-board UX Task 3 — per-pool banked hype (from listBankedHypePools,
+   * positive pools only: a negative pool suppresses discovery — not a resource
+   * to advertise). Replaces the former aggregate "+N Hype banked" chip with
+   * named per-artist/label lines and per-pool expiry hints.
+   */
+  pools?: BankedHypePool[];
+  /** Planned releases currently building pre-release anticipation. */
+  anticipations?: AnticipationPreviewEntry[];
   className?: string;
 }) {
   const { building, fading } = summarizeCatalogBuzz(songs, currentWeek);
   const hasBuzz = building > 0 || fading > 0;
 
-  // Buzz-v2 slice 1: banked-hype chip. Only the POSITIVE banked channel gets a
-  // "seeds your next release" chip (a negative pool suppresses discovery — not a
-  // resource to advertise). Expiry week = stamped week + N (mirrors the engine's
-  // pending_awareness_boost_expiry_weeks); omit the countdown if we can't date it.
-  const showBankedHype = bankedHype > 0;
-  const fadesWeek =
-    typeof bankedHypeWeek === 'number' ? bankedHypeWeek + BANKED_HYPE_EXPIRY_WEEKS : null;
+  const positivePools = pools.filter((p) => p.amount > 0);
 
   return (
     <div className={`min-w-0 ${className}`} data-testid="buzz-status-stat">
@@ -77,25 +93,48 @@ export function BuzzStatusStat({
         )}
       </div>
       <div className="text-[11.5px] text-text-muted mt-1.5">Buzz</div>
-      {showBankedHype && (
+      {/* Hype-board UX Task 3: named per-pool lines instead of one generic
+          aggregate chip. Same tooltip contract as the old chip (the block is
+          the trigger); per-pool expiry hint reads "fading wk W if unused". */}
+      {positivePools.length > 0 && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <div
                 data-testid="banked-hype-chip"
-                className="text-[11.5px] font-mono text-money mt-1 whitespace-nowrap cursor-help"
+                className="mt-1 cursor-help space-y-0.5"
                 aria-label={`Banked Hype: ${BANKED_HYPE_TOOLTIP}`}
               >
-                +{bankedHype} Hype banked
-                {fadesWeek !== null && (
-                  <span className="text-text-muted"> · fades wk {fadesWeek}</span>
-                )}
+                {positivePools.map((pool) => (
+                  <div
+                    key={pool.scope === 'label' ? 'label' : pool.artistId}
+                    data-testid="banked-hype-pool"
+                    className="text-[11.5px] font-mono text-money whitespace-nowrap"
+                  >
+                    +{pool.amount} Hype — {pool.name}
+                    {pool.fadesWeek !== null && (
+                      <span className="text-text-muted"> · fading wk {pool.fadesWeek} if unused</span>
+                    )}
+                  </div>
+                ))}
               </div>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">{BANKED_HYPE_TOOLTIP}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       )}
+      {/* Hype-board UX Task 3: planned releases building anticipation, by name.
+          Qualitative strength word only (fork E) — no numbers beyond the week. */}
+      {anticipations.map((entry) => (
+        <div
+          key={entry.releaseId}
+          data-testid="anticipation-status-line"
+          className="mt-1 text-[11.5px] text-neon-cyan whitespace-nowrap"
+        >
+          “{entry.title}” {entry.strength ? `${entry.strength} anticipation` : 'anticipation building'}
+          <span className="text-text-muted"> · launches wk {currentWeek + entry.weeksToLaunch}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -119,14 +158,49 @@ export function MetricsDashboard() {
   const { selectedActions } = useGameStore();
   // Catalog-wide songs for the core-status "Buzz" stat (live derivation).
   const { data: songs } = useSongs();
-  // Buzz-v2 slice 1+2: banked-hype pools read via the useGameState() façade
-  // (NEVER useGameStore for spine fields). Slice 2 sums ALL unattached pools —
-  // the label pool (flags.pendingAwarenessBoost) AND every per-artist pool
-  // (flags.hypeArtistPools) — and shows the soonest fade week among them, feeding
-  // the "+N Hype banked · fades wk W" chip on BuzzStatusStat.
-  const bankedHypeSummary = summarizeBankedHype(gameState?.flags as Record<string, any> | undefined);
-  const bankedHype = bankedHypeSummary.total;
-  const bankedHypeWeek = bankedHypeSummary.soonestWeek;
+  // Buzz-v2 slice 1+2 / hype-board UX Task 3: banked-hype pools read via the
+  // useGameState() façade (NEVER useGameStore for spine fields). Task 3
+  // de-genericized the readout: instead of one summed "+N Hype banked" chip,
+  // every unattached pool renders by NAME (artist pools via the roster cache,
+  // plus the label pool) with its own "fading wk W if unused" hint — all from
+  // the SAME cached flag fields the old chip read.
+  const { data: rosterArtists = [] } = useArtists();
+  const { data: releases = [] } = useReleases();
+  const artistNameById = React.useMemo(
+    () => Object.fromEntries((rosterArtists as any[]).map((a) => [a.id, a.name])),
+    [rosterArtists]
+  );
+  const hypePools = listBankedHypePools(
+    gameState?.flags as Record<string, any> | undefined,
+    artistNameById
+  );
+  // Task 3: planned releases currently building pre-release anticipation —
+  // same detection rule as ReleaseWorkflowCard's ramp line (planned status,
+  // preCampaign.pct > 0, at least one lead-up week), strength word from the
+  // release's songs' pre-built awareness (summarizeAnticipation, fork E bands).
+  const currentWeekNumber = gameState?.currentWeek || 1;
+  const anticipations = React.useMemo(
+    () =>
+      (releases as any[])
+        .filter((release) => {
+          const preCampaign = release?.metadata?.preCampaign;
+          const weeksToLaunch = (release?.releaseWeek || 0) - currentWeekNumber;
+          return (
+            release?.status === 'planned' &&
+            !!preCampaign &&
+            typeof preCampaign.pct === 'number' &&
+            preCampaign.pct > 0 &&
+            weeksToLaunch >= 1
+          );
+        })
+        .map((release) => ({
+          releaseId: release.id,
+          title: release.title ?? 'Untitled',
+          strength: summarizeAnticipation(getReleaseSongs(release.id, songs ?? [])),
+          weeksToLaunch: (release.releaseWeek || 0) - currentWeekNumber,
+        })),
+    [releases, songs, currentWeekNumber]
+  );
   const [impactPreview, setImpactPreview] = useState<ImpactPreview>({
     immediate: {},
     delayed: {},
@@ -473,8 +547,8 @@ export function MetricsDashboard() {
                 <BuzzStatusStat
                   songs={songs}
                   currentWeek={gameState.currentWeek || 1}
-                  bankedHype={bankedHype}
-                  bankedHypeWeek={bankedHypeWeek}
+                  pools={hypePools}
+                  anticipations={anticipations}
                 />
               </div>
             </div>
@@ -596,8 +670,8 @@ export function MetricsDashboard() {
                 <BuzzStatusStat
                   songs={songs}
                   currentWeek={gameState.currentWeek || 1}
-                  bankedHype={bankedHype}
-                  bankedHypeWeek={bankedHypeWeek}
+                  pools={hypePools}
+                  anticipations={anticipations}
                   className="text-center p-2 bg-surface-inner/50 rounded-chip"
                 />
               </div>
@@ -733,8 +807,8 @@ export function MetricsDashboard() {
                 <BuzzStatusStat
                   songs={songs}
                   currentWeek={gameState.currentWeek || 1}
-                  bankedHype={bankedHype}
-                  bankedHypeWeek={bankedHypeWeek}
+                  pools={hypePools}
+                  anticipations={anticipations}
                   className="text-center p-2 bg-surface-inner/50 rounded-chip"
                 />
               </div>
