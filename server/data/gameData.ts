@@ -873,6 +873,19 @@ export class ServerGameData {
     };
   }
 
+  /**
+   * Mandatory Side Events ("Crisis on the Desk") kill-switch. When enabled
+   * (the default), a rolled side event is DEFERRED to the following week as a
+   * mandatory crisis card that consumes a focus slot and gates the advance.
+   * When disabled, the legacy in-results interactive beat path is restored.
+   * Falls back to enabled:true (the shipped default) when balance data has not
+   * loaded — the GM harness overrides this stub explicitly.
+   */
+  getMandatorySideEventsConfigSync(): { enabled: boolean } {
+    const cfg = (this.balanceData as any)?.mandatory_side_events;
+    return { enabled: cfg?.enabled !== false };
+  }
+
   getWeeklyBurnRangeSync(): [number, number] {
     if (!this.balanceData) {
       return [3000, 6000];

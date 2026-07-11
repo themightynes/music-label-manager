@@ -5717,6 +5717,772 @@ Performance Indicators:
 }
 `;
 
+exports[`GameEngine.advanceWeek — golden master > side-event defer: a rolled crisis lands as a pending flag (deferred, no effects this week) 1`] = `
+{
+  "digest": {
+    "artists": [
+      {
+        "age": null,
+        "archetype": "Workhorse",
+        "bio": null,
+        "creativity": 50,
+        "energy": 53,
+        "experience": 0,
+        "gameId": "<id>",
+        "genre": "pop",
+        "id": "<id>",
+        "lastAttentionWeek": 1,
+        "lastMoodEvent": null,
+        "massAppeal": 50,
+        "mood": 50,
+        "moodHistory": [],
+        "moodTrend": 0,
+        "name": "Crisis Artist",
+        "popularity": 50,
+        "signed": true,
+        "signedWeek": null,
+        "signingCost": null,
+        "stress": 0,
+        "talent": 60,
+        "temperament": 50,
+        "weeklyCost": 1200,
+        "workEthic": 70,
+      },
+    ],
+    "charts": {
+      "competitorChecksum": -86029892,
+      "competitorCount": 98,
+      "playerEntries": [],
+    },
+    "emails": [
+      {
+        "body": {
+          "amount": 0,
+          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+          "greeting": "Boss,",
+          "narrative": "Revenue threshold achieved. New distribution tier unlocked.
+
+TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
+
+New capabilities are live:
+• Expanded playlist access
+• Higher inclusion probability
+
+System automatically grants access. No action required.",
+          "narrativeBody": "Boss,
+
+Revenue threshold achieved. New distribution tier unlocked.
+
+TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
+
+New capabilities are live:
+• Expanded playlist access
+• Higher inclusion probability
+
+System automatically grants access. No action required.
+
+Per our projections,
+- Patricia Williams, PhD",
+          "signOff": "Per our projections,
+- Patricia Williams, PhD",
+          "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        },
+        "category": "financial",
+        "createdAt": "<timestamp>",
+        "gameId": "<id>",
+        "id": "<id>",
+        "isRead": false,
+        "metadata": {
+          "amount": 0,
+          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+          "moodBand": "neutral",
+          "narrativeBody": "Boss,
+
+Revenue threshold achieved. New distribution tier unlocked.
+
+TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
+
+New capabilities are live:
+• Expanded playlist access
+• Higher inclusion probability
+
+System automatically grants access. No action required.
+
+Per our projections,
+- Patricia Williams, PhD",
+          "tierKind": "playlist",
+        },
+        "preview": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        "sender": "Patricia "Pat" Williams, PhD",
+        "senderRoleId": "<id>",
+        "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        "updatedAt": "<timestamp>",
+        "week": 4,
+      },
+      {
+        "body": {
+          "amount": 0,
+          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+          "greeting": "Boss,",
+          "narrative": "You just opened doors most labels take years to access.
+
+NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
+
+Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.",
+          "narrativeBody": "Boss,
+
+You just opened doors most labels take years to access.
+
+NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
+
+Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
+
+By the numbers,
+- Samara Chen
+
+P.S. – Already have three story angles ready to deploy.",
+          "quirk": "P.S. – Already have three story angles ready to deploy.",
+          "signOff": "By the numbers,
+- Samara Chen",
+          "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        },
+        "category": "financial",
+        "createdAt": "<timestamp>",
+        "gameId": "<id>",
+        "id": "<id>",
+        "isRead": false,
+        "metadata": {
+          "amount": 0,
+          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+          "moodBand": "neutral",
+          "narrativeBody": "Boss,
+
+You just opened doors most labels take years to access.
+
+NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
+
+Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
+
+By the numbers,
+- Samara Chen
+
+P.S. – Already have three story angles ready to deploy.",
+          "tierKind": "press",
+        },
+        "preview": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        "sender": "Samara "Sam" Chen",
+        "senderRoleId": "<id>",
+        "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        "updatedAt": "<timestamp>",
+        "week": 4,
+      },
+      {
+        "body": {
+          "expenseBreakdown": {
+            "artistSalaries": 1200,
+            "executiveSalaries": 0,
+            "marketingCosts": 0,
+            "projectCosts": 0,
+            "roleMeetingCosts": 0,
+            "signingBonuses": 0,
+            "weeklyOperations": 2156,
+          },
+          "expenses": 3356,
+          "financialBreakdown": "$500,000 - $2,156 (operations) - $1,200 (artists) = $496,644",
+          "greeting": "Financial Report – Week 4",
+          "narrative": "REVENUE: $0
+EXPENSES: $3,356
+NET: -$3,356
+
+⚠ Warning Indicators:
+• Expense ratio: 0% (target: <70%)
+• Cash flow: Negative
+• Burn rate: $3,356/week
+
+Immediate attention recommended.",
+          "narrativeBody": "Financial Report – Week 4
+
+REVENUE: $0
+EXPENSES: $3,356
+NET: -$3,356
+
+⚠ Warning Indicators:
+• Expense ratio: 0% (target: <70%)
+• Cash flow: Negative
+• Burn rate: $3,356/week
+
+Immediate attention recommended.
+
+— Finance Department",
+          "revenue": 0,
+          "signOff": "— Finance Department",
+          "streams": 0,
+          "subject": "Week 4 Financial Summary",
+        },
+        "category": "financial",
+        "createdAt": "<timestamp>",
+        "gameId": "<id>",
+        "id": "<id>",
+        "isRead": false,
+        "metadata": {
+          "expenseBreakdown": {
+            "artistSalaries": 1200,
+            "executiveSalaries": 0,
+            "marketingCosts": 0,
+            "projectCosts": 0,
+            "roleMeetingCosts": 0,
+            "signingBonuses": 0,
+            "weeklyOperations": 2156,
+          },
+          "expenses": 3356,
+          "financialBreakdown": "$500,000 - $2,156 (operations) - $1,200 (artists) = $496,644",
+          "isProfit": false,
+          "narrativeBody": "Financial Report – Week 4
+
+REVENUE: $0
+EXPENSES: $3,356
+NET: -$3,356
+
+⚠ Warning Indicators:
+• Expense ratio: 0% (target: <70%)
+• Cash flow: Negative
+• Burn rate: $3,356/week
+
+Immediate attention recommended.
+
+— Finance Department",
+          "net": -3356,
+          "revenue": 0,
+          "streams": 0,
+        },
+        "preview": "Revenue $0 • Expenses $3356",
+        "sender": "Finance Department",
+        "senderRoleId": null,
+        "subject": "Week 4 Financial Summary",
+        "updatedAt": "<timestamp>",
+        "week": 4,
+      },
+    ],
+    "executives": [],
+    "projects": [],
+    "releaseSongs": [],
+    "releases": [],
+    "songs": [],
+  },
+  "stateDelta": {
+    "currentWeek": {
+      "after": 4,
+      "before": 3,
+    },
+    "flags": {
+      "after": {
+        "pending_side_event": {
+          "category": "business_opportunities",
+          "choices": [
+            {
+              "effects_delayed": {
+                "reputation": 2,
+              },
+              "effects_immediate": {
+                "money": 12000,
+              },
+              "id": "<id>",
+              "label": "Take the deal",
+            },
+            {
+              "effects_delayed": {},
+              "effects_immediate": {
+                "reputation": 1,
+              },
+              "id": "<id>",
+              "label": "Walk away",
+            },
+          ],
+          "eventId": "gm_crisis",
+          "prompt": "A distributor offers a lucrative but risky catalog deal.",
+          "week": 4,
+        },
+        "side_event_history": {
+          "gm_crisis": 4,
+        },
+        "unlocked_producer_tiers": [
+          "local",
+        ],
+      },
+      "before": {},
+    },
+    "money": {
+      "after": 496644,
+      "before": 500000,
+    },
+    "playlistAccess": {
+      "after": "niche",
+      "before": "none",
+    },
+    "pressAccess": {
+      "after": "blogs",
+      "before": "none",
+    },
+  },
+  "summary": {
+    "arOffice": {
+      "completed": false,
+    },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
+    "changes": [
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Crisis Artist: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
+      },
+      {
+        "amount": -3356,
+        "description": "Weekly operational costs",
+        "importance": "routine",
+        "type": "expense",
+      },
+      {
+        "amount": 0,
+        "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        "importance": "hero",
+        "type": "unlock",
+      },
+      {
+        "amount": 0,
+        "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        "importance": "hero",
+        "type": "unlock",
+      },
+    ],
+    "chartUpdates": {
+      "competitorChecksum": -1590080495,
+      "competitorCount": 98,
+      "playerEntries": [],
+    },
+    "events": [
+      {
+        "category": "business_opportunities",
+        "id": "<id>",
+        "occurred": true,
+        "prompt": "A distributor offers a lucrative but risky catalog deal.",
+        "title": "A distributor offers a lucrative but risky catalog",
+      },
+    ],
+    "expenseBreakdown": {
+      "artistSalaries": 1200,
+      "executiveSalaries": 0,
+      "marketingCosts": 0,
+      "projectCosts": 0,
+      "roleMeetingCosts": 0,
+      "signingBonuses": 0,
+      "weeklyOperations": 2156,
+    },
+    "expenses": 3356,
+    "financialBreakdown": "$500,000 - $2,156 (operations) - $1,200 (artists) = $496,644",
+    "generatedEmails": 3,
+    "reputationChanges": {},
+    "revenue": 0,
+    "usedExecutives": {},
+    "week": 4,
+  },
+}
+`;
+
+exports[`GameEngine.advanceWeek — golden master > side-event resolve: a pending crisis carried with the advance applies its effects and clears 1`] = `
+{
+  "digest": {
+    "artists": [
+      {
+        "age": null,
+        "archetype": "Workhorse",
+        "bio": null,
+        "creativity": 50,
+        "energy": 53,
+        "experience": 0,
+        "gameId": "<id>",
+        "genre": "pop",
+        "id": "<id>",
+        "lastAttentionWeek": 1,
+        "lastMoodEvent": null,
+        "massAppeal": 50,
+        "mood": 50,
+        "moodHistory": [],
+        "moodTrend": 0,
+        "name": "Resolver Artist",
+        "popularity": 50,
+        "signed": true,
+        "signedWeek": null,
+        "signingCost": null,
+        "stress": 0,
+        "talent": 60,
+        "temperament": 50,
+        "weeklyCost": 1200,
+        "workEthic": 70,
+      },
+    ],
+    "charts": {
+      "competitorChecksum": 38080924,
+      "competitorCount": 98,
+      "playerEntries": [],
+    },
+    "emails": [
+      {
+        "body": {
+          "amount": 0,
+          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+          "greeting": "Boss,",
+          "narrative": "Revenue threshold achieved. New distribution tier unlocked.
+
+TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
+
+New capabilities are live:
+• Expanded playlist access
+• Higher inclusion probability
+
+System automatically grants access. No action required.",
+          "narrativeBody": "Boss,
+
+Revenue threshold achieved. New distribution tier unlocked.
+
+TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
+
+New capabilities are live:
+• Expanded playlist access
+• Higher inclusion probability
+
+System automatically grants access. No action required.
+
+Per our projections,
+- Patricia Williams, PhD",
+          "signOff": "Per our projections,
+- Patricia Williams, PhD",
+          "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        },
+        "category": "financial",
+        "createdAt": "<timestamp>",
+        "gameId": "<id>",
+        "id": "<id>",
+        "isRead": false,
+        "metadata": {
+          "amount": 0,
+          "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+          "moodBand": "neutral",
+          "narrativeBody": "Boss,
+
+Revenue threshold achieved. New distribution tier unlocked.
+
+TIER: 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.
+
+New capabilities are live:
+• Expanded playlist access
+• Higher inclusion probability
+
+System automatically grants access. No action required.
+
+Per our projections,
+- Patricia Williams, PhD",
+          "tierKind": "playlist",
+        },
+        "preview": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        "sender": "Patricia "Pat" Williams, PhD",
+        "senderRoleId": "<id>",
+        "subject": "Playlist Tier Unlocked – 🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        "updatedAt": "<timestamp>",
+        "week": 4,
+      },
+      {
+        "body": {
+          "amount": 0,
+          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+          "greeting": "Boss,",
+          "narrative": "You just opened doors most labels take years to access.
+
+NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
+
+Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.",
+          "narrativeBody": "Boss,
+
+You just opened doors most labels take years to access.
+
+NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
+
+Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
+
+By the numbers,
+- Samara Chen",
+          "signOff": "By the numbers,
+- Samara Chen",
+          "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        },
+        "category": "financial",
+        "createdAt": "<timestamp>",
+        "gameId": "<id>",
+        "id": "<id>",
+        "isRead": false,
+        "metadata": {
+          "amount": 0,
+          "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+          "moodBand": "neutral",
+          "narrativeBody": "Boss,
+
+You just opened doors most labels take years to access.
+
+NEW TIER: 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.
+
+Translation? We can now pitch to publications that actually move markets. This isn't just press access—it's narrative control at scale.
+
+By the numbers,
+- Samara Chen",
+          "tierKind": "press",
+        },
+        "preview": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        "sender": "Samara "Sam" Chen",
+        "senderRoleId": "<id>",
+        "subject": "Press Tier Unlocked – 📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        "updatedAt": "<timestamp>",
+        "week": 4,
+      },
+      {
+        "body": {
+          "expenseBreakdown": {
+            "artistSalaries": 1200,
+            "executiveSalaries": 0,
+            "marketingCosts": 0,
+            "projectCosts": 0,
+            "roleMeetingCosts": 0,
+            "signingBonuses": 0,
+            "weeklyOperations": 2299,
+          },
+          "expenses": 3499,
+          "financialBreakdown": "$500,000 - $2,299 (operations) - $1,200 (artists) + $12,000 (streaming) = $508,501",
+          "greeting": "Financial Report – Week 4",
+          "narrative": "REVENUE: $12,000
+EXPENSES: $3,499
+NET: +$8,501
+
+Performance Indicators:
+✓ Expense ratio: 29% (target: <70%)
+✓ Cash flow: Positive
+",
+          "narrativeBody": "Financial Report – Week 4
+
+REVENUE: $12,000
+EXPENSES: $3,499
+NET: +$8,501
+
+Performance Indicators:
+✓ Expense ratio: 29% (target: <70%)
+✓ Cash flow: Positive
+
+
+— Finance Department",
+          "revenue": 12000,
+          "signOff": "— Finance Department",
+          "streams": 0,
+          "subject": "Week 4 Financial Summary",
+        },
+        "category": "financial",
+        "createdAt": "<timestamp>",
+        "gameId": "<id>",
+        "id": "<id>",
+        "isRead": false,
+        "metadata": {
+          "expenseBreakdown": {
+            "artistSalaries": 1200,
+            "executiveSalaries": 0,
+            "marketingCosts": 0,
+            "projectCosts": 0,
+            "roleMeetingCosts": 0,
+            "signingBonuses": 0,
+            "weeklyOperations": 2299,
+          },
+          "expenses": 3499,
+          "financialBreakdown": "$500,000 - $2,299 (operations) - $1,200 (artists) + $12,000 (streaming) = $508,501",
+          "isProfit": true,
+          "narrativeBody": "Financial Report – Week 4
+
+REVENUE: $12,000
+EXPENSES: $3,499
+NET: +$8,501
+
+Performance Indicators:
+✓ Expense ratio: 29% (target: <70%)
+✓ Cash flow: Positive
+
+
+— Finance Department",
+          "net": 8501,
+          "revenue": 12000,
+          "streams": 0,
+        },
+        "preview": "Revenue $12000 • Expenses $3499",
+        "sender": "Finance Department",
+        "senderRoleId": null,
+        "subject": "Week 4 Financial Summary",
+        "updatedAt": "<timestamp>",
+        "week": 4,
+      },
+    ],
+    "executives": [],
+    "projects": [],
+    "releaseSongs": [],
+    "releases": [],
+    "songs": [],
+  },
+  "stateDelta": {
+    "currentWeek": {
+      "after": 4,
+      "before": 3,
+    },
+    "flags": {
+      "after": {
+        "side-event-gm_crisis-accept-week4": {
+          "choiceId": "<id>",
+          "effects": {
+            "reputation": 2,
+          },
+          "meetingName": "side_event:gm_crisis",
+          "triggerWeek": 5,
+        },
+        "unlocked_producer_tiers": [
+          "local",
+        ],
+      },
+      "before": {
+        "pending_side_event": {
+          "category": "business_opportunities",
+          "choices": [
+            {
+              "effects_delayed": {
+                "reputation": 2,
+              },
+              "effects_immediate": {
+                "money": 12000,
+              },
+              "id": "<id>",
+              "label": "Take the deal",
+            },
+            {
+              "effects_delayed": {},
+              "effects_immediate": {
+                "reputation": 1,
+              },
+              "id": "<id>",
+              "label": "Walk away",
+            },
+          ],
+          "eventId": "gm_crisis",
+          "prompt": "A distributor offers a lucrative but risky catalog deal.",
+          "week": 3,
+        },
+      },
+    },
+    "money": {
+      "after": 508501,
+      "before": 500000,
+    },
+    "playlistAccess": {
+      "after": "niche",
+      "before": "none",
+    },
+    "pressAccess": {
+      "after": "blogs",
+      "before": "none",
+    },
+  },
+  "summary": {
+    "arOffice": {
+      "completed": false,
+    },
+    "artistChanges": {
+      "<uuid-key>": {
+        "energy": 0,
+        "mood": 0,
+      },
+    },
+    "changes": [
+      {
+        "amount": 12000,
+        "description": "Executive meeting benefit",
+        "importance": "routine",
+        "type": "revenue",
+      },
+      {
+        "amount": 3,
+        "artistId": "<id>",
+        "description": "Resolver Artist: +3 energy — a week to breathe",
+        "importance": "routine",
+        "type": "energy",
+      },
+      {
+        "amount": -3499,
+        "description": "Weekly operational costs",
+        "importance": "routine",
+        "type": "expense",
+      },
+      {
+        "amount": 0,
+        "description": "🎵 Playlist Access Upgraded: Niche playlists unlocked! Your releases can now reach wider audiences.",
+        "importance": "hero",
+        "type": "unlock",
+      },
+      {
+        "amount": 0,
+        "description": "📰 Press Access Upgraded: Music Blogs coverage unlocked! Your projects will get better media attention.",
+        "importance": "hero",
+        "type": "unlock",
+      },
+    ],
+    "chartUpdates": {
+      "competitorChecksum": 1613480601,
+      "competitorCount": 98,
+      "playerEntries": [],
+    },
+    "events": [
+      {
+        "category": "business_opportunities",
+        "choiceId": "<id>",
+        "choiceLabel": "Take the deal",
+        "delayedEffects": {
+          "reputation": 2,
+        },
+        "effects": {
+          "money": 12000,
+        },
+        "id": "<id>",
+        "occurred": true,
+        "prompt": "A distributor offers a lucrative but risky catalog deal.",
+        "resolved": true,
+        "title": "A distributor offers a lucrative but risky catalog",
+      },
+    ],
+    "expenseBreakdown": {
+      "artistSalaries": 1200,
+      "executiveSalaries": 0,
+      "marketingCosts": 0,
+      "projectCosts": 0,
+      "roleMeetingCosts": 0,
+      "signingBonuses": 0,
+      "weeklyOperations": 2299,
+    },
+    "expenses": 3499,
+    "financialBreakdown": "$500,000 - $2,299 (operations) - $1,200 (artists) + $12,000 (streaming) = $508,501",
+    "generatedEmails": 3,
+    "reputationChanges": {},
+    "revenue": 12000,
+    "usedExecutives": {},
+    "week": 4,
+  },
+}
+`;
+
 exports[`GameEngine.advanceWeek — golden master > tour-week: active Mini-Tour produces city revenue + variance + mood impacts 1`] = `
 {
   "digest": {

@@ -237,7 +237,10 @@ export class GameDataLoader {
       
       // Side events
       side_events: events.side_events,
-      
+
+      // Mandatory side events kill-switch ("Crisis on the Desk")
+      mandatory_side_events: events.mandatory_side_events,
+
       // Quality system
       quality_system: quality.quality_system,
       
@@ -306,6 +309,7 @@ export class GameDataLoader {
         artist_stats: z.record(z.any()).optional(),
         market_formulas: z.record(z.any()).optional(),
         side_events: z.record(z.any()).optional(),
+        mandatory_side_events: z.record(z.any()).optional(),
         progression_thresholds: z.record(z.any()).optional(),
         quality_system: z.record(z.any()).optional(),
         ui_constants: z.record(z.any()).optional(),

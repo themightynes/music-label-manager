@@ -117,6 +117,12 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     getAccessTiersSync: () => progression.access_tier_system,
     getMarketConfigSync: () => markets,
     getEventConfigSync: () => ({ weekly_chance: 0, event_types: [] }),
+    // Mandatory Side Events ("Crisis on the Desk"): production default (ON). With
+    // weekly_chance 0 no side event ever fires in the golden master and no fixture
+    // seeds a pending crisis, so ON vs OFF is behaviorally identical here — the
+    // engine's checkForEvents just reads this to decide lapse-vs-defer, and
+    // neither branch runs. Present so checkForEvents never TypeErrors on the call.
+    getMandatorySideEventsConfigSync: () => ({ enabled: true }),
     getWeeklyBurnRangeSync: () => balance.economy?.weekly_burn_range || [1500, 2500],
     getProgressionThresholdsSync: () => progression,
     getProducerTierSystemSync: () => progression.producer_tiers || {},
