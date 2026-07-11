@@ -469,11 +469,14 @@ describe('advanceWeek gameState merge precedence', () => {
 });
 
 // ---------------------------------------------------------------------------
-// (c) adoptServerBalances — two-field merge preserving everything else
+// (c) adoptServerPlanReleaseResolution — money/creativeCapital/flags merge
+//     preserving everything else (buzz-v2 slice 2 follow-up: planRelease moved
+//     off adoptServerBalances to this wider sibling because attach-at-plan
+//     drains hype flags server-side)
 // ---------------------------------------------------------------------------
 
-describe('adoptServerBalances two-field merge (via planRelease)', () => {
-  it('overwrites ONLY money + creativeCapital, preserving A&R fields and musicLabel', async () => {
+describe('adoptServerPlanReleaseResolution merge (via planRelease)', () => {
+  it('overwrites ONLY money + creativeCapital + flags, preserving A&R fields and musicLabel', async () => {
     seedGameState(baseGameState({
       id: 'game-1',
       money: 100000,
@@ -482,16 +485,19 @@ describe('adoptServerBalances two-field merge (via planRelease)', () => {
       arOfficeSourcingType: 'active',
       usedFocusSlots: 2,
       musicLabel: { name: 'Preserve Me' },
-    }));
+      flags: { pendingAwarenessBoost: 5, pendingAwarenessBoostWeek: 3 },
+    } as any));
     routeApiRequest([
       // GET /api/game/:id refetch carries a DIFFERENT musicLabel + A&R fields, none
-      // of which must leak into the store (only money + creativeCapital merge).
+      // of which must leak into the store (only money + creativeCapital + flags
+      // merge — flags because attach-at-plan drains the hype pools server-side).
       {
         match: (u) => /\/api\/game\/[^/]+$/.test(u),
         body: {
           gameState: {
             money: 55000,
             creativeCapital: 1,
+            flags: {}, // pools drained onto the release at plan time
             arOfficeSlotUsed: false,
             arOfficeSourcingType: null,
             usedFocusSlots: 0,
@@ -507,6 +513,8 @@ describe('adoptServerBalances two-field merge (via planRelease)', () => {
     const gs = record('game-1');
     expect(gs.money).toBe(55000); // adopted
     expect(gs.creativeCapital).toBe(1); // adopted
+    // Drained flags adopted — the "+N Hype banked" chip clears without a reload.
+    expect((gs as any).flags).toEqual({});
     // Everything else is the PRE-EXISTING store value, NOT the server refetch's.
     expect(gs.arOfficeSlotUsed).toBe(true);
     expect(gs.arOfficeSourcingType).toBe('active');

@@ -64,6 +64,68 @@ export const SONG_BUZZ_TOOLTIP =
   'through, then fades. While it lasts, this song’s weekly streams ride the buzz. ' +
   '(Different from the meeting “Buzz” effect, which banks hype for your NEXT release.)';
 
+/**
+ * Banked-Hype chip copy — buzz-v2 (Hype & Pre-Marketing) slice 1. The meeting
+ * "Buzz" channel banks awareness_boost into a label-global pool
+ * (flags.pendingAwarenessBoost) that seeds the NEXT release you ship as starting
+ * Buzz, and expires unused after 8 weeks. This chip is the first time that pool
+ * is visible while banked. Fork E (standing rule): qualitative only — a point
+ * value ("+N Hype") is fine, but NO multiplier numbers.
+ */
+/**
+ * Weeks an unconsumed banked-hype pool survives before it expires. DISPLAY-ONLY
+ * mirror of the engine knob `pending_awareness_boost_expiry_weeks`
+ * (data/balance/markets.json → market_formulas.awareness_system, currently 8),
+ * used to render the chip's "fades wk W" countdown synchronously without an
+ * async balance fetch. HARDCODED: if the balance knob changes, update this too
+ * (same mirror-the-engine pattern as BUZZ_BUILDING_WEEKS above).
+ */
+export const BANKED_HYPE_EXPIRY_WEEKS = 8;
+
+export const BANKED_HYPE_TOOLTIP =
+  'Banked Hype from your executive meetings. It seeds a release with extra ' +
+  'starting Buzz when you plan it — an artist-targeted meeting banks for that ' +
+  'artist’s next planned release, otherwise for your next planned release. ' +
+  'Unused, it fades after a while. (Different from a released song’s live Buzz stat.)';
+
+/**
+ * Buzz-v2 slice 2 — sum ALL unattached hype pools for the core-status chip. As
+ * of slice 2 there is a label pool (flags.pendingAwarenessBoost, stamped by
+ * flags.pendingAwarenessBoostWeek) AND per-artist pools
+ * (flags.hypeArtistPools[artistId] = { amount, week }). The chip shows the total
+ * banked positive hype and the SOONEST fade week across all contributing pools.
+ * Attached hype (moved onto a release at plan time) is NOT in flags and never
+ * appears here. Only POSITIVE pools count toward the advertised total (a negative
+ * pool suppresses discovery — not a resource to surface); a pool's fade week only
+ * counts if it contributes to the positive total.
+ */
+export interface BankedHypeSummary {
+  /** Sum of all positive unattached pools (label + per-artist). */
+  total: number;
+  /** Soonest last-bank week among the positive contributing pools, or null. */
+  soonestWeek: number | null;
+}
+
+export function summarizeBankedHype(flags: Record<string, any> | undefined | null): BankedHypeSummary {
+  let total = 0;
+  let soonestWeek: number | null = null;
+  const consider = (amount: unknown, week: unknown) => {
+    if (typeof amount !== 'number' || amount <= 0) return;
+    total += amount;
+    if (typeof week === 'number' && (soonestWeek === null || week < soonestWeek)) {
+      soonestWeek = week;
+    }
+  };
+  const f = flags || {};
+  consider(f.pendingAwarenessBoost, f.pendingAwarenessBoostWeek);
+  if (f.hypeArtistPools && typeof f.hypeArtistPools === 'object') {
+    for (const pool of Object.values(f.hypeArtistPools as Record<string, any>)) {
+      consider(pool?.amount, pool?.week);
+    }
+  }
+  return { total, soonestWeek };
+}
+
 /** Catalog-wide counts backing the MetricsDashboard core-status "Buzz" stat. */
 export interface CatalogBuzzStatus {
   /** Released songs in the building window (weeks 1-4 since release) with awareness > 0. */
@@ -105,6 +167,121 @@ export function summarizeCatalogBuzz(
   }
   return { building, fading };
 }
+
+/**
+ * Buzz-v2 slice 3 — pre-release anticipation strength word, derived from the
+ * PLANNED release's songs' current (pre-built) awareness. Reuses the same
+ * display bands as the released-song sustain language (BUZZ_SUSTAIN_STRONG_MIN /
+ * BUZZ_SUSTAIN_MIN) so the vocabulary stays consistent — NO new thresholds, and
+ * (fork E) strictly qualitative, no numbers. The headline is the HOTTEST song's
+ * awareness (max), matching summarizeReleaseBuzz's fork-D "hottest, not average".
+ *
+ * Returns null when no song has any pre-built awareness yet (the card then shows
+ * the plain "anticipation building" line without a strength word).
+ */
+export function summarizeAnticipation(songs: any[] | null | undefined): string | null {
+  let maxAwareness = 0;
+  for (const song of songs ?? []) {
+    const awareness = typeof song?.awareness === 'number' ? song.awareness : 0;
+    if (awareness > maxAwareness) maxAwareness = awareness;
+  }
+  if (maxAwareness <= 0) return null;
+  if (maxAwareness >= BUZZ_SUSTAIN_STRONG_MIN) return 'strong';
+  if (maxAwareness >= BUZZ_SUSTAIN_MIN) return 'building';
+  return 'early';
+}
+
+/**
+ * Buzz-v2 slice 4 (C43) — cancel-confirmation copy for a PLANNED release.
+ *
+ * PURE display helper backing the "Cancel release" confirmation dialog. It
+ * derives the refund PREVIEW the same way the server DELETE endpoint computes
+ * the authoritative refund (fork E). The money is ONE POT: the full paid amount
+ * (main marketing + lead single) is stored on `release.marketingBudget`, and the
+ * pre-campaign pot is a SHARE of it. Refund = marketingBudget MINUS the
+ * pre-campaign share already converted to awareness (spentToDate, clamped into
+ * [0, preCampaign.totalBudget]), floored at 0. The dialog shows this as a
+ * preview; the store adopts the server's returned refundedAmount as the source
+ * of truth.
+ *
+ * The consequence lines are QUALITATIVE (fork E standing rule): no ×N multiplier
+ * strings anywhere. `hasPreBuzz` gates whether the "anticipation lost" line is
+ * shown (a plan with no pre-campaign built nothing to lose); `hasAttachedHype`
+ * gates the "attached Hype lost" line.
+ */
+export interface CancelReleasePreview {
+  /** Refund preview in whole currency units (paid budget − converted pre-campaign share). */
+  refundAmount: number;
+  /** True when this release diverted a pre-campaign share (anticipation was/will be built). */
+  hasPreBuzz: boolean;
+  /** True when banked hype was attached at plan time (dies on cancel, no pool return). */
+  hasAttachedHype: boolean;
+  /** Qualitative consequence lines to render in the dialog (no numbers/multipliers). */
+  consequences: string[];
+}
+
+export function summarizeCancelRelease(release: any): CancelReleasePreview {
+  const metadata = (release?.metadata ?? {}) as Record<string, any>;
+  const marketingBudget = typeof release?.marketingBudget === 'number' ? release.marketingBudget : 0;
+
+  const preCampaign = metadata.preCampaign;
+  const hasPreCampaign = !!preCampaign && typeof preCampaign === 'object';
+  // Converted share: spentToDate clamped into [0, totalBudget] so drift can
+  // neither over- nor under-credit (mirrors the server rule exactly).
+  const spentPreCampaign = hasPreCampaign
+    ? Math.min(
+        Math.max(0, typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+        typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0,
+      )
+    : 0;
+
+  const refundAmount = Math.max(0, marketingBudget - spentPreCampaign);
+
+  // A pre-campaign share was diverted → anticipation was (or is being) built.
+  const hasPreBuzz = hasPreCampaign
+    && typeof preCampaign.pct === 'number' && preCampaign.pct > 0;
+  // attachedHype is a signed number stored at plan time; nonzero means hype rode in.
+  const hasAttachedHype = typeof metadata.attachedHype === 'number' && metadata.attachedHype !== 0;
+
+  const consequences: string[] = [];
+  if (hasPreBuzz) {
+    consequences.push('Any anticipation your pre-campaign built is lost.');
+  }
+  if (hasAttachedHype) {
+    consequences.push('Attached Hype is lost — it does not return to any pool.');
+  }
+  consequences.push('The songs return to your catalog, ready to plan again.');
+
+  return { refundAmount, hasPreBuzz, hasAttachedHype, consequences };
+}
+
+/**
+ * Buzz-v2 slice 5 — marketing channel personality copy for the release-planning
+ * page. Purely descriptive, grounded in the REAL engine behavior
+ * (FinancialSystem.calculateAwarenessGain's per-channel awareness coefficients:
+ * pr 0.4 / influencer 0.3 / digital 0.2 / radio 0.1 per $1k spend, before the
+ * quality multiplier) — PR and influencer build the most lasting awareness per
+ * dollar, radio and digital lag on awareness but still contribute to launch-week
+ * reach via the separate ReleaseProcessor marketing-boost/streams path. Fork E
+ * (standing rule, awareness arc): QUALITATIVE ONLY — no formulas, no
+ * coefficients, no "×N" multiplier numbers anywhere in this copy.
+ */
+export const MARKETING_CHANNEL_PERSONALITIES: Record<string, string> = {
+  pr: 'Slow to build, but the longest-lasting buzz per dollar spent.',
+  influencer: 'Builds lasting buzz almost as well as PR, with a social-momentum edge.',
+  digital: 'Steady and broad — more about reach than lasting buzz.',
+  radio: 'Launch-week punch, but the least lasting buzz of the four channels.',
+};
+
+/**
+ * Buzz-v2 slice 5 — quality legibility note for release planning. The engine
+ * multiplies awareness gain by (song quality / 100) — see
+ * FinancialSystem.calculateAwarenessGain's qualityMultiplier — so a low-quality
+ * song blunts every marketing dollar and a high-quality one amplifies it.
+ * Qualitative only (fork E): no multiplier number in the copy.
+ */
+export const MARKETING_QUALITY_NOTE =
+  'Higher-quality songs get more out of every marketing dollar — weaker songs blunt the same spend.';
 
 /**
  * Aggregate a release's songs into the card Buzz summary.

@@ -32,6 +32,20 @@ import {
   type CampaignOutcome
 } from '@/lib/releaseAnalytics';
 import { ReleaseBuzzSection } from './ReleaseBuzzSection';
+import { summarizeAnticipation, summarizeCancelRelease } from '@/lib/releaseBuzz';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useGameStore } from '@/store/gameStore';
+import { X } from 'lucide-react';
 import {
   formatChartPosition,
   formatChartMovement,
@@ -58,6 +72,9 @@ export function ReleaseWorkflowCard({
   songs = []
 }: ReleaseWorkflowCardProps) {
   const [showDetailedAnalytics, setShowDetailedAnalytics] = useState(false);
+  // Buzz-v2 slice 4 (C43) — cancel-planned-release affordance.
+  const [isCancelling, setIsCancelling] = useState(false);
+  const cancelRelease = useGameStore((s) => s.cancelRelease);
 
   const metadata = release.metadata as any;
   const leadSingleStrategy = metadata?.leadSingleStrategy;
@@ -65,7 +82,36 @@ export function ReleaseWorkflowCard({
 
   // Get release songs for enhanced analytics
   const releaseSongs = getReleaseSongs(release.id, songs);
+
+  // Buzz-v2 slice 3 — pre-release anticipation ramp. Shown on a PLANNED (not yet
+  // released) release that diverted marketing to a pre-campaign. weeksToLaunch is
+  // release.releaseWeek − currentWeek; the strength word comes from the songs'
+  // current pre-built awareness (qualitative bands in releaseBuzz.ts).
+  const preCampaign = metadata?.preCampaign;
+  const weeksToLaunch = (release.releaseWeek || 0) - currentWeek;
+  const showAnticipation =
+    !!preCampaign && typeof preCampaign.pct === 'number' && preCampaign.pct > 0
+    && release.status !== 'released' && weeksToLaunch >= 1;
+  const anticipationStrength = showAnticipation ? summarizeAnticipation(releaseSongs) : null;
   const campaignData = extractCampaignData(release);
+
+  // Buzz-v2 slice 4 (C43) — a PLANNED (not yet released) release is cancellable.
+  // The refund preview + consequence copy come from the pure helper (fork E);
+  // the store adopts the server's authoritative refund on confirm.
+  const isPlanned = release.status === 'planned';
+  const cancelPreview = isPlanned ? summarizeCancelRelease(release) : null;
+
+  const handleConfirmCancel = async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+    try {
+      await cancelRelease(release.id);
+    } catch (error) {
+      console.error('Failed to cancel release:', error);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   // Calculate actual totals from songs if release totals are missing
   const totalStreamsFromSongs = releaseSongs.reduce((sum, song) => sum + (song.totalStreams || 0), 0);
@@ -587,6 +633,68 @@ export function ReleaseWorkflowCard({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Buzz-v2 slice 3 — Pre-release anticipation ramp (planned releases only).
+            Compact qualitative line; NO multiplier numbers (fork E). */}
+        {showAnticipation && (
+          <div className="pt-2 border-t border-white/[0.08] flex items-center space-x-2 text-sm">
+            <TrendingUp className="w-4 h-4 text-neon-lilac" />
+            <span className="text-[rgba(233,230,244,0.75)]">
+              Anticipation building{anticipationStrength ? ` (${anticipationStrength})` : ''} — {weeksToLaunch} week{weeksToLaunch === 1 ? '' : 's'} to launch
+            </span>
+          </div>
+        )}
+
+        {/* Buzz-v2 slice 4 (C43) — Cancel affordance for PLANNED releases. A small
+            destructive-styled button opens a confirmation dialog spelling out the
+            fork-E consequences (refund preview + what's lost). Qualitative copy
+            only — no multiplier numbers. */}
+        {isPlanned && cancelPreview && (
+          <div className="pt-2 border-t border-white/[0.08] flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-pill font-mono text-[11px] px-2.5 py-1 border border-negative/40 text-negative hover:bg-negative/10 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Cancel release
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this planned release?</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3">
+                      <div>
+                        You'll be refunded{' '}
+                        <span className="font-mono text-money">
+                          {formatCurrency(cancelPreview.refundAmount)}
+                        </span>{' '}
+                        of unspent marketing budget.
+                      </div>
+                      <ul className="list-disc pl-5 space-y-1 text-[rgba(233,230,244,0.75)]">
+                        {cancelPreview.consequences.map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isCancelling}>Keep release</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleConfirmCancel}
+                    disabled={isCancelling}
+                    className="bg-negative/20 border border-negative/50 text-negative hover:bg-negative/30"
+                  >
+                    {isCancelling ? 'Cancelling…' : 'Cancel release'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
 

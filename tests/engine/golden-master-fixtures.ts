@@ -148,6 +148,14 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
       awareness_boost_points_per_unit: markets.market_formulas?.awareness_system?.awareness_boost_points_per_unit ?? 8,
       pending_awareness_boost_expiry_weeks: markets.market_formulas?.awareness_system?.pending_awareness_boost_expiry_weeks ?? 8,
     }),
+    // Mirror ServerGameData.getPreCampaignConfigSync (server/data/gameData.ts,
+    // buzz-v2 slice 3 — pre-release marketing knobs).
+    getPreCampaignConfigSync: () => ({
+      max_pct: markets.market_formulas?.pre_campaign?.max_pct ?? 50,
+      diminishing_after_weeks: markets.market_formulas?.pre_campaign?.diminishing_after_weeks ?? 4,
+      diminishing_factor: markets.market_formulas?.pre_campaign?.diminishing_factor ?? 0.5,
+      lead_single_conduit_factor: markets.market_formulas?.pre_campaign?.lead_single_conduit_factor ?? 0.5,
+    }),
     // Mirror ServerGameData.getVarianceConfigSync (server/data/gameData.ts,
     // exec-meetings-revival PR-6, C4 — outcome variance/risk channel).
     getVarianceConfigSync: () => ({

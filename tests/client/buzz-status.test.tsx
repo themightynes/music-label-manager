@@ -20,7 +20,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { summarizeCatalogBuzz, SONG_BUZZ_TOOLTIP } from '@/lib/releaseBuzz';
+import { summarizeCatalogBuzz, summarizeBankedHype, SONG_BUZZ_TOOLTIP, BANKED_HYPE_EXPIRY_WEEKS, BANKED_HYPE_TOOLTIP } from '@/lib/releaseBuzz';
 import { BuzzStatusStat } from '@/components/MetricsDashboard';
 import { SongBuzzChip } from '@/components/SongCatalog';
 import { EFFECT_CHANNEL_DESCRIPTIONS } from '@shared/engine/processors/ActionProcessor';
@@ -142,6 +142,87 @@ describe('BuzzStatusStat', () => {
   });
 });
 
+describe('summarizeBankedHype (buzz-v2 slice 2 — chip aggregation)', () => {
+  it('sums the label pool and all positive artist pools', () => {
+    const r = summarizeBankedHype({
+      pendingAwarenessBoost: 2,
+      pendingAwarenessBoostWeek: 5,
+      hypeArtistPools: {
+        a: { amount: 3, week: 6 },
+        b: { amount: 4, week: 7 },
+      },
+    });
+    expect(r.total).toBe(9);
+  });
+
+  it('reports the SOONEST fade week among contributing pools', () => {
+    const r = summarizeBankedHype({
+      pendingAwarenessBoost: 2,
+      pendingAwarenessBoostWeek: 8,
+      hypeArtistPools: {
+        a: { amount: 3, week: 4 }, // soonest
+        b: { amount: 4, week: 6 },
+      },
+    });
+    expect(r.soonestWeek).toBe(4);
+  });
+
+  it('excludes negative and zero pools from the total (and their weeks)', () => {
+    const r = summarizeBankedHype({
+      pendingAwarenessBoost: -5,
+      pendingAwarenessBoostWeek: 1,
+      hypeArtistPools: {
+        a: { amount: 3, week: 6 },
+        b: { amount: 0, week: 2 },
+      },
+    });
+    expect(r.total).toBe(3);
+    expect(r.soonestWeek).toBe(6); // week 1 (negative) and week 2 (zero) excluded
+  });
+
+  it('returns total 0 / null week for empty or missing flags', () => {
+    expect(summarizeBankedHype({})).toEqual({ total: 0, soonestWeek: null });
+    expect(summarizeBankedHype(undefined)).toEqual({ total: 0, soonestWeek: null });
+    expect(summarizeBankedHype(null)).toEqual({ total: 0, soonestWeek: null });
+  });
+});
+
+describe('BuzzStatusStat banked-hype chip (buzz-v2 slice 1)', () => {
+  it('renders "+N Hype banked · fades wk W" when a positive pool is banked', () => {
+    render(
+      <BuzzStatusStat songs={[]} currentWeek={5} bankedHype={4} bankedHypeWeek={5} />
+    );
+    const chip = screen.getByTestId('banked-hype-chip');
+    expect(chip).toHaveTextContent('+4 Hype banked');
+    // Expiry week = stamped week + BANKED_HYPE_EXPIRY_WEEKS (mirrors the engine).
+    expect(chip).toHaveTextContent(`fades wk ${5 + BANKED_HYPE_EXPIRY_WEEKS}`);
+    expect(chip).toHaveAttribute('aria-label', `Banked Hype: ${BANKED_HYPE_TOOLTIP}`);
+  });
+
+  it('omits the countdown when the stamp week is unknown', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={2} bankedHypeWeek={null} />);
+    const chip = screen.getByTestId('banked-hype-chip');
+    expect(chip).toHaveTextContent('+2 Hype banked');
+    expect(chip).not.toHaveTextContent('fades wk');
+  });
+
+  it('renders no chip when nothing is banked', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={0} />);
+    expect(screen.queryByTestId('banked-hype-chip')).toBeNull();
+  });
+
+  it('renders no chip for a negative pool (suppression is not advertised)', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={-3} bankedHypeWeek={5} />);
+    expect(screen.queryByTestId('banked-hype-chip')).toBeNull();
+  });
+
+  it('never leaks a multiplier number in the chip (fork E: qualitative only)', () => {
+    render(<BuzzStatusStat songs={[]} currentWeek={5} bankedHype={6} bankedHypeWeek={5} />);
+    expect(screen.getByTestId('banked-hype-chip').textContent).not.toMatch(/[×x]\s*\d/);
+    expect(BANKED_HYPE_TOOLTIP).not.toMatch(/[×x]\s*\d/);
+  });
+});
+
 describe('SongBuzzChip tooltip (fork C — song-level side)', () => {
   it('wires the song-level Buzz copy onto the chip trigger', () => {
     render(<SongBuzzChip awareness={42} />);
@@ -172,6 +253,14 @@ describe('awareness_boost channel copy (fork C — meetings side)', () => {
     );
     // Still the banked-seed mechanic description underneath.
     expect(EFFECT_CHANNEL_DESCRIPTIONS.awareness_boost.title).toBe('Buzz');
-    expect(EFFECT_CHANNEL_DESCRIPTIONS.awareness_boost.text).toContain('banked for your next release');
+    expect(EFFECT_CHANNEL_DESCRIPTIONS.awareness_boost.text).toContain('banked as Hype');
+  });
+
+  it('describes the slice-2 scoping (artist-targeted vs label pool)', () => {
+    const text = EFFECT_CHANNEL_DESCRIPTIONS.awareness_boost.text;
+    expect(text).toContain("artist's next planned release");
+    expect(text).toContain("label's next planned release");
+    // Fork E: qualitative only.
+    expect(text).not.toMatch(/[×x]\s*\d/);
   });
 });

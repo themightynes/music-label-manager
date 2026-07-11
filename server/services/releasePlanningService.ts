@@ -23,6 +23,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db as dbSingleton } from '../db';
 import { gameStates, releases, releaseSongs, songs } from '@shared/schema';
+import { serverGameData } from '../data/gameData';
 
 /**
  * A coded error whose `body` is the EXACT JSON payload the original route
@@ -92,6 +93,7 @@ export class ReleasePlanningService {
       marketingBudget,
       leadSingleStrategy,
       metadata,
+      preCampaignPct,
     } = body;
 
     // Validate inputs
@@ -140,6 +142,45 @@ export class ReleasePlanningService {
           leadSingleReleaseWeek: leadSingleStrategy.leadSingleReleaseWeek,
           details: [
             { field: 'leadSingleReleaseWeek', error: `Must be greater than current week (${currentWeek})` },
+          ],
+        });
+      }
+    }
+
+    // Buzz-v2 slice 3 — pre-release campaign share validation. `preCampaignPct` is
+    // the share of the MAIN marketing budget diverted to a pre-release anticipation
+    // ramp (0/10/20/30/40/50; hard-capped at the balance knob max_pct). Default 0 =
+    // exact current behavior (no preCampaign key stored, launch path unscaled). A
+    // nonzero pct requires at least one lead-up week (plan → release), because a
+    // release shipping the very next week has no pre-release window — its pre-campaign
+    // would have nowhere to convert.
+    const preCampaignConfig = serverGameData.getPreCampaignConfigSync();
+    const rawPct = typeof preCampaignPct === 'number' && Number.isFinite(preCampaignPct)
+      ? Math.round(preCampaignPct)
+      : 0;
+    if (rawPct !== 0) {
+      const validStep = rawPct % 10 === 0;
+      if (!validStep || rawPct < 0 || rawPct > preCampaignConfig.max_pct) {
+        throw new ReleaseServiceError('INVALID_PRE_CAMPAIGN_PCT', 400, {
+          error: 'INVALID_PRE_CAMPAIGN_PCT',
+          message: `preCampaignPct must be 0 or a multiple of 10 up to ${preCampaignConfig.max_pct}`,
+          details: [
+            { field: 'preCampaignPct', error: `Must be 0 or a 10-step share, 0..${preCampaignConfig.max_pct}` },
+          ],
+        });
+      }
+      // Lead-up weeks = scheduledReleaseWeek − currentWeek. A next-week release
+      // (gap of 1, i.e. no full lead-up week before the release week) cannot carry
+      // a pre-campaign. scheduledReleaseWeek is already validated > currentWeek above.
+      const leadUpWeeks = (scheduledReleaseWeek || 0) - currentWeek;
+      if (leadUpWeeks < 2) {
+        throw new ReleaseServiceError('PRE_CAMPAIGN_NO_LEADUP', 400, {
+          error: 'PRE_CAMPAIGN_NO_LEADUP',
+          message: 'A pre-release campaign needs at least one lead-up week before the release week',
+          currentWeek,
+          scheduledReleaseWeek,
+          details: [
+            { field: 'preCampaignPct', error: 'Set 0 when the release is scheduled for next week' },
           ],
         });
       }
@@ -196,6 +237,43 @@ export class ReleasePlanningService {
       });
     }
 
+    // Buzz-v2 slice 3 — build the pre-campaign metadata block (only when pct > 0;
+    // pct 0 stores NOTHING, keeping the golden-master path byte-identical). This
+    // block is what the engine's weekly pre-campaign pass reads (ReleaseProcessor):
+    //   - pct: the diverted share (10..max_pct)
+    //   - totalBudget: round(pct% of the MAIN marketing total) — the anticipation
+    //     pot, converted over the lead-up weeks
+    //   - budgetPerChannel: each MAIN channel scaled by pct% (the per-channel mix the
+    //     ramp uses, so the anticipation build honors channel coefficients)
+    //   - weeklySpend: totalBudget / leadUpWeeks, computed ONCE at plan time to
+    //     avoid week-to-week drift (final week spends the remainder)
+    //   - spentToDate: 0 — advances each week the ramp fires
+    // The launch-phase (weeks 1-4) conversion scales its breakdown DOWN by (1-pct)
+    // at READ time (ReleaseProcessor), never mutating the stored marketingBudgetBreakdown.
+    let preCampaign: {
+      pct: number;
+      totalBudget: number;
+      budgetPerChannel: Record<string, number>;
+      weeklySpend: number;
+      spentToDate: number;
+    } | null = null;
+    if (rawPct > 0) {
+      const share = rawPct / 100;
+      const preTotalBudget = Math.round(marketingTotal * share);
+      const budgetPerChannel: Record<string, number> = {};
+      for (const [channel, raw] of Object.entries(marketingBudget || {})) {
+        budgetPerChannel[channel] = (raw as number) * share;
+      }
+      const leadUpWeeks = (scheduledReleaseWeek || 0) - currentWeek;
+      preCampaign = {
+        pct: rawPct,
+        totalBudget: preTotalBudget,
+        budgetPerChannel,
+        weeklySpend: leadUpWeeks > 0 ? preTotalBudget / leadUpWeeks : preTotalBudget,
+        spentToDate: 0,
+      };
+    }
+
     // Create the planned release in a transaction
     const result = await this.db.transaction(async (tx) => {
       // CRITICAL FIX: Single deduction of marketing budget and creative capital
@@ -207,6 +285,44 @@ export class ReleasePlanningService {
         .where(eq(gameStates.id, gameId));
 
       console.log(`[PLAN RELEASE] Deducted $${totalBudget} and 1 creative capital for release planning`);
+
+      // Buzz-v2 slice 2 — ATTACH-AT-PLAN. Drain the planning artist's hype pool
+      // (flags.hypeArtistPools[artistId]) PLUS the entire label pool
+      // (flags.pendingAwarenessBoost, fork B: first-planned takes all) onto this
+      // release NOW, stored on release.metadata.attachedHype (signed units). At
+      // ship time ReleaseProcessor seeds starting Buzz from this attached number,
+      // NOT from reading global flags — so attached hype never expires and can't be
+      // stolen by a later release. flags live in a jsonb COLUMN on game_states.
+      // Re-read flags off the owner-verified gameState row (not a stale copy).
+      const flags = (gameState.flags && typeof gameState.flags === 'object')
+        ? { ...(gameState.flags as Record<string, any>) }
+        : {};
+      // Follow-up guard: only drain (and only WRITE flags) when there is actually
+      // something to drain — never-banked games keep byte-stable flags (no stray
+      // `pendingAwarenessBoost: 0` key) and skip a pointless gameStates UPDATE.
+      const hasLabelPool = typeof flags.pendingAwarenessBoost === 'number' && flags.pendingAwarenessBoost !== 0;
+      const artistPools = (flags.hypeArtistPools && typeof flags.hypeArtistPools === 'object')
+        ? flags.hypeArtistPools as Record<string, { amount: number; week: number }>
+        : null;
+      const artistPool = artistPools ? artistPools[artistId] : undefined;
+      const hasArtistPool = !!artistPool && typeof artistPool.amount === 'number' && artistPool.amount !== 0;
+      let attachedHype = 0;
+      if (hasLabelPool || hasArtistPool) {
+        // Label pool (whole, fork B: first-planned takes all).
+        if (hasLabelPool) {
+          attachedHype += flags.pendingAwarenessBoost;
+          flags.pendingAwarenessBoost = 0;
+          delete flags.pendingAwarenessBoostWeek;
+        }
+        // This artist's pool (drained; other artists' pools untouched).
+        if (hasArtistPool && artistPools) {
+          attachedHype += artistPool!.amount;
+          delete artistPools[artistId];
+          if (Object.keys(artistPools).length === 0) delete flags.hypeArtistPools;
+        }
+        // Persist the drained flags back onto the game state row.
+        await tx.update(gameStates).set({ flags }).where(eq(gameStates.id, gameId));
+      }
 
       // Create release record
       const [newRelease] = await tx.insert(releases).values({
@@ -223,6 +339,16 @@ export class ReleasePlanningService {
           scheduledReleaseWeek,
           marketingChannels: Object.keys(marketingBudget || {}),
           marketingBudgetBreakdown: marketingBudget || {}, // CRITICAL FIX: Store per-channel budgets for release execution
+          // Buzz-v2 slice 2: hype attached at plan time (signed units). Presence of
+          // this field routes ReleaseProcessor to seed from it (attached, never
+          // expires) instead of the legacy label-pool fallback. Stored even when 0
+          // so the release is unambiguously "slice-2 planned".
+          attachedHype,
+          // Buzz-v2 slice 3: pre-release campaign block. ONLY present when pct > 0 —
+          // its ABSENCE is the golden-master containment (releases without a
+          // pre-campaign never enter the new engine path, and the launch-phase
+          // awareness conversion reads the full unscaled breakdown).
+          ...(preCampaign ? { preCampaign } : {}),
           leadSingleStrategy: leadSingleStrategy ? {
             ...leadSingleStrategy,
             leadSingleBudgetBreakdown: leadSingleStrategy.leadSingleBudget || {}, // Store per-channel breakdown for lead single too
@@ -248,8 +374,21 @@ export class ReleasePlanningService {
       await tx.insert(releaseSongs).values(releaseSongEntries);
       console.log(`[PLAN RELEASE] Created ${releaseSongEntries.length} junction table entries for release ${newRelease.id}`);
 
-      return newRelease;
+      return { newRelease, attachedHype };
     });
+
+    const { newRelease: resultRelease, attachedHype } = result;
+
+    // Buzz-v2 slice 2 — plan-summary attribution. There is no weekly summary at
+    // plan time, so surface the applied hype in the plan response instead: the
+    // client shows "Hype applied: +N starting Buzz" in the planning confirmation.
+    // `units` is the raw pool (signed); `buzzPoints` is units × points-per-unit,
+    // exactly what ReleaseProcessor seeds at ship time. serverGameData's sync
+    // accessor has a safe hardcoded fallback if balance data isn't loaded.
+    const pointsPerUnit = serverGameData.getAwarenessBoostConfigSync().awareness_boost_points_per_unit;
+    const hypeApplied = attachedHype !== 0
+      ? { units: attachedHype, buzzPoints: attachedHype * pointsPerUnit }
+      : null;
 
     // Get updated game state and planned releases
     const [updatedGameState] = await this.db.select().from(gameStates).where(eq(gameStates.id, gameId));
@@ -258,11 +397,12 @@ export class ReleasePlanningService {
 
     return {
       success: true,
+      hypeApplied,
       release: {
-        id: result.id,
-        title: result.title,
-        type: result.type,
-        artistId: result.artistId,
+        id: resultRelease.id,
+        title: resultRelease.title,
+        type: resultRelease.type,
+        artistId: resultRelease.artistId,
         artistName: 'Artist Name', // Would need artist lookup
         songIds,
         leadSingleId,
@@ -274,7 +414,7 @@ export class ReleasePlanningService {
           roi: metadata?.projectedROI || 0,
           chartPotential: 50,
         },
-        createdAt: result.createdAt?.toISOString(),
+        createdAt: resultRelease.createdAt?.toISOString(),
         createdByWeek: updatedGameState.currentWeek,
       },
       updatedGameState: {
@@ -300,8 +440,38 @@ export class ReleasePlanningService {
    * Delete a planned release and free up its songs, refunding the STORED
    * marketing budget (never a client-supplied amount) back to the game's money.
    *
-   * Returns the exact response payload the original DELETE handler sent (the
-   * route wraps it as res.json(payload)).
+   * Buzz-v2 slice 4 (C43) — fork E cancel semantics. THE MONEY IS ONE POT: at
+   * plan time the player pays `totalBudget` (main marketing + lead single)
+   * exactly ONCE, and that full paid amount is stored whole on
+   * `release.marketingBudget` (planRelease, ~line 189/282/335). The pre-campaign
+   * pot (metadata.preCampaign.totalBudget = pct% of the MAIN marketing total) is
+   * a SHARE of that already-paid-and-stored total — not an extra charge — which
+   * the weekly engine converts to song awareness over the lead-up weeks,
+   * advancing `spentToDate`. On cancel:
+   *   - the player gets back everything they paid EXCEPT the pre-campaign share
+   *     already CONVERTED to awareness: refund = marketingBudget −
+   *     min(max(0, spentToDate), preCampaign.totalBudget), floored at 0. The
+   *     clamps mean spentToDate drift can neither over- nor under-credit. The
+   *     converted share is gone — it bought the pre-buzz we are about to destroy
+   *     (fork E: pre-buzz dies).
+   *   - legacy / pct-0 releases have no preCampaign key → converted share 0 →
+   *     full marketingBudget refund, byte-identical to the pre-slice-4 rule.
+   *   - the release's still-unreleased songs have their `awareness` and
+   *     `peak_awareness` ZEROED. Those points were built purely by this release's
+   *     pre-campaign; leaving them would recreate the buzz-farming exploit fork E
+   *     rejected. (Songs are unreleased/unreserved here — they only re-enter the
+   *     awareness economy via a fresh plan.)
+   *   - attached hype (metadata.attachedHype) dies implicitly: it lives only on
+   *     this release row, which is deleted, and nothing re-credits any pool.
+   * Everything below runs in ONE transaction with the refund.
+   *
+   * KNOWN PRE-EXISTING OVER-REFUND (deliberately NOT changed here; orchestrator
+   * is logging it as debt): the refund includes the lead-single budget share even
+   * when the lead single already shipped and its marketing converted — that
+   * behavior predates this arc.
+   *
+   * Returns the same payload shape the original DELETE handler sent;
+   * `refundedAmount` is the paid pot minus the converted pre-campaign share.
    */
   async deleteRelease(userId: string | undefined, gameId: string, releaseId: string) {
     // Get the release to return marketing budget
@@ -322,28 +492,46 @@ export class ReleasePlanningService {
       });
     }
 
+    // Fork E: the paid pot (marketingBudget) comes back MINUS the pre-campaign
+    // share already converted to awareness. spentToDate is clamped into
+    // [0, preCampaign.totalBudget] so drift can neither over- nor under-credit;
+    // the final refund is floored at 0. Absent preCampaign (pct 0 / legacy
+    // release) deducts nothing — byte-identical to the old full-budget refund.
+    const preCampaign = (release.metadata as any)?.preCampaign;
+    const spentPreCampaign = preCampaign
+      ? Math.min(
+          Math.max(0, typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
+          typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0,
+        )
+      : 0;
+    const refundedAmount = Math.max(0, (release.marketingBudget || 0) - spentPreCampaign);
+
     // Execute deletion in transaction
     const result = await this.db.transaction(async (tx) => {
-      // Free up songs reserved for this release
+      // Free up songs reserved for this release AND zero the pre-buzz they were
+      // seeded with (fork E: built pre-buzz dies with cancellation). These songs
+      // are unreleased, so peak_awareness held only pre-campaign build too.
       const freedSongs = await tx.update(songs)
-        .set({ releaseId: null })
+        .set({ releaseId: null, awareness: 0, peak_awareness: 0 })
         .where(eq(songs.releaseId, releaseId))
         .returning();
 
-      // Return marketing budget to player (from STORED release data, not client)
+      // Refund the paid pot minus the converted pre-campaign share (from STORED
+      // release data, never client input).
       const [gameState] = await tx.select().from(gameStates)
         .where(eq(gameStates.id, gameId));
 
       if (gameState) {
         await tx.update(gameStates)
-          .set({ money: (gameState.money || 0) + (release.marketingBudget || 0) })
+          .set({ money: (gameState.money || 0) + refundedAmount })
           .where(eq(gameStates.id, gameId));
       }
 
-      // Delete the planned release
+      // Delete the planned release. Attached hype dies here — it lives only on
+      // this row and nothing re-credits any pool.
       await tx.delete(releases).where(eq(releases.id, releaseId));
 
-      return { freedSongs, refundedAmount: release.marketingBudget || 0 };
+      return { freedSongs, refundedAmount };
     });
 
     return {

@@ -134,8 +134,22 @@ export function classifyChange(
     // A tour-planning foreshadow is an informational "what's coming next week"
     // beat — surfaced, but ordinary weekly churn, not a headline.
     case 'tour_planning':
+    // Buzz-v2 slice 1: banking hype (a meeting choice's delayed buzz landing in
+    // the pool) is ordinary weekly churn — surfaced as a routine-stage line.
+    case 'hype_banked':
+    // Buzz-v2 slice 3: pre-release anticipation build — one line per planned
+    // release per week while the pre-campaign converts. Informational "what's
+    // building" churn, like the tour_planning foreshadow above.
+    case 'pre_campaign':
     case 'error':
       return 'routine';
+
+    // Buzz-v2 slice 1: hype PAYING OFF (seeding a shipped release) or expiring
+    // unused are meaningful, attributable beats — the whole point of this slice
+    // is that they stop happening invisibly. Both render in the notable stage.
+    case 'hype_applied':
+    case 'hype_expired':
+      return 'notable';
 
     default:
       return assertNever(change.type);

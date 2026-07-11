@@ -168,6 +168,13 @@
         "enhanced_decay_rate": 0.92
       },
       "max_awareness_modifier": 2.0
+    },
+
+    "pre_campaign": {
+      "max_pct": 50,
+      "diminishing_after_weeks": 4,
+      "diminishing_factor": 0.5,
+      "lead_single_conduit_factor": 0.5
     }
   },
 

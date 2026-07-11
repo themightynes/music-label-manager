@@ -209,7 +209,13 @@ export class GameEngine {
     // Process song generation for recording projects
     await this.processRecordingProjects(summary, dbTransaction);
 
-    // Process lead singles scheduled for this week  
+    // Buzz-v2 slice 3: pre-release anticipation build for planned releases that
+    // diverted marketing to a pre-campaign (deterministic, zero RNG). Runs BEFORE
+    // lead singles / planned releases so this week's pre-built awareness is in place
+    // when a release ships (the ship-time attachedHype seed composes on top of it).
+    await this.processPreCampaigns(summary, dbTransaction);
+
+    // Process lead singles scheduled for this week
     await this.processLeadSingles(summary, dbTransaction);
 
     // Process planned releases scheduled for this week
@@ -797,6 +803,16 @@ export class GameEngine {
   // wrapper; still called from advanceWeek.
   private async processLeadSingles(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     return new ReleaseProcessor().processLeadSingles(
+      this.weekContext(summary, dbTransaction),
+      summary,
+      dbTransaction
+    );
+  }
+
+  // Buzz-v2 slice 3: DELEGATED TO ReleaseProcessor. Pre-release anticipation build
+  // for planned releases carrying a metadata.preCampaign block.
+  private async processPreCampaigns(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    return new ReleaseProcessor().processPreCampaigns(
       this.weekContext(summary, dbTransaction),
       summary,
       dbTransaction

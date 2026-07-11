@@ -76,6 +76,42 @@ type SongUpdatePatch = {
   awareness_decay_rate?: number;
 };
 
+/**
+ * Buzz-v2 slice 3 — stored pre-campaign metadata shape (mirrors what
+ * releasePlanningService writes onto release.metadata.preCampaign). Present ONLY
+ * when the player diverted a share (pct > 0) of the marketing budget to a
+ * pre-release anticipation ramp.
+ */
+interface PreCampaignMetadata {
+  pct: number;
+  totalBudget: number;
+  budgetPerChannel: Record<string, number>;
+  weeklySpend: number;
+  spentToDate: number;
+}
+
+/**
+ * Buzz-v2 slice 3 — scale a release's LAUNCH-phase (weeks 1-4) marketing breakdown
+ * DOWN by the pre-campaign's remaining (1-pct) share, at READ time. When no
+ * pre-campaign exists (or pct is absent/0), the breakdown passes through unchanged
+ * (golden-master path — byte-identical). Never mutates the stored breakdown; returns
+ * a fresh per-channel object so the auditable plan-time data is preserved.
+ */
+export function scaleLaunchBreakdown(
+  breakdown: Record<string, number> | undefined | null,
+  preCampaign: PreCampaignMetadata | undefined | null,
+): Record<string, number> | undefined | null {
+  if (!breakdown) return breakdown;
+  const pct = preCampaign && typeof preCampaign.pct === 'number' ? preCampaign.pct : 0;
+  if (pct <= 0) return breakdown;
+  const launchShare = 1 - pct / 100;
+  const scaled: Record<string, number> = {};
+  for (const [channel, value] of Object.entries(breakdown)) {
+    scaled[channel] = (typeof value === 'number' ? value : 0) * launchShare;
+  }
+  return scaled;
+}
+
 export class ReleaseProcessor {
   /**
    * Calculates streaming revenue for a release
@@ -677,7 +713,15 @@ export class ReleaseProcessor {
                 // Fallback to individual lookup if not in cache
                 release = await ctx.storage.getRelease(song.releaseId, dbTransaction);
               }
-              const marketingBreakdown = release?.metadata?.marketingBudgetBreakdown;
+              // Buzz-v2 slice 3: when a pre-release campaign diverted a share (pct)
+              // of the MARKETING budget to the anticipation ramp, the launch phase
+              // (weeks 1-4) converts only the REMAINING (1-pct) share. Scale the
+              // per-channel breakdown DOWN at READ time — the stored
+              // marketingBudgetBreakdown is never mutated, so the data stays
+              // auditable. Releases without a preCampaign read the full breakdown
+              // (golden-master path, byte-identical).
+              const rawBreakdown = release?.metadata?.marketingBudgetBreakdown;
+              const marketingBreakdown = scaleLaunchBreakdown(rawBreakdown, release?.metadata?.preCampaign);
 
               if (marketingBreakdown) {
               const awarenessGain = await ctx.financialSystem.calculateAwarenessGain(song, marketingBreakdown);
@@ -901,6 +945,152 @@ export class ReleaseProcessor {
   }
 
   /**
+   * Buzz-v2 (Hype & Pre-Marketing) slice 3 — the pre-release anticipation build.
+   *
+   * A NEW weekly engine write path for PLANNED, not-yet-released releases carrying
+   * a `metadata.preCampaign` block (only present when the player diverted a share
+   * of the marketing budget to a pre-release campaign). Each such release, while it
+   * still has budget to convert (spentToDate < totalBudget), builds awareness on its
+   * songs during the lead-up weeks — turning "planning early" into a real strategy.
+   *
+   * DETERMINISTIC, ZERO RNG DRAWS (tour-foreshadow precedent): the awareness gain
+   * reuses FinancialSystem.calculateAwarenessGain (the SAME channel-coefficient
+   * formula as the launch path — never duplicated here) fed the per-week channel
+   * amounts, then scaled by:
+   *   - fork D diminishing factor: full strength when ≤ diminishing_after_weeks from
+   *     launch, × diminishing_factor when further out (mega-early planning doesn't
+   *     dominate). The existing +25/wk cap (inside calculateAwarenessGain) still applies.
+   *   - fork F lead-single conduit factor: full strength only while the release's
+   *     lead single is ALREADY out this week; × lead_single_conduit_factor otherwise
+   *     (no lead single planned, or not yet released) — makes the lead single matter.
+   *
+   * The gain is applied to EACH of the release's songs' awareness (peak bumped like
+   * the other paths), spentToDate advanced, and ONE structured 'pre_campaign' summary
+   * change emitted per release per week. Composes automatically with the ship-time
+   * attachedHype seed (slice 2): the seed is additive to whatever awareness the song
+   * already built here.
+   */
+  async processPreCampaigns(ctx: WeekContext, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const currentWeek = ctx.gameState.currentWeek || 1;
+
+    try {
+      const allReleases = await ctx.gameData.getReleasesByGame(ctx.gameState.id, dbTransaction) || [];
+      const plannedReleases = allReleases.filter((r: any) => {
+        if (r.status !== 'planned') return false;
+        const pc = r.metadata?.preCampaign;
+        return pc && typeof pc.pct === 'number' && pc.pct > 0
+          && typeof pc.totalBudget === 'number' && pc.totalBudget > 0;
+      });
+
+      if (plannedReleases.length === 0) return;
+
+      const preCampaignConfig = ctx.gameData.getPreCampaignConfigSync();
+      const diminishingAfterWeeks = preCampaignConfig.diminishing_after_weeks;
+      const diminishingFactor = preCampaignConfig.diminishing_factor;
+      const conduitFactor = preCampaignConfig.lead_single_conduit_factor;
+
+      for (const release of plannedReleases) {
+        const metadata = release.metadata as any;
+        const preCampaign = metadata.preCampaign as PreCampaignMetadata;
+
+        const totalBudget = preCampaign.totalBudget;
+        const spentToDate = typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0;
+        const remaining = totalBudget - spentToDate;
+        if (remaining <= 0) continue; // fully converted already
+
+        const weeksUntilRelease = (release.releaseWeek || 0) - currentWeek;
+        // Only build BEFORE the release week (a release shipping this week or in the
+        // past converts in the launch path, not here). Zero-lead-up plans are
+        // rejected at plan time, so this is a safety guard.
+        if (weeksUntilRelease < 1) continue;
+
+        // This week's spend: the pinned weeklySpend, but never more than remains
+        // (final lead-up week spends the remainder). weeklySpend was computed once
+        // at plan time to avoid drift.
+        const weeklySpend = Math.min(
+          typeof preCampaign.weeklySpend === 'number' ? preCampaign.weeklySpend : remaining,
+          remaining,
+        );
+        if (weeklySpend <= 0) continue;
+
+        // Per-channel amounts for THIS week: scale the plan-time per-channel mix by
+        // (weeklySpend / totalBudget) so the channel coefficients apply proportionally.
+        const spendFraction = weeklySpend / totalBudget;
+        const weeklyBreakdown: Record<string, number> = {};
+        for (const [channel, value] of Object.entries(preCampaign.budgetPerChannel || {})) {
+          weeklyBreakdown[channel] = (typeof value === 'number' ? value : 0) * spendFraction;
+        }
+
+        // fork D: diminishing returns when planning far ahead.
+        const diminishing = weeksUntilRelease <= diminishingAfterWeeks ? 1.0 : diminishingFactor;
+
+        // fork F: lead-single conduit. Full strength only while the lead single is
+        // ALREADY out this week (its release week has arrived). Otherwise (no lead
+        // single, or not yet released) the build is weaker.
+        const leadSingleStrategy = metadata.leadSingleStrategy;
+        const leadSingleOut = !!leadSingleStrategy
+          && typeof leadSingleStrategy.leadSingleReleaseWeek === 'number'
+          && currentWeek >= leadSingleStrategy.leadSingleReleaseWeek;
+        const conduit = leadSingleOut ? 1.0 : conduitFactor;
+
+        const rampFactor = diminishing * conduit;
+
+        const releaseSongs = await ctx.gameData.getSongsByRelease(release.id, dbTransaction) || [];
+        if (releaseSongs.length === 0) continue;
+
+        const songUpdates: SongUpdatePatch[] = [];
+        let appliedGainInt = 0;
+        for (const song of releaseSongs) {
+          // Reuse the launch-path awareness formula (channel coefficients ×
+          // quality × popularity, +25/wk cap) — never duplicated here.
+          const baseGain = await ctx.financialSystem.calculateAwarenessGain(song, weeklyBreakdown);
+          const scaledGain = baseGain * rampFactor;
+          if (scaledGain <= 0) continue;
+
+          const currentAwareness = song.awareness || 0;
+          const newAwareness = Math.round(Math.min(currentAwareness + scaledGain, 100));
+          if (newAwareness === currentAwareness) continue;
+
+          appliedGainInt += newAwareness - currentAwareness; // signed int, summed across the release's songs
+          songUpdates.push({
+            songId: song.id,
+            awareness: newAwareness,
+            peak_awareness: Math.round(Math.max(song.peak_awareness || 0, newAwareness)),
+          });
+        }
+
+        // Advance spentToDate on the stored metadata regardless of whether awareness
+        // moved (the budget converts; a fully-capped/zero-quality song just yields no
+        // visible awareness). Persist via a release-metadata update.
+        const newSpentToDate = spentToDate + weeklySpend;
+        const updatedMetadata = {
+          ...metadata,
+          preCampaign: { ...preCampaign, spentToDate: newSpentToDate },
+        };
+
+        if (songUpdates.length > 0 && ctx.gameData.updateSongs) {
+          await ctx.gameData.updateSongs(songUpdates, dbTransaction);
+        }
+        if (ctx.storage?.updateRelease) {
+          await ctx.storage.updateRelease(release.id, { metadata: updatedMetadata }, dbTransaction);
+        }
+
+        // ONE structured summary change per release per week (routine).
+        summary.changes.push({
+          type: 'pre_campaign',
+          description: `📣 Anticipation building for "${release.title}" — ${weeksUntilRelease} week${weeksUntilRelease === 1 ? '' : 's'} to launch`,
+          amount: appliedGainInt,
+          releaseId: release.id,
+          releaseName: release.title,
+          weeksToLaunch: weeksUntilRelease,
+        });
+      }
+    } catch (error) {
+      console.error('[PRE-CAMPAIGN] Error processing pre-release campaigns:', error);
+    }
+  }
+
+  /**
    * Processes lead singles that are scheduled for release this week (before the main release)
    * Checks all planned releases for lead single strategies and releases them early
    */
@@ -1039,23 +1229,30 @@ export class ReleaseProcessor {
         return;
       }
 
-      // Exec-meetings-revival PR-5 (C3) — snapshot the banked awareness boost BEFORE
-      // seeding any release this week. A meeting choice banks signed authored points
-      // into flags.pendingAwarenessBoost (ActionProcessor); here they SEED the next
-      // release's per-song initial awareness (× awareness_boost_points_per_unit, ×8),
-      // clamped at 0 — a negative pool (viral_kill / reach_limitation) suppresses
-      // discovery but never drives awareness below zero. The seed rides the live
-      // awareness economy (weeks 1-4 build path + the up-to-2× stream multiplier).
-      // Consumed by the FIRST release that actually releases songs this week, then
-      // the pool zeroes so it can't seed a second release or carry into future weeks.
-      // Only touch flags at all when a boost is banked, so games that never use the
-      // channel stay byte-stable (no stray flags keys in golden-master snapshots).
+      // Exec-meetings-revival PR-5 (C3) + Buzz-v2 slice 2 — awareness-boost seed at
+      // ship time. As of slice 2, hype is ATTACHED at PLAN time
+      // (releasePlanningService.planRelease drains the planning artist's pool + the
+      // whole label pool onto release.metadata.attachedHype). At ship time we simply
+      // read that stored number and seed each released song's initial awareness
+      // (× awareness_boost_points_per_unit, ×8), clamped at 0 — a negative pool
+      // suppresses discovery but never drives awareness below zero. The seed rides
+      // the live awareness economy (weeks 1-4 build path + the up-to-2× stream
+      // multiplier).
+      //
+      // LEGACY FALLBACK (releases planned BEFORE slice 2): those rows have no
+      // `attachedHype` field. For them we keep the OLD behavior — consume the
+      // label-wide flags.pendingAwarenessBoost pool, "first-planned takes all",
+      // zeroing it after the first release seeds songs this week. This safety net
+      // only fires for a release with no attachedHype field AND a nonzero legacy
+      // label pool; new releases always carry attachedHype (even 0) so they never
+      // touch the label pool here. Only touch flags when the legacy path actually
+      // consumes, so games that never use the channel stay byte-stable.
       const awarenessFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
-      const bankedAwarenessBoost = typeof awarenessFlagsSnapshot.pendingAwarenessBoost === 'number'
+      const legacyLabelPool = typeof awarenessFlagsSnapshot.pendingAwarenessBoost === 'number'
         ? awarenessFlagsSnapshot.pendingAwarenessBoost
         : 0;
       const awarenessPointsPerUnit = ctx.gameData.getAwarenessBoostConfigSync().awareness_boost_points_per_unit;
-      let awarenessBoostConsumed = false;
+      let legacyLabelPoolConsumed = false;
 
       // Process planned releases
 
@@ -1103,14 +1300,29 @@ export class ReleaseProcessor {
           releaseArtist
         );
 
-        // Exec-meetings-revival PR-5 (C3) — seed each released song's initial
-        // awareness from the banked boost (× points-per-unit, clamped at 0). Applied
-        // to THIS release only if the pool is still unconsumed; consumed once, then
-        // zeroed below. The seed is additive to whatever awareness the song already
-        // had (0 for a fresh song) and is the value the weeks-1-4 build path grows
+        // Buzz-v2 slice 2 — determine THIS release's hype seed. Prefer the
+        // plan-time attached hype (metadata.attachedHype, a signed number). If the
+        // field is ABSENT (legacy release planned before slice 2), fall back to the
+        // label-wide pool "first-planned takes all". A present attachedHype of 0
+        // means "attached, nothing to seed" and MUST NOT trip the legacy path.
+        const hasAttachedHype = metadata != null
+          && Object.prototype.hasOwnProperty.call(metadata, 'attachedHype')
+          && typeof metadata.attachedHype === 'number';
+        let releaseHype = 0;
+        let usedLegacyLabelPool = false;
+        if (hasAttachedHype) {
+          releaseHype = metadata.attachedHype as number;
+        } else if (legacyLabelPool !== 0 && !legacyLabelPoolConsumed) {
+          releaseHype = legacyLabelPool;
+          usedLegacyLabelPool = true;
+        }
+
+        // Seed each released song's initial awareness from this release's hype
+        // (× points-per-unit, clamped at 0). Additive to whatever awareness the song
+        // already had (0 for a fresh song); the value the weeks-1-4 build path grows
         // from (ReleaseProcessor's awareness loop reads song.awareness).
-        const awarenessSeed = (bankedAwarenessBoost !== 0 && !awarenessBoostConsumed)
-          ? Math.max(0, (songsToRelease[0]?.awareness || 0) + bankedAwarenessBoost * awarenessPointsPerUnit)
+        const awarenessSeed = (releaseHype !== 0)
+          ? Math.max(0, (songsToRelease[0]?.awareness || 0) + releaseHype * awarenessPointsPerUnit)
           : null;
 
         // Prepare song updates using sophisticated breakdown
@@ -1127,28 +1339,46 @@ export class ReleaseProcessor {
           };
           if (awarenessSeed !== null) {
             const song = songsToRelease.find(s => s.id === songResult.songId);
-            base.awareness = Math.max(0, (song?.awareness || 0) + bankedAwarenessBoost * awarenessPointsPerUnit);
+            base.awareness = Math.max(0, (song?.awareness || 0) + releaseHype * awarenessPointsPerUnit);
             base.peak_awareness = Math.round(Math.max(song?.peak_awareness || 0, base.awareness));
           }
           return base;
         });
 
-        // Consume the banked boost on the first release that seeds songs this week.
+        // Emit the payoff attribution + consume the legacy label pool if this
+        // release used it (attached-hype releases have nothing to zero here — the
+        // pools were drained at plan time).
         if (awarenessSeed !== null) {
-          awarenessBoostConsumed = true;
-          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
-          flags.pendingAwarenessBoost = 0;
-          delete flags.pendingAwarenessBoostWeek;
-          ctx.gameState.flags = flags;
+          if (usedLegacyLabelPool) {
+            legacyLabelPoolConsumed = true;
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+            flags.pendingAwarenessBoost = 0;
+            delete flags.pendingAwarenessBoostWeek;
+            ctx.gameState.flags = flags;
+          }
 
           summary.changes.push({
             type: 'meeting',
-            description: bankedAwarenessBoost > 0
-              ? `Buzz paid off: +${bankedAwarenessBoost * awarenessPointsPerUnit} awareness seeded into "${release.title}"`
-              : `Suppressed discovery: ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness on "${release.title}"`,
-            amount: bankedAwarenessBoost
+            description: releaseHype > 0
+              ? `Buzz paid off: +${releaseHype * awarenessPointsPerUnit} awareness seeded into "${release.title}"`
+              : `Suppressed discovery: ${releaseHype * awarenessPointsPerUnit} awareness on "${release.title}"`,
+            amount: releaseHype
           });
-          console.log(`[AWARENESS BOOST] Consumed banked boost (${bankedAwarenessBoost}) -> seeded ${bankedAwarenessBoost * awarenessPointsPerUnit} awareness into "${release.title}", pool zeroed`);
+          // Buzz-v2 slice 1: STRUCTURED payoff attribution (notable). Additive to
+          // the 'meeting' entry above; this one drives the notable-stage Hype line
+          // so the player sees WHICH release the hype seeded. `amount` is the
+          // seeded Buzz points (signed); hypeUnits is the raw pool consumed.
+          summary.changes.push({
+            type: 'hype_applied',
+            description: releaseHype > 0
+              ? `🚀 Banked Hype seeded "${release.title}" with +${releaseHype * awarenessPointsPerUnit} starting Buzz`
+              : `🚀 Banked negative Hype suppressed "${release.title}" starting Buzz by ${releaseHype * awarenessPointsPerUnit}`,
+            amount: releaseHype * awarenessPointsPerUnit,
+            hypeUnits: releaseHype,
+            releaseId: release.id,
+            releaseName: release.title,
+          });
+          console.log(`[AWARENESS BOOST] ${usedLegacyLabelPool ? 'Legacy label pool' : 'Attached hype'} (${releaseHype}) -> seeded ${releaseHype * awarenessPointsPerUnit} awareness into "${release.title}"`);
         }
 
         // Handle marketing investment allocation - use actual charged amount including seasonal adjustments

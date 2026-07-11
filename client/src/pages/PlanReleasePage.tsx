@@ -33,6 +33,7 @@ import {
   type MarketingChannel,
   type ReleaseType
 } from '@shared/utils/marketingUtils';
+import { MARKETING_CHANNEL_PERSONALITIES, MARKETING_QUALITY_NOTE } from '@/lib/releaseBuzz';
 
 // Mock data types
 interface Song {
@@ -165,6 +166,11 @@ export default function PlanReleasePage() {
     pr: 0,
     influencer: 1000
   });
+
+  // Buzz-v2 slice 3 — pre-release campaign share (% of MAIN marketing budget
+  // diverted to a pre-launch anticipation ramp). 0 = current behavior (all budget
+  // hits at launch). Steps of 10 up to 50%.
+  const [preCampaignPct, setPreCampaignPct] = useState(0);
 
   // Lead single timing (for multi-song releases)
   const [leadSingleWeek, setLeadSingleWeek] = useState(5); // Default 1 week before main release
@@ -444,6 +450,11 @@ export default function PlanReleasePage() {
     return errors.length === 0;
   };
 
+  // Buzz-v2 slice 3 — a pre-release campaign needs at least one lead-up week
+  // before the release week (a next-week release has no anticipation window). The
+  // control is disabled and forced to 0 in that case (server enforces this too).
+  const preCampaignDisabled = !gameState || (releaseWeek - gameState.currentWeek) < 2;
+
   const handleCreateRelease = async () => {
     if (!validateRelease()) return;
 
@@ -458,6 +469,10 @@ export default function PlanReleasePage() {
         leadSingleId: leadSingle || null,
         scheduledReleaseWeek: releaseWeek,
         marketingBudget: channelBudgets,
+        // Buzz-v2 slice 3: pre-release campaign share. Forced to 0 when there is no
+        // lead-up window (release scheduled for next week) — the server rejects
+        // pct > 0 in that case too.
+        preCampaignPct: preCampaignDisabled ? 0 : preCampaignPct,
         leadSingleStrategy: releaseType !== 'single' && leadSingle ? {
           leadSingleId: leadSingle,
           leadSingleReleaseWeek: leadSingleWeek,
@@ -485,6 +500,7 @@ export default function PlanReleasePage() {
       setSelectedSongs([]);
       setLeadSingle('');
       setReleaseTitle('');
+      setPreCampaignPct(0);
 
       // Refresh available songs to remove the ones that were just scheduled
       await loadArtistSongs();
@@ -495,9 +511,20 @@ export default function PlanReleasePage() {
         return song?.title || 'Unknown Song';
       }).join(', ');
 
+      // Buzz-v2 slice 2: surface plan-time hype attach. There's no weekly summary at
+      // plan time, so the applied hype (drained from the artist + label pools onto
+      // this release) is reported here. Qualitative-only per the standing rule: a
+      // point value is fine, no multiplier numbers.
+      const hypeApplied = result?.hypeApplied;
+      const hypeLine = hypeApplied
+        ? (hypeApplied.buzzPoints >= 0
+            ? ` Hype applied: +${hypeApplied.buzzPoints} starting Buzz.`
+            : ` Hype applied: ${hypeApplied.buzzPoints} starting Buzz (suppressed).`)
+        : '';
+
       toast({
         title: `Release "${releaseData.title}" planned successfully!`,
-        description: `Scheduled songs: ${scheduledSongTitles}. These songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`,
+        description: `Scheduled songs: ${scheduledSongTitles}.${hypeLine} These songs are now reserved and won't appear in future release planning until this release is completed or cancelled.`,
       });
 
       // Refresh game data to load the new planned release
@@ -1067,6 +1094,12 @@ export default function PlanReleasePage() {
                     </span>
                   </div>
 
+                  {/* Buzz-v2 slice 5 — qualitative quality legibility note (fork E: no
+                      multiplier numbers). Static, applies to the whole budget below. */}
+                  <p className="text-xs text-[rgba(233,230,244,0.5)] mb-3">
+                    {MARKETING_QUALITY_NOTE}
+                  </p>
+
                   <div className="space-y-3">
                     {marketingChannels.map(channel => {
                       const budget = channelBudgets[channel.id] || 0;
@@ -1111,6 +1144,12 @@ export default function PlanReleasePage() {
                               </span>
                               <span className="font-mono">${channel.maxBudget.toLocaleString()} max</span>
                             </div>
+                            {/* Buzz-v2 slice 5 — channel personality, qualitative only (fork E). */}
+                            {MARKETING_CHANNEL_PERSONALITIES[channel.id] && (
+                              <p className="text-xs text-[rgba(233,230,244,0.45)] italic">
+                                {MARKETING_CHANNEL_PERSONALITIES[channel.id]}
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
@@ -1138,6 +1177,37 @@ export default function PlanReleasePage() {
                     minWeek={gameState ? gameState.currentWeek + 1 : 1}
                     className="max-w-lg"
                   />
+                </div>
+
+                {/* Buzz-v2 slice 3 — Pre-Release Campaign share. Diverts part of the
+                    marketing budget to a pre-launch anticipation ramp. Qualitative
+                    helper only (no multiplier numbers, fork E standing rule). */}
+                <div>
+                  <h4 className="text-xs font-semibold text-[rgba(233,230,244,0.75)] uppercase tracking-wide mb-3">Pre-Release Campaign</h4>
+                  <label className="text-[10px] font-mono uppercase tracking-wide text-[rgba(233,230,244,0.5)] mb-1 block">
+                    Marketing diverted before launch
+                  </label>
+                  <Select
+                    value={String(preCampaignPct)}
+                    onValueChange={(v) => setPreCampaignPct(Number(v))}
+                    disabled={preCampaignDisabled}
+                  >
+                    <SelectTrigger className="max-w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[0, 10, 20, 30, 40, 50].map(pct => (
+                        <SelectItem key={pct} value={String(pct)}>
+                          {pct === 0 ? 'None (all at launch)' : `${pct}%`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="text-xs text-[rgba(233,230,244,0.5)] mt-2">
+                    {preCampaignDisabled
+                      ? 'Schedule the release at least two weeks out to run a pre-release campaign.'
+                      : 'Builds anticipation before launch; the rest hits at release.'}
+                  </div>
                 </div>
               </section>
             )}

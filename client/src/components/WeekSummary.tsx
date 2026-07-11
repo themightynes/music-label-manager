@@ -796,6 +796,26 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </RevealGroup>
         )}
 
+        {/* Banked Hype payoff / expiry (stage 3, notable) — buzz-v2 slice 1.
+            The meeting Buzz channel was invisible before this slice: banked hype
+            seeded a release (or aged out) with zero UI. These are simple notable
+            lines (descriptions are already player-ready, emoji included), never
+            routed to the never-rendered `other` bucket. */}
+        {categorizedChanges.hypeNotable.length > 0 && (
+          <RevealGroup revealed={currentStage >= STAGE_NOTABLE} instant={instant}>
+            <div className="space-y-2">
+              {categorizedChanges.hypeNotable.map((change: GameChange, index: number) => (
+                <div
+                  key={`hype-notable-${index}`}
+                  className="p-3 rounded-[12px] border border-neon-purple/20 bg-neon-purple/10"
+                >
+                  <span className="text-sm font-medium text-neon-lilac">{change.description}</span>
+                </div>
+              ))}
+            </div>
+          </RevealGroup>
+        )}
+
         {/* Mood Changes (stage 4, routine) */}
         {categorizedChanges.mood.length > 0 && (
           <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
@@ -979,6 +999,24 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                 })}
               </CardContent>
             </Card>
+          </RevealGroup>
+        )}
+
+        {/* Banked Hype (stage 4, routine) — buzz-v2 slice 1. A meeting choice
+            topped up the label hype pool; simple routine line (never routed to
+            the never-rendered `other` bucket). */}
+        {categorizedChanges.hypeRoutine.length > 0 && (
+          <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
+            <div className="space-y-2">
+              {categorizedChanges.hypeRoutine.map((change: GameChange, index: number) => (
+                <div
+                  key={`hype-routine-${index}`}
+                  className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40"
+                >
+                  <span className="text-sm font-medium text-white/80">{change.description}</span>
+                </div>
+              ))}
+            </div>
           </RevealGroup>
         )}
 

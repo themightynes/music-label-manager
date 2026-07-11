@@ -338,6 +338,43 @@ async function adoptServerSideEventResolution(get: () => GameStore, gameId: stri
   }
 }
 
+// Buzz-v2 slice 2: reconcile the gameState spine after planning a release
+// (POST /api/game/:gameId/releases/plan). Since attach-at-plan landed, that
+// endpoint mutates money / creativeCapital server-side AND drains the banked
+// hype pools out of flags (flags.pendingAwarenessBoost + this artist's
+// flags.hypeArtistPools entry move onto release.metadata.attachedHype) — a
+// strictly wider set of fields than adoptServerBalances (money +
+// creativeCapital only) is documented to merge, so this is a SIBLING helper
+// rather than an adoptServerBalances extension (that helper's narrow two-field
+// contract is relied on by its other callers). Without the flags merge, the
+// core-status "+N Hype banked" chip kept showing the just-attached pool until
+// a full reload — a visibility bug in the exact feature this arc exists to
+// make visible. Mirrors adoptServerSideEventResolution's shape: refetch GET
+// /api/game/:id, merge just the fields this mutation can touch onto the
+// current cached record, and route the write through the commitGameState
+// funnel so the cache stays the single owner of the spine. Failures are
+// swallowed (console.error) — the plan itself already succeeded server-side;
+// a stale reconciliation just means the player sees last-known balances/chip
+// until the next full reload.
+async function adoptServerPlanReleaseResolution(get: () => GameStore, gameId: string) {
+  try {
+    const response = await apiRequest('GET', `/api/game/${gameId}`);
+    const data = await response.json();
+    const serverGameState = data?.gameState;
+    if (!serverGameState) return;
+    const current = readGameState(get);
+    if (!current) return;
+    commitGameState((partial) => useGameStore.setState(partial), {
+      ...current,
+      money: serverGameState.money,
+      creativeCapital: serverGameState.creativeCapital,
+      flags: serverGameState.flags,
+    });
+  } catch (error) {
+    console.error('[Buzz-v2 slice 2] Failed to reconcile gameState after plan-release:', error);
+  }
+}
+
 // Internal helper to sync focus slots and A&R operation status to the server
 async function syncSlotsPatch(
   gameId: string,
@@ -435,7 +472,8 @@ interface GameStore {
   cancelProject: (projectId: string, cancellationData: { refundAmount: number }) => Promise<void>;
   
   // Release management
-  planRelease: (releaseData: any) => Promise<void>;
+  planRelease: (releaseData: any) => Promise<any>;
+  cancelRelease: (releaseId: string) => Promise<{ refundedAmount: number }>;
   
   // Save management
   saveGame: (name: string, options?: { isAutosave?: boolean }) => Promise<void>;
@@ -1343,11 +1381,53 @@ export const useGameStore = create<GameStore>()(
           // /api/game/:id is the one correct source for BOTH fields (adopting
           // money from the response but refetching for cc would split one action
           // across two sources). Server validates the marketing budget itself.
-          await adoptServerBalances(get, gameState.id);
+          // Buzz-v2 slice 2: the plan endpoint now ALSO drains hype flags
+          // (attach-at-plan), so this path uses the wider sibling helper that
+          // merges flags too — otherwise the "+N Hype banked" chip kept showing
+          // the just-attached pool until a full reload.
+          await adoptServerPlanReleaseResolution(get, gameState.id);
 
           return result;
         } catch (error) {
           console.error('Failed to plan release:', error);
+          throw error;
+        }
+      },
+
+      // Cancel a PLANNED release (buzz-v2 slice 4, C43). Mirrors cancelProject's
+      // response-field balance-adoption precedent: the DELETE endpoint returns
+      // the server-authoritative `refundedAmount` (paid marketing budget minus
+      // the converted pre-campaign share, fork E), which we add onto the spine money via the
+      // commitGameState funnel — the endpoint does NOT return a full newBalance,
+      // and the refund is the only field that changed. Then invalidate the
+      // releases / release-songs / songs caches so the planned card disappears and
+      // the freed songs (awareness/peak zeroed server-side) become plannable again.
+      cancelRelease: async (releaseId: string) => {
+        const gameState = readGameState(get);
+        if (!gameState) return { refundedAmount: 0 };
+
+        try {
+          const response = await apiRequest(
+            'DELETE',
+            `/api/game/${gameState.id}/releases/${releaseId}`,
+          );
+          const result = await response.json();
+          const refundedAmount = typeof result?.refundedAmount === 'number' ? result.refundedAmount : 0;
+
+          // Adopt the refund onto money (server-authoritative refund, applied to
+          // the current committed balance) through the dual-write funnel.
+          commitGameState(set, {
+            ...gameState,
+            money: (gameState.money || 0) + refundedAmount,
+          });
+
+          await queryClient.invalidateQueries({ queryKey: releasesQueryKey(gameState.id) });
+          await queryClient.invalidateQueries({ queryKey: releaseSongsQueryKey(gameState.id) });
+          await queryClient.invalidateQueries({ queryKey: songsQueryKey(gameState.id) });
+
+          return { refundedAmount };
+        } catch (error) {
+          console.error('Failed to cancel release:', error);
           throw error;
         }
       },

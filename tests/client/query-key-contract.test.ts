@@ -155,6 +155,30 @@ describe('query-key contract: planRelease invalidations (PR-6)', () => {
   });
 });
 
+describe('query-key contract: cancelRelease invalidations (buzz-v2 slice 4, C43)', () => {
+  // cancelRelease (client/src/store/gameStore.ts) invalidates the SAME three
+  // EXACT scoped keys planRelease does — releases / release-songs / songs — so
+  // the cancelled planned card disappears and the freed (awareness-zeroed) songs
+  // become plannable again. Each must match its hook key.
+  it('cancelRelease releases invalidation matches the useReleases hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(releasesQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('cancelRelease release-songs invalidation matches the useReleaseSongs hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(releaseSongsQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('cancelRelease songs invalidation matches the useSongs hook key', () => {
+    expect(someRealKeyMatchesInvalidationKey(songsQueryKey(GAME_ID))).toBe(true);
+  });
+
+  it('none of the cancelRelease invalidations match a different game', () => {
+    expect(someRealKeyMatchesInvalidationKey(releasesQueryKey('other'))).toBe(false);
+    expect(someRealKeyMatchesInvalidationKey(releaseSongsQueryKey('other'))).toBe(false);
+    expect(someRealKeyMatchesInvalidationKey(songsQueryKey('other'))).toBe(false);
+  });
+});
+
 describe('query-key contract: project mutation invalidations (PR-7)', () => {
   // createProject / updateProject / cancelProject invalidate the projects cache
   // with the EXACT scoped key (client/src/store/gameStore.ts): projectsQueryKey

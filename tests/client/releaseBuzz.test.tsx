@@ -16,9 +16,12 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
   summarizeReleaseBuzz,
+  summarizeAnticipation,
   BUZZ_PHASE_LABELS,
   BUZZ_SUSTAIN_STRONG_MIN,
   BUZZ_SUSTAIN_MIN,
+  MARKETING_CHANNEL_PERSONALITIES,
+  MARKETING_QUALITY_NOTE,
 } from '@/lib/releaseBuzz';
 import { ReleaseBuzzSection } from '@/components/ReleaseBuzzSection';
 
@@ -202,5 +205,63 @@ describe('ReleaseBuzzSection', () => {
     );
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByTestId('release-buzz-section')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Buzz-v2 slice 3 — pre-release anticipation strength word.
+// ---------------------------------------------------------------------------
+describe('summarizeAnticipation (buzz-v2 slice 3)', () => {
+  it('returns null when no song has any pre-built awareness', () => {
+    expect(summarizeAnticipation([{ awareness: 0 }, { awareness: 0 }])).toBeNull();
+    expect(summarizeAnticipation([])).toBeNull();
+    expect(summarizeAnticipation(undefined)).toBeNull();
+  });
+
+  it('derives the strength word from the HOTTEST song awareness, using the shared bands', () => {
+    // early: 1..(BUZZ_SUSTAIN_MIN-1)
+    expect(summarizeAnticipation([{ awareness: 5 }, { awareness: BUZZ_SUSTAIN_MIN - 1 }])).toBe('early');
+    // building: BUZZ_SUSTAIN_MIN..(BUZZ_SUSTAIN_STRONG_MIN-1)
+    expect(summarizeAnticipation([{ awareness: BUZZ_SUSTAIN_MIN }])).toBe('building');
+    expect(summarizeAnticipation([{ awareness: BUZZ_SUSTAIN_STRONG_MIN - 1 }])).toBe('building');
+    // strong: >= BUZZ_SUSTAIN_STRONG_MIN
+    expect(summarizeAnticipation([{ awareness: BUZZ_SUSTAIN_STRONG_MIN }, { awareness: 10 }])).toBe('strong');
+  });
+
+  it('emits no multiplier numbers in the strength words (fork E guard)', () => {
+    for (const a of [5, 40, 90]) {
+      const word = summarizeAnticipation([{ awareness: a }]);
+      expect(word).not.toMatch(/[×x]\s*\d/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Buzz-v2 slice 5 — marketing channel personality + quality legibility copy.
+// Fork E (standing rule): qualitative only — no formulas, no coefficients, no
+// "×N" multiplier numbers, no dollar-figure formulas anywhere in this copy.
+// ---------------------------------------------------------------------------
+describe('MARKETING_CHANNEL_PERSONALITIES (buzz-v2 slice 5)', () => {
+  const REAL_CHANNEL_KEYS = ['pr', 'influencer', 'digital', 'radio'];
+
+  it('has a non-empty personality line for every real engine channel key', () => {
+    for (const key of REAL_CHANNEL_KEYS) {
+      expect(MARKETING_CHANNEL_PERSONALITIES[key]).toBeTruthy();
+      expect(typeof MARKETING_CHANNEL_PERSONALITIES[key]).toBe('string');
+      expect(MARKETING_CHANNEL_PERSONALITIES[key].length).toBeGreaterThan(0);
+    }
+  });
+
+  it('emits no multiplier numbers or dollar-formula figures in any channel line', () => {
+    for (const line of Object.values(MARKETING_CHANNEL_PERSONALITIES)) {
+      expect(line).not.toMatch(/[×x]\s*\d/);
+      expect(line).not.toMatch(/\$\d/);
+    }
+  });
+
+  it('quality note is qualitative only (fork E guard)', () => {
+    expect(MARKETING_QUALITY_NOTE).toBeTruthy();
+    expect(MARKETING_QUALITY_NOTE).not.toMatch(/[×x]\s*\d/);
+    expect(MARKETING_QUALITY_NOTE).not.toMatch(/\$\d/);
   });
 });

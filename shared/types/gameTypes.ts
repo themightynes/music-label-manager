@@ -459,7 +459,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign';
   description: string;
   amount?: number;
   roleId?: string;
@@ -517,6 +517,24 @@ export interface GameChange {
   // Slice 1b: artist reaction deltas attached to the tour_performance entry
   // itself (moodChange above is reused); popularity delta from the show.
   popularityChange?: number;
+  // Buzz-v2 (Hype & Pre-Marketing) slice 1: banked-hype lifecycle attribution.
+  // Three additive entry types make the meeting Buzz channel — invisible before
+  // this slice — legible: 'hype_banked' when a meeting choice banks awareness_boost
+  // into flags.pendingAwarenessBoost (routine), 'hype_applied' when the next
+  // shipped release consumes the pool as starting Buzz (notable), 'hype_expired'
+  // when an unconsumed pool ages out after N weeks (notable). STRUCTURED from day
+  // one (C80 lesson — awareness entries shipped description-only and could not be
+  // re-styled without string-parsing). All optional/additive; `amount` above
+  // carries the signed hype units for banked/applied/expired.
+  hypeTotal?: number;   // hype_banked: label pool size AFTER this bank
+  hypeUnits?: number;   // hype_applied: signed units consumed from the pool
+  releaseId?: string;   // hype_applied / pre_campaign: the release the entry concerns
+  releaseName?: string; // hype_applied / pre_campaign: that release's title
+  // Buzz-v2 slice 3: pre-release marketing ('pre_campaign'). One entry per planned
+  // release per week while its pre-campaign is converting. `amount` (declared above)
+  // carries the signed awareness points added this week; `weeksToLaunch` is how many
+  // weeks remain until the release ships. Structured from day one (C80 lesson).
+  weeksToLaunch?: number;
 }
 
 export interface EventOccurrence {
