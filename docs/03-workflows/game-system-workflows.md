@@ -62,11 +62,13 @@ The engine executes these steps in order each week (`GameEngine.advanceWeek`, `s
 2. Reset `usedFocusSlots` to 0 and increment `currentWeek`
 3. Run the A&R Office weekly lifecycle
 4. Apply role-meeting actions, then all other selected actions
+4a. **Autonomous resolution of un-acted executive meetings** (Executive Delegation & Trust arc, Tier 1, 2026-07-12) — `resolveAutonomousExecMeetings`, runs immediately after the player-meeting loop and before artist-change flush. Every exec-lane meeting the player did NOT personally staff this week never lapses: the engine re-derives what that exec was offered (the same seeded selection pipeline the `/api/roles` route uses) and resolves it autonomously — the exec spends real money per their loyalty band (direction) and mood (risk-appetite tie-break), through the same effect-application path a player pick uses. The exec is marked used (`lastActionWeek` set), which suppresses this week's idle loyalty decay. CEO meetings are exempt (no exec row; the CEO lane genuinely lapses if unspent — see the three-lane rule in the `[REFERENCE]` doc §10). No RNG-stream impact (isolated seeds only).
 5. Accrue ongoing revenue for released projects; generate songs for recording projects
 6. Process lead singles and planned releases
 7. Update weekly charts; advance project stages
 8. Apply delayed effects; weekly artist mood & popularity changes; executive mood/loyalty decay
-9. Roll random events (in mandatory-side-events mode the roll is **deferred** — it lands on `flags.pending_side_event` as a crisis to resolve next week rather than surfacing an interactive beat this week; one crisis at a time)
+8a. **Escalation emission** (Tier 2, 2026-07-12) — `applyEscalation`, runs after any prior-week pending crisis has been resolved/cleared and before this week's random-event roll (step 9). If step 4a captured an urgent (reactive) meeting that a below-loyalty-ceiling executive self-resolved this advance, escalation sets `flags.pending_side_event` for the FOLLOWING week via the same mandatory-crisis pipeline step 9 uses — roll-free, zero RNG draws. Running before the weekly roll means escalation wins any same-week collision by construction (the roll's own "already pending" check then discards). One crisis at a time, same rule as the roll.
+9. Roll random events (in mandatory-side-events mode the roll is **deferred** — it lands on `flags.pending_side_event` as a crisis to resolve next week rather than surfacing an interactive beat this week; one crisis at a time; skipped entirely if step 8a already set a pending crisis this advance)
 10. Apply weekly burn (base operations + artist salaries) and executive salaries
 11. Evaluate progression gates; unlock access tiers and producer tiers
 12. Finalize financials, queue emails, run the campaign-completion check (week 52), and commit the single money update

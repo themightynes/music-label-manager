@@ -179,7 +179,7 @@ export const NODES: SystemNode[] = [
     domain: 'meetings',
     col: 1,
     row: 0,
-    description: `Scales that executive's meeting outcomes via shared/utils/executiveMoodModifier.ts, config from progression.json reputation_system.exec_mood_modifiers: disgruntled below ${execMoodModifiers.disgruntled_below} (cost ×${execMoodModifiers.cost_multiplier_disgruntled}), content above ${execMoodModifiers.content_above} (cost ×${execMoodModifiers.cost_multiplier_content}), inspired above ${execMoodModifiers.inspired_above} (additionally all non-money effects ×${execMoodModifiers.effect_multiplier_inspired}). Positive money effects are never scaled. Set via ActionProcessor.processExecutiveActions (ActionProcessor.ts:564).`,
+    description: `Scales that executive's meeting outcomes via shared/utils/executiveMoodModifier.ts, config from progression.json reputation_system.exec_mood_modifiers: disgruntled below ${execMoodModifiers.disgruntled_below} (cost ×${execMoodModifiers.cost_multiplier_disgruntled}), content above ${execMoodModifiers.content_above} (cost ×${execMoodModifiers.cost_multiplier_content}), inspired above ${execMoodModifiers.inspired_above} (additionally all non-money effects ×${execMoodModifiers.effect_multiplier_inspired}). Positive money effects are never scaled. Set via ActionProcessor.processExecutiveActions (ActionProcessor.ts:564). Executive Delegation & Trust arc Tier 1 (2026-07-12): mood gained a SECOND, distinct read — the SAME inspired/disgruntled boundaries also bias the risk appetite of an autonomously-resolved meeting's pick (a tie-break WITHIN the loyalty-band candidate set, not a replacement for it) — see edge e-execmood-autonomous-risk.`,
   },
   {
     id: 'executive_loyalty',
@@ -187,7 +187,7 @@ export const NODES: SystemNode[] = [
     domain: 'meetings',
     col: 1,
     row: 1,
-    description: `0-100. +5 when the exec is used in a meeting (ActionProcessor.ts:576); −5/week after 3 consecutive weeks ignored, idle mood drifts ±5 toward 50 (ArtistStateProcessor.ts:414, :420-427). Not itself read by any streams/quality/revenue formula — it's a relationship-health meter that gates future meeting flavor, not a documented direct multiplier in the reviewed engine paths.`,
+    description: `0-100. +${reputationSystem.executive_delegation?.loyalty_on_use ?? 5} when the exec is used in a meeting (ActionProcessor.ts:576); −${reputationSystem.executive_delegation?.loyalty_decay_per_week ?? 5}/week after ${reputationSystem.executive_delegation?.idle_weeks_before_decay ?? 3} consecutive weeks ignored, idle mood drifts ±5 toward 50 (ArtistStateProcessor.ts:414, :420-427). ALL of these constants are config-extracted (progression.json reputation_system.executive_delegation), Executive Delegation & Trust arc Tier 1 (2026-07-12). Still not read by any streams/quality/revenue formula, but as of this arc it IS read: loyalty now selects WHICH choice an un-acted exec makes when their meeting resolves autonomously (never-lapse) — see edges e-loyalty-autonomous-direction and e-loyalty-escalation.`,
   },
   {
     id: 'award_chances',
@@ -203,7 +203,7 @@ export const NODES: SystemNode[] = [
     domain: 'meetings',
     col: 1,
     row: 3,
-    description: `A weekly seeded roll (weekly_chance in data/balance/events.json side_events, currently 20%) draws a side event in-stream — game-engine.ts checkForEvents, the fixed C64 stream position (never moved/reordered). MANDATORY mode (data/balance/events.json mandatory_side_events.enabled, default true): the rolled event is DEFERRED — stored on flags.pending_side_event and surfaced the FOLLOWING week as a crisis card that consumes ONE focus slot (threaded like arOfficeSlotUsed through the manual UI + AUTO), blocking the advance until the player picks. Its chosen effects apply DURING that week's advance (game-engine.ts processPendingSideEventResolution → ActionProcessor.applyEffects for immediate, delayed banked triggerWeek+1). One crisis at a time (a roll while one is pending still draws but discards). Kill-switch OFF restores the legacy in-results interactive beat (resolved via POST /api/game/:id/side-event-choice, lapses if unresolved). Cooldown event_cooldown weeks per event; category weights in event_weights.`,
+    description: `A weekly seeded roll (weekly_chance in data/balance/events.json side_events, currently 20%) draws a side event in-stream — game-engine.ts checkForEvents, the fixed C64 stream position (never moved/reordered). MANDATORY mode (data/balance/events.json mandatory_side_events.enabled, default true): the rolled event is DEFERRED — stored on flags.pending_side_event and surfaced the FOLLOWING week as a crisis card that consumes ONE focus slot (threaded like arOfficeSlotUsed through the manual UI + AUTO), blocking the advance until the player picks. Its chosen effects apply DURING that week's advance (game-engine.ts processPendingSideEventResolution → ActionProcessor.applyEffects for immediate, delayed banked triggerWeek+1). One crisis at a time (a roll while one is pending still draws but discards). Kill-switch OFF restores the legacy in-results interactive beat (resolved via POST /api/game/:id/side-event-choice, lapses if unresolved). Cooldown event_cooldown weeks per event; category weights in event_weights. Executive Delegation & Trust arc Tier 2 (2026-07-12): a SECOND, roll-free injection path — escalation (game-engine.ts applyEscalation) can ALSO set flags.pending_side_event, roll-free, when a low-loyalty exec self-resolves an urgent meeting (see edge e-loyalty-escalation). Escalation runs before the weekly roll, so it wins any same-week collision by construction (the roll's own "already pending" check discards). Escalation-only events (data/events.json escalation_only: true, one per core-four archetype) are excluded from the weighted roll pool entirely — they can only ever fire via this path.`,
   },
 
   // Artist
@@ -979,6 +979,60 @@ export const EDGES: SystemEdge[] = [
     hardcoded: false,
     ref: 'shared/utils/executiveMoodModifier.ts (consumed via ActionProcessor.ts:617-1143)',
     note: 'Representative edge — the same ×1.20 scaling applies to every non-money meeting effect channel (reputation, artist_mood, artist_popularity, etc.), not creative_capital alone.',
+  },
+  // ─── Executive Delegation & Trust arc (Tiers 1+2, 2026-07-12) ──────────────
+  {
+    id: 'e-loyalty-autonomous-direction',
+    from: 'executive_loyalty',
+    to: 'money',
+    mechanism: 'Autonomous choice DIRECTION (loyalty bands) — un-acted meetings never lapse',
+    formula: 'loyalty > loyal_above → picks the AUTO-safe choice; loyalty < disloyal_below → picks the in-character self-serving choice; otherwise → the exec\'s own competent-professional call. The picked choice\'s money/effects apply through the SAME path a player pick uses.',
+    values: [
+      { label: 'loyal_above / disloyal_below', value: `${reputationSystem.executive_delegation?.loyalty_bands?.loyal_above ?? 70} / ${reputationSystem.executive_delegation?.loyalty_bands?.disloyal_below ?? 30}`, source: 'live', configPath: 'progression.reputation_system.executive_delegation.loyalty_bands.loyal_above / disloyal_below', ref: 'shared/utils/executiveDelegation.ts getLoyaltyBand' },
+    ],
+    hardcoded: false,
+    ref: 'shared/engine/executiveAutonomy.ts pickAutonomousChoice; shared/engine/game-engine.ts resolveAutonomousExecMeetings',
+    note: 'Every exec-lane meeting the player did NOT personally staff this week resolves anyway — the exec spends real money per this band, with no spend cap. "money" stands in for the whole authored effect bag (reputation, awareness, quality, etc.), the same targets a player pick can touch.',
+  },
+  {
+    id: 'e-execmood-autonomous-risk',
+    from: 'executive_mood',
+    to: 'money',
+    mechanism: 'Autonomous choice RISK APPETITE (mood tie-break within the loyalty band)',
+    formula: 'mood > inspired_above → prefers the higher-risk/higher-spend candidate WITHIN the loyalty band\'s top-scoring set (argmax variance_up/rep_swing magnitude + |money|); mood < disgruntled_below → prefers the lower-risk/lower-spend candidate (argmin); otherwise → no bias, the band\'s top pick stands.',
+    values: [
+      { label: 'inspired_above / disgruntled_below (shared with the cost-multiplier bands)', value: `${execMoodModifiers.inspired_above} / ${execMoodModifiers.disgruntled_below}`, source: 'live', configPath: 'progression.reputation_system.exec_mood_modifiers.inspired_above / disgruntled_below', ref: 'shared/utils/executiveDelegation.ts getRiskAppetiteBias' },
+    ],
+    hardcoded: false,
+    ref: 'shared/engine/executiveAutonomy.ts riskScore + pickAutonomousChoice',
+    note: 'A tie-break WITHIN the loyalty band\'s candidate set (e-loyalty-autonomous-direction), not a replacement for it — an inspired disloyal exec still only picks among the self-serving candidates, just the riskiest one among them.',
+  },
+  {
+    id: 'e-focusslot-autonomous-spend',
+    from: 'focus_slots',
+    to: 'money',
+    mechanism: 'Neglect still spends — an unspent focus slot does not save the money',
+    formula: 'A focus slot NOT spent on an exec meeting does not cancel that meeting — the exec resolves it themselves. Neglect costs 0 slots but grants only neglect_loyalty_gain (0) loyalty, versus loyalty_on_use (5) for a personally-staffed or AUTO-endorsed meeting.',
+    values: [
+      { label: 'neglect_loyalty_gain / loyalty_on_use', value: `${reputationSystem.executive_delegation?.neglect_loyalty_gain ?? 0} / ${reputationSystem.executive_delegation?.loyalty_on_use ?? 5}`, source: 'live', configPath: 'progression.reputation_system.executive_delegation.neglect_loyalty_gain / loyalty_on_use', ref: 'shared/engine/game-engine.ts resolveAutonomousExecMeetings' },
+    ],
+    hardcoded: false,
+    ref: 'shared/engine/game-engine.ts resolveAutonomousExecMeetings (never-lapse, §4 of the delegation plan)',
+    note: 'The pre-arc mental model — "I can save money by not spending a slot" — is now false for exec meetings. The player-legible trade is control (spend a slot, make the call) vs. handing the exec the wheel (free, but their call) — see the AUTO-vs-neglect table in the [REFERENCE] doc §10.4.',
+  },
+  {
+    id: 'e-loyalty-escalation',
+    from: 'executive_loyalty',
+    to: 'side_events',
+    mechanism: 'Escalation — a low-loyalty exec who self-resolves an urgent meeting can trigger a mandatory crisis NEXT week',
+    formula: 'An urgent (reactive/pulse-dot) meeting self-resolved by autonomous resolution (never player-chosen), while that exec\'s PRE-UPDATE loyalty < escalation.loyalty_ceiling, sets flags.pending_side_event for the following week via the existing mandatory-crisis pipeline. Roll-free — zero RNG draws. Only the first qualifying exec per advance is captured; escalation wins any same-week collision with the weekly roll by running first in the pipeline.',
+    values: [
+      { label: 'escalation.loyalty_ceiling', value: reputationSystem.executive_delegation?.escalation?.loyalty_ceiling ?? 40, source: 'live', configPath: 'progression.reputation_system.executive_delegation.escalation.loyalty_ceiling', ref: 'shared/engine/game-engine.ts applyEscalation' },
+      { label: 'escalation.enabled', value: String(reputationSystem.executive_delegation?.escalation?.enabled ?? true), source: 'live', configPath: 'progression.reputation_system.executive_delegation.escalation.enabled' },
+    ],
+    hardcoded: false,
+    ref: 'shared/engine/game-engine.ts resolveAutonomousExecMeetings (capture) + applyEscalation (emission); shared/utils/executiveDelegation.ts ESCALATION_EVENT_BY_ROLE',
+    note: 'One escalation-only event per core-four archetype (data/events.json escalation_only: true), injected via this path exclusively — never rolled by the weekly weighted draw. Kill-switches: escalation.enabled AND mandatory_side_events.enabled.',
   },
 ];
 

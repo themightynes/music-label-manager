@@ -681,10 +681,56 @@ export const PlaytestFeedbackResponsesV2Schema = PlaytestFeedbackResponsesSchema
   formId: z.literal(PLAYTEST_FEEDBACK_FORM_ID_V2).default(PLAYTEST_FEEDBACK_FORM_ID_V2),
 });
 
-// Union used by the endpoint pair: V2 first so a document with no explicit
-// formId defaults to the ACTIVE form (v2). An explicit v1 formId still
-// parses via the v1 branch.
+// ========================================
+// Admin Playtest Feedback Schemas — V3 (2026-07-12 "Round 3: Delegation & Trust" form)
+// ========================================
+// Round 3 recording surface for docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12-delegation.md.
+// The round-1 and round-2 constants/schemas above stay UNTOUCHED — both prior
+// responses files are historical records and must remain loadable forever.
+// Same versioning approach as V1→V2: the SAME /api/admin/playtest-feedback
+// endpoint pair serves all three forms, keyed by a validated formId from the
+// (now three-entry) allowlist below. The filename deliberately does NOT
+// collide with round 2's (`playtest-feedback-2026-07-12.responses.json`) even
+// though both rounds share a calendar date.
+
+export const PLAYTEST_FEEDBACK_FORM_ID_V3 = 'playtest-feedback-2026-07-12-delegation' as const;
+
+// Canonical V3 section ids, in the form's order (§1–§8, per the Executive
+// Delegation & Trust arc's playtest probes, spec §9).
+export const PLAYTEST_SECTION_IDS_V3 = [
+  'autonomous_spend_feel',
+  'auto_vs_neglect_legibility',
+  'disloyal_in_character',
+  'week_summary_digest_readability',
+  'escalation_crisis_legibility',
+  'three_lane_clarity',
+  'post_never_lapse_economy',
+  'freeform_priorities',
+] as const;
+
+// Canonical V3 knob-strength rows, in table order. Every row here is a knob
+// this arc actually shipped (loyalty bands, mood risk appetite, escalation
+// ceiling, AUTO-endorse vs neglect gains).
+export const PLAYTEST_KNOB_IDS_V3 = [
+  'loyalty_band_thresholds',
+  'autonomous_spend_magnitude',
+  'escalation_loyalty_ceiling',
+  'escalation_frequency',
+  'digest_grouping',
+  'auto_endorse_vs_neglect_gap',
+] as const;
+
+// V3 response document: identical shape to V1/V2, distinguished only by the
+// formId literal.
+export const PlaytestFeedbackResponsesV3Schema = PlaytestFeedbackResponsesSchema.extend({
+  formId: z.literal(PLAYTEST_FEEDBACK_FORM_ID_V3).default(PLAYTEST_FEEDBACK_FORM_ID_V3),
+});
+
+// Union used by the endpoint pair: V3 first so a document with no explicit
+// formId defaults to the ACTIVE form (v3). Explicit v1/v2 formIds still parse
+// via their own branches (both prior rounds' historical records stay loadable).
 export const AnyPlaytestFeedbackResponsesSchema = z.union([
+  PlaytestFeedbackResponsesV3Schema,
   PlaytestFeedbackResponsesV2Schema,
   PlaytestFeedbackResponsesSchema,
 ]);
@@ -693,6 +739,10 @@ export const AnyPlaytestFeedbackResponsesSchema = z.union([
 // responses-file path and stable key order from this registry; anything not
 // in it is rejected with 400.
 export const PLAYTEST_FORM_REGISTRY = {
+  [PLAYTEST_FEEDBACK_FORM_ID_V3]: {
+    sectionIds: PLAYTEST_SECTION_IDS_V3 as readonly string[],
+    knobIds: PLAYTEST_KNOB_IDS_V3 as readonly string[],
+  },
   [PLAYTEST_FEEDBACK_FORM_ID_V2]: {
     sectionIds: PLAYTEST_SECTION_IDS_V2 as readonly string[],
     knobIds: PLAYTEST_KNOB_IDS_V2 as readonly string[],
@@ -710,7 +760,7 @@ export function isPlaytestFormId(value: string): value is PlaytestFormId {
 }
 
 // The form the admin page currently records against.
-export const ACTIVE_PLAYTEST_FORM_ID: PlaytestFormId = PLAYTEST_FEEDBACK_FORM_ID_V2;
+export const ACTIVE_PLAYTEST_FORM_ID: PlaytestFormId = PLAYTEST_FEEDBACK_FORM_ID_V3;
 
 // Admin endpoints for playtest feedback
 export const adminPlaytestFeedbackEndpoints = {
@@ -770,11 +820,19 @@ export function buildEmptyPlaytestFeedbackResponses(): PlaytestFeedbackResponses
   ) as PlaytestFeedbackResponses;
 }
 
-// V2 builder — the active form's empty default.
+// V2 builder — round 2's empty default (round 2 is no longer active, but its
+// responses file must stay editable/loadable, same as V1).
 export function buildEmptyPlaytestFeedbackResponsesV2(): PlaytestFeedbackResponsesV2 {
   return buildEmptyPlaytestFeedbackResponsesFor(
     PLAYTEST_FEEDBACK_FORM_ID_V2
   ) as PlaytestFeedbackResponsesV2;
+}
+
+// V3 builder — the active form's empty default.
+export function buildEmptyPlaytestFeedbackResponsesV3(): PlaytestFeedbackResponsesV3 {
+  return buildEmptyPlaytestFeedbackResponsesFor(
+    PLAYTEST_FEEDBACK_FORM_ID_V3
+  ) as PlaytestFeedbackResponsesV3;
 }
 
 // Export TypeScript types
@@ -783,6 +841,7 @@ export type PlaytestStrength = z.infer<typeof PlaytestStrengthSchema>;
 export type PlaytestSectionResponse = z.infer<typeof PlaytestSectionResponseSchema>;
 export type PlaytestFeedbackResponses = z.infer<typeof PlaytestFeedbackResponsesSchema>;
 export type PlaytestFeedbackResponsesV2 = z.infer<typeof PlaytestFeedbackResponsesV2Schema>;
+export type PlaytestFeedbackResponsesV3 = z.infer<typeof PlaytestFeedbackResponsesV3Schema>;
 export type AnyPlaytestFeedbackResponses = z.infer<typeof AnyPlaytestFeedbackResponsesSchema>;
 export type SavePlaytestFeedbackRequest = z.infer<typeof SavePlaytestFeedbackRequestSchema>;
 export type SavePlaytestFeedbackResponse = z.infer<typeof SavePlaytestFeedbackResponseSchema>;

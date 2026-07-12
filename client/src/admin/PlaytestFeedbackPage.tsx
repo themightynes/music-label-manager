@@ -26,22 +26,23 @@ import {
   type PlaytestFormSection,
   type PlaytestFormDefinition,
 } from '@/admin/playtestFeedbackForm';
-import { PLAYTEST_FORM_V2 } from '@/admin/playtestFeedbackFormV2';
+import { PLAYTEST_FORM_V3 } from '@/admin/playtestFeedbackFormV3';
 
 /**
  * Playtest feedback recording surface — versioned; currently serving the
- * ROUND 2 form (2026-07-12).
+ * ROUND 3 form (2026-07-12, Executive Delegation & Trust).
  *
- * On-screen mirror of docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12.md — the
- * markdown stays the printable source. Answers persist via
+ * On-screen mirror of docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12-delegation.md
+ * — the markdown stays the printable source. Answers persist via
  * GET/POST /api/admin/playtest-feedback (server/routes/admin.ts) keyed by
- * formId into docs/01-planning/playtest-feedback-2026-07-12.responses.json,
+ * formId into docs/01-planning/playtest-feedback-2026-07-12-r3.responses.json,
  * so the page prefills from the saved file and can be edited incrementally.
  * Nothing is required — unanswered fields simply stay empty/null.
  *
- * Round 1 (2026-07-11) is history: its markdown, content module, and
- * responses file stay in the repo untouched and remain loadable through the
- * same endpoint via ?formId=playtest-feedback-2026-07-11.
+ * Rounds 1 (2026-07-11) and 2 (2026-07-12) are history: their markdown,
+ * content modules, and responses files stay in the repo untouched and remain
+ * loadable through the same endpoint via ?formId=playtest-feedback-2026-07-11
+ * / ?formId=playtest-feedback-2026-07-12.
  */
 
 type PlaytestFeedbackResponsesDoc = AnyPlaytestFeedbackResponses;
@@ -426,7 +427,7 @@ export default function PlaytestFeedbackPage() {
         {/* Sticky save bar */}
         <div className="sticky top-0 z-20 -mx-2 px-2 py-3 backdrop-blur-md bg-surface-app/80 border-b border-white/10 mb-5 flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-white truncate">{PLAYTEST_FORM_V2.title}</h1>
+            <h1 className="text-xl font-bold text-white truncate">{PLAYTEST_FORM_V3.title}</h1>
             <p className="text-xs text-white/50">
               {savedLabel ? `Last saved ${savedLabel}` : 'Not saved yet'}
               {dirty ? ' · unsaved changes' : ''}
@@ -438,13 +439,15 @@ export default function PlaytestFeedbackPage() {
         </div>
 
         <p className="text-xs text-white/40 mb-3" data-testid="round1-history-note">
-          Round 1 (2026-07-11) is archived as history:{' '}
+          Rounds 1 (2026-07-11) and 2 (2026-07-12) are archived as history:{' '}
           <code className="text-white/60">docs/01-planning/PLAYTEST_FEEDBACK_2026-07-11.md</code> +{' '}
-          <code className="text-white/60">playtest-feedback-2026-07-11.responses.json</code>. This page now
-          records Round 2.
+          <code className="text-white/60">playtest-feedback-2026-07-11.responses.json</code>,{' '}
+          <code className="text-white/60">docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12.md</code> +{' '}
+          <code className="text-white/60">playtest-feedback-2026-07-12.responses.json</code>. This page now
+          records Round 3.
         </p>
 
-        <p className="text-sm text-white/60 mb-6">{PLAYTEST_FORM_V2.intro}</p>
+        <p className="text-sm text-white/60 mb-6">{PLAYTEST_FORM_V3.intro}</p>
 
         {isLoading && <p className="text-white/60">Loading saved responses…</p>}
         {isError && (
@@ -452,7 +455,7 @@ export default function PlaytestFeedbackPage() {
         )}
 
         {responses && (
-          <PlaytestFeedbackForm form={PLAYTEST_FORM_V2} responses={responses} onChange={handleChange} />
+          <PlaytestFeedbackForm form={PLAYTEST_FORM_V3} responses={responses} onChange={handleChange} />
         )}
       </div>
     </GameLayout>

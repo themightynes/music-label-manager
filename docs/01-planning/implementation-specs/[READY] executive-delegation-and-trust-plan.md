@@ -1,6 +1,7 @@
 # [READY] Executive Delegation & Trust
 
 **Status:** READY — design brief for the next major gameplay arc. Fork document for an orchestrated build session (parallel worktree agents + adversarial verifiers). **All forks resolved by Nes on 2026-07-12** (a–e per recommendation; f overridden: predetermined targeting preserved) — see §12. Build authorized: Tiers 1+2 as one PR.
+**EXECUTION STATUS (2026-07-12):** Tiers 1+2 EXECUTED on `feat/exec-delegation-trust` — config extraction, autonomous resolution (engine re-derivation, loyalty-band + mood-risk-appetite choice policy, golden-master coverage), CEO structural changes (`ceo_crisis` migration + predetermined targeting, inaction-penalty removal), escalation (urgent-meeting-ignored → mandatory crisis), and the "While you were out" WeekSummary digest all shipped; verifier findings (a flaky characterization test, a delayed-effect key collision, a predetermined-event gating regression, a self-serving-hint schema gap) all fixed pre-merge. Suite 1,868 → 1,933. **Tiers 3 (Level/XP, §6) and 4 (Portfolios, §7) remain future arcs — designed here, NOT built.**
 **Author:** game-design architect (for Nes)
 **Date:** 2026-07-12
 **Depends on / builds atop (all merged):** exec-meetings revival (#119/#120), meeting-relevance Tier 0+1 (#122–#132), Tier 2 reactive meetings + side events (#133–#145), mandatory side events "Crisis on the Desk" (#162), volatility-economy + balance-integrity arcs (#156–#164).
