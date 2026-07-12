@@ -13,42 +13,40 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import {
-  buildEmptyPlaytestFeedbackResponses,
-  type PlaytestFeedbackResponses,
+  ACTIVE_PLAYTEST_FORM_ID,
+  buildEmptyPlaytestFeedbackResponsesFor,
+  type AnyPlaytestFeedbackResponses,
   type PlaytestFeel,
   type PlaytestStrength,
   type PlaytestSectionResponse,
 } from '@shared/api/contracts';
 import {
-  FORM_TITLE,
-  FORM_INTRO,
   FEEL_OPTIONS,
   STRENGTH_OPTIONS,
-  PLAYTEST_FORM_SECTIONS,
-  PLAYTEST_FORM_KNOBS,
-  KNOB_SECTION_TITLE,
-  KNOB_SECTION_BLURB,
-  ONE_KNOB_PROMPT,
-  PRIORITIES_SECTION_TITLE,
-  PRIORITIES_SECTION_BLURB,
-  PULL_BACK_PROMPT,
-  GUT_CHECK_PROMPT,
-  ANYTHING_OFF_PROMPT,
   type PlaytestFormSection,
+  type PlaytestFormDefinition,
 } from '@/admin/playtestFeedbackForm';
+import { PLAYTEST_FORM_V2 } from '@/admin/playtestFeedbackFormV2';
 
 /**
- * Playtest feedback recording surface (2026-07-11 form).
+ * Playtest feedback recording surface — versioned; currently serving the
+ * ROUND 2 form (2026-07-12).
  *
- * On-screen mirror of docs/01-planning/PLAYTEST_FEEDBACK_2026-07-11.md — the
+ * On-screen mirror of docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12.md — the
  * markdown stays the printable source. Answers persist via
- * GET/POST /api/admin/playtest-feedback (server/routes/admin.ts) into
- * docs/01-planning/playtest-feedback-2026-07-11.responses.json, so the page
- * prefills from the saved file and can be edited incrementally. Nothing is
- * required — unanswered fields simply stay empty/null.
+ * GET/POST /api/admin/playtest-feedback (server/routes/admin.ts) keyed by
+ * formId into docs/01-planning/playtest-feedback-2026-07-12.responses.json,
+ * so the page prefills from the saved file and can be edited incrementally.
+ * Nothing is required — unanswered fields simply stay empty/null.
+ *
+ * Round 1 (2026-07-11) is history: its markdown, content module, and
+ * responses file stay in the repo untouched and remain loadable through the
+ * same endpoint via ?formId=playtest-feedback-2026-07-11.
  */
 
-const PLAYTEST_FEEDBACK_QUERY_KEY = ['admin', 'playtest-feedback'] as const;
+type PlaytestFeedbackResponsesDoc = AnyPlaytestFeedbackResponses;
+
+const PLAYTEST_FEEDBACK_QUERY_KEY = ['admin', 'playtest-feedback', ACTIVE_PLAYTEST_FORM_ID] as const;
 
 function emptySection(): PlaytestSectionResponse {
   return { exposure: [], feel: null, anythingOff: '', designerAnswers: [] };
@@ -56,8 +54,8 @@ function emptySection(): PlaytestSectionResponse {
 
 // Merge a fetched document over the canonical empty default so every section
 // and knob key exists even if the saved file predates a form tweak.
-function withDefaults(fetched: PlaytestFeedbackResponses): PlaytestFeedbackResponses {
-  const base = buildEmptyPlaytestFeedbackResponses();
+function withDefaults(fetched: PlaytestFeedbackResponsesDoc): PlaytestFeedbackResponsesDoc {
+  const base = buildEmptyPlaytestFeedbackResponsesFor(ACTIVE_PLAYTEST_FORM_ID);
   return {
     ...base,
     ...fetched,
@@ -85,11 +83,12 @@ function formatSavedAt(savedAt: string | null): string | null {
 
 interface SectionCardProps {
   section: PlaytestFormSection;
+  anythingOffPrompt: string;
   value: PlaytestSectionResponse;
   onChange: (next: PlaytestSectionResponse) => void;
 }
 
-function SectionCard({ section, value, onChange }: SectionCardProps) {
+function SectionCard({ section, anythingOffPrompt, value, onChange }: SectionCardProps) {
   const toggleExposure = (optionId: string, checked: boolean) => {
     let exposure: string[];
     if (section.exposureMulti) {
@@ -169,7 +168,7 @@ function SectionCard({ section, value, onChange }: SectionCardProps) {
           htmlFor={`${section.id}-anything-off`}
           className="text-sm font-medium text-white/80"
         >
-          {ANYTHING_OFF_PROMPT}
+          {anythingOffPrompt}
         </Label>
         <Input
           id={`${section.id}-anything-off`}
@@ -210,11 +209,12 @@ function SectionCard({ section, value, onChange }: SectionCardProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface PlaytestFeedbackFormProps {
-  responses: PlaytestFeedbackResponses;
-  onChange: (next: PlaytestFeedbackResponses) => void;
+  form: PlaytestFormDefinition;
+  responses: PlaytestFeedbackResponsesDoc;
+  onChange: (next: PlaytestFeedbackResponsesDoc) => void;
 }
 
-export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFormProps) {
+export function PlaytestFeedbackForm({ form, responses, onChange }: PlaytestFeedbackFormProps) {
   const setSection = (id: string, next: PlaytestSectionResponse) => {
     onChange({ ...responses, sections: { ...responses.sections, [id]: next } });
   };
@@ -229,25 +229,29 @@ export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFo
     onChange({ ...responses, topPriorities });
   };
 
+  const knobSectionNumber = form.sections.length + 1;
+  const prioritiesSectionNumber = form.sections.length + 2;
+
   return (
     <div className="space-y-5">
-      {PLAYTEST_FORM_SECTIONS.map((section) => (
+      {form.sections.map((section) => (
         <SectionCard
           key={section.id}
           section={section}
+          anythingOffPrompt={form.anythingOffPrompt}
           value={responses.sections[section.id] ?? emptySection()}
           onChange={(next) => setSection(section.id, next)}
         />
       ))}
 
-      {/* §12 — Feel-knob tuning appetite */}
+      {/* Knob-strength table */}
       <section className="glass-panel rounded-xl p-5 space-y-4" data-testid="section-knob-strength">
         <header>
           <h2 className="text-lg font-semibold text-white">
-            <span className="text-neon-cyan mr-2">12.</span>
-            {KNOB_SECTION_TITLE}
+            <span className="text-neon-cyan mr-2">{knobSectionNumber}.</span>
+            {form.knobSectionTitle}
           </h2>
-          <p className="text-sm text-white/60 italic mt-1">{KNOB_SECTION_BLURB}</p>
+          <p className="text-sm text-white/60 italic mt-1">{form.knobSectionBlurb}</p>
         </header>
 
         <div className="overflow-x-auto">
@@ -263,7 +267,7 @@ export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFo
               </tr>
             </thead>
             <tbody>
-              {PLAYTEST_FORM_KNOBS.map((knob) => (
+              {form.knobs.map((knob) => (
                 <tr key={knob.id} className="border-b border-white/5">
                   <td className="py-2 pr-4 text-white/80">{knob.label}</td>
                   {STRENGTH_OPTIONS.map((option) => {
@@ -288,7 +292,7 @@ export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFo
 
         <div>
           <Label htmlFor="one-knob-change" className="text-sm font-medium text-white/80">
-            {ONE_KNOB_PROMPT}
+            {form.oneKnobPrompt}
           </Label>
           <Input
             id="one-knob-change"
@@ -299,14 +303,14 @@ export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFo
         </div>
       </section>
 
-      {/* §13 — Top-3 priority */}
+      {/* Top-3 priority */}
       <section className="glass-panel rounded-xl p-5 space-y-4" data-testid="section-priorities">
         <header>
           <h2 className="text-lg font-semibold text-white">
-            <span className="text-neon-cyan mr-2">13.</span>
-            {PRIORITIES_SECTION_TITLE}
+            <span className="text-neon-cyan mr-2">{prioritiesSectionNumber}.</span>
+            {form.prioritiesSectionTitle}
           </h2>
-          <p className="text-sm text-white/60 italic mt-1">{PRIORITIES_SECTION_BLURB}</p>
+          <p className="text-sm text-white/60 italic mt-1">{form.prioritiesSectionBlurb}</p>
         </header>
 
         <div className="space-y-2">
@@ -324,7 +328,7 @@ export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFo
 
         <div>
           <Label htmlFor="pull-back" className="text-sm font-medium text-white/80">
-            {PULL_BACK_PROMPT}
+            {form.pullBackPrompt}
           </Label>
           <Textarea
             id="pull-back"
@@ -337,7 +341,7 @@ export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFo
 
         <div>
           <Label htmlFor="gut-check" className="text-sm font-medium text-white/80">
-            {GUT_CHECK_PROMPT}
+            {form.gutCheckPrompt}
           </Label>
           <Input
             id="gut-check"
@@ -358,7 +362,7 @@ export function PlaytestFeedbackForm({ responses, onChange }: PlaytestFeedbackFo
 
 export default function PlaytestFeedbackPage() {
   const { toast } = useToast();
-  const [responses, setResponses] = useState<PlaytestFeedbackResponses | null>(null);
+  const [responses, setResponses] = useState<PlaytestFeedbackResponsesDoc | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -367,10 +371,13 @@ export default function PlaytestFeedbackPage() {
     data: fetched,
     isLoading,
     isError,
-  } = useQuery<PlaytestFeedbackResponses>({
+  } = useQuery<PlaytestFeedbackResponsesDoc>({
     queryKey: PLAYTEST_FEEDBACK_QUERY_KEY,
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/playtest-feedback');
+      const response = await apiRequest(
+        'GET',
+        `/api/admin/playtest-feedback?formId=${ACTIVE_PLAYTEST_FORM_ID}`
+      );
       return response.json();
     },
   });
@@ -385,7 +392,7 @@ export default function PlaytestFeedbackPage() {
     }
   }, [fetched, responses]);
 
-  const handleChange = (next: PlaytestFeedbackResponses) => {
+  const handleChange = (next: PlaytestFeedbackResponsesDoc) => {
     setResponses(next);
     setDirty(true);
   };
@@ -419,7 +426,7 @@ export default function PlaytestFeedbackPage() {
         {/* Sticky save bar */}
         <div className="sticky top-0 z-20 -mx-2 px-2 py-3 backdrop-blur-md bg-surface-app/80 border-b border-white/10 mb-5 flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-white truncate">{FORM_TITLE}</h1>
+            <h1 className="text-xl font-bold text-white truncate">{PLAYTEST_FORM_V2.title}</h1>
             <p className="text-xs text-white/50">
               {savedLabel ? `Last saved ${savedLabel}` : 'Not saved yet'}
               {dirty ? ' · unsaved changes' : ''}
@@ -430,14 +437,23 @@ export default function PlaytestFeedbackPage() {
           </Button>
         </div>
 
-        <p className="text-sm text-white/60 mb-6">{FORM_INTRO}</p>
+        <p className="text-xs text-white/40 mb-3" data-testid="round1-history-note">
+          Round 1 (2026-07-11) is archived as history:{' '}
+          <code className="text-white/60">docs/01-planning/PLAYTEST_FEEDBACK_2026-07-11.md</code> +{' '}
+          <code className="text-white/60">playtest-feedback-2026-07-11.responses.json</code>. This page now
+          records Round 2.
+        </p>
+
+        <p className="text-sm text-white/60 mb-6">{PLAYTEST_FORM_V2.intro}</p>
 
         {isLoading && <p className="text-white/60">Loading saved responses…</p>}
         {isError && (
           <p className="text-negative">Failed to load saved responses — answers entered now would not prefill.</p>
         )}
 
-        {responses && <PlaytestFeedbackForm responses={responses} onChange={handleChange} />}
+        {responses && (
+          <PlaytestFeedbackForm form={PLAYTEST_FORM_V2} responses={responses} onChange={handleChange} />
+        )}
       </div>
     </GameLayout>
   );

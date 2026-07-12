@@ -33,6 +33,7 @@ import {
   PULL_BACK_PROMPT,
   GUT_CHECK_PROMPT,
   ANYTHING_OFF_PROMPT,
+  PLAYTEST_FORM_V1,
 } from '@/admin/playtestFeedbackForm';
 import { PlaytestFeedbackForm } from '@/admin/PlaytestFeedbackPage';
 
@@ -98,7 +99,9 @@ describe('PlaytestFeedbackForm — render + interaction', () => {
   function renderForm(initial?: PlaytestFeedbackResponses) {
     const onChange = vi.fn();
     const responses = initial ?? buildEmptyPlaytestFeedbackResponses();
-    render(<PlaytestFeedbackForm responses={responses} onChange={onChange} />);
+    // The page now serves round 2; the component renders whichever form
+    // definition it is handed — these tests exercise the round-1 definition.
+    render(<PlaytestFeedbackForm form={PLAYTEST_FORM_V1} responses={responses} onChange={onChange} />);
     return { onChange, responses };
   }
 
