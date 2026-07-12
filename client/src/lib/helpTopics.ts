@@ -187,6 +187,26 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
   },
   {
+    id: 'delegation-trust',
+    title: 'Delegation & Trust',
+    hook: 'You skip your CMO this week. You expect nothing to happen. Instead you come back to find she already spent real money without you.',
+    tldr: 'A meeting you skip is never simply skipped — your executive makes the call themselves, and how they make it depends on how much they trust you. Neglect a disloyal exec and your own absence can hand you a crisis.',
+    body: [
+      'Here is the shift: every executive meeting resolves, whether you show up or not. Spend a slot and you make the call. Walk away and your exec makes it for you — with real [[money]], on the label\'s behalf, while your attention is somewhere else. There is no longer a free week where a meeting simply evaporates unattended.',
+      'What they do with that freedom depends on trust, and trust is something you build or burn over time. An exec who has felt backed by you tends to make the call you would have made yourself — the safe, sensible read. An exec you have kept close and rewarded plays it like a professional who wants the label to win. But an exec left to drift, ignored meeting after meeting, stops reading your intent and starts reading their own — chasing whatever serves them, not you. And that drift is not a held pattern; it is a slow slide. Week after week of being passed over, an exec\'s trust in you quietly thins and their spark cools back toward indifference on its own — the longer neglect runs, the further they drift from your corner, and the harder they are to win back.',
+      'That is why AUTO and simply walking away are not the same move, even though both save you the trouble of deciding. AUTO still spends a slot, and you are knowingly endorsing the safe pick. Walking away costs nothing today, but you are handing the wheel to whoever is sitting in that chair — and if they have stopped trusting you, they may not steer where you would have.',
+      'And an ignored urgent call is not the end of it. Wave off a pressing situation with an exec who has soured on you, and it rarely just quietly resolves. It can come back around, landing on your desk the following week as a real crisis that eats a focus slot and will not be waved off a second time.',
+    ],
+    rules: [
+      'A skipped meeting is never a free pass — your exec still spends on the label\'s behalf whether you are in the room or not.',
+      'Trust runs the wheel when you are not holding it: an exec who trusts you plays it safe, one who does not plays for themselves — and trust itself quietly erodes the longer an exec is left ignored, so sustained neglect slowly turns a reliable hand into an unreliable one.',
+      'Ignore an urgent call from an exec who has stopped trusting you, and the fallout has a way of finding its way back to your desk.',
+    ],
+    veteranNotes: [
+      'AUTO is not the same as walking away. AUTO still costs a slot and still endorses the safe pick with your eyes open; only genuine neglect hands an exec full discretion — and that discretion is exactly what a disloyal exec spends on themselves.',
+    ],
+  },
+  {
     id: 'ar-office',
     title: 'The A&R Office',
     hook: 'The roster you have is the label you are. Somewhere out there is the act that changes that — if you spend the week looking.',

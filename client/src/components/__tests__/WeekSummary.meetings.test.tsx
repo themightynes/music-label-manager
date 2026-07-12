@@ -99,7 +99,7 @@ describe('WeekSummary meetings card', () => {
     ]);
 
     expect(screen.getByText('Met with head_ar')).toBeInTheDocument();
-    expect(screen.getByText('+5 Mood')).toBeInTheDocument();
+    expect(screen.getByText('+5 Exec Mood')).toBeInTheDocument();
     expect(screen.getByText('+5 Loyalty')).toBeInTheDocument();
   });
 
@@ -130,7 +130,7 @@ describe('WeekSummary meetings card', () => {
     ]);
 
     expect(screen.getByText('Delayed effect triggered for artist a1')).toBeInTheDocument();
-    expect(screen.getByText('+3 Mood')).toBeInTheDocument();
+    expect(screen.getByText('+3 Artist Mood')).toBeInTheDocument();
   });
 
   it('never renders a badge for a dead effect key arriving via delayed_effect (badge honesty)', () => {
@@ -148,7 +148,7 @@ describe('WeekSummary meetings card', () => {
       } as GameChange,
     ]);
 
-    expect(screen.getByText('+2 Mood')).toBeInTheDocument();
+    expect(screen.getByText('+2 Artist Mood')).toBeInTheDocument();
     expect(screen.queryByText(/quality risk/i)).not.toBeInTheDocument();
   });
 

@@ -17,14 +17,23 @@ import { ChoiceEffects } from './executive-meetings/DialogueInterface';
 import type { SideEventCategory } from '@shared/types/gameTypes';
 import type { PendingCrisis } from '@/hooks/useCrisisSideEvent';
 
-const CATEGORY_LABEL: Record<SideEventCategory, string> = {
-  sync_licensing: 'Sync Licensing',
-  copyright_issues: 'Copyright Issue',
-  platform_opportunities: 'Platform Opportunity',
-  industry_drama: 'Industry Drama',
-  technical_problems: 'Technical Problem',
-  business_opportunities: 'Business Opportunity',
-  artist_personal: 'Artist Moment',
+/**
+ * Short domain label per side-event category, for the crisis chip ONLY.
+ * Deliberately distinct from WeekSummary's `SIDE_EVENT_CATEGORY_META` (which
+ * labels a resolved side event in retrospect, opportunity-framing included) —
+ * this card is exclusively the mandatory "On Your Desk" crisis, so every
+ * chip reads as "Crisis — <Domain>" rather than echoing the raw, sometimes
+ * opportunity-flavored category name (e.g. "Business Opportunity" read as
+ * absurd framing for an escalation crisis during playtest).
+ */
+const CRISIS_DOMAIN_LABEL: Record<SideEventCategory, string> = {
+  sync_licensing: 'Licensing',
+  copyright_issues: 'Legal',
+  platform_opportunities: 'Platforms',
+  industry_drama: 'Industry',
+  technical_problems: 'Technical',
+  business_opportunities: 'Business',
+  artist_personal: 'Artist',
 };
 
 interface CrisisSideEventCardProps {
@@ -37,7 +46,7 @@ interface CrisisSideEventCardProps {
 export function CrisisSideEventCard({ crisis, chosenChoiceId, slotNumber }: CrisisSideEventCardProps) {
   const setSideEventChoice = useGameStore((s) => s.setSideEventChoice);
   const choices = crisis.choices ?? [];
-  const categoryLabel = crisis.category ? CATEGORY_LABEL[crisis.category] : 'Crisis';
+  const categoryLabel = crisis.category ? `Crisis — ${CRISIS_DOMAIN_LABEL[crisis.category]}` : 'Crisis';
 
   return (
     <div className="relative overflow-hidden rounded-card border border-negative/40 bg-gradient-to-br from-negative/[0.10] to-neon-magenta/[0.06] p-4">

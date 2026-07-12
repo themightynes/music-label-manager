@@ -51,53 +51,6 @@
       ]
     },
     {
-      "id": "ceo_crisis",
-      "name": "CEO: Crisis Management",
-      "type": "role_meeting",
-      "icon": "fas fa-user-tie",
-      "description": "Handle crisis situation with CEO",
-      "role_id": "ceo",
-      "meeting_id": "mgr_crisis",
-      "category": "business",
-      "target_scope": "predetermined",
-      "requires": ["artist_signed", "tour_active"],
-      "prompt": "Your biggest artist just fired their last three backup dancers. The tour starts in two weeks.",
-      "choices": [
-        {
-          "id": "emergency_auditions",
-          "label": "Emergency auditions - whatever it costs",
-          "effects_immediate": {
-            "money": -8000,
-            "reputation": 1
-          },
-          "effects_delayed": {
-            "artist_mood": 3
-          }
-        },
-        {
-          "id": "local_talent",
-          "label": "Hire local dancers in each city",
-          "effects_immediate": {
-            "money": -3000
-          },
-          "effects_delayed": {
-            "variance_up": 1
-          }
-        },
-        {
-          "id": "acoustic_pivot",
-          "label": "Pivot to stripped-down acoustic shows",
-          "effects_immediate": {
-            "creative_capital": -1
-          },
-          "effects_delayed": {
-            "artist_mood": -2,
-            "press_story_flag": 1
-          }
-        }
-      ]
-    },
-    {
       "id": "ceo_expansion",
       "name": "CEO: Festival Strategy",
       "type": "role_meeting",
@@ -254,6 +207,7 @@
         {
           "id": "chase_trends",
           "label": "Follow the money - chase the trend",
+          "self_serving_hint": true,
           "effects_immediate": {
             "artist_mood": -3,
             "executive_mood": 8
@@ -499,6 +453,7 @@
         {
           "id": "spin_collaboration",
           "label": "Spin it as a surprise collaboration",
+          "self_serving_hint": true,
           "effects_immediate": {
             "creative_capital": -1,
             "executive_mood": 8
@@ -1020,9 +975,7 @@
           "effects_immediate": {
             "money": 2000
           },
-          "effects_delayed": {
-            "executive_mood": -2
-          }
+          "effects_delayed": {}
         }
       ]
     },

@@ -20,7 +20,10 @@ const DialogueChoiceSchema = z.object({
   id: z.string(),
   label: z.string(),
   effects_immediate: ChoiceEffectSchema.default({}),
-  effects_delayed: ChoiceEffectSchema.default({})
+  effects_delayed: ChoiceEffectSchema.default({}),
+  // Delegation-arc §4.3.1: optional authoring escape hatch — forces this choice as
+  // the exec's self-serving pick (scoreSelfServing → +Infinity). Additive/optional.
+  self_serving_hint: z.boolean().optional()
 });
 
 const RoleMeetingSchema = z.object({
@@ -74,6 +77,16 @@ const SideEventSchema = z.object({
   // Tier 2 (PR-3): category drives isolated-seed weighted selection + cooldown.
   // Enum derived from the ONE canonical const in shared/types/gameTypes.ts.
   category: z.enum(SIDE_EVENT_CATEGORIES),
+  // Executive Delegation arc (Tier 1, §8/fork f): optional per-event targeting mode.
+  // 'predetermined' resolves the event's artist-scoped effects (artist_mood, etc.)
+  // against the highest-popularity signed artist instead of applying globally.
+  // Absent → existing global-application behavior (backward-compatible with all
+  // pre-arc events).
+  target: z.enum(['predetermined']).optional(),
+  // Executive Delegation arc (Tier 2, §5.3): true only for the escalation-only
+  // events (injected by the escalation mechanism, never rolled). Absent/false
+  // for every pre-arc event. See shared/types/gameTypes.ts SideEvent doc.
+  escalation_only: z.boolean().optional(),
   prompt: z.string(),
   choices: z.array(EventChoiceSchema)
 });
@@ -362,7 +375,9 @@ export class GameDataLoader {
           id: z.string(),
           label: z.string(),
           effects_immediate: z.record(z.number()).optional(),
-          effects_delayed: z.record(z.number()).optional()
+          effects_delayed: z.record(z.number()).optional(),
+          // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice).
+          self_serving_hint: z.boolean().optional()
         }).passthrough()).optional(),
         details: z.object({
           cost: z.string(),

@@ -8,6 +8,7 @@ import {
   AnyPlaytestFeedbackResponsesSchema,
   PLAYTEST_FEEDBACK_FORM_ID,
   PLAYTEST_FEEDBACK_FORM_ID_V2,
+  PLAYTEST_FEEDBACK_FORM_ID_V3,
   PLAYTEST_FORM_REGISTRY,
   ACTIVE_PLAYTEST_FORM_ID,
   isPlaytestFormId,
@@ -197,16 +198,18 @@ router.post('/api/admin/events-config', requireClerkUser, requireAdmin, async (r
 
 // Playtest feedback endpoints (Admin only) — versioned recording surface for
 // the playtest forms (round 1: PLAYTEST_FEEDBACK_2026-07-11.md, round 2:
-// PLAYTEST_FEEDBACK_2026-07-12.md). Mirrors the actions-config pattern
-// (validate → backup → write). The SAME endpoint pair serves every form,
-// keyed by a validated formId from the fixed allowlist below (GET ?formId=…
-// defaulting to the active form; POST reads responses.formId). Each form
-// persists to its own responses file — the round-1 file is a HISTORICAL
-// RECORD that a v2 save must never touch. The markdown forms stay untouched
-// as the printable sources. No dataLoader cache clear or content changelog
-// here — this is not game content.
+// PLAYTEST_FEEDBACK_2026-07-12.md, round 3: PLAYTEST_FEEDBACK_2026-07-12-delegation.md).
+// Mirrors the actions-config pattern (validate → backup → write). The SAME
+// endpoint pair serves every form, keyed by a validated formId from the fixed
+// allowlist below (GET ?formId=… defaulting to the active form; POST reads
+// responses.formId). Each form persists to its OWN responses file — rounds 1
+// and 2 are HISTORICAL RECORDS that a round-3 save must never touch (round
+// 3's filename deliberately does not collide with round 2's despite sharing a
+// calendar date). The markdown forms stay untouched as the printable sources.
+// No dataLoader cache clear or content changelog here — this is not game content.
 
 const PLAYTEST_RESPONSES_FILENAMES: Record<PlaytestFormId, string> = {
+  [PLAYTEST_FEEDBACK_FORM_ID_V3]: 'playtest-feedback-2026-07-12-r3.responses.json',
   [PLAYTEST_FEEDBACK_FORM_ID_V2]: 'playtest-feedback-2026-07-12.responses.json',
   [PLAYTEST_FEEDBACK_FORM_ID]: 'playtest-feedback-2026-07-11.responses.json',
 };

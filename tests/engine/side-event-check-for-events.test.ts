@@ -93,6 +93,71 @@ async function runCheck(gameState: GameState, gameData: any, summary: WeekSummar
   await (engine as any).checkForEvents(summary);
 }
 
+/** A predetermined-target event (artist-scoped). Needs a signed artist to be sane. */
+function makePredeterminedEvent(): SideEvent {
+  return {
+    id: 'crisis_predetermined',
+    role_hint: 'CEO',
+    category: 'artist_personal',
+    target: 'predetermined',
+    prompt: 'Your biggest artist just fired their backup dancers.',
+    choices: [{ id: 'fix', label: 'Fix it', effects_immediate: {}, effects_delayed: {} }],
+  } as any;
+}
+
+/** gameData whose weights make the predetermined event eligible on a roll. */
+function makePredeterminedGameData(events: SideEvent[]): any {
+  const gd = makeGameData(1, events, true);
+  gd.getSideEventsConfigSync = () => ({ event_weights: { artist_personal: 1 }, event_cooldown: 2 });
+  return gd;
+}
+
+/** Invoke checkForEvents with a storage stub that reports the given artists. */
+async function runCheckWithArtists(
+  gameState: GameState,
+  gameData: any,
+  summary: WeekSummary,
+  artists: Array<{ signed: boolean }>,
+) {
+  const storage: any = { getArtistsByGame: async () => artists };
+  const engine = new GameEngine(gameState, gameData, storage, 'fixed-seed');
+  await (engine as any).checkForEvents(summary, {});
+}
+
+describe('checkForEvents — predetermined-target gating (Delegation FIX 3)', () => {
+  it('excludes a predetermined-target event from the pool when NO artist is signed (roll hits, nothing fires)', async () => {
+    const gs = makeGameState({ currentWeek: 5, flags: {} });
+    const summary = makeSummary();
+    // Pool is ONLY the predetermined event; with no signed artist it is filtered
+    // out → empty pool → nothing fires even though the weekly roll hit.
+    await runCheckWithArtists(gs, makePredeterminedGameData([makePredeterminedEvent()]), summary, []);
+
+    expect((gs.flags as any).pending_side_event).toBeUndefined();
+    expect(summary.events).toHaveLength(0);
+  });
+
+  it('allows the predetermined-target event when an artist IS signed (roll hits, it fires)', async () => {
+    const gs = makeGameState({ currentWeek: 5, flags: {} });
+    const summary = makeSummary();
+    await runCheckWithArtists(gs, makePredeterminedGameData([makePredeterminedEvent()]), summary, [
+      { signed: true },
+    ]);
+
+    expect((gs.flags as any).pending_side_event?.eventId).toBe('crisis_predetermined');
+    expect(summary.events).toHaveLength(1);
+  });
+
+  it('never filters a NON-predetermined event, even with no signed artist', async () => {
+    const gs = makeGameState({ currentWeek: 5, flags: {} });
+    const summary = makeSummary();
+    // The default sync_offer event has no `target` → always eligible.
+    await runCheckWithArtists(gs, makeGameData(1, makeEvents(), true), summary, []);
+
+    expect((gs.flags as any).pending_side_event?.eventId).toBe('sync_offer');
+    expect(summary.events).toHaveLength(1);
+  });
+});
+
 describe('checkForEvents — hit writes pending + history flags', () => {
   it('on a hit, sets pending_side_event and stamps side_event_history at the arrival week', async () => {
     const gs = makeGameState({ currentWeek: 5, flags: {} });

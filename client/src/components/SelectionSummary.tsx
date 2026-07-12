@@ -174,7 +174,6 @@ export function SelectionSummary({
       const meetingNames: Record<string, string> = {
         // CEO meetings
         'ceo_vision': 'Strategic Vision',
-        'ceo_crisis': 'Crisis Management',
         'ceo_investor': 'Investor Relations',
 
         // Head of A&R meetings

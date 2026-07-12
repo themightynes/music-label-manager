@@ -34,6 +34,13 @@ export interface DialogueChoice {
   label: string;
   effects_immediate: ChoiceEffect;
   effects_delayed: ChoiceEffect;
+  /**
+   * Delegation-arc §4.3.1: optional authoring escape hatch. When true, this choice
+   * is FORCED as the exec's self-serving pick (scoreSelfServing returns +Infinity),
+   * overriding the archetype heuristic — used when the numeric heuristic would tie
+   * or would pick a choice that is not the in-character self-serving one.
+   */
+  self_serving_hint?: boolean;
 }
 
 // Mood targeting scope for executive meetings (Task 3.1)
@@ -186,6 +193,24 @@ export interface SideEvent {
   role_hint: string;
   /** Tier 2 (PR-3): weighted-selection + cooldown category. One of SIDE_EVENT_CATEGORIES. */
   category: SideEventCategory;
+  /**
+   * Executive Delegation arc (Tier 1, §8/fork f): optional per-event targeting mode.
+   * 'predetermined' resolves artist-scoped effects (artist_mood, etc.) against the
+   * highest-popularity signed artist, reusing the same resolver role-meeting
+   * predetermined targeting uses. Absent -> existing global-application behavior
+   * (backward-compatible with all pre-arc events).
+   */
+  target?: 'predetermined';
+  /**
+   * Executive Delegation arc (Tier 2, §5.3): marks an event as INJECTED ONLY by
+   * escalation (shared/utils/executiveDelegation.ts ESCALATION_EVENT_BY_ROLE) —
+   * it must never enter the weekly weighted side-event roll. Absent/false for
+   * every pre-arc event. Enforced by a data-lint rule
+   * (tests/engine/data-lint-escalation-events.test.ts): every `escalation_*`
+   * event id carries this flag, and no non-escalation event does. Filtered out
+   * of the roll's candidate pool in game-engine.ts checkForEvents.
+   */
+  escalation_only?: boolean;
   prompt: string;
   choices: EventChoice[];
 }
@@ -510,6 +535,11 @@ export interface GameChange {
   choiceId?: string;
   choiceLabel?: string;
   appliedEffects?: Record<string, number>;
+  // Executive Delegation arc (Tier 1, §4.6): true on a 'meeting' entry that an
+  // executive resolved AUTONOMOUSLY (the player spent no slot on them). Drives the
+  // WeekSummary "While you were out" attribution group. Optional/additive — old
+  // saves without this field remain valid; no SNAPSHOT_VERSION bump.
+  autonomous?: boolean;
   // Exec-meetings-revival PR-9 (C6/D): mood-modifier context on a 'meeting' change
   // entry, set only when a non-neutral executive-mood modifier fired for that meeting.
   // Optional/additive — old saves without these fields remain valid.

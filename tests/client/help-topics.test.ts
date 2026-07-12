@@ -15,6 +15,10 @@ const EXPECTED_IDS = [
   'three-currencies',
   'access-tiers',
   'executive-team',
+  // Executive Delegation & Trust arc (2026-07-12): delegation slots in right
+  // after the exec team topic it extends (autonomous resolution, AUTO vs.
+  // neglect, escalation) and before A&R/roster care.
+  'delegation-trust',
   // C85 expansion (2026-07-11): A&R + roster care slot in after the exec team
   // (build the roster before you market it)…
   'ar-office',
@@ -52,7 +56,7 @@ function stripTermTokens(text: string): string {
 const ALL_TEXT_STRIPPED = stripTermTokens(ALL_TEXT);
 
 describe('helpTopics — structure', () => {
-  it('has exactly 13 topics, in the expected journey order', () => {
+  it('has exactly 14 topics, in the expected journey order', () => {
     expect(HELP_TOPICS).toHaveLength(EXPECTED_IDS.length);
     expect(HELP_TOPICS.map(t => t.id)).toEqual([...EXPECTED_IDS]);
   });

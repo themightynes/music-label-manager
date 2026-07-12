@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3, Flame, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3, Flame, AlertTriangle, ChevronRight } from 'lucide-react';
 import { ChartPerformanceCard } from './ChartPerformanceCard';
 import { AnimatedNumber } from './motion-primitives/animated-number';
 import { GlowEffect } from './motion-primitives/glow-effect';
@@ -15,6 +15,7 @@ import { classifyChartUpdate } from '@shared/utils/changeImportance';
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import { EffectBadgeTooltip } from './executive-meetings/EffectBadgeTooltip';
 import { ChoiceEffects } from './executive-meetings/DialogueInterface';
+import { roleConfig } from './executive-meetings/ExecutiveCard';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
 import { queryClient } from '@/lib/queryClient';
@@ -354,7 +355,10 @@ function formatMeetingEffectLabel(key: string): string {
     case 'creative_capital':
       return 'Creative';
     case 'artist_mood':
-      return 'Mood';
+      // Delegation playtest-revision (2026-07-12): disambiguate from the exec-mood
+      // delta badge — a digest line can carry both an artist-mood and an exec-mood
+      // change (Entry 4: "-2 Mood, +9 Exec Mood" read as one confusing stat).
+      return 'Artist Mood';
     case 'artist_energy':
       return 'Energy';
     case 'artist_popularity':
@@ -413,6 +417,102 @@ function formatAppliedEffects(
           : `${value > 0 ? '+' : ''}${value} ${formatMeetingEffectLabel(key)}`;
       return { key, line };
     });
+}
+
+// --- "While you were out" autonomous-resolution digest ---------------------
+// Executive Delegation & Trust arc, Track D (spec §4.6, fork c DECIDED: quiet
+// grouped digest, collapsed by default — no dedicated staged-reveal beat).
+// Lives INSIDE the existing Meetings card, below the player-chosen entries,
+// so a heavy autonomous week never crowds out the beats that matter. Reuses
+// the exact same effect-badge/tooltip plumbing as a player meeting entry
+// (formatAppliedEffects / EffectBadgeTooltip / LIVE_EFFECT_KEYS) — the copy
+// stays qualitative, the badges carry the magnitudes.
+
+/** roleId -> display name, reusing the ExecutiveCard channel-strip mapping
+ * (single source of truth for exec names/titles across the client). */
+function autonomousExecAttribution(roleId: string | undefined): string {
+  if (!roleId) return 'Your team';
+  const config = roleConfig[roleId as keyof typeof roleConfig];
+  if (!config) return roleId;
+  return `${config.name} · ${config.shortTitle}`;
+}
+
+function AutonomousMeetingEntry({ change }: { change: GameChange }) {
+  const appliedLines = formatAppliedEffects(change.appliedEffects);
+
+  return (
+    <div className="p-3 rounded-[12px] border border-white/[0.06] bg-surface-inner/20 opacity-80">
+      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-text-muted/80">
+        {autonomousExecAttribution(change.roleId)}
+      </div>
+      <div className="flex-1 min-w-0 mt-1">
+        <span className="text-sm font-medium text-white/70">{change.description}</span>
+        {change.choiceLabel && (
+          // Delegation playtest-revision (2026-07-12, Entry 1): prefix the exec's
+          // choice as THEIR past decision. The raw option label ("Accept their
+          // terms, worth the risk") otherwise read as advice/instruction to the
+          // player rather than the call the exec already made.
+          <p className="text-xs text-text-muted/80 mt-0.5 truncate">
+            Their call: &ldquo;{change.choiceLabel}&rdquo;
+          </p>
+        )}
+        {appliedLines.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {appliedLines.map(({ key, line }, lineIdx) => (
+              <EffectBadgeTooltip key={lineIdx} effectKey={key}>
+                <Badge
+                  variant="outline"
+                  className="text-xs font-mono rounded-pill text-neon-cyan/70 border-neon-cyan/25"
+                >
+                  {line}
+                </Badge>
+              </EffectBadgeTooltip>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Collapsed-by-default header row + expandable list. Purely local UI state —
+ * the digest is nested inside the Meetings card, which is already gated to
+ * the routine reveal stage; expanding it does not add a new stage.
+ */
+function AutonomousMeetingsDigest({ entries }: { entries: GameChange[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="pt-1">
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+        data-testid="autonomous-digest-toggle"
+        className="w-full flex items-center justify-between gap-2 p-3 rounded-[12px] border border-white/[0.06] bg-surface-inner/10 hover:bg-surface-inner/20 transition-colors text-left"
+      >
+        <span className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+          <ChevronRight
+            className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
+            aria-hidden="true"
+          />
+          Made Without You
+        </span>
+        <span className="text-xs text-text-muted">
+          Your team made {entries.length} decision{entries.length === 1 ? '' : 's'} on their own
+        </span>
+      </button>
+      {expanded && (
+        <div className="space-y-2 mt-2">
+          {entries.map((change, index) => (
+            <AutonomousMeetingEntry key={index} change={change} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekResults, onClose, gameId }: WeekSummaryProps) {
@@ -978,7 +1078,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             regardless of importance tier — the staged reveal already gates them to
             the routine stage via this card's placement, not per-item hero/notable
             styling. */}
-        {categorizedChanges.meetings.length > 0 && (
+        {(categorizedChanges.meetings.length > 0 || categorizedChanges.autonomousMeetings.length > 0) && (
           <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
             <Card>
               <CardHeader>
@@ -1059,7 +1159,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                                   : 'text-negative border-negative/40'
                               }`}
                             >
-                              {change.moodChange > 0 ? '+' : ''}{change.moodChange} Mood
+                              {change.moodChange > 0 ? '+' : ''}{change.moodChange} Exec Mood
                             </Badge>
                           )}
                           {change.loyaltyBoost !== undefined && change.loyaltyBoost !== 0 && (
@@ -1083,6 +1183,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                     </div>
                   );
                 })}
+                <AutonomousMeetingsDigest entries={categorizedChanges.autonomousMeetings} />
               </CardContent>
             </Card>
           </RevealGroup>

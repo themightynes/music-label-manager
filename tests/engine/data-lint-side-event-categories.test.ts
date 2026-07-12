@@ -28,6 +28,19 @@ import type { SideEventCategory } from '@shared/types/gameTypes';
  * explicitly includes data/events.json in its DATA_FILES), so this suite does
  * not re-check them.
  *
+ * KNOWN LIMITATION — side events have NO `requires` gating (Delegation arc FIX 3,
+ * doc-sync target). Unlike role_meetings (data/actions.json), side events in
+ * data/events.json carry no `requires: [...]` relevance tags, so a state-dependent
+ * precondition cannot be expressed in the data. In particular a `target:
+ * "predetermined"` event (e.g. crisis_fired_dancers) resolves its artist-scoped
+ * effects against the highest-popularity SIGNED artist and would silently no-op —
+ * and print artist/tour fiction into an artist-less game — if it rolled with zero
+ * signed artists. That precondition is enforced ENGINE-side instead:
+ * game-engine.ts checkForEvents excludes `target: "predetermined"` events from the
+ * candidate pool when the label has no signed artist. If side events ever gain
+ * `requires` support, migrate that guard back into the data and drop the engine
+ * filter. (JSON has no comments, so this note lives here.)
+ *
  * Spec: docs/01-planning/implementation-specs/[READY] tier2-reactive-meetings-and-side-events-plan.md §3.
  */
 

@@ -388,6 +388,47 @@
       ]
     },
     {
+      "id": "crisis_fired_dancers",
+      "role_hint": "CEO",
+      "category": "artist_personal",
+      "target": "predetermined",
+      "prompt": "Your biggest artist just fired their last three backup dancers, and there's a headline showcase booked in two weeks.",
+      "choices": [
+        {
+          "id": "emergency_auditions",
+          "label": "Emergency auditions - whatever it costs",
+          "effects_immediate": {
+            "money": -8000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 3
+          }
+        },
+        {
+          "id": "local_talent",
+          "label": "Hire local dancers in each city",
+          "effects_immediate": {
+            "money": -3000
+          },
+          "effects_delayed": {
+            "variance_up": 1
+          }
+        },
+        {
+          "id": "acoustic_pivot",
+          "label": "Pivot to stripped-down acoustic shows",
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "artist_mood": -2,
+            "press_story_flag": 1
+          }
+        }
+      ]
+    },
+    {
       "id": "content_takedown",
       "role_hint": "Content Moderator",
       "category": "copyright_issues",
@@ -419,6 +460,164 @@
           },
           "effects_delayed": {
             "reputation": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "escalation_ar_botched_signing",
+      "role_hint": "Mac (Head of A&R)",
+      "category": "industry_drama",
+      "escalation_only": true,
+      "prompt": "Mac trusted his gut on your most promising signing — no follow-through, no calls — until the artist quietly walked to a rival label. He's already replaying every conversation he didn't have.",
+      "choices": [
+        {
+          "id": "chase_rebound",
+          "label": "Chase an aggressive rebound signing, no time to second-guess",
+          "effects_immediate": {
+            "money": -6000
+          },
+          "effects_delayed": {
+            "variance_up": 1
+          }
+        },
+        {
+          "id": "eat_the_loss",
+          "label": "Eat the loss and protect the budget",
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "reputation": -1
+          }
+        },
+        {
+          "id": "own_the_miss",
+          "label": "Own the miss, publicly and on record",
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "reputation": 1,
+            "press_story_flag": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "escalation_cmo_narrative_lost",
+      "role_hint": "Sam (CMO)",
+      "category": "industry_drama",
+      "escalation_only": true,
+      "prompt": "Sam left your press cycle unsupervised, and a rival act took the story that should've been yours this week. His read: the market moved, not him.",
+      "choices": [
+        {
+          "id": "buy_back_narrative",
+          "label": "Buy back the narrative with a full-court blitz",
+          "effects_immediate": {
+            "money": -9000
+          },
+          "effects_delayed": {
+            "awareness_boost": 2
+          }
+        },
+        {
+          "id": "quiet_reset",
+          "label": "Let the news cycle pass quietly",
+          "effects_immediate": {
+            "money": -1000
+          },
+          "effects_delayed": {
+            "press_momentum": -1
+          }
+        },
+        {
+          "id": "blame_the_market",
+          "label": "Blame the market, hold the line",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": -1,
+            "artist_mood": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "escalation_cco_artist_walkout",
+      "role_hint": "Dante (CCO)",
+      "category": "artist_personal",
+      "escalation_only": true,
+      "prompt": "Left unattended, Dante chased the sound past your artist's patience — they walked out mid-session while he was already reaching for the next take.",
+      "choices": [
+        {
+          "id": "emergency_session",
+          "label": "Book an emergency reconciliation session",
+          "effects_immediate": {
+            "money": -4000
+          },
+          "effects_delayed": {
+            "artist_mood": 3
+          }
+        },
+        {
+          "id": "retreat_to_the_studio",
+          "label": "Let Dante retreat into the next experiment",
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "quality_bonus": 3,
+            "artist_mood": -2
+          }
+        },
+        {
+          "id": "cut_losses",
+          "label": "Cut the session short, cut your losses",
+          "effects_immediate": {
+            "money": -1500
+          },
+          "effects_delayed": {
+            "artist_mood": -3
+          }
+        }
+      ]
+    },
+    {
+      "id": "escalation_dist_deal_collapsed",
+      "role_hint": "Pat (Head of Distribution)",
+      "category": "business_opportunities",
+      "escalation_only": true,
+      "prompt": "Pat's guaranteed-safe distribution deal for your release — the one with no failure modes on paper — collapsed at the signature line, unmonitored until now.",
+      "choices": [
+        {
+          "id": "scramble_new_deal",
+          "label": "Scramble for a replacement deal now",
+          "effects_immediate": {
+            "money": -5000
+          },
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "commission_process_audit",
+          "label": "Commission Pat's full process audit and 200-point recovery plan",
+          "effects_immediate": {
+            "money": -2000,
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "reputation": 1
+          }
+        },
+        {
+          "id": "absorb_quietly",
+          "label": "Absorb the loss quietly, protect the relationship",
+          "effects_immediate": {
+            "money": -500
+          },
+          "effects_delayed": {
+            "reputation": -1
           }
         }
       ]

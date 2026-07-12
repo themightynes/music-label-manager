@@ -28,6 +28,30 @@
       "effect_multiplier_inspired": 1.2
     },
 
+    "executive_delegation": {
+      "loyalty_on_use": 5,
+      "loyalty_decay_per_week": 5,
+      "idle_weeks_before_decay": 3,
+      "mood_drift_per_week": 5,
+      "mood_default_delta": 5,
+      "loyalty_bands": {
+        "loyal_above": 70,
+        "disloyal_below": 30
+      },
+      "autonomous_risk_appetite": {
+        "inspired_bias": "aggressive",
+        "disgruntled_bias": "defensive",
+        "neutral_bias": "balanced"
+      },
+      "auto_endorse_loyalty_gain": 5,
+      "neglect_loyalty_gain": 0,
+      "neglect_mood_gain": 0,
+      "escalation": {
+        "loyalty_ceiling": 40,
+        "enabled": true
+      }
+    },
+
     "regional_barriers": {
       "domestic": 0,
       "neighboring": 15,

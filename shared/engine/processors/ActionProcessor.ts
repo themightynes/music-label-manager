@@ -52,6 +52,7 @@ import {
   isNeutral,
   type MoodModifiers,
 } from '../../utils/executiveMoodModifier';
+import { DEFAULT_EXEC_DELEGATION_CONFIG } from '../../utils/executiveDelegation';
 
 /**
  * Effect keys that applyEffects's switch actually implements (PR-1, truth infrastructure).
@@ -382,6 +383,16 @@ export class ActionProcessor {
         const repCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
         appliedEffects.reputation = scaleReputationGain(appliedEffects.reputation, repCfg);
       }
+
+      // Digest honesty (playtest-revision 2026-07-12 round 3, Entry 4): the exec-
+      // mood self-effect is surfaced by the dedicated moodChange badge on this
+      // change entry (execResult below), so carrying the authored `executive_mood`
+      // in appliedEffects too renders a DUPLICATE "Exec Mood" badge on player
+      // meetings. Worse, on an AUTONOMOUS (neglect) resolution the authored value
+      // no longer lands on the exec at all (neglect_mood_gain 0) — leaving it here
+      // would show a PHANTOM exec-mood delta. Drop it from the display record; the
+      // real self-effect (0 for neglect) rides on execResult.moodChange.
+      delete (appliedEffects as any).executive_mood;
     }
 
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
@@ -424,13 +435,30 @@ export class ActionProcessor {
     // Frame a CEO meeting as a solo executive decision rather than a meeting with
     // a hired executive. Non-CEO meetings keep the "Met with <role>" copy.
     const isCeoMeeting = roleId === 'ceo';
-    const baseDescription = isCeoMeeting ? 'Executive strategy decision' : `Met with ${roleName}`;
+    // Executive Delegation arc (Tier 1, §4.6): an autonomously-resolved meeting
+    // (the exec ran it while you were out) gets a distinct qualitative
+    // description and an additive `autonomous: true` marker so the WeekSummary can
+    // group it under "While you were out". Prose stays qualitative (no numbers —
+    // the effect badges carry the magnitudes, house regex rule).
+    const isAutonomous = action.metadata?.autonomous === true;
+    const baseDescription = isAutonomous
+      // Playtest-revision (2026-07-12, Entry 1): drop the "while you were out"
+      // fiction — the player objected it isn't that they were "out", just that the
+      // decision was made without their involvement.
+      ? `${roleName} handled this on their own`
+      : isCeoMeeting
+      ? 'Executive strategy decision'
+      : `Met with ${roleName}`;
 
     summary.changes.push({
       type: 'meeting',
-      description: modifierFired
+      // Autonomous entries stay qualitative (no numeric mood-band suffix in the
+      // prose); the moodBand/effectMultiplier fields below still ride along so the
+      // client can render the modifier note as a badge.
+      description: (!isAutonomous && modifierFired)
         ? `${baseDescription} — ${this.moodBandDescription(moodModifiers!, executiveForMeeting)}`
         : baseDescription,
+      ...(isAutonomous ? { autonomous: true } : {}),
       roleId: roleId,
       // Exec-meetings-revival PR-2: enrichment so the WeekSummary meetings card has
       // real content — which meeting, which choice, and what it actually did.
@@ -554,8 +582,20 @@ export class ActionProcessor {
 
     console.log('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
 
-    // Track that this executive was used this week
-    (summary as any).usedExecutives.add(executiveId);
+    // Executive Delegation arc — playtest-revision (2026-07-12 round 3): only a
+    // PLAYER-attended (manual OR AUTO-endorsed) meeting marks the exec "used" this
+    // week. A NEGLECTED (autonomous self-served) meeting does NOT — being used
+    // suppresses BOTH idle loyalty-decay AND passive mood-drift (ArtistStateProcessor
+    // .processExecutiveMoodDecay reads summary.usedExecutives), and sustained neglect
+    // must instead erode loyalty and drift mood toward 50. So neglect no longer
+    // counts as engagement (§4.5). This does NOT risk double-processing: the
+    // autonomous-resolution candidate list is computed ONCE before its loop
+    // (game-engine.resolveAutonomousExecMeetings) and never re-reads usedExecutives.
+    const isAutonomous = action.metadata?.autonomous === true;
+    if (!isAutonomous) {
+      // Track that this executive was engaged by the player this week.
+      (summary as any).usedExecutives.add(executiveId);
+    }
 
     // Get executive from database (PR-9: reuse the caller's fetch when provided).
     const executive = prefetchedExecutive ?? await ctx.storage.getExecutive(executiveId, dbTransaction);
@@ -570,32 +610,57 @@ export class ActionProcessor {
       loyalty: executive.loyalty
     });
 
+    // Executive Delegation arc (Tier 1, §3.4): the mood/loyalty knobs are config
+    // now, not hardcoded literals (defaults equal the former +5s → byte-identical).
+    const delegationCfg = ctx.gameData.getExecDelegationConfigSync?.() ?? DEFAULT_EXEC_DELEGATION_CONFIG;
+
     // Apply mood changes from executive-specific choice effects
     let moodChange = 0;
     const choiceEffects = action.metadata?.choiceEffects;
-    if (choiceEffects?.effects_immediate?.executive_mood) {
+    if (isAutonomous) {
+      // NEGLECT path (playtest-revision 2026-07-12 round 3): the exec's personal
+      // engagement reward is neglect_mood_gain (default 0) — the authored
+      // executive_mood and mood_default_delta do NOT apply to a self-served
+      // meeting. This stops neglect from ratcheting mood to the cap; combined
+      // with the (now un-suppressed) passive drift, sustained neglect lets mood
+      // erode toward 50 (§4.5).
+      moodChange = delegationCfg.neglect_mood_gain;
+      console.log('[GAME-ENGINE] Autonomous (neglect) resolution — neglect_mood_gain:', moodChange);
+    } else if (choiceEffects?.effects_immediate?.executive_mood) {
       // Use executive-specific mood effect if available
       moodChange = choiceEffects.effects_immediate.executive_mood;
       console.log('[GAME-ENGINE] Applied executive_mood effect:', moodChange);
     } else {
-      // Default positive boost for interaction (removed artist_mood fallback)
-      moodChange = 5;
-      console.log('[GAME-ENGINE] Applied default executive interaction boost: +5');
+      // Default positive boost for interaction (mood_default_delta) — an exec the
+      // player engaged (manual OR AUTO-endorsed) feels engaged (§4.4).
+      moodChange = delegationCfg.mood_default_delta;
+      console.log('[GAME-ENGINE] Applied default executive interaction boost:', moodChange);
     }
 
     const newMood = Math.max(0, Math.min(100, executive.mood + moodChange));
 
-    // Boost loyalty for being used (+5 for interaction)
-    const newLoyalty = Math.min(100, executive.loyalty + 5);
+    // Loyalty gain for engagement (§4.5): a player-attended / AUTO-endorsed
+    // meeting grants loyalty_on_use; a NEGLECTED (autonomously self-served)
+    // meeting grants neglect_loyalty_gain (default 0 — a self-serve is not
+    // endorsement). AUTO-endorse is indistinguishable from a manual pick
+    // server-side (both arrive as ordinary role_meeting actions with no
+    // `autonomous` marker), so both use loyalty_on_use; auto_endorse_loyalty_gain
+    // is a reserved knob if playtest shows AUTO should differ.
+    const loyaltyGain = isAutonomous ? delegationCfg.neglect_loyalty_gain : delegationCfg.loyalty_on_use;
+    const newLoyalty = Math.min(100, executive.loyalty + loyaltyGain);
 
-    // Update last action week
+    // Update last action week — ONLY on a player-engaged meeting. A neglected
+    // (autonomous) resolution must NOT refresh lastActionWeek (playtest-revision
+    // 2026-07-12 round 3): leaving it stale is what lets idle loyalty-decay keep
+    // firing under sustained neglect, so neglect costs control + loyalty over time
+    // rather than parking the exec's stats (§4.1/§4.5).
     const currentWeek = ctx.gameState.currentWeek || 1;
 
     console.log('[GAME-ENGINE] Updating executive:', {
       moodChange,
       newMood,
       newLoyalty,
-      lastActionWeek: currentWeek
+      lastActionWeek: isAutonomous ? '(unchanged — neglect)' : currentWeek,
     });
 
     // Save changes to database
@@ -604,7 +669,8 @@ export class ActionProcessor {
       {
         mood: newMood,
         loyalty: newLoyalty,
-        lastActionWeek: currentWeek
+        // Neglect leaves lastActionWeek untouched so decay continues to accrue.
+        ...(isAutonomous ? {} : { lastActionWeek: currentWeek }),
       },
       dbTransaction
     );
@@ -614,7 +680,7 @@ export class ActionProcessor {
     // Playtest bug #1 fix: return the deltas for processRoleMeeting to fold into
     // the single 'meeting' change entry, instead of pushing a duplicate
     // 'executive_interaction' "Met with <slug>" row here.
-    return { moodChange, newMood, loyaltyBoost: 5, newLoyalty };
+    return { moodChange, newMood, loyaltyBoost: loyaltyGain, newLoyalty };
   }
 
   /**

@@ -1,17 +1,18 @@
 // @vitest-environment node
 /**
- * Admin playtest-feedback endpoint characterization test — versioned (round 2).
+ * Admin playtest-feedback endpoint characterization test — versioned (round 3).
  *
  * Mirrors the admin-events-config suite (same router, same auth/db mocks).
- * The single GET/POST pair now serves BOTH forms, keyed by a validated
- * formId from the fixed two-entry allowlist:
- * - GET defaults to the active (v2, 2026-07-12) form; ?formId= selects a
- *   round; unknown ids are rejected with 400.
+ * The single GET/POST pair now serves THREE forms, keyed by a validated
+ * formId from the fixed three-entry allowlist:
+ * - GET defaults to the active (v3, 2026-07-12-delegation) form; ?formId=
+ *   selects a round; unknown ids are rejected with 400.
  * - POST validates via the union schema, keys the target file off the
  *   validated responses.formId, backs up the previous file, stamps savedAt
  *   server-side, and writes pretty-printed JSON with stable key order.
- * - The round-1 responses file is a HISTORICAL RECORD: a v2 save must never
- *   touch it (proven byte-for-byte below).
+ * - The round-1 and round-2 responses files are HISTORICAL RECORDS: a v3
+ *   save must never touch either (proven byte-for-byte below for round 2,
+ *   the more recent/likely-live one).
  *
  * Uses a temp fixture docs/01-planning directory (via process.chdir) so the
  * test never touches the real planning docs.
@@ -43,12 +44,16 @@ import request from 'supertest';
 import {
   buildEmptyPlaytestFeedbackResponses,
   buildEmptyPlaytestFeedbackResponsesV2,
+  buildEmptyPlaytestFeedbackResponsesV3,
   PLAYTEST_FEEDBACK_FORM_ID,
   PLAYTEST_FEEDBACK_FORM_ID_V2,
+  PLAYTEST_FEEDBACK_FORM_ID_V3,
   PLAYTEST_SECTION_IDS,
   PLAYTEST_KNOB_IDS,
   PLAYTEST_SECTION_IDS_V2,
   PLAYTEST_KNOB_IDS_V2,
+  PLAYTEST_SECTION_IDS_V3,
+  PLAYTEST_KNOB_IDS_V3,
 } from '@shared/api/contracts';
 
 const V1_RESPONSES_REL_PATH = path.join(
@@ -61,6 +66,29 @@ const V2_RESPONSES_REL_PATH = path.join(
   '01-planning',
   'playtest-feedback-2026-07-12.responses.json'
 );
+const V3_RESPONSES_REL_PATH = path.join(
+  'docs',
+  '01-planning',
+  'playtest-feedback-2026-07-12-r3.responses.json'
+);
+
+function sampleV3Responses() {
+  const responses = buildEmptyPlaytestFeedbackResponsesV3();
+  responses.sections.autonomous_spend_feel = {
+    exposure: ['saw_money_spent', 'saw_while_you_were_out'],
+    feel: 'works',
+    anythingOff: '',
+    designerAnswers: [
+      'Feels like the team, mostly.',
+      'One surprise spend but understandable in hindsight.',
+    ],
+  };
+  responses.knobStrength.escalation_frequency = 'about_right';
+  responses.oneKnobChange = 'loyalty band thresholds, widen the committed band';
+  responses.topPriorities = ['buzz hidden-at-zero still open', 'more archetype flavor', ''];
+  responses.gutCheck = 'feels like a team now';
+  return responses;
+}
 
 function sampleV2Responses() {
   const responses = buildEmptyPlaytestFeedbackResponsesV2();
@@ -118,13 +146,13 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  it('GET without formId returns the empty ACTIVE (v2) default when no file exists', async () => {
+  it('GET without formId returns the empty ACTIVE (v3) default when no file exists', async () => {
     const res = await request(app).get('/api/admin/playtest-feedback');
     expect(res.status).toBe(200);
-    expect(res.body.formId).toBe(PLAYTEST_FEEDBACK_FORM_ID_V2);
+    expect(res.body.formId).toBe(PLAYTEST_FEEDBACK_FORM_ID_V3);
     expect(res.body.savedAt).toBeNull();
-    expect(Object.keys(res.body.sections)).toEqual([...PLAYTEST_SECTION_IDS_V2]);
-    expect(Object.keys(res.body.knobStrength)).toEqual([...PLAYTEST_KNOB_IDS_V2]);
+    expect(Object.keys(res.body.sections)).toEqual([...PLAYTEST_SECTION_IDS_V3]);
+    expect(Object.keys(res.body.knobStrength)).toEqual([...PLAYTEST_KNOB_IDS_V3]);
     expect(res.body.topPriorities).toEqual(['', '', '']);
   });
 
@@ -138,6 +166,16 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
     expect(Object.keys(res.body.knobStrength)).toEqual([...PLAYTEST_KNOB_IDS]);
   });
 
+  it('GET ?formId=<v2> returns the empty round-2 default when no file exists', async () => {
+    const res = await request(app).get(
+      `/api/admin/playtest-feedback?formId=${PLAYTEST_FEEDBACK_FORM_ID_V2}`
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.formId).toBe(PLAYTEST_FEEDBACK_FORM_ID_V2);
+    expect(Object.keys(res.body.sections)).toEqual([...PLAYTEST_SECTION_IDS_V2]);
+    expect(Object.keys(res.body.knobStrength)).toEqual([...PLAYTEST_KNOB_IDS_V2]);
+  });
+
   it('GET with a formId outside the allowlist returns 400', async () => {
     const res = await request(app).get(
       '/api/admin/playtest-feedback?formId=playtest-feedback-2027-01-01'
@@ -145,8 +183,8 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('POST writes the v2 file with a server-stamped savedAt and GET round-trips it', async () => {
-    const responses = sampleV2Responses();
+  it('POST writes the v3 file with a server-stamped savedAt and GET round-trips it', async () => {
+    const responses = sampleV3Responses();
 
     const postRes = await request(app)
       .post('/api/admin/playtest-feedback')
@@ -156,13 +194,13 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
     expect(postRes.body.success).toBe(true);
     expect(typeof postRes.body.savedAt).toBe('string');
 
-    const writtenRaw = await fs.readFile(path.join(tmpDir, V2_RESPONSES_REL_PATH), 'utf8');
+    const writtenRaw = await fs.readFile(path.join(tmpDir, V3_RESPONSES_REL_PATH), 'utf8');
     const written = JSON.parse(writtenRaw);
-    expect(written.formId).toBe(PLAYTEST_FEEDBACK_FORM_ID_V2);
+    expect(written.formId).toBe(PLAYTEST_FEEDBACK_FORM_ID_V3);
     expect(written.savedAt).toBe(postRes.body.savedAt);
-    expect(written.sections.mandatory_crisis_events.feel).toBe('sings');
+    expect(written.sections.autonomous_spend_feel.feel).toBe('works');
     // Pretty-printed, stable key order: top-level keys and section keys are
-    // in canonical V2 order regardless of what order the client sent.
+    // in canonical V3 order regardless of what order the client sent.
     expect(writtenRaw).toContain('\n  "formId"');
     expect(Object.keys(written)).toEqual([
       'formId',
@@ -174,20 +212,20 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
       'pullBack',
       'gutCheck',
     ]);
-    expect(Object.keys(written.sections)).toEqual([...PLAYTEST_SECTION_IDS_V2]);
-    expect(Object.keys(written.knobStrength)).toEqual([...PLAYTEST_KNOB_IDS_V2]);
+    expect(Object.keys(written.sections)).toEqual([...PLAYTEST_SECTION_IDS_V3]);
+    expect(Object.keys(written.knobStrength)).toEqual([...PLAYTEST_KNOB_IDS_V3]);
 
     const getRes = await request(app).get('/api/admin/playtest-feedback');
     expect(getRes.status).toBe(200);
-    expect(getRes.body.sections.mandatory_crisis_events.designerAnswers).toHaveLength(3);
+    expect(getRes.body.sections.autonomous_spend_feel.designerAnswers).toHaveLength(2);
     expect(getRes.body.savedAt).toBe(postRes.body.savedAt);
   });
 
-  it('POST backs up the previous v2 responses file before overwriting', async () => {
-    const first = sampleV2Responses();
+  it('POST backs up the previous v3 responses file before overwriting', async () => {
+    const first = sampleV3Responses();
     await request(app).post('/api/admin/playtest-feedback').send({ responses: first });
 
-    const second = sampleV2Responses();
+    const second = sampleV3Responses();
     second.gutCheck = 'revised answer';
     const res = await request(app)
       .post('/api/admin/playtest-feedback')
@@ -197,44 +235,55 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
     expect(res.body.backupCreated).toBe(true);
 
     const backupRaw = await fs.readFile(
-      `${path.join(tmpDir, V2_RESPONSES_REL_PATH)}.backup`,
+      `${path.join(tmpDir, V3_RESPONSES_REL_PATH)}.backup`,
       'utf8'
     );
     const backup = JSON.parse(backupRaw);
-    expect(backup.gutCheck).toBe('round two has the drama');
+    expect(backup.gutCheck).toBe('feels like a team now');
 
-    const currentRaw = await fs.readFile(path.join(tmpDir, V2_RESPONSES_REL_PATH), 'utf8');
+    const currentRaw = await fs.readFile(path.join(tmpDir, V3_RESPONSES_REL_PATH), 'utf8');
     expect(JSON.parse(currentRaw).gutCheck).toBe('revised answer');
   });
 
-  it('POST of a v2 document NEVER touches the round-1 historical file', async () => {
-    // Seed a round-1 file exactly as the owner's machine has one.
+  it('POST of a v3 document NEVER touches the round-1 or round-2 historical files', async () => {
+    // Seed round-1 and round-2 files exactly as the owner's machine has them.
     const v1Path = path.join(tmpDir, V1_RESPONSES_REL_PATH);
-    const historicalRaw = JSON.stringify(
+    const v1HistoricalRaw = JSON.stringify(
       { ...sampleV1Responses(), savedAt: '2026-07-11T21:47:07.073Z' },
       null,
       2
     );
-    await fs.writeFile(v1Path, historicalRaw, 'utf8');
+    await fs.writeFile(v1Path, v1HistoricalRaw, 'utf8');
+
+    const v2Path = path.join(tmpDir, V2_RESPONSES_REL_PATH);
+    const v2HistoricalRaw = JSON.stringify(
+      { ...sampleV2Responses(), savedAt: '2026-07-12T10:00:00.000Z' },
+      null,
+      2
+    );
+    await fs.writeFile(v2Path, v2HistoricalRaw, 'utf8');
 
     const res = await request(app)
       .post('/api/admin/playtest-feedback')
-      .send({ responses: sampleV2Responses() });
+      .send({ responses: sampleV3Responses() });
     expect(res.status).toBe(200);
 
-    // v1 file byte-identical, and no v1 backup was created (nothing wrote near it).
-    const afterRaw = await fs.readFile(v1Path, 'utf8');
-    expect(afterRaw).toBe(historicalRaw);
+    // Both historical files byte-identical, and no backup was created near either.
+    expect(await fs.readFile(v1Path, 'utf8')).toBe(v1HistoricalRaw);
+    expect(await fs.readFile(v2Path, 'utf8')).toBe(v2HistoricalRaw);
     await expect(fs.readFile(`${v1Path}.backup`, 'utf8')).rejects.toMatchObject({
       code: 'ENOENT',
     });
-    // And the v2 file landed in its own slot.
-    await expect(fs.readFile(path.join(tmpDir, V2_RESPONSES_REL_PATH), 'utf8')).resolves.toContain(
-      PLAYTEST_FEEDBACK_FORM_ID_V2
+    await expect(fs.readFile(`${v2Path}.backup`, 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    // And the v3 file landed in its own slot.
+    await expect(fs.readFile(path.join(tmpDir, V3_RESPONSES_REL_PATH), 'utf8')).resolves.toContain(
+      PLAYTEST_FEEDBACK_FORM_ID_V3
     );
   });
 
-  it('POST of a v1 document still writes the v1 file (history stays editable) and not the v2 file', async () => {
+  it('POST of a v1 document still writes the v1 file (history stays editable) and not the v3 file', async () => {
     const res = await request(app)
       .post('/api/admin/playtest-feedback')
       .send({ responses: sampleV1Responses() });
@@ -246,13 +295,29 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
     expect(Object.keys(written.sections)).toEqual([...PLAYTEST_SECTION_IDS]);
 
     await expect(
-      fs.readFile(path.join(tmpDir, V2_RESPONSES_REL_PATH), 'utf8')
+      fs.readFile(path.join(tmpDir, V3_RESPONSES_REL_PATH), 'utf8')
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('POST of a v2 document still writes the v2 file (history stays editable) and not the v3 file', async () => {
+    const res = await request(app)
+      .post('/api/admin/playtest-feedback')
+      .send({ responses: sampleV2Responses() });
+    expect(res.status).toBe(200);
+
+    const writtenRaw = await fs.readFile(path.join(tmpDir, V2_RESPONSES_REL_PATH), 'utf8');
+    const written = JSON.parse(writtenRaw);
+    expect(written.formId).toBe(PLAYTEST_FEEDBACK_FORM_ID_V2);
+    expect(Object.keys(written.sections)).toEqual([...PLAYTEST_SECTION_IDS_V2]);
+
+    await expect(
+      fs.readFile(path.join(tmpDir, V3_RESPONSES_REL_PATH), 'utf8')
     ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('POST with an invalid feel rating returns 400 and does not write', async () => {
-    const invalid: any = sampleV2Responses();
-    invalid.sections.mandatory_crisis_events.feel = 'transcendent';
+    const invalid: any = sampleV3Responses();
+    invalid.sections.autonomous_spend_feel.feel = 'transcendent';
 
     const res = await request(app)
       .post('/api/admin/playtest-feedback')
@@ -260,12 +325,12 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
 
     expect(res.status).toBe(400);
     await expect(
-      fs.readFile(path.join(tmpDir, V2_RESPONSES_REL_PATH), 'utf8')
+      fs.readFile(path.join(tmpDir, V3_RESPONSES_REL_PATH), 'utf8')
     ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('POST with a formId outside the allowlist returns 400 and does not write', async () => {
-    const foreign: any = sampleV2Responses();
+    const foreign: any = sampleV3Responses();
     foreign.formId = 'playtest-feedback-2027-01-01';
 
     const res = await request(app)
@@ -274,7 +339,7 @@ describe('admin playtest-feedback endpoints (versioned)', () => {
 
     expect(res.status).toBe(400);
     await expect(
-      fs.readFile(path.join(tmpDir, V2_RESPONSES_REL_PATH), 'utf8')
+      fs.readFile(path.join(tmpDir, V3_RESPONSES_REL_PATH), 'utf8')
     ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 

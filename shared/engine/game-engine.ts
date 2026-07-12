@@ -32,6 +32,11 @@ import { ReleaseProcessor } from './processors/ReleaseProcessor';
 import { ArtistStateProcessor } from './processors/ArtistStateProcessor';
 import { ActionProcessor } from './processors/ActionProcessor';
 import type { WeekContext } from './processors/types';
+import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meetingSelection';
+import { deriveWeekHappenings } from './weekHappenings';
+import { generateMeetingSeed } from '../utils/seededRandom';
+import { pickAutonomousChoice } from './executiveAutonomy';
+import { DEFAULT_EXEC_DELEGATION_CONFIG, ESCALATION_EVENT_BY_ROLE } from '../utils/executiveDelegation';
 
 // Re-export WeekSummary for backward compatibility
 export type { WeekSummary } from '../types/gameTypes';
@@ -195,7 +200,17 @@ export class GameEngine {
     for (const action of meetingActions) {
       await this.processAction(action, summary, dbTransaction);
     }
-    
+
+    // Executive Delegation arc (Tier 1, §4): NEVER-LAPSE. Every offered exec-lane
+    // meeting the player did NOT spend a slot on this week is resolved
+    // autonomously by that executive, spending real money per their loyalty/mood
+    // (§4.3). Runs immediately after the player-meeting loop, BEFORE
+    // applyArtistChangesToDatabase, so autonomous artist-mood deltas flush in the
+    // same pass. Routes each pick through the SAME processRoleMeeting path as a
+    // player pick (byte-identical effect application) and marks the exec as used
+    // so it is skipped by processExecutiveMoodDecay.
+    await this.resolveAutonomousExecMeetings(summary, dbTransaction);
+
     // Apply any artist mood/loyalty changes from meetings immediately to database
     await this.applyArtistChangesToDatabase(summary, dbTransaction);
     
@@ -209,6 +224,14 @@ export class GameEngine {
     // action effects), its delayed effects bank for next week, and the pending
     // flag clears. No-op in the legacy path (no sideEventChoice provided).
     await this.processPendingSideEventResolution(summary, options?.sideEventChoice ?? null, dbTransaction);
+
+    // Executive Delegation arc (Tier 2, §5.2): emit any escalation captured
+    // during resolveAutonomousExecMeetings. MUST run AFTER
+    // processPendingSideEventResolution (so a genuinely-resolved prior-week
+    // crisis is cleared first, not clobbered) and BEFORE checkForEvents (so this
+    // week's roll — if it hits — discards in favor of the escalation via the
+    // roll's own "already pending" check). See applyEscalation's doc comment.
+    await this.applyEscalation(summary, dbTransaction);
 
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary, dbTransaction);
@@ -264,7 +287,7 @@ export class GameEngine {
     await this.processExecutiveMoodDecay(summary, dbTransaction);
 
     // Check for random events
-    await this.checkForEvents(summary);
+    await this.checkForEvents(summary, dbTransaction);
 
     // Apply weekly burn (operational costs) - handled by consolidated financial calculation
     const weeklyBurnResult = await this.calculateWeeklyBurnWithBreakdown();
@@ -664,6 +687,295 @@ export class GameEngine {
   }
 
   /**
+   * Executive Delegation arc (Tier 1, §4): autonomous resolution of every
+   * exec-lane meeting the player did NOT act this week.
+   *
+   * Fork e→A: the engine RE-DERIVES each un-acted exec's offered meeting via the
+   * SAME seeded pipeline the /api/roles route uses (deriveRelevanceState +
+   * deriveWeekHappenings + selectWeeklyMeetingWithHappenings), against the same
+   * persisted inputs — deterministic, authoritative, no client trust. The offered
+   * meeting is derived at the PLANNING week (currentWeek-1: currentWeek was already
+   * incremented at the top of advanceWeek), so the seed matches what the player saw.
+   *
+   * The chosen choice (loyalty band + mood risk tie-break, pickAutonomousChoice)
+   * is applied through the EXACT same processRoleMeeting path as a player pick, so
+   * autonomous-vs-manual effect application is byte-identical. Playtest-revision
+   * (2026-07-12 round 3): a neglect (autonomous) resolution is NOT marked "used"
+   * and does NOT refresh lastActionWeek — only its choice's world-effects land; the
+   * exec's personal engagement rewards (mood/loyalty gain, decay/drift suppression)
+   * are withheld, so sustained neglect erodes loyalty and drifts mood toward 50
+   * (§4.5). Only a player-engaged meeting adds the exec to summary.usedExecutives.
+   *
+   * RNG: choice tie-breaks use an ISOLATED seed (`${seed}-autonomous`), NEVER
+   * ctx.getRandom — the engine's pinned stream gains ZERO draws (§10.3). The
+   * re-derivation's own seeds (generateMeetingSeed / reactive tie-break) are
+   * likewise isolated.
+   */
+  private async resolveAutonomousExecMeetings(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const storage = this.storage;
+    if (!storage?.getExecutivesByGame) return;
+
+    const gameId = this.gameState.id;
+    const executives = await storage.getExecutivesByGame(gameId, dbTransaction);
+    if (!executives || executives.length === 0) return;
+
+    // Execs the player already acted this week (executiveIds added by
+    // processExecutiveActions during PHASE 1). Those are NOT auto-resolved.
+    const acted: Set<string> = (summary as any).usedExecutives ?? new Set<string>();
+
+    // Only auto-resolve if at least one exec actually needs it.
+    const candidates = executives.filter(
+      (e: any) => e?.role && e.role !== 'ceo' && !acted.has(e.id),
+    );
+    if (candidates.length === 0) return;
+
+    // Meeting pool + tuning (mirrors server/routes/executives.ts).
+    const actionsData = await this.gameData.getWeeklyActionsWithCategories();
+    const allRoleMeetings = (actionsData.actions || []).filter(
+      (a: any) => a.type === 'role_meeting' && !String(a.id).startsWith('TEST_'),
+    );
+    if (allRoleMeetings.length === 0) return;
+
+    const tuning = this.gameData.getWeeklyMeetingSelectionConfigSync();
+    const delegationCfg = this.gameData.getExecDelegationConfigSync?.() ?? DEFAULT_EXEC_DELEGATION_CONFIG;
+    const moodBands = this.gameData.getExecMoodModifierConfigSync();
+
+    // Escalation (Tier 2, §5.1 fork a1): urgent meeting self-resolved once while
+    // loyalty < escalation.loyalty_ceiling => escalates into a mandatory crisis
+    // NEXT week. Only ONE escalation is captured per advance (first qualifying
+    // exec in iteration order below) — later qualifiers are discarded, mirroring
+    // the existing "one crisis at a time" rule (§5.2/§9). Actually written to
+    // flags.pending_side_event in applyEscalation, called from advanceWeek AFTER
+    // any prior-week pending crisis has been resolved/cleared (processPendingSide
+    // EventResolution) and BEFORE this week's roll (checkForEvents), so escalation
+    // naturally wins a same-week collision with either.
+    const escalationEnabled =
+      (delegationCfg.escalation?.enabled ?? true) &&
+      (this.gameData.getMandatorySideEventsConfigSync?.()?.enabled ?? true);
+    const loyaltyCeiling = delegationCfg.escalation?.loyalty_ceiling ?? 40;
+    let escalationCandidate: { roleId: string; eventId: string } | undefined;
+
+    // The player was offered these meetings while PLANNING the pre-increment week.
+    const offeredWeek = (this.gameState.currentWeek || 1) - 1;
+
+    // Persisted inputs the selection reads (same as the route).
+    const [artists, projects, releases, songs] = await Promise.all([
+      storage.getArtistsByGame(gameId, dbTransaction),
+      storage.getProjectsByGame(gameId, dbTransaction),
+      storage.getReleasesByGame(gameId, dbTransaction),
+      storage.getSongsByGame(gameId, dbTransaction),
+    ]);
+    const relevanceState = deriveRelevanceState({
+      artists,
+      projects,
+      releases,
+      songs,
+      currentWeek: offeredWeek,
+      recencyWindowWeeks: tuning.recency_window_weeks,
+    });
+
+    // Reactive-meeting happenings at the offered week (same mapping as the route).
+    let happenings: any[] = [];
+    try {
+      const [moodEvents, chartEntries] = await Promise.all([
+        storage.getMoodEventsByWeekRange
+          ? storage.getMoodEventsByWeekRange(gameId, offeredWeek, offeredWeek)
+          : Promise.resolve([]),
+        storage.getChartEntriesByWeekAndGame
+          ? storage.getChartEntriesByWeekAndGame(
+              new Date(ChartService.generateChartWeekFromGameWeek(offeredWeek)),
+              gameId,
+              dbTransaction,
+            )
+          : Promise.resolve([]),
+      ]);
+      const songsById = new Map<string, any>((songs || []).map((s: any) => [s.id, s] as [string, any]));
+      happenings = deriveWeekHappenings(
+        {
+          artists,
+          releases,
+          moodEvents: (moodEvents || []).map((e: any) => ({
+            artistId: e.artistId,
+            weekOccurred: e.weekOccurred,
+            moodBefore: e.moodBefore,
+            moodAfter: e.moodAfter,
+          })),
+          chartEntries: (chartEntries || []).map((c: any) => ({
+            songId: c.songId,
+            songTitle: c.songId ? songsById.get(c.songId)?.title : undefined,
+            artistId: c.songId ? songsById.get(c.songId)?.artistId : undefined,
+            isDebut: c.isDebut,
+            isCompetitorSong: c.isCompetitorSong,
+          })),
+        },
+        offeredWeek,
+      );
+    } catch (err) {
+      console.warn('[AUTONOMOUS] Failed to derive happenings; proceeding with none:', err);
+    }
+
+    for (const exec of candidates) {
+      const roleId = exec.role as string;
+      const pool = allRoleMeetings.filter((m: any) => m.role_id === roleId);
+      if (pool.length === 0) continue;
+
+      const seed = generateMeetingSeed(gameId, offeredWeek, roleId);
+      const { meeting, reactiveHappening } = selectWeeklyMeetingWithHappenings(pool, relevanceState, seed, happenings, {
+        relevanceWeight: tuning.relevance_weight,
+        recencyWindowWeeks: tuning.recency_window_weeks,
+      });
+      // Empty eligible pool → exec sits out → nothing to resolve.
+      if (!meeting) continue;
+
+      // Pre-update loyalty (§5.1): captured BEFORE processRoleMeeting below so an
+      // escalation decision never reads a loyalty value that resolution itself
+      // just changed.
+      const preUpdateLoyalty = typeof exec.loyalty === 'number' ? exec.loyalty : 50;
+
+      const picked = pickAutonomousChoice({
+        choices: (meeting.choices || []) as any[],
+        loyalty: preUpdateLoyalty,
+        mood: typeof exec.mood === 'number' ? exec.mood : 50,
+        roleId,
+        config: delegationCfg,
+        moodBands: {
+          inspired_above: moodBands.inspired_above,
+          disgruntled_below: moodBands.disgruntled_below,
+        },
+        seed: `${seed}-autonomous`,
+      });
+      if (!picked) continue;
+
+      // Escalation (Tier 2, §5.1 fork a1): this meeting was URGENT
+      // (reactiveHappening present — a reactive/pulse-dot meeting the exec was
+      // offered) AND it is being self-resolved (never lapses) AND the exec's
+      // pre-update loyalty is below the ceiling => escalate. Only the FIRST
+      // qualifying exec this advance is captured (escalationCandidate already
+      // set by an earlier iteration wins) — a later qualifier is discarded, same
+      // "one crisis at a time" spirit as the weekly roll's own discard rule.
+      if (
+        !escalationCandidate &&
+        escalationEnabled &&
+        reactiveHappening &&
+        preUpdateLoyalty < loyaltyCeiling
+      ) {
+        const escalationEventId = ESCALATION_EVENT_BY_ROLE[roleId];
+        if (escalationEventId) {
+          escalationCandidate = { roleId, eventId: escalationEventId };
+        }
+      }
+
+      const metadata: Record<string, any> = {
+        roleId,
+        actionId: (meeting as any).id,
+        choiceId: (picked as any).id,
+        executiveId: exec.id,
+        autonomous: true,
+      };
+
+      // user_selected meetings: autonomous resolution falls back to predetermined
+      // targeting (highest-popularity artist) — the exec picks the obvious artist
+      // in character (§4.3.4). This is the one place autonomous diverges from AUTO
+      // (which skips user_selected entirely).
+      if ((meeting as any).target_scope === 'user_selected') {
+        const artist = await new ArtistStateProcessor().selectHighestPopularityArtist(
+          this.weekContext(summary, dbTransaction),
+        );
+        if (!artist) continue; // no signed artist to target → sit out
+        metadata.selectedArtistId = artist.id;
+      }
+
+      // Delegation-arc FIX 2: the targetId must be unique per (meeting, week).
+      // ActionProcessor keys a choice's delayed-effect flag as
+      // `${targetId}-${choiceId}-delayed` (no meeting id, no week). A neglected exec
+      // autonomously resolving the SAME choice in consecutive weeks would otherwise
+      // reuse `role-${roleId}-autonomous-${choiceId}-delayed` and OVERWRITE week N's
+      // un-consumed flag (triggerWeek N+1) with week N+1's (triggerWeek N+2) — the
+      // first week's delayed payoff would silently never land. Scoping the key by
+      // meeting id + offered week makes the two banks distinct so both fire.
+      const syntheticAction: GameEngineAction = {
+        actionType: 'role_meeting',
+        targetId: `role-${roleId}-autonomous-${(meeting as any).id}-w${offeredWeek}`,
+        metadata,
+      };
+
+      await new ActionProcessor().processRoleMeeting(
+        this.weekContext(summary, dbTransaction),
+        syntheticAction,
+        dbTransaction,
+      );
+    }
+
+    // Stash the (at most one) escalation candidate for applyEscalation, called
+    // separately from advanceWeek AFTER the prior week's pending crisis has been
+    // resolved/cleared (§5.2 — see call site doc comment). Only set the key when
+    // there IS a candidate — WeekSummary is snapshotted verbatim by the golden
+    // master, so an always-present `undefined` key would spuriously diff every
+    // non-escalation fixture.
+    if (escalationCandidate) {
+      (summary as any)._pendingEscalation = escalationCandidate;
+    }
+  }
+
+  /**
+   * Escalation emission (Tier 2, §5.2). Consumes the escalation candidate
+   * `resolveAutonomousExecMeetings` captured (an urgent meeting self-resolved by
+   * a below-ceiling-loyalty exec) and — if no crisis is already pending — writes
+   * the mandatory-mode rich payload into `flags.pending_side_event` for the
+   * FOLLOWING week, exactly like a rolled crisis (checkForEvents' mandatory
+   * branch). Roll-free: no RNG draw, no engine-stream impact.
+   *
+   * ONE CRISIS AT A TIME: if `flags.pending_side_event` is already set — a
+   * still-unresolved prior-week crisis (defensive; the route gates the advance
+   * on its resolution, so processPendingSideEventResolution above should already
+   * have cleared it) — the escalation is discarded. Call this AFTER
+   * processPendingSideEventResolution (so a genuinely-resolved prior crisis is
+   * cleared first) and BEFORE checkForEvents (so this week's roll, if it hits,
+   * discards in favor of the escalation via its own existing "already pending"
+   * check — escalation runs first in the pipeline, so it wins ties by
+   * construction; first-set wins, matching the roll's existing discard rule).
+   */
+  private async applyEscalation(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const pending = (summary as any)._pendingEscalation as
+      | { roleId: string; eventId: string }
+      | undefined;
+    delete (summary as any)._pendingEscalation; // internal-only — never part of the public WeekSummary shape
+    if (!pending) return;
+
+    const flags = (this.gameState.flags || {}) as Record<string, any>;
+    this.gameState.flags = flags;
+
+    // Already-pending crisis (defensive) → discard, one crisis at a time.
+    if (flags.pending_side_event) return;
+
+    const event = await this.gameData.getEventById(pending.eventId);
+    if (!event) return; // unknown role→event mapping — defensive no-op
+
+    const currentWeek = this.gameState.currentWeek || 0;
+
+    // Deferred landing, same shape as a rolled crisis (game-engine.ts
+    // checkForEvents mandatory branch): the escalation lands as NEXT week's
+    // mandatory crisis card.
+    flags.pending_side_event = {
+      eventId: event.id,
+      week: currentWeek,
+      prompt: event.prompt,
+      category: event.category,
+      choices: event.choices,
+    };
+
+    summary.events.push({
+      id: event.id,
+      title: event.prompt.substring(0, 50),
+      occurred: true,
+      category: event.category,
+      prompt: event.prompt,
+      // No `choices` → same convention as the mandatory-roll branch: the crisis
+      // card (not an in-results interactive beat) reads the pending flag.
+    });
+  }
+
+  /**
    * Applies immediate effects to game state
    * @param effects - Effects to apply
    * @param summary - Week summary to update
@@ -1026,7 +1338,7 @@ export class GameEngine {
    * ARRIVAL week; the pending event belongs to (and is consumed during) that
    * same week.
    */
-  private async checkForEvents(summary: WeekSummary): Promise<void> {
+  private async checkForEvents(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     const currentWeek = this.gameState.currentWeek || 0;
     const flags = (this.gameState.flags || {}) as Record<string, any>;
     this.gameState.flags = flags;
@@ -1055,7 +1367,35 @@ export class GameEngine {
       // The draws ALWAYS run (stream discipline / C64) even when the result will
       // be discarded, so the seeded RNG stream is byte-identical regardless of
       // pending state.
-      const events = await this.gameData.getAllEvents();
+      // Executive Delegation arc (Tier 2, §5.3): escalation-only events are
+      // injected exclusively by applyEscalation — they must never enter the
+      // weighted weekly roll. Filtering here (rather than inside selectSideEvent)
+      // keeps selectSideEvent pure/roll-agnostic and leaves the candidate pool
+      // for every OTHER (non-escalation) event byte-identical to before this
+      // change — only the 4 new escalation_* ids are removed.
+      // Delegation-arc FIX 3(a): predetermined-target events (e.g. the migrated
+      // crisis_fired_dancers) resolve their artist-scoped effects against the
+      // highest-popularity SIGNED artist. Side events carry no `requires` gating,
+      // so with zero signed artists such an event would roll, silently no-op its
+      // artist effects, and print artist/tour fiction into an artist-less game.
+      // Exclude predetermined events from the candidate pool when no artist is
+      // signed. State-dependent pool filtering only — the weighted draw below still
+      // ALWAYS runs (stream discipline / C64), so the seeded RNG stream is
+      // byte-identical; only which ids are eligible changes, and only when the
+      // label has no signed artist. (Escalation-only ids remain filtered too.)
+      let hasSignedArtist = true;
+      try {
+        const gameArtists = this.storage?.getArtistsByGame
+          ? await this.storage.getArtistsByGame(this.gameState.id, dbTransaction)
+          : [];
+        hasSignedArtist = (gameArtists || []).some((a: any) => a?.signed);
+      } catch (err) {
+        // Defensive: if the artist read fails, keep the legacy (unfiltered) pool.
+        console.warn('[SIDE EVENT] Signed-artist read failed; predetermined events not filtered:', err);
+      }
+      const events = (await this.gameData.getAllEvents()).filter(
+        (e: any) => !e.escalation_only && (hasSignedArtist || e.target !== 'predetermined'),
+      );
       const selectionConfig = this.gameData.getSideEventsConfigSync();
       const history = (flags.side_event_history || {}) as Record<string, number>;
 
@@ -1160,8 +1500,31 @@ export class GameEngine {
       return;
     }
 
+    // Executive Delegation arc (Tier 1, §8/fork f): predetermined-target support.
+    // `event.target === 'predetermined'` resolves artist-scoped effects (artist_mood
+    // etc.) against the highest-popularity signed artist, reusing the SAME resolver
+    // role_meeting's predetermined targeting uses (ActionProcessor.ts:296). Absent
+    // (undefined) → existing global-application behavior, byte-identical for all 12
+    // legacy events. Label-scoped effects (money, reputation, creative_capital, ...)
+    // are untouched by targetScope/artistId — they apply the same either way.
+    const isPredetermined = (event as any).target === 'predetermined';
+    let targetArtistId: string | undefined;
+    if (isPredetermined) {
+      const selectedArtist = await new ArtistStateProcessor().selectHighestPopularityArtist(
+        this.weekContext(summary, dbTransaction),
+      );
+      if (selectedArtist) {
+        targetArtistId = selectedArtist.id;
+        console.log(`[SIDE EVENT] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity}) for "${event.id}"`);
+      } else {
+        console.warn(`[SIDE EVENT] Predetermined targeting failed for "${event.id}": no signed artists available; artist-scoped effects apply globally.`);
+      }
+    }
+    const targetScope: string = targetArtistId ? 'predetermined' : 'global';
+
     // Apply immediate effects, queued like a weekly action (global scope — side
-    // events are label-level, so artist-scoped keys hit every signed artist).
+    // events are label-level, so artist-scoped keys hit every signed artist —
+    // unless predetermined targeting resolved a single artist above).
     const effectsImmediate: Record<string, number> = {};
     for (const [k, v] of Object.entries(choice.effects_immediate || {})) {
       if (typeof v === 'number') effectsImmediate[k] = v;
@@ -1170,8 +1533,8 @@ export class GameEngine {
       await new ActionProcessor().applyEffects(
         this.weekContext(summary, dbTransaction),
         effectsImmediate,
-        undefined,
-        'global',
+        targetArtistId,
+        targetScope,
         `side_event:${event.id}`,
         choice.id
       );
@@ -1189,6 +1552,12 @@ export class GameEngine {
         effects: effectsDelayed,
         meetingName: `side_event:${event.id}`,
         choiceId: choice.id,
+        // Preserve artist targeting for delayed effects, mirroring role-meeting
+        // delayed banking (ActionProcessor.ts:398-405) — but ONLY when predetermined
+        // targeting actually resolved an artist. Legacy/global events omit both keys
+        // entirely (rather than writing targetScope: 'global') so their delayed-flag
+        // shape stays byte-identical to pre-arc behavior (GM policy, §10.1).
+        ...(targetArtistId ? { artistId: targetArtistId, targetScope } : {}),
       };
     }
 
