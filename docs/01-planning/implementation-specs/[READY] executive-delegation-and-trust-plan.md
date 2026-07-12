@@ -122,7 +122,8 @@ Every currently-hardcoded exec constant moves into the new block. **No literal m
   "loyalty_bands": { "loyal_above": 70, "disloyal_below": 30 },
   "autonomous_risk_appetite": { "inspired_bias": "aggressive", "disgruntled_bias": "defensive", "neutral_bias": "balanced" },
   "auto_endorse_loyalty_gain": 5, // fork (d) recommendation — same as loyalty_on_use for now
-  "neglect_loyalty_gain": 0       // fork (d) recommendation — a self-served meeting grants no loyalty
+  "neglect_loyalty_gain": 0,      // fork (d) recommendation — a self-served meeting grants no loyalty
+  "neglect_mood_gain": 0          // playtest-revision (2026-07-12 round 3) — a self-served meeting grants NO exec-mood gain either (was implicitly mood_default_delta)
 }
 ```
 Accessor: `getExecDelegationConfigSync()` in `server/data/gameData.ts` (HARDCODED fallback mirroring `getWeeklyMeetingSelectionConfigSync`), threaded through `ctx.gameData` like `getExecMoodModifierConfigSync()`.
@@ -145,7 +146,11 @@ applyArtistChangesToDatabase                                (line 200)
 PHASE 2: other actions … processPendingSideEventResolution … decay … checkForEvents
 ```
 
-`processExecutiveMoodDecay` (line 264) already runs late and **skips execs used this week**. An autonomously-resolved exec counts as **used** (it made a decision) — so it must set `lastActionWeek` and skip decay, exactly like a player-attended meeting. (This changes the current behavior where an unchosen exec both decays loyalty AND now resolves; see §4.5 — neglect still decays loyalty because a *self-served* meeting is not the same as being *engaged*. Resolve this in §4.5's write rules; the recommendation is: autonomous resolution sets `lastActionWeek` to prevent the −5 idle decay from *also* firing on top of the self-serving pick, so neglect costs you *control* and *loyalty-gain-forgone*, not a double loyalty hit.)
+`processExecutiveMoodDecay` (line 264) already runs late and **skips execs used this week**.
+
+> **▲ playtest-revision (2026-07-12 round 3) — REVERSED from the original recommendation below.** A neglect (autonomous) resolution is **NOT** counted as "used": it does **NOT** set `lastActionWeek`, is **NOT** added to `summary.usedExecutives`, and therefore does **NOT** suppress idle loyalty-decay or passive mood-drift. Only a *player-engaged* meeting (manual or AUTO-endorsed) marks the exec used. This is safe against double-processing because the autonomous-resolution candidate list is computed once before its loop (`resolveAutonomousExecMeetings`) and never re-reads `usedExecutives`. Sustained neglect thus erodes loyalty (−`loyalty_decay_per_week` after `idle_weeks_before_decay`) and drifts mood toward 50, instead of parking the exec's stats at full benefit. See §4.5 for the corrected write rules and rationale.
+
+~~The original recommendation (superseded): an autonomously-resolved exec counts as **used** (it made a decision) — so it must set `lastActionWeek` and skip decay, exactly like a player-attended meeting. The recommendation was: autonomous resolution sets `lastActionWeek` to prevent the −5 idle decay from *also* firing on top of the self-serving pick, so neglect costs you *control* and *loyalty-gain-forgone*, not a double loyalty hit.~~ Live playtesting (Entries 3–5) showed this made neglect a *reward* (mood ratcheted to the cap, loyalty parked), defeating the escalation ceiling — hence the reversal above.
 
 ### 4.2 How the engine knows which meeting each exec was offered
 
@@ -180,18 +185,20 @@ For the resolved meeting's `choices[]`:
 ### 4.4 Mood/level scaling of the autonomous pick
 
 - **Mood modifiers** apply to the picked choice's effects exactly as for a player pick (§3.2) — same `applyMoodModifiersToEffects`, same delayed-queue scaling at queue time (`ActionProcessor.ts:394-404`).
-- **`executive_mood` self-effect:** an autonomous resolution grants the exec their `mood_default_delta` (or the choice's authored `executive_mood`) — an exec who just acted feels engaged. Loyalty change per Fork (d) (recommendation: `neglect_loyalty_gain = 0` — self-serving is not endorsement).
+- **`executive_mood` self-effect:** ~~an autonomous resolution grants the exec their `mood_default_delta` (or the choice's authored `executive_mood`) — an exec who just acted feels engaged.~~ **▲ playtest-revision (2026-07-12 round 3):** a neglect (autonomous) resolution grants the exec `neglect_mood_gain` (default **0**) — NOT `mood_default_delta` and NOT the authored `executive_mood`. A self-served meeting is not engagement, so the exec's mood is left to drift toward 50 rather than boosted. Loyalty change per Fork (d) (`neglect_loyalty_gain = 0` — self-serving is not endorsement).
 - **Level** raises the *quality floor* of the committed (mid-loyalty) band (§6): a higher-level committed exec's "own call" trends toward better choices.
 
 ### 4.5 AUTO vs neglect distinction (✅ DECIDED)
 
-| | Slot cost | Choice source | Loyalty consequence | Mood self-effect |
-|---|---|---|---|---|
-| **Player manual** | 1 slot | Player picks | `+loyalty_on_use` (endorsed) | authored `executive_mood` or `mood_default_delta` |
-| **AUTO-endorse** (player clicks AUTO → confirms the safe pick via the review panel) | 1 slot | AUTO-safe (loyal-band pick) | `+auto_endorse_loyalty_gain` (endorsed) — fork (d) | `mood_default_delta` |
-| **Neglect** (player never engages; exec self-resolves) | **0 slots** | Loyalty-band pick (may be self-serving) | `+neglect_loyalty_gain` (default **0**) + `lastActionWeek` set to suppress the *extra* idle −5 (§4.1) | `mood_default_delta` |
+> **▲ playtest-revision (2026-07-12 round 3):** the original neglect rules (mood_default_delta on the exec + `lastActionWeek` set to suppress idle decay) made neglect *reward* the exec — a neglected exec ratcheted mood to the cap and parked its loyalty, so the `<40` escalation ceiling and `<30` self-serving band were unreachable and three of four execs sat at mood 100 while being ignored (live Entries 3–5). Corrected below: on the **neglect path ONLY**, the exec's personal engagement rewards are withheld — mood self-effect = `neglect_mood_gain` (default **0**, NOT the authored `executive_mood`/`mood_default_delta`), and `lastActionWeek` is **NOT** set, so idle loyalty-decay and passive mood-drift toward 50 both continue. The choice's *other* effects (money, reputation, artist mood, delayed banks) are unchanged — the decision still happens; only the exec's engagement rewards stop. Player-attended and AUTO-endorsed paths are unchanged.
 
-The key player-legible difference: **AUTO costs a slot and endorses the safe pick; neglect is free but hands the exec the wheel** (and at low loyalty they drive it their way). This is the central trade the arc creates.
+| | Slot cost | Choice source | Loyalty consequence | Mood self-effect | Marked "used"? |
+|---|---|---|---|---|---|
+| **Player manual** | 1 slot | Player picks | `+loyalty_on_use` (endorsed); `lastActionWeek` set | authored `executive_mood` or `mood_default_delta` | Yes |
+| **AUTO-endorse** (player clicks AUTO → confirms the safe pick via the review panel) | 1 slot | AUTO-safe (loyal-band pick) | `+auto_endorse_loyalty_gain` (endorsed) — fork (d); `lastActionWeek` set | `mood_default_delta` | Yes |
+| **Neglect** (player never engages; exec self-resolves) | **0 slots** | Loyalty-band pick (may be self-serving) | `+neglect_loyalty_gain` (default **0**); `lastActionWeek` **NOT** set → idle decay continues to accrue | `neglect_mood_gain` (default **0**); passive mood-drift toward 50 continues | **No** |
+
+The key player-legible difference: **AUTO costs a slot and endorses the safe pick; neglect is free but hands the exec the wheel** (and at low loyalty they drive it their way). Sustained neglect now also *quietly erodes the relationship* — loyalty decays and mood drifts back toward indifference — so ignoring an exec has a real, accumulating cost rather than parking them at full benefit. This is the central trade the arc creates.
 
 ### 4.6 How it lands in WeekSummary
 
