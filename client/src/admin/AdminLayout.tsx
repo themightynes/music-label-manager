@@ -21,7 +21,7 @@ function AdminHome() {
           <Link href="/admin/bug-reports" className="text-brand-rose hover:underline">Bug Reports</Link>
           <Link href="/admin/database-health" className="text-brand-rose hover:underline">💾 Database Health</Link>
           <Link href="/admin/systems-map" className="text-brand-rose hover:underline">🕸️ Systems Map</Link>
-          <Link href="/admin/playtest-feedback" className="text-brand-rose hover:underline">🎧 Playtest Feedback (Round 3, 2026-07-12)</Link>
+          <Link href="/admin/playtest-feedback" className="text-brand-rose hover:underline">🎧 Playtest Feedback</Link>
         </div>
       </div>
     </GameLayout>

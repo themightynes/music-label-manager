@@ -14,9 +14,13 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import {
   ACTIVE_PLAYTEST_FORM_ID,
+  PLAYTEST_FEEDBACK_FORM_ID,
+  PLAYTEST_FEEDBACK_FORM_ID_V2,
+  PLAYTEST_FEEDBACK_FORM_ID_V3,
   buildEmptyPlaytestFeedbackResponsesFor,
   type AnyPlaytestFeedbackResponses,
   type PlaytestFeel,
+  type PlaytestFormId,
   type PlaytestStrength,
   type PlaytestSectionResponse,
 } from '@shared/api/contracts';
@@ -25,29 +29,58 @@ import {
   STRENGTH_OPTIONS,
   type PlaytestFormSection,
   type PlaytestFormDefinition,
+  PLAYTEST_FORM_V1,
 } from '@/admin/playtestFeedbackForm';
+import { PLAYTEST_FORM_V2 } from '@/admin/playtestFeedbackFormV2';
 import { PLAYTEST_FORM_V3 } from '@/admin/playtestFeedbackFormV3';
 
+// Every registered form, newest first — the picker below lets the admin
+// switch which round they're recording against. Keep in lockstep with
+// PLAYTEST_FORM_REGISTRY (@shared/api/contracts): one entry per registered
+// formId, no more, no less (round-trip test guards this).
+interface PlaytestFormOption {
+  formId: PlaytestFormId;
+  form: PlaytestFormDefinition;
+  roundLabel: string;
+  dateLabel: string;
+}
+
+// Exported for the picker lockstep test (tests/client/playtest-feedback-picker.test.tsx).
+export const PLAYTEST_FORM_OPTIONS: PlaytestFormOption[] = [
+  { formId: PLAYTEST_FEEDBACK_FORM_ID_V3, form: PLAYTEST_FORM_V3, roundLabel: 'Round 3', dateLabel: '2026-07-12' },
+  { formId: PLAYTEST_FEEDBACK_FORM_ID_V2, form: PLAYTEST_FORM_V2, roundLabel: 'Round 2', dateLabel: '2026-07-12' },
+  { formId: PLAYTEST_FEEDBACK_FORM_ID, form: PLAYTEST_FORM_V1, roundLabel: 'Round 1', dateLabel: '2026-07-11' },
+];
+
 /**
- * Playtest feedback recording surface — versioned; currently serving the
- * ROUND 3 form (2026-07-12, Executive Delegation & Trust).
+ * Playtest feedback recording surface — versioned, with a round picker.
+ * Defaults to the ACTIVE form (Round 3, 2026-07-12, Executive Delegation &
+ * Trust), badged "Current" in the picker, but any registered round is
+ * answerable: picking Round 1 or Round 2 swaps in that round's form
+ * definition and loads/saves against that round's own responses file.
  *
- * On-screen mirror of docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12-delegation.md
- * — the markdown stays the printable source. Answers persist via
+ * On-screen mirror of the round's markdown source under docs/01-planning/
+ * (e.g. PLAYTEST_FEEDBACK_2026-07-12-delegation.md for Round 3) — the
+ * markdown stays the printable source. Answers persist via
  * GET/POST /api/admin/playtest-feedback (server/routes/admin.ts) keyed by
- * formId into docs/01-planning/playtest-feedback-2026-07-12-r3.responses.json,
- * so the page prefills from the saved file and can be edited incrementally.
- * Nothing is required — unanswered fields simply stay empty/null.
+ * formId (?formId=… on GET, responses.formId on POST) into that round's own
+ * responses file (see PLAYTEST_RESPONSES_FILENAMES in server/routes/admin.ts
+ * — round 1 = playtest-feedback-2026-07-11.responses.json, round 2 =
+ * playtest-feedback-2026-07-12.responses.json, round 3 =
+ * playtest-feedback-2026-07-12-r3.responses.json). Nothing is required —
+ * unanswered fields simply stay empty/null.
  *
- * Rounds 1 (2026-07-11) and 2 (2026-07-12) are history: their markdown,
- * content modules, and responses files stay in the repo untouched and remain
- * loadable through the same endpoint via ?formId=playtest-feedback-2026-07-11
- * / ?formId=playtest-feedback-2026-07-12.
+ * Switching rounds discards any unsaved draft (with a confirm prompt) and
+ * refetches that round's saved responses — each round's file is independent
+ * and a save can never cross-write another round's file (server-side formId
+ * allowlist, PLAYTEST_FORM_REGISTRY in @shared/api/contracts).
  */
 
 type PlaytestFeedbackResponsesDoc = AnyPlaytestFeedbackResponses;
 
-const PLAYTEST_FEEDBACK_QUERY_KEY = ['admin', 'playtest-feedback', ACTIVE_PLAYTEST_FORM_ID] as const;
+function playtestFeedbackQueryKey(formId: PlaytestFormId) {
+  return ['admin', 'playtest-feedback', formId] as const;
+}
 
 function emptySection(): PlaytestSectionResponse {
   return { exposure: [], feel: null, anythingOff: '', designerAnswers: [] };
@@ -55,8 +88,11 @@ function emptySection(): PlaytestSectionResponse {
 
 // Merge a fetched document over the canonical empty default so every section
 // and knob key exists even if the saved file predates a form tweak.
-function withDefaults(fetched: PlaytestFeedbackResponsesDoc): PlaytestFeedbackResponsesDoc {
-  const base = buildEmptyPlaytestFeedbackResponsesFor(ACTIVE_PLAYTEST_FORM_ID);
+function withDefaults(
+  fetched: PlaytestFeedbackResponsesDoc,
+  formId: PlaytestFormId
+): PlaytestFeedbackResponsesDoc {
+  const base = buildEmptyPlaytestFeedbackResponsesFor(formId);
   return {
     ...base,
     ...fetched,
@@ -363,35 +399,47 @@ export function PlaytestFeedbackForm({ form, responses, onChange }: PlaytestFeed
 
 export default function PlaytestFeedbackPage() {
   const { toast } = useToast();
+  const [selectedFormId, setSelectedFormId] = useState<PlaytestFormId>(ACTIVE_PLAYTEST_FORM_ID);
   const [responses, setResponses] = useState<PlaytestFeedbackResponsesDoc | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  const selectedOption =
+    PLAYTEST_FORM_OPTIONS.find((option) => option.formId === selectedFormId) ?? PLAYTEST_FORM_OPTIONS[0];
 
   const {
     data: fetched,
     isLoading,
     isError,
   } = useQuery<PlaytestFeedbackResponsesDoc>({
-    queryKey: PLAYTEST_FEEDBACK_QUERY_KEY,
+    queryKey: playtestFeedbackQueryKey(selectedFormId),
     queryFn: async () => {
-      const response = await apiRequest(
-        'GET',
-        `/api/admin/playtest-feedback?formId=${ACTIVE_PLAYTEST_FORM_ID}`
-      );
+      const response = await apiRequest('GET', `/api/admin/playtest-feedback?formId=${selectedFormId}`);
       return response.json();
     },
   });
 
-  // Prefill once from the fetch; afterwards the local draft owns the state so
-  // in-progress edits are never clobbered.
+  // Prefill from the fetch whenever the selected form changes; the local
+  // draft otherwise owns the state so in-progress edits are never clobbered.
   useEffect(() => {
     if (fetched && responses === null) {
-      const merged = withDefaults(fetched);
+      const merged = withDefaults(fetched, selectedFormId);
       setResponses(merged);
       setSavedAt(merged.savedAt);
     }
-  }, [fetched, responses]);
+  }, [fetched, responses, selectedFormId]);
+
+  const handleSelectForm = (formId: PlaytestFormId) => {
+    if (formId === selectedFormId) return;
+    if (dirty && !window.confirm('Switching forms will discard unsaved changes. Continue?')) {
+      return;
+    }
+    setSelectedFormId(formId);
+    setResponses(null);
+    setSavedAt(null);
+    setDirty(false);
+  };
 
   const handleChange = (next: PlaytestFeedbackResponsesDoc) => {
     setResponses(next);
@@ -427,7 +475,7 @@ export default function PlaytestFeedbackPage() {
         {/* Sticky save bar */}
         <div className="sticky top-0 z-20 -mx-2 px-2 py-3 backdrop-blur-md bg-surface-app/80 border-b border-white/10 mb-5 flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-white truncate">{PLAYTEST_FORM_V3.title}</h1>
+            <h1 className="text-xl font-bold text-white truncate">Playtest Feedback</h1>
             <p className="text-xs text-white/50">
               {savedLabel ? `Last saved ${savedLabel}` : 'Not saved yet'}
               {dirty ? ' · unsaved changes' : ''}
@@ -438,16 +486,28 @@ export default function PlaytestFeedbackPage() {
           </Button>
         </div>
 
-        <p className="text-xs text-white/40 mb-3" data-testid="round1-history-note">
-          Rounds 1 (2026-07-11) and 2 (2026-07-12) are archived as history:{' '}
-          <code className="text-white/60">docs/01-planning/PLAYTEST_FEEDBACK_2026-07-11.md</code> +{' '}
-          <code className="text-white/60">playtest-feedback-2026-07-11.responses.json</code>,{' '}
-          <code className="text-white/60">docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12.md</code> +{' '}
-          <code className="text-white/60">playtest-feedback-2026-07-12.responses.json</code>. This page now
-          records Round 3.
-        </p>
+        {/* Round picker — segmented control, ActionsViewer filter precedent */}
+        <div className="flex flex-wrap items-center gap-2 mb-5" data-testid="playtest-form-picker">
+          {PLAYTEST_FORM_OPTIONS.map((option) => (
+            <Button
+              key={option.formId}
+              type="button"
+              size="sm"
+              variant={selectedFormId === option.formId ? 'default' : 'outline'}
+              onClick={() => handleSelectForm(option.formId)}
+              data-testid={`playtest-form-option-${option.formId}`}
+            >
+              {option.roundLabel} · {option.dateLabel}
+              {option.formId === ACTIVE_PLAYTEST_FORM_ID && (
+                <span className="ml-1.5 rounded-full bg-neon-cyan/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-cyan">
+                  Current
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
 
-        <p className="text-sm text-white/60 mb-6">{PLAYTEST_FORM_V3.intro}</p>
+        <p className="text-sm text-white/60 mb-6">{selectedOption.form.intro}</p>
 
         {isLoading && <p className="text-white/60">Loading saved responses…</p>}
         {isError && (
@@ -455,7 +515,7 @@ export default function PlaytestFeedbackPage() {
         )}
 
         {responses && (
-          <PlaytestFeedbackForm form={PLAYTEST_FORM_V3} responses={responses} onChange={handleChange} />
+          <PlaytestFeedbackForm form={selectedOption.form} responses={responses} onChange={handleChange} />
         )}
       </div>
     </GameLayout>
