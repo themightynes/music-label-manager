@@ -18,6 +18,16 @@ export interface WeekChangeCategories {
   /** Exec-meetings-revival PR-2: meeting/executive-interaction/delayed-effect. */
   meetings: GameChange[];
   /**
+   * Executive Delegation & Trust arc (spec §4.6): 'meeting' entries the engine
+   * resolved autonomously (`autonomous: true` — no focus slot spent). Split
+   * OUT of `meetings` into their own bucket so the WeekSummary meetings card
+   * can render player decisions first, then a separate "While you were out"
+   * grouped digest — collapsed by default (fork c DECIDED: quiet digest, not
+   * its own staged beat). Never routed to `other` (this repo's recurring
+   * swallow-bug class).
+   */
+  autonomousMeetings: GameChange[];
+  /**
    * Tour-tier1 slice 2: per-city tour performance results (type 'revenue',
    * source 'tour_performance'). Pulled OUT of the generic revenue bucket so
    * each city renders as a dedicated card in the NOTABLE stage instead of a
@@ -74,6 +84,7 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
     achievements: [],
     mood: [],
     meetings: [],
+    autonomousMeetings: [],
     tourCities: [],
     tourPlanning: [],
     awareness: [],
@@ -104,6 +115,8 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       // home) so they actually render — `other` is never rendered (this repo's
       // recurring swallow-bug class).
       categories.mood.push(change);
+    } else if (change.type === 'meeting' && change.autonomous === true) {
+      categories.autonomousMeetings.push(change);
     } else if (
       change.type === 'meeting' ||
       change.type === 'executive_interaction' ||
