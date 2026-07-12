@@ -27,7 +27,7 @@ const progression = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), 'data', 'balance', 'progression.json'), 'utf-8'),
 );
 const repSystem = progression.reputation_system;
-const FLOP_PENALTY: number = repSystem.flop_penalty;               // 3
+const FLOP_PENALTY: number = repSystem.flop_penalty;               // 8 (round-2 tuning 2026-07-12)
 const FLOP_REVENUE_RATIO: number = repSystem.flop_revenue_ratio;   // 0.10
 const FLOP_INVESTMENT_FLOOR: number = repSystem.flop_investment_floor; // 10000
 
@@ -204,7 +204,7 @@ describe('Balance-integrity slice 2 — flop penalty (ReleaseProcessor.processPl
     const { ctx } = buildReleaseCtx({
       productionBudget: 12000,
       revenue: 500,
-      reputation: 2, // 2 - 3 would be -1 → clamps to 0, delta -2
+      reputation: 2, // 2 - FLOP_PENALTY(8) would be -6 → clamps to 0, delta -2
     });
 
     await proc.processPlannedReleases(ctx, ctx.summary, undefined);
@@ -221,12 +221,16 @@ describe('Balance-integrity slice 2 — tier downgrade sanity (ProgressionProces
       getAccessTiersSync: () => progression.access_tier_system,
     };
     // playlist 'mid' threshold is 30; start just above at 31 with mid unlocked,
-    // then a −3 flop puts reputation at 28 → must downgrade to 'niche' (thr 10).
+    // then a −FLOP_PENALTY flop puts reputation at (31 - FLOP_PENALTY) → must
+    // downgrade to 'niche' (thr 10). Computed dynamically so this test tracks
+    // whatever flop_penalty is currently configured (8 as of round-2 tuning
+    // 2026-07-12, was 28 when flop_penalty was 3).
+    const postFlopReputation = 31 - FLOP_PENALTY; // 23
     const ctx: WeekContext = {
       gameState: {
         id: 'game-1',
         currentWeek: 10,
-        reputation: 31 - FLOP_PENALTY, // 28
+        reputation: postFlopReputation,
         playlistAccess: 'mid',
         pressAccess: 'blogs',
         venueAccess: 'clubs',
@@ -239,16 +243,17 @@ describe('Balance-integrity slice 2 — tier downgrade sanity (ProgressionProces
     };
 
     const midThreshold = progression.access_tier_system.playlist_access.mid.threshold;
-    expect(28).toBeLessThan(midThreshold); // guard: the crossing is real
+    expect(postFlopReputation).toBeLessThan(midThreshold); // guard: the crossing is real
 
     expect(() => {
       proc.updateAccessTiers(ctx);
     }).not.toThrow();
 
-    // Downgraded to the highest tier still cleared by rep 28 (niche, threshold 10).
-    // (updateAccessTiers reassigns to the highest tier ≤ reputation on every pass,
-    // so a reputation drop steps the tier DOWN without any special-casing — the
-    // downgrade path is reachable now that flop penalties can lower reputation.)
+    // Downgraded to the highest tier still cleared by the post-flop reputation
+    // (niche, threshold 10). (updateAccessTiers reassigns to the highest tier ≤
+    // reputation on every pass, so a reputation drop steps the tier DOWN without
+    // any special-casing — the downgrade path is reachable now that flop
+    // penalties can lower reputation.)
     expect(ctx.gameState.playlistAccess).toBe('niche');
   });
 });
