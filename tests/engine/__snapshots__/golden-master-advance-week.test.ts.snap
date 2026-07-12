@@ -272,7 +272,7 @@ Immediate attention recommended.
           "targetScope": "global",
           "triggerWeek": 6,
         },
-        "role-head_ar-autonomous-ar_quality-delayed": {
+        "role-head_ar-autonomous-auto_ar-w4-ar_quality-delayed": {
           "choiceId": "<id>",
           "effects": {},
           "meetingName": "auto_ar",
@@ -1499,7 +1499,7 @@ Immediate attention recommended.
     },
     "flags": {
       "after": {
-        "role-head_ar-autonomous-ar_safe-delayed": {
+        "role-head_ar-autonomous-auto_ar-w4-ar_safe-delayed": {
           "choiceId": "<id>",
           "effects": {
             "reputation": 1,
@@ -1885,14 +1885,14 @@ Immediate attention recommended.
     },
     "flags": {
       "after": {
-        "role-cmo-autonomous-cheap-delayed": {
+        "role-cmo-autonomous-mr_cmo-w4-cheap-delayed": {
           "choiceId": "<id>",
           "effects": {},
           "meetingName": "mr_cmo",
           "targetScope": "global",
           "triggerWeek": 6,
         },
-        "role-head_ar-autonomous-pricey-delayed": {
+        "role-head_ar-autonomous-mr_head_ar-w4-pricey-delayed": {
           "choiceId": "<id>",
           "effects": {},
           "meetingName": "mr_head_ar",
@@ -2316,7 +2316,7 @@ Immediate attention recommended.
     },
     "flags": {
       "after": {
-        "role-cco-autonomous-cco_quality-delayed": {
+        "role-cco-autonomous-auto_cco-w4-cco_quality-delayed": {
           "choiceId": "<id>",
           "effects": {
             "quality_bonus": 6,
@@ -2325,7 +2325,7 @@ Immediate attention recommended.
           "targetScope": "global",
           "triggerWeek": 6,
         },
-        "role-cmo-autonomous-cmo_blowout-delayed": {
+        "role-cmo-autonomous-auto_cmo-w4-cmo_blowout-delayed": {
           "choiceId": "<id>",
           "effects": {
             "awareness_boost": 3,
@@ -2334,7 +2334,7 @@ Immediate attention recommended.
           "targetScope": "global",
           "triggerWeek": 6,
         },
-        "role-head_ar-autonomous-ar_safe-delayed": {
+        "role-head_ar-autonomous-auto_ar-w4-ar_safe-delayed": {
           "choiceId": "<id>",
           "effects": {
             "reputation": 1,
@@ -2343,7 +2343,7 @@ Immediate attention recommended.
           "targetScope": "global",
           "triggerWeek": 6,
         },
-        "role-head_distribution-autonomous-dist_safe-delayed": {
+        "role-head_distribution-autonomous-auto_dist-w4-dist_safe-delayed": {
           "choiceId": "<id>",
           "effects": {},
           "meetingName": "auto_dist",
@@ -2779,7 +2779,7 @@ Immediate attention recommended.
     },
     "flags": {
       "after": {
-        "role-head_ar-autonomous-ar_quality-delayed": {
+        "role-head_ar-autonomous-auto_ar-w4-ar_quality-delayed": {
           "choiceId": "<id>",
           "effects": {
             "quality_bonus": 4,
@@ -3539,7 +3539,7 @@ Immediate attention recommended.
           "prompt": "Mac let a promising signing go cold while his attention was elsewhere.",
           "week": 5,
         },
-        "role-head_ar-autonomous-ar_gamble-delayed": {
+        "role-head_ar-autonomous-esc_ar_urgent-w4-ar_gamble-delayed": {
           "choiceId": "<id>",
           "effects": {
             "variance_up": 2,

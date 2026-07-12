@@ -287,7 +287,7 @@ export class GameEngine {
     await this.processExecutiveMoodDecay(summary, dbTransaction);
 
     // Check for random events
-    await this.checkForEvents(summary);
+    await this.checkForEvents(summary, dbTransaction);
 
     // Apply weekly burn (operational costs) - handled by consolidated financial calculation
     const weeklyBurnResult = await this.calculateWeeklyBurnWithBreakdown();
@@ -760,7 +760,7 @@ export class GameEngine {
       storage.getArtistsByGame(gameId, dbTransaction),
       storage.getProjectsByGame(gameId, dbTransaction),
       storage.getReleasesByGame(gameId, dbTransaction),
-      storage.getSongsByGame(gameId),
+      storage.getSongsByGame(gameId, dbTransaction),
     ]);
     const relevanceState = deriveRelevanceState({
       artists,
@@ -882,9 +882,17 @@ export class GameEngine {
         metadata.selectedArtistId = artist.id;
       }
 
+      // Delegation-arc FIX 2: the targetId must be unique per (meeting, week).
+      // ActionProcessor keys a choice's delayed-effect flag as
+      // `${targetId}-${choiceId}-delayed` (no meeting id, no week). A neglected exec
+      // autonomously resolving the SAME choice in consecutive weeks would otherwise
+      // reuse `role-${roleId}-autonomous-${choiceId}-delayed` and OVERWRITE week N's
+      // un-consumed flag (triggerWeek N+1) with week N+1's (triggerWeek N+2) — the
+      // first week's delayed payoff would silently never land. Scoping the key by
+      // meeting id + offered week makes the two banks distinct so both fire.
       const syntheticAction: GameEngineAction = {
         actionType: 'role_meeting',
-        targetId: `role-${roleId}-autonomous`,
+        targetId: `role-${roleId}-autonomous-${(meeting as any).id}-w${offeredWeek}`,
         metadata,
       };
 
@@ -1327,7 +1335,7 @@ export class GameEngine {
    * ARRIVAL week; the pending event belongs to (and is consumed during) that
    * same week.
    */
-  private async checkForEvents(summary: WeekSummary): Promise<void> {
+  private async checkForEvents(summary: WeekSummary, dbTransaction?: any): Promise<void> {
     const currentWeek = this.gameState.currentWeek || 0;
     const flags = (this.gameState.flags || {}) as Record<string, any>;
     this.gameState.flags = flags;
@@ -1362,7 +1370,29 @@ export class GameEngine {
       // keeps selectSideEvent pure/roll-agnostic and leaves the candidate pool
       // for every OTHER (non-escalation) event byte-identical to before this
       // change — only the 4 new escalation_* ids are removed.
-      const events = (await this.gameData.getAllEvents()).filter((e: any) => !e.escalation_only);
+      // Delegation-arc FIX 3(a): predetermined-target events (e.g. the migrated
+      // crisis_fired_dancers) resolve their artist-scoped effects against the
+      // highest-popularity SIGNED artist. Side events carry no `requires` gating,
+      // so with zero signed artists such an event would roll, silently no-op its
+      // artist effects, and print artist/tour fiction into an artist-less game.
+      // Exclude predetermined events from the candidate pool when no artist is
+      // signed. State-dependent pool filtering only — the weighted draw below still
+      // ALWAYS runs (stream discipline / C64), so the seeded RNG stream is
+      // byte-identical; only which ids are eligible changes, and only when the
+      // label has no signed artist. (Escalation-only ids remain filtered too.)
+      let hasSignedArtist = true;
+      try {
+        const gameArtists = this.storage?.getArtistsByGame
+          ? await this.storage.getArtistsByGame(this.gameState.id, dbTransaction)
+          : [];
+        hasSignedArtist = (gameArtists || []).some((a: any) => a?.signed);
+      } catch (err) {
+        // Defensive: if the artist read fails, keep the legacy (unfiltered) pool.
+        console.warn('[SIDE EVENT] Signed-artist read failed; predetermined events not filtered:', err);
+      }
+      const events = (await this.gameData.getAllEvents()).filter(
+        (e: any) => !e.escalation_only && (hasSignedArtist || e.target !== 'predetermined'),
+      );
       const selectionConfig = this.gameData.getSideEventsConfigSync();
       const history = (flags.side_event_history || {}) as Record<string, number>;
 
