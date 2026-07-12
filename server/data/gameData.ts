@@ -1,5 +1,6 @@
 import { gameDataLoader } from '../../shared/utils/dataLoader';
 import { applyStartingMoneyMultiplier, type DifficultyLevel } from '../../shared/utils/startingValues';
+import { DEFAULT_EXEC_DELEGATION_CONFIG, type ExecDelegationConfig } from '../../shared/utils/executiveDelegation';
 import type { 
   GameDataFiles, 
   GameArtist, 
@@ -691,6 +692,39 @@ export class ServerGameData {
       cost_multiplier_disgruntled: cfg.cost_multiplier_disgruntled ?? defaults.cost_multiplier_disgruntled,
       cost_multiplier_content: cfg.cost_multiplier_content ?? defaults.cost_multiplier_content,
       effect_multiplier_inspired: cfg.effect_multiplier_inspired ?? defaults.effect_multiplier_inspired
+    };
+  }
+
+  // Executive Delegation arc (Tier 1) — autonomous-resolution + config extraction.
+  // Lives in data/balance/progression.json under
+  // reputation_system.executive_delegation. Mirrors the shared default
+  // (DEFAULT_EXEC_DELEGATION_CONFIG, shared/utils/executiveDelegation.ts); a
+  // parity tripwire test keeps the two in lockstep. Same HARDCODED-fallback
+  // pattern as getExecMoodModifierConfigSync so behavior is identical whether or
+  // not the JSON block is present.
+  getExecDelegationConfigSync(): ExecDelegationConfig {
+    if (!this.balanceData) {
+      return DEFAULT_EXEC_DELEGATION_CONFIG;
+    }
+    const cfg = ((this.balanceData.reputation_system || {}) as Record<string, any>).executive_delegation || {};
+    const d = DEFAULT_EXEC_DELEGATION_CONFIG;
+    return {
+      loyalty_on_use: cfg.loyalty_on_use ?? d.loyalty_on_use,
+      loyalty_decay_per_week: cfg.loyalty_decay_per_week ?? d.loyalty_decay_per_week,
+      idle_weeks_before_decay: cfg.idle_weeks_before_decay ?? d.idle_weeks_before_decay,
+      mood_drift_per_week: cfg.mood_drift_per_week ?? d.mood_drift_per_week,
+      mood_default_delta: cfg.mood_default_delta ?? d.mood_default_delta,
+      loyalty_bands: {
+        loyal_above: cfg.loyalty_bands?.loyal_above ?? d.loyalty_bands.loyal_above,
+        disloyal_below: cfg.loyalty_bands?.disloyal_below ?? d.loyalty_bands.disloyal_below,
+      },
+      autonomous_risk_appetite: {
+        inspired_bias: cfg.autonomous_risk_appetite?.inspired_bias ?? d.autonomous_risk_appetite.inspired_bias,
+        disgruntled_bias: cfg.autonomous_risk_appetite?.disgruntled_bias ?? d.autonomous_risk_appetite.disgruntled_bias,
+        neutral_bias: cfg.autonomous_risk_appetite?.neutral_bias ?? d.autonomous_risk_appetite.neutral_bias,
+      },
+      auto_endorse_loyalty_gain: cfg.auto_endorse_loyalty_gain ?? d.auto_endorse_loyalty_gain,
+      neglect_loyalty_gain: cfg.neglect_loyalty_gain ?? d.neglect_loyalty_gain,
     };
   }
 

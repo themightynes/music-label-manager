@@ -31,6 +31,7 @@ import type { WeekContext } from './types';
 import type { Artist } from '../../schema';
 import type { WeekSummary, GameArtist } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
+import { DEFAULT_EXEC_DELEGATION_CONFIG } from '../../utils/executiveDelegation';
 
 export class ArtistStateProcessor {
   /**
@@ -473,6 +474,11 @@ export class ArtistStateProcessor {
       }
 
       const currentWeek = ctx.gameState.currentWeek || 1;
+      // Executive Delegation arc (Tier 1, §3.4): the idle-decay threshold, the
+      // weekly loyalty decay, and the mood-drift magnitude are config knobs now,
+      // not hardcoded literals. Defaults equal the former literals (3 / 5 / 5) so
+      // behavior is byte-identical when the JSON block is present.
+      const delegationCfg = ctx.gameData.getExecDelegationConfigSync?.() ?? DEFAULT_EXEC_DELEGATION_CONFIG;
       console.log(`[GAME-ENGINE] Processing executive decay for week ${currentWeek}, ${executives.length} executives`);
 
       for (const exec of executives) {
@@ -496,20 +502,22 @@ export class ArtistStateProcessor {
       console.log(`  - Weeks since action: ${weeksSinceAction}`);
       console.log(`  - Used this week: ${wasUsedThisWeek}`);
 
-      // Loyalty decay: -5 every week after being ignored for 3+ weeks
-      if (weeksSinceAction >= 3 && !wasUsedThisWeek) {
-        loyaltyChange = -5; // Consistent weekly penalty after 3 weeks of neglect
+      // Loyalty decay: -loyalty_decay_per_week every week after being ignored for
+      // idle_weeks_before_decay+ weeks (config; defaults -5 after 3 weeks).
+      if (weeksSinceAction >= delegationCfg.idle_weeks_before_decay && !wasUsedThisWeek) {
+        loyaltyChange = -delegationCfg.loyalty_decay_per_week;
       }
 
       // Natural mood normalization toward 50 - but NOT for executives used this week
-      // This prevents the +5/-5 conflict where used executives get cancelled out
+      // This prevents the +5/-5 conflict where used executives get cancelled out.
+      // The ±drift magnitude is mood_drift_per_week (config; default 5).
       if (!wasUsedThisWeek) {
         if (currentMood > 55) {
           // Happy executives gradually calm down
-          moodChange = -Math.min(5, currentMood - 50);
+          moodChange = -Math.min(delegationCfg.mood_drift_per_week, currentMood - 50);
         } else if (currentMood < 45) {
           // Unhappy executives gradually recover
-          moodChange = Math.min(5, 50 - currentMood);
+          moodChange = Math.min(delegationCfg.mood_drift_per_week, 50 - currentMood);
         }
       }
 
