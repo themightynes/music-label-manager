@@ -74,6 +74,12 @@ const SideEventSchema = z.object({
   // Tier 2 (PR-3): category drives isolated-seed weighted selection + cooldown.
   // Enum derived from the ONE canonical const in shared/types/gameTypes.ts.
   category: z.enum(SIDE_EVENT_CATEGORIES),
+  // Executive Delegation arc (Tier 1, §8/fork f): optional per-event targeting mode.
+  // 'predetermined' resolves the event's artist-scoped effects (artist_mood, etc.)
+  // against the highest-popularity signed artist instead of applying globally.
+  // Absent → existing global-application behavior (backward-compatible with all
+  // pre-arc events).
+  target: z.enum(['predetermined']).optional(),
   prompt: z.string(),
   choices: z.array(EventChoiceSchema)
 });

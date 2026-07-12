@@ -209,15 +209,20 @@ describe('selectWeeklyMeeting — deterministic uniform pick over the eligible p
 });
 
 describe('week-1 scenario against the real catalog (spec §1 empty-pool finding)', () => {
-  it('empty label state → exactly ceo_priorities, ar_discovery, cmo_pr_angle eligible across all 25 meetings', () => {
+  it('empty label state → exactly ceo_priorities, ar_discovery, cmo_pr_angle eligible across all 24 meetings', () => {
     const actions = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data/actions.json'), 'utf-8'));
     const catalog = (actions.weekly_actions as any[]).filter(
       (a) => a.type === 'role_meeting' && !String(a.id).startsWith('TEST_')
     );
     // Tier 2 PR-2 added 5 authored reactive meetings (25 total, up from 20) —
     // all 5 require tags that are false under empty label state, so the
-    // empty-pool eligible set below is unchanged.
-    expect(catalog).toHaveLength(25);
+    // empty-pool eligible set was unchanged. Executive Delegation arc (Tier 1,
+    // §8) migrated `ceo_crisis` out of actions.json into the side-events
+    // pipeline (data/events.json, id crisis_fired_dancers) — 24 total, down
+    // from 25. ceo_crisis required ['artist_signed', 'tour_active'], both false
+    // under empty label state, so it was never in the empty-pool eligible set
+    // either — this removal is catalog-count-only.
+    expect(catalog).toHaveLength(24);
 
     const eligible = filterEligible(catalog, emptyState()).map((m) => m.id).sort();
     expect(eligible).toEqual(['ar_discovery', 'ceo_priorities', 'cmo_pr_angle']);

@@ -514,6 +514,10 @@ export const SideEventContractSchema = z.object({
   id: z.string(),
   role_hint: z.string(),
   category: SideEventCategorySchema,
+  // Executive Delegation arc (Tier 1, §8/fork f): optional per-event targeting
+  // mode — 'predetermined' resolves artist-scoped effects against the
+  // highest-popularity signed artist. Absent -> existing global behavior.
+  target: z.enum(['predetermined']).optional(),
   prompt: z.string(),
   choices: z.array(DialogueChoiceSchema).min(1),
 }).passthrough();

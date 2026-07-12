@@ -186,6 +186,14 @@ export interface SideEvent {
   role_hint: string;
   /** Tier 2 (PR-3): weighted-selection + cooldown category. One of SIDE_EVENT_CATEGORIES. */
   category: SideEventCategory;
+  /**
+   * Executive Delegation arc (Tier 1, §8/fork f): optional per-event targeting mode.
+   * 'predetermined' resolves artist-scoped effects (artist_mood, etc.) against the
+   * highest-popularity signed artist, reusing the same resolver role-meeting
+   * predetermined targeting uses. Absent -> existing global-application behavior
+   * (backward-compatible with all pre-arc events).
+   */
+  target?: 'predetermined';
   prompt: string;
   choices: EventChoice[];
 }

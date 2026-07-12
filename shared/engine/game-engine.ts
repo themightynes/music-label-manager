@@ -1346,8 +1346,31 @@ export class GameEngine {
       return;
     }
 
+    // Executive Delegation arc (Tier 1, §8/fork f): predetermined-target support.
+    // `event.target === 'predetermined'` resolves artist-scoped effects (artist_mood
+    // etc.) against the highest-popularity signed artist, reusing the SAME resolver
+    // role_meeting's predetermined targeting uses (ActionProcessor.ts:296). Absent
+    // (undefined) → existing global-application behavior, byte-identical for all 12
+    // legacy events. Label-scoped effects (money, reputation, creative_capital, ...)
+    // are untouched by targetScope/artistId — they apply the same either way.
+    const isPredetermined = (event as any).target === 'predetermined';
+    let targetArtistId: string | undefined;
+    if (isPredetermined) {
+      const selectedArtist = await new ArtistStateProcessor().selectHighestPopularityArtist(
+        this.weekContext(summary, dbTransaction),
+      );
+      if (selectedArtist) {
+        targetArtistId = selectedArtist.id;
+        console.log(`[SIDE EVENT] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity}) for "${event.id}"`);
+      } else {
+        console.warn(`[SIDE EVENT] Predetermined targeting failed for "${event.id}": no signed artists available; artist-scoped effects apply globally.`);
+      }
+    }
+    const targetScope: string = targetArtistId ? 'predetermined' : 'global';
+
     // Apply immediate effects, queued like a weekly action (global scope — side
-    // events are label-level, so artist-scoped keys hit every signed artist).
+    // events are label-level, so artist-scoped keys hit every signed artist —
+    // unless predetermined targeting resolved a single artist above).
     const effectsImmediate: Record<string, number> = {};
     for (const [k, v] of Object.entries(choice.effects_immediate || {})) {
       if (typeof v === 'number') effectsImmediate[k] = v;
@@ -1356,8 +1379,8 @@ export class GameEngine {
       await new ActionProcessor().applyEffects(
         this.weekContext(summary, dbTransaction),
         effectsImmediate,
-        undefined,
-        'global',
+        targetArtistId,
+        targetScope,
         `side_event:${event.id}`,
         choice.id
       );
@@ -1375,6 +1398,12 @@ export class GameEngine {
         effects: effectsDelayed,
         meetingName: `side_event:${event.id}`,
         choiceId: choice.id,
+        // Preserve artist targeting for delayed effects, mirroring role-meeting
+        // delayed banking (ActionProcessor.ts:398-405) — but ONLY when predetermined
+        // targeting actually resolved an artist. Legacy/global events omit both keys
+        // entirely (rather than writing targetScope: 'global') so their delayed-flag
+        // shape stays byte-identical to pre-arc behavior (GM policy, §10.1).
+        ...(targetArtistId ? { artistId: targetArtistId, targetScope } : {}),
       };
     }
 

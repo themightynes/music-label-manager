@@ -388,6 +388,47 @@
       ]
     },
     {
+      "id": "crisis_fired_dancers",
+      "role_hint": "CEO",
+      "category": "artist_personal",
+      "target": "predetermined",
+      "prompt": "Your biggest artist just fired their last three backup dancers. The tour starts in two weeks.",
+      "choices": [
+        {
+          "id": "emergency_auditions",
+          "label": "Emergency auditions - whatever it costs",
+          "effects_immediate": {
+            "money": -8000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 3
+          }
+        },
+        {
+          "id": "local_talent",
+          "label": "Hire local dancers in each city",
+          "effects_immediate": {
+            "money": -3000
+          },
+          "effects_delayed": {
+            "variance_up": 1
+          }
+        },
+        {
+          "id": "acoustic_pivot",
+          "label": "Pivot to stripped-down acoustic shows",
+          "effects_immediate": {
+            "creative_capital": -1
+          },
+          "effects_delayed": {
+            "artist_mood": -2,
+            "press_story_flag": 1
+          }
+        }
+      ]
+    },
+    {
       "id": "content_takedown",
       "role_hint": "Content Moderator",
       "category": "copyright_issues",
