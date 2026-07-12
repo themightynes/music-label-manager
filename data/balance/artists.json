@@ -34,8 +34,8 @@
     "mood_drift": {
       "threshold_high": 55,
       "threshold_low": 45,
-      "drift_amount": 5,
-      "_note": "Volatility-economy slice 2 (knob liberation + amplification): the weekly passive mood drift toward neutral was HARDCODED in ArtistStateProcessor.calculateNaturalMoodDrift as ±3 with 55/45 bands. Liberated to config and amplified from 3 → 5 (~1.5×, rounded to the nearest sensible integer — leans into the 'mood too stable / invisible' playtest finding). Mood above threshold_high drifts down by drift_amount; below threshold_low drifts up by drift_amount; inside the band, no drift. Integer only (mood is an int column). Zero RNG."
+      "drift_amount": 8,
+      "_note": "Volatility-economy slice 2 (knob liberation + amplification): the weekly passive mood drift toward neutral was HARDCODED in ArtistStateProcessor.calculateNaturalMoodDrift as ±3 with 55/45 bands. Liberated to config and amplified from 3 → 5 (~1.5×, rounded to the nearest sensible integer — leans into the 'mood too stable / invisible' playtest finding). Mood above threshold_high drifts down by drift_amount; below threshold_low drifts up by drift_amount; inside the band, no drift. Integer only (mood is an int column). Zero RNG. Round-2 tuning (2026-07-12): drift_amount 5 -> 8, bands unchanged."
     }
   }
 }

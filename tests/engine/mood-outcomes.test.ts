@@ -8,8 +8,9 @@
  *    markets.json awareness_system.breakthrough_effects.artist_mood_bonus,
  *    default +5), applied at the breakthrough site.
  *  - Passive NATURAL DRIFT amplified (knob liberation): bands + magnitude read
- *    from artists.json artist_stats.mood_drift (drift_amount 5, ~1.5× the old
- *    hardcoded 3), fallback defaults preserve the pre-liberation ±3 / 55-45.
+ *    from artists.json artist_stats.mood_drift (drift_amount 8 as of round-2
+ *    tuning 2026-07-12, up from 5 / originally 1.5× the old hardcoded 3),
+ *    fallback defaults preserve the pre-liberation ±3 / 55-45.
  *
  * All three are arithmetic-only — zero new RNG draws.
  */
@@ -26,9 +27,9 @@ const progression = JSON.parse(fs.readFileSync(path.join(balanceDir, 'progressio
 const markets = JSON.parse(fs.readFileSync(path.join(balanceDir, 'markets.json'), 'utf-8'));
 const artistsBalance = JSON.parse(fs.readFileSync(path.join(balanceDir, 'artists.json'), 'utf-8'));
 const repSystem = progression.reputation_system;
-const FLOP_MOOD: number = repSystem.flop_artist_mood_penalty; // -8
+const FLOP_MOOD: number = repSystem.flop_artist_mood_penalty; // -12 (round-2 tuning 2026-07-12)
 const BREAKTHROUGH_MOOD: number = markets.market_formulas.awareness_system.breakthrough_effects.artist_mood_bonus; // 5
-const DRIFT_CFG = artistsBalance.artist_stats.mood_drift; // { threshold_high:55, threshold_low:45, drift_amount:5 }
+const DRIFT_CFG = artistsBalance.artist_stats.mood_drift; // { threshold_high:55, threshold_low:45, drift_amount:8 } (round-2 tuning 2026-07-12)
 
 // ---------------------------------------------------------------------------
 // FLOP MOOD PENALTY — via ReleaseProcessor.processPlannedReleases (flop gate).
@@ -80,9 +81,9 @@ describe('slice 2 — flop mood penalty', () => {
       (c) => c.type === 'mood' && c.artistId === 'artist-1' && c.description.includes('flopped'),
     );
     expect(moodEntry).toBeDefined();
-    expect(moodEntry.amount).toBe(FLOP_MOOD); // -8
+    expect(moodEntry.amount).toBe(FLOP_MOOD); // -12
     // Net accumulation: the base +5 single release-mood boost combines with the
-    // -8 flop penalty on the same artist → -3 pending in artistChanges.
+    // -12 flop penalty on the same artist → -7 pending in artistChanges.
     expect((ctx.summary.artistChanges as any)['artist-1'].mood).toBe(5 + FLOP_MOOD);
   });
 
@@ -157,22 +158,22 @@ describe('slice 2 — amplified natural mood drift', () => {
   const proc = new ArtistStateProcessor();
   const artist = { id: 'a', name: 'Drift' };
 
-  it('config drift_amount is 5 (~1.5× the old hardcoded 3)', () => {
-    expect(DRIFT_CFG.drift_amount).toBe(5);
+  it('config drift_amount is 8 (round-2 tuning 2026-07-12, up from 5)', () => {
+    expect(DRIFT_CFG.drift_amount).toBe(8);
   });
 
   it('mood above threshold_high drifts DOWN by the configured amount', () => {
     const summary = { changes: [] } as unknown as WeekSummary;
     const drift = proc.calculateNaturalMoodDrift(artist, 70, summary, DRIFT_CFG);
-    expect(drift).toBe(-DRIFT_CFG.drift_amount); // -5
+    expect(drift).toBe(-DRIFT_CFG.drift_amount); // -8
     const entry = (summary.changes as any[]).find((c) => c.source === 'weekly_drift');
-    expect(entry.amount).toBe(-5);
+    expect(entry.amount).toBe(-8);
   });
 
   it('mood below threshold_low drifts UP by the configured amount', () => {
     const summary = { changes: [] } as unknown as WeekSummary;
     const drift = proc.calculateNaturalMoodDrift(artist, 20, summary, DRIFT_CFG);
-    expect(drift).toBe(DRIFT_CFG.drift_amount); // +5
+    expect(drift).toBe(DRIFT_CFG.drift_amount); // +8
   });
 
   it('mood inside the band does not drift', () => {
