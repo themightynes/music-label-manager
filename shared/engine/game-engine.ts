@@ -32,6 +32,11 @@ import { ReleaseProcessor } from './processors/ReleaseProcessor';
 import { ArtistStateProcessor } from './processors/ArtistStateProcessor';
 import { ActionProcessor } from './processors/ActionProcessor';
 import type { WeekContext } from './processors/types';
+import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meetingSelection';
+import { deriveWeekHappenings } from './weekHappenings';
+import { generateMeetingSeed } from '../utils/seededRandom';
+import { pickAutonomousChoice } from './executiveAutonomy';
+import { DEFAULT_EXEC_DELEGATION_CONFIG } from '../utils/executiveDelegation';
 
 // Re-export WeekSummary for backward compatibility
 export type { WeekSummary } from '../types/gameTypes';
@@ -195,7 +200,17 @@ export class GameEngine {
     for (const action of meetingActions) {
       await this.processAction(action, summary, dbTransaction);
     }
-    
+
+    // Executive Delegation arc (Tier 1, §4): NEVER-LAPSE. Every offered exec-lane
+    // meeting the player did NOT spend a slot on this week is resolved
+    // autonomously by that executive, spending real money per their loyalty/mood
+    // (§4.3). Runs immediately after the player-meeting loop, BEFORE
+    // applyArtistChangesToDatabase, so autonomous artist-mood deltas flush in the
+    // same pass. Routes each pick through the SAME processRoleMeeting path as a
+    // player pick (byte-identical effect application) and marks the exec as used
+    // so it is skipped by processExecutiveMoodDecay.
+    await this.resolveAutonomousExecMeetings(summary, dbTransaction);
+
     // Apply any artist mood/loyalty changes from meetings immediately to database
     await this.applyArtistChangesToDatabase(summary, dbTransaction);
     
@@ -661,6 +676,177 @@ export class GameEngine {
       action,
       dbTransaction
     );
+  }
+
+  /**
+   * Executive Delegation arc (Tier 1, §4): autonomous resolution of every
+   * exec-lane meeting the player did NOT act this week.
+   *
+   * Fork e→A: the engine RE-DERIVES each un-acted exec's offered meeting via the
+   * SAME seeded pipeline the /api/roles route uses (deriveRelevanceState +
+   * deriveWeekHappenings + selectWeeklyMeetingWithHappenings), against the same
+   * persisted inputs — deterministic, authoritative, no client trust. The offered
+   * meeting is derived at the PLANNING week (currentWeek-1: currentWeek was already
+   * incremented at the top of advanceWeek), so the seed matches what the player saw.
+   *
+   * The chosen choice (loyalty band + mood risk tie-break, pickAutonomousChoice)
+   * is applied through the EXACT same processRoleMeeting path as a player pick, so
+   * autonomous-vs-manual effect application is byte-identical. The exec is marked
+   * used (processExecutiveActions adds it to summary.usedExecutives), which
+   * suppresses the idle loyalty-decay for the week (§4.5).
+   *
+   * RNG: choice tie-breaks use an ISOLATED seed (`${seed}-autonomous`), NEVER
+   * ctx.getRandom — the engine's pinned stream gains ZERO draws (§10.3). The
+   * re-derivation's own seeds (generateMeetingSeed / reactive tie-break) are
+   * likewise isolated.
+   */
+  private async resolveAutonomousExecMeetings(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const storage = this.storage;
+    if (!storage?.getExecutivesByGame) return;
+
+    const gameId = this.gameState.id;
+    const executives = await storage.getExecutivesByGame(gameId, dbTransaction);
+    if (!executives || executives.length === 0) return;
+
+    // Execs the player already acted this week (executiveIds added by
+    // processExecutiveActions during PHASE 1). Those are NOT auto-resolved.
+    const acted: Set<string> = (summary as any).usedExecutives ?? new Set<string>();
+
+    // Only auto-resolve if at least one exec actually needs it.
+    const candidates = executives.filter(
+      (e: any) => e?.role && e.role !== 'ceo' && !acted.has(e.id),
+    );
+    if (candidates.length === 0) return;
+
+    // Meeting pool + tuning (mirrors server/routes/executives.ts).
+    const actionsData = await this.gameData.getWeeklyActionsWithCategories();
+    const allRoleMeetings = (actionsData.actions || []).filter(
+      (a: any) => a.type === 'role_meeting' && !String(a.id).startsWith('TEST_'),
+    );
+    if (allRoleMeetings.length === 0) return;
+
+    const tuning = this.gameData.getWeeklyMeetingSelectionConfigSync();
+    const delegationCfg = this.gameData.getExecDelegationConfigSync?.() ?? DEFAULT_EXEC_DELEGATION_CONFIG;
+    const moodBands = this.gameData.getExecMoodModifierConfigSync();
+
+    // The player was offered these meetings while PLANNING the pre-increment week.
+    const offeredWeek = (this.gameState.currentWeek || 1) - 1;
+
+    // Persisted inputs the selection reads (same as the route).
+    const [artists, projects, releases, songs] = await Promise.all([
+      storage.getArtistsByGame(gameId, dbTransaction),
+      storage.getProjectsByGame(gameId, dbTransaction),
+      storage.getReleasesByGame(gameId, dbTransaction),
+      storage.getSongsByGame(gameId),
+    ]);
+    const relevanceState = deriveRelevanceState({
+      artists,
+      projects,
+      releases,
+      songs,
+      currentWeek: offeredWeek,
+      recencyWindowWeeks: tuning.recency_window_weeks,
+    });
+
+    // Reactive-meeting happenings at the offered week (same mapping as the route).
+    let happenings: any[] = [];
+    try {
+      const [moodEvents, chartEntries] = await Promise.all([
+        storage.getMoodEventsByWeekRange
+          ? storage.getMoodEventsByWeekRange(gameId, offeredWeek, offeredWeek)
+          : Promise.resolve([]),
+        storage.getChartEntriesByWeekAndGame
+          ? storage.getChartEntriesByWeekAndGame(
+              new Date(ChartService.generateChartWeekFromGameWeek(offeredWeek)),
+              gameId,
+              dbTransaction,
+            )
+          : Promise.resolve([]),
+      ]);
+      const songsById = new Map<string, any>((songs || []).map((s: any) => [s.id, s] as [string, any]));
+      happenings = deriveWeekHappenings(
+        {
+          artists,
+          releases,
+          moodEvents: (moodEvents || []).map((e: any) => ({
+            artistId: e.artistId,
+            weekOccurred: e.weekOccurred,
+            moodBefore: e.moodBefore,
+            moodAfter: e.moodAfter,
+          })),
+          chartEntries: (chartEntries || []).map((c: any) => ({
+            songId: c.songId,
+            songTitle: c.songId ? songsById.get(c.songId)?.title : undefined,
+            artistId: c.songId ? songsById.get(c.songId)?.artistId : undefined,
+            isDebut: c.isDebut,
+            isCompetitorSong: c.isCompetitorSong,
+          })),
+        },
+        offeredWeek,
+      );
+    } catch (err) {
+      console.warn('[AUTONOMOUS] Failed to derive happenings; proceeding with none:', err);
+    }
+
+    for (const exec of candidates) {
+      const roleId = exec.role as string;
+      const pool = allRoleMeetings.filter((m: any) => m.role_id === roleId);
+      if (pool.length === 0) continue;
+
+      const seed = generateMeetingSeed(gameId, offeredWeek, roleId);
+      const { meeting } = selectWeeklyMeetingWithHappenings(pool, relevanceState, seed, happenings, {
+        relevanceWeight: tuning.relevance_weight,
+        recencyWindowWeeks: tuning.recency_window_weeks,
+      });
+      // Empty eligible pool → exec sits out → nothing to resolve.
+      if (!meeting) continue;
+
+      const picked = pickAutonomousChoice({
+        choices: (meeting.choices || []) as any[],
+        loyalty: typeof exec.loyalty === 'number' ? exec.loyalty : 50,
+        mood: typeof exec.mood === 'number' ? exec.mood : 50,
+        roleId,
+        config: delegationCfg,
+        moodBands: {
+          inspired_above: moodBands.inspired_above,
+          disgruntled_below: moodBands.disgruntled_below,
+        },
+        seed: `${seed}-autonomous`,
+      });
+      if (!picked) continue;
+
+      const metadata: Record<string, any> = {
+        roleId,
+        actionId: (meeting as any).id,
+        choiceId: (picked as any).id,
+        executiveId: exec.id,
+        autonomous: true,
+      };
+
+      // user_selected meetings: autonomous resolution falls back to predetermined
+      // targeting (highest-popularity artist) — the exec picks the obvious artist
+      // in character (§4.3.4). This is the one place autonomous diverges from AUTO
+      // (which skips user_selected entirely).
+      if ((meeting as any).target_scope === 'user_selected') {
+        const artist = await new ArtistStateProcessor().selectHighestPopularityArtist(
+          this.weekContext(summary, dbTransaction),
+        );
+        if (!artist) continue; // no signed artist to target → sit out
+        metadata.selectedArtistId = artist.id;
+      }
+
+      const syntheticAction: GameEngineAction = {
+        actionType: 'role_meeting',
+        targetId: `role-${roleId}-autonomous`,
+        metadata,
+      };
+
+      await new ActionProcessor().processRoleMeeting(
+        this.weekContext(summary, dbTransaction),
+        syntheticAction,
+        dbTransaction,
+      );
+    }
   }
 
   /**

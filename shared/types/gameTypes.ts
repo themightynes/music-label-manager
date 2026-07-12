@@ -510,6 +510,11 @@ export interface GameChange {
   choiceId?: string;
   choiceLabel?: string;
   appliedEffects?: Record<string, number>;
+  // Executive Delegation arc (Tier 1, §4.6): true on a 'meeting' entry that an
+  // executive resolved AUTONOMOUSLY (the player spent no slot on them). Drives the
+  // WeekSummary "While you were out" attribution group. Optional/additive — old
+  // saves without this field remain valid; no SNAPSHOT_VERSION bump.
+  autonomous?: boolean;
   // Exec-meetings-revival PR-9 (C6/D): mood-modifier context on a 'meeting' change
   // entry, set only when a non-neutral executive-mood modifier fired for that meeting.
   // Optional/additive — old saves without these fields remain valid.
