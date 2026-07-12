@@ -521,12 +521,6 @@ export interface GameChange {
   moodBand?: 'disgruntled' | 'neutral' | 'content' | 'inspired';
   costMultiplier?: number;
   effectMultiplier?: number;
-  // Executive Delegation & Trust arc, Track D (client): additive marker on a
-  // 'meeting' change entry — the engine resolved this meeting itself because
-  // no focus slot was spent on it (spec §4.6). Drives the "While you were
-  // out" grouped digest in the WeekSummary meetings card. Optional/additive —
-  // old saves without this field remain valid (absent === player-chosen).
-  autonomous?: boolean;
   // Tour-tier1 slice 1: structured per-city fields on tour_performance revenue
   // entries and tour_planning foreshadow entries, so the client can render a
   // proper tour card without re-parsing the description string. All optional/
