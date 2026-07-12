@@ -233,6 +233,11 @@
 
 *Rank the three things most worth my time after this round. A bug, a tuning pass, a legibility fix, or "make X louder." Be specific — round one left this section blank and it was missed.*
 
+**Already queued from live play this session (rank them against your own finds, or strike them):**
+- **Buzz hidden-at-zero is ambiguous during the building window.** A release with no banked-hype seed shows NO Buzz section in its first post-release week — indistinguishable from a dead release. This misled you in real play (Glass Houses read as "never generated buzz" when it simply hadn't had its first building tick). Candidate fix: during the building weeks, always show the bar — even empty — labeled "building"; absence then genuinely means faded out.
+- **Stale label on the Admin index:** the tools list still links "Playtest Feedback (2026-07-11)" — should read Round 2 / 2026-07-12.
+- *(For context, not a bug: the campaign verdict on a fresh release is a week-one snapshot — Glass Houses flipped from "Underperformed" to "Strong Success" as week-two streams landed. If that flip felt confusing rather than dramatic, note it here.)*
+
 1. ____________________________________________________________________
 2. ____________________________________________________________________
 3. ____________________________________________________________________
