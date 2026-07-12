@@ -151,20 +151,94 @@ describe('Mandatory Side Events — advance-week gate', () => {
   it('advances with 200 when a valid resolution rides the payload: crisis clears + money applied', async () => {
     const gameId = await seedGameWithPendingCrisis({ pending: true, currentWeek: 5 });
 
-    const res = await request(app)
-      .post('/api/advance-week')
-      .send({ gameId, selectedActions: [], sideEventChoice: { eventId: EVENT_ID, choiceId: CHOICE_ID } });
+    // DETERMINISM: suppress the weekly side-event roll for this advance. With the
+    // real weekly_chance (0.20) and a random gameId (no pinned rngSeed), ~1 in 5
+    // resolve-advances would legitimately roll a NEW crisis in the same advance,
+    // and the strict pending_side_event toBeUndefined below would flake. Same
+    // pattern as the golden-master sideEventResolve fixture: isolate the
+    // resolution path from a fresh roll.
+    const eventConfigSpy = vi
+      .spyOn(serverGameData, 'getEventConfigSync')
+      .mockReturnValue({ weekly_chance: 0, cooldown_weeks: 2, max_per_year: 12 });
+    try {
+      const res = await request(app)
+        .post('/api/advance-week')
+        .send({ gameId, selectedActions: [], sideEventChoice: { eventId: EVENT_ID, choiceId: CHOICE_ID } });
 
-    expect(res.status).toBe(200);
-    expect(res.body.gameState.currentWeek).toBe(6);
+      expect(res.status).toBe(200);
+      expect(res.body.gameState.currentWeek).toBe(6);
 
-    const { eq } = await import('drizzle-orm');
-    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
-    expect(gs.currentWeek).toBe(6);
-    // Pending cleared.
-    expect((gs.flags as any).pending_side_event).toBeUndefined();
-    // Immediate +20000 applied during the advance (money = 100000 + 20000 - weekly burn).
-    expect(gs.money).toBeGreaterThan(100000);
+      const { eq } = await import('drizzle-orm');
+      const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+      expect(gs.currentWeek).toBe(6);
+      // Pending cleared.
+      expect((gs.flags as any).pending_side_event).toBeUndefined();
+      // Immediate +20000 applied during the advance (money = 100000 + 20000 - weekly burn).
+      expect(gs.money).toBeGreaterThan(100000);
+    } finally {
+      eventConfigSpy.mockRestore();
+    }
+  });
+
+  it('orphaned pending event (id deleted from data): advance proceeds, engine self-heals the flag, no effects applied', async () => {
+    // Seed a pending crisis whose eventId does not exist in data/events.json —
+    // simulates a Content Editor deletion between defer and resolve. The gate
+    // must NOT deadlock the run on a permanent 400: it lets the advance proceed
+    // (forwarding a synthetic resolution) and the engine's self-heal clears the
+    // orphaned flag without effects.
+    const ORPHANED_ID = 'deleted_via_content_editor';
+    const gameId = crypto.randomUUID();
+    await db.insert(gameStates).values({
+      id: gameId,
+      userId: TEST_USER_ID,
+      currentWeek: 5,
+      money: 100000,
+      reputation: 10,
+      creativeCapital: 5,
+      focusSlots: 3,
+      usedFocusSlots: 0,
+      venueAccess: 'clubs',
+      campaignCompleted: false,
+      flags: { pending_side_event: { eventId: ORPHANED_ID, week: 5, prompt: 'x', category: 'sync_licensing', choices: [] } },
+    });
+    await db.insert(artists).values({
+      id: crypto.randomUUID(),
+      gameId,
+      name: 'Test Artist',
+      archetype: 'Workhorse',
+      genre: 'pop',
+      mood: 50,
+      energy: 50,
+      popularity: 40,
+    });
+    await db.insert(executives).values([
+      { id: crypto.randomUUID(), gameId, role: 'head_ar', level: 1, mood: 50, loyalty: 50 },
+    ]);
+
+    // Suppress the weekly roll (determinism — see the resolve test above).
+    const eventConfigSpy = vi
+      .spyOn(serverGameData, 'getEventConfigSync')
+      .mockReturnValue({ weekly_chance: 0, cooldown_weeks: 2, max_per_year: 12 });
+    try {
+      // No sideEventChoice sent — the player CANNOT pick for a deleted event.
+      const res = await request(app)
+        .post('/api/advance-week')
+        .send({ gameId, selectedActions: [] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.gameState.currentWeek).toBe(6);
+
+      const { eq } = await import('drizzle-orm');
+      const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+      expect(gs.currentWeek).toBe(6);
+      // Orphaned flag cleared by the engine self-heal.
+      expect((gs.flags as any).pending_side_event).toBeUndefined();
+      // No side-event effects applied: money only moved by normal weekly costs
+      // (never up — the orphaned event granted nothing).
+      expect(gs.money).toBeLessThanOrEqual(100000);
+    } finally {
+      eventConfigSpy.mockRestore();
+    }
   });
 
   it('advances normally (no gate) when no crisis is pending', async () => {

@@ -146,19 +146,37 @@ export class AdvanceWeekService {
       // screen. A live campaign at week 52 (completed still false) IS gated: the
       // player resolves the crisis, then the advance completes the campaign.
       const campaignAlreadyEnded = (gameState.currentWeek ?? 1) >= 52 && !!gameState.campaignCompleted;
+      // The resolution actually forwarded to the engine. Normally the client's
+      // sideEventChoice; replaced by a synthetic one in the orphaned-event case
+      // below so the engine's self-heal path can clear the flag.
+      let effectiveSideEventChoice: { eventId: string; choiceId: string } | null = sideEventChoice ?? null;
       if (mandatorySideEvents && pendingCrisis?.eventId && !campaignAlreadyEnded) {
-        const provided = sideEventChoice ?? null;
-        let valid = false;
-        if (provided && provided.eventId === pendingCrisis.eventId) {
-          const crisisEvent = await this.serverGameData.getEventById(pendingCrisis.eventId);
-          valid = !!crisisEvent?.choices.some((c) => c.id === provided.choiceId);
-        }
-        if (!valid) {
-          throw new AdvanceWeekConflictError(400, {
-            error: 'PENDING_SIDE_EVENT',
-            message: 'A crisis is on your desk — choose how to handle it before advancing the week.',
-            eventId: pendingCrisis.eventId,
-          });
+        const crisisEvent = await this.serverGameData.getEventById(pendingCrisis.eventId);
+        if (!crisisEvent) {
+          // ORPHANED EVENT: the pending eventId no longer exists in data (e.g.
+          // deleted via the Content Editor between defer and resolve). Gating
+          // here would 400 EVERY advance forever — the engine's self-heal
+          // ("clearing without effects", processPendingSideEventResolution)
+          // would be unreachable because this gate throws first. Instead, let
+          // the advance proceed and forward a synthetic resolution matching the
+          // pending eventId: the engine finds no such event and clears the flag
+          // with no effects (its existing self-heal branch).
+          console.warn(`[SIDE EVENT] Pending event "${pendingCrisis.eventId}" no longer exists in data; advancing to let the engine self-heal.`);
+          effectiveSideEventChoice = { eventId: pendingCrisis.eventId, choiceId: '__orphaned__' };
+        } else {
+          const provided = sideEventChoice ?? null;
+          const valid = !!(
+            provided &&
+            provided.eventId === pendingCrisis.eventId &&
+            crisisEvent.choices.some((c) => c.id === provided.choiceId)
+          );
+          if (!valid) {
+            throw new AdvanceWeekConflictError(400, {
+              error: 'PENDING_SIDE_EVENT',
+              message: 'A crisis is on your desk — choose how to handle it before advancing the week.',
+              eventId: pendingCrisis.eventId,
+            });
+          }
         }
       }
 
@@ -335,8 +353,10 @@ export class AdvanceWeekService {
           weekResult = await gameEngine.advanceWeek(formattedActions, tx, {
             // Mandatory Side Events: carry the validated crisis resolution into the
             // engine so its effects apply DURING this advance (queued like a weekly
-            // action). The gate above already verified it against the pending flag.
-            sideEventChoice: sideEventChoice ?? null,
+            // action). The gate above already verified it against the pending flag
+            // (or substituted a synthetic one for an orphaned event so the engine's
+            // self-heal can clear the stale flag).
+            sideEventChoice: effectiveSideEventChoice,
           }); // Pass transaction context
           console.log('[DEBUG] Week advancement completed successfully');
           console.log('[DEBUG] WeekResult received from GameEngine:', {
