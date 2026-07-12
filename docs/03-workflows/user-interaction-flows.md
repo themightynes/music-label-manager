@@ -136,6 +136,8 @@ Player clicks   Check ≥1       GameEngine         Database      Weekly Results
 
 The **"Advance Week"** button in `GameHeader` calls the `advanceWeek()` store action, which POSTs to `/api/advance-week`, reloads state, and writes an autosave ("Autosave - Week N").
 
+**Mandatory side events ("Crisis on the Desk", #162):** a rolled side event does not resolve the same week it fires — it is **deferred one week** as a pending crisis surfaced on a crisis card, and it **occupies one focus slot** (the effective slot ceiling drops by one while a crisis is pending). When the mandatory-side-events kill-switch is ON, the server **blocks the next advance** until the player resolves the crisis: an advance without a valid `sideEventChoice` for the pending event is rejected with a 400 (`PENDING_SIDE_EVENT`) from inside the advance-week transaction. An already-ended campaign and an orphaned (deleted-from-data) pending event are exempt so the gate can never deadlock the game.
+
 **Processing Order Workflow** (server-authoritative — see [Game System Workflows](./game-system-workflows.md) for the full ordered list):
 ```
 1. Apply Action Effects → 2. Process Projects → 3. Calculate Revenue → 4. Update Relations → 5. Check Progression

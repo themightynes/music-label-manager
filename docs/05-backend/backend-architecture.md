@@ -80,6 +80,9 @@ DELETE /api/game/:gameId          // Delete game (orphaned cleanup)
 GET    /api/games                 // List all user's games (newest first)
 POST   /api/advance-week          // Process weekly turn
 
+// Config (read-only, auth-gated)
+GET    /api/config/side-events    // { mandatory } — is the mandatory-side-events kill-switch ON (data/balance/events.json mandatory_side_events.enabled); fails toward mandatory:true
+
 // Entity management
 POST   /api/game/:gameId/artists  // Sign new artist
 POST   /api/game/:gameId/projects // Create new project
@@ -96,6 +99,8 @@ GET    /api/admin/actions-config         // Content Editor: read data/actions.js
 POST   /api/admin/actions-config         // Content Editor: save meetings (validate → backup → write → cache-clear → changelog)
 GET    /api/admin/events-config          // Content Editor: read data/events.json
 POST   /api/admin/events-config          // Content Editor: save side events (same pipeline; both POSTs append id-level diffs to data/content-changelog.json)
+GET    /api/admin/playtest-feedback      // Read recorded playtest-feedback responses (formId-allowlist versioned; round 2 = form V2)
+POST   /api/admin/playtest-feedback      // Record a playtest-feedback response (formId-allowlist versioned)
 
 // Authentication (Clerk-issued JWT verified per request; no local auth endpoints)
 GET    /api/me                    // Current user
@@ -550,6 +555,8 @@ router.post('/api/advance-week', requireClerkUser, requireGameOwner, async (req,
 ```
 
 Week advancement runs inside a single database transaction with `SELECT ... FOR UPDATE` row locking on the game state (the "D6" hardening pass), so concurrent advance-week calls for the same game serialize instead of racing each other; a failure at any point rolls back the whole turn rather than leaving partial state.
+
+**Pending-crisis advance gate (mandatory side events, PR #162):** inside that same FOR UPDATE lock, `advanceWeekService` enforces a precondition beyond Zod validation — when the mandatory-side-events kill-switch is ON (`data/balance/events.json` `mandatory_side_events.enabled`, read via `getMandatorySideEventsConfigSync`) and `gameState.flags.pending_side_event` holds an unresolved deferred crisis ("Crisis on the Desk"), the request MUST carry a matching, valid `sideEventChoice` (right `eventId`, a real `choiceId` on that event); otherwise the service throws `AdvanceWeekConflictError(400, PENDING_SIDE_EVENT)` — mapped to a 400 by `gameLoop.ts`'s existing catch, mirroring the C58 stale-week guard. Two exemptions keep the gate from bricking play: an already-ended campaign (week ≥ 52 + completed) bypasses it so the end-state early-return can't deadlock, and an orphaned `pending_side_event.eventId` no longer present in data falls through to the engine's self-heal (which clears the stale flag) instead of 400-ing every advance forever.
 
 ---
 
