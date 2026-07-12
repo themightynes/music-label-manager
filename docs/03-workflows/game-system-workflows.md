@@ -66,7 +66,7 @@ The engine executes these steps in order each week (`GameEngine.advanceWeek`, `s
 6. Process lead singles and planned releases
 7. Update weekly charts; advance project stages
 8. Apply delayed effects; weekly artist mood & popularity changes; executive mood/loyalty decay
-9. Roll random events
+9. Roll random events (in mandatory-side-events mode the roll is **deferred** — it lands on `flags.pending_side_event` as a crisis to resolve next week rather than surfacing an interactive beat this week; one crisis at a time)
 10. Apply weekly burn (base operations + artist salaries) and executive salaries
 11. Evaluate progression gates; unlock access tiers and producer tiers
 12. Finalize financials, queue emails, run the campaign-completion check (week 52), and commit the single money update
