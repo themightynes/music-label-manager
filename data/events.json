@@ -469,11 +469,11 @@
       "role_hint": "Mac (Head of A&R)",
       "category": "industry_drama",
       "escalation_only": true,
-      "prompt": "Mac let a promising signing go cold while his attention was elsewhere — the artist quietly walked to a rival label.",
+      "prompt": "Mac trusted his gut on your most promising signing — no follow-through, no calls — until the artist quietly walked to a rival label. He's already replaying every conversation he didn't have.",
       "choices": [
         {
           "id": "chase_rebound",
-          "label": "Chase an aggressive rebound signing",
+          "label": "Chase an aggressive rebound signing, no time to second-guess",
           "effects_immediate": {
             "money": -6000
           },
@@ -483,7 +483,7 @@
         },
         {
           "id": "eat_the_loss",
-          "label": "Eat the loss, protect the budget",
+          "label": "Eat the loss and protect the budget",
           "effects_immediate": {
             "money": -1500
           },
@@ -493,7 +493,7 @@
         },
         {
           "id": "own_the_miss",
-          "label": "Own the miss publicly",
+          "label": "Own the miss, publicly and on record",
           "effects_immediate": {
             "creative_capital": -1
           },
@@ -509,11 +509,11 @@
       "role_hint": "Sam (CMO)",
       "category": "industry_drama",
       "escalation_only": true,
-      "prompt": "Sam let the press cycle slip while unsupervised — a rival act is the story this week, not yours.",
+      "prompt": "Sam left your press cycle unsupervised, and a rival act took the story that should've been yours this week. His read: the market moved, not him.",
       "choices": [
         {
           "id": "buy_back_narrative",
-          "label": "Buy back the narrative with a blitz",
+          "label": "Buy back the narrative with a full-court blitz",
           "effects_immediate": {
             "money": -9000
           },
@@ -523,7 +523,7 @@
         },
         {
           "id": "quiet_reset",
-          "label": "Let the cycle pass quietly",
+          "label": "Let the news cycle pass quietly",
           "effects_immediate": {
             "money": -1000
           },
@@ -547,7 +547,7 @@
       "role_hint": "Dante (CCO)",
       "category": "artist_personal",
       "escalation_only": true,
-      "prompt": "Dante's perfectionism finally broke an artist's patience — they walked out of the session unattended.",
+      "prompt": "Left unattended, Dante chased the sound past your artist's patience — they walked out mid-session while he was already reaching for the next take.",
       "choices": [
         {
           "id": "emergency_session",
@@ -572,7 +572,7 @@
         },
         {
           "id": "cut_losses",
-          "label": "Cut the session short, cut losses",
+          "label": "Cut the session short, cut your losses",
           "effects_immediate": {
             "money": -1500
           },
@@ -587,11 +587,11 @@
       "role_hint": "Pat (Head of Distribution)",
       "category": "business_opportunities",
       "escalation_only": true,
-      "prompt": "Pat's guaranteed-safe distribution deal fell through at the signature line, unmonitored until now.",
+      "prompt": "Pat's guaranteed-safe distribution deal for your release — the one with no failure modes on paper — collapsed at the signature line, unmonitored until now.",
       "choices": [
         {
           "id": "scramble_new_deal",
-          "label": "Scramble for a new deal now",
+          "label": "Scramble for a replacement deal now",
           "effects_immediate": {
             "money": -5000
           },
@@ -612,7 +612,7 @@
         },
         {
           "id": "absorb_quietly",
-          "label": "Absorb the loss quietly, protect relationships",
+          "label": "Absorb the loss quietly, protect the relationship",
           "effects_immediate": {
             "money": -500
           },
