@@ -725,6 +725,10 @@ export class ServerGameData {
       },
       auto_endorse_loyalty_gain: cfg.auto_endorse_loyalty_gain ?? d.auto_endorse_loyalty_gain,
       neglect_loyalty_gain: cfg.neglect_loyalty_gain ?? d.neglect_loyalty_gain,
+      escalation: {
+        loyalty_ceiling: cfg.escalation?.loyalty_ceiling ?? d.escalation.loyalty_ceiling,
+        enabled: cfg.escalation?.enabled ?? d.escalation.enabled,
+      },
     };
   }
 

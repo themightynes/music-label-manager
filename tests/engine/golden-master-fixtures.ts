@@ -329,6 +329,10 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
         },
         auto_endorse_loyalty_gain: cfg.auto_endorse_loyalty_gain ?? 5,
         neglect_loyalty_gain: cfg.neglect_loyalty_gain ?? 0,
+        escalation: {
+          loyalty_ceiling: cfg.escalation?.loyalty_ceiling ?? 40,
+          enabled: cfg.escalation?.enabled ?? true,
+        },
       };
     },
     getWeeklyMeetingSelectionConfigSync: () => ({
@@ -340,6 +344,7 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
     getAllExecutives: async () => [],
     getAllRoles: async () => [],
     getAllEvents: async () => [],
+    getEventById: async (_id: string) => undefined,
 
     // --- signable-artist catalog (A&R discovery pool) ---
     getAllArtists: async () => catalogArtists,

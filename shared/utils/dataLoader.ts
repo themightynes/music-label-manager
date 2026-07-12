@@ -80,6 +80,10 @@ const SideEventSchema = z.object({
   // Absent → existing global-application behavior (backward-compatible with all
   // pre-arc events).
   target: z.enum(['predetermined']).optional(),
+  // Executive Delegation arc (Tier 2, §5.3): true only for the escalation-only
+  // events (injected by the escalation mechanism, never rolled). Absent/false
+  // for every pre-arc event. See shared/types/gameTypes.ts SideEvent doc.
+  escalation_only: z.boolean().optional(),
   prompt: z.string(),
   choices: z.array(EventChoiceSchema)
 });

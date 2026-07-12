@@ -194,6 +194,16 @@ export interface SideEvent {
    * (backward-compatible with all pre-arc events).
    */
   target?: 'predetermined';
+  /**
+   * Executive Delegation arc (Tier 2, §5.3): marks an event as INJECTED ONLY by
+   * escalation (shared/utils/executiveDelegation.ts ESCALATION_EVENT_BY_ROLE) —
+   * it must never enter the weekly weighted side-event roll. Absent/false for
+   * every pre-arc event. Enforced by a data-lint rule
+   * (tests/engine/data-lint-escalation-events.test.ts): every `escalation_*`
+   * event id carries this flag, and no non-escalation event does. Filtered out
+   * of the roll's candidate pool in game-engine.ts checkForEvents.
+   */
+  escalation_only?: boolean;
   prompt: string;
   choices: EventChoice[];
 }

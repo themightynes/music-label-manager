@@ -24,6 +24,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
 import { GameEngine } from '@shared/engine/game-engine';
+import { ESCALATION_EVENT_BY_ROLE } from '@shared/utils/executiveDelegation';
 import * as schema from '@shared/schema';
 import { DatabaseStorage } from '../../server/storage';
 import { createTestDatabase, clearDatabase, setupDatabase } from '../helpers/test-db';
@@ -68,6 +69,12 @@ const IDS = {
   autoEndorse: '00000000-0000-4000-8000-000000000013',
   neglect: '00000000-0000-4000-8000-000000000014',
   ceoLapse: '00000000-0000-4000-8000-000000000015',
+  // Escalation arc additive fixtures (Tier 2, 2026-07-12).
+  escalationWeek: '00000000-0000-4000-8000-000000000016',
+  escalationLoyalNoFire: '00000000-0000-4000-8000-000000000017',
+  escalationNonUrgentNoFire: '00000000-0000-4000-8000-000000000018',
+  escalationAlreadyPending: '00000000-0000-4000-8000-000000000019',
+  escalationKillSwitch: '00000000-0000-4000-8000-00000000001a',
 };
 
 // A deterministic single-event catalog + config decorator forcing a side-event
@@ -106,6 +113,69 @@ const MOOD_RISK_POOL: any[] = ['head_ar', 'cmo'].map((role) => ({
     { id: 'pricey', label: 'Pricey', effects_immediate: { money: -9000 }, effects_delayed: {} },
   ],
 }));
+
+// Escalation arc (Tier 2, §10.2/§10.4): the real events.json escalation event
+// for head_ar (ESCALATION_EVENT_BY_ROLE is the shared role→eventId constant the
+// engine itself reads — imported, not re-literaled, so the test stays coupled
+// to the real mapping). A minimal single-choice stand-in mirroring the real
+// event's shape (id/prompt/category/choices) is enough to pin the payload; the
+// authored content itself is covered by data-lint + JSON validation, not here.
+const ESCALATION_TEST_EVENT = {
+  id: ESCALATION_EVENT_BY_ROLE.head_ar,
+  role_hint: 'Mac (Head of A&R)',
+  category: 'industry_drama' as const,
+  escalation_only: true,
+  prompt: 'Mac let a promising signing go cold while his attention was elsewhere.',
+  choices: [
+    { id: 'chase_rebound', label: 'Chase an aggressive rebound signing', effects_immediate: { money: -6000 }, effects_delayed: { variance_up: 1 } },
+    { id: 'eat_the_loss', label: 'Eat the loss, protect the budget', effects_immediate: { money: -1500 }, effects_delayed: { reputation: -1 } },
+    { id: 'own_the_miss', label: 'Own the miss publicly', effects_immediate: { creative_capital: -1 }, effects_delayed: { reputation: 1, press_story_flag: 1 } },
+  ],
+};
+
+/**
+ * A head_ar meeting pool with ONE meeting carrying `reactive_trigger:
+ * 'recent_signing'` — matched when the seeded artist's `signedWeek` equals
+ * `offeredWeek - 1` (deriveWeekHappenings' player-action-class window;
+ * `offeredWeek = (post-increment currentWeek) - 1` = the seedGame week). So a
+ * seedGame week of 4 needs `signedWeek: 3` to land the reactive match. This is
+ * what makes `reactiveHappening` non-null so the escalation trigger (§5.1) is
+ * actually exercised — every OTHER autonomous-* fixture's pool has NO
+ * reactive_trigger, so this is the only scenario class that can fire escalation.
+ */
+const ESCALATION_REACTIVE_POOL: any[] = [
+  {
+    type: 'role_meeting', id: 'esc_ar_urgent', role_id: 'head_ar', name: 'Urgent A&R call',
+    target_scope: 'global', requires: [], reactive_trigger: 'recent_signing', choices: [
+      { id: 'ar_safe', label: 'Play it safe', effects_immediate: {}, effects_delayed: { reputation: 1 } },
+      { id: 'ar_gamble', label: 'Chase the wild card', effects_immediate: {}, effects_delayed: { variance_up: 2 } },
+    ],
+  },
+];
+
+/**
+ * The shared `normalize()` helper (golden-master-fixtures.ts) blanket-replaces
+ * ANY object key literally named `id` with the placeholder `'<id>'` (it does not
+ * distinguish a UUID `id` from an authored content id like a choice's `'accept'`)
+ * — so an event's `choices[].id` comes back normalized in a `stateDelta`. This
+ * mirrors that one rule (nothing else) so a manual `.toEqual()` against a raw
+ * (un-normalized) expected event payload matches what `stateDelta` actually
+ * produces.
+ */
+function withNormalizedChoiceIds(choices: any[]): any[] {
+  return choices.map(({ id, ...rest }) => ({ id: '<id>', ...rest }));
+}
+
+/** Decorates gameData with the escalation event catalog + mandatory config. */
+function withEscalationEvents(gd: any, overrides: Record<string, any> = {}): any {
+  return {
+    ...gd,
+    getMandatorySideEventsConfigSync: () => ({ enabled: true }),
+    getAllEvents: async () => [ESCALATION_TEST_EVENT],
+    getEventById: async (id: string) => (id === ESCALATION_TEST_EVENT.id ? ESCALATION_TEST_EVENT : undefined),
+    ...overrides,
+  };
+}
 
 let db: TestDb;
 
@@ -847,5 +917,134 @@ describe('GameEngine.advanceWeek — golden master', () => {
       .map((c: any) => c.roleId);
     expect(autoRoles).toEqual(['head_ar']); // ceo NEVER auto-resolves
     expect(snap).toMatchSnapshot();
+  });
+
+  // -------------------------------------------------------------------------
+  // Escalation arc (Tier 2, §10.2/§10.4) — an urgent (reactive) meeting
+  // self-resolved by a below-ceiling-loyalty exec escalates into a mandatory
+  // crisis for NEXT week. ESCALATION_REACTIVE_POOL + a signedWeek match on the
+  // seeded artist are what make the meeting URGENT (reactiveHappening non-null);
+  // every OTHER fixture's pool has no reactive_trigger, so escalation cannot
+  // fire there — proven by the double-run leaving them byte-identical.
+  // -------------------------------------------------------------------------
+
+  it('escalation-week: an urgent meeting self-resolved by a loyalty<40 exec pins pending_side_event', async () => {
+    await seedGame(IDS.escalationWeek, 4);
+    // signedWeek === 3 (offeredWeek 4 minus the player-action window's 1-week lag) makes 'recent_signing' fire.
+    await seedArtist(IDS.escalationWeek, { name: 'Escalation Act', signedWeek: 3 });
+    await seedExecutive(IDS.escalationWeek, 'head_ar', { loyalty: 20, mood: 50 }); // disloyal, < ceiling 40
+
+    const snap = await runScenario(
+      IDS.escalationWeek,
+      { id: IDS.escalationWeek, currentWeek: 4 },
+      [],
+      [],
+      { decorateGameData: (gd) => withEscalationEvents(withAutonomousPool(gd, ESCALATION_REACTIVE_POOL)) },
+    );
+
+    expect(snap.stateDelta.flags?.after?.pending_side_event).toEqual({
+      eventId: ESCALATION_TEST_EVENT.id,
+      week: 5, // arrival week (currentWeek incremented 4 -> 5) — same deferral as a rolled crisis
+      prompt: ESCALATION_TEST_EVENT.prompt,
+      category: ESCALATION_TEST_EVENT.category,
+      choices: withNormalizedChoiceIds(ESCALATION_TEST_EVENT.choices),
+    });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('escalation: a LOYAL exec (loyalty >= ceiling) self-resolving the same urgent meeting does NOT escalate', async () => {
+    await seedGame(IDS.escalationLoyalNoFire, 4);
+    await seedArtist(IDS.escalationLoyalNoFire, { name: 'Loyal Act', signedWeek: 3 });
+    await seedExecutive(IDS.escalationLoyalNoFire, 'head_ar', { loyalty: 75, mood: 50 }); // loyal, >= ceiling 40
+
+    const snap = await runScenario(
+      IDS.escalationLoyalNoFire,
+      { id: IDS.escalationLoyalNoFire, currentWeek: 4 },
+      [],
+      [],
+      { decorateGameData: (gd) => withEscalationEvents(withAutonomousPool(gd, ESCALATION_REACTIVE_POOL)) },
+    );
+
+    expect(snap.stateDelta.flags?.after?.pending_side_event).toBeUndefined();
+  });
+
+  it('escalation: a NON-URGENT meeting (no matching happening) self-resolved by a disloyal exec does NOT escalate', async () => {
+    await seedGame(IDS.escalationNonUrgentNoFire, 4);
+    // NO signedWeek match this time — the meeting falls back to the regular
+    // (non-reactive) pool, so reactiveHappening is null even though it's the
+    // same pool/meeting shape.
+    await seedArtist(IDS.escalationNonUrgentNoFire, { name: 'Quiet Act' });
+    await seedExecutive(IDS.escalationNonUrgentNoFire, 'head_ar', { loyalty: 20, mood: 50 }); // disloyal
+
+    const snap = await runScenario(
+      IDS.escalationNonUrgentNoFire,
+      { id: IDS.escalationNonUrgentNoFire, currentWeek: 4 },
+      [],
+      [],
+      { decorateGameData: (gd) => withEscalationEvents(withAutonomousPool(gd, ESCALATION_REACTIVE_POOL)) },
+    );
+
+    expect(snap.stateDelta.flags?.after?.pending_side_event).toBeUndefined();
+  });
+
+  it('escalation: discarded when a crisis is already pending (one-crisis-at-a-time, first-set wins)', async () => {
+    const alreadyPending = {
+      eventId: 'gm_prior_crisis',
+      week: 3,
+      prompt: 'A prior, still-unresolved crisis.',
+      category: 'business_opportunities',
+      choices: [{ id: 'x', label: 'x', effects_immediate: {}, effects_delayed: {} }],
+    };
+    await seedGame(IDS.escalationAlreadyPending, 4, { flags: { pending_side_event: alreadyPending } });
+    await seedArtist(IDS.escalationAlreadyPending, { name: 'Pending Act', signedWeek: 3 });
+    await seedExecutive(IDS.escalationAlreadyPending, 'head_ar', { loyalty: 20, mood: 50 });
+
+    const snap = await runScenario(
+      IDS.escalationAlreadyPending,
+      { id: IDS.escalationAlreadyPending, currentWeek: 4, flags: { pending_side_event: alreadyPending } },
+      [],
+      [],
+      {
+        decorateGameData: (gd) => withEscalationEvents(withAutonomousPool(gd, ESCALATION_REACTIVE_POOL)),
+        // No sideEventChoice supplied → processPendingSideEventResolution no-ops
+        // (defensive: production gates the advance on resolving it first), so the
+        // prior crisis is still pending when applyEscalation runs.
+      },
+    );
+
+    // The PRIOR crisis survives untouched — the escalation was discarded, not
+    // merged or overwritten.
+    const normalizedAlreadyPending = { ...alreadyPending, choices: withNormalizedChoiceIds(alreadyPending.choices) };
+    expect(snap.stateDelta.flags?.after?.pending_side_event ?? normalizedAlreadyPending).toEqual(
+      normalizedAlreadyPending,
+    );
+  });
+
+  it('escalation: the enabled:false kill-switch suppresses escalation even when otherwise qualifying', async () => {
+    await seedGame(IDS.escalationKillSwitch, 4);
+    await seedArtist(IDS.escalationKillSwitch, { name: 'Killswitch Act', signedWeek: 3 });
+    await seedExecutive(IDS.escalationKillSwitch, 'head_ar', { loyalty: 20, mood: 50 });
+
+    const snap = await runScenario(
+      IDS.escalationKillSwitch,
+      { id: IDS.escalationKillSwitch, currentWeek: 4 },
+      [],
+      [],
+      {
+        decorateGameData: (gd) => {
+          const withPool = withAutonomousPool(gd, ESCALATION_REACTIVE_POOL);
+          const withEvents = withEscalationEvents(withPool);
+          return {
+            ...withEvents,
+            getExecDelegationConfigSync: () => ({
+              ...withPool.getExecDelegationConfigSync(),
+              escalation: { loyalty_ceiling: 40, enabled: false },
+            }),
+          };
+        },
+      },
+    );
+
+    expect(snap.stateDelta.flags?.after?.pending_side_event).toBeUndefined();
   });
 });

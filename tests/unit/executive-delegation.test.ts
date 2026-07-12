@@ -30,6 +30,7 @@ describe('DEFAULT_EXEC_DELEGATION_CONFIG matches the locked plan values (§3.4)'
       },
       auto_endorse_loyalty_gain: 5,
       neglect_loyalty_gain: 0,
+      escalation: { loyalty_ceiling: 40, enabled: true },
     });
   });
 });

@@ -37,6 +37,20 @@ export interface AutonomousRiskAppetiteConfig {
   neutral_bias: RiskAppetiteBias;
 }
 
+/**
+ * Escalation config (Tier 2, spec §5.1, fork a → a1: loyalty-gated single strike).
+ * An urgent (reactive) meeting self-resolved by an executive whose PRE-UPDATE
+ * loyalty is below `loyalty_ceiling` escalates into a mandatory crisis side event
+ * (`flags.pending_side_event`) for the FOLLOWING week — the exec let the crisis
+ * blow up instead of handling it.
+ */
+export interface EscalationConfig {
+  /** Urgent meeting self-resolved below this loyalty => escalates. */
+  loyalty_ceiling: number;
+  /** Kill-switch, mirrors mandatory_side_events.enabled. */
+  enabled: boolean;
+}
+
 export interface ExecDelegationConfig {
   /** +loyalty granted on any attended (manual/AUTO-endorsed) meeting. */
   loyalty_on_use: number;
@@ -54,7 +68,23 @@ export interface ExecDelegationConfig {
   auto_endorse_loyalty_gain: number;
   /** +loyalty on a neglected (self-served) meeting — a self-serve is not endorsement. */
   neglect_loyalty_gain: number;
+  /** Tier 2 (§5.1): urgent-meeting-ignored escalation into a mandatory crisis. */
+  escalation: EscalationConfig;
 }
+
+/**
+ * Role → escalation-event-id mapping (spec §5.6). A shared constant rather than
+ * scattered literals — the engine reads it to resolve WHICH escalation event to
+ * inject for a given exec's role. One event per core-four archetype; `ceo` has
+ * no exec row and is never a candidate for autonomous resolution (the CEO lane
+ * genuinely lapses, §2), so it is intentionally absent here.
+ */
+export const ESCALATION_EVENT_BY_ROLE: Readonly<Record<string, string>> = {
+  head_ar: 'escalation_ar_botched_signing',
+  cmo: 'escalation_cmo_narrative_lost',
+  cco: 'escalation_cco_artist_walkout',
+  head_distribution: 'escalation_dist_deal_collapsed',
+};
 
 /**
  * Default knobs — mirror data/balance/progression.json
@@ -78,6 +108,10 @@ export const DEFAULT_EXEC_DELEGATION_CONFIG: ExecDelegationConfig = {
   },
   auto_endorse_loyalty_gain: 5,
   neglect_loyalty_gain: 0,
+  escalation: {
+    loyalty_ceiling: 40,
+    enabled: true,
+  },
 };
 
 /**
