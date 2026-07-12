@@ -193,6 +193,13 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "middleware": [
       "requireClerkUser",
     ],
+    "path": "/api/config/side-events",
+  },
+  {
+    "method": "GET",
+    "middleware": [
+      "requireClerkUser",
+    ],
     "path": "/api/debug/data-load",
   },
   {

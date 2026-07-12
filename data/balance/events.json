@@ -1,9 +1,12 @@
 {
+  "mandatory_side_events": {
+    "enabled": true
+  },
   "side_events": {
     "weekly_chance": 0.20,
     "max_events_per_week": 1,
     "event_cooldown": 2,
-    
+
     "event_weights": {
       "sync_licensing": 0.15,
       "copyright_issues": 0.10,

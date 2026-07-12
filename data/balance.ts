@@ -66,7 +66,10 @@ const balance = {
   
   // Side events
   side_events: events.side_events,
-  
+
+  // Mandatory side events kill-switch ("Crisis on the Desk")
+  mandatory_side_events: events.mandatory_side_events,
+
   // Progression thresholds
   progression_thresholds: progression.progression_thresholds,
   

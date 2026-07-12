@@ -4,6 +4,7 @@ import { Zap } from 'lucide-react';
 import { SelectionSummary } from '../components/SelectionSummary';
 import { ExecutiveMeetings } from '../components/executive-meetings/ExecutiveMeetings';
 import { useGameContext } from '@/contexts/GameContext';
+import { useCrisisSideEvent } from '@/hooks/useCrisisSideEvent';
 import GameLayout from '@/layouts/GameLayout';
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
@@ -71,7 +72,12 @@ export default function ExecutiveSuitePage({
   if (!gameState || !gameId) return null;
 
   const totalSlots = gameState.focusSlots || 3;
-  const usedSlots = gameState.usedFocusSlots || 0;
+  // Mandatory Side Events ("Crisis on the Desk"): a pending crisis eats one slot.
+  // Folding it into `usedSlots` threads through the HUD pips AND the focusSlots
+  // prop fed to ExecutiveMeetings — so SYNC_SLOTS → the machine's slotsRemaining
+  // (manual gating) and selectTopOptions (AUTO) both propose one fewer action.
+  const crisis = useCrisisSideEvent();
+  const usedSlots = (gameState.usedFocusSlots || 0) + crisis.crisisSlotUsed;
   const slotsLeft = totalSlots - usedSlots;
   const creativeCapital = gameState.creativeCapital ?? 0;
   const gridHint = slotsLeft > 0

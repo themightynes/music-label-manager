@@ -56,7 +56,36 @@ const IDS = {
   lowMoodRecording: '00000000-0000-4000-8000-00000000000c',
   underEnergyTour: '00000000-0000-4000-8000-00000000000d',
   saturatedTour: '00000000-0000-4000-8000-00000000000e',
+  // Mandatory Side Events additive fixtures ("Crisis on the Desk", 2026-07-11).
+  sideEventDefer: '00000000-0000-4000-8000-00000000000f',
+  sideEventResolve: '00000000-0000-4000-8000-000000000010',
 };
+
+// A deterministic single-event catalog + config decorator forcing a side-event
+// hit (weekly_chance 1) in mandatory mode. Used only by the two additive
+// side-event fixtures below — every other scenario keeps weekly_chance 0 (no
+// event), so their snapshots are untouched.
+const CRISIS_EVENT = {
+  id: 'gm_crisis',
+  role_hint: 'x',
+  category: 'business_opportunities' as const,
+  prompt: 'A distributor offers a lucrative but risky catalog deal.',
+  choices: [
+    { id: 'accept', label: 'Take the deal', effects_immediate: { money: 12000 }, effects_delayed: { reputation: 2 } },
+    { id: 'decline', label: 'Walk away', effects_immediate: { reputation: 1 }, effects_delayed: {} },
+  ],
+};
+
+function forceCrisisGameData(gd: any): any {
+  return {
+    ...gd,
+    getMandatorySideEventsConfigSync: () => ({ enabled: true }),
+    getEventConfigSync: () => ({ weekly_chance: 1, cooldown_weeks: 2, max_per_year: 12 }),
+    getSideEventsConfigSync: () => ({ event_weights: { business_opportunities: 1 }, event_cooldown: 2 }),
+    getAllEvents: async () => [CRISIS_EVENT],
+    getEventById: async (id: string) => (id === CRISIS_EVENT.id ? CRISIS_EVENT : undefined),
+  };
+}
 
 let db: TestDb;
 
@@ -98,9 +127,17 @@ async function seedArtist(gameId: string, over: Record<string, any> = {}) {
  * Runs advanceWeek inside a real transaction (mirrors production gameLoop.ts).
  * Returns the (normalized) snapshot payload for the scenario.
  */
-async function runScenario(gameId: string, gameStateOverrides: Record<string, any>, actions: any[] = [], catalogArtists: any[] = []) {
+async function runScenario(
+  gameId: string,
+  gameStateOverrides: Record<string, any>,
+  actions: any[] = [],
+  catalogArtists: any[] = [],
+  opts: { decorateGameData?: (gd: any) => any; sideEventChoice?: { eventId: string; choiceId: string } } = {}
+) {
   const storage = new DatabaseStorage(db);
-  const gameData = createGameData(storage, catalogArtists);
+  const gameData = opts.decorateGameData
+    ? opts.decorateGameData(createGameData(storage, catalogArtists))
+    : createGameData(storage, catalogArtists);
   const gameState = makeGameState(gameId, gameStateOverrides);
 
   const before = snapshotState(gameState);
@@ -111,7 +148,7 @@ async function runScenario(gameId: string, gameStateOverrides: Record<string, an
 
   let summary: any;
   await (db as any).transaction(async (tx: any) => {
-    const result = await engine.advanceWeek(actions, tx);
+    const result = await engine.advanceWeek(actions, tx, { sideEventChoice: opts.sideEventChoice ?? null });
     summary = result.summary;
   });
 
@@ -583,6 +620,58 @@ describe('GameEngine.advanceWeek — golden master', () => {
     });
 
     const snap = await runScenario(IDS.saturatedTour, { id: IDS.saturatedTour, currentWeek: 3, venueAccess: 'clubs' });
+    expect(snap).toMatchSnapshot();
+  });
+
+  // --- Mandatory Side Events ("Crisis on the Desk") additive fixtures ---------
+  // These force a side-event hit (weekly_chance 1) so the mandatory deferral +
+  // resolution paths are captured in the golden master. All OTHER fixtures keep
+  // weekly_chance 0, so this does NOT touch their snapshots.
+
+  it('side-event defer: a rolled crisis lands as a pending flag (deferred, no effects this week)', async () => {
+    await seedGame(IDS.sideEventDefer, 3);
+    await seedArtist(IDS.sideEventDefer, { name: 'Crisis Artist' });
+
+    const snap = await runScenario(
+      IDS.sideEventDefer,
+      { id: IDS.sideEventDefer, currentWeek: 3 },
+      [],
+      [],
+      { decorateGameData: forceCrisisGameData }
+    );
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('side-event resolve: a pending crisis carried with the advance applies its effects and clears', async () => {
+    await seedGame(IDS.sideEventResolve, 3, {
+      // Pending crisis already on the spine from the prior week (arrival week 4
+      // after this advance's increment; the resolution matches by eventId).
+      flags: { pending_side_event: { eventId: CRISIS_EVENT.id, week: 3, prompt: CRISIS_EVENT.prompt, category: CRISIS_EVENT.category, choices: CRISIS_EVENT.choices } },
+    });
+    await seedArtist(IDS.sideEventResolve, { name: 'Resolver Artist' });
+
+    const snap = await runScenario(
+      IDS.sideEventResolve,
+      {
+        id: IDS.sideEventResolve,
+        currentWeek: 3,
+        flags: { pending_side_event: { eventId: CRISIS_EVENT.id, week: 3, prompt: CRISIS_EVENT.prompt, category: CRISIS_EVENT.category, choices: CRISIS_EVENT.choices } },
+      },
+      [],
+      [],
+      {
+        // weekly_chance 0 for this one so the resolution is isolated from a new
+        // roll; only the resolution path runs.
+        decorateGameData: (gd) => ({
+          ...gd,
+          getMandatorySideEventsConfigSync: () => ({ enabled: true }),
+          getEventConfigSync: () => ({ weekly_chance: 0, cooldown_weeks: 2, max_per_year: 12 }),
+          getAllEvents: async () => [CRISIS_EVENT],
+          getEventById: async (id: string) => (id === CRISIS_EVENT.id ? CRISIS_EVENT : undefined),
+        }),
+        sideEventChoice: { eventId: CRISIS_EVENT.id, choiceId: 'accept' },
+      }
+    );
     expect(snap).toMatchSnapshot();
   });
 });

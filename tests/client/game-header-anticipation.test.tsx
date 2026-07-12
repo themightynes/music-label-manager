@@ -39,6 +39,20 @@ vi.mock('@/hooks/useGameState', () => ({
   ),
 }));
 
+// Mandatory Side Events: the header now reads the crisis-slot derivation (which
+// itself hits a TanStack query). This suite renders GameHeader without a
+// QueryClientProvider, so stub the hook to the inert "no crisis" default.
+vi.mock('@/hooks/useCrisisSideEvent', () => ({
+  useCrisisSideEvent: () => ({
+    crisisActive: false,
+    crisis: null,
+    choicePicked: false,
+    chosenChoiceId: null,
+    crisisSlotUsed: 0,
+    blocksAdvance: false,
+  }),
+}));
+
 const fakeStore = {
   selectedActions: [] as string[],
   isAdvancingWeek: false,

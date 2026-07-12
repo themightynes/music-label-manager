@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from 'wouter';
 import { useGameStore } from '@/store/gameStore';
 import { useGameState } from '@/hooks/useGameState';
+import { useCrisisSideEvent } from '@/hooks/useCrisisSideEvent';
 import { toast } from '@/hooks/use-toast';
 import logger from '@/lib/logger';
 import { getWeekDateRange } from '@shared/utils/seasonalCalculations';
@@ -19,6 +20,7 @@ import { WeekTransition } from '@/components/WeekTransition';
  */
 export function GameHeader() {
   const gameState = useGameState();
+  const crisis = useCrisisSideEvent();
   const { selectedActions, isAdvancingWeek, advanceWeek } = useGameStore();
   const pendingAutoSelectIntent = useGameStore((s) => s.pendingAutoSelectIntent);
   const setPendingAutoSelectIntent = useGameStore(
@@ -31,8 +33,10 @@ export function GameHeader() {
     return null;
   }
 
+  // Mandatory Side Events ("Crisis on the Desk"): a pending crisis consumes one
+  // focus slot, so AUTO has one fewer slot to fill.
   const freeFocusSlots =
-    (gameState.focusSlots || 3) - (gameState.usedFocusSlots || 0);
+    (gameState.focusSlots || 3) - (gameState.usedFocusSlots || 0) - crisis.crisisSlotUsed;
 
   /**
    * C74: route the header AUTO button through the SAME propose-then-confirm review
@@ -118,7 +122,9 @@ export function GameHeader() {
         <button
           type="button"
           onClick={handleAdvanceWeek}
-          disabled={selectedActions.length === 0 || isAdvancingWeek}
+          // Mandatory Side Events: block while a crisis is unresolved; allow a
+          // crisis-only advance (crisis picked, zero meeting actions).
+          disabled={isAdvancingWeek || crisis.blocksAdvance || (selectedActions.length === 0 && !crisis.crisisActive)}
           className={`relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-button bg-gradient-to-br from-action-pink to-action-purple px-4 py-1.5 text-[13px] font-semibold text-white shadow-action transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50${
             isCharging ? ' animate-pulse [animation-duration:1.6s]' : ''
           }`}

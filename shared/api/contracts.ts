@@ -156,7 +156,15 @@ export const AdvanceWeekRequest = z.object({
   // advance click 409s on the second request instead of silently advancing
   // two weeks (see advanceWeekService.ts's guard, right after the
   // `SELECT ... FOR UPDATE` re-read).
-  expectedCurrentWeek: z.number().int().optional()
+  expectedCurrentWeek: z.number().int().optional(),
+  // Mandatory Side Events ("Crisis on the Desk"): the player's resolution for a
+  // pending crisis, carried WITH the advance (mirrors expectedCurrentWeek).
+  // OPTIONAL — absent in the legacy in-results path and week-1/no-crisis advances.
+  // The server validates it against flags.pending_side_event before advancing.
+  sideEventChoice: z.object({
+    eventId: z.string(),
+    choiceId: z.string(),
+  }).optional()
 });
 
 export const CampaignResultsSchema = z.object({

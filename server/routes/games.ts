@@ -26,6 +26,22 @@ const patchGameStateSchema = z
   })
   .strict();
 
+  // Mandatory Side Events ("Crisis on the Desk") kill-switch, surfaced to the
+  // client so it can branch crisis-card-vs-legacy-beat and gate the advance.
+  // Read-only config; requireClerkUser keeps it behind auth like the rest of the
+  // game API. Cached client-side with staleTime: Infinity (useSideEventsConfig).
+  router.get("/api/config/side-events", requireClerkUser, async (_req, res) => {
+    try {
+      await serverGameData.initialize();
+      const mandatory = serverGameData.getMandatorySideEventsConfigSync().enabled;
+      res.json({ mandatory });
+    } catch (error) {
+      // Fail toward the shipped default (mandatory ON) rather than 500 — a config
+      // read should never block gameplay.
+      res.json({ mandatory: true });
+    }
+  });
+
   // Game state routes
   router.get("/api/game/:id", requireClerkUser, requireGameOwnerByParam('id'), async (req, res) => {
     try {

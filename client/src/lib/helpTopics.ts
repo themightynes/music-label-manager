@@ -301,17 +301,17 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'side-events',
     title: 'When the Week Fights Back: Side Events',
-    hook: 'You had the week planned to the hour. Then a payout report looks off, a rival makes a move, and suddenly the plan has company.',
-    tldr: 'Side events are the world reacting to you — not your executives\' agenda. Read each choice for the trade it is offering, and remember that "ignore it" is also a choice, with a price.',
+    hook: 'You had the week planned to the hour. Then a crisis lands on your desk, and the plan has to make room — because handling it is now part of the week.',
+    tldr: 'Side events are the world reacting to you — not your executives\' agenda. When one lands, it takes over a focus slot the following week and you cannot advance until you decide how to handle it. Read each choice for the trade it is offering.',
     body: [
-      'Your meetings are the agenda you set; side events are the industry setting one for you. They arrive uninvited — a licensing offer, a billing dispute, a mess that happened on someone else\'s stage — and they do not wait for a convenient week. This is not noise. It is the world responding to the label you are building, and the labels that do well treat these moments as decisions, not interruptions.',
-      'When one lands, slow down and read the trade. Every option in a side event is offering you something and asking for something — cash now against standing later, a quick exit against a slower play that compounds. The right answer depends on what your label needs this stretch, not on which line sounds boldest. A cash-poor week and a reputation-rich week can make opposite choices correct on the same event.',
-      'And do not mistake walking away for staying neutral. Declining to engage is an answer the industry hears, and it usually carries its own cost — quieter than the flashy options, but real. Sometimes eating that cost is right; just make sure you chose it, rather than drifted into it.',
+      'Your meetings are the agenda you set; side events are the industry setting one for you. They arrive uninvited — a licensing offer, a billing dispute, a mess that happened on someone else\'s stage — and they do not wait for a convenient week. This is not noise. It is the world responding to the label you are building.',
+      'Here is the part that matters for your planning: a crisis does not resolve itself in the margins. It lands on your desk and claims one of that week\'s focus slots, the same slots your executives compete for — because handling a real problem eats real management time. You will have one fewer meeting to run while it sits there, and the week will not advance until you have chosen how to deal with it. It is mandatory; there is no quietly ignoring it away.',
+      'So when one lands, slow down and read the trade. Every option is offering you something and asking for something — cash now against standing later, a quick exit against a slower play that compounds. The right answer depends on what your label needs this stretch, not on which line sounds boldest. A cash-poor week and a reputation-rich week can make opposite choices correct on the same crisis — and remember you are paying for it in bandwidth no matter which you pick, so make the slot count.',
     ],
     rules: [
-      'Side events are the world\'s agenda, not yours — they arrive on their schedule, and they still deserve a real read.',
+      'Side events are the world\'s agenda, not yours — they arrive on their schedule and demand a decision.',
+      'A crisis costs you a focus slot the following week and blocks the advance until you resolve it — plan for one fewer meeting when one is on your desk.',
       'Every option is a trade: name what it gives and what it takes before you pick, and match it to what this stretch of the run needs.',
-      '"Ignore it" is a choice with a price — walking away quietly costs you too, so walk away on purpose or not at all.',
     ],
   },
   {

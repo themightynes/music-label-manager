@@ -564,6 +564,16 @@ export interface EventOccurrence {
   category?: SideEventCategory;
   prompt?: string;
   choices?: EventChoice[];
+  // Mandatory Side Events ("Crisis on the Desk"): when a deferred crisis is
+  // RESOLVED during a week's advance, the engine emits a resolved beat instead
+  // of the interactive one. `resolved` marks it; `choiceId`/`choiceLabel` record
+  // the pick; `effects`/`delayedEffects` are the applied immediate/delayed maps
+  // (for the "You spent the week handling: …" WeekSummary card).
+  resolved?: boolean;
+  choiceId?: string;
+  choiceLabel?: string;
+  effects?: Record<string, number>;
+  delayedEffects?: Record<string, number>;
 }
 
 /**

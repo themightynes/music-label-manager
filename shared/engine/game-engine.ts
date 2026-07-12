@@ -137,7 +137,13 @@ export class GameEngine {
    * @param weeklyActions - Actions selected by the player this week
    * @returns Updated game state and summary of changes
    */
-  async advanceWeek(weeklyActions: GameEngineAction[], dbTransaction?: any): Promise<{
+  async advanceWeek(weeklyActions: GameEngineAction[], dbTransaction?: any, options?: {
+    // Mandatory Side Events ("Crisis on the Desk"): the player's resolution for
+    // the pending crisis, carried WITH the advance request (mirrors the optional
+    // expectedCurrentWeek guard). Applied during this advance, queued like a
+    // weekly action's effects. Absent in the legacy in-results path.
+    sideEventChoice?: { eventId: string; choiceId: string } | null;
+  }): Promise<{
     gameState: GameState;
     summary: WeekSummary;
     campaignResults?: CampaignResults;
@@ -197,6 +203,12 @@ export class GameEngine {
     for (const action of otherActions) {
       await this.processAction(action, summary, dbTransaction);
     }
+
+    // Mandatory Side Events ("Crisis on the Desk"): resolve the pending crisis
+    // WITHIN this advance — its immediate effects apply now (queued like weekly
+    // action effects), its delayed effects bank for next week, and the pending
+    // flag clears. No-op in the legacy path (no sideEventChoice provided).
+    await this.processPendingSideEventResolution(summary, options?.sideEventChoice ?? null, dbTransaction);
 
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary, dbTransaction);
@@ -1019,9 +1031,19 @@ export class GameEngine {
     const flags = (this.gameState.flags || {}) as Record<string, any>;
     this.gameState.flags = flags;
 
+    // Defensive optional-chain: production ServerGameData always implements this,
+    // but some duck-typed test gameData mocks predate it. Missing → production
+    // default (mandatory ON). The legacy-path characterization test sets it false
+    // explicitly.
+    const mandatory = this.gameData.getMandatorySideEventsConfigSync?.()?.enabled ?? true;
+
     // --- LAPSE: clear a stale pending event from a prior week (no effects). ---
+    // In MANDATORY mode a pending crisis never lapses — it is resolved during the
+    // week's advance (processPendingSideEventResolution, before this runs) and the
+    // advance is gated until it is. Skipping the lapse keeps a crisis from being
+    // silently dropped if resolution somehow did not clear it (defensive).
     const pending = flags.pending_side_event as { eventId: string; week: number } | undefined;
-    if (pending && typeof pending.week === 'number' && pending.week < currentWeek) {
+    if (!mandatory && pending && typeof pending.week === 'number' && pending.week < currentWeek) {
       console.log(`[SIDE EVENT] Lapsing unresolved event "${pending.eventId}" from week ${pending.week} (now week ${currentWeek})`);
       delete flags.pending_side_event;
     }
@@ -1030,28 +1052,162 @@ export class GameEngine {
 
     if (this.getRandom(0, 1) < eventConfig.weekly_chance) {
       // --- HIT: select WHICH event on an isolated seed (weighted + cooldown). ---
+      // The draws ALWAYS run (stream discipline / C64) even when the result will
+      // be discarded, so the seeded RNG stream is byte-identical regardless of
+      // pending state.
       const events = await this.gameData.getAllEvents();
       const selectionConfig = this.gameData.getSideEventsConfigSync();
       const history = (flags.side_event_history || {}) as Record<string, number>;
 
       const event = selectSideEvent(events, selectionConfig, history, currentWeek, this.gameState.id);
-      if (event) {
+
+      // ONE CRISIS AT A TIME: if a crisis is already pending (mandatory mode), the
+      // draw above still happened, but the newly-rolled event is DISCARDED — no
+      // overwrite of the pending event, no summary push, no cooldown stamp for the
+      // discarded pick. Existing cooldown behavior for the pending event is
+      // unchanged.
+      const alreadyPending = mandatory && !!flags.pending_side_event;
+
+      if (event && !alreadyPending) {
         // Persist pending event + cooldown stamp (additive flags keys only).
         flags.side_event_history = { ...history, [event.id]: currentWeek };
-        flags.pending_side_event = { eventId: event.id, week: currentWeek };
 
-        // Push the FULL payload so PR-4 can render the beat from the outcome.
-        summary.events.push({
-          id: event.id,
-          title: event.prompt.substring(0, 50),
-          occurred: true,
-          category: event.category,
-          prompt: event.prompt,
-          choices: event.choices,
-        });
+        if (mandatory) {
+          // Deferred landing: store the RICHER payload so next week's crisis card
+          // renders fully after a reload (no second fetch). eventId/week keep their
+          // legacy positions; the extra fields are inert for the legacy readers.
+          flags.pending_side_event = {
+            eventId: event.id,
+            week: currentWeek,
+            prompt: event.prompt,
+            category: event.category,
+            choices: event.choices,
+          };
+          // In mandatory mode the event is NOT surfaced as an interactive beat this
+          // week — it lands as a mandatory crisis card in NEXT week's action
+          // selection. We still record its arrival for the outcome log/tests.
+          summary.events.push({
+            id: event.id,
+            title: event.prompt.substring(0, 50),
+            occurred: true,
+            category: event.category,
+            prompt: event.prompt,
+            // No `choices` → the client's legacy interactive beat renders nothing;
+            // the crisis card reads the pending flag instead.
+          });
+        } else {
+          // Legacy path: pending flag is the lean {eventId, week}; the full payload
+          // rides summary.events so PR-4's in-results interactive beat can render.
+          flags.pending_side_event = { eventId: event.id, week: currentWeek };
+          summary.events.push({
+            id: event.id,
+            title: event.prompt.substring(0, 50),
+            occurred: true,
+            category: event.category,
+            prompt: event.prompt,
+            choices: event.choices,
+          });
+        }
       }
-      // Empty pool (all events on cooldown) → no event fires this week.
+      // Empty pool (all events on cooldown) or a crisis already pending → nothing
+      // new fires this week.
     }
+  }
+
+  /**
+   * Mandatory Side Events ("Crisis on the Desk"): resolve the pending crisis
+   * carried with the advance request. Applies the chosen effects DURING this
+   * advance — immediate effects through ActionProcessor.applyEffects (global
+   * scope → all signed artists, mood_events logged via applyArtistChangesToDatabase),
+   * delayed effects banked on flags with triggerWeek = currentWeek + 1 (drained
+   * next advance, exactly like meeting/dialogue delayed effects). Clears the
+   * pending flag and emits a RESOLVED beat into summary.events.
+   *
+   * No-op when no choice is supplied (legacy in-results path) or no crisis is
+   * pending. If the supplied choice does not match the pending event, it is
+   * ignored and the pending flag is left intact (the server gate should have
+   * already validated the match; this is defensive).
+   */
+  private async processPendingSideEventResolution(
+    summary: WeekSummary,
+    sideEventChoice: { eventId: string; choiceId: string } | null,
+    dbTransaction?: any
+  ): Promise<void> {
+    if (!sideEventChoice) return;
+
+    const flags = (this.gameState.flags || {}) as Record<string, any>;
+    this.gameState.flags = flags;
+    const pending = flags.pending_side_event as { eventId: string; week: number } | undefined;
+    if (!pending) return;
+    if (pending.eventId !== sideEventChoice.eventId) {
+      console.warn(`[SIDE EVENT] Resolution eventId "${sideEventChoice.eventId}" does not match pending "${pending.eventId}"; ignoring.`);
+      return;
+    }
+
+    const currentWeek = this.gameState.currentWeek || 0;
+
+    // Authoritative event/choice from data (the pending flag also carries a copy,
+    // but the on-disk content is the source of truth).
+    const event = await this.gameData.getEventById(sideEventChoice.eventId);
+    if (!event) {
+      console.warn(`[SIDE EVENT] Unknown pending event "${sideEventChoice.eventId}"; clearing without effects.`);
+      delete flags.pending_side_event;
+      return;
+    }
+    const choice = event.choices.find((c) => c.id === sideEventChoice.choiceId);
+    if (!choice) {
+      console.warn(`[SIDE EVENT] Invalid choice "${sideEventChoice.choiceId}" for event "${event.id}"; leaving pending.`);
+      return;
+    }
+
+    // Apply immediate effects, queued like a weekly action (global scope — side
+    // events are label-level, so artist-scoped keys hit every signed artist).
+    const effectsImmediate: Record<string, number> = {};
+    for (const [k, v] of Object.entries(choice.effects_immediate || {})) {
+      if (typeof v === 'number') effectsImmediate[k] = v;
+    }
+    if (Object.keys(effectsImmediate).length > 0) {
+      await new ActionProcessor().applyEffects(
+        this.weekContext(summary, dbTransaction),
+        effectsImmediate,
+        undefined,
+        'global',
+        `side_event:${event.id}`,
+        choice.id
+      );
+    }
+
+    // Bank delayed effects (deterministic week-based key — never Date.now()).
+    const effectsDelayed: Record<string, number> = {};
+    for (const [k, v] of Object.entries(choice.effects_delayed || {})) {
+      if (typeof v === 'number') effectsDelayed[k] = v;
+    }
+    if (Object.keys(effectsDelayed).length > 0) {
+      const delayedKey = `side-event-${event.id}-${choice.id}-week${currentWeek}`;
+      flags[delayedKey] = {
+        triggerWeek: currentWeek + 1,
+        effects: effectsDelayed,
+        meetingName: `side_event:${event.id}`,
+        choiceId: choice.id,
+      };
+    }
+
+    // Clear the resolved crisis.
+    delete flags.pending_side_event;
+
+    // Emit the resolved beat ("You spent the week handling: …").
+    summary.events.push({
+      id: event.id,
+      title: event.prompt.substring(0, 50),
+      occurred: true,
+      resolved: true,
+      category: event.category,
+      prompt: event.prompt,
+      choiceId: choice.id,
+      choiceLabel: choice.label,
+      effects: effectsImmediate,
+      delayedEffects: effectsDelayed,
+    });
   }
 
   /**

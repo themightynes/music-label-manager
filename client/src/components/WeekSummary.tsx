@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3, Flame } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Music, Trophy, Zap, X, BarChart3, Unlock, Users, Sparkles, Check, Clock3, Flame, AlertTriangle } from 'lucide-react';
 import { ChartPerformanceCard } from './ChartPerformanceCard';
 import { AnimatedNumber } from './motion-primitives/animated-number';
 import { GlowEffect } from './motion-primitives/glow-effect';
@@ -278,6 +278,69 @@ export function SideEventBeat({ event, gameId, isPendingOnSpine }: SideEventBeat
   );
 }
 
+/**
+ * Mandatory Side Events ("Crisis on the Desk"): the RESOLVED beat. When a crisis
+ * is handled during a week's advance, the engine emits an EventOccurrence with
+ * `resolved: true`, the chosen label, and the applied effect maps. This renders
+ * "You spent the week handling: <event>" in place of the old interactive UI.
+ */
+function ResolvedCrisisBeat({ event }: { event: EventOccurrence }) {
+  const effects = event.effects || {};
+  const delayed = event.delayedEffects || {};
+  const renderable = (entries: Record<string, number>) =>
+    Object.entries(entries).filter(
+      ([key, value]) => typeof value === 'number' && value !== 0 && LIVE_EFFECT_KEYS.has(key)
+    );
+  const immediateBadges = renderable(effects);
+  const delayedBadges = renderable(delayed);
+
+  return (
+    <Card className="relative overflow-hidden border-negative/40">
+      <GlowEffect
+        mode="pulse"
+        blur="stronger"
+        colors={['#ff4fd8', '#f43f5e', '#a855f7']}
+        className="opacity-[0.10]"
+      />
+      <CardHeader className="relative">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-negative" aria-hidden="true" />
+          <span className="text-aberration font-bold uppercase tracking-wide">Crisis Handled</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="relative space-y-3">
+        <p className="text-sm font-medium text-white/90">
+          You spent the week handling: {event.prompt || event.title}
+        </p>
+        {event.choiceLabel && (
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] text-negative">
+            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>You chose: {event.choiceLabel}</span>
+          </div>
+        )}
+        {(immediateBadges.length > 0 || delayedBadges.length > 0) && (
+          <div className="flex flex-wrap gap-1">
+            {immediateBadges.map(([key, value]) => (
+              <EffectBadgeTooltip key={`i-${key}`} effectKey={key}>
+                <Badge variant="outline" className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40">
+                  {value > 0 ? '+' : ''}{value} {key.replace(/_/g, ' ')}
+                </Badge>
+              </EffectBadgeTooltip>
+            ))}
+            {delayedBadges.map(([key, value]) => (
+              <EffectBadgeTooltip key={`d-${key}`} effectKey={key}>
+                <Badge variant="outline" className="text-xs font-mono rounded-pill text-neon-lilac border-neon-lilac/40">
+                  {value > 0 ? '+' : ''}{value} {key.replace(/_/g, ' ')} (next wk)
+                </Badge>
+              </EffectBadgeTooltip>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // --- Meetings card formatting (exec-meetings-revival PR-2) -----------------
 // Module scope: pure formatting helpers, no reason to redefine per render.
 
@@ -490,6 +553,14 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     pendingSideEvent.week === weeklyStats?.week
   );
 
+  // Mandatory Side Events ("Crisis on the Desk"): a crisis RESOLVED during this
+  // advance is emitted as a resolved beat (occurred + resolved), replacing the
+  // legacy interactive choice UI. "You spent the week handling: <event>".
+  const resolvedSideEvent = useMemo(
+    () => (weeklyStats?.events || []).find((e) => (e as any).resolved),
+    [weeklyStats?.events]
+  );
+
   // HERO moments now live IN the modal (fixing the missable-toast gap):
   //  - tier/access unlocks (always hero per the changeImportance classifier)
   //  - No. 1 chart outcomes (debut at #1 or climb to #1)
@@ -587,7 +658,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
     setActiveTab(value as 'overview' | 'charts' | 'projects');
   };
 
-  const hasResults = isWeekResults && (changes.length > 0 || playerChartUpdates.length > 0 || !!sideEventOccurrence);
+  const hasResults = isWeekResults && (changes.length > 0 || playerChartUpdates.length > 0 || !!sideEventOccurrence || !!resolvedSideEvent);
 
   const overviewBody = (
     <div className="space-y-6">
@@ -603,6 +674,12 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
             gameId={gameId ?? null}
             isPendingOnSpine={isSideEventPendingOnSpine}
           />
+        </RevealGroup>
+      )}
+
+      {resolvedSideEvent && (
+        <RevealGroup revealed={currentStage >= STAGE_HERO} instant={instant}>
+          <ResolvedCrisisBeat event={resolvedSideEvent} />
         </RevealGroup>
       )}
 

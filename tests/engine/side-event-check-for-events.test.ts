@@ -28,14 +28,19 @@ function makeEvents(): SideEvent[] {
   ];
 }
 
-function makeGameData(weeklyChance: number, events: SideEvent[]): any {
+function makeGameData(weeklyChance: number, events: SideEvent[], mandatory = false): any {
   return {
     getEventConfigSync: () => ({ weekly_chance: weeklyChance, cooldown_weeks: 2, max_per_year: 12 }),
+    // Mandatory Side Events kill-switch. Defaults to OFF here so the existing
+    // characterization tests below document the LEGACY in-results path; the
+    // mandatory-mode suite passes true explicitly.
+    getMandatorySideEventsConfigSync: () => ({ enabled: mandatory }),
     getSideEventsConfigSync: () => ({
       event_weights: { sync_licensing: 1 },
       event_cooldown: 2,
     }),
     getAllEvents: async () => events,
+    getEventById: async (id: string) => events.find((e) => e.id === id),
     // FinancialSystem's constructor runs validateConfiguration(), which reads
     // tour + venue config. Minimal valid stubs so construction succeeds; these
     // are never exercised by checkForEvents.
@@ -177,5 +182,56 @@ describe('checkForEvents — lapse rule', () => {
     // The stale one lapsed and was replaced by this week's fresh pending.
     expect(flags.pending_side_event).toEqual({ eventId: 'sync_offer', week: 6 });
     expect(summary.events).toHaveLength(1);
+  });
+});
+
+describe('checkForEvents — MANDATORY mode ("Crisis on the Desk")', () => {
+  it('on a hit, stores the RICHER pending payload (prompt/category/choices) and NO choices on the summary occurrence', async () => {
+    const gs = makeGameState({ currentWeek: 5, flags: {} });
+    const summary = makeSummary();
+    await runCheck(gs, makeGameData(1, makeEvents(), true), summary);
+
+    const pending = (gs.flags as any).pending_side_event;
+    expect(pending.eventId).toBe('sync_offer');
+    expect(pending.week).toBe(5);
+    expect(pending.prompt).toBe('A blockbuster film wants your single.');
+    expect(pending.category).toBe('sync_licensing');
+    expect(pending.choices).toHaveLength(1);
+
+    // The interactive beat is suppressed this week — the occurrence carries NO
+    // choices (the crisis card reads the pending flag next week instead).
+    expect(summary.events).toHaveLength(1);
+    expect(summary.events[0].choices).toBeUndefined();
+  });
+
+  it('does NOT lapse a prior-week pending crisis (mandatory events never silently drop)', async () => {
+    const gs = makeGameState({
+      currentWeek: 6,
+      flags: { pending_side_event: { eventId: 'sync_offer', week: 5 } },
+    });
+    const summary = makeSummary();
+    // weekly_chance 0 so no new roll interferes.
+    await runCheck(gs, makeGameData(0, makeEvents(), true), summary);
+
+    // The stale pending survives (would have lapsed in legacy mode).
+    expect((gs.flags as any).pending_side_event).toEqual({ eventId: 'sync_offer', week: 5 });
+  });
+
+  it('ONE CRISIS AT A TIME: a roll while one is pending draws but discards the result (pending unchanged, no summary push)', async () => {
+    const existing = { eventId: 'sync_offer', week: 5, prompt: 'x', category: 'sync_licensing', choices: [] };
+    const gs = makeGameState({
+      currentWeek: 6,
+      flags: { pending_side_event: existing, side_event_history: { sync_offer: 5 } },
+    });
+    const summary = makeSummary();
+    // weekly_chance 1 → the draw happens (stream discipline) but the result is
+    // discarded because a crisis is already pending.
+    await runCheck(gs, makeGameData(1, makeEvents(), true), summary);
+
+    // Pending is unchanged; no new occurrence; the discarded pick did not stamp
+    // history (still week 5, not 6).
+    expect((gs.flags as any).pending_side_event).toEqual(existing);
+    expect(summary.events).toHaveLength(0);
+    expect((gs.flags as any).side_event_history.sync_offer).toBe(5);
   });
 });

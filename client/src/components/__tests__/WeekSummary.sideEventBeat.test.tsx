@@ -241,3 +241,56 @@ describe('WeekSummary side-event beat', () => {
     expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument();
   });
 });
+
+describe('WeekSummary — Mandatory Side Events resolved beat ("Crisis Handled")', () => {
+  beforeEach(() => {
+    mockResolveSideEvent.mockReset();
+    mockInvalidateQueries.mockReset();
+    mockUseGameState.mockReset();
+  });
+  afterEach(() => {
+    mockUseReducedMotion.mockReturnValue(true);
+    vi.clearAllMocks();
+  });
+
+  it('renders "You spent the week handling: …" with the chosen label and effect badges for a resolved event', () => {
+    const resolved: EventOccurrence = {
+      id: 'gm_crisis',
+      title: 'Catalog deal',
+      occurred: true,
+      resolved: true,
+      category: 'business_opportunities',
+      prompt: 'A distributor offers a risky catalog deal.',
+      choiceId: 'accept',
+      choiceLabel: 'Take the deal',
+      effects: { money: 12000 },
+      delayedEffects: { reputation: 2 },
+    };
+    renderSummary([resolved]);
+
+    expect(screen.getByText('Crisis Handled')).toBeInTheDocument();
+    expect(
+      screen.getByText(/You spent the week handling: A distributor offers a risky catalog deal\./)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/You chose: Take the deal/)).toBeInTheDocument();
+    // Immediate + delayed effect badges (both whitelisted keys).
+    expect(screen.getByText(/\+12000 money/)).toBeInTheDocument();
+    expect(screen.getByText(/\+2 reputation \(next wk\)/)).toBeInTheDocument();
+  });
+
+  it('does not render the interactive beat for a mandatory occurrence that carries no choices', () => {
+    // Mandatory deferral: the fresh occurrence has NO choices (handled next week
+    // by the crisis card), so the legacy interactive beat must not appear.
+    const deferred: EventOccurrence = {
+      id: 'gm_crisis',
+      title: 'Catalog deal',
+      occurred: true,
+      category: 'business_opportunities',
+      prompt: 'A distributor offers a risky catalog deal.',
+    };
+    renderSummary([deferred]);
+
+    expect(screen.queryByText('And Then...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Crisis Handled')).not.toBeInTheDocument();
+  });
+});

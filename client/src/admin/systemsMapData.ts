@@ -197,6 +197,14 @@ export const NODES: SystemNode[] = [
     row: 2,
     description: `A never-expiring pool, incremented by meeting choices (ActionProcessor.ts:1091). At campaign end: chance = min(${reputationSystem.award_chance_cap}, pool × ${reputationSystem.award_chance_per_point}) (progression.json award_chance_per_point / award_chance_cap), win adds +${reputationSystem.award_score_bonus} to the campaign score (progression.json award_score_bonus) via an isolated seeded roll — AchievementsEngine.ts:66-73. The score itself is a campaign-end abstraction with no dedicated system node, so this is not modeled as an edge.`,
   },
+  {
+    id: 'side_events',
+    label: 'Side Events (Crisis)',
+    domain: 'meetings',
+    col: 1,
+    row: 3,
+    description: `A weekly seeded roll (weekly_chance in data/balance/events.json side_events, currently 20%) draws a side event in-stream — game-engine.ts checkForEvents, the fixed C64 stream position (never moved/reordered). MANDATORY mode (data/balance/events.json mandatory_side_events.enabled, default true): the rolled event is DEFERRED — stored on flags.pending_side_event and surfaced the FOLLOWING week as a crisis card that consumes ONE focus slot (threaded like arOfficeSlotUsed through the manual UI + AUTO), blocking the advance until the player picks. Its chosen effects apply DURING that week's advance (game-engine.ts processPendingSideEventResolution → ActionProcessor.applyEffects for immediate, delayed banked triggerWeek+1). One crisis at a time (a roll while one is pending still draws but discards). Kill-switch OFF restores the legacy in-results interactive beat (resolved via POST /api/game/:id/side-event-choice, lapses if unresolved). Cooldown event_cooldown weeks per event; category weights in event_weights.`,
+  },
 
   // Artist
   {
