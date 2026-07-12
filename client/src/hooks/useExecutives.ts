@@ -34,17 +34,28 @@ export function executivesQueryKey(gameId: string | null | undefined) {
  * Fetch executives through the TanStack Query cache using the same key as
  * `useExecutives`. Intended to be injected into `executiveMeetingMachine` as its
  * `fetchExecutives` service so the machine reads/writes the shared cache instead
- * of firing its own uncached request. `ensureQueryData` returns the cached value
- * when fresh and fetches otherwise; the weekly-refresh flow invalidates the key
- * (see gameStore.advanceWeek) so post-week mood/loyalty changes refetch.
+ * of firing its own uncached request.
+ *
+ * ⚠️ Uses `fetchQuery` with `staleTime: 0`, NOT `ensureQueryData`. This is
+ * load-bearing: the machine is the ONLY consumer of this cache key (no component
+ * mounts `useExecutives()`), so there is no active observer for `advanceWeek`'s
+ * `invalidateQueries` to auto-refetch. `ensureQueryData` returns whatever entry
+ * is already in the cache — even after invalidation — so it served STALE
+ * loyalty/mood for weeks while the DB decayed (the console only self-corrected on
+ * a full page reload, which empties the in-memory cache → miss → refetch). The
+ * machine invokes this fetch ONLY at deliberate refresh points (initial load,
+ * post-choice `refreshingExecutives`, and week-change `REFRESH_EXECUTIVES`), so
+ * `fetchQuery` with `staleTime: 0` correctly returns current DB state at each of
+ * them while still writing through the shared cache key.
  */
 export function makeCachedFetchExecutives(
   queryClient: ReturnType<typeof useQueryClient>,
 ): (gameId: string) => Promise<Executive[]> {
   return (gameId: string) =>
-    queryClient.ensureQueryData({
+    queryClient.fetchQuery({
       queryKey: executivesQueryKey(gameId),
       queryFn: () => fetchExecutives(gameId),
+      staleTime: 0,
     });
 }
 
