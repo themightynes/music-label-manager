@@ -13,8 +13,9 @@
  * FIX 2 scopes the targetId by meeting id + offered week
  * (`role-${roleId}-autonomous-${meetingId}-w${offeredWeek}`) so the two banks get
  * distinct keys and BOTH fire. This test drives two consecutive advances against
- * ONE persisted game (a loyal head_ar that always self-resolves auto_ar → ar_safe,
- * whose delayed effect is `{ reputation: 1 }`) and asserts:
+ * ONE persisted game (a loyal head_ar, loyalty 85 so it stays loyal across two
+ * weeks of neglect decay, always self-resolves auto_ar → ar_safe, whose delayed
+ * effect is `{ reputation: 1 }`) and asserts:
  *   - after advance 1 (week 4→5): exactly one autonomous bank, key contains `-w4-`,
  *     triggerWeek 6;
  *   - after advance 2 (week 5→6): the week-4 bank FIRED (consumed at week 6, a
@@ -82,13 +83,18 @@ describe('autonomous delayed-effect key collision (Delegation FIX 2)', () => {
       mood: 50,
       signed: true,
     });
+    // Loyalty 85, not 75: after the playtest-revision (2026-07-12 round 3) neglect
+    // no longer suppresses idle decay, so a self-resolving exec loses 5 loyalty/week.
+    // At 85 the exec stays in the LOYAL band (> loyal_above 70) across BOTH neglect
+    // weeks (preUpdate 85 → 80), so it keeps picking ar_safe and this test stays
+    // about the KEY COLLISION (distinct -w4-/-w5- banks), not an incidental band flip.
     await db.insert(schema.executives).values({
       id: crypto.randomUUID(),
       gameId: GAME_ID,
       role: 'head_ar',
       level: 1,
       mood: 50,
-      loyalty: 75,
+      loyalty: 85,
       lastActionWeek: 0,
     });
 

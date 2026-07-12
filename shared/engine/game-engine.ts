@@ -699,9 +699,12 @@ export class GameEngine {
    *
    * The chosen choice (loyalty band + mood risk tie-break, pickAutonomousChoice)
    * is applied through the EXACT same processRoleMeeting path as a player pick, so
-   * autonomous-vs-manual effect application is byte-identical. The exec is marked
-   * used (processExecutiveActions adds it to summary.usedExecutives), which
-   * suppresses the idle loyalty-decay for the week (§4.5).
+   * autonomous-vs-manual effect application is byte-identical. Playtest-revision
+   * (2026-07-12 round 3): a neglect (autonomous) resolution is NOT marked "used"
+   * and does NOT refresh lastActionWeek — only its choice's world-effects land; the
+   * exec's personal engagement rewards (mood/loyalty gain, decay/drift suppression)
+   * are withheld, so sustained neglect erodes loyalty and drifts mood toward 50
+   * (§4.5). Only a player-engaged meeting adds the exec to summary.usedExecutives.
    *
    * RNG: choice tie-breaks use an ISOLATED seed (`${seed}-autonomous`), NEVER
    * ctx.getRandom — the engine's pinned stream gains ZERO draws (§10.3). The

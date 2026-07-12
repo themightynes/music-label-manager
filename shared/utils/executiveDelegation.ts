@@ -68,6 +68,14 @@ export interface ExecDelegationConfig {
   auto_endorse_loyalty_gain: number;
   /** +loyalty on a neglected (self-served) meeting — a self-serve is not endorsement. */
   neglect_loyalty_gain: number;
+  /**
+   * Exec-mood self-effect on a NEGLECTED (autonomous self-served) meeting
+   * (default 0). Playtest-revision (2026-07-12 round 3): the authored
+   * executive_mood / mood_default_delta do NOT apply to the exec on autonomous
+   * resolution — a self-served meeting is not engagement. At 0, sustained
+   * neglect lets mood drift toward 50 instead of ratcheting to the cap.
+   */
+  neglect_mood_gain: number;
   /** Tier 2 (§5.1): urgent-meeting-ignored escalation into a mandatory crisis. */
   escalation: EscalationConfig;
 }
@@ -108,6 +116,7 @@ export const DEFAULT_EXEC_DELEGATION_CONFIG: ExecDelegationConfig = {
   },
   auto_endorse_loyalty_gain: 5,
   neglect_loyalty_gain: 0,
+  neglect_mood_gain: 0,
   escalation: {
     loyalty_ceiling: 40,
     enabled: true,

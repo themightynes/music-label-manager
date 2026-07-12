@@ -855,10 +855,16 @@ describe('GameEngine.advanceWeek — golden master', () => {
       { decorateGameData: (gd) => withAutonomousPool(gd, AUTONOMOUS_MEETING_POOL) },
     );
 
+    // Playtest-revision (2026-07-12 round 3): neglect no longer counts as
+    // engagement. The exec's world-effects still land, but its personal rewards
+    // are withheld AND it is NOT marked "used" — so idle loyalty-decay fires and
+    // lastActionWeek is left stale. Contrast the AUTO-endorse sibling below
+    // (loyalty 80 / mood 55 / lastActionWeek 5): the divergence is now on ALL
+    // THREE axes, not just the loyalty-gain.
     const exec: any = (snap.digest as any).executives[0];
-    expect(exec.loyalty).toBe(75); // neglect_loyalty_gain = 0 → unchanged
-    expect(exec.mood).toBe(55);    // mood_default_delta +5 (acted, engaged), decay suppressed
-    expect(exec.lastActionWeek).toBe(5);
+    expect(exec.loyalty).toBe(70); // neglect_loyalty_gain 0 AND idle decay −5 (loyalty erodes now)
+    expect(exec.mood).toBe(50);    // neglect_mood_gain 0; at neutral 50 there is no drift either way
+    expect(exec.lastActionWeek).toBe(0); // NOT refreshed by a self-served resolution (seed default)
     const autoEntry = (snap.summary as any).changes.find((c: any) => c.type === 'meeting' && c.autonomous);
     expect(autoEntry.loyaltyBoost).toBe(0);
     expect(snap).toMatchSnapshot();

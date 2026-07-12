@@ -355,7 +355,10 @@ function formatMeetingEffectLabel(key: string): string {
     case 'creative_capital':
       return 'Creative';
     case 'artist_mood':
-      return 'Mood';
+      // Delegation playtest-revision (2026-07-12): disambiguate from the exec-mood
+      // delta badge — a digest line can carry both an artist-mood and an exec-mood
+      // change (Entry 4: "-2 Mood, +9 Exec Mood" read as one confusing stat).
+      return 'Artist Mood';
     case 'artist_energy':
       return 'Energy';
     case 'artist_popularity':
@@ -445,7 +448,13 @@ function AutonomousMeetingEntry({ change }: { change: GameChange }) {
       <div className="flex-1 min-w-0 mt-1">
         <span className="text-sm font-medium text-white/70">{change.description}</span>
         {change.choiceLabel && (
-          <p className="text-xs text-text-muted/80 mt-0.5 truncate">{change.choiceLabel}</p>
+          // Delegation playtest-revision (2026-07-12, Entry 1): prefix the exec's
+          // choice as THEIR past decision. The raw option label ("Accept their
+          // terms, worth the risk") otherwise read as advice/instruction to the
+          // player rather than the call the exec already made.
+          <p className="text-xs text-text-muted/80 mt-0.5 truncate">
+            Their call: &ldquo;{change.choiceLabel}&rdquo;
+          </p>
         )}
         {appliedLines.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
@@ -489,10 +498,10 @@ function AutonomousMeetingsDigest({ entries }: { entries: GameChange[] }) {
             className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
             aria-hidden="true"
           />
-          While You Were Out
+          Made Without You
         </span>
         <span className="text-xs text-text-muted">
-          Your team made {entries.length} call{entries.length === 1 ? '' : 's'} without you
+          Your team made {entries.length} decision{entries.length === 1 ? '' : 's'} on their own
         </span>
       </button>
       {expanded && (
@@ -1150,7 +1159,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                                   : 'text-negative border-negative/40'
                               }`}
                             >
-                              {change.moodChange > 0 ? '+' : ''}{change.moodChange} Mood
+                              {change.moodChange > 0 ? '+' : ''}{change.moodChange} Exec Mood
                             </Badge>
                           )}
                           {change.loyaltyBoost !== undefined && change.loyaltyBoost !== 0 && (

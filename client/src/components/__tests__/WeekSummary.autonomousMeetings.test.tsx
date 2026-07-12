@@ -89,8 +89,8 @@ describe('WeekSummary "While you were out" digest', () => {
     renderSummary([AUTONOMOUS_ENTRY]);
 
     expect(screen.getByText('Meetings')).toBeInTheDocument();
-    expect(screen.getByText('While You Were Out')).toBeInTheDocument();
-    expect(screen.getByText('Your team made 1 call without you')).toBeInTheDocument();
+    expect(screen.getByText('Made Without You')).toBeInTheDocument();
+    expect(screen.getByText('Your team made 1 decision on their own')).toBeInTheDocument();
 
     // Collapsed by default: the entry description/attribution are not rendered.
     expect(screen.queryByText('Samara ran the awards campaign while you were out')).not.toBeInTheDocument();
@@ -109,7 +109,8 @@ describe('WeekSummary "While you were out" digest', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Samara ran the awards campaign while you were out')).toBeInTheDocument();
     expect(screen.getByText('Samara Chen · CMO')).toBeInTheDocument();
-    expect(screen.getByText('Go all in on the awards campaign')).toBeInTheDocument();
+    // Choice label is now prefixed as the exec's past call (Entry 1 reframe).
+    expect(screen.getByText(/Their call:.*Go all in on the awards campaign/)).toBeInTheDocument();
     expect(screen.getByText('-20000 Money')).toBeInTheDocument();
     expect(screen.getByText('+5 Prestige')).toBeInTheDocument();
 
@@ -129,7 +130,7 @@ describe('WeekSummary "While you were out" digest', () => {
     expect(screen.getByText('+2 Rep')).toBeInTheDocument();
 
     // Autonomous entry is folded into the collapsed digest, not the player list.
-    expect(screen.getByText('While You Were Out')).toBeInTheDocument();
+    expect(screen.getByText('Made Without You')).toBeInTheDocument();
     expect(screen.queryByText('Samara ran the awards campaign while you were out')).not.toBeInTheDocument();
   });
 
@@ -137,7 +138,7 @@ describe('WeekSummary "While you were out" digest', () => {
     renderSummary([PLAYER_ENTRY]);
 
     expect(screen.getByText('Meetings')).toBeInTheDocument();
-    expect(screen.queryByText('While You Were Out')).not.toBeInTheDocument();
+    expect(screen.queryByText('Made Without You')).not.toBeInTheDocument();
     expect(screen.queryByTestId('autonomous-digest-toggle')).not.toBeInTheDocument();
   });
 
@@ -145,6 +146,6 @@ describe('WeekSummary "While you were out" digest', () => {
     renderSummary([AUTONOMOUS_ENTRY]);
 
     expect(screen.getByText('Meetings')).toBeInTheDocument();
-    expect(screen.getByText('While You Were Out')).toBeInTheDocument();
+    expect(screen.getByText('Made Without You')).toBeInTheDocument();
   });
 });

@@ -329,6 +329,7 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
         },
         auto_endorse_loyalty_gain: cfg.auto_endorse_loyalty_gain ?? 5,
         neglect_loyalty_gain: cfg.neglect_loyalty_gain ?? 0,
+        neglect_mood_gain: cfg.neglect_mood_gain ?? 0,
         escalation: {
           loyalty_ceiling: cfg.escalation?.loyalty_ceiling ?? 40,
           enabled: cfg.escalation?.enabled ?? true,
