@@ -287,7 +287,16 @@ export const PRIORITIES_SECTION_TITLE_V2 = 'Top-3 priority — what do I fix/tun
 
 export const PRIORITIES_SECTION_BLURB_V2 =
   'Rank the three things most worth my time after this round. A bug, a tuning pass, a legibility fix, or ' +
-  '"make X louder." Be specific — round one left this section blank and it was missed.';
+  '"make X louder." Be specific — round one left this section blank and it was missed. ' +
+  'Already queued from live play this session (rank against your own finds, or strike them): ' +
+  '(1) Buzz hidden-at-zero is ambiguous during the building window — a release with no banked-hype seed shows ' +
+  'no Buzz section at all in its first post-release week, indistinguishable from a dead release (this misled real ' +
+  'play: Glass Houses read as "never generated buzz" when it simply had not had its first building tick; candidate ' +
+  'fix: always show the bar during the building weeks, even empty, labeled "building"). ' +
+  '(2) Stale Admin-index link label still says Round 1. ' +
+  '(3) Context, not a bug: the campaign verdict on a fresh release is a week-one snapshot — Glass Houses flipped ' +
+  'from Underperformed to Strong Success as week-two streams landed; note here if that flip read as confusing ' +
+  'rather than dramatic.';
 
 export const PULL_BACK_PROMPT_V2 =
   "Anything from this tuning arc that overshot and you'd rather I pull back or reconsider?";
