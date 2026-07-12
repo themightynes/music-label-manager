@@ -35,6 +35,8 @@ import {
   stateDelta,
   normalize,
   compactSummary,
+  AUTONOMOUS_MEETING_POOL,
+  withAutonomousPool,
   type TestDb,
 } from './golden-master-fixtures';
 
@@ -59,6 +61,13 @@ const IDS = {
   // Mandatory Side Events additive fixtures ("Crisis on the Desk", 2026-07-11).
   sideEventDefer: '00000000-0000-4000-8000-00000000000f',
   sideEventResolve: '00000000-0000-4000-8000-000000000010',
+  // Executive Delegation arc additive fixtures (Tier 1, 2026-07-12). Fixed UUIDs
+  // (C86 lesson: autonomous flag keys embed roleIds not UUIDs, but pin ids anyway).
+  autonomousResolution: '00000000-0000-4000-8000-000000000011',
+  autonomousMoodRisk: '00000000-0000-4000-8000-000000000012',
+  autoEndorse: '00000000-0000-4000-8000-000000000013',
+  neglect: '00000000-0000-4000-8000-000000000014',
+  ceoLapse: '00000000-0000-4000-8000-000000000015',
 };
 
 // A deterministic single-event catalog + config decorator forcing a side-event
@@ -87,7 +96,33 @@ function forceCrisisGameData(gd: any): any {
   };
 }
 
+// Executive Delegation arc (Tier 1, §10.2): a pool where the loyal (safety) band
+// TIES between two gamble-free choices differing only in money spend (clamped in
+// the safety score) — so mood risk-appetite decides. One meeting per role.
+const MOOD_RISK_POOL: any[] = ['head_ar', 'cmo'].map((role) => ({
+  type: 'role_meeting', id: `mr_${role}`, role_id: role, name: `${role} call`,
+  target_scope: 'global', requires: [], choices: [
+    { id: 'cheap', label: 'Cheap', effects_immediate: { money: -3000 }, effects_delayed: {} },
+    { id: 'pricey', label: 'Pricey', effects_immediate: { money: -9000 }, effects_delayed: {} },
+  ],
+}));
+
 let db: TestDb;
+
+/** Inserts an executive row for the given game/role. */
+async function seedExecutive(gameId: string, role: string, over: Record<string, any> = {}) {
+  const id = crypto.randomUUID();
+  await db.insert(schema.executives).values({
+    id,
+    gameId,
+    role,
+    level: 1,
+    mood: over.mood ?? 50,
+    loyalty: over.loyalty ?? 50,
+    lastActionWeek: over.lastActionWeek ?? 0,
+  });
+  return id;
+}
 
 /** Inserts a game_states row with a pinned rngSeed. */
 async function seedGame(id: string, week: number, overrides: Record<string, any> = {}) {
@@ -672,6 +707,145 @@ describe('GameEngine.advanceWeek — golden master', () => {
         sideEventChoice: { eventId: CRISIS_EVENT.id, choiceId: 'accept' },
       }
     );
+    expect(snap).toMatchSnapshot();
+  });
+
+  // -------------------------------------------------------------------------
+  // Executive Delegation arc (Tier 1, §10.2) — autonomous-resolution fixtures.
+  // These seed exec rows + no (or one) player action so the never-lapse path
+  // fires. Every OTHER fixture above has no exec rows, so it is a no-op there
+  // (byte-identical) — proven by the double-run.
+  // -------------------------------------------------------------------------
+
+  it('autonomous-resolution-week: four execs at four loyalty bands each resolve the band-correct choice', async () => {
+    await seedGame(IDS.autonomousResolution, 4);
+    await seedArtist(IDS.autonomousResolution, { name: 'Roster Act' });
+    // Bands: loyal (75) → safe; disloyal (20/25) → self-serving; committed (50) → own call.
+    await seedExecutive(IDS.autonomousResolution, 'head_ar', { loyalty: 75, mood: 50 });
+    await seedExecutive(IDS.autonomousResolution, 'cmo', { loyalty: 20, mood: 50 });
+    await seedExecutive(IDS.autonomousResolution, 'cco', { loyalty: 50, mood: 50 });
+    await seedExecutive(IDS.autonomousResolution, 'head_distribution', { loyalty: 25, mood: 50 });
+
+    const snap = await runScenario(
+      IDS.autonomousResolution,
+      { id: IDS.autonomousResolution, currentWeek: 4 },
+      [],
+      [],
+      { decorateGameData: (gd) => withAutonomousPool(gd, AUTONOMOUS_MEETING_POOL) },
+    );
+
+    // Band-correct picks are visible via each autonomous meeting's choiceLabel.
+    const autoPicks = (snap.summary as any).changes
+      .filter((c: any) => c.type === 'meeting' && c.autonomous)
+      .reduce((acc: Record<string, string>, c: any) => ({ ...acc, [c.roleId]: c.choiceLabel }), {});
+    expect(autoPicks).toEqual({
+      head_ar: 'Play it safe',        // loyal → AUTO-safe
+      cmo: 'Big blitz',               // disloyal → flashy overspend (Sam)
+      cco: 'Add a revision',          // committed → own quality call (Dante's quality is also the pro call)
+      head_distribution: 'Guaranteed deal', // disloyal → conservative guaranteed value (Pat)
+    });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('autonomous-mood-risk-week: same loyal band, mood decides the risk tie-break', async () => {
+    await seedGame(IDS.autonomousMoodRisk, 4);
+    await seedArtist(IDS.autonomousMoodRisk, { name: 'Risk Act' });
+    // Both loyal (75) → the safety band ties (cheap vs pricey); mood breaks it.
+    await seedExecutive(IDS.autonomousMoodRisk, 'head_ar', { loyalty: 75, mood: 95 }); // inspired → aggressive
+    await seedExecutive(IDS.autonomousMoodRisk, 'cmo', { loyalty: 75, mood: 20 });     // disgruntled → defensive
+
+    const snap = await runScenario(
+      IDS.autonomousMoodRisk,
+      { id: IDS.autonomousMoodRisk, currentWeek: 4 },
+      [],
+      [],
+      { decorateGameData: (gd) => withAutonomousPool(gd, MOOD_RISK_POOL) },
+    );
+
+    const picks = (snap.summary as any).changes
+      .filter((c: any) => c.type === 'meeting' && c.autonomous)
+      .reduce((acc: Record<string, string>, c: any) => ({ ...acc, [c.roleId]: c.choiceLabel }), {});
+    expect(picks).toEqual({
+      head_ar: 'Pricey', // inspired → swings big
+      cmo: 'Cheap',      // disgruntled → plays defensive
+    });
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('auto-vs-neglect divergence: neglect grants no loyalty and flags autonomous', async () => {
+    await seedGame(IDS.neglect, 4);
+    await seedArtist(IDS.neglect, { name: 'Neglect Act' });
+    await seedExecutive(IDS.neglect, 'head_ar', { loyalty: 75, mood: 50 }); // loyal → ar_safe
+
+    const snap = await runScenario(
+      IDS.neglect,
+      { id: IDS.neglect, currentWeek: 4 },
+      [],
+      [],
+      { decorateGameData: (gd) => withAutonomousPool(gd, AUTONOMOUS_MEETING_POOL) },
+    );
+
+    const exec: any = (snap.digest as any).executives[0];
+    expect(exec.loyalty).toBe(75); // neglect_loyalty_gain = 0 → unchanged
+    expect(exec.mood).toBe(55);    // mood_default_delta +5 (acted, engaged), decay suppressed
+    expect(exec.lastActionWeek).toBe(5);
+    const autoEntry = (snap.summary as any).changes.find((c: any) => c.type === 'meeting' && c.autonomous);
+    expect(autoEntry.loyaltyBoost).toBe(0);
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('auto-vs-neglect divergence: AUTO-endorse (player picks the safe choice) grants loyalty and is NOT autonomous', async () => {
+    await seedGame(IDS.autoEndorse, 4);
+    await seedArtist(IDS.autoEndorse, { name: 'Endorse Act' });
+    const execId = await seedExecutive(IDS.autoEndorse, 'head_ar', { loyalty: 75, mood: 50 });
+
+    // The player (or AUTO) spends a slot on the SAME meeting/choice the neglect
+    // game auto-resolved — same effects, but through the manual path.
+    const actions = [
+      {
+        actionType: 'role_meeting',
+        targetId: 'role-head_ar',
+        metadata: { roleId: 'head_ar', actionId: 'auto_ar', choiceId: 'ar_safe', executiveId: execId },
+      },
+    ];
+
+    const snap = await runScenario(
+      IDS.autoEndorse,
+      { id: IDS.autoEndorse, currentWeek: 4 },
+      actions,
+      [],
+      { decorateGameData: (gd) => withAutonomousPool(gd, AUTONOMOUS_MEETING_POOL) },
+    );
+
+    const exec: any = (snap.digest as any).executives[0];
+    expect(exec.loyalty).toBe(80); // loyalty_on_use +5 (endorsed)
+    expect(exec.mood).toBe(55);    // mood_default_delta +5
+    expect(exec.lastActionWeek).toBe(5);
+    const meetingEntry = (snap.summary as any).changes.find((c: any) => c.type === 'meeting' && c.roleId === 'head_ar');
+    expect(meetingEntry.autonomous).toBeUndefined(); // manual pick → not autonomous
+    expect(meetingEntry.loyaltyBoost).toBe(5);
+    expect(snap).toMatchSnapshot();
+  });
+
+  it('ceo-lane-lapses: an exec with role "ceo" is never autonomously resolved (guard), head_ar is', async () => {
+    await seedGame(IDS.ceoLapse, 4);
+    await seedArtist(IDS.ceoLapse, { name: 'CEO Lapse Act' });
+    // A defensive guard test: even a (never-in-production) ceo exec row is skipped.
+    await seedExecutive(IDS.ceoLapse, 'ceo', { loyalty: 20, mood: 50 });
+    await seedExecutive(IDS.ceoLapse, 'head_ar', { loyalty: 50, mood: 50 });
+
+    const snap = await runScenario(
+      IDS.ceoLapse,
+      { id: IDS.ceoLapse, currentWeek: 4 },
+      [],
+      [],
+      { decorateGameData: (gd) => withAutonomousPool(gd, AUTONOMOUS_MEETING_POOL) },
+    );
+
+    const autoRoles = (snap.summary as any).changes
+      .filter((c: any) => c.type === 'meeting' && c.autonomous)
+      .map((c: any) => c.roleId);
+    expect(autoRoles).toEqual(['head_ar']); // ceo NEVER auto-resolves
     expect(snap).toMatchSnapshot();
   });
 });

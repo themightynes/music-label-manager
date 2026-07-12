@@ -49,6 +49,75 @@ export type TestDb = NodePgDatabase<typeof schema> & { $client: Pool };
  * signable artists through this override (see seedArOfficeScenario), which lets us
  * pin exactly which artist A&R discovers without depending on data/artists JSON.
  */
+/**
+ * Executive Delegation arc (Tier 1, §10.1): a minimal, deterministic role-meeting
+ * pool so the autonomous-resolution path is exercised + pinned in the golden
+ * master. One always-eligible (`requires: []`) global meeting per core exec role.
+ * Choice effects are authored so pickAutonomousChoice yields a clear per-band pick
+ * (loyal→safe, committed→quality, disloyal→archetype vice). The BASE getChoiceById
+ * still returns FIXED effects, so actions-week's applied numbers stay simple; the
+ * autonomous-* scenarios decorate getChoiceById (autonomousChoiceById below) to
+ * echo the picked choice's authored effects, making the band-correct pick visible
+ * in the money delta / appliedEffects.
+ */
+export const AUTONOMOUS_MEETING_POOL: any[] = [
+  {
+    type: 'role_meeting', id: 'auto_ar', role_id: 'head_ar', name: 'A&R call',
+    target_scope: 'global', requires: [], choices: [
+      { id: 'ar_safe', label: 'Play it safe', effects_immediate: {}, effects_delayed: { reputation: 1 } },
+      { id: 'ar_quality', label: 'Invest in quality', effects_immediate: { creative_capital: -1 }, effects_delayed: { quality_bonus: 4 } },
+      { id: 'ar_gamble', label: 'Chase the wild card', effects_immediate: {}, effects_delayed: { variance_up: 2 } },
+    ],
+  },
+  {
+    type: 'role_meeting', id: 'auto_cmo', role_id: 'cmo', name: 'CMO call',
+    target_scope: 'global', requires: [], choices: [
+      { id: 'cmo_safe', label: 'Modest push', effects_immediate: { money: -1000 }, effects_delayed: { press_momentum: 1 } },
+      { id: 'cmo_quality', label: 'Balanced campaign', effects_immediate: { money: -2000 }, effects_delayed: { reputation: 2 } },
+      { id: 'cmo_blowout', label: 'Big blitz', effects_immediate: { money: -8000 }, effects_delayed: { awareness_boost: 3 } },
+    ],
+  },
+  {
+    type: 'role_meeting', id: 'auto_cco', role_id: 'cco', name: 'CCO call',
+    target_scope: 'global', requires: [], choices: [
+      { id: 'cco_safe', label: 'Ship as-is', effects_immediate: {}, effects_delayed: {} },
+      { id: 'cco_quality', label: 'Add a revision', effects_immediate: { money: -1500 }, effects_delayed: { quality_bonus: 6 } },
+      { id: 'cco_cheap', label: 'Quick fix', effects_immediate: { money: -500 }, effects_delayed: { reputation: 1 } },
+    ],
+  },
+  {
+    type: 'role_meeting', id: 'auto_dist', role_id: 'head_distribution', name: 'Distro call',
+    target_scope: 'global', requires: [], choices: [
+      { id: 'dist_safe', label: 'Guaranteed deal', effects_immediate: { money: 3000 }, effects_delayed: {} },
+      { id: 'dist_quality', label: 'Steady build', effects_immediate: { money: -2000 }, effects_delayed: { awareness_boost: 2 } },
+      { id: 'dist_gamble', label: 'Roll the dice', effects_immediate: { money: -5000 }, effects_delayed: { variance_up: 2 } },
+    ],
+  },
+];
+
+/** Look a choice up in a role-meeting pool by (actionId, choiceId). */
+function findPoolChoice(pool: any[], actionId: string, choiceId: string): any | undefined {
+  const meeting = pool.find((m) => m.id === actionId);
+  return meeting?.choices?.find((c: any) => c.id === choiceId);
+}
+
+/**
+ * Decorator: make getWeeklyActionsWithCategories serve a custom pool AND make
+ * getChoiceById echo that pool's authored per-choice effects (so the applied
+ * money/effects reflect exactly which choice the autonomous path picked). Used by
+ * the autonomous-* golden-master scenarios that must pin the band-correct pick.
+ */
+export function withAutonomousPool(gd: any, pool: any[]): any {
+  return {
+    ...gd,
+    getWeeklyActionsWithCategories: async () => ({ actions: pool, categories: [] }),
+    getChoiceById: async (actionId: string, choiceId: string) => {
+      const c = findPoolChoice(pool, actionId, choiceId);
+      return c ?? { id: choiceId, label: `Choice ${choiceId}`, effects_immediate: {}, effects_delayed: {} };
+    },
+  };
+}
+
 export function createGameData(storage: DatabaseStorage, catalogArtists: any[] = []): any {
   const balanceDir = path.join(process.cwd(), 'data', 'balance');
   const economy = JSON.parse(fs.readFileSync(path.join(balanceDir, 'economy.json'), 'utf-8'));
@@ -237,6 +306,36 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
         effect_multiplier_inspired: cfg.effect_multiplier_inspired ?? 1.2,
       };
     },
+    // Executive Delegation arc (Tier 1) — mirror ServerGameData so the autonomous
+    // resolution path (game-engine.resolveAutonomousExecMeetings) has its config +
+    // meeting pool + selection tuning. The pool is the deterministic
+    // AUTONOMOUS_MEETING_POOL (autonomous-* scenarios override via withAutonomousPool).
+    getExecDelegationConfigSync: () => {
+      const cfg = progression.reputation_system?.executive_delegation ?? {};
+      return {
+        loyalty_on_use: cfg.loyalty_on_use ?? 5,
+        loyalty_decay_per_week: cfg.loyalty_decay_per_week ?? 5,
+        idle_weeks_before_decay: cfg.idle_weeks_before_decay ?? 3,
+        mood_drift_per_week: cfg.mood_drift_per_week ?? 5,
+        mood_default_delta: cfg.mood_default_delta ?? 5,
+        loyalty_bands: {
+          loyal_above: cfg.loyalty_bands?.loyal_above ?? 70,
+          disloyal_below: cfg.loyalty_bands?.disloyal_below ?? 30,
+        },
+        autonomous_risk_appetite: {
+          inspired_bias: cfg.autonomous_risk_appetite?.inspired_bias ?? 'aggressive',
+          disgruntled_bias: cfg.autonomous_risk_appetite?.disgruntled_bias ?? 'defensive',
+          neutral_bias: cfg.autonomous_risk_appetite?.neutral_bias ?? 'balanced',
+        },
+        auto_endorse_loyalty_gain: cfg.auto_endorse_loyalty_gain ?? 5,
+        neglect_loyalty_gain: cfg.neglect_loyalty_gain ?? 0,
+      };
+    },
+    getWeeklyMeetingSelectionConfigSync: () => ({
+      relevance_weight: progression.weekly_meeting_selection?.relevance_weight ?? 3.0,
+      recency_window_weeks: progression.weekly_meeting_selection?.recency_window_weeks ?? 4,
+    }),
+    getWeeklyActionsWithCategories: async () => ({ actions: AUTONOMOUS_MEETING_POOL, categories: [] }),
     getAvailableProducerTiers: () => ['local'],
     getAllExecutives: async () => [],
     getAllRoles: async () => [],
