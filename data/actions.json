@@ -207,6 +207,7 @@
         {
           "id": "chase_trends",
           "label": "Follow the money - chase the trend",
+          "self_serving_hint": true,
           "effects_immediate": {
             "artist_mood": -3,
             "executive_mood": 8
@@ -452,6 +453,7 @@
         {
           "id": "spin_collaboration",
           "label": "Spin it as a surprise collaboration",
+          "self_serving_hint": true,
           "effects_immediate": {
             "creative_capital": -1,
             "executive_mood": 8

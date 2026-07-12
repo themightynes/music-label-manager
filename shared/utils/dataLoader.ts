@@ -20,7 +20,10 @@ const DialogueChoiceSchema = z.object({
   id: z.string(),
   label: z.string(),
   effects_immediate: ChoiceEffectSchema.default({}),
-  effects_delayed: ChoiceEffectSchema.default({})
+  effects_delayed: ChoiceEffectSchema.default({}),
+  // Delegation-arc §4.3.1: optional authoring escape hatch — forces this choice as
+  // the exec's self-serving pick (scoreSelfServing → +Infinity). Additive/optional.
+  self_serving_hint: z.boolean().optional()
 });
 
 const RoleMeetingSchema = z.object({
@@ -372,7 +375,9 @@ export class GameDataLoader {
           id: z.string(),
           label: z.string(),
           effects_immediate: z.record(z.number()).optional(),
-          effects_delayed: z.record(z.number()).optional()
+          effects_delayed: z.record(z.number()).optional(),
+          // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice).
+          self_serving_hint: z.boolean().optional()
         }).passthrough()).optional(),
         details: z.object({
           cost: z.string(),

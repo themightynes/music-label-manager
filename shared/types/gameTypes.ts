@@ -34,6 +34,13 @@ export interface DialogueChoice {
   label: string;
   effects_immediate: ChoiceEffect;
   effects_delayed: ChoiceEffect;
+  /**
+   * Delegation-arc §4.3.1: optional authoring escape hatch. When true, this choice
+   * is FORCED as the exec's self-serving pick (scoreSelfServing returns +Infinity),
+   * overriding the archetype heuristic — used when the numeric heuristic would tie
+   * or would pick a choice that is not the in-character self-serving one.
+   */
+  self_serving_hint?: boolean;
 }
 
 // Mood targeting scope for executive meetings (Task 3.1)

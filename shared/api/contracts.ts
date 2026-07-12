@@ -375,6 +375,8 @@ export const DialogueChoiceSchema = z.object({
   label: z.string(),
   effects_immediate: ChoiceEffectSchema,
   effects_delayed: ChoiceEffectSchema,
+  // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice type).
+  self_serving_hint: z.boolean().optional(),
 });
 
 // Action details schema (for non-meeting actions)

@@ -392,7 +392,7 @@
       "role_hint": "CEO",
       "category": "artist_personal",
       "target": "predetermined",
-      "prompt": "Your biggest artist just fired their last three backup dancers. The tour starts in two weeks.",
+      "prompt": "Your biggest artist just fired their last three backup dancers, and there's a headline showcase booked in two weeks.",
       "choices": [
         {
           "id": "emergency_auditions",
@@ -600,18 +600,21 @@
           }
         },
         {
-          "id": "fall_back_to_safe_terms",
-          "label": "Fall back to conservative terms",
+          "id": "commission_process_audit",
+          "label": "Commission Pat's full process audit and 200-point recovery plan",
           "effects_immediate": {
-            "money": -2000
+            "money": -2000,
+            "creative_capital": -1
           },
-          "effects_delayed": {}
+          "effects_delayed": {
+            "reputation": 1
+          }
         },
         {
           "id": "absorb_quietly",
           "label": "Absorb the loss quietly, protect relationships",
           "effects_immediate": {
-            "money": -3500
+            "money": -500
           },
           "effects_delayed": {
             "reputation": -1
