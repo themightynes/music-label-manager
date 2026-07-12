@@ -1,6 +1,29 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 11, 2026*
+*Updated: July 11, 2026 (evening)*
+
+---
+
+## 📅 Session Log — July 11, 2026, evening (PLAYTEST-FEEDBACK IMPLEMENTATION ARC: #158–#163 all merged — six PRs in one orchestrated session)
+
+**Arc shape:** merged the held Exec Console reskin (**#158**), then Nes's first STRUCTURED playtest feedback (captured via a new admin recording page) drove a four-track orchestrated implementation — design-architect brief → parallel worktree-isolated build agents → fresh-context adversarial verifier per track → merge on green. Merged `main` finished at **1,868 passed + 1 conditional skip** (from 1,712 at session start; +157 tests).
+
+**Merged PRs:**
+- **#158** Exec Console "The Board" reskin (held from 07-11 morning; presentation-only).
+- **#159 small-ready-slices**: C87 tour energy drain (−6/city, `energy_cost` knob, GM revenue byte-identical), C86 four additive GM range fixtures, C76 audit/negotiate retune (pair non-dominant; `ignore` dominated by design), C85 guide 9→13 topics, PLUS the playtest capture system: retrospective markdown form + `/admin/playtest-feedback` page (GET/POST admin pair, validate→backup→write to a responses JSON). Ledger: C76/C85/C86/C87 struck.
+- **#160 hype-board-ux** (client-only): banked-hype attach preview on PlanReleasePage (display mirror of the server fork-B rule, verifier-proven equivalent), weekly anticipation line (qualitative, leak-guarded), dashboard hype de-genericized (named pools + expiry hints), The Board previews the waiting brief (name + snippet, zero new requests; revises the Tier 2 no-name-on-card stance — why-now still reveals only on open).
+- **#161 volatility-economy** (the engine core of the feedback): energy lifecycle (recording −4/wk, idle +3/wk recovery — `market_formulas.energy_lifecycle`), mood↔outcomes (flop −8 artist mood, breakthrough +5, drift liberated + amplified 3→5), flop penalty 3→5, **`reputation_gain_scaling` 0.7 on positive gains only** (fixes rep-100-at-week-21; losses unscaled), **C65 resolved** (press-coverage rep path capped), CC grants 3→5/6→9, relevance weight 2.0→3.0. **Load-bearing find: the GM fixture assembler had omitted `artist_stats` + `reputation_system` blocks entirely** — config there silently used code fallbacks in the golden master; now mirrored from `getBalanceConfigSync`.
+- **#162 mandatory-side-events** ("Crisis on the Desk", Nes's product call): the seeded in-stream roll is untouched (byte-position-identical, verifier-confirmed); the rolled event defers to `flags.pending_side_event` and lands the NEXT week as a mandatory crisis card consuming one focus slot (SYNC_SLOTS threading incl. AUTO + server meeting-selection gate; A&R-busy + crisis stacks to −2); advance gated client+server (400 inside the FOR UPDATE transaction) until resolved; effects apply during that advance; kill-switch `mandatory_side_events.enabled`. **Verifier caught two real issues pre-merge**: a ~20–25% flaky characterization test (unpinned seed could roll a NEW crisis during the resolve-advance — deterministic stub + 10/10 flake-check) and an **orphaned-event advance deadlock** (event id deleted via Content Editor between defer and resolve → permanent 400; gate now steps aside so the engine self-heal clears the flag, regression-tested). SNAPSHOT_VERSION stays 2 (passthrough-verified round-trip).
+- **#163 playtest-form-v2**: Round-2 feedback form (10 sections grounded in what shipped + Nes's round-1 answers: crisis drama/slot-cost/pacing, explicit re-tests of round 1's three "never saw it" mechanics, full-campaign rep-arc question) served by the same endpoint pair via a **formId allowlist** (no new routes; v1 responses file structurally unreachable from v2 saves, byte-for-byte tested + MD5-verified across two full local suite runs).
+
+**Round-1 playtest findings (recorded in `docs/01-planning/playtest-feedback-2026-07-11.responses.json`)**: flop/mood-variance/energy all "never encountered" in ~20 weeks (root cause: mood+energy too stable) and rated too weak; rep gain "aggressive and quick" (rep 100 @ wk 21); CC too scarce; relevance too subtle; hype/awareness/reactive-meetings/tour-T1/Board all "sings" with surgical asks — every item above traces to one of these.
+
+**Open threads / next steps:**
+- **Nes: playtest round 2** on merged main (dev server restarted post-merge) and fill `/admin/playtest-feedback` (now Round 2). Key watch-fors: crisis drama + slot cost, energy rotation pressure, mood movement, a real rep arc, the re-tested flop beat.
+- Feel knobs from this arc are all config (`energy_lifecycle`, `mood_drift`, `flop_artist_mood_penalty`, `reputation_gain_scaling`, `mandatory_side_events`) — round-2 feedback tunes values, not code.
+- **Meeting-scenario content working session** (Nes live + Content Editor) — the one round-1 ask not implementable by agents.
+- Deferred/known: latent `reputationScaling` rounding note (only if the knob ever drops below 0.5 a +1 gain rounds to 0); LOW cosmetics from verifiers (emoji truncation in Board snippet, missing useMemo in dashboard pools; exec-meetings [REFERENCE] doc may quote stale CC values 3/6→5/9).
+- Carry-overs: C88 + remaining pending ledger (20 items), first copywriter changelog→doc-pass loop, Phase 4 audio audition.
 
 ---
 
