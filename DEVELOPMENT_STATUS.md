@@ -34,6 +34,8 @@ With round 2 and round 3 both now answered, every unactioned finding converges o
 
 **Two design decisions logged ahead of that session** (`docs/01-planning/PENDING-DECISIONS.md` #8/#9, both pointing at the agenda doc for full analysis + options): **#8** where to set the flop trigger (raise `flop_revenue_ratio` / lower `flop_investment_floor` / go probabilistic near the bar — recommend raising the ratio, cheapest and pure-config); **#9** Creative Capital's economy (currently exactly one positive source in the whole game, one cco meeting's two choices — recommend spreading CC grants across the exec pool as part of the content rework, vs. milestone-sourced or CEO-lane-sourced CC as complementary follow-ups).
 
+**▲ Session close (2026-07-12, end of day):** the findings-fold itself merged as **#170** (`28f2c0f` — the agenda doc, PENDING-DECISIONS #8/#9, C93–C96 with verified anchors, systems-map value sync incl. the one hardcoded drift-prose literal now interpolating live JSON). Main is fully green (suite ~1,963), the dev server runs current main, and the debt ledger stands at 96 total / 28 pending. **The next session's entry point is the meeting-content working-session agenda** (`implementation-specs/[FUTURE] meeting-content-working-session-agenda.md`) — orchestrator prep (per-meeting stakes audit) can run agent-side before Nes joins live; PENDING-DECISIONS #8/#9 can be decided in that session or async. Also open: playtest round 4 (retest energy/mood feel post-#169 knobs), Tiers 3+4 of the delegation plan (specced, unbuilt), C95 buzz-hidden-at-zero as a small ready client slice.
+
 ---
 
 ## 📅 Session Log — July 11, 2026, evening (PLAYTEST-FEEDBACK IMPLEMENTATION ARC: #158–#163 all merged — six PRs in one orchestrated session)
