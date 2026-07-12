@@ -296,3 +296,42 @@ export const GUT_CHECK_PROMPT =
   'One-line gut check — does the label sim feel more alive than it did a week ago?';
 
 export const ANYTHING_OFF_PROMPT = 'Anything off / confusing / invisible?';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Versioned form bundle (added with the round-2 form). The PlaytestFeedbackForm
+// component renders whichever definition it is handed; the page serves the
+// active round. The individual constants above stay exported — they are the
+// round-1 historical content and the round-1 tests read them directly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PlaytestFormDefinition {
+  formId: string;
+  title: string;
+  intro: string;
+  sections: PlaytestFormSection[];
+  knobs: PlaytestKnobRow[];
+  knobSectionTitle: string;
+  knobSectionBlurb: string;
+  oneKnobPrompt: string;
+  prioritiesSectionTitle: string;
+  prioritiesSectionBlurb: string;
+  pullBackPrompt: string;
+  gutCheckPrompt: string;
+  anythingOffPrompt: string;
+}
+
+export const PLAYTEST_FORM_V1: PlaytestFormDefinition = {
+  formId: 'playtest-feedback-2026-07-11',
+  title: FORM_TITLE,
+  intro: FORM_INTRO,
+  sections: PLAYTEST_FORM_SECTIONS,
+  knobs: PLAYTEST_FORM_KNOBS,
+  knobSectionTitle: KNOB_SECTION_TITLE,
+  knobSectionBlurb: KNOB_SECTION_BLURB,
+  oneKnobPrompt: ONE_KNOB_PROMPT,
+  prioritiesSectionTitle: PRIORITIES_SECTION_TITLE,
+  prioritiesSectionBlurb: PRIORITIES_SECTION_BLURB,
+  pullBackPrompt: PULL_BACK_PROMPT,
+  gutCheckPrompt: GUT_CHECK_PROMPT,
+  anythingOffPrompt: ANYTHING_OFF_PROMPT,
+};
