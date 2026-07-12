@@ -627,15 +627,95 @@ export const PlaytestFeedbackResponsesSchema = z.object({
   gutCheck: z.string().default(''),
 });
 
+// ========================================
+// Admin Playtest Feedback Schemas — V2 (2026-07-12 "Round 2" form)
+// ========================================
+// Round 2 recording surface for docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12.md.
+// The round-1 (2026-07-11) constants/schemas above stay UNTOUCHED — the v1
+// responses file is a historical record and must remain loadable forever.
+// Versioning approach: the SAME /api/admin/playtest-feedback endpoint pair
+// serves both forms, keyed by a validated formId from the fixed two-entry
+// allowlist below (GET ?formId=…, POST responses.formId). No new routes, so
+// the route manifest is unchanged.
+
+export const PLAYTEST_FEEDBACK_FORM_ID_V2 = 'playtest-feedback-2026-07-12' as const;
+
+// Canonical V2 section ids, in the form's order (§1–§10).
+export const PLAYTEST_SECTION_IDS_V2 = [
+  'mandatory_crisis_events',
+  'energy_lifecycle',
+  'mood_outcomes',
+  'mood_recording_variance_retest',
+  'flop_drama',
+  'reputation_pacing',
+  'creative_capital_income',
+  'meeting_relevance_whynow',
+  'hype_attach_ux',
+  'board_waiting_brief',
+] as const;
+
+// Canonical V2 §11 knob-strength rows, in table order. Every row here was
+// tuned (or newly created) in direct response to round 1.
+export const PLAYTEST_KNOB_IDS_V2 = [
+  'energy_drain_rate',
+  'idle_recovery_rate',
+  'mood_swing_size',
+  'flop_sting',
+  'reputation_pacing',
+  'creative_capital_income',
+  'crisis_frequency',
+  'crisis_slot_cost',
+] as const;
+
+// V2 response document: identical shape to V1, distinguished only by the
+// formId literal (feel/strength scales and section-response shape are shared
+// deliberately — the whole point of the versioned system is diffable,
+// same-shaped rounds).
+export const PlaytestFeedbackResponsesV2Schema = PlaytestFeedbackResponsesSchema.extend({
+  formId: z.literal(PLAYTEST_FEEDBACK_FORM_ID_V2).default(PLAYTEST_FEEDBACK_FORM_ID_V2),
+});
+
+// Union used by the endpoint pair: V2 first so a document with no explicit
+// formId defaults to the ACTIVE form (v2). An explicit v1 formId still
+// parses via the v1 branch.
+export const AnyPlaytestFeedbackResponsesSchema = z.union([
+  PlaytestFeedbackResponsesV2Schema,
+  PlaytestFeedbackResponsesSchema,
+]);
+
+// Fixed allowlist: formId → canonical id lists. The server derives the
+// responses-file path and stable key order from this registry; anything not
+// in it is rejected with 400.
+export const PLAYTEST_FORM_REGISTRY = {
+  [PLAYTEST_FEEDBACK_FORM_ID_V2]: {
+    sectionIds: PLAYTEST_SECTION_IDS_V2 as readonly string[],
+    knobIds: PLAYTEST_KNOB_IDS_V2 as readonly string[],
+  },
+  [PLAYTEST_FEEDBACK_FORM_ID]: {
+    sectionIds: PLAYTEST_SECTION_IDS as readonly string[],
+    knobIds: PLAYTEST_KNOB_IDS as readonly string[],
+  },
+} as const;
+
+export type PlaytestFormId = keyof typeof PLAYTEST_FORM_REGISTRY;
+
+export function isPlaytestFormId(value: string): value is PlaytestFormId {
+  return value in PLAYTEST_FORM_REGISTRY;
+}
+
+// The form the admin page currently records against.
+export const ACTIVE_PLAYTEST_FORM_ID: PlaytestFormId = PLAYTEST_FEEDBACK_FORM_ID_V2;
+
 // Admin endpoints for playtest feedback
 export const adminPlaytestFeedbackEndpoints = {
   getResponses: '/api/admin/playtest-feedback',
   saveResponses: '/api/admin/playtest-feedback',
 } as const;
 
-// Request schema for saving playtest feedback responses
+// Request schema for saving playtest feedback responses (either form version;
+// the server keys the target file off the validated formId).
 export const SavePlaytestFeedbackRequestSchema = z.object({
-  responses: PlaytestFeedbackResponsesSchema,
+  responses: AnyPlaytestFeedbackResponsesSchema,
 });
 
 // Response schema for saving playtest feedback responses
@@ -646,23 +726,27 @@ export const SavePlaytestFeedbackResponseSchema = z.object({
   savedAt: z.string().optional(),
 });
 
-// Response schema for getting playtest feedback responses
-export const GetPlaytestFeedbackResponseSchema = PlaytestFeedbackResponsesSchema;
+// Response schema for getting playtest feedback responses (either version)
+export const GetPlaytestFeedbackResponseSchema = AnyPlaytestFeedbackResponsesSchema;
 
-// Builds the empty default response document (GET returns this when the
-// responses file does not exist yet), with every canonical section/knob key
-// present in stable order so the client can prefill without guessing keys.
-export function buildEmptyPlaytestFeedbackResponses(): PlaytestFeedbackResponses {
+// Builds the empty default response document for any registered form (GET
+// returns this when that form's responses file does not exist yet), with
+// every canonical section/knob key present in stable order so the client can
+// prefill without guessing keys.
+export function buildEmptyPlaytestFeedbackResponsesFor(
+  formId: PlaytestFormId
+): AnyPlaytestFeedbackResponses {
+  const registry = PLAYTEST_FORM_REGISTRY[formId];
   const sections: Record<string, PlaytestSectionResponse> = {};
-  for (const id of PLAYTEST_SECTION_IDS) {
+  for (const id of registry.sectionIds) {
     sections[id] = { exposure: [], feel: null, anythingOff: '', designerAnswers: [] };
   }
   const knobStrength: Record<string, PlaytestStrength | null> = {};
-  for (const id of PLAYTEST_KNOB_IDS) {
+  for (const id of registry.knobIds) {
     knobStrength[id] = null;
   }
   return {
-    formId: PLAYTEST_FEEDBACK_FORM_ID,
+    formId,
     savedAt: null,
     sections,
     knobStrength,
@@ -670,7 +754,21 @@ export function buildEmptyPlaytestFeedbackResponses(): PlaytestFeedbackResponses
     topPriorities: ['', '', ''],
     pullBack: '',
     gutCheck: '',
-  };
+  } as AnyPlaytestFeedbackResponses;
+}
+
+// V1 builder — kept with its original signature (historical callers + tests).
+export function buildEmptyPlaytestFeedbackResponses(): PlaytestFeedbackResponses {
+  return buildEmptyPlaytestFeedbackResponsesFor(
+    PLAYTEST_FEEDBACK_FORM_ID
+  ) as PlaytestFeedbackResponses;
+}
+
+// V2 builder — the active form's empty default.
+export function buildEmptyPlaytestFeedbackResponsesV2(): PlaytestFeedbackResponsesV2 {
+  return buildEmptyPlaytestFeedbackResponsesFor(
+    PLAYTEST_FEEDBACK_FORM_ID_V2
+  ) as PlaytestFeedbackResponsesV2;
 }
 
 // Export TypeScript types
@@ -678,6 +776,8 @@ export type PlaytestFeel = z.infer<typeof PlaytestFeelSchema>;
 export type PlaytestStrength = z.infer<typeof PlaytestStrengthSchema>;
 export type PlaytestSectionResponse = z.infer<typeof PlaytestSectionResponseSchema>;
 export type PlaytestFeedbackResponses = z.infer<typeof PlaytestFeedbackResponsesSchema>;
+export type PlaytestFeedbackResponsesV2 = z.infer<typeof PlaytestFeedbackResponsesV2Schema>;
+export type AnyPlaytestFeedbackResponses = z.infer<typeof AnyPlaytestFeedbackResponsesSchema>;
 export type SavePlaytestFeedbackRequest = z.infer<typeof SavePlaytestFeedbackRequestSchema>;
 export type SavePlaytestFeedbackResponse = z.infer<typeof SavePlaytestFeedbackResponseSchema>;
 export type GetPlaytestFeedbackResponse = z.infer<typeof GetPlaytestFeedbackResponseSchema>;

@@ -5,11 +5,15 @@ import { z } from 'zod';
 import {
   ActionsConfigSchema,
   EventsConfigSchema,
-  PlaytestFeedbackResponsesSchema,
-  PLAYTEST_SECTION_IDS,
-  PLAYTEST_KNOB_IDS,
-  buildEmptyPlaytestFeedbackResponses,
-  type PlaytestFeedbackResponses,
+  AnyPlaytestFeedbackResponsesSchema,
+  PLAYTEST_FEEDBACK_FORM_ID,
+  PLAYTEST_FEEDBACK_FORM_ID_V2,
+  PLAYTEST_FORM_REGISTRY,
+  ACTIVE_PLAYTEST_FORM_ID,
+  isPlaytestFormId,
+  buildEmptyPlaytestFeedbackResponsesFor,
+  type AnyPlaytestFeedbackResponses,
+  type PlaytestFormId,
 } from '@shared/api/contracts';
 import { gameStates } from '@shared/schema';
 import { db } from '../db';
@@ -191,32 +195,42 @@ router.post('/api/admin/events-config', requireClerkUser, requireAdmin, async (r
     }
   });
 
-// Playtest feedback endpoints (Admin only) — recording surface for
-// docs/01-planning/PLAYTEST_FEEDBACK_2026-07-11.md. Mirrors the
-// actions-config pattern (validate → backup → write); persists at
-// docs/01-planning/playtest-feedback-2026-07-11.responses.json. The markdown
-// form stays untouched as the printable source. No dataLoader cache clear or
-// content changelog here — this is not game content.
+// Playtest feedback endpoints (Admin only) — versioned recording surface for
+// the playtest forms (round 1: PLAYTEST_FEEDBACK_2026-07-11.md, round 2:
+// PLAYTEST_FEEDBACK_2026-07-12.md). Mirrors the actions-config pattern
+// (validate → backup → write). The SAME endpoint pair serves every form,
+// keyed by a validated formId from the fixed allowlist below (GET ?formId=…
+// defaulting to the active form; POST reads responses.formId). Each form
+// persists to its own responses file — the round-1 file is a HISTORICAL
+// RECORD that a v2 save must never touch. The markdown forms stay untouched
+// as the printable sources. No dataLoader cache clear or content changelog
+// here — this is not game content.
 
-const PLAYTEST_RESPONSES_FILENAME = 'playtest-feedback-2026-07-11.responses.json';
+const PLAYTEST_RESPONSES_FILENAMES: Record<PlaytestFormId, string> = {
+  [PLAYTEST_FEEDBACK_FORM_ID_V2]: 'playtest-feedback-2026-07-12.responses.json',
+  [PLAYTEST_FEEDBACK_FORM_ID]: 'playtest-feedback-2026-07-11.responses.json',
+};
 
-function playtestResponsesPath(): string {
-  return path.join(process.cwd(), 'docs', '01-planning', PLAYTEST_RESPONSES_FILENAME);
+function playtestResponsesPath(formId: PlaytestFormId): string {
+  return path.join(process.cwd(), 'docs', '01-planning', PLAYTEST_RESPONSES_FILENAMES[formId]);
 }
 
 // Rebuilds the response document with keys in canonical order (formId first,
-// sections/knobs in form order, extras appended) so the pretty-printed JSON
-// file is stable and diffable across saves.
-function stablePlaytestResponses(parsed: PlaytestFeedbackResponses): PlaytestFeedbackResponses {
-  const sections: PlaytestFeedbackResponses['sections'] = {};
-  for (const id of PLAYTEST_SECTION_IDS) {
+// sections/knobs in the given form's order, extras appended) so the
+// pretty-printed JSON file is stable and diffable across saves.
+function stablePlaytestResponses(
+  parsed: AnyPlaytestFeedbackResponses
+): AnyPlaytestFeedbackResponses {
+  const registry = PLAYTEST_FORM_REGISTRY[parsed.formId];
+  const sections: AnyPlaytestFeedbackResponses['sections'] = {};
+  for (const id of registry.sectionIds) {
     if (parsed.sections[id]) sections[id] = parsed.sections[id];
   }
   for (const id of Object.keys(parsed.sections)) {
     if (!(id in sections)) sections[id] = parsed.sections[id];
   }
-  const knobStrength: PlaytestFeedbackResponses['knobStrength'] = {};
-  for (const id of PLAYTEST_KNOB_IDS) {
+  const knobStrength: AnyPlaytestFeedbackResponses['knobStrength'] = {};
+  for (const id of registry.knobIds) {
     if (id in parsed.knobStrength) knobStrength[id] = parsed.knobStrength[id];
   }
   for (const id of Object.keys(parsed.knobStrength)) {
@@ -231,12 +245,19 @@ function stablePlaytestResponses(parsed: PlaytestFeedbackResponses): PlaytestFee
     topPriorities: parsed.topPriorities,
     pullBack: parsed.pullBack,
     gutCheck: parsed.gutCheck,
-  };
+  } as AnyPlaytestFeedbackResponses;
 }
 
 router.get('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, async (req, res) => {
   try {
-    const responsesPath = playtestResponsesPath();
+    // Optional ?formId=… selects which round to load; defaults to the active
+    // form. Anything outside the fixed allowlist is rejected.
+    const requestedFormId =
+      typeof req.query.formId === 'string' ? req.query.formId : ACTIVE_PLAYTEST_FORM_ID;
+    if (!isPlaytestFormId(requestedFormId)) {
+      return res.status(400).json({ error: `Unknown playtest form id: ${requestedFormId}` });
+    }
+    const responsesPath = playtestResponsesPath(requestedFormId);
     let raw: string;
     try {
       raw = await fs.readFile(responsesPath, 'utf8');
@@ -244,11 +265,11 @@ router.get('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, async
       if (readError?.code === 'ENOENT') {
         // No responses saved yet — return the empty default so the page can
         // prefill every field.
-        return res.json(buildEmptyPlaytestFeedbackResponses());
+        return res.json(buildEmptyPlaytestFeedbackResponsesFor(requestedFormId));
       }
       throw readError;
     }
-    const responses = PlaytestFeedbackResponsesSchema.parse(JSON.parse(raw));
+    const responses = AnyPlaytestFeedbackResponsesSchema.parse(JSON.parse(raw));
     res.json(responses);
   } catch (error) {
     console.error('Failed to load playtest feedback responses:', error);
@@ -264,10 +285,12 @@ router.post('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, asyn
       return res.status(400).json({ error: 'Responses data is required' });
     }
 
-    // Validate using shared schema from contracts
-    let parsed: PlaytestFeedbackResponses;
+    // Validate using shared schema from contracts. The validated formId (a
+    // closed two-literal union) keys the target file — a v2 save can never
+    // reach the round-1 historical file and vice versa.
+    let parsed: AnyPlaytestFeedbackResponses;
     try {
-      parsed = PlaytestFeedbackResponsesSchema.parse(responses);
+      parsed = AnyPlaytestFeedbackResponsesSchema.parse(responses);
     } catch (validationError) {
       if (validationError instanceof z.ZodError) {
         return res.status(400).json({
@@ -278,7 +301,7 @@ router.post('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, asyn
       throw validationError;
     }
 
-    const responsesPath = playtestResponsesPath();
+    const responsesPath = playtestResponsesPath(parsed.formId);
 
     // Create backup before overwriting (actions-config precedent; the very
     // first save has nothing to back up, which is fine).
