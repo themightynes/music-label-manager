@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 12, 2026
-- **Total Items**: 91 (C1–C91, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76; C86–C88 added July 10, 2026 during the balance-integrity arc closure; C89–C91 added July 12, 2026 during the Executive Delegation & Trust arc doc-sync pass)
+- **Total Items**: 96 (C1–C96, no gaps; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76; C86–C88 added July 10, 2026 during the balance-integrity arc closure; C89–C91 added July 12, 2026 during the Executive Delegation & Trust arc doc-sync pass; C92 added July 12, 2026 during the Executive Delegation & Trust live-playtest round 3 (this header had drifted one item stale, not counting C92, until this pass); C93–C96 added July 12, 2026 during the round-2 knob-tuning (PR #169) doc-sync pass)
 - **Completed**: 65 — C65 (uncapped press rep) resolved July 11, 2026 by the volatility-economy arc (PR #161); C76 + C85 + C86 + C87 resolved July 11, 2026 by the small-ready-slices arc (`feat/small-ready-slices`: C87 tour energy drain `e1a543f`, C86 four additive GM fixtures `fbbcc53`, C76 audit/negotiate retune `b56a968`, C85 four new guide topics `7f007c2`); C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1 (knob liberation, commit `f065637`)
 - **Deferred by decision**: 3 (C32, C42 — decided July 6, 2026: wire awareness fully player-facing; build EXECUTED same evening on `feat/awareness-surfacing`, held with PR #149 pending playtest; C43)
 - **In Progress**: 0
-- **Pending**: 23 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C66, C75 — CC gate ignores queued choices, July 5, 2026, C77–C78 — tour-tier1 session finds, July 6, 2026, C80 — awareness-surfacing session find, July 6, 2026, C81–C84 — buzz-v2 arc finds, July 6–7, 2026, C88 — balance-integrity arc find, July 10, 2026, C89–C91 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026) — C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1
+- **Pending**: 28 (C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C66, C75 — CC gate ignores queued choices, July 5, 2026, C77–C78 — tour-tier1 session finds, July 6, 2026, C80 — awareness-surfacing session find, July 6, 2026, C81–C84 — buzz-v2 arc finds, July 6–7, 2026, C88 — balance-integrity arc find, July 10, 2026, C89–C91 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026, C92 — Executive Delegation & Trust live-playtest round 3 find, July 12, 2026, C93–C96 — round-2 knob-tuning (PR #169) doc-sync finds, July 12, 2026) — C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -1455,19 +1455,72 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
+### [ ] Comment 93 (C93): flop trigger practically unreachable in competent play 🟡
+**Priority**: 🟡 High
+**Impact**: The flop condition (`shared/engine/processors/ReleaseProcessor.ts:1590-1592`, `processPlannedReleases`) fires only when `totalInvestment >= flop_investment_floor` (10000, `progression.json reputation_system.flop_investment_floor`) AND `releaseWeekRevenue < flop_revenue_ratio × totalInvestment` (ratio 0.10). In practice even a weak, unpromoted artist's week-1 release revenue clears 10% of a $10k+ investment, so the bar is rarely crossed by anything but a deliberately pathological setup. Round-2 tuning (PR #169) just raised the two flop STING knobs (`flop_penalty` 5→8, `flop_artist_mood_penalty` −8→−12) without touching the TRIGGER knobs (`flop_revenue_ratio`/`flop_investment_floor`) — so the flop system (the game's only reputation sink, per edge `e-flop-reputation` in the systems map) is effectively dead content: real penalties attached to a condition that doesn't fire.
+**Effort**: Small (balance-only — no engine change; raise `flop_revenue_ratio`, lower `flop_investment_floor`, or introduce a probabilistic near-bar flop chance). Resolution path is a design decision (see PENDING-DECISIONS, logged by the planning-doc pass on this same date).
+
+**Relevant Files**:
+- [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts) (processPlannedReleases, flop block ~1560-1643)
+- [data/balance/progression.json](data/balance/progression.json) (reputation_system.flop_revenue_ratio / flop_investment_floor / flop_penalty / flop_artist_mood_penalty)
+
+*Identified July 12, 2026 during the round-2 knob-tuning (PR #169) doc-sync pass.*
+
+---
+
+### [ ] Comment 94 (C94): Creative Capital has exactly one positive source 🟡
+**Priority**: 🟡 High
+**Impact**: Across every `ActionProcessor` effect path, the only authored choices that grant positive `creative_capital` are the two delayed effects on the CCO "Employee Effectiveness" meeting (`data/actions.json`, `id: action_1760807005433`, `role_id: cco`): `quick_one` grants `+5`, `take_time` grants `+9` (both `effects_delayed`). Every other `creative_capital` reference in `data/actions.json` is a negative cost. A whole label-wide currency gated behind a single meeting explains the designer confusion ("not clear where CC builds") noted in playtest feedback — there is no other in-game lever that replenishes it.
+**Effort**: Small–Medium (design decision — add CC grants to other meetings/side events, or make the scarcity intentional and surface it better in the UI). Resolution path is a design decision (see PENDING-DECISIONS, logged by the planning-doc pass on this same date).
+
+**Relevant Files**:
+- [data/actions.json](data/actions.json) (action_1760807005433, choices quick_one/take_time)
+- [shared/engine/processors/ActionProcessor.ts](shared/engine/processors/ActionProcessor.ts) (creative_capital case, ~line 741)
+
+*Identified July 12, 2026 during the round-2 knob-tuning (PR #169) doc-sync pass.*
+
+---
+
+### [ ] Comment 95 (C95): release Buzz section hidden at zero awareness during the weeks-1–4 building window 🔵
+**Priority**: 🔵 Low
+**Impact**: `summarizeReleaseBuzz` (`client/src/lib/releaseBuzz.ts:470-472`) returns `{ hottestSong: null, phase: null, ... }` when no released song has `awareness > 0`, and `ReleaseBuzzSection.tsx:25` (`if (!buzz.hottestSong) return null;`) hides the entire section on that null. During the weeks-1–4 building window this reads as ambiguous — the player can't tell if Buzz just hasn't started yet or isn't tracked for this release at all (round-2 playtest carryover, first observed 2026-07-11 "Glass Houses"). A candidate fix is already designed: always render the bar during building weeks, labeled "building," instead of hiding it at exactly-zero awareness.
+**Effort**: Small (client-only — `ReleaseBuzzSection.tsx` + `summarizeReleaseBuzz`'s null-hottest branch, no engine/schema change).
+
+**Relevant Files**:
+- [client/src/lib/releaseBuzz.ts](client/src/lib/releaseBuzz.ts) (summarizeReleaseBuzz, ~line 454-472)
+- [client/src/components/ReleaseBuzzSection.tsx](client/src/components/ReleaseBuzzSection.tsx) (line 25)
+
+*Identified 2026-07-11 during round-2 playtest ("Glass Houses"); logged July 12, 2026 doc-sync pass.*
+
+---
+
+### [ ] Comment 96 (C96): reactive-meeting "why now" line has low noticed-ness 🔵
+**Priority**: 🔵 Low
+**Impact**: The Tier 2 "why now" relevance line (`client/src/utils/reactiveContextCopy.ts`, surfaced in `MeetingSelector.tsx` and `AutoSelectReviewPanel.tsx`) is designed as the payoff explaining why a meeting is reacting to label state, with an urgency dot on the exec card. Across 3 playtests the designer never consciously registered it firing despite reactive meetings actually triggering — round-2 delegation playtest survey (`docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12-delegation.md` §6, line 84) offers "Never noticed it was there" as a checkbox option, selected in the round-2 response. This is a UI visibility/copy question (placement, contrast, or wording), not an engine bug — the underlying relevance computation fires correctly.
+**Effort**: Small (UI pass — increase visual weight of the urgency dot/why-now line, or reposition it) — fold into the meeting-content working session or a standalone small UI slice.
+
+**Relevant Files**:
+- [client/src/utils/reactiveContextCopy.ts](client/src/utils/reactiveContextCopy.ts)
+- [client/src/components/executive-meetings/MeetingSelector.tsx](client/src/components/executive-meetings/MeetingSelector.tsx)
+- [client/src/components/executive-meetings/ExecutiveCard.tsx](client/src/components/executive-meetings/ExecutiveCard.tsx)
+
+*Identified July 12, 2026 during the Executive Delegation & Trust round-2 playtest survey pass.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
-- 🟡 High: 0 items (all completed! 🎉) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
+- 🟡 High: 2 pending (C93 — flop trigger practically unreachable in competent play; C94 — Creative Capital has exactly one positive source; both logged July 12, 2026 during the round-2 knob-tuning doc-sync pass) — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
 - 🟢 Medium: 2 deferred (C42 — decided July 6, 2026: wire awareness fully player-facing, build queued; C43 — product decision open, July 3, 2026; see stale-entry corrections in Document Information), 1 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 23 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C88 — balance-integrity arc find, July 10, 2026; C89–C91 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026; C92 — Executive Delegation & Trust live-playtest round 3 find, July 12, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 25 pending (C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C88 — balance-integrity arc find, July 10, 2026; C89–C91 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026; C92 — Executive Delegation & Trust live-playtest round 3 find, July 12, 2026; C95–C96 — round-2 knob-tuning doc-sync finds, July 12, 2026) — C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
 
 ### By Status
-- ✅ Completed: 65 items (71.4% of 91; 65 + 3 deferred + 23 pending = 91 ✓) — C65 resolved July 11, 2026 (volatility-economy arc, PR #161); C76 + C85 + C86 + C87 resolved July 11, 2026 (small-ready-slices arc)
+- ✅ Completed: 65 items (67.7% of 96; 65 + 3 deferred + 28 pending = 96 ✓) — C65 resolved July 11, 2026 (volatility-economy arc, PR #161); C76 + C85 + C86 + C87 resolved July 11, 2026 (small-ready-slices arc)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42 — decided July 6, 2026: wire awareness fully player-facing (Nes); build EXECUTED same evening on `feat/awareness-surfacing`, held pending playtest; C43)
-- 📋 Pending: 24 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C88 — balance-integrity arc find, July 10, 2026; C89–C91 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026; C92 — Executive Delegation & Trust live-playtest round 3 find, July 12, 2026; all low except C62 medium, not scheduled). C76 (audit retune) + C85 (guide topics) + C86 (GM range fixtures) + C87 (tour energy drain) resolved July 11, 2026 (small-ready-slices arc); C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
+- 📋 Pending: 28 items (C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63, C65 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C88 — balance-integrity arc find, July 10, 2026; C89–C91 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026; C92 — Executive Delegation & Trust live-playtest round 3 find, July 12, 2026; C93–C96 — round-2 knob-tuning (PR #169) doc-sync finds, July 12, 2026; all low except C62 medium and C93/C94 high, not scheduled). C76 (audit retune) + C85 (guide topics) + C86 (GM range fixtures) + C87 (tour energy drain) resolved July 11, 2026 (small-ready-slices arc); C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
 
 ---
 

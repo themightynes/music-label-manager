@@ -25,6 +25,8 @@ import quality from '../../../data/balance/quality.json';
 import progression from '../../../data/balance/progression.json';
 // eslint-disable-next-line import/no-relative-packages
 import economy from '../../../data/balance/economy.json';
+// eslint-disable-next-line import/no-relative-packages
+import artists from '../../../data/balance/artists.json';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -221,7 +223,7 @@ export const NODES: SystemNode[] = [
     domain: 'artist',
     col: 2,
     row: 1,
-    description: `Default 50. Feeds song_quality at generation time only (snapshotted — see non-edges for why it never moves an already-released song's streams). Set by meeting/dialogue choices (ActionProcessor.ts:660) and tour attendance (TourProcessor.ts:338-345). Also moved by RELEASE OUTCOMES (volatility-economy slice 2): a flop wounds the release artist (edge e-flop-artist-mood) and a breakthrough lifts the song artist (edge e-breakthrough-artist-mood). PASSIVE WEEKLY DRIFT toward neutral (liberated to config + amplified, slice 2): mood above threshold_high drifts down by drift_amount, below threshold_low drifts up — artists.json artist_stats.mood_drift { threshold_high 55, threshold_low 45, drift_amount 5 (~1.5× the old hardcoded 3) }, ArtistStateProcessor.calculateNaturalMoodDrift.`,
+    description: `Default 50. Feeds song_quality at generation time only (snapshotted — see non-edges for why it never moves an already-released song's streams). Set by meeting/dialogue choices (ActionProcessor.ts:660) and tour attendance (TourProcessor.ts:338-345). Also moved by RELEASE OUTCOMES (volatility-economy slice 2): a flop wounds the release artist (edge e-flop-artist-mood) and a breakthrough lifts the song artist (edge e-breakthrough-artist-mood). PASSIVE WEEKLY DRIFT toward neutral (liberated to config + amplified, slice 2): mood above threshold_high drifts down by drift_amount, below threshold_low drifts up — artists.json artist_stats.mood_drift { threshold_high 55, threshold_low 45, drift_amount ${(artists as any).artist_stats.mood_drift.drift_amount} (round-2 tuning 2026-07-12: 5 → 8, bands unchanged) }, ArtistStateProcessor.calculateNaturalMoodDrift.`,
   },
   {
     id: 'artist_energy',

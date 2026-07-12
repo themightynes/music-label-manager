@@ -27,6 +27,7 @@ See `@ai-dev-tasks/README.md` for full details.
 - Fix bug → `09-troubleshooting/`
 - Understand UX → `03-workflows/user-interaction-flows.md`
 - Plan work → `01-planning/CORE_FEATURES_sim-v2.0.md`
+- Meeting content working session / playtest next steps *(temporary signpost, 2026-07-12)* → `01-planning/implementation-specs/[FUTURE] meeting-content-working-session-agenda.md`
 
 ---
 
