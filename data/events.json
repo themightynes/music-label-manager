@@ -469,7 +469,7 @@
       "role_hint": "Mac (Head of A&R)",
       "category": "industry_drama",
       "escalation_only": true,
-      "prompt": "Mac trusted his gut on your most promising signing — no follow-through, no calls — until the artist quietly walked to a rival label. He's already replaying every conversation he didn't have.",
+      "prompt": "Week one was supposed to set the tone for your newest signing. Nobody set anything. The onboarding plan Mac never brought to your desk got run anyway — by a rival label, who walked the artist through it and then out the door. Mac heard the news mid-pitch on the next name he wants to sign.",
       "choices": [
         {
           "id": "chase_rebound",
@@ -509,7 +509,7 @@
       "role_hint": "Sam (CMO)",
       "category": "industry_drama",
       "escalation_only": true,
-      "prompt": "Sam left your press cycle unsupervised, and a rival act took the story that should've been yours this week. His read: the market moved, not him.",
+      "prompt": "You charted, and the press window opened — that was the week Sam decided the story could breathe on its own. It breathed its way into a rival's headline: the coverage your debut earned is running this morning under someone else's logo, and Sam's read is that the market moved, not him.",
       "choices": [
         {
           "id": "buy_back_narrative",
@@ -547,7 +547,7 @@
       "role_hint": "Dante (CCO)",
       "category": "artist_personal",
       "escalation_only": true,
-      "prompt": "Left unattended, Dante chased the sound past your artist's patience — they walked out mid-session while he was already reaching for the next take.",
+      "prompt": "The burnout flag went up — step in before it costs us the work, that was the ask. It cost you the work. With no one watching, Dante's answer to a cratering artist was another take, and they walked out mid-session while he was still reaching for the next one.",
       "choices": [
         {
           "id": "emergency_session",
@@ -587,7 +587,7 @@
       "role_hint": "Pat (Head of Distribution)",
       "category": "business_opportunities",
       "escalation_only": true,
-      "prompt": "Pat's guaranteed-safe distribution deal for your release — the one with no failure modes on paper — collapsed at the signature line, unmonitored until now.",
+      "prompt": "The first-week numbers review was the checkpoint — the meeting where the partner's cold feet would have shown up in black and white. Nobody read the numbers. The deal died quietly at the signature line, and Pat's checklist turns out to have covered every failure mode except someone actually watching.",
       "choices": [
         {
           "id": "scramble_new_deal",
