@@ -15,6 +15,11 @@
  * fails CI.
  */
 
+import {
+  DEFAULT_AUTO_SAFE_SCORING,
+  type AutoSafeScoringConfig,
+} from './executiveAutoSelect';
+
 /** Loyalty-band names (§3.1). */
 export type LoyaltyBand = 'loyal' | 'committed' | 'disloyal';
 
@@ -78,6 +83,13 @@ export interface ExecDelegationConfig {
   neglect_mood_gain: number;
   /** Tier 2 (§5.1): urgent-meeting-ignored escalation into a mandatory crisis. */
   escalation: EscalationConfig;
+  /**
+   * Loyal-scorer fix (2026-07-12): tunables for the AUTO-safe / loyal-band
+   * choice scorer (scoreChoiceSafety). Defined next to the scorer in
+   * shared/utils/executiveAutoSelect.ts; carried on this config so the engine's
+   * autonomous-resolution path reads the balance-JSON-tuned values.
+   */
+  auto_safe_scoring: AutoSafeScoringConfig;
 }
 
 /**
@@ -121,6 +133,7 @@ export const DEFAULT_EXEC_DELEGATION_CONFIG: ExecDelegationConfig = {
     loyalty_ceiling: 40,
     enabled: true,
   },
+  auto_safe_scoring: DEFAULT_AUTO_SAFE_SCORING,
 };
 
 /**

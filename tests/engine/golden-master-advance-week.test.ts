@@ -104,13 +104,15 @@ function forceCrisisGameData(gd: any): any {
 }
 
 // Executive Delegation arc (Tier 1, §10.2): a pool where the loyal (safety) band
-// TIES between two gamble-free choices differing only in money spend (clamped in
-// the safety score) — so mood risk-appetite decides. One meeting per role.
+// TIES between two gamble-free choices differing only in money spend — so mood
+// risk-appetite decides. Loyal-scorer fix (2026-07-12): spends now score
+// per-$1000, so a tie needs BOTH spends beyond the money_spend_cap ($20k-worth
+// of score); riskScore (raw spend) still differs, so mood breaks the tie.
 const MOOD_RISK_POOL: any[] = ['head_ar', 'cmo'].map((role) => ({
   type: 'role_meeting', id: `mr_${role}`, role_id: role, name: `${role} call`,
   target_scope: 'global', requires: [], choices: [
-    { id: 'cheap', label: 'Cheap', effects_immediate: { money: -3000 }, effects_delayed: {} },
-    { id: 'pricey', label: 'Pricey', effects_immediate: { money: -9000 }, effects_delayed: {} },
+    { id: 'cheap', label: 'Cheap', effects_immediate: { money: -25000 }, effects_delayed: {} },
+    { id: 'pricey', label: 'Pricey', effects_immediate: { money: -40000 }, effects_delayed: {} },
   ],
 }));
 

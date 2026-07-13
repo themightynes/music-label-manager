@@ -159,7 +159,7 @@ export function pickAutonomousChoice(input: PickAutonomousChoiceInput): Dialogue
   const band = getLoyaltyBand(loyalty, config);
   const scoreFn: (c: DialogueChoice) => number =
     band === 'loyal'
-      ? scoreChoiceSafety
+      ? (c) => scoreChoiceSafety(c, config.auto_safe_scoring)
       : band === 'disloyal'
       ? (c) => scoreSelfServing(c, roleId)
       : scoreCommitted;
