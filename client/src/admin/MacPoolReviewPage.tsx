@@ -12,52 +12,56 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import {
   MAC_POOL_REVIEW_FORM_ID,
-  buildEmptyMacPoolReviewResponses,
-  type MacPoolMeetingReview,
-  type MacPoolReviewResponses,
-  type MacPoolReviewVerdict,
+  buildEmptyPoolReviewResponsesFor,
+  type PoolReviewFormId,
+  type PoolReviewMeeting,
+  type PoolReviewResponses,
+  type PoolReviewVerdict,
 } from '@shared/api/contracts';
-import {
-  MAC_POOL_REVIEW_INTRO,
-  MAC_POOL_REVIEW_TITLE,
-  MAC_POOL_REVIEW_VERDICT_OPTIONS,
-  MAC_POOL_OVERALL_NOTES_PROMPT,
-  MAC_POOL_VOICE_CONSISTENCY_PROMPT,
-  V3_MAC_POOL_MEETINGS,
-  type MacPoolMeetingEntry,
-} from '@/admin/v3MacPoolReview';
+import { MAC_POOL_REVIEW_VERDICT_OPTIONS } from '@/admin/v3MacPoolReview';
+import { POOL_REVIEW_OPTIONS, POOL_REVIEW_REGISTRY, type PoolReviewDefinition } from '@/admin/poolReviewRegistry';
+import type { PoolReviewEntry } from '@/admin/poolReviewTypes';
 
 /**
- * v3 Mac Pool content-review surface (/admin/mac-pool-review).
+ * v3 pool content-review surface (/admin/mac-pool-review — historical route
+ * name; the page now covers ALL SEVEN pools via the picker).
  *
  * Same persistence machinery as the playtest-feedback page — the SAME
- * GET/POST /api/admin/playtest-feedback endpoint pair, keyed by the
- * 'v3-mac-pool-review' formId from the widened server-side allowlist, saving
- * to docs/01-planning/v3-mac-pool-review.responses.json (validate → backup →
- * write; a save here can never reach any playtest round's file and vice
- * versa). NOT a playtest round: it does not appear in the round picker, and
- * the round-shaped PLAYTEST_FORM_REGISTRY is untouched.
+ * GET/POST /api/admin/playtest-feedback endpoint pair, keyed per pool by the
+ * formIds from the widened server-side allowlist (POOL_REVIEW_FORM_IDS),
+ * each saving to its own docs/01-planning/v3-<pool>-pool-review.responses.json
+ * (validate → backup → write; a save against one pool can never reach any
+ * other pool's file, any round's file, or vice versa). NOT playtest rounds:
+ * none of these appear in the round picker, and the round-shaped
+ * PLAYTEST_FORM_REGISTRY is untouched.
  *
- * Content (client/src/admin/v3MacPoolReview.ts) is the verbatim transcription
- * of the 2026-07-12 working session's authored Mac meetings. Per meeting: a
- * verdict (approve / approve with edits / rework / kill) + freeform notes;
- * two overall fields at the end. Nothing is required — unanswered stays
- * null/empty.
+ * Content (client/src/admin/v3*PoolReview.ts + poolReviewRegistry.ts) is the
+ * verbatim transcription of the 2026-07-12 working session's authored pools.
+ * Per entry: a verdict (approve / approve with edits / rework / kill) +
+ * freeform notes; two overall fields at the end. Nothing is required —
+ * unanswered stays null/empty.
+ *
+ * Switching pools discards any unsaved draft (with a confirm prompt) and
+ * refetches that pool's saved responses (PlaytestFeedbackPage round-picker
+ * precedent).
  */
 
-const macPoolReviewQueryKey = ['admin', 'playtest-feedback', MAC_POOL_REVIEW_FORM_ID] as const;
+function poolReviewQueryKey(formId: PoolReviewFormId) {
+  return ['admin', 'playtest-feedback', formId] as const;
+}
 
-function emptyMeetingReview(): MacPoolMeetingReview {
+function emptyMeetingReview(): PoolReviewMeeting {
   return { verdict: null, notes: '' };
 }
 
 // Merge a fetched document over the canonical empty default so every meeting
 // key exists even if the saved file predates a content tweak.
-function withDefaults(fetched: MacPoolReviewResponses): MacPoolReviewResponses {
-  const base = buildEmptyMacPoolReviewResponses();
+function withDefaults(fetched: PoolReviewResponses, formId: PoolReviewFormId): PoolReviewResponses {
+  const base = buildEmptyPoolReviewResponsesFor(formId);
   return {
     ...base,
     ...fetched,
+    formId,
     meetings: { ...base.meetings, ...(fetched.meetings ?? {}) },
   };
 }
@@ -71,17 +75,18 @@ function formatSavedAt(savedAt: string | null): string | null {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Meeting card: authored content (prompt as exec dialogue, choices table,
-// band line, upgrade spec) + the review controls.
+// band lines / design-note lines, upgrade specs) + the review controls.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface MeetingCardProps {
-  meeting: MacPoolMeetingEntry;
+  meeting: PoolReviewEntry;
   number: number;
-  value: MacPoolMeetingReview;
-  onChange: (next: MacPoolMeetingReview) => void;
+  promptSpeaker: string | null;
+  value: PoolReviewMeeting;
+  onChange: (next: PoolReviewMeeting) => void;
 }
 
-function MeetingCard({ meeting, number, value, onChange }: MeetingCardProps) {
+function MeetingCard({ meeting, number, promptSpeaker, value, onChange }: MeetingCardProps) {
   return (
     <section className="glass-panel rounded-xl p-5 space-y-4" data-testid={`meeting-${meeting.id}`}>
       <header className="space-y-1">
@@ -101,25 +106,46 @@ function MeetingCard({ meeting, number, value, onChange }: MeetingCardProps) {
         </h2>
         <p className="text-xs text-white/50">
           <span className="font-mono text-neon-lilac">{meeting.tier}</span>
-          <span className="mx-1.5">·</span>
-          {meeting.gating}
-          <span className="mx-1.5">·</span>
-          <span className="text-white/35">
-            {meeting.status} — {meeting.sourceFile}
-          </span>
+          {meeting.gating && (
+            <>
+              <span className="mx-1.5">·</span>
+              {meeting.gating}
+            </>
+          )}
+          {(meeting.status || meeting.sourceFile) && (
+            <>
+              <span className="mx-1.5">·</span>
+              <span className="text-white/35">
+                {meeting.status ? `${meeting.status} — ` : ''}
+                {meeting.sourceFile}
+              </span>
+            </>
+          )}
         </p>
       </header>
 
       {meeting.prompt && (
         <blockquote className="border-l-2 border-neon-magenta/60 pl-4 py-1">
           <p className="text-sm text-white/85 italic leading-relaxed">
-            <span className="not-italic font-semibold text-neon-magenta mr-2">Mac:</span>
+            {promptSpeaker && (
+              <span className="not-italic font-semibold text-neon-magenta mr-2">{promptSpeaker}:</span>
+            )}
             “{meeting.prompt}”
           </p>
         </blockquote>
       )}
 
       {meeting.description && <p className="text-sm text-white/60">{meeting.description}</p>}
+
+      {meeting.designNotes.length > 0 && (
+        <div className="rounded-lg border border-warning/25 bg-warning/5 p-3 space-y-1">
+          {meeting.designNotes.map((note, index) => (
+            <p key={index} className="text-xs text-warning/90">
+              {note}
+            </p>
+          ))}
+        </div>
+      )}
 
       {meeting.choices.length > 0 && (
         <div className="overflow-x-auto">
@@ -155,20 +181,11 @@ function MeetingCard({ meeting, number, value, onChange }: MeetingCardProps) {
       {meeting.bandPredictions && (
         <div className="rounded-lg bg-surface-inner/60 p-3 space-y-1 text-xs">
           <p className="font-medium text-neon-lilac">{meeting.bandPredictions.heading}:</p>
-          <p className="text-white/70">
-            <span className="font-semibold text-white/85">Loyal:</span> {meeting.bandPredictions.loyal}
-          </p>
-          <p className="text-white/70">
-            <span className="font-semibold text-white/85">Committed:</span> {meeting.bandPredictions.committed}
-          </p>
-          <p className="text-white/70">
-            <span className="font-semibold text-white/85">Disloyal:</span> {meeting.bandPredictions.disloyal}
-          </p>
-          {meeting.bandPredictions.flags && (
-            <p className="text-warning/90">
-              <span className="font-semibold">Flags:</span> {meeting.bandPredictions.flags}
+          {meeting.bandPredictions.lines.map((line, index) => (
+            <p key={index} className="text-white/70">
+              {line}
             </p>
-          )}
+          ))}
         </div>
       )}
 
@@ -180,10 +197,17 @@ function MeetingCard({ meeting, number, value, onChange }: MeetingCardProps) {
         </ul>
       )}
 
-      {meeting.upgradeSpec && (
-        <p className="text-xs text-neon-cyan/80 border border-neon-cyan/20 rounded-lg p-3 bg-surface-inner/40">
-          {meeting.upgradeSpec}
-        </p>
+      {meeting.upgradeSpecs.length > 0 && (
+        <div className="space-y-2">
+          {meeting.upgradeSpecs.map((spec, index) => (
+            <p
+              key={index}
+              className="text-xs text-neon-cyan/80 border border-neon-cyan/20 rounded-lg p-3 bg-surface-inner/40"
+            >
+              {spec}
+            </p>
+          ))}
+        </div>
       )}
 
       {/* Review controls */}
@@ -193,7 +217,7 @@ function MeetingCard({ meeting, number, value, onChange }: MeetingCardProps) {
           <RadioGroup
             value={value.verdict ?? ''}
             onValueChange={(verdict) =>
-              onChange({ ...value, verdict: verdict as MacPoolReviewVerdict })
+              onChange({ ...value, verdict: verdict as PoolReviewVerdict })
             }
             className="flex flex-wrap gap-4"
           >
@@ -230,25 +254,28 @@ function MeetingCard({ meeting, number, value, onChange }: MeetingCardProps) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The form body — exported for the render test (no layout, no network).
+// Pool-agnostic: takes the pool definition + that pool's responses document.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface MacPoolReviewFormProps {
-  responses: MacPoolReviewResponses;
-  onChange: (next: MacPoolReviewResponses) => void;
+export interface PoolReviewFormProps {
+  pool: PoolReviewDefinition;
+  responses: PoolReviewResponses;
+  onChange: (next: PoolReviewResponses) => void;
 }
 
-export function MacPoolReviewForm({ responses, onChange }: MacPoolReviewFormProps) {
-  const setMeeting = (id: string, next: MacPoolMeetingReview) => {
+export function PoolReviewForm({ pool, responses, onChange }: PoolReviewFormProps) {
+  const setMeeting = (id: string, next: PoolReviewMeeting) => {
     onChange({ ...responses, meetings: { ...responses.meetings, [id]: next } });
   };
 
   return (
     <div className="space-y-5">
-      {V3_MAC_POOL_MEETINGS.map((meeting, index) => (
+      {pool.meetings.map((meeting, index) => (
         <MeetingCard
           key={meeting.id}
           meeting={meeting}
           number={index + 1}
+          promptSpeaker={pool.promptSpeaker}
           value={responses.meetings[meeting.id] ?? emptyMeetingReview()}
           onChange={(next) => setMeeting(meeting.id, next)}
         />
@@ -258,14 +285,14 @@ export function MacPoolReviewForm({ responses, onChange }: MacPoolReviewFormProp
       <section className="glass-panel rounded-xl p-5 space-y-4" data-testid="section-overall">
         <header>
           <h2 className="text-lg font-semibold text-white">
-            <span className="text-neon-cyan mr-2">{V3_MAC_POOL_MEETINGS.length + 1}.</span>
+            <span className="text-neon-cyan mr-2">{pool.meetings.length + 1}.</span>
             Overall
           </h2>
         </header>
 
         <div>
           <Label htmlFor="overall-notes" className="text-sm font-medium text-white/80">
-            {MAC_POOL_OVERALL_NOTES_PROMPT}
+            {pool.overallNotesPrompt}
           </Label>
           <Textarea
             id="overall-notes"
@@ -278,7 +305,7 @@ export function MacPoolReviewForm({ responses, onChange }: MacPoolReviewFormProp
 
         <div>
           <Label htmlFor="voice-consistency" className="text-sm font-medium text-white/80">
-            {MAC_POOL_VOICE_CONSISTENCY_PROMPT}
+            {pool.voiceConsistencyPrompt}
           </Label>
           <Textarea
             id="voice-consistency"
@@ -289,48 +316,76 @@ export function MacPoolReviewForm({ responses, onChange }: MacPoolReviewFormProp
           />
         </div>
       </section>
+
+      {/* File-level hand-off sections (divergence summaries, cross-pool notes) */}
+      {pool.poolLevelNotes.length > 0 && (
+        <section className="glass-panel rounded-xl p-5 space-y-2" data-testid="section-pool-notes">
+          <h2 className="text-sm font-semibold text-white/80">
+            Hand-off file-level notes (divergence summaries, cross-pool notes)
+          </h2>
+          <div className="overflow-x-auto">
+            <pre className="text-[11px] leading-relaxed text-white/55 whitespace-pre-wrap font-mono">
+              {pool.poolLevelNotes.join('\n')}
+            </pre>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The page — GameLayout exactly once, fetch via apiRequest, sticky save bar
-// (PlaytestFeedbackPage precedent).
+// The page — GameLayout exactly once, fetch via apiRequest, sticky save bar,
+// pool picker with switch-with-confirm (PlaytestFeedbackPage precedent).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function MacPoolReviewPage() {
   const { toast } = useToast();
-  const [responses, setResponses] = useState<MacPoolReviewResponses | null>(null);
+  const [selectedFormId, setSelectedFormId] = useState<PoolReviewFormId>(MAC_POOL_REVIEW_FORM_ID);
+  const [responses, setResponses] = useState<PoolReviewResponses | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  const pool = POOL_REVIEW_REGISTRY[selectedFormId];
 
   const {
     data: fetched,
     isLoading,
     isError,
-  } = useQuery<MacPoolReviewResponses>({
-    queryKey: macPoolReviewQueryKey,
+  } = useQuery<PoolReviewResponses>({
+    queryKey: poolReviewQueryKey(selectedFormId),
     queryFn: async () => {
       const response = await apiRequest(
         'GET',
-        `/api/admin/playtest-feedback?formId=${MAC_POOL_REVIEW_FORM_ID}`
+        `/api/admin/playtest-feedback?formId=${selectedFormId}`
       );
       return response.json();
     },
   });
 
-  // Prefill from the fetch once; the local draft otherwise owns the state so
-  // in-progress edits are never clobbered.
+  // Prefill from the fetch whenever the selected pool changes; the local
+  // draft otherwise owns the state so in-progress edits are never clobbered.
   useEffect(() => {
     if (fetched && responses === null) {
-      const merged = withDefaults(fetched);
+      const merged = withDefaults(fetched, selectedFormId);
       setResponses(merged);
       setSavedAt(merged.savedAt);
     }
-  }, [fetched, responses]);
+  }, [fetched, responses, selectedFormId]);
 
-  const handleChange = (next: MacPoolReviewResponses) => {
+  const handleSelectPool = (formId: PoolReviewFormId) => {
+    if (formId === selectedFormId) return;
+    if (dirty && !window.confirm('Switching pools will discard unsaved changes. Continue?')) {
+      return;
+    }
+    setSelectedFormId(formId);
+    setResponses(null);
+    setSavedAt(null);
+    setDirty(false);
+  };
+
+  const handleChange = (next: PoolReviewResponses) => {
     setResponses(next);
     setDirty(true);
   };
@@ -345,7 +400,7 @@ export default function MacPoolReviewPage() {
       setDirty(false);
       toast({ title: 'Review saved', description: 'Responses written to the planning doc folder.' });
     } catch (error) {
-      console.error('Failed to save mac pool review:', error);
+      console.error('Failed to save pool review:', error);
       toast({
         title: 'Save failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -364,7 +419,7 @@ export default function MacPoolReviewPage() {
         {/* Sticky save bar */}
         <div className="sticky top-0 z-20 -mx-2 px-2 py-3 backdrop-blur-md bg-surface-app/80 border-b border-white/10 mb-5 flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-white truncate">{MAC_POOL_REVIEW_TITLE}</h1>
+            <h1 className="text-xl font-bold text-white truncate">{pool.title}</h1>
             <p className="text-xs text-white/50">
               {savedLabel ? `Last saved ${savedLabel}` : 'Not saved yet'}
               {dirty ? ' · unsaved changes' : ''}
@@ -375,14 +430,33 @@ export default function MacPoolReviewPage() {
           </Button>
         </div>
 
-        <p className="text-sm text-white/60 mb-6">{MAC_POOL_REVIEW_INTRO}</p>
+        {/* Pool picker — segmented control, PlaytestFeedbackPage round-picker precedent */}
+        <div className="flex flex-wrap items-center gap-2 mb-5" data-testid="pool-review-picker">
+          {POOL_REVIEW_OPTIONS.map((option) => (
+            <Button
+              key={option.formId}
+              type="button"
+              size="sm"
+              variant={selectedFormId === option.formId ? 'default' : 'outline'}
+              onClick={() => handleSelectPool(option.formId)}
+              data-testid={`pool-review-option-${option.formId}`}
+            >
+              {option.pickerLabel}
+              <span className="ml-1.5 text-[10px] text-white/50 font-mono">
+                {option.meetings.length}
+              </span>
+            </Button>
+          ))}
+        </div>
+
+        <p className="text-sm text-white/60 mb-6">{pool.intro}</p>
 
         {isLoading && <p className="text-white/60">Loading saved responses…</p>}
         {isError && (
           <p className="text-negative">Failed to load saved responses — answers entered now would not prefill.</p>
         )}
 
-        {responses && <MacPoolReviewForm responses={responses} onChange={handleChange} />}
+        {responses && <PoolReviewForm pool={pool} responses={responses} onChange={handleChange} />}
       </div>
     </GameLayout>
   );

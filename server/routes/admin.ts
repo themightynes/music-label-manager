@@ -10,14 +10,21 @@ import {
   PLAYTEST_FEEDBACK_FORM_ID_V2,
   PLAYTEST_FEEDBACK_FORM_ID_V3,
   MAC_POOL_REVIEW_FORM_ID,
-  MAC_POOL_REVIEW_MEETING_IDS,
+  SAM_POOL_REVIEW_FORM_ID,
+  DANTE_POOL_REVIEW_FORM_ID,
+  PAT_POOL_REVIEW_FORM_ID,
+  CEO_POOL_REVIEW_FORM_ID,
+  EVENTS_POOL_REVIEW_FORM_ID,
+  ESCALATIONS_POOL_REVIEW_FORM_ID,
+  POOL_REVIEW_MEETING_IDS,
   PLAYTEST_FORM_REGISTRY,
   ACTIVE_PLAYTEST_FORM_ID,
   isAdminFeedbackFormId,
+  isPoolReviewFormId,
   buildEmptyAdminFeedbackResponsesFor,
   type AnyAdminFeedbackResponses,
   type AnyPlaytestFeedbackResponses,
-  type MacPoolReviewResponses,
+  type PoolReviewResponses,
   type AdminFeedbackFormId,
 } from '@shared/api/contracts';
 import { gameStates } from '@shared/schema';
@@ -212,16 +219,22 @@ router.post('/api/admin/events-config', requireClerkUser, requireAdmin, async (r
 // calendar date). The markdown forms stay untouched as the printable sources.
 // No dataLoader cache clear or content changelog here — this is not game content.
 
-// The allowlist ALSO carries the v3-mac-pool-review CONTENT-REVIEW form (not
-// a playtest round; not in the round picker) — same endpoint pair, its own
-// document shape (per-meeting verdict/notes) and its own responses file,
-// structurally unreachable from any round's save (the validated formId is the
-// only path to a filename).
+// The allowlist ALSO carries the seven v3 pool CONTENT-REVIEW forms (not
+// playtest rounds; not in the round picker) — same endpoint pair, their own
+// document shape (per-meeting verdict/notes) and one responses file PER POOL,
+// structurally unreachable from any other form's save (the validated formId
+// is the only path to a filename).
 const PLAYTEST_RESPONSES_FILENAMES: Record<AdminFeedbackFormId, string> = {
   [PLAYTEST_FEEDBACK_FORM_ID_V3]: 'playtest-feedback-2026-07-12-r3.responses.json',
   [PLAYTEST_FEEDBACK_FORM_ID_V2]: 'playtest-feedback-2026-07-12.responses.json',
   [PLAYTEST_FEEDBACK_FORM_ID]: 'playtest-feedback-2026-07-11.responses.json',
   [MAC_POOL_REVIEW_FORM_ID]: 'v3-mac-pool-review.responses.json',
+  [SAM_POOL_REVIEW_FORM_ID]: 'v3-sam-pool-review.responses.json',
+  [DANTE_POOL_REVIEW_FORM_ID]: 'v3-dante-pool-review.responses.json',
+  [PAT_POOL_REVIEW_FORM_ID]: 'v3-pat-pool-review.responses.json',
+  [CEO_POOL_REVIEW_FORM_ID]: 'v3-ceo-pool-review.responses.json',
+  [EVENTS_POOL_REVIEW_FORM_ID]: 'v3-events-pool-review.responses.json',
+  [ESCALATIONS_POOL_REVIEW_FORM_ID]: 'v3-escalations-pool-review.responses.json',
 };
 
 function playtestResponsesPath(formId: AdminFeedbackFormId): string {
@@ -261,11 +274,11 @@ function stablePlaytestResponses(
   } as AnyPlaytestFeedbackResponses;
 }
 
-// Mac-pool-review sibling of stablePlaytestResponses: meetings in canonical
-// reading order (extras appended), stable top-level key order.
-function stableMacPoolReviewResponses(parsed: MacPoolReviewResponses): MacPoolReviewResponses {
-  const meetings: MacPoolReviewResponses['meetings'] = {};
-  for (const id of MAC_POOL_REVIEW_MEETING_IDS) {
+// Pool-review sibling of stablePlaytestResponses: meetings in that pool's
+// canonical reading order (extras appended), stable top-level key order.
+function stablePoolReviewResponses(parsed: PoolReviewResponses): PoolReviewResponses {
+  const meetings: PoolReviewResponses['meetings'] = {};
+  for (const id of POOL_REVIEW_MEETING_IDS[parsed.formId]) {
     if (parsed.meetings[id]) meetings[id] = parsed.meetings[id];
   }
   for (const id of Object.keys(parsed.meetings)) {
@@ -352,10 +365,9 @@ router.post('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, asyn
 
     // Stamp savedAt server-side and write pretty-printed, stable key order.
     const savedAt = new Date().toISOString();
-    const stable =
-      parsed.formId === MAC_POOL_REVIEW_FORM_ID
-        ? stableMacPoolReviewResponses({ ...parsed, savedAt })
-        : stablePlaytestResponses({ ...parsed, savedAt });
+    const stable = isPoolReviewFormId(parsed.formId)
+      ? stablePoolReviewResponses({ ...(parsed as PoolReviewResponses), savedAt })
+      : stablePlaytestResponses({ ...(parsed as AnyPlaytestFeedbackResponses), savedAt });
     await fs.writeFile(responsesPath, JSON.stringify(stable, null, 2), 'utf8');
 
     res.json({

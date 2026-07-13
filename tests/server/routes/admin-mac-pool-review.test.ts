@@ -44,12 +44,18 @@ import express, { type Express } from 'express';
 import request from 'supertest';
 import {
   buildEmptyMacPoolReviewResponses,
+  buildEmptyPoolReviewResponsesFor,
   buildEmptyPlaytestFeedbackResponses,
   buildEmptyPlaytestFeedbackResponsesV2,
   buildEmptyPlaytestFeedbackResponsesV3,
   MAC_POOL_REVIEW_FORM_ID,
   MAC_POOL_REVIEW_MEETING_IDS,
+  POOL_REVIEW_FORM_IDS,
+  POOL_REVIEW_MEETING_IDS,
+  SAM_POOL_REVIEW_FORM_ID,
+  ESCALATIONS_POOL_REVIEW_FORM_ID,
   PLAYTEST_FEEDBACK_FORM_ID_V3,
+  type PoolReviewFormId,
 } from '@shared/api/contracts';
 
 const REVIEW_RESPONSES_REL_PATH = path.join(
@@ -72,6 +78,11 @@ const V3_RESPONSES_REL_PATH = path.join(
   '01-planning',
   'playtest-feedback-2026-07-12-r3.responses.json'
 );
+
+function poolResponsesRelPath(formId: PoolReviewFormId): string {
+  // Mirrors PLAYTEST_RESPONSES_FILENAMES: v3-<pool>-pool-review.responses.json
+  return path.join('docs', '01-planning', `${formId}.responses.json`);
+}
 
 function sampleReviewResponses() {
   const responses = buildEmptyMacPoolReviewResponses();
@@ -254,14 +265,115 @@ describe('admin mac-pool-review via the playtest-feedback endpoint pair', () => 
   });
 
   it('GET/POST with a formId outside the widened allowlist still returns 400', async () => {
-    const getRes = await request(app).get('/api/admin/playtest-feedback?formId=v3-sam-pool-review');
+    const getRes = await request(app).get(
+      '/api/admin/playtest-feedback?formId=v3-nobody-pool-review'
+    );
     expect(getRes.status).toBe(400);
 
     const foreign: any = sampleReviewResponses();
-    foreign.formId = 'v3-sam-pool-review';
+    foreign.formId = 'v3-nobody-pool-review';
     const postRes = await request(app)
       .post('/api/admin/playtest-feedback')
       .send({ responses: foreign });
     expect(postRes.status).toBe(400);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Seven-pool extension: every pool loads its own empty default and saves to
+  // its own file, unreachable from every other pool's save (and from rounds).
+  // ───────────────────────────────────────────────────────────────────────────
+
+  it('GET returns each pool’s empty default with that pool’s canonical meeting keys', async () => {
+    for (const formId of POOL_REVIEW_FORM_IDS) {
+      const res = await request(app).get(`/api/admin/playtest-feedback?formId=${formId}`);
+      expect(res.status, formId).toBe(200);
+      expect(res.body.formId, formId).toBe(formId);
+      expect(res.body.savedAt, formId).toBeNull();
+      expect(Object.keys(res.body.meetings), formId).toEqual([
+        ...POOL_REVIEW_MEETING_IDS[formId],
+      ]);
+    }
+  });
+
+  it('POST of one pool’s review writes ONLY that pool’s file — every other pool file stays absent', async () => {
+    const sam = buildEmptyPoolReviewResponsesFor(SAM_POOL_REVIEW_FORM_ID);
+    sam.meetings.the_dossier = { verdict: 'approve', notes: 'leverage reads true' };
+    const res = await request(app)
+      .post('/api/admin/playtest-feedback')
+      .send({ responses: sam });
+    expect(res.status).toBe(200);
+
+    const samPath = path.join(tmpDir, poolResponsesRelPath(SAM_POOL_REVIEW_FORM_ID));
+    const written = JSON.parse(await fs.readFile(samPath, 'utf8'));
+    expect(written.formId).toBe(SAM_POOL_REVIEW_FORM_ID);
+    expect(written.meetings.the_dossier.verdict).toBe('approve');
+    // Stable key order: meetings in Sam's canonical reading order.
+    expect(Object.keys(written.meetings)).toEqual([
+      ...POOL_REVIEW_MEETING_IDS[SAM_POOL_REVIEW_FORM_ID],
+    ]);
+
+    for (const other of POOL_REVIEW_FORM_IDS) {
+      if (other === SAM_POOL_REVIEW_FORM_ID) continue;
+      await expect(
+        fs.readFile(path.join(tmpDir, poolResponsesRelPath(other)), 'utf8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  });
+
+  it('POST of one pool’s review never touches another pool’s EXISTING file (byte-identical)', async () => {
+    // Seed the mac and escalations files as if previously saved.
+    const macSeedRaw = JSON.stringify(
+      { ...sampleReviewResponses(), savedAt: '2026-07-12T20:00:00.000Z' },
+      null,
+      2
+    );
+    const macPath = path.join(tmpDir, REVIEW_RESPONSES_REL_PATH);
+    await fs.writeFile(macPath, macSeedRaw, 'utf8');
+    const escSeed = buildEmptyPoolReviewResponsesFor(ESCALATIONS_POOL_REVIEW_FORM_ID);
+    const escSeedRaw = JSON.stringify({ ...escSeed, savedAt: '2026-07-12T20:05:00.000Z' }, null, 2);
+    const escPath = path.join(tmpDir, poolResponsesRelPath(ESCALATIONS_POOL_REVIEW_FORM_ID));
+    await fs.writeFile(escPath, escSeedRaw, 'utf8');
+
+    const sam = buildEmptyPoolReviewResponsesFor(SAM_POOL_REVIEW_FORM_ID);
+    const res = await request(app).post('/api/admin/playtest-feedback').send({ responses: sam });
+    expect(res.status).toBe(200);
+
+    expect(await fs.readFile(macPath, 'utf8')).toBe(macSeedRaw);
+    expect(await fs.readFile(escPath, 'utf8')).toBe(escSeedRaw);
+    for (const seeded of [macPath, escPath]) {
+      await expect(fs.readFile(`${seeded}.backup`, 'utf8')).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    }
+    // And the sam save round-trips through GET.
+    const getRes = await request(app).get(
+      `/api/admin/playtest-feedback?formId=${SAM_POOL_REVIEW_FORM_ID}`
+    );
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.formId).toBe(SAM_POOL_REVIEW_FORM_ID);
+  });
+
+  it('a pool save never touches the playtest-round files either', async () => {
+    const v3Path = path.join(tmpDir, V3_RESPONSES_REL_PATH);
+    const v3Raw = JSON.stringify(
+      { ...buildEmptyPlaytestFeedbackResponsesV3(), savedAt: '2026-07-12T18:00:00.000Z' },
+      null,
+      2
+    );
+    await fs.writeFile(v3Path, v3Raw, 'utf8');
+
+    const esc = buildEmptyPoolReviewResponsesFor(ESCALATIONS_POOL_REVIEW_FORM_ID);
+    esc.meetings.escalation_cco_erased_masters = { verdict: 'rework', notes: 'too brutal?' };
+    const res = await request(app).post('/api/admin/playtest-feedback').send({ responses: esc });
+    expect(res.status).toBe(200);
+
+    expect(await fs.readFile(v3Path, 'utf8')).toBe(v3Raw);
+    const escWritten = JSON.parse(
+      await fs.readFile(
+        path.join(tmpDir, poolResponsesRelPath(ESCALATIONS_POOL_REVIEW_FORM_ID)),
+        'utf8'
+      )
+    );
+    expect(escWritten.meetings.escalation_cco_erased_masters.verdict).toBe('rework');
   });
 });

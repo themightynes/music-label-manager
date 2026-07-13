@@ -848,25 +848,50 @@ export type SavePlaytestFeedbackResponse = z.infer<typeof SavePlaytestFeedbackRe
 export type GetPlaytestFeedbackResponse = z.infer<typeof GetPlaytestFeedbackResponseSchema>;
 
 // ========================================
-// Admin Content Review Schemas — v3 Mac Pool Review (2026-07-12)
+// Admin Content Review Schemas — v3 Pool Reviews (2026-07-12)
 // ========================================
-// Content-review surface for the authored "v3 Mac pool" meetings (working
-// session 2026-07-12): the designer reads each authored meeting and records a
-// verdict + freeform notes per meeting, plus two overall fields. This is NOT
-// a playtest round — the round-shaped PLAYTEST_FORM_REGISTRY (sections/knobs,
-// round picker, feel scale) stays untouched. The SAME
-// /api/admin/playtest-feedback endpoint pair serves this form: the server's
-// formId allowlist is widened by exactly this one id (AdminFeedbackFormId
-// below), and the review saves to its OWN responses file
-// (docs/01-planning/v3-mac-pool-review.responses.json) — structurally
-// unreachable from any round's save and vice versa.
+// Content-review surface for the authored v3 content pools (working session
+// 2026-07-12): the designer reads each authored entry and records a verdict +
+// freeform notes per entry, plus two overall fields. Started as the Mac pool
+// only; extended the same day to all SEVEN pools (Mac / Sam / Dante / Pat /
+// CEO / side events / escalations). These are NOT playtest rounds — the
+// round-shaped PLAYTEST_FORM_REGISTRY (sections/knobs, round picker, feel
+// scale) stays untouched. The SAME /api/admin/playtest-feedback endpoint pair
+// serves every review form: the server's formId allowlist is widened by
+// exactly these ids (AdminFeedbackFormId below), and each pool's review saves
+// to its OWN responses file
+// (docs/01-planning/v3-<pool>-pool-review.responses.json) — structurally
+// unreachable from any other form's save and vice versa.
 
 export const MAC_POOL_REVIEW_FORM_ID = 'v3-mac-pool-review' as const;
+export const SAM_POOL_REVIEW_FORM_ID = 'v3-sam-pool-review' as const;
+export const DANTE_POOL_REVIEW_FORM_ID = 'v3-dante-pool-review' as const;
+export const PAT_POOL_REVIEW_FORM_ID = 'v3-pat-pool-review' as const;
+export const CEO_POOL_REVIEW_FORM_ID = 'v3-ceo-pool-review' as const;
+export const EVENTS_POOL_REVIEW_FORM_ID = 'v3-events-pool-review' as const;
+export const ESCALATIONS_POOL_REVIEW_FORM_ID = 'v3-escalations-pool-review' as const;
 
-// Canonical meeting ids, in the review form's reading order (source scratchpad
-// file order: pool-authored, routine, major, reactive, new). The client-side
-// content module (client/src/admin/v3MacPoolReview.ts) must use exactly these
-// ids; the server writes `meetings` keys in this order for a stable JSON file.
+export const POOL_REVIEW_FORM_IDS = [
+  MAC_POOL_REVIEW_FORM_ID,
+  SAM_POOL_REVIEW_FORM_ID,
+  DANTE_POOL_REVIEW_FORM_ID,
+  PAT_POOL_REVIEW_FORM_ID,
+  CEO_POOL_REVIEW_FORM_ID,
+  EVENTS_POOL_REVIEW_FORM_ID,
+  ESCALATIONS_POOL_REVIEW_FORM_ID,
+] as const;
+
+export type PoolReviewFormId = (typeof POOL_REVIEW_FORM_IDS)[number];
+
+export function isPoolReviewFormId(value: string): value is PoolReviewFormId {
+  return (POOL_REVIEW_FORM_IDS as readonly string[]).includes(value);
+}
+
+// Canonical meeting ids per pool, in each review form's reading order (source
+// scratchpad file order: routine → major → reactive → new; CEO/events/
+// escalations in their hand-off file order). The client-side content modules
+// (client/src/admin/v3*PoolReview.ts) must use exactly these ids; the server
+// writes `meetings` keys in this order for a stable JSON file.
 export const MAC_POOL_REVIEW_MEETING_IDS = [
   'wall_of_misses',
   'the_3am_demo',
@@ -885,20 +910,150 @@ export const MAC_POOL_REVIEW_MEETING_IDS = [
   'machine_that_listens',
 ] as const;
 
+export const SAM_POOL_REVIEW_MEETING_IDS = [
+  'slow_news_week',
+  'billboard_money',
+  'journalist_favor_called_in',
+  'crisis_retainer',
+  'own_the_correction',
+  'the_dossier',
+  'awards_whisper_campaign',
+  'the_comeback_client',
+  'platform_exclusive_bidding',
+  'the_documentary_ask',
+  'chart_debut_one_hour_window',
+  'old_tweets_surface',
+  'the_engagement_farm',
+  'the_hatchet_piece',
+] as const;
+
+export const DANTE_POOL_REVIEW_MEETING_IDS = [
+  'the_432_hz_surcharge',
+  'protege_producer',
+  'the_perfect_take_exists',
+  'remaster_the_debut',
+  'employee_effectiveness_rewritten',
+  'forty_eight_hours_or_delete',
+  'the_aura_veto',
+  'mountain_retreat',
+  'the_pop_sellout_brief',
+  'sample_clearance_roulette',
+  'score_offer',
+  'salvage_job',
+  'the_dead_room',
+  'the_loudness_heresy',
+  'the_two_inch_truth',
+] as const;
+
+export const PAT_POOL_REVIEW_MEETING_IDS = [
+  'the_guaranteed_placement',
+  'the_47_slide_deck',
+  'spontaneity_block',
+  'tour_routing_optimization',
+  'predict_the_quarter',
+  'territory_arbitrage',
+  'physical_media_bet',
+  'the_chargeback_discrepancy',
+  'the_data_broker',
+  'the_exclusive_window_auction',
+  'the_algorithm_change',
+  'supply_chain_hostage',
+  'the_anomaly_premium',
+  'the_long_tail_audit',
+] as const;
+
+export const CEO_POOL_REVIEW_MEETING_IDS = [
+  'the_investor_term_sheet',
+  'buy_the_failing_rival',
+  'the_genre_pivot',
+  'anchor_artist_renegotiation',
+  'the_buyout_letter',
+  'chart_week_war_room',
+  'the_second_signing_doctrine',
+  'layoff_or_lean',
+  'the_mentorship_hour',
+  'define_the_legacy',
+  'the_counter_offer',
+  'the_open_letter',
+] as const;
+
+export const EVENTS_POOL_REVIEW_MEETING_IDS = [
+  'event_sync_bidding_war',
+  'event_leaked_masters',
+  'event_beta_algorithm_invite',
+  'event_festival_cancellation',
+  'event_studio_flood',
+  'event_ghostwriter_confession',
+  'event_brand_deal_strings',
+  'event_tribute_moment',
+  'the_loop_deal',
+  'sampled_without_asking',
+  'takeover_tuesday',
+  'ransom_note',
+  'detained_abroad',
+  'the_catalog_fund',
+  'the_plant_callout',
+  'the_amplify_pilot',
+  'twenty_four_frames',
+  'the_collab_drop',
+  'the_old_clip',
+  'the_arena_cover',
+] as const;
+
+export const ESCALATIONS_POOL_REVIEW_MEETING_IDS = [
+  'escalation_ar_botched_signing',
+  'escalation_ar_pipeline_burned',
+  'escalation_cmo_narrative_lost',
+  'escalation_cmo_fabricated_story',
+  'escalation_cco_artist_walkout',
+  'escalation_cco_erased_masters',
+  'escalation_dist_deal_collapsed',
+  'escalation_dist_royalty_freeze',
+] as const;
+
+export const POOL_REVIEW_MEETING_IDS: Record<PoolReviewFormId, readonly string[]> = {
+  [MAC_POOL_REVIEW_FORM_ID]: MAC_POOL_REVIEW_MEETING_IDS,
+  [SAM_POOL_REVIEW_FORM_ID]: SAM_POOL_REVIEW_MEETING_IDS,
+  [DANTE_POOL_REVIEW_FORM_ID]: DANTE_POOL_REVIEW_MEETING_IDS,
+  [PAT_POOL_REVIEW_FORM_ID]: PAT_POOL_REVIEW_MEETING_IDS,
+  [CEO_POOL_REVIEW_FORM_ID]: CEO_POOL_REVIEW_MEETING_IDS,
+  [EVENTS_POOL_REVIEW_FORM_ID]: EVENTS_POOL_REVIEW_MEETING_IDS,
+  [ESCALATIONS_POOL_REVIEW_FORM_ID]: ESCALATIONS_POOL_REVIEW_MEETING_IDS,
+};
+
 // Per-meeting verdict scale: approve / approve with edits / rework / kill.
+// (MacPoolReviewVerdictSchema is the historical name; the scale is shared by
+// every pool review form.)
 export const MacPoolReviewVerdictSchema = z.enum([
   'approve',
   'approve_with_edits',
   'rework',
   'kill',
 ]);
+export const PoolReviewVerdictSchema = MacPoolReviewVerdictSchema;
 
 export const MacPoolMeetingReviewSchema = z.object({
   verdict: MacPoolReviewVerdictSchema.nullable().default(null),
   notes: z.string().default(''),
 });
+export const PoolReviewMeetingSchema = MacPoolMeetingReviewSchema;
 
-// Full review document. `savedAt` is stamped server-side on save.
+// Full review document — one shape for all seven pools; the formId (a closed
+// enum) selects the pool. `savedAt` is stamped server-side on save. Note:
+// formId is REQUIRED here (no default) — a document with no formId still
+// defaults to the ACTIVE playtest form via the union below (unchanged
+// behavior since the Mac-only version).
+export const PoolReviewResponsesSchema = z.object({
+  formId: z.enum(POOL_REVIEW_FORM_IDS),
+  savedAt: z.string().nullable().default(null),
+  meetings: z.record(z.string(), MacPoolMeetingReviewSchema).default({}),
+  overallNotes: z.string().default(''),
+  voiceConsistency: z.string().default(''),
+});
+
+// Historical Mac-only schema (literal formId with a default) — kept for
+// callers/tests that parse a Mac document standalone; the endpoint union
+// routes through the generic schema above.
 export const MacPoolReviewResponsesSchema = z.object({
   formId: z.literal(MAC_POOL_REVIEW_FORM_ID).default(MAC_POOL_REVIEW_FORM_ID),
   savedAt: z.string().nullable().default(null),
@@ -908,30 +1063,31 @@ export const MacPoolReviewResponsesSchema = z.object({
 });
 
 // The full allowlist the endpoint pair validates against: every playtest
-// round plus the Mac pool review. Union order matters — the playtest union
+// round plus the seven pool reviews. Union order matters — the playtest union
 // goes first so a document with no explicit formId still defaults to the
-// ACTIVE playtest form (unchanged behavior); an explicit
-// 'v3-mac-pool-review' formId fails every round's literal and lands here.
+// ACTIVE playtest form (unchanged behavior); an explicit pool-review formId
+// fails every round's literal and lands here.
 export const AnyAdminFeedbackResponsesSchema = z.union([
   AnyPlaytestFeedbackResponsesSchema,
-  MacPoolReviewResponsesSchema,
+  PoolReviewResponsesSchema,
 ]);
 
-export type AdminFeedbackFormId = PlaytestFormId | typeof MAC_POOL_REVIEW_FORM_ID;
+export type AdminFeedbackFormId = PlaytestFormId | PoolReviewFormId;
 
 export function isAdminFeedbackFormId(value: string): value is AdminFeedbackFormId {
-  return isPlaytestFormId(value) || value === MAC_POOL_REVIEW_FORM_ID;
+  return isPlaytestFormId(value) || isPoolReviewFormId(value);
 }
 
-// Empty review default (GET returns this when the responses file does not
-// exist yet), with every canonical meeting key present in reading order.
-export function buildEmptyMacPoolReviewResponses(): MacPoolReviewResponses {
+// Empty review default for any pool (GET returns this when that pool's
+// responses file does not exist yet), with every canonical meeting key
+// present in reading order.
+export function buildEmptyPoolReviewResponsesFor(formId: PoolReviewFormId): PoolReviewResponses {
   const meetings: Record<string, MacPoolMeetingReview> = {};
-  for (const id of MAC_POOL_REVIEW_MEETING_IDS) {
+  for (const id of POOL_REVIEW_MEETING_IDS[formId]) {
     meetings[id] = { verdict: null, notes: '' };
   }
   return {
-    formId: MAC_POOL_REVIEW_FORM_ID,
+    formId,
     savedAt: null,
     meetings,
     overallNotes: '',
@@ -939,12 +1095,19 @@ export function buildEmptyMacPoolReviewResponses(): MacPoolReviewResponses {
   };
 }
 
+// Historical Mac-only builder (delegates to the generic one).
+export function buildEmptyMacPoolReviewResponses(): MacPoolReviewResponses {
+  return buildEmptyPoolReviewResponsesFor(
+    MAC_POOL_REVIEW_FORM_ID
+  ) as MacPoolReviewResponses;
+}
+
 // Allowlist-wide empty-default builder (server GET path).
 export function buildEmptyAdminFeedbackResponsesFor(
   formId: AdminFeedbackFormId
 ): AnyAdminFeedbackResponses {
-  if (formId === MAC_POOL_REVIEW_FORM_ID) {
-    return buildEmptyMacPoolReviewResponses();
+  if (isPoolReviewFormId(formId)) {
+    return buildEmptyPoolReviewResponsesFor(formId);
   }
   return buildEmptyPlaytestFeedbackResponsesFor(formId);
 }
@@ -952,4 +1115,7 @@ export function buildEmptyAdminFeedbackResponsesFor(
 export type MacPoolReviewVerdict = z.infer<typeof MacPoolReviewVerdictSchema>;
 export type MacPoolMeetingReview = z.infer<typeof MacPoolMeetingReviewSchema>;
 export type MacPoolReviewResponses = z.infer<typeof MacPoolReviewResponsesSchema>;
+export type PoolReviewVerdict = MacPoolReviewVerdict;
+export type PoolReviewMeeting = MacPoolMeetingReview;
+export type PoolReviewResponses = z.infer<typeof PoolReviewResponsesSchema>;
 export type AnyAdminFeedbackResponses = z.infer<typeof AnyAdminFeedbackResponsesSchema>;

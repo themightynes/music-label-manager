@@ -20,14 +20,20 @@
  * in lockstep. Reading order = source-file order: pool-authored → routine →
  * major → reactive → new.
  *
- * KNOWN GAP (flagged at transcription time): "The 3 AM Demo" is listed in
- * v3-mac-pool-authored.md only as "PRESENTED, awaiting Nes feedback — (see
- * conversation table)"; its full authored content was never written to the
- * scratchpad hand-off, so its entry below carries the bible pitch line as the
- * only reviewable context and is marked content-pending.
+ * "The 3 AM Demo" was originally missing from the hand-off (content-pending);
+ * its authored content arrived via the pool-review-extension task hand-off
+ * (2026-07-12, same session) and is transcribed below — it is no longer
+ * content-pending.
+ *
+ * SHAPE NOTE (pool-review extension): the review surface now covers all seven
+ * pools with a generic PoolReviewEntry shape (poolReviewTypes.ts). The Mac
+ * data below keeps its original structured band fields (loyal/committed/
+ * disloyal/flags) and is mapped to the generic shape at the bottom of this
+ * module — the authored text is untouched by the mapping.
  */
 
 import type { MacPoolReviewVerdict } from '@shared/api/contracts';
+import type { PoolReviewEntry } from './poolReviewTypes';
 
 export interface MacPoolChoiceRow {
   id: string;
@@ -93,9 +99,9 @@ export const MAC_POOL_OVERALL_NOTES_PROMPT =
   'Overall notes — anything pool-wide: tier balance, gating spread, effect-budget consistency, missing territory:';
 
 export const MAC_POOL_VOICE_CONSISTENCY_PROMPT =
-  'Voice consistency — does Mac sound like the same person across all fourteen rooms (wall-of-misses religion, gut-versus-spreadsheet, the superstition streak)? Where does the voice slip?';
+  'Voice consistency — does Mac sound like the same person across all fifteen rooms (wall-of-misses religion, gut-versus-spreadsheet, the superstition streak)? Where does the voice slip?';
 
-export const V3_MAC_POOL_MEETINGS: MacPoolMeetingEntry[] = [
+const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
   {
     id: 'wall_of_misses',
     title: 'Wall of Misses',
@@ -161,25 +167,59 @@ export const V3_MAC_POOL_MEETINGS: MacPoolMeetingEntry[] = [
   {
     id: 'the_3am_demo',
     title: 'The 3 AM Demo',
-    status: 'PRESENTED, awaiting Nes feedback — (see conversation table)',
+    status: 'AUTHORED (delivered via the 2026-07-12 pool-review-extension hand-off), pending Nes review',
     finalized: false,
-    contentPending: true,
+    contentPending: false,
     tier: 'routine',
-    gating: '— (per bible pitch: ungated)',
-    prompt: '',
-    description: '',
-    choices: [],
-    bandPredictions: null,
-    notes: [
-      'Authored content was not written to the scratchpad hand-off (the source file says only "PRESENTED, ' +
-        'awaiting Nes feedback — (see conversation table)"). The only reviewable context is the bible pitch:',
-      'Bible §3.1 pitch 3: The 3 AM Demo (routine | —) — Mac texts at 3 AM: YOU NEED TO HEAR THIS. ' +
-        "It's raw, wrong genre, undeniable. Pass, development deal, or full pursuit. Trilemma: free pass vs. " +
-        'cheap option (money −$5k, quality +2 delayed) vs. expensive bet (money −$18k, variance_up 2, quality +5). ' +
-        'Vice: full pursuit. Bands: diverge cleanly by construction.',
+    gating: 'requires — (ungated) · role head_ar',
+    prompt:
+      'My text log will show you I have no self-control: 3:04 AM, all caps, YOU NEED TO HEAR THIS. Listen — ' +
+      "it's raw, it's the wrong genre for everything we've built, and it's undeniable. I've been wrong twice " +
+      "in my life. The wall in my office keeps the score. This isn't a wall one.",
+    description:
+      'Mac found something at 3 AM — wrong genre, undeniable, and he wants to move before anyone else wakes up.',
+    choices: [
+      {
+        id: 'pass_politely',
+        label: 'Not for us. Pass politely.',
+        gist: "The catalog has a direction; this isn't it. Mac frames another regret for the wall.",
+        immediate: '',
+        delayed: 'exec_mood −3',
+        outcomeSummary: "Mac passed on the 3 AM find — politely, and he hasn't mentioned it since.",
+      },
+      {
+        id: 'development_deal',
+        label: 'Development deal — keep them close',
+        gist: 'A small check, studio hours, no announcement.',
+        immediate: 'money −6000',
+        delayed: 'quality_bonus +2, exec_mood +2',
+        outcomeSummary:
+          'Mac locked the 3 AM find into a quiet development deal — close enough to watch, cheap enough to defend.',
+      },
+      {
+        id: 'full_pursuit',
+        label: 'Go get them. Full pursuit.',
+        gist: 'Fly out, front-row the showcase, out-charm the majors.',
+        immediate: 'money −18000',
+        delayed: 'rep_swing 2, press_story_flag 1',
+        outcomeSummary:
+          'Mac went all-in courting the 3 AM find — the whole industry heard about the chase.',
+      },
     ],
-    upgradeSpec: null,
-    sourceFile: 'v3-mac-pool-authored.md',
+    bandPredictions: {
+      heading: 'Bands (target)',
+      loyal: 'pass_politely',
+      committed: 'development_deal',
+      disloyal: 'full_pursuit (rep_swing 2 → 20 pts, no hint, verify margin)',
+      flags: '',
+    },
+    notes: [
+      'Artist mood absent by design (unsigned prospect — exec_mood is the reaction axis); the pass feeds the ' +
+        'Wall of Misses fiction.',
+    ],
+    upgradeSpec:
+      "UPGRADE SPEC (future mechanism spawns_artist): full pursuit's success delivers a signable artist.",
+    sourceFile: 'pool-review-extension task hand-off (2026-07-12)',
   },
   {
     id: 'tuesday_superstition',
@@ -1141,3 +1181,39 @@ export const V3_MAC_POOL_MEETINGS: MacPoolMeetingEntry[] = [
     sourceFile: 'v3-mac-authored-new.md',
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Generic-shape export (pool-review extension): map the structured Mac band
+// fields onto the shared PoolReviewEntry shape. Pure re-labeling — every
+// authored string above is carried through unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const V3_MAC_POOL_MEETINGS: PoolReviewEntry[] = V3_MAC_POOL_MEETINGS_RAW.map((m) => ({
+  id: m.id,
+  title: m.title,
+  status: m.status,
+  finalized: m.finalized,
+  contentPending: m.contentPending,
+  tier: m.tier,
+  gating: m.gating,
+  prompt: m.prompt,
+  description: m.description,
+  choices: m.choices,
+  bandPredictions: m.bandPredictions
+    ? {
+        heading: m.bandPredictions.heading,
+        lines: [
+          `Loyal: ${m.bandPredictions.loyal}`,
+          `Committed: ${m.bandPredictions.committed}`,
+          `Disloyal: ${m.bandPredictions.disloyal}`,
+          ...(m.bandPredictions.flags ? [`Flags: ${m.bandPredictions.flags}`] : []),
+        ],
+      }
+    : null,
+  designNotes: [],
+  notes: m.notes,
+  upgradeSpecs: m.upgradeSpec ? [m.upgradeSpec] : [],
+  sourceFile: m.sourceFile,
+}));
+
+export const V3_MAC_POOL_LEVEL_NOTES: string[] = [];
