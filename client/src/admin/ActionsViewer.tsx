@@ -1733,6 +1733,29 @@ export default function ActionsViewer() {
                                     )}
                                   </div>
 
+                                  {/* C92: optional authored past-tense outcome line.
+                                      Omit the key when empty on save — the shared schema
+                                      is min(1), so an empty string would fail validation. */}
+                                  <div>
+                                    <label className="text-xs text-white/60 mb-1 block">Outcome Summary:</label>
+                                    {editMode ? (
+                                      <Input
+                                        value={choice.outcome_summary ?? ''}
+                                        onChange={(e) => {
+                                          updateChoice(action.id, choice.id, {
+                                            outcome_summary: e.target.value === '' ? undefined : e.target.value,
+                                          });
+                                        }}
+                                        className="h-7 text-xs bg-black/30 border-white/10"
+                                        placeholder="Past-tense outcome (optional, falls back to label)"
+                                      />
+                                    ) : (
+                                      <div className="text-xs text-white/50">
+                                        {choice.outcome_summary || <span className="italic">— falls back to label —</span>}
+                                      </div>
+                                    )}
+                                  </div>
+
                                   {/* Immediate Effects */}
                                   <div>
                                     <div className="flex items-center justify-between mb-2">

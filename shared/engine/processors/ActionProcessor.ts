@@ -465,6 +465,13 @@ export class ActionProcessor {
       meetingId: actionId,
       choiceId: choiceId,
       choiceLabel: (choice as any).label,
+      // C92: authored past-tense outcome line. CONDITIONAL spread — an
+      // always-present undefined key would diff every golden-master fixture
+      // (WeekSummary is snapshotted verbatim; see the _pendingEscalation
+      // precedent in game-engine.ts).
+      ...((choice as any).outcome_summary
+        ? { outcomeSummary: (choice as any).outcome_summary }
+        : {}),
       appliedEffects,
       // Playtest bug #1 fix: fold the exec mood/loyalty deltas onto this single
       // 'meeting' entry (CEO meetings have no executive → execResult is null).
@@ -529,7 +536,9 @@ export class ActionProcessor {
         meetingLabel = actionData?.name;
         if (choiceId) {
           const choice = await ctx.gameData.getChoiceById(meetingName, choiceId);
-          choiceLabel = (choice as any)?.label;
+          // C92: prefer the authored past-tense outcome line for payoff
+          // attribution; fall back to the raw option label.
+          choiceLabel = (choice as any)?.outcome_summary ?? (choice as any)?.label;
         }
       } catch {
         // Resolution is best-effort — fall through to the generic label below.

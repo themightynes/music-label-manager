@@ -41,6 +41,13 @@ export interface DialogueChoice {
    * or would pick a choice that is not the in-character self-serving one.
    */
   self_serving_hint?: boolean;
+  /**
+   * C92: optional authored past-tense outcome line ("Signed the deal despite the
+   * risk") rendered by digest/results surfaces — WeekSummary autonomous digest,
+   * meeting entries, crisis-resolved beats. Falls back to `label` when absent.
+   * Pre-decision surfaces (choice buttons, meeting flows) always use `label`.
+   */
+  outcome_summary?: string;
 }
 
 // Mood targeting scope for executive meetings (Task 3.1)
@@ -186,6 +193,8 @@ export interface EventChoice {
   label: string;
   effects_immediate: ChoiceEffect;
   effects_delayed: ChoiceEffect;
+  /** C92: optional authored past-tense outcome line (falls back to `label`). */
+  outcome_summary?: string;
 }
 
 export interface SideEvent {
@@ -534,6 +543,11 @@ export interface GameChange {
   meetingId?: string;
   choiceId?: string;
   choiceLabel?: string;
+  // C92: authored past-tense outcome line (choice.outcome_summary), camelCase on
+  // the wire like choiceLabel. Only present when the choice authors it — producers
+  // conditionally spread it (never an always-present undefined key; golden master
+  // snapshots WeekSummary verbatim). Render sites fall back to choiceLabel.
+  outcomeSummary?: string;
   appliedEffects?: Record<string, number>;
   // Executive Delegation arc (Tier 1, §4.6): true on a 'meeting' entry that an
   // executive resolved AUTONOMOUSLY (the player spent no slot on them). Drives the
@@ -602,6 +616,9 @@ export interface EventOccurrence {
   resolved?: boolean;
   choiceId?: string;
   choiceLabel?: string;
+  // C92: authored past-tense outcome line (choice.outcome_summary), conditionally
+  // spread by the engine (golden-master-safe); render falls back to choiceLabel.
+  outcomeSummary?: string;
   effects?: Record<string, number>;
   delayedEffects?: Record<string, number>;
 }

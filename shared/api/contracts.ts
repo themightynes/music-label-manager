@@ -377,6 +377,10 @@ export const DialogueChoiceSchema = z.object({
   effects_delayed: ChoiceEffectSchema,
   // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice type).
   self_serving_hint: z.boolean().optional(),
+  // C92: optional authored past-tense outcome line, rendered by digest/results
+  // surfaces (falls back to `label`). This schema is NOT passthrough, so the
+  // field MUST be declared here or admin Content Editor saves silently strip it.
+  outcome_summary: z.string().min(1).optional(),
 });
 
 // Action details schema (for non-meeting actions)

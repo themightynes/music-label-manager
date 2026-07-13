@@ -262,7 +262,10 @@ export function SideEventBeat({ event, gameId, isPendingOnSpine }: SideEventBeat
                     size="sm"
                     variant="outline"
                     disabled={!gameId || pendingChoiceId !== null}
-                    onClick={() => handleChoice(choice.id, choice.label)}
+                    // C92: pass the authored past-tense outcome line (fallback:
+                    // label) so the post-resolve card reads as a result; the
+                    // BUTTON copy above stays `label` (pre-decision surface).
+                    onClick={() => handleChoice(choice.id, choice.outcome_summary ?? choice.label)}
                     className="shrink-0 border-neon-purple/40 text-neon-lilac hover:bg-neon-purple/10"
                   >
                     {pendingChoiceId === choice.id ? 'Choosing...' : 'Choose'}
@@ -313,10 +316,11 @@ function ResolvedCrisisBeat({ event }: { event: EventOccurrence }) {
         <p className="text-sm font-medium text-white/90">
           You spent the week handling: {event.prompt || event.title}
         </p>
-        {event.choiceLabel && (
+        {(event.outcomeSummary ?? event.choiceLabel) && (
           <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] text-negative">
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>You chose: {event.choiceLabel}</span>
+            {/* C92: authored past-tense outcome line, falling back to the raw choice label. */}
+            <span>You chose: {event.outcomeSummary ?? event.choiceLabel}</span>
           </div>
         )}
         {(immediateBadges.length > 0 || delayedBadges.length > 0) && (
@@ -447,13 +451,14 @@ function AutonomousMeetingEntry({ change }: { change: GameChange }) {
       </div>
       <div className="flex-1 min-w-0 mt-1">
         <span className="text-sm font-medium text-white/70">{change.description}</span>
-        {change.choiceLabel && (
+        {(change.outcomeSummary ?? change.choiceLabel) && (
           // Delegation playtest-revision (2026-07-12, Entry 1): prefix the exec's
           // choice as THEIR past decision. The raw option label ("Accept their
           // terms, worth the risk") otherwise read as advice/instruction to the
           // player rather than the call the exec already made.
+          // C92: prefer the authored past-tense outcome line when present.
           <p className="text-xs text-text-muted/80 mt-0.5 truncate">
-            Their call: &ldquo;{change.choiceLabel}&rdquo;
+            Their call: &ldquo;{change.outcomeSummary ?? change.choiceLabel}&rdquo;
           </p>
         )}
         {appliedLines.length > 0 && (
@@ -1107,9 +1112,10 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                           <span className="text-sm font-medium text-white/90">
                             {change.description}
                           </span>
-                          {change.choiceLabel && (
+                          {(change.outcomeSummary ?? change.choiceLabel) && (
+                            // C92: authored past-tense outcome line, falls back to the label.
                             <p className="text-xs text-text-muted mt-0.5 truncate">
-                              {change.choiceLabel}
+                              {change.outcomeSummary ?? change.choiceLabel}
                             </p>
                           )}
                           {/* Exec-meetings-revival PR-9: mood-modifier note when it fired. */}

@@ -23,7 +23,10 @@ const DialogueChoiceSchema = z.object({
   effects_delayed: ChoiceEffectSchema.default({}),
   // Delegation-arc §4.3.1: optional authoring escape hatch — forces this choice as
   // the exec's self-serving pick (scoreSelfServing → +Infinity). Additive/optional.
-  self_serving_hint: z.boolean().optional()
+  self_serving_hint: z.boolean().optional(),
+  // C92: optional authored past-tense outcome line for digest/results surfaces
+  // (falls back to `label`). Additive/optional.
+  outcome_summary: z.string().min(1).optional()
 });
 
 const RoleMeetingSchema = z.object({
@@ -68,7 +71,9 @@ const EventChoiceSchema = z.object({
   id: z.string(),
   label: z.string(),
   effects_immediate: ChoiceEffectSchema,
-  effects_delayed: ChoiceEffectSchema
+  effects_delayed: ChoiceEffectSchema,
+  // C92: optional authored past-tense outcome line (falls back to `label`).
+  outcome_summary: z.string().min(1).optional()
 });
 
 const SideEventSchema = z.object({
@@ -377,7 +382,10 @@ export class GameDataLoader {
           effects_immediate: z.record(z.number()).optional(),
           effects_delayed: z.record(z.number()).optional(),
           // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice).
-          self_serving_hint: z.boolean().optional()
+          self_serving_hint: z.boolean().optional(),
+          // C92: optional past-tense outcome line — passthrough would keep it
+          // anyway; declared explicitly for symmetry with the other schemas.
+          outcome_summary: z.string().min(1).optional()
         }).passthrough()).optional(),
         details: z.object({
           cost: z.string(),

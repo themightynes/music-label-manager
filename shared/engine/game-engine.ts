@@ -1574,6 +1574,10 @@ export class GameEngine {
       prompt: event.prompt,
       choiceId: choice.id,
       choiceLabel: choice.label,
+      // C92: authored past-tense outcome line. CONDITIONAL spread — the golden
+      // master snapshots WeekSummary verbatim, so an always-present undefined
+      // key would spuriously diff every fixture (see _pendingEscalation above).
+      ...(choice.outcome_summary ? { outcomeSummary: choice.outcome_summary } : {}),
       effects: effectsImmediate,
       delayedEffects: effectsDelayed,
     });
