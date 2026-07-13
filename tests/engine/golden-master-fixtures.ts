@@ -29,6 +29,7 @@ import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Pool } from 'pg';
 import * as schema from '@shared/schema';
+import { DEFAULT_AUTO_SAFE_SCORING } from '@shared/utils/executiveAutoSelect';
 import type { DatabaseStorage } from '../../server/storage';
 
 export type TestDb = NodePgDatabase<typeof schema> & { $client: Pool };
@@ -65,7 +66,12 @@ export const AUTONOMOUS_MEETING_POOL: any[] = [
     type: 'role_meeting', id: 'auto_ar', role_id: 'head_ar', name: 'A&R call',
     target_scope: 'global', requires: [], choices: [
       { id: 'ar_safe', label: 'Play it safe', effects_immediate: {}, effects_delayed: { reputation: 1 } },
-      { id: 'ar_quality', label: 'Invest in quality', effects_immediate: { creative_capital: -1 }, effects_delayed: { quality_bonus: 4 } },
+      // Loyal-scorer fix (2026-07-12): the safety scorer now VALUES quality_bonus,
+      // so a cheap quality investment would (sanely) beat ar_safe for the loyal
+      // band too and the pool would stop splitting the bands. Pricing the quality
+      // choice at -$16k keeps the split observable: loyal (money-conservative)
+      // stays on ar_safe, committed still judges the quality spend worth it.
+      { id: 'ar_quality', label: 'Invest in quality', effects_immediate: { creative_capital: -1, money: -16000 }, effects_delayed: { quality_bonus: 4 } },
       { id: 'ar_gamble', label: 'Chase the wild card', effects_immediate: {}, effects_delayed: { variance_up: 2 } },
     ],
   },
@@ -333,6 +339,18 @@ export function createGameData(storage: DatabaseStorage, catalogArtists: any[] =
         escalation: {
           loyalty_ceiling: cfg.escalation?.loyalty_ceiling ?? 40,
           enabled: cfg.escalation?.enabled ?? true,
+        },
+        // Loyal-scorer fix (2026-07-12): AUTO-safe scorer tunables. The JSON and
+        // DEFAULT_AUTO_SAFE_SCORING are pinned identical by the parity tripwire,
+        // so reading the JSON block with a code-default fallback mirrors
+        // ServerGameData exactly.
+        auto_safe_scoring: {
+          ...DEFAULT_AUTO_SAFE_SCORING,
+          ...(cfg.auto_safe_scoring ?? {}),
+          soft_stat_weights: {
+            ...DEFAULT_AUTO_SAFE_SCORING.soft_stat_weights,
+            ...(cfg.auto_safe_scoring?.soft_stat_weights ?? {}),
+          },
         },
       };
     },

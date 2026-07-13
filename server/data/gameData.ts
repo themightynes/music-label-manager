@@ -730,6 +730,23 @@ export class ServerGameData {
         loyalty_ceiling: cfg.escalation?.loyalty_ceiling ?? d.escalation.loyalty_ceiling,
         enabled: cfg.escalation?.enabled ?? d.escalation.enabled,
       },
+      auto_safe_scoring: {
+        gamble_base_penalty: cfg.auto_safe_scoring?.gamble_base_penalty ?? d.auto_safe_scoring.gamble_base_penalty,
+        gamble_per_point_penalty: cfg.auto_safe_scoring?.gamble_per_point_penalty ?? d.auto_safe_scoring.gamble_per_point_penalty,
+        value_gain_cap: cfg.auto_safe_scoring?.value_gain_cap ?? d.auto_safe_scoring.value_gain_cap,
+        value_loss_cap: cfg.auto_safe_scoring?.value_loss_cap ?? d.auto_safe_scoring.value_loss_cap,
+        value_loss_dampener: cfg.auto_safe_scoring?.value_loss_dampener ?? d.auto_safe_scoring.value_loss_dampener,
+        money_per_thousand: cfg.auto_safe_scoring?.money_per_thousand ?? d.auto_safe_scoring.money_per_thousand,
+        money_gain_cap: cfg.auto_safe_scoring?.money_gain_cap ?? d.auto_safe_scoring.money_gain_cap,
+        money_spend_cap: cfg.auto_safe_scoring?.money_spend_cap ?? d.auto_safe_scoring.money_spend_cap,
+        money_spend_dampener: cfg.auto_safe_scoring?.money_spend_dampener ?? d.auto_safe_scoring.money_spend_dampener,
+        soft_stat_weights: {
+          quality_bonus: cfg.auto_safe_scoring?.soft_stat_weights?.quality_bonus ?? d.auto_safe_scoring.soft_stat_weights.quality_bonus,
+          artist_mood: cfg.auto_safe_scoring?.soft_stat_weights?.artist_mood ?? d.auto_safe_scoring.soft_stat_weights.artist_mood,
+          awareness_boost: cfg.auto_safe_scoring?.soft_stat_weights?.awareness_boost ?? d.auto_safe_scoring.soft_stat_weights.awareness_boost,
+          press_momentum: cfg.auto_safe_scoring?.soft_stat_weights?.press_momentum ?? d.auto_safe_scoring.soft_stat_weights.press_momentum,
+        },
+      },
     };
   }
 

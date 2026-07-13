@@ -32,6 +32,25 @@ describe('DEFAULT_EXEC_DELEGATION_CONFIG matches the locked plan values (§3.4)'
       neglect_loyalty_gain: 0,
       neglect_mood_gain: 0,
       escalation: { loyalty_ceiling: 40, enabled: true },
+      // Loyal-scorer fix (2026-07-12): AUTO-safe scorer knobs (see
+      // shared/utils/executiveAutoSelect.ts AutoSafeScoringConfig).
+      auto_safe_scoring: {
+        gamble_base_penalty: 100,
+        gamble_per_point_penalty: 10,
+        value_gain_cap: 5,
+        value_loss_cap: 5,
+        value_loss_dampener: 0.5,
+        money_per_thousand: 1,
+        money_gain_cap: 5,
+        money_spend_cap: 20,
+        money_spend_dampener: 0.5,
+        soft_stat_weights: {
+          quality_bonus: 2,
+          artist_mood: 2,
+          awareness_boost: 1,
+          press_momentum: 1,
+        },
+      },
     });
   });
 });
