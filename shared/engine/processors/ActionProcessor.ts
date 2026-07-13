@@ -41,7 +41,12 @@
  */
 import type { WeekContext } from './types';
 import type { WeekSummary } from '../../types/gameTypes';
-import { ArtistChangeHelpers } from '../../types/gameTypes';
+import {
+  ArtistChangeHelpers,
+  EFFECT_TARGETING_DIRECTIVE_KEYS,
+  EXEC_MOOD_TARGET_ROLE_IDS,
+  EXEC_MOOD_TARGET_BROADCAST,
+} from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
 import { seededRandom } from '../../utils/seededRandom';
@@ -395,6 +400,31 @@ export class ActionProcessor {
       delete (appliedEffects as any).executive_mood;
     }
 
+    // Engine-verbs SLICE 5 (M13): TARGETED executive_mood from CEO meetings.
+    // CEO meetings have no executive row (processExecutiveActions returns null),
+    // so an authored executive_mood was historically DEAD there. With a
+    // target_executive directive sibling, the delta now routes to the named
+    // exec(s) through the shared clamp/persist path. Role meetings never enter
+    // this branch (roleId !== 'ceo'; the data-lint also forbids the directive
+    // on them — their exec is implicit). CEO meetings never have moodModifiers
+    // (no exec row), so the authored value applies unscaled by construction.
+    {
+      const rawImmediate = (choice.effects_immediate ?? {}) as Record<string, unknown>;
+      if (
+        roleId === 'ceo' &&
+        typeof rawImmediate.executive_mood === 'number' &&
+        typeof rawImmediate.target_executive === 'string'
+      ) {
+        await this.applyTargetedExecutiveMood(
+          ctx,
+          rawImmediate.executive_mood,
+          rawImmediate.target_executive,
+          dbTransaction,
+          `meeting:${meetingName}/${choiceId}`
+        );
+      }
+    }
+
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
     if (choice.effects_delayed) {
       const flags = ctx.gameState.flags || {};
@@ -646,7 +676,7 @@ export class ActionProcessor {
       console.log('[GAME-ENGINE] Applied default executive interaction boost:', moodChange);
     }
 
-    const newMood = Math.max(0, Math.min(100, executive.mood + moodChange));
+    const newMood = this.clampExecutiveMood(executive.mood + moodChange);
 
     // Loyalty gain for engagement (§4.5): a player-attended / AUTO-endorsed
     // meeting grants loyalty_on_use; a NEGLECTED (autonomously self-served)
@@ -672,11 +702,13 @@ export class ActionProcessor {
       lastActionWeek: isAutonomous ? '(unchanged — neglect)' : currentWeek,
     });
 
-    // Save changes to database
-    await ctx.storage.updateExecutive(
-      executive.id,
+    // Save changes to database (SLICE 5/M13: through the ONE shared clamp+persist
+    // path — persistExecutiveMoodUpdate — which applyTargetedExecutiveMood reuses).
+    await this.persistExecutiveMoodUpdate(
+      ctx,
+      executive,
+      moodChange,
       {
-        mood: newMood,
         loyalty: newLoyalty,
         // Neglect leaves lastActionWeek untouched so decay continues to accrue.
         ...(isAutonomous ? {} : { lastActionWeek: currentWeek }),
@@ -690,6 +722,131 @@ export class ActionProcessor {
     // the single 'meeting' change entry, instead of pushing a duplicate
     // 'executive_interaction' "Met with <slug>" row here.
     return { moodChange, newMood, loyaltyBoost: loyaltyGain, newLoyalty };
+  }
+
+  /**
+   * SLICE 5 (M13): the 0–100 executive-mood clamp — the SAME clamp
+   * processExecutiveActions has always applied. One definition so the targeted
+   * resolver below can never drift from the role-meeting path.
+   */
+  private clampExecutiveMood(mood: number): number {
+    return Math.max(0, Math.min(100, mood));
+  }
+
+  /**
+   * SLICE 5 (M13): the ONE clamp+persist path for an executive mood delta.
+   * Extracted VERBATIM from processExecutiveActions' update (clamp to 0–100,
+   * then ctx.storage.updateExecutive within the advance-week transaction) so
+   * both the implicit role-meeting self-effect and the new targeted resolver
+   * share it — reuse, not a fork. `extraUpdates` carries the role-meeting
+   * path's loyalty/lastActionWeek fields; the targeted path passes none.
+   * Returns the clamped mood that was persisted.
+   */
+  private async persistExecutiveMoodUpdate(
+    ctx: WeekContext,
+    executive: any,
+    moodChange: number,
+    extraUpdates: Record<string, any>,
+    dbTransaction?: any
+  ): Promise<number> {
+    const newMood = this.clampExecutiveMood((executive.mood ?? 0) + moodChange);
+    await ctx.storage.updateExecutive(
+      executive.id,
+      { mood: newMood, ...extraUpdates },
+      dbTransaction
+    );
+    return newMood;
+  }
+
+  /**
+   * Engine-verbs SLICE 5 (M13) — TARGETED executive-mood resolver.
+   *
+   * `executive_mood` historically only landed via processExecutiveActions +
+   * `action.metadata.executiveId` (role meetings; CEO meetings return null,
+   * side/random events drop the key silently). This resolver makes the key
+   * routable from BOTH of those dead surfaces via an authored
+   * `target_executive` directive sibling in effects_immediate:
+   *
+   *   "effects_immediate": { "executive_mood": -5, "target_executive": "cmo" }
+   *   "effects_immediate": { "executive_mood": 3,  "target_executive": "all" }
+   *
+   * Call sites: processRoleMeeting (CEO meetings only — role meetings' exec is
+   * implicit and the data-lint forbids the directive there) and
+   * game-engine.processPendingSideEventResolution (side/escalation event
+   * choices). Fetches the executive row(s) BY ROLE within the advance-week
+   * transaction and applies the delta through the SAME clamp+persist path the
+   * role-meeting self-effect uses ({@link persistExecutiveMoodUpdate}).
+   * Loyalty and lastActionWeek are deliberately untouched — an external mood
+   * hit is not player engagement.
+   *
+   * GM: no current content authors target_executive, so this never fires in
+   * golden-master fixtures (byte-identical by construction). No RNG.
+   */
+  async applyTargetedExecutiveMood(
+    ctx: WeekContext,
+    moodDelta: number,
+    targetExecutive: string,
+    dbTransaction?: any,
+    sourceLabel?: string
+  ): Promise<void> {
+    const { summary } = ctx;
+    const suffix = sourceLabel ? ` (source: ${sourceLabel})` : '';
+
+    const isBroadcast = targetExecutive === EXEC_MOOD_TARGET_BROADCAST;
+    if (!isBroadcast && !(EXEC_MOOD_TARGET_ROLE_IDS as readonly string[]).includes(targetExecutive)) {
+      // Defensive — the data-lint guards authored content; this catches runtime-
+      // supplied garbage without crashing the week.
+      console.warn(`[EXEC MOOD TARGETING] Unknown target_executive "${targetExecutive}" — dropped${suffix}`);
+      return;
+    }
+    if (!ctx.storage?.getExecutivesByGame) {
+      console.warn(`[EXEC MOOD TARGETING] storage.getExecutivesByGame unavailable — targeted executive_mood dropped${suffix}`);
+      return;
+    }
+
+    const executives = (await ctx.storage.getExecutivesByGame(ctx.gameState.id, dbTransaction)) || [];
+    const targets = executives.filter(
+      (e: any) => e && e.role !== 'ceo' && (isBroadcast || e.role === targetExecutive)
+    );
+    if (targets.length === 0) {
+      console.warn(`[EXEC MOOD TARGETING] No executive row found for target "${targetExecutive}" — dropped${suffix}`);
+      return;
+    }
+
+    for (const executive of targets) {
+      const previousMood = executive.mood ?? 0;
+      // SAME clamp/persist path as the role-meeting self-effect (reuse, not fork).
+      const newMood = await this.persistExecutiveMoodUpdate(ctx, executive, moodDelta, {}, dbTransaction);
+      const appliedDelta = newMood - previousMood; // what actually landed after the clamp
+
+      console.log(
+        `[EXEC MOOD TARGETING] ${executive.role}: mood ${previousMood} -> ${newMood} ` +
+        `(authored ${moodDelta > 0 ? '+' : ''}${moodDelta}, applied ${appliedDelta > 0 ? '+' : ''}${appliedDelta})${suffix}`
+      );
+
+      // Qualitative prose (house rule: numbers ride the structured fields, not the
+      // description); 'executive_interaction' routes to the meetings bucket in
+      // categorizeWeekChanges and classifies routine (no loyaltyChange field).
+      summary.changes.push({
+        type: 'executive_interaction',
+        description: `${this.execRoleDisplayName(executive.role)} ${moodDelta >= 0 ? 'appreciated how you handled this' : 'took this one personally'}`,
+        roleId: executive.role,
+        moodChange: appliedDelta,
+        newMood,
+        ...(sourceLabel ? { source: sourceLabel } : {}),
+      });
+    }
+  }
+
+  /** Human display name for an executive role slug (SLICE 5 change-entry prose). */
+  private execRoleDisplayName(role: string): string {
+    switch (role) {
+      case 'head_ar': return 'Your Head of A&R';
+      case 'cmo': return 'Your CMO';
+      case 'cco': return 'Your CCO';
+      case 'head_distribution': return 'Your Head of Distribution';
+      default: return 'Your executive';
+    }
   }
 
   /**
@@ -1234,7 +1391,12 @@ export class ActionProcessor {
           // MISSING: unknown/unimplemented effect key encountered by applyEffects (PR-1 truth
           // infrastructure). 'executive_mood' is deliberately silent here — it's consumed
           // directly out of effects_immediate by processExecutiveActions, not via this switch.
-          if (key !== 'executive_mood') {
+          // SLICE 5 (M13/M14): the targeting DIRECTIVE keys (target_executive /
+          // target_artist) are likewise silent — they are string-valued routing
+          // directives consumed by applyTargetedExecutiveMood (below) and the
+          // side-event resolver (game-engine.processPendingSideEventResolution),
+          // never live numeric channels of this switch.
+          if (key !== 'executive_mood' && !(EFFECT_TARGETING_DIRECTIVE_KEYS as readonly string[]).includes(key)) {
             console.warn(
               `[EFFECT VALIDATION] Unknown effect key "${key}" (value: ${value}) dropped` +
               `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}${targetScope ? `, scope: ${targetScope}` : ''}`

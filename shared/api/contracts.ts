@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -366,8 +366,37 @@ export function createErrorResponse(error: string, message: string, details?: an
 // Admin Actions Config Schemas
 // ========================================
 
-// Choice effect schema - flexible object with number properties (defaults to empty object)
-export const ChoiceEffectSchema = z.record(z.number()).default({});
+// Choice effect schema — flexible object with number properties (defaults to empty
+// object). Engine-verbs SLICE 5 (M13/M14): the two string-valued TARGETING
+// DIRECTIVE keys (target_executive / target_artist — see
+// EFFECT_TARGETING_DIRECTIVE_KEYS in shared/types/gameTypes.ts) are the ONLY
+// keys allowed to hold a string; every other key must stay numeric. WHERE the
+// directives are legal (CEO meetings / event choices, immediate-only for
+// target_executive, etc.) is enforced by the data-lint test + contentLint
+// mirror, not this shape schema.
+const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
+export const ChoiceEffectSchema = z
+  .record(z.union([z.number(), z.string()]))
+  .superRefine((effects, ctx) => {
+    for (const [key, value] of Object.entries(effects)) {
+      if (EFFECT_DIRECTIVE_KEY_SET.has(key)) {
+        if (typeof value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `'${key}' is a targeting directive and must be a string (got ${typeof value})`,
+            path: [key],
+          });
+        }
+      } else if (typeof value !== 'number') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `effect '${key}' must be a number (only ${EFFECT_TARGETING_DIRECTIVE_KEYS.join('/')} may be strings)`,
+          path: [key],
+        });
+      }
+    }
+  })
+  .default({});
 
 // Dialogue choice schema
 export const DialogueChoiceSchema = z.object({

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ArtistSchema } from '../schemas/artist';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
 import type {
   GameDataFiles,
   GameArtist,
@@ -14,7 +14,33 @@ import type {
 } from '../types/gameTypes';
 
 // Zod validation schemas
-const ChoiceEffectSchema = z.record(z.number()).default({});
+// Engine-verbs SLICE 5 (M13/M14): effects blocks are numeric EXCEPT the two
+// string-valued targeting directive keys (target_executive / target_artist).
+// WHERE the directives are legal is enforced by tests/engine/
+// data-lint-effect-keys.test.ts (+ the contentLint mirror), not this shape schema.
+const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
+const ChoiceEffectSchema = z
+  .record(z.union([z.number(), z.string()]))
+  .superRefine((effects, ctx) => {
+    for (const [key, value] of Object.entries(effects)) {
+      if (EFFECT_DIRECTIVE_KEY_SET.has(key)) {
+        if (typeof value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `'${key}' is a targeting directive and must be a string (got ${typeof value})`,
+            path: [key],
+          });
+        }
+      } else if (typeof value !== 'number') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `effect '${key}' must be a number (only ${EFFECT_TARGETING_DIRECTIVE_KEYS.join('/')} may be strings)`,
+          path: [key],
+        });
+      }
+    }
+  })
+  .default({});
 
 const DialogueChoiceSchema = z.object({
   id: z.string(),
@@ -463,7 +489,10 @@ export class GameDataLoader {
 
     const parsed = schema.parse(data);
 
-    const normalizeEffectKeys = (effects: Record<string, number> | undefined): ChoiceEffect => {
+    // SLICE 5: the effects record may now carry string targeting directives
+    // (schema-level); dialogue never legally authors them (data-lint), but the
+    // type must accept the widened record.
+    const normalizeEffectKeys = (effects: Record<string, number | string> | undefined): ChoiceEffect => {
       if (!effects) return {};
       if ('artist_loyalty' in effects && !('artist_energy' in effects)) {
         const { artist_loyalty, ...rest } = effects;

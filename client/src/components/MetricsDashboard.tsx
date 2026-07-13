@@ -237,16 +237,17 @@ export function MetricsDashboard() {
               effects_delayed: choice.effects_delayed as Record<string, number>
             });
 
-            // Accumulate immediate effects
+            // Accumulate immediate effects (numeric only — SLICE 5 string
+            // targeting directives are routing metadata, never summed).
             Object.entries(choice.effects_immediate).forEach(([effect, value]) => {
-              if (value !== undefined) {
+              if (typeof value === 'number') {
                 immediate[effect] = (immediate[effect] || 0) + value;
               }
             });
 
-            // Accumulate delayed effects
+            // Accumulate delayed effects (numeric only — see above).
             Object.entries(choice.effects_delayed).forEach(([effect, value]) => {
-              if (value !== undefined) {
+              if (typeof value === 'number') {
                 delayed[effect] = (delayed[effect] || 0) + value;
               }
             });

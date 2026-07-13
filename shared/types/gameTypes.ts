@@ -26,8 +26,48 @@ export interface ChoiceEffect {
   artist_mood?: number;
   /** @deprecated Use `artist_energy` */
   artist_loyalty?: never;
-  [key: string]: number | undefined;
+  /**
+   * Engine-verbs SLICE 5 (M13): string TARGETING DIRECTIVE, not an effect key.
+   * Routes a sibling `executive_mood` value to a specific executive — one of
+   * {@link EXEC_MOOD_TARGET_ROLE_IDS} or {@link EXEC_MOOD_TARGET_BROADCAST}
+   * ('all'). Only valid in `effects_immediate` of CEO meetings and side/
+   * escalation event choices (data-lint enforced); role meetings must NOT
+   * carry it (their exec is implicit via action.metadata.executiveId).
+   */
+  target_executive?: string;
+  /**
+   * Engine-verbs M14 rider: string TARGETING DIRECTIVE, not an effect key.
+   * On a side/escalation EVENT choice only — 'predetermined' applies the
+   * block's artist-scoped keys (artist_mood/energy/popularity) to the event's
+   * resolved artist (highest-popularity signed artist); 'global' forces the
+   * legacy all-signed-artists application. Absent → the event-level `target`
+   * field governs (current behavior).
+   */
+  target_artist?: 'predetermined' | 'global';
+  [key: string]: number | string | undefined;
 }
+
+/**
+ * Engine-verbs SLICE 5 (M13 + M14 rider): the string-valued targeting
+ * DIRECTIVE keys that may appear inside an authored effects block alongside
+ * the numeric effect keys. They are NOT effect channels (never in
+ * LIVE_EFFECT_KEYS, never carry a magnitude) — they only steer WHERE a
+ * sibling effect lands. Every numeric-effect consumer already filters
+ * `typeof value === 'number'`, so directives are inert everywhere except the
+ * dedicated resolvers (ActionProcessor.applyTargetedExecutiveMood and
+ * game-engine.processPendingSideEventResolution).
+ */
+export const EFFECT_TARGETING_DIRECTIVE_KEYS = ['target_executive', 'target_artist'] as const;
+
+/**
+ * Valid `target_executive` role ids (the four hireable executives — the CEO is
+ * the player and has no executive row). Matches gameCreationService's seeded
+ * roles and shared/engine/emailTemplates.ts's role union.
+ */
+export const EXEC_MOOD_TARGET_ROLE_IDS = ['head_ar', 'cmo', 'cco', 'head_distribution'] as const;
+
+/** `target_executive: 'all'` — broadcast the mood delta to every executive. */
+export const EXEC_MOOD_TARGET_BROADCAST = 'all' as const;
 
 export interface DialogueChoice {
   id: string;
