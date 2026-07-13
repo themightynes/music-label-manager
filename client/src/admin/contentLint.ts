@@ -17,6 +17,7 @@
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 import {
   RELEVANCE_TAGS,
+  REQUIRES_STAT_NAMES,
   HAPPENING_TYPES,
   SIDE_EVENT_CATEGORIES,
   EFFECT_TARGETING_DIRECTIVE_KEYS,
@@ -43,6 +44,7 @@ export const CANONICAL_EFFECT_KEYS: readonly string[] = Array.from(
 ).sort();
 
 const RELEVANCE_TAG_SET: ReadonlySet<string> = new Set(RELEVANCE_TAGS);
+const REQUIRES_STAT_NAME_SET: ReadonlySet<string> = new Set(REQUIRES_STAT_NAMES);
 const HAPPENING_TYPE_SET: ReadonlySet<string> = new Set(HAPPENING_TYPES);
 const CANONICAL_EFFECT_KEY_SET: ReadonlySet<string> = new Set(CANONICAL_EFFECT_KEYS);
 const SIDE_EVENT_CATEGORY_SET: ReadonlySet<string> = new Set(SIDE_EVENT_CATEGORIES);
@@ -188,14 +190,50 @@ export function lintMeetings(actions: WeeklyAction[]): LintIssue[] {
       });
     }
 
-    // requires: must be a subset of RELEVANCE_TAGS.
+    // requires: plain tags must be RELEVANCE_TAGS; M16 threshold/flag objects
+    // must be well-formed (mirrors RequiresEntrySchema in shared/api/contracts.ts
+    // and the data-lint suite — keep the three surfaces in lockstep).
     if (action.requires) {
-      for (const tag of action.requires) {
-        if (!RELEVANCE_TAG_SET.has(tag)) {
+      for (const entry of action.requires) {
+        if (typeof entry === 'string') {
+          if (!RELEVANCE_TAG_SET.has(entry)) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has an unknown requires tag '${entry}' — must be one of: ${RELEVANCE_TAGS.join(', ')}.`,
+            });
+          }
+        } else if (entry && typeof entry === 'object' && 'stat' in entry) {
+          const stat = (entry as { stat?: unknown }).stat;
+          if (!REQUIRES_STAT_NAME_SET.has(String(stat))) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has a requires threshold with unknown stat '${String(stat)}' — must be one of: ${REQUIRES_STAT_NAMES.join(', ')}.`,
+            });
+          }
+          const { gte, lte } = entry as { gte?: unknown; lte?: unknown };
+          if (gte === undefined && lte === undefined) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has a requires threshold on '${String(stat)}' with no bound — provide gte and/or lte.`,
+            });
+          }
+        } else if (entry && typeof entry === 'object' && 'flag' in entry) {
+          const flag = (entry as { flag?: unknown }).flag;
+          if (typeof flag !== 'string' || !/^[a-z][a-z0-9_]*$/.test(flag)) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has a requires flag gate with invalid key '${String(flag)}' — story-flag keys must be snake_case identifiers.`,
+            });
+          }
+        } else {
           issues.push({
             severity: 'error',
             scope: action.id,
-            message: `Action '${action.id}' has an unknown requires tag '${tag}' — must be one of: ${RELEVANCE_TAGS.join(', ')}.`,
+            message: `Action '${action.id}' has an unrecognized requires entry ${JSON.stringify(entry)} — must be a relevance tag, {stat, gte/lte} or {flag, is?}.`,
           });
         }
       }

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { ArtistSchema } from '../schemas/artist';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
+import { HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+// M16 (requires-gates): the ONE `requires`-entry schema, shared with the
+// contracts surface so the two Zod definitions cannot drift.
+import { RequiresEntrySchema } from '../api/contracts';
+import { EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
+import { RELEVANCE_TAGS } from '../types/gameTypes';
 import type {
   GameDataFiles,
   GameArtist,
@@ -420,9 +425,11 @@ export class GameDataLoader {
         prompt_before_selection: z.string().optional(),
         target_scope: z.enum(['global', 'predetermined', 'user_selected']).optional(),
         // Meeting-relevance Tier 0 (PR-1): optional relevance tags (AND semantics,
-        // absent = always eligible). Enum derived from the canonical RELEVANCE_TAGS
-        // in shared/types/gameTypes.ts — single source of truth.
-        requires: z.array(z.enum(RELEVANCE_TAGS)).nonempty().optional(),
+        // absent = always eligible). M16 (requires-gates): entries may also be
+        // `{stat, gte?, lte?}` / `{flag, is?}` objects — schema imported from
+        // shared/api/contracts.ts (RequiresEntrySchema, the one definition both
+        // Zod surfaces share).
+        requires: z.array(RequiresEntrySchema).nonempty().optional(),
         // Tier 2 (PR-1): optional reactive-meeting trigger. Enum derived from
         // the canonical HAPPENING_TYPES in shared/types/gameTypes.ts — single
         // source of truth. Dark launch: no data/actions.json entry sets this yet.

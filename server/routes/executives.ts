@@ -4,7 +4,7 @@ import { storage } from '../storage';
 import { requireClerkUser } from '../auth';
 import { requireGameOwner } from '../middleware/requireGameOwner';
 import { generateMeetingSeed } from '@shared/utils/seededRandom';
-import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from '@shared/engine/meetingSelection';
+import { buildRelevanceInput, deriveRelevanceState, selectWeeklyMeetingWithHappenings } from '@shared/engine/meetingSelection';
 import { deriveWeekHappenings } from '@shared/engine/weekHappenings';
 import { ChartService } from '@shared/engine/ChartService';
 import { gameDataLoader } from '@shared/utils/dataLoader';
@@ -67,23 +67,38 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
           // `requires` tags hold for the current label state, THEN do the same
           // uniform seeded pick as before. An empty eligible pool means the
           // exec sits out the week (meetings: []) — spec §1's empty-pool rule.
-          const [artists, projects, releases, songs] = await Promise.all([
+          // M16 (requires-gates): gameState is loaded alongside the rows so the
+          // threshold/flag grammar can read cash (money), reputation and
+          // flags.story. Threaded through buildRelevanceInput — the SAME
+          // lockstep helper the engine's autonomous re-derivation uses
+          // (game-engine.ts resolveAutonomousExecMeetings); parity test:
+          // tests/engine/meeting-selection-two-site-parity.test.ts.
+          const [artists, projects, releases, songs, relevanceGameState] = await Promise.all([
             storage.getArtistsByGame(gameId as string),
             storage.getProjectsByGame(gameId as string),
             storage.getReleasesByGame(gameId as string),
             storage.getSongsByGame(gameId as string),
+            storage.getGameState(gameId as string),
           ]);
           // Meeting-relevance Tier 1 (PR-2): tuning from data/balance/progression.json
           // weekly_meeting_selection (HARDCODED fallback inside the accessor).
           const tuning = serverGameData.getWeeklyMeetingSelectionConfigSync();
-          const relevanceState = deriveRelevanceState({
+          const relevanceState = deriveRelevanceState(buildRelevanceInput({
             artists,
             projects,
             releases,
             songs,
             currentWeek: weekNum,
+            gameState: relevanceGameState
+              ? {
+                  money: relevanceGameState.money,
+                  reputation: relevanceGameState.reputation,
+                  flags: relevanceGameState.flags,
+                }
+              : null,
             recencyWindowWeeks: tuning.recency_window_weeks,
-          });
+            artistStateThresholds: tuning.artist_state_thresholds,
+          }));
 
           // Tier 2: derive fresh happenings from persisted data so the
           // injection stage can offer a reactive meeting in place of the

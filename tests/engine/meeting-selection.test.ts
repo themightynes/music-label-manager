@@ -41,6 +41,14 @@ describe('deriveRelevanceState — one predicate per tag', () => {
       tourActive: false,
       releasePlannedSoon: false,
       artistSignedRecently: false,
+      // M16 (requires-gates): stat values absent (thresholds fail closed) and
+      // artist-state tags false on an empty label.
+      cash: undefined,
+      reputation: undefined,
+      storyFlags: undefined,
+      anyArtistLowMood: false,
+      anyArtistHighPopularity: false,
+      anyArtistLowEnergy: false,
     });
   });
 

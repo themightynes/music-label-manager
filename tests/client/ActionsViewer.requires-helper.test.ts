@@ -24,4 +24,18 @@ describe('computeRequiresFromChecked', () => {
     const result = computeRequiresFromChecked(checked);
     expect(result).toEqual([...RELEVANCE_TAGS]);
   });
+
+  // M16 (requires-gates): threshold/flag object entries have no checkbox UI —
+  // toggling a tag checkbox must PRESERVE them verbatim, never drop them.
+  it('preserves non-tag entries (threshold/flag objects) after the ordered tags', () => {
+    const preserved = [{ stat: 'cash' as const, gte: 20000 }, { flag: 'dante_deal_taken' }];
+    const result = computeRequiresFromChecked(new Set<RelevanceTag>(['artist_signed']), preserved);
+    expect(result).toEqual(['artist_signed', { stat: 'cash', gte: 20000 }, { flag: 'dante_deal_taken' }]);
+  });
+
+  it('returns just the preserved objects when no tags are checked (still nonempty, schema-valid)', () => {
+    const preserved = [{ flag: 'k' }];
+    const result = computeRequiresFromChecked(new Set<RelevanceTag>(), preserved);
+    expect(result).toEqual([{ flag: 'k' }]);
+  });
 });
