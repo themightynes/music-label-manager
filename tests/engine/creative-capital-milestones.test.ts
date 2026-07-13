@@ -40,6 +40,9 @@ function buildEngine(opts: {
     creativeCapital: opts.creativeCapital ?? 5,
     flags: opts.flags ?? {},
   };
+  // The FinancialSystem constructor validates tour + venue config on startup,
+  // so a bare mock isn't enough — supply the minimum it requires (mirrors
+  // tests/engine/awareness-gain-c69.test.ts).
   const gameData: any = {
     getBalanceConfigSync: () => ({
       reputation_system: {
@@ -48,6 +51,22 @@ function buildEngine(opts: {
         reputation_gain_scaling: 1.0,
         ...(opts.ccKnobs !== undefined ? { creative_capital_milestones: opts.ccKnobs } : {}),
       },
+    }),
+    getAccessTiersSync: () => ({
+      venue_access: {
+        none: { threshold: 0, capacity_range: [0, 50], guarantee_multiplier: 0.3 },
+        clubs: { threshold: 5, capacity_range: [50, 500], guarantee_multiplier: 0.7 },
+        theaters: { threshold: 20, capacity_range: [500, 2000], guarantee_multiplier: 1.0 },
+        arenas: { threshold: 45, capacity_range: [2000, 20000], guarantee_multiplier: 1.5 },
+      },
+    }),
+    getTourConfigSync: () => ({
+      sell_through_base: 0.15,
+      reputation_modifier: 0.05,
+      local_popularity_weight: 0.6,
+      merch_percentage: 0.15,
+      ticket_price_base: 25,
+      ticket_price_per_capacity: 0.03,
     }),
   };
   const engine = new GameEngine(gameState, gameData, undefined, 'cc-milestone-seed');
