@@ -398,6 +398,12 @@ export interface BalanceConfig {
       genre_specific?: Record<string, string[]>;
     };
     mood_types: string[];
+    /** Engine-verbs M1a (grant_song). Optional — absent ⇒ read-site HARDCODED fallback.
+     * default_quality_range is a [min, max] pair (typed number[] because JSON
+     * imports infer arrays, not tuples; the read site validates length === 2). */
+    granted_song?: {
+      default_quality_range: number[];
+    };
   };
 }
 
@@ -509,7 +515,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'energy' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign' | 'flop' | 'creative_capital';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'energy' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign' | 'flop' | 'creative_capital' | 'song_granted' | 'release_spawned';
   description: string;
   amount?: number;
   roleId?: string;

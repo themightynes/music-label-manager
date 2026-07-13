@@ -74,6 +74,13 @@ export interface WeekChangeCategories {
    * rendered — this repo's recurring swallow-bug).
    */
   hypeRoutine: GameChange[];
+  /**
+   * Engine-verbs M1a/M1b (tangible catalog): 'song_granted' (a meeting choice
+   * delivered a real recorded song) and 'release_spawned' (a meeting choice put
+   * a real release on the schedule). Simple notable-stage lines, kept OUT of
+   * `other` (never rendered — this repo's recurring swallow-bug).
+   */
+  catalogNotable: GameChange[];
   other: GameChange[];
 }
 
@@ -91,6 +98,7 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
     breakthroughs: [],
     hypeNotable: [],
     hypeRoutine: [],
+    catalogNotable: [],
     other: [],
   };
 
@@ -139,6 +147,8 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       categories.hypeNotable.push(change);
     } else if (change.type === 'hype_banked' || change.type === 'pre_campaign') {
       categories.hypeRoutine.push(change);
+    } else if (change.type === 'song_granted' || change.type === 'release_spawned') {
+      categories.catalogNotable.push(change);
     } else if (change.type === 'project_complete') {
       // Projects go to other category, will be shown in Projects tab
       categories.other.push(change);

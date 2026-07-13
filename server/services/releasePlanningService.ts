@@ -24,6 +24,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db as dbSingleton } from '../db';
 import { gameStates, releases, releaseSongs, songs } from '@shared/schema';
 import { serverGameData } from '../data/gameData';
+import { createReleaseWithSongs } from '@shared/engine/releaseCreation';
 
 /**
  * A coded error whose `body` is the EXACT JSON payload the original route
@@ -324,55 +325,63 @@ export class ReleasePlanningService {
         await tx.update(gameStates).set({ flags }).where(eq(gameStates.id, gameId));
       }
 
-      // Create release record
-      const [newRelease] = await tx.insert(releases).values({
-        gameId,
-        artistId,
-        title,
-        type,
-        releaseWeek: scheduledReleaseWeek,
-        status: 'planned',
-        marketingBudget: totalBudget,
-        metadata: {
-          ...metadata,
-          seasonalTiming,
-          scheduledReleaseWeek,
-          marketingChannels: Object.keys(marketingBudget || {}),
-          marketingBudgetBreakdown: marketingBudget || {}, // CRITICAL FIX: Store per-channel budgets for release execution
-          // Buzz-v2 slice 2: hype attached at plan time (signed units). Presence of
-          // this field routes ReleaseProcessor to seed from it (attached, never
-          // expires) instead of the legacy label-pool fallback. Stored even when 0
-          // so the release is unambiguously "slice-2 planned".
-          attachedHype,
-          // Buzz-v2 slice 3: pre-release campaign block. ONLY present when pct > 0 —
-          // its ABSENCE is the golden-master containment (releases without a
-          // pre-campaign never enter the new engine path, and the launch-phase
-          // awareness conversion reads the full unscaled breakdown).
-          ...(preCampaign ? { preCampaign } : {}),
-          leadSingleStrategy: leadSingleStrategy ? {
-            ...leadSingleStrategy,
-            leadSingleBudgetBreakdown: leadSingleStrategy.leadSingleBudget || {}, // Store per-channel breakdown for lead single too
-          } : null,
+      // Create release record → reserve songs → junction rows, via the SHARED
+      // creation core (engine-verbs M1b: shared/engine/releaseCreation.ts). The
+      // ops below run the SAME three statements this block always inlined, in the
+      // SAME order, inside the SAME route transaction — route behavior is
+      // byte-identical; the core is now also callable from the engine's
+      // spawn_release effect key.
+      const newRelease = await createReleaseWithSongs(
+        {
+          insertRelease: async (row) => {
+            const [created] = await tx.insert(releases).values(row as any).returning();
+            return created;
+          },
+          reserveSongsForRelease: async (ids, releaseId) => {
+            // Update songs to mark them as reserved for this release
+            await tx.update(songs)
+              .set({ releaseId })
+              .where(inArray(songs.id, ids));
+          },
+          insertReleaseSongs: async (rows) => {
+            // CRITICAL FIX: Also create entries in the junction table for proper song-release association
+            // This ensures songs are properly linked when releases are executed
+            await tx.insert(releaseSongs).values(rows as any);
+          },
         },
-      }).returning();
-
-      // Update songs to mark them as reserved for this release
-      await tx.update(songs)
-        .set({ releaseId: newRelease.id })
-        .where(inArray(songs.id, songIds));
-
-      // CRITICAL FIX: Also create entries in the junction table for proper song-release association
-      // This ensures songs are properly linked when releases are executed
-      const releaseSongEntries = songIds.map((songId: string, index: number) => ({
-        id: crypto.randomUUID(),
-        releaseId: newRelease.id,
-        songId: songId,
-        trackNumber: index + 1, // Track order based on selection order
-        createdAt: new Date(),
-      }));
-
-      await tx.insert(releaseSongs).values(releaseSongEntries);
-      console.log(`[PLAN RELEASE] Created ${releaseSongEntries.length} junction table entries for release ${newRelease.id}`);
+        {
+          gameId,
+          artistId,
+          title,
+          type,
+          releaseWeek: scheduledReleaseWeek,
+          status: 'planned',
+          marketingBudget: totalBudget,
+          metadata: {
+            ...metadata,
+            seasonalTiming,
+            scheduledReleaseWeek,
+            marketingChannels: Object.keys(marketingBudget || {}),
+            marketingBudgetBreakdown: marketingBudget || {}, // CRITICAL FIX: Store per-channel budgets for release execution
+            // Buzz-v2 slice 2: hype attached at plan time (signed units). Presence of
+            // this field routes ReleaseProcessor to seed from it (attached, never
+            // expires) instead of the legacy label-pool fallback. Stored even when 0
+            // so the release is unambiguously "slice-2 planned".
+            attachedHype,
+            // Buzz-v2 slice 3: pre-release campaign block. ONLY present when pct > 0 —
+            // its ABSENCE is the golden-master containment (releases without a
+            // pre-campaign never enter the new engine path, and the launch-phase
+            // awareness conversion reads the full unscaled breakdown).
+            ...(preCampaign ? { preCampaign } : {}),
+            leadSingleStrategy: leadSingleStrategy ? {
+              ...leadSingleStrategy,
+              leadSingleBudgetBreakdown: leadSingleStrategy.leadSingleBudget || {}, // Store per-channel breakdown for lead single too
+            } : null,
+          },
+        },
+        songIds
+      );
+      console.log(`[PLAN RELEASE] Created ${songIds.length} junction table entries for release ${newRelease.id}`);
 
       return { newRelease, attachedHype };
     });

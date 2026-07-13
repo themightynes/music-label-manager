@@ -1,5 +1,9 @@
 {
   "market_formulas": {
+    "spawned_release": {
+      "default_marketing_budget": 0,
+      "release_offset_weeks": 1
+    },
     "streaming_calculation": {
       "base_formula": "quality * playlist_access * reputation * marketing * popularity * rng",
       "quality_weight": 0.25,

@@ -1006,6 +1006,29 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </RevealGroup>
         )}
 
+        {/* Tangible catalog (stage 3, notable) — engine-verbs M1a/M1b. A meeting
+            choice delivering a real recorded song ('song_granted') or scheduling a
+            real surprise release ('release_spawned'). Simple notable lines with
+            player-ready descriptions, never routed to the never-rendered `other`
+            bucket. */}
+        {categorizedChanges.catalogNotable.length > 0 && (
+          <RevealGroup revealed={currentStage >= STAGE_NOTABLE} instant={instant}>
+            <div className="space-y-2">
+              {categorizedChanges.catalogNotable.map((change: GameChange, index: number) => (
+                <div
+                  key={`catalog-notable-${index}`}
+                  className="p-3 rounded-[12px] border border-neon-cyan/20 bg-neon-cyan/10"
+                >
+                  <span className="text-sm font-medium text-neon-cyan">
+                    {change.type === 'song_granted' ? '🎵 ' : '🚀 '}
+                    {change.description}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </RevealGroup>
+        )}
+
         {/* Mood Changes (stage 4, routine) */}
         {categorizedChanges.mood.length > 0 && (
           <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
