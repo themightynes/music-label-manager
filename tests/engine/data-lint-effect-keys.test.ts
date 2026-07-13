@@ -35,6 +35,16 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v);
 
 const STRUCTURED_VALUE_VALIDATORS: Record<string, { shape: string; validate: (v: unknown) => boolean }> = {
+  // schedule_event's event-id EXISTENCE check lives in its own describe below
+  // (it needs data/events.json); this map entry covers the value SHAPE only.
+  schedule_event: {
+    shape: '{ event_id: string, defer_weeks: int >= 0 }',
+    validate: (v) =>
+      isPlainObject(v) &&
+      typeof v.event_id === 'string' && (v.event_id as string).length > 0 &&
+      typeof v.defer_weeks === 'number' && Number.isInteger(v.defer_weeks) && (v.defer_weeks as number) >= 0 &&
+      Object.keys(v).every((k) => k === 'event_id' || k === 'defer_weeks'),
+  },
   story_flag: {
     shape: 'string key, or { key: string, value?: boolean }',
     validate: (v) =>
@@ -273,7 +283,15 @@ describe('Data lint — schedule_event payloads + scheduled_only events (engine-
             offenders.push(`${crumb} :: ${block}.schedule_event.event_id "${v.event_id}" does not exist in data/events.json`);
           }
         } else if (typeof value !== 'number') {
-          offenders.push(`${crumb} :: ${block}.${key} = ${JSON.stringify(value)} — every non-schedule_event effect value must be a number`);
+          // Engine-verbs arc reconciliation: structured keys carry their own
+          // validated shapes (see STRUCTURED_VALUE_VALIDATORS); everything else
+          // must stay a plain number.
+          const structured = STRUCTURED_VALUE_VALIDATORS[key];
+          if (!structured) {
+            offenders.push(`${crumb} :: ${block}.${key} = ${JSON.stringify(value)} — every non-structured effect value must be a number`);
+          } else if (!structured.validate(value)) {
+            offenders.push(`${crumb} :: ${block}.${key} = ${JSON.stringify(value)} — must be ${structured.shape}`);
+          }
         }
       }
     }
