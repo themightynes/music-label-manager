@@ -18,6 +18,57 @@ export interface GameArtist {
   age?: number;
 }
 
+/**
+ * Engine-verbs Slice 1 (M4 chained/scheduled events): the ONE non-numeric
+ * effect value. Authored as `"schedule_event": { "event_id": ..., "defer_weeks": N }`
+ * inside a choice's effects_immediate — banks an entry into
+ * `flags.scheduled_events[]` that promotes into `flags.pending_side_event`
+ * (the mandatory crisis slot) once `defer_weeks` weeks have passed AND the
+ * slot is free. See ActionProcessor.applyEffects (`schedule_event` case) and
+ * GameEngine.promoteScheduledEvents for the queue/priority rules.
+ */
+export interface ScheduleEventEffect {
+  /** Id of an event in data/events.json (typically `scheduled_only: true`). */
+  event_id: string;
+  /** Non-negative integer: weeks from now the event becomes due. */
+  defer_weeks: number;
+}
+
+/** Runtime guard for the authored `schedule_event` effect value shape. */
+export function isScheduleEventEffect(value: unknown): value is ScheduleEventEffect {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as any).event_id === 'string' &&
+    (value as any).event_id.length > 0 &&
+    typeof (value as any).defer_weeks === 'number' &&
+    Number.isInteger((value as any).defer_weeks) &&
+    (value as any).defer_weeks >= 0
+  );
+}
+
+/**
+ * Engine-verbs Slice 1: one entry in the `flags.scheduled_events[]` queue
+ * (additive flags key — NO SNAPSHOT_VERSION bump). Written by
+ * ActionProcessor.applyEffects (`schedule_event`), drained by
+ * GameEngine.promoteScheduledEvents.
+ */
+export interface ScheduledEventEntry {
+  /** data/events.json event id to land. */
+  eventId: string;
+  /** Absolute game week the entry becomes due (authored week + defer_weeks). */
+  landsOnWeek: number;
+  /** Provenance for logs/debugging (meeting/side-event id that scheduled it). */
+  source: string;
+  /**
+   * Optional pinned artist for predetermined-target events ({artistName}
+   * interpolation / artist-scoped effects resolve against THIS artist at
+   * resolution time instead of re-deriving highest-popularity). Threaded
+   * through pending_side_event when the entry promotes.
+   */
+  artistId?: string;
+}
+
 export interface ChoiceEffect {
   money?: number;
   reputation?: number;
@@ -26,7 +77,12 @@ export interface ChoiceEffect {
   artist_mood?: number;
   /** @deprecated Use `artist_energy` */
   artist_loyalty?: never;
-  [key: string]: number | undefined;
+  /**
+   * Engine-verbs Slice 1: the one structured (non-numeric) effect. Only honored
+   * in effects_immediate of actions.json / events.json choices (lint-enforced).
+   */
+  schedule_event?: ScheduleEventEffect;
+  [key: string]: number | ScheduleEventEffect | undefined;
 }
 
 export interface DialogueChoice {
@@ -220,6 +276,15 @@ export interface SideEvent {
    * of the roll's candidate pool in game-engine.ts checkForEvents.
    */
   escalation_only?: boolean;
+  /**
+   * Engine-verbs Slice 1 (M4): marks an event as INJECTED ONLY via the
+   * `flags.scheduled_events[]` queue (authored `schedule_event` effects) — it
+   * must never enter the weekly weighted side-event roll. Parallel to
+   * `escalation_only` (an event may carry either, never both — lint-enforced
+   * in tests/engine/data-lint-effect-keys.test.ts). Filtered out of the roll's
+   * candidate pool in game-engine.ts checkForEvents.
+   */
+  scheduled_only?: boolean;
   prompt: string;
   choices: EventChoice[];
 }

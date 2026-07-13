@@ -1007,7 +1007,7 @@ export default function SideEventsEditor() {
                                                   : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                                               }`}
                                             >
-                                              {key}: {value}
+                                              {key}: {typeof value === 'number' ? value : JSON.stringify(value)}
                                             </Badge>
                                           )}
                                         </div>
@@ -1077,7 +1077,7 @@ export default function SideEventsEditor() {
                                             </>
                                           ) : (
                                             <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-300 border-blue-500/30">
-                                              {key}: {value}
+                                              {key}: {typeof value === 'number' ? value : JSON.stringify(value)}
                                             </Badge>
                                           )}
                                         </div>

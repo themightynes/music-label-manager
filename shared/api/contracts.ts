@@ -366,8 +366,18 @@ export function createErrorResponse(error: string, message: string, details?: an
 // Admin Actions Config Schemas
 // ========================================
 
-// Choice effect schema - flexible object with number properties (defaults to empty object)
-export const ChoiceEffectSchema = z.record(z.number()).default({});
+// Engine-verbs Slice 1 (M4): the one structured effect value — `schedule_event`
+// carries `{ event_id, defer_weeks }` instead of a number. Mirrors
+// shared/utils/dataLoader.ts ScheduleEventEffectSchema (admin Content Editor
+// round-trips actions.json through this contract, so the shapes must agree).
+export const ScheduleEventEffectSchema = z.object({
+  event_id: z.string().min(1),
+  defer_weeks: z.number().int().min(0),
+});
+
+// Choice effect schema - flexible object with number properties (defaults to empty object);
+// schedule_event is the one structured (object) value allowed.
+export const ChoiceEffectSchema = z.record(z.union([z.number(), ScheduleEventEffectSchema])).default({});
 
 // Dialogue choice schema
 export const DialogueChoiceSchema = z.object({

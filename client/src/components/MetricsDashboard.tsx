@@ -239,14 +239,16 @@ export function MetricsDashboard() {
 
             // Accumulate immediate effects
             Object.entries(choice.effects_immediate).forEach(([effect, value]) => {
-              if (value !== undefined) {
+              // Engine-verbs Slice 1: schedule_event carries an object payload — numeric totals only.
+              if (typeof value === 'number') {
                 immediate[effect] = (immediate[effect] || 0) + value;
               }
             });
 
             // Accumulate delayed effects
             Object.entries(choice.effects_delayed).forEach(([effect, value]) => {
-              if (value !== undefined) {
+              // Engine-verbs Slice 1: schedule_event carries an object payload — numeric totals only.
+              if (typeof value === 'number') {
                 delayed[effect] = (delayed[effect] || 0) + value;
               }
             });

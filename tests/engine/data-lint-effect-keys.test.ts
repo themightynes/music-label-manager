@@ -95,3 +95,99 @@ describe('Data lint — every authored effect key is canonical (PR-8 forever-gua
     expect(CANONICAL_KEYS.size).toBe(LIVE_EFFECT_KEYS.size + 1);
   });
 });
+
+/**
+ * Engine-verbs Slice 1 (M4 — chained/scheduled events) data-lint.
+ *
+ * `schedule_event` is the ONE structured (non-numeric) effect value. These
+ * rules keep authored data honest:
+ *  1. Every schedule_event value is exactly { event_id, defer_weeks } with a
+ *     non-negative-integer defer and an event_id that EXISTS in data/events.json
+ *     (a typo'd id would silently drop at promotion time otherwise).
+ *  2. schedule_event lives ONLY in effects_immediate (a delayed scheduler is
+ *     redundant — defer_weeks IS the deferral — and processDelayedEffects'
+ *     numeric filter would silently drop it).
+ *  3. schedule_event is never authored in dialogue.json (only role-meeting
+ *     choices in actions.json and event choices in events.json route through
+ *     the code paths that pass it to applyEffects).
+ *  4. Every OTHER effect key stays a plain number (schedule_event is the only
+ *     key allowed to carry an object).
+ *  5. scheduled_only / escalation_only are mutually exclusive on an event
+ *     (both mean "excluded from the weekly roll" via different injectors).
+ */
+describe('Data lint — schedule_event payloads + scheduled_only events (engine-verbs Slice 1)', () => {
+  const eventsJson = loadJson('data/events.json') as { events: Array<{ id: string; escalation_only?: boolean; scheduled_only?: boolean }> };
+  const knownEventIds = new Set(eventsJson.events.map((e) => e.id));
+
+  /** Collect every (crumbPath, key, value) effect pair from a data file. */
+  function collectEffectValues(
+    node: unknown,
+    crumb: string,
+    out: Array<{ crumb: string; block: string; key: string; value: unknown }>
+  ): void {
+    if (Array.isArray(node)) {
+      for (const item of node) collectEffectValues(item, crumb, out);
+      return;
+    }
+    if (node && typeof node === 'object') {
+      const obj = node as Record<string, unknown>;
+      const nextCrumb = typeof obj.id === 'string' ? `${crumb}/${obj.id}` : crumb;
+      for (const block of EFFECT_BLOCK_KEYS) {
+        const eff = obj[block];
+        if (eff && typeof eff === 'object' && !Array.isArray(eff)) {
+          for (const [key, value] of Object.entries(eff as Record<string, unknown>)) {
+            out.push({ crumb: nextCrumb, block, key, value });
+          }
+        }
+      }
+      for (const [k, v] of Object.entries(obj)) {
+        if (!EFFECT_BLOCK_KEYS.includes(k as any)) collectEffectValues(v, nextCrumb, out);
+      }
+    }
+  }
+
+  function effectValuesOf(rel: string) {
+    const out: Array<{ crumb: string; block: string; key: string; value: unknown }> = [];
+    collectEffectValues(loadJson(rel), rel, out);
+    return out;
+  }
+
+  it('every authored schedule_event has a valid payload and an existing event_id; no other key carries an object', () => {
+    const offenders: string[] = [];
+    for (const rel of ['data/actions.json', 'data/events.json', 'data/dialogue.json']) {
+      for (const { crumb, block, key, value } of effectValuesOf(rel)) {
+        if (key === 'schedule_event') {
+          if (rel === 'data/dialogue.json') {
+            offenders.push(`${crumb} :: ${block}.schedule_event — not supported in dialogue.json`);
+            continue;
+          }
+          if (block !== 'effects_immediate') {
+            offenders.push(`${crumb} :: ${block}.schedule_event — only allowed in effects_immediate (defer_weeks IS the deferral)`);
+            continue;
+          }
+          const v = value as any;
+          const shapeOk =
+            v && typeof v === 'object' &&
+            typeof v.event_id === 'string' && v.event_id.length > 0 &&
+            typeof v.defer_weeks === 'number' && Number.isInteger(v.defer_weeks) && v.defer_weeks >= 0 &&
+            Object.keys(v).every((k) => k === 'event_id' || k === 'defer_weeks');
+          if (!shapeOk) {
+            offenders.push(`${crumb} :: ${block}.schedule_event = ${JSON.stringify(value)} — must be { event_id: string, defer_weeks: int >= 0 }`);
+          } else if (!knownEventIds.has(v.event_id)) {
+            offenders.push(`${crumb} :: ${block}.schedule_event.event_id "${v.event_id}" does not exist in data/events.json`);
+          }
+        } else if (typeof value !== 'number') {
+          offenders.push(`${crumb} :: ${block}.${key} = ${JSON.stringify(value)} — every non-schedule_event effect value must be a number`);
+        }
+      }
+    }
+    expect(offenders, offenders.length ? `schedule_event lint failure(s):\n  ${offenders.join('\n  ')}` : undefined).toEqual([]);
+  });
+
+  it('no event is both scheduled_only and escalation_only', () => {
+    const offenders = eventsJson.events
+      .filter((e) => e.scheduled_only === true && e.escalation_only === true)
+      .map((e) => e.id);
+    expect(offenders, offenders.length ? `Events flagged BOTH scheduled_only and escalation_only:\n  ${offenders.join('\n  ')}` : undefined).toEqual([]);
+  });
+});

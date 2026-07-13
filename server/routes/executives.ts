@@ -44,6 +44,25 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
       if (gameId && week && roleMeetings.length > 0) {
         const weekNum = parseInt(week as string);
         if (!isNaN(weekNum)) {
+          // Engine-verbs Slice 11 (M7, READ half): an exec marked absent offers
+          // NO meeting this week — same empty-pool sit-out shape as the
+          // relevance filter below (meetings: []). `flags.execAbsence[roleId] =
+          // untilWeek`; absent while untilWeek > the requested planning week.
+          // The engine's resolveAutonomousExecMeetings applies the SAME filter
+          // so nothing is auto-resolved for an absent exec either. The WRITE
+          // key (`set_exec_absence`) ships in a sibling slice — this read is
+          // defensive (no save carries the flag yet). Read failures fall
+          // through to normal offering (never block the route on this flag).
+          try {
+            const gameStateRow = await storage.getGameState(gameId as string);
+            const absentUntil = (gameStateRow?.flags as any)?.execAbsence?.[req.params.roleId];
+            if (typeof absentUntil === 'number' && absentUntil > weekNum) {
+              console.log(`[MEETING API] ${req.params.roleId} is absent until week ${absentUntil} (> ${weekNum}) — sit-out`);
+              return res.json({ ...role, meetings: [] });
+            }
+          } catch (err) {
+            console.warn('[MEETING API] execAbsence read failed; offering normally:', err);
+          }
           // Meeting-relevance Tier 0 (PR-1): filter the pool to meetings whose
           // `requires` tags hold for the current label state, THEN do the same
           // uniform seeded pick as before. An empty eligible pool means the

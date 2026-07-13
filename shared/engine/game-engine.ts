@@ -16,8 +16,8 @@ import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
 import { AchievementsEngine } from './AchievementsEngine';
-import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
-import { ArtistChangeHelpers } from '../types/gameTypes';
+import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist, ScheduledEventEntry, ScheduleEventEffect } from '../types/gameTypes';
+import { ArtistChangeHelpers, isScheduleEventEffect } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 import { scaleReputationGain } from '../utils/reputationScaling';
 import { selectSideEvent } from './sideEventSelection';
@@ -36,7 +36,7 @@ import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meeti
 import { deriveWeekHappenings } from './weekHappenings';
 import { generateMeetingSeed } from '../utils/seededRandom';
 import { pickAutonomousChoice } from './executiveAutonomy';
-import { DEFAULT_EXEC_DELEGATION_CONFIG, pickEscalationEventId } from '../utils/executiveDelegation';
+import { DEFAULT_EXEC_DELEGATION_CONFIG, pickEscalationEventId, ESCALATION_EVENT_BY_ROLE } from '../utils/executiveDelegation';
 
 // Re-export WeekSummary for backward compatibility
 export type { WeekSummary } from '../types/gameTypes';
@@ -232,6 +232,16 @@ export class GameEngine {
     // week's roll — if it hits — discards in favor of the escalation via the
     // roll's own "already pending" check). See applyEscalation's doc comment.
     await this.applyEscalation(summary, dbTransaction);
+
+    // Engine-verbs Slice 1 (M4): promote the earliest DUE scheduled event
+    // (flags.scheduled_events queue) into the mandatory-crisis slot. MUST run
+    // AFTER applyEscalation (escalations keep ABSOLUTE priority — an escalation
+    // that just occupied the slot makes every scheduled entry wait) and BEFORE
+    // checkForEvents (a promoted event occupies the slot first, so this week's
+    // roll — if it hits — discards via its own "already pending" check, same
+    // first-set-wins rule as escalation). See the method doc for the
+    // queue/starvation rules.
+    await this.promoteScheduledEvents(summary, dbTransaction);
 
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary, dbTransaction);
@@ -723,9 +733,22 @@ export class GameEngine {
     // processExecutiveActions during PHASE 1). Those are NOT auto-resolved.
     const acted: Set<string> = (summary as any).usedExecutives ?? new Set<string>();
 
+    // Engine-verbs Slice 11 (M7, READ half): an exec marked absent skips
+    // autonomous resolution — no meeting was offered for them at the planning
+    // week (the /api/roles route applies the SAME filter, so route and engine
+    // agree the exec sat out). `flags.execAbsence[roleId] = untilWeek`; absent
+    // while untilWeek > the PLANNING (offered) week. The WRITE key
+    // (`set_exec_absence`) ships in a sibling slice — this read is defensive.
+    const planningWeek = (this.gameState.currentWeek || 1) - 1;
+    const execAbsence = ((this.gameState.flags as any)?.execAbsence ?? {}) as Record<string, unknown>;
+    const isAbsent = (roleId: string): boolean => {
+      const until = execAbsence[roleId];
+      return typeof until === 'number' && until > planningWeek;
+    };
+
     // Only auto-resolve if at least one exec actually needs it.
     const candidates = executives.filter(
-      (e: any) => e?.role && e.role !== 'ceo' && !acted.has(e.id),
+      (e: any) => e?.role && e.role !== 'ceo' && !acted.has(e.id) && !isAbsent(e.role),
     );
     if (candidates.length === 0) return;
 
@@ -864,7 +887,13 @@ export class GameEngine {
         // namespaced off the in-scope meeting seed; with today's singleton
         // pools seededRandomPick short-circuits to the only element, so the
         // pick is byte-identical to the old single-id map.
-        const escalationEventId = pickEscalationEventId(roleId, `${seed}-escalation-event`);
+        // Engine-verbs Slice 14 (M12b): pass this role's escalation last-seen
+        // history (stamped by applyEscalation, mirrors flags.side_event_history)
+        // so a repeat offender doesn't see the same crisis twice. The picker
+        // never filters to empty — a fully-seen pool falls back to the whole
+        // pool (and applyEscalation's saturation reset keeps the history small).
+        const seenEscalations = (((this.gameState.flags as any)?.escalationHistory ?? {})[roleId] ?? []) as string[];
+        const escalationEventId = pickEscalationEventId(roleId, `${seed}-escalation-event`, seenEscalations);
         if (escalationEventId) {
           escalationCandidate = { roleId, eventId: escalationEventId };
         }
@@ -969,6 +998,24 @@ export class GameEngine {
       choices: event.choices,
     };
 
+    // Engine-verbs Slice 14 (M12b — escalation last-seen): stamp this role's
+    // escalation history so pickEscalationEventId (called from
+    // resolveAutonomousExecMeetings NEXT time this exec escalates) filters the
+    // already-seen event out of the pool. Mirrors flags.side_event_history
+    // (additive flags key — NO SNAPSHOT_VERSION bump). SATURATION RESET: once
+    // every event in the role's pool has been seen, the history collapses to
+    // just the event landing now — so the cycle restarts but an immediate
+    // repeat of THIS event is still filtered on the next pick.
+    const escalationHistory = (flags.escalationHistory || {}) as Record<string, string[]>;
+    const prevSeen = Array.isArray(escalationHistory[pending.roleId]) ? escalationHistory[pending.roleId] : [];
+    const nextSeen = prevSeen.includes(event.id) ? prevSeen : [...prevSeen, event.id];
+    const rolePool = ESCALATION_EVENT_BY_ROLE[pending.roleId] ?? [];
+    const saturated = rolePool.length > 0 && rolePool.every((id) => nextSeen.includes(id));
+    flags.escalationHistory = {
+      ...escalationHistory,
+      [pending.roleId]: saturated ? [event.id] : nextSeen,
+    };
+
     summary.events.push({
       id: event.id,
       title: event.prompt.substring(0, 50),
@@ -978,6 +1025,112 @@ export class GameEngine {
       // No `choices` → same convention as the mandatory-roll branch: the crisis
       // card (not an in-results interactive beat) reads the pending flag.
     });
+  }
+
+  /**
+   * Engine-verbs Slice 1 (M4 — chained/scheduled events). Drains the
+   * `flags.scheduled_events[]` queue (written by ActionProcessor.applyEffects's
+   * `schedule_event` case) into the mandatory-crisis slot
+   * (`flags.pending_side_event`), exactly like a rolled crisis / an escalation.
+   *
+   * QUEUE / PRIORITY / STARVATION RULES (as implemented):
+   *  - AT MOST ONE promotion per advance: the earliest DUE entry (lowest
+   *    landsOnWeek <= currentWeek; FIFO insertion order breaks ties) promotes.
+   *  - THE SLOT WINS: if `flags.pending_side_event` is already set — an
+   *    escalation emitted this advance (applyEscalation runs immediately
+   *    before this), or an unresolved prior crisis — NOTHING promotes. Entries
+   *    are NEVER dropped; they wait in the queue for a later advance. This
+   *    means a sustained stream of escalations can starve the queue
+   *    indefinitely (deliberate: escalations have absolute priority, and a
+   *    scheduled consequence arriving "late" is fiction-safe, unlike one that
+   *    silently vanishes).
+   *  - Runs BEFORE checkForEvents, so a promoted event beats this week's
+   *    weekly roll by construction (the roll's own "already pending" check
+   *    discards its pick — first-set wins, same rule escalation relies on).
+   *  - A backlog (several due entries) drains at ONE per advance, earliest
+   *    landsOnWeek first.
+   *  - MANDATORY MODE ONLY: with mandatory side events disabled (legacy
+   *    in-results path) nothing promotes — the queue waits. Scheduled events
+   *    are crisis-card content; the legacy path has no gated slot to land into.
+   *  - Unknown event ids (content removed after scheduling) are dropped with a
+   *    warn, and the next due entry is considered in the same advance.
+   *
+   * Roll-free and RNG-free: no draws of any kind — the engine's pinned stream
+   * and every isolated seed are untouched (GM-safe when the queue is empty,
+   * which is every pre-slice save: `flags.scheduled_events` simply never exists).
+   */
+  private async promoteScheduledEvents(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const flags = (this.gameState.flags || {}) as Record<string, any>;
+    this.gameState.flags = flags;
+
+    const queue = Array.isArray(flags.scheduled_events)
+      ? (flags.scheduled_events as ScheduledEventEntry[])
+      : [];
+    if (queue.length === 0) return;
+
+    // Legacy (non-mandatory) mode: no crisis slot to land into — queue waits.
+    const mandatory = this.gameData.getMandatorySideEventsConfigSync?.()?.enabled ?? true;
+    if (!mandatory) return;
+
+    // Slot occupied (escalation this advance / unresolved prior crisis) →
+    // starvation rule: everything waits, nothing is dropped.
+    if (flags.pending_side_event) return;
+
+    const currentWeek = this.gameState.currentWeek || 0;
+    const remaining = [...queue];
+
+    while (true) {
+      // Earliest due entry: lowest landsOnWeek <= currentWeek, FIFO tie-break
+      // (first qualifying index wins via strict <).
+      let dueIdx = -1;
+      for (let i = 0; i < remaining.length; i++) {
+        const e = remaining[i];
+        if (!e || typeof e.landsOnWeek !== 'number' || e.landsOnWeek > currentWeek) continue;
+        if (dueIdx === -1 || e.landsOnWeek < remaining[dueIdx].landsOnWeek) dueIdx = i;
+      }
+      if (dueIdx === -1) break; // nothing due this week
+
+      const [entry] = remaining.splice(dueIdx, 1);
+      const event = await this.gameData.getEventById(entry.eventId);
+      if (!event) {
+        // Content removed after scheduling — drop the entry, try the next due one.
+        console.warn(`[SCHEDULED EVENT] Unknown event "${entry.eventId}" (source: ${entry.source}); dropping entry.`);
+        continue;
+      }
+
+      // Promote: same rich mandatory payload as a rolled crisis / an escalation.
+      // The pinned artistId (if the scheduling choice targeted an artist) rides
+      // along so predetermined-target resolution hits the SAME artist.
+      flags.pending_side_event = {
+        eventId: event.id,
+        week: currentWeek,
+        prompt: event.prompt,
+        category: event.category,
+        choices: event.choices,
+        ...(entry.artistId ? { artistId: entry.artistId } : {}),
+      };
+
+      summary.events.push({
+        id: event.id,
+        title: event.prompt.substring(0, 50),
+        occurred: true,
+        category: event.category,
+        prompt: event.prompt,
+        // No `choices` → crisis-card convention (see applyEscalation above).
+      });
+      console.log(
+        `[SCHEDULED EVENT] Promoted "${event.id}" (scheduled by ${entry.source}, due week ${entry.landsOnWeek}) as week ${currentWeek}'s pending crisis`
+      );
+      break; // at most ONE promotion per advance
+    }
+
+    // Persist the drained queue; delete the key entirely when empty so old-save
+    // flag shapes stay byte-identical once the queue has fully drained.
+    if (remaining.length > 0) {
+      flags.scheduled_events = remaining;
+    } else {
+      delete flags.scheduled_events;
+    }
   }
 
   /**
@@ -1398,8 +1551,11 @@ export class GameEngine {
         // Defensive: if the artist read fails, keep the legacy (unfiltered) pool.
         console.warn('[SIDE EVENT] Signed-artist read failed; predetermined events not filtered:', err);
       }
+      // Engine-verbs Slice 1 (M4): scheduled_only events are injected exclusively
+      // via the flags.scheduled_events queue (promoteScheduledEvents) — parallel
+      // to the escalation_only exclusion, they must never enter the weekly roll.
       const events = (await this.gameData.getAllEvents()).filter(
-        (e: any) => !e.escalation_only && (hasSignedArtist || e.target !== 'predetermined'),
+        (e: any) => !e.escalation_only && !e.scheduled_only && (hasSignedArtist || e.target !== 'predetermined'),
       );
       const selectionConfig = this.gameData.getSideEventsConfigSync();
       const history = (flags.side_event_history || {}) as Record<string, number>;
@@ -1515,14 +1671,36 @@ export class GameEngine {
     const isPredetermined = (event as any).target === 'predetermined';
     let targetArtistId: string | undefined;
     if (isPredetermined) {
-      const selectedArtist = await new ArtistStateProcessor().selectHighestPopularityArtist(
-        this.weekContext(summary, dbTransaction),
-      );
-      if (selectedArtist) {
-        targetArtistId = selectedArtist.id;
-        console.log(`[SIDE EVENT] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity}) for "${event.id}"`);
-      } else {
-        console.warn(`[SIDE EVENT] Predetermined targeting failed for "${event.id}": no signed artists available; artist-scoped effects apply globally.`);
+      // Engine-verbs Slice 1 (M4): a SCHEDULED event may carry a pinned artist
+      // (the artist the scheduling choice targeted, threaded through the queue
+      // and onto the pending payload by promoteScheduledEvents). Prefer it —
+      // but only if that artist is still a signed member of this game;
+      // otherwise fall back to the legacy highest-popularity resolver.
+      const pinnedArtistId = (pending as any).artistId as string | undefined;
+      if (pinnedArtistId) {
+        try {
+          const gameArtists = this.storage?.getArtistsByGame
+            ? await this.storage.getArtistsByGame(this.gameState.id, dbTransaction)
+            : [];
+          const pinned = (gameArtists || []).find((a: any) => a?.id === pinnedArtistId && a?.signed);
+          if (pinned) {
+            targetArtistId = pinned.id;
+            console.log(`[SIDE EVENT] Predetermined targeting: pinned artist ${pinned.name} (from scheduled-event queue) for "${event.id}"`);
+          }
+        } catch (err) {
+          console.warn(`[SIDE EVENT] Pinned-artist read failed for "${event.id}"; falling back to highest-popularity:`, err);
+        }
+      }
+      if (!targetArtistId) {
+        const selectedArtist = await new ArtistStateProcessor().selectHighestPopularityArtist(
+          this.weekContext(summary, dbTransaction),
+        );
+        if (selectedArtist) {
+          targetArtistId = selectedArtist.id;
+          console.log(`[SIDE EVENT] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity}) for "${event.id}"`);
+        } else {
+          console.warn(`[SIDE EVENT] Predetermined targeting failed for "${event.id}": no signed artists available; artist-scoped effects apply globally.`);
+        }
       }
     }
     const targetScope: string = targetArtistId ? 'predetermined' : 'global';
@@ -1534,10 +1712,19 @@ export class GameEngine {
     for (const [k, v] of Object.entries(choice.effects_immediate || {})) {
       if (typeof v === 'number') effectsImmediate[k] = v;
     }
-    if (Object.keys(effectsImmediate).length > 0) {
+    // Engine-verbs Slice 1 (M4): a crisis choice may itself schedule a follow-up
+    // (chained verdict events). schedule_event is the one structured effect —
+    // the numeric filter above drops it, so re-attach it for applyEffects.
+    const chainedSchedule = isScheduleEventEffect((choice.effects_immediate as any)?.schedule_event)
+      ? ((choice.effects_immediate as any).schedule_event as ScheduleEventEffect)
+      : undefined;
+    const immediateToApply: Record<string, number | ScheduleEventEffect> = chainedSchedule
+      ? { ...effectsImmediate, schedule_event: chainedSchedule }
+      : effectsImmediate;
+    if (Object.keys(immediateToApply).length > 0) {
       await new ActionProcessor().applyEffects(
         this.weekContext(summary, dbTransaction),
-        effectsImmediate,
+        immediateToApply,
         targetArtistId,
         targetScope,
         `side_event:${event.id}`,

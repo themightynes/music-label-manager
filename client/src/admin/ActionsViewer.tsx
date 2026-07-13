@@ -1800,7 +1800,7 @@ export default function ActionsViewer() {
                                                 </Select>
                                                 <Input
                                                   type="number"
-                                                  value={value}
+                                                  value={typeof value === 'number' ? value : ''}
                                                   onChange={(e) => {
                                                     updateEffect(action.id, choice.id, 'immediate', key, Number(e.target.value));
                                                   }}
@@ -1829,7 +1829,7 @@ export default function ActionsViewer() {
                                                 }`}
                                                 title={!isEffectConnected(key) ? 'Not implemented in game logic' : undefined}
                                               >
-                                                {key}: {value} {!isEffectConnected(key) && '○'}
+                                                {key}: {typeof value === 'number' ? value : JSON.stringify(value)} {!isEffectConnected(key) && '○'}
                                               </Badge>
                                             )}
                                           </div>
@@ -1884,7 +1884,7 @@ export default function ActionsViewer() {
                                                 </Select>
                                                 <Input
                                                   type="number"
-                                                  value={value}
+                                                  value={typeof value === 'number' ? value : ''}
                                                   onChange={(e) => {
                                                     updateEffect(action.id, choice.id, 'delayed', key, Number(e.target.value));
                                                   }}
@@ -1909,7 +1909,7 @@ export default function ActionsViewer() {
                                                 }`}
                                                 title={!isEffectConnected(key) ? 'Not implemented in game logic' : undefined}
                                               >
-                                                {key}: {value} {!isEffectConnected(key) && '○'}
+                                                {key}: {typeof value === 'number' ? value : JSON.stringify(value)} {!isEffectConnected(key) && '○'}
                                               </Badge>
                                             )}
                                           </div>

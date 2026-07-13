@@ -105,9 +105,11 @@ export interface ExecDelegationConfig {
  * a candidate for autonomous resolution (the CEO lane genuinely lapses, §2),
  * so it is intentionally absent here.
  *
- * TODO: a "don't repeat the last-seen escalation" rule needs persisted
- * last-seen state per role — deliberately out of scope; the seeded pick from
- * the pool is the approved v3 mechanism.
+ * Engine-verbs Slice 14 (M12b): the "don't repeat the last-seen escalation"
+ * rule is now live — `flags.escalationHistory[roleId]` (stamped by
+ * GameEngine.applyEscalation, mirroring flags.side_event_history) is passed to
+ * `pickEscalationEventId` as `seen`, which filters the pool before the seeded
+ * pick (never to empty — a fully-seen pool falls back to the whole pool).
  */
 export const ESCALATION_EVENT_BY_ROLE: Readonly<Record<string, readonly string[]>> = {
   head_ar: ['escalation_ar_botched_signing'],
@@ -127,19 +129,31 @@ export const ESCALATION_EVENT_BY_ROLE: Readonly<Record<string, readonly string[]
  * (`${gameId}-week${week}-${roleId}`) plus an `-escalation-event` suffix so
  * the draw is namespaced away from the `-autonomous-choice` tie-break.
  *
+ * Engine-verbs Slice 14 (M12b — escalation last-seen): `seen` (this role's
+ * flags.escalationHistory entry) filters already-seen event ids OUT of the
+ * pool before the seeded pick. NEVER-EMPTY RULE: if filtering would empty the
+ * pool (every event seen — e.g. a singleton pool that already fired), the
+ * pick falls back to the FULL pool, so an escalation always resolves to an
+ * event. GameEngine.applyEscalation's saturation reset keeps the stored
+ * history from pinning a fully-seen pool forever.
+ *
  * @param roleId - Executive role id (core four; `ceo` never escalates)
  * @param seed - Isolated seed string (gameId/week/role-derived)
+ * @param seen - Event ids this role has already escalated into (filtered out)
  * @param pools - Injectable for tests; defaults to ESCALATION_EVENT_BY_ROLE
  * @returns The picked event id, or undefined for an unknown role / empty pool
  */
 export function pickEscalationEventId(
   roleId: string,
   seed: string,
+  seen: readonly string[] = [],
   pools: Readonly<Record<string, readonly string[]>> = ESCALATION_EVENT_BY_ROLE,
 ): string | undefined {
   const pool = pools[roleId];
   if (!pool || pool.length === 0) return undefined;
-  return seededRandomPick(pool as string[], seed);
+  const unseen = pool.filter((id) => !seen.includes(id));
+  const effectivePool = unseen.length > 0 ? unseen : pool;
+  return seededRandomPick(effectivePool as string[], seed);
 }
 
 /**

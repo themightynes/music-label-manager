@@ -14,7 +14,17 @@ import type {
 } from '../types/gameTypes';
 
 // Zod validation schemas
-const ChoiceEffectSchema = z.record(z.number()).default({});
+// Engine-verbs Slice 1 (M4): the ONE structured effect value — authored as
+// `"schedule_event": { "event_id": ..., "defer_weeks": N }`. Every other effect
+// value stays a plain number. The data-lint (tests/engine/data-lint-effect-keys
+// .test.ts) enforces that ONLY the `schedule_event` key carries the object shape
+// (and that the referenced event id exists); zod here validates structure only.
+export const ScheduleEventEffectSchema = z.object({
+  event_id: z.string().min(1),
+  defer_weeks: z.number().int().min(0),
+});
+
+const ChoiceEffectSchema = z.record(z.union([z.number(), ScheduleEventEffectSchema])).default({});
 
 const DialogueChoiceSchema = z.object({
   id: z.string(),
@@ -92,6 +102,10 @@ const SideEventSchema = z.object({
   // events (injected by the escalation mechanism, never rolled). Absent/false
   // for every pre-arc event. See shared/types/gameTypes.ts SideEvent doc.
   escalation_only: z.boolean().optional(),
+  // Engine-verbs Slice 1 (M4): true only for events injected via the
+  // flags.scheduled_events queue (authored schedule_event effects) — never
+  // rolled weekly. See shared/types/gameTypes.ts SideEvent doc.
+  scheduled_only: z.boolean().optional(),
   prompt: z.string(),
   choices: z.array(EventChoiceSchema)
 });
@@ -379,8 +393,10 @@ export class GameDataLoader {
         choices: z.array(z.object({
           id: z.string(),
           label: z.string(),
-          effects_immediate: z.record(z.number()).optional(),
-          effects_delayed: z.record(z.number()).optional(),
+          // Engine-verbs Slice 1: allow the structured schedule_event value
+          // alongside plain numbers (see ScheduleEventEffectSchema above).
+          effects_immediate: z.record(z.union([z.number(), ScheduleEventEffectSchema])).optional(),
+          effects_delayed: z.record(z.union([z.number(), ScheduleEventEffectSchema])).optional(),
           // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice).
           self_serving_hint: z.boolean().optional(),
           // C92: optional past-tense outcome line — passthrough would keep it
@@ -463,13 +479,13 @@ export class GameDataLoader {
 
     const parsed = schema.parse(data);
 
-    const normalizeEffectKeys = (effects: Record<string, number> | undefined): ChoiceEffect => {
+    const normalizeEffectKeys = (effects: ChoiceEffect | undefined): ChoiceEffect => {
       if (!effects) return {};
       if ('artist_loyalty' in effects && !('artist_energy' in effects)) {
         const { artist_loyalty, ...rest } = effects;
         return {
           ...rest,
-          artist_energy: artist_loyalty as number
+          artist_energy: artist_loyalty as unknown as number
         };
       }
       return effects;

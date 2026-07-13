@@ -40,8 +40,8 @@
  * via `(engine as any).applyEffects`) keep working byte-for-byte.
  */
 import type { WeekContext } from './types';
-import type { WeekSummary } from '../../types/gameTypes';
-import { ArtistChangeHelpers } from '../../types/gameTypes';
+import type { WeekSummary, ScheduleEventEffect, ScheduledEventEntry } from '../../types/gameTypes';
+import { ArtistChangeHelpers, isScheduleEventEffect } from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
 import { seededRandom } from '../../utils/seededRandom';
@@ -79,7 +79,12 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'variance_up',
   'rep_swing',
   // Exec-meetings-revival PR-7 (C5 — prestige/award track):
-  'award_chances'
+  'award_chances',
+  // Engine-verbs Slice 1 (M4 — chained/scheduled events): the ONE structured
+  // (non-numeric) effect. Value shape { event_id, defer_weeks } — banks an
+  // entry into flags.scheduled_events[]; GameEngine.promoteScheduledEvents
+  // lands it as a mandatory crisis once due AND the crisis slot is free.
+  'schedule_event'
 ]);
 
 /**
@@ -179,6 +184,10 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
   award_chances: {
     title: 'Prestige',
     text: 'Prestige points toward the end-of-campaign awards. They accumulate all game long, never expire, and pay off in one roll at the finish — more prestige, better odds of winning an award.',
+  },
+  schedule_event: {
+    title: 'Consequence',
+    text: 'Sets something in motion behind the scenes. A few weeks from now this decision comes back around as an event on your desk — you\'ll deal with it when it lands.',
   },
 };
 
@@ -359,6 +368,14 @@ export class ActionProcessor {
           appliedEffects[key] = value;
         }
       }
+      // Engine-verbs Slice 1 (M4): schedule_event is the one structured
+      // (non-numeric) effect value — the numeric filter above drops it, so
+      // capture it separately and re-attach AFTER mood scaling (the exec-mood
+      // multiplier must never touch its payload; it is a scheduling verb, not a
+      // magnitude). Kept out of appliedEffects too — badge records are numeric.
+      const scheduleEventEffect = isScheduleEventEffect((choice.effects_immediate as any).schedule_event)
+        ? ((choice.effects_immediate as any).schedule_event as ScheduleEventEffect)
+        : undefined;
       // PR-9: transform through the shared mood util BEFORE applyEffects so the
       // scaled numbers are what actually land (and match the client Impact Preview,
       // which routes the same util). Neutral/no-exec → identity transform.
@@ -371,7 +388,10 @@ export class ActionProcessor {
           appliedEffects[key] = immediateToApply[key];
         }
       }
-      await this.applyEffects(ctx, immediateToApply, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+      const toApply: Record<string, number | ScheduleEventEffect> = scheduleEventEffect
+        ? { ...immediateToApply, schedule_event: scheduleEventEffect }
+        : immediateToApply;
+      await this.applyEffects(ctx, toApply, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
 
       // Volatility-economy slice 3: applyEffects throttles POSITIVE reputation
       // gains through the global scaling helper. Reflect the SAME scaled value back
@@ -701,9 +721,54 @@ export class ActionProcessor {
    * @param meetingName - Optional meeting name for logging
    * @param choiceId - Optional choice ID for logging
    */
-  async applyEffects(ctx: WeekContext, effects: Record<string, number>, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
+  async applyEffects(ctx: WeekContext, effects: Record<string, number | ScheduleEventEffect>, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
     const { summary } = ctx;
-    for (const [key, value] of Object.entries(effects)) {
+    for (const [key, rawValue] of Object.entries(effects)) {
+      // Engine-verbs Slice 1 (M4): `schedule_event` is the ONE structured
+      // (non-numeric) effect — handled before the numeric switch. Banks an entry
+      // into the flags.scheduled_events[] queue (additive flags key, NO
+      // SNAPSHOT_VERSION bump); GameEngine.promoteScheduledEvents promotes the
+      // earliest DUE entry into flags.pending_side_event each advance when the
+      // crisis slot is free (escalations + already-pending crises keep priority).
+      if (key === 'schedule_event') {
+        if (!isScheduleEventEffect(rawValue)) {
+          console.warn(
+            `[EFFECT VALIDATION] schedule_event with invalid payload ${JSON.stringify(rawValue)} dropped` +
+            `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}`
+          );
+          continue;
+        }
+        const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+        const queue: ScheduledEventEntry[] = Array.isArray(flags.scheduled_events)
+          ? flags.scheduled_events
+          : [];
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        const entry: ScheduledEventEntry = {
+          eventId: rawValue.event_id,
+          landsOnWeek: currentWeek + rawValue.defer_weeks,
+          source: meetingName || 'unknown',
+          // Thread the resolved artist target through the queue so a
+          // predetermined-target verdict event resolves against the SAME artist
+          // the scheduling choice was about (conditional spread — absent key,
+          // not undefined, so flag shape stays lean).
+          ...(artistId ? { artistId } : {}),
+        };
+        flags.scheduled_events = [...queue, entry];
+        ctx.gameState.flags = flags;
+
+        // Qualitative foreshadow only — no numbers, no event identity leak.
+        summary.changes.push({
+          type: 'meeting',
+          description: 'Consequences set in motion — this will come back around',
+          amount: 0,
+          appliedEffects: {}
+        });
+        console.log(
+          `[EFFECT PROCESSING] schedule_event: "${entry.eventId}" queued (lands week ${entry.landsOnWeek}, source: ${entry.source})`
+        );
+        continue;
+      }
+      const value = rawValue as number;
       switch (key) {
         case 'money':
           // Note: Money changes will be handled by consolidated financial calculation
