@@ -541,6 +541,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
       case 'mood': return '💭'; // Mood changes
       case 'reputation': return '⭐'; // Reputation changes
       case 'flop': return '📉'; // Balance-integrity slice 2: flop reputation penalty
+      case 'creative_capital': return '💡'; // PENDING-DECISIONS #9: chart-milestone CC grant
       default: return '📊';
     }
   };
@@ -968,7 +969,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                       <span className="text-sm">{getChangeIcon(change.type)}</span>
                       <span className="text-sm font-medium text-neon-lilac">{change.description}</span>
                     </div>
-                    {change.type === 'reputation' && change.amount !== undefined && change.amount !== 0 && (
+                    {(change.type === 'reputation' || change.type === 'creative_capital') && change.amount !== undefined && change.amount !== 0 && (
                       <Badge variant="outline" className="text-xs font-mono text-neon-lilac border-neon-purple/40 font-semibold">
                         {change.amount > 0 ? '+' : ''}{change.amount}
                       </Badge>

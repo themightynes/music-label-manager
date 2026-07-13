@@ -103,12 +103,20 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       categories.revenue.push(change);
     } else if (change.type === 'expense') {
       categories.expenses.push(change);
-    } else if (change.type === 'unlock' || change.type === 'reputation' || change.type === 'flop') {
+    } else if (
+      change.type === 'unlock' ||
+      change.type === 'reputation' ||
+      change.type === 'flop' ||
+      change.type === 'creative_capital'
+    ) {
       // Balance-integrity slice 2: a 'flop' is a reputation SINK event — a released
       // record underperformed its investment and cost the label standing. Routed to
       // the rendered Achievements card (the reputation home) alongside the aggregated
       // ⭐ line, so the flop cause is visible and never falls into the never-rendered
       // `other` bucket (the awareness-arc invisible-event failure class).
+      // PENDING-DECISIONS #9: 'creative_capital' (chart-milestone CC grant) rides
+      // the same Achievements card as the chart-milestone reputation line it
+      // accompanies — same never-`other` rule.
       categories.achievements.push(change);
     } else if (change.type === 'mood' || change.type === 'energy') {
       // C87: tour energy drain entries ride the mood bucket (the artist-state

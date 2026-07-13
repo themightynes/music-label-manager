@@ -163,7 +163,7 @@ export const NODES: SystemNode[] = [
     domain: 'resources',
     col: 0,
     row: 2,
-    description: `Starts at ${reputationSystem.starting_creative_capital} (progression.json reputation_system.starting_creative_capital). Gates action availability at the route/UI layer only — see non-edges (no engine revenue/quality/stream formula reads it). Set by meeting choices (ActionProcessor.ts:657).`,
+    description: `Starts at ${reputationSystem.starting_creative_capital} (progression.json reputation_system.starting_creative_capital). Gates action availability at the route/UI layer only — see non-edges (no engine revenue/quality/stream formula reads it). Set by meeting choices (ActionProcessor.ts:657) and earned from chart milestones (e-chart-creative-capital, PENDING-DECISIONS #9).`,
   },
   {
     id: 'focus_slots',
@@ -838,6 +838,20 @@ export const EDGES: SystemEdge[] = [
     hardcoded: false,
     ref: 'game-engine.ts:1150-1190',
     note: 'Volatility-economy slice 3: the chart-milestone bonus (a "release success" reputation GAIN) is throttled by the global reputation_gain_scaling damper before it lands. Same damper applies to press-coverage + marketing + meeting reputation gains; losses (flop) are exempt.',
+  },
+  {
+    id: 'e-chart-creative-capital',
+    from: 'chart_position',
+    to: 'creative_capital',
+    mechanism: 'Chart milestone creative-capital grant (once per song, no-stack)',
+    formula: 'first top-10 → +cc_top10_bonus; first No.1 → +cc_number_one_bonus; SAME WEEK both (a #1 debut) → max of the two, never the sum',
+    values: [
+      { label: 'cc_top10_bonus', value: reputationSystem.creative_capital_milestones?.cc_top10_bonus, source: 'live', configPath: 'progression.reputation_system.creative_capital_milestones.cc_top10_bonus', ref: 'game-engine.ts applyChartMilestoneBonuses' },
+      { label: 'cc_number_one_bonus', value: reputationSystem.creative_capital_milestones?.cc_number_one_bonus, source: 'live', configPath: 'progression.reputation_system.creative_capital_milestones.cc_number_one_bonus' },
+    ],
+    hardcoded: false,
+    ref: 'game-engine.ts (applyChartMilestoneBonuses)',
+    note: 'PENDING-DECISIONS #9 (2026-07-12): CC\'s first non-meeting positive source — rides the SAME once-per-song chartMilestones flags as e-chart-reputation. NOT scaled by reputation_gain_scaling (that damper is reputation-only). Clamped ≥ 0; no upper CC cap exists in the engine.',
   },
   {
     id: 'e-flop-reputation',

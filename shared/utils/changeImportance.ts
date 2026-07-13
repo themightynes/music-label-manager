@@ -160,6 +160,12 @@ export function classifyChange(
     case 'flop':
       return 'notable';
 
+    // PENDING-DECISIONS #9: a chart milestone granting Creative Capital is a
+    // meaningful, attributable beat — the positive sibling of the reputation
+    // milestone line it rides alongside (both render on the Achievements card).
+    case 'creative_capital':
+      return 'notable';
+
     default:
       return assertNever(change.type);
   }
