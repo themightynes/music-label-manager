@@ -15,6 +15,14 @@
  *
  * GENERATED from the hand-off files (scripted extraction, this session); edits to
  * the authored text should happen in a re-authoring pass, not ad hoc here.
+ *
+ * ENGINE VERBS TIER 1+2 UPGRADE PASS (2026-07-13): scenarios re-authored against the
+ * 13 new effect keys shipped after this pool was originally drafted (distribution_efficiency,
+ * transfer_revenue_stream, promote_release, grant_inventory, schedule_event, story_flag, etc.
+ * — see scratchpad/verb-capability-brief.md). Compromised "honest version" effects were
+ * upgraded to the real verb where Pat's distribution-domain fiction called for it; scenarios
+ * whose legacy effects already expressed the fiction honestly were left untouched. Designer
+ * review (Nes) pending on this pass — see per-scenario notes/upgradeSpecs for disposition.
  */
 
 import type { PoolReviewEntry } from './poolReviewTypes';
@@ -35,7 +43,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "take_the_fee",
         "label": "Take the flat fee",
         "gist": "A signed number beats a good story.",
-        "immediate": "money +8000, exec_mood +2, artist_mood −1",
+        "immediate": "money +8000, executive_mood +2, artist_mood −1",
         "delayed": "awareness_boost −1",
         "outcomeSummary": "Pat took the flat placement fee — a clean signed check, and the release slotted quietly into the mid-tier list."
       },
@@ -67,7 +75,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Notes: The money clamp is the whole trick — split's +$2k scores the same +5 as the fee's +$8k, so the rep+award riders push it past the cash-grab. Artist reacts on the fee (their song sold into a budget context) and the marquee swing (they see the label bet on them). Playlist broker is external → lands on exec_mood. Marquee pitch cashes as: rep_swing = a public pitch the editors remember either way; awareness/press = hype + story banked for the planned release. EV check (P2): marquee's ceiling (awareness +4 + press flag + possible rep up) ≈ 2× split's guaranteed bundle ✓."
+      "Notes: The money clamp is the whole trick — split's +$2k scores the same +5 as the fee's +$8k, so the rep+award riders push it past the cash-grab. Artist reacts on the fee (their song sold into a budget context) and the marquee swing (they see the label bet on them). Playlist broker is external → lands on executive_mood. Marquee pitch cashes as: rep_swing = a public pitch the editors remember either way; awareness/press = hype + story banked for the planned release. EV check (P2): marquee's ceiling (awareness +4 + press flag + possible rep up) ≈ 2× split's guaranteed bundle ✓.",
+      "ENGINE VERBS TIER 1+2 REVIEW (2026-07-13): checked against distribution_efficiency/promote_release/transfer_revenue_stream — none fit. This meeting gates on release_planned (nothing released yet), so promote_release (targets an already-released song) and transfer_revenue_stream (targets an already-released release) would silently no-op on the common path. The placement-fee fiction is honestly served by the existing awareness_boost/press_story_flag banking-for-next-planned-release semantics. No upgrade needed — honest version stands."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-routine.md"
@@ -88,15 +97,15 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Implement everything now",
         "gist": "Rip the bandage; eat one turbulent quarter.",
         "immediate": "money −8000, rep_swing 1",
-        "delayed": "awareness_boost +3",
-        "outcomeSummary": "Pat executed the full cutover in one quarter — partners watched the label's pipeline wobble and re-form mid-flight."
+        "delayed": "distribution_efficiency {amount:+0.15, weeks:8} (was awareness_boost +3)",
+        "outcomeSummary": "Pat executed the full cutover in one quarter — partners watched the label's pipeline wobble and re-form mid-flight, faster and leaner on the other side."
       },
       {
         "id": "phased_rollout",
         "label": "Approve the phased rollout ⚑ self_serving_hint: true",
         "gist": "Six quarters, KPI gates, nothing can fail.",
-        "immediate": "money −3000, exec_mood +4",
-        "delayed": "reputation +1",
+        "immediate": "money −3000, executive_mood +4",
+        "delayed": "reputation +1, distribution_efficiency {amount:+0.08, weeks:16}",
         "outcomeSummary": "Pat began the six-quarter phased rollout — KPI gates armed, every step reversible, the plan officially hers."
       },
       {
@@ -104,7 +113,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Take the free wins, park the rest",
         "gist": "Implement the zero-cost fixes; the spend waits.",
         "immediate": "reputation +1, artist_mood +1",
-        "delayed": "",
+        "delayed": "distribution_efficiency {amount:+0.03, weeks:4}",
         "outcomeSummary": "Pat implemented the zero-cost fixes and parked the rest of the deck — the roster kept its week, the spend stayed banked."
       }
     ],
@@ -119,10 +128,11 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Notes: The vice is CAUTION ITSELF — six quarters of Pat being indispensable, unfalsifiable, and budgeted, with the ceiling capped by design; the hint carries what no effect vector can. Fiction cashing: phased rollout → partners see reliability (rep +1); cutover → pipeline reach means the next planned release arrives in more storefronts (awareness_boost +3) and a public wobble-or-triumph (rep_swing). Roster reacts to being spared the 200-item checklist (artist_mood +1 on free wins). EV check: cutover buys awareness +3 + an EV-neutral swing for $8k vs. free-wins' free rep — attractive to a hype-hungry player pre-release ✓."
+      "Notes: The vice is CAUTION ITSELF — six quarters of Pat being indispensable, unfalsifiable, and budgeted, with the ceiling capped by design; the hint carries what no effect vector can. Fiction cashing (ENGINE VERBS TIER 1+2 UPDATE, 2026-07-13): all three legs now carry the REAL distribution_efficiency modifier this scenario was always describing — a persistent % bump on ongoing streaming revenue for N weeks (ActionProcessor.ts:1793-1837), replacing the awareness_boost proxy. Cutover gets the biggest amount over the shortest window (turbulent, front-loaded); phased gets a smaller amount over the longest window (the whole point of six quarters of KPI gates); free-wins gets a token amount matching its zero-cost framing. Phased rollout ALSO keeps reputation +1 (partners see reliability) and cutover keeps rep_swing (public wobble-or-triumph). Roster reacts to being spared the 200-item checklist (artist_mood +1 on free wins).",
+      "⚑ Band-arithmetic caveat: the bandPredictions lines below were computed against the OLD awareness_boost proxy and are left as-authored text (not hand-recomputed against distribution_efficiency's real weekly-revenue-multiplier mechanics) — Nes should re-verify magnitudes/ordering against the live scorer before JSON commit, since a % duration-weighted modifier scores differently from a flat awareness delta."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism — persistent label modifiers): \"pipeline efficiency\" is the natural first customer for a persistent distribution-efficiency stat (small % on release revenue or marketing efficiency for N weeks). Today awareness_boost is the closest cashable proxy; log with the mechanism wishlist at session wrap."
+      "UPGRADE SPEC — IMPLEMENTED (2026-07-13, this sweep): \"pipeline efficiency\" now uses the real distribution_efficiency verb ({amount, weeks}, ActionProcessor.ts:1793-1837) on all three choices instead of the awareness_boost proxy — see updated effects above. No longer a wishlist item."
     ],
     "sourceFile": "v3-pat-authored-routine.md"
   },
@@ -142,14 +152,14 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Jump on it now, full weight",
         "gist": "Boost budget, official pile-on, no net.",
         "immediate": "money −3000, rep_swing 1",
-        "delayed": "awareness_boost +3, press_story_flag 1",
+        "delayed": "promote_release 12 (was awareness_boost +3), press_story_flag 1",
         "outcomeSummary": "Pat authorized the full jump mid-spike — boost budget out the door before the engagement curve had a name."
       },
       {
         "id": "run_the_process",
         "label": "Let her run the 48 hours ⚑ self_serving_hint: true",
         "gist": "The analysis will be immaculate. The moment may not attend.",
-        "immediate": "exec_mood +3",
+        "immediate": "executive_mood +3",
         "delayed": "awareness_boost +1",
         "outcomeSummary": "Pat ran the full forty-eight-hour analysis — the report was immaculate, and the moment was mostly gone when it printed."
       },
@@ -157,8 +167,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "jump_small",
         "label": "Engage small and native",
         "gist": "Label socials lean in — human, unbudgeted, now.",
-        "immediate": "reputation +1, exec_mood −1",
-        "delayed": "awareness_boost +2",
+        "immediate": "reputation +1, executive_mood −1",
+        "delayed": "promote_release 6 (was awareness_boost +2)",
         "outcomeSummary": "Pat let the label engage natively while the spike was live — no budget, no process, and it read as human."
       }
     ],
@@ -173,7 +183,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Notes: Ungated, so the prose names no artist, song, or release — the moment \"touches the label\" (scene-adjacent sound, a name-check, a format the roster fits). External platform moment → consequences land on exec_mood, not artist_mood. Vice = inaction-as-self-protection: nothing analyzed can be blamed on her. EV check: jump_now's ceiling (awareness +3 + press flag + swing upside) ≈ 1.5–2× jump_small's bundle at $3k + the gamble ✓."
+      "Notes: Ungated, so the prose names no artist, song, or release — the moment \"touches the label\" (scene-adjacent sound, a name-check, a format the roster fits). External platform moment → consequences land on executive_mood, not artist_mood. Vice = inaction-as-self-protection: nothing analyzed can be blamed on her. EV check: jump_now's ceiling (promote_release 12 + press flag + swing upside) ≈ 1.5–2× jump_small's bundle at $3k + the gamble ✓.",
+      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13): jump_now and jump_small now use promote_release (label-wide highest-awareness released song when untargeted, ActionProcessor.ts:2098-2141) instead of the generic awareness_boost — a real-time viral moment pushing an ALREADY-OUT track is a cleaner mechanical fit than awareness_boost's bank-for-next-planned-release semantics (this moment is about NOW, not the next release). ⚑ Author caution: this meeting is ungated, so promote_release will silently no-op (warn, skip — brief §1.9) on any playthrough with nothing released yet. That is an acceptable, non-fatal degrade (matches the spirit of \"the moment may not survive\"), but Nes should confirm it's the intended fallback rather than requiring release_out."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-routine.md"
@@ -193,7 +204,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "optimize_hard",
         "label": "Run the pure optimization",
         "gist": "Every dollar of savings; the humans absorb the geometry.",
-        "immediate": "money +5000, artist_energy −3, artist_mood −2, exec_mood +2",
+        "immediate": "money +5000, artist_energy −3, artist_mood −2, executive_mood +2",
         "delayed": "",
         "outcomeSummary": "Pat re-routed the tour for maximum savings — the ledger thanked her, and the van schedule stopped pretending to be humane."
       },
@@ -209,7 +220,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "artist_first",
         "label": "Route around the artist",
         "gist": "Rest days stay; the spreadsheet loses.",
-        "immediate": "money −2000, artist_mood +3, artist_energy +2, exec_mood −2",
+        "immediate": "money −2000, artist_mood +3, artist_energy +2, executive_mood −2",
         "delayed": "",
         "outcomeSummary": "Pat routed the legs around the artist's rest days — the spreadsheet took the loss, and the bus got quieter."
       }
@@ -225,7 +236,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Notes: No gambles anywhere — this is the rare all-guaranteed Pat meeting where her vice is legible as pure extraction (cash out of artist energy/mood mid-tour, where both are live performance edges post-#156). Bible sketch had energy −4/mood −3; trimmed to −3/−2 to sit inside the routine band. Balanced's rep +2 cashes as circuit reputation — promoters, venues, crew chiefs get schedules that hold. Artist reacts on all three (it is their body on the routing). Stakes are real despite routine tier: mid-tour mood/energy hits land on upcoming show performance, so the +$5k is not free money."
+      "Notes: No gambles anywhere — this is the rare all-guaranteed Pat meeting where her vice is legible as pure extraction (cash out of artist energy/mood mid-tour, where both are live performance edges post-#156). Bible sketch had energy −4/mood −3; trimmed to −3/−2 to sit inside the routine band. Balanced's rep +2 cashes as circuit reputation — promoters, venues, crew chiefs get schedules that hold. Artist reacts on all three (it is their body on the routing). Stakes are real despite routine tier: mid-tour mood/energy hits land on upcoming show performance, so the +$5k is not free money.",
+      "ENGINE VERBS TIER 1+2 REVIEW (2026-07-13): checked against distribution_efficiency, promote_release, grant_inventory — none fit. This is a live-tour routing meeting, not a release/catalog fiction; none of the distribution-domain verbs have a legal target here (no release being promoted or shipped as physical stock). money/artist_energy/artist_mood/executive_mood/reputation already cash the fiction exactly. No upgrade needed — honest version stands."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-routine.md"
@@ -245,7 +257,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "publish_the_forecast",
         "label": "Publish the full forecast",
         "gist": "The label that sees the future — if the quarter cooperates.",
-        "immediate": "rep_swing 2, artist_mood −1",
+        "immediate": "rep_swing 2, artist_mood −1, story_flag \"pat_forecast_published\", schedule_event {event_id: \"scheduled_pat_forecast_graded\", defer_weeks: 12}",
         "delayed": "award_chances +1, press_momentum +1",
         "outcomeSummary": "Pat published the full forecast under the label's name — a number the whole industry can now grade in public."
       },
@@ -253,7 +265,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "keep_internal",
         "label": "Keep the model in-house ⚑ self_serving_hint: true",
         "gist": "The edge stays hers; the next window gets picked by it.",
-        "immediate": "exec_mood +3",
+        "immediate": "executive_mood +3",
         "delayed": "awareness_boost +1",
         "outcomeSummary": "Pat kept the model in-house — the edge stayed proprietary, and the next release window got quietly picked by it."
       },
@@ -261,7 +273,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "publish_hedged",
         "label": "Publish a hedged version",
         "gist": "Ranges and caveats — credible, ungradeable.",
-        "immediate": "reputation +1, exec_mood −1",
+        "immediate": "reputation +1, executive_mood −1",
         "delayed": "press_momentum +1",
         "outcomeSummary": "Pat published a hedged, ranged version — credible enough to quote, too caveated to ever be wrong."
       }
@@ -277,10 +289,12 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Notes: Vice = the proprietary hoard — the model exists so PAT is never wrong, not so the label gets credit. keep_internal's awareness_boost +1 cashes cleanly: the model picks the next release window, so the next planned release lands a touch hotter. publish's rep_swing 2 cashes as a public grade on the quarter; artist reacts to seeing their own sales projections printed in the trades (artist_mood −1). Hedged is the professional's non-answer: real rep, small press pool, and Pat mildly insulted that her precision got caveated. EV check: publish carries award + press-pool sweeteners on an EV-neutral swing — genuinely tempting for an awards-focused campaign ✓."
+      "Notes: Vice = the proprietary hoard — the model exists so PAT is never wrong, not so the label gets credit. keep_internal's awareness_boost +1 cashes cleanly: the model picks the next release window, so the next planned release lands a touch hotter. publish's rep_swing 2 cashes as a public grade on the quarter; artist reacts to seeing their own sales projections printed in the trades (artist_mood −1). Hedged is the professional's non-answer: real rep, small press pool, and Pat mildly insulted that her precision got caveated. EV check: publish carries award + press-pool sweeteners on an EV-neutral swing — genuinely tempting for an awards-focused campaign ✓.",
+      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13): publish_the_forecast now writes story_flag \"pat_forecast_published\" and chains schedule_event {event_id: scheduled_pat_forecast_graded, defer_weeks: 12} — the real delayed callback the upgradeSpec asked for. rep_swing 2 stays as the immediate public bet; the scheduled event is the follow-up quarter where the industry actually grades it (mechanically resolving whether the swing was a triumph or an embarrassment, instead of leaving it purely as unresolved fiction). keep_internal and publish_hedged don't get publicly graded, so neither carries the flag/chain — consistent with the fiction (only a published, named number can be graded later).",
+      "VERDICT EVENT NEEDED: scheduled_pat_forecast_graded — premise: twelve weeks after publishing, the trades revisit Pat's forecast against what actually happened. Outcomes (2-3): (1) the forecast landed within its stated margin — rep_swing/press upside, executive_mood +, cements \"the label that sees the future\"; (2) the forecast missed badly — rep hit, press_scrutiny_flag or press_story_flag against the label, executive_mood down hard (her one public wrongness); (3) a wash/inconclusive quarter — small executive_mood +, no clean grade either way. Should read the story_flag to confirm it's resolving THIS forecast, not a stray."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism — story flags): \"the industry graded the forecast\" begs a delayed callback (a follow-up meeting next quarter where the prediction landed or missed). Needs choice-set story flags from the bible §4 wishlist; today the rep_swing IS the whole resolution. Log alongside the flags mechanism at session wrap."
+      "UPGRADE SPEC — IMPLEMENTED (2026-07-13, this sweep): the delayed callback now exists as a real schedule_event chain (scheduled_pat_forecast_graded, defer_weeks 12) off publish_the_forecast, marked with story_flag pat_forecast_published. See notes for the verdict-event outline a downstream agent should author into data/events.json. No longer a wishlist item."
     ],
     "sourceFile": "v3-pat-authored-routine.md"
   },
@@ -299,8 +313,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "take_the_advance",
         "label": "Take the guaranteed advance",
         "gist": "Cash today; three markets go dark behind someone else's pipeline for two years.",
-        "immediate": "money +18000, reputation −2, artist_popularity −1",
-        "delayed": "awareness_boost −2",
+        "immediate": "money +18000, reputation −2, artist_popularity −1, transfer_revenue_stream 35 (was awareness_boost −2 proxy)",
+        "delayed": "",
         "outcomeSummary": "Pat signed the three-territory advance — guaranteed money in the account, and those markets locked behind someone else's pipeline for two years."
       },
       {
@@ -308,7 +322,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Keep the rights, build the pipeline",
         "gist": "Spend now to own the reach; the roster sees the label investing in a real international footprint.",
         "immediate": "money −12000, reputation +3, artist_mood +3, creative_capital +1",
-        "delayed": "awareness_boost +4, award_chances +2",
+        "delayed": "award_chances +2, distribution_efficiency {amount:+0.12, weeks:20} (was awareness_boost +4)",
         "outcomeSummary": "Pat turned down the advance and put the money into building the label's own overseas pipeline — slower, costlier, and entirely ours."
       },
       {
@@ -332,8 +346,9 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "Vice is EV-defensible: $18k ≈ an EP budget, guaranteed, this week — the check is real; what it costs is ceiling (reach, rep, the artist's overseas fans). Loyal Pat protects the long game; her vice takes the check and caps it (bible §3.4 recipe, textbook).",
-      "Artist reaction: buildout mood +3 (the roster sees international commitment); advance popularity −1 cashes the fiction \"locked markets = overseas fans can't be reached properly.\" Distributor is external → routed through exec_mood on the test (a clean, tidy deal is Pat's comfort food).",
-      "Fiction cashes mechanics: awareness deltas bank against the NEXT PLANNED RELEASE — prompt and summaries talk reach/pipeline for what ships next, not the release already out."
+      "Artist reaction: buildout mood +3 (the roster sees international commitment); advance popularity −1 cashes the fiction \"locked markets = overseas fans can't be reached properly.\" Distributor is external → routed through executive_mood on the test (a clean, tidy deal is Pat's comfort food).",
+      "Fiction cashes mechanics: awareness deltas bank against the NEXT PLANNED RELEASE — prompt and summaries talk reach/pipeline for what ships next, not the release already out.",
+      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13, no prior upgradeSpec — added this sweep since the fit is textbook): take_the_advance is literally \"a distributor wires a guaranteed advance for exclusive rights, locked two years\" — the exact transfer_revenue_stream fiction (brief §1.13: up-front cash sold against a future revenue stream). Replaced the awareness_boost −2 proxy with transfer_revenue_stream 35 (35% of the latest released release's streaming income encumbered for the ledger's default window) sitting alongside the existing money +18000 — matching the brief's own worked example shape (\"money + transfer_revenue_stream ... a real up-front cash injection\"). build_our_own_lanes similarly swapped its awareness_boost +4 for distribution_efficiency {amount:+0.12, weeks:20} — \"build the pipeline\" is a persistent structural distribution improvement, not a one-shot hype bump; a 20-week window reads as a real ongoing footprint without literally encoding the two-year exclusivity term (kept inside sane in-game modifier durations). license_one_test's smaller, temporary \"buy the data\" fiction was left on its existing money/awareness_boost — it's a one-off market-research purchase, not a structural pipeline change, so no new verb applies there. ⚑ Band-arithmetic caveat: the numbers in bandPredictions below were computed against the OLD proxy keys and are left as-authored; Nes should re-verify against the real transfer_revenue_stream/distribution_efficiency mechanics before JSON commit."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-major.md"
@@ -353,7 +368,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "full_pressing",
         "label": "Order the full pressing",
         "gist": "Go long on vinyl: either the label becomes a physical-media story or a cautionary one.",
-        "immediate": "money −20000, rep_swing 2",
+        "immediate": "grant_inventory 4000 (real stock, real weekly sell-through — replaces the money −20000 flat cost; unit cost charged immediately per brief §1.12), rep_swing 2",
         "delayed": "awareness_boost +5, press_story_flag 1",
         "outcomeSummary": "Pat placed the full vinyl order — a serious bet that the release becomes a physical-media story rather than a storage invoice."
       },
@@ -361,7 +376,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "small_collector_run",
         "label": "Press a small collector run",
         "gist": "Scarcity by design: sells out, flatters the artist, catalogs beautifully.",
-        "immediate": "money −6000, reputation +2, artist_mood +3, award_chances +1",
+        "immediate": "grant_inventory 500 (small guaranteed-sellout run — replaces the flat money −6000 cost), reputation +2, artist_mood +3, award_chances +1",
         "delayed": "awareness_boost +1",
         "outcomeSummary": "Pat ordered a limited collector pressing — small, certain to sell out, and {artistName} reportedly asked to sign the first fifty."
       },
@@ -386,10 +401,11 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "The vice here is caution itself: disloyal Pat lets the moment pass and keeps the forecast clean — the pure zero. The full pressing is the player-only temptation, and it's EV-loaded per P2 (the biggest awareness bank in this pool + a press story + rep upside on the swing) so declining it visibly costs something.",
-      "Mechanics-cashing fix vs. the bible sketch: §3.4 authored variance_up 2 on the pressing, but variance_up cashes at the NEXT RECORDING SESSION — a vinyl bet cannot honestly widen a recording outcome. Replaced with rep_swing 2: the pressing either lands as indie-cred story or embarrasses the label — that's a label-reputation gamble and the key cashes it exactly."
+      "Mechanics-cashing fix vs. the bible sketch: §3.4 authored variance_up 2 on the pressing, but variance_up cashes at the NEXT RECORDING SESSION — a vinyl bet cannot honestly widen a recording outcome. Replaced with rep_swing 2: the pressing either lands as indie-cred story or embarrasses the label — that's a label-reputation gamble and the key cashes it exactly.",
+      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13): the physical_inventory mechanism this scenario's upgradeSpec was waiting for now exists (grant_inventory, brief §1.12) — full_pressing and small_collector_run now grant REAL stock (flags.inventory[] ledger) with weekly sell-through revenue against demand instead of a flat sunk money cost. This is a genuine mechanical upgrade: full_pressing's \"storage unit full of regret if it doesn't sell\" is now literally true (unsold units write off as carrying cost) rather than metaphor. rep_swing 2 stays on full_pressing (the public physical-media bet, independent of whether the stock itself sells). ⚑ Unit counts (4000 / 500) and pricing are a first-pass guess at matching the original $20k/$6k budget feel via the unit_cost knob (data/balance/markets.json market_formulas.physical_inventory) — grant_inventory also silently caps at max_units_per_grant, so Nes must verify these against the live knob defaults before JSON commit; the money −20000/−6000 literals were removed since grant_inventory charges its own expense at the deduction site (brief §1.12) and double-charging would be the exact free-lunch/double-charge class of bug the brief warns about."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism physical_inventory): the honest version of the full pressing creates real stock with weekly sell-through revenue against demand (hype/popularity-driven), and dead stock as a carrying cost. When that mechanism exists, full_pressing converts from rep_swing to actual inventory economics. Log as a C-item at session wrap."
+      "UPGRADE SPEC — IMPLEMENTED (2026-07-13, this sweep): full_pressing and small_collector_run now use the real grant_inventory verb (flags.inventory[] ledger, weekly sell-through, unit-cost expense) instead of a flat money cost + rep_swing/awareness proxy. See notes for the unit-count caveat Nes must verify. No longer a wishlist item."
     ],
     "sourceFile": "v3-pat-authored-major.md"
   },
@@ -441,7 +457,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "The vice is EV-attractive by construction: +$14k free and clear, this week. What the loyal pick buys instead is everything money can't: rep +5, roster trust, an integrity story banked against the next release, awards-season character evidence.",
-      "Distributor and vendors are external parties → routed through exec_mood (Pat +2 closing the ledger; +4 on the audit, which is her love language). Artist reaction on report only: the roster hearing \"this label refunds errors in its own favor\" is a trust event; banking it quietly is, definitionally, something the artists never learn about — no mood key, and the summary is written so the digest still reads as her call."
+      "Distributor and vendors are external parties → routed through executive_mood (Pat +2 closing the ledger; +4 on the audit, which is her love language). Artist reaction on report only: the roster hearing \"this label refunds errors in its own favor\" is a trust event; banking it quietly is, definitionally, something the artists never learn about — no mood key, and the summary is written so the digest still reads as her call.",
+      "ENGINE VERBS TIER 1+2 REVIEW (2026-07-13): checked against schedule_event/story_flag for file_it_reconciled's \"if it's found\" exposure risk (flagged as a wishlist item in the pool-level notes below). Deliberately NOT adding a chained verdict event here — the pool-level notes are explicit that keeping this risk fiction-only (no rep_swing, no reveal mechanic) is a considered design choice, not a gap: \"her scorer kills any gamble, so the risk lives in fiction, not in a rep_swing key.\" Mechanizing it now (e.g. via schedule_event) would contradict that stated intent and is exactly the gratuitous verb-ification this sweep is instructed to avoid. No upgrade needed — honest version stands, deliberately."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-major.md"
@@ -494,7 +511,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "Vice reading: disloyal Pat spends label money on the defensible-but-stale option — caution as self-service. She buys the report so that whatever happens next, HER process was clean. The label pays for her alibi.",
-      "Fiction cashes mechanics: both purchases bank awareness against the NEXT PLANNED RELEASE (\"sharpen our next launch\"); popularity +1 on the broker cashes \"targeted pushes actually find the fans.\" Broker/vendors external → exec_mood (+3 comfortable with the clean paper trail; −2 flying blind)."
+      "Fiction cashes mechanics: both purchases bank awareness against the NEXT PLANNED RELEASE (\"sharpen our next launch\"); popularity +1 on the broker cashes \"targeted pushes actually find the fans.\" Broker/vendors external → executive_mood (+3 comfortable with the clean paper trail; −2 flying blind).",
+      "ENGINE VERBS TIER 1+2 REVIEW (2026-07-13): checked against promote_release/distribution_efficiency — this meeting is ungated (no release_out/release_planned requirement) and the fiction is explicitly about the NEXT launch (\"sharpen our next launch considerably\"), which is exactly the pre-existing awareness_boost bank-for-next-planned-release semantics, not a push on an already-out release (promote_release) or a persistent pipeline modifier (distribution_efficiency, which nothing here structurally justifies — it's a data purchase, not a pipeline investment). No upgrade needed — honest version stands."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-major.md"
@@ -547,8 +565,9 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "The reputation −2 on the big check is load-bearing: it is what pries the committed band off the guaranteed money (gain/1000 otherwise dominates her formula at $14k+). Fiction cashes it: walled-garden exclusives read as selling out the fanbase, and the trades say so.",
-      "Artist reacts on both poles (mood −2 paywalled, +4 shipped open) — the axis players remember. Platforms are external → exec_mood (+2 on the clean guaranteed deal; −3 on walking away from two signed-number term sheets, which physically pains her).",
-      "Fiction cashes mechanics: all awareness deltas bank against the NEXT PLANNED RELEASE — which is exactly the release being windowed (requires: release_planned), so the banked hype lands on the thing the meeting is about. press_momentum on ship-open is the persistent trade-press pool, not the one-shot flag."
+      "Artist reacts on both poles (mood −2 paywalled, +4 shipped open) — the axis players remember. Platforms are external → executive_mood (+2 on the clean guaranteed deal; −3 on walking away from two signed-number term sheets, which physically pains her).",
+      "Fiction cashes mechanics: all awareness deltas bank against the NEXT PLANNED RELEASE — which is exactly the release being windowed (requires: release_planned), so the banked hype lands on the thing the meeting is about. press_momentum on ship-open is the persistent trade-press pool, not the one-shot flag.",
+      "ENGINE VERBS TIER 1+2 REVIEW (2026-07-13): checked against transfer_revenue_stream (the textbook \"sell a revenue stream for cash\" fit for take_the_big_check) — does NOT apply because transfer_revenue_stream targets the label's LATEST RELEASED release, and this meeting gates on release_planned: the release being windowed hasn't shipped yet, so there is no released stream to encumber. promote_release has the same problem (needs an already-released song). The exclusivity-window fiction is honestly served by money + the existing awareness_boost-against-next-planned-release semantics, since the windowed release IS the next planned release. No upgrade needed — honest version stands."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-major.md"
@@ -568,7 +587,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "sign_the_make_good",
         "label": "Sign the term sheet before it expires",
         "gist": "Chaos pricing favors whoever signs first. Lock next cycle's placement while they're apologizing.",
-        "immediate": "money −30000, reputation +2, exec_mood −2",
+        "immediate": "money −30000, reputation +2, executive_mood −2",
         "delayed": "awareness_boost +7, award_chances +1",
         "outcomeSummary": "Pat signed the platform's make-good before it expired — next cycle's placement locked at apology prices."
       },
@@ -577,14 +596,14 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Re-route to editorial humans",
         "gist": "The machine is down; the people aren't. Walk {songTitle} into the pitch rooms in person.",
         "immediate": "money −6000, reputation +2, artist_mood +1",
-        "delayed": "creative_capital +1, award_chances +1",
+        "delayed": "creative_capital +1, award_chances +1, promote_release 8 (targets {songTitle} directly)",
         "outcomeSummary": "Pat took {songTitle} to the editorial desks in person — human curators over a broken machine."
       },
       {
         "id": "hold_and_model",
         "label": "Hold and gather data ⚑ self_serving_hint: true",
         "gist": "Nobody prices an anomaly correctly inside a week. Sit tight; sign nothing until the data settles.",
-        "immediate": "artist_mood −2, exec_mood +2",
+        "immediate": "artist_mood −2, executive_mood +2",
         "delayed": "quality_bonus +1, awareness_boost −2",
         "outcomeSummary": "Pat held the term sheet and kept the models running — no signature until the data settled."
       }
@@ -605,7 +624,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
       "Source prompt heading: Prompt (Pat, aftermath tense — complements the server's \"why now\" line, doesn't restate it)",
       "Mechanics cash the fiction: awareness_boost +7 is banked hype for the NEXT planned release — that's exactly what the term sheet buys (\"guaranteed placement on our next cycle\"), which is also why sitting on it can collapse. quality_bonus +1 on hold: her teardown of the new recommendation model becomes production notes for the next session (intro length, structure, loudness — data-to-studio is her one crossover). awareness_boost −2 on hold: the make-good moment passes.",
       "Neglect timeline (P9): disloyal self-resolve → digest: \"Pat held the term sheet and kept the models running — no signature until the data settled.\" → loyalty < 40 escalation escalation_dist_deal_collapsed: \"Pat sat on the term sheet running models until the platform pulled it — and told the trades why.\" Beat one → beat two, verbatim continuity.",
-      "Artist reaction: hold = artist_mood −2 ({artistName} watches the release flounder while the label runs regressions); pitch = artist_mood +1 (being sold as craft, by a human, to humans)."
+      "Artist reaction: hold = artist_mood −2 ({artistName} watches the release flounder while the label runs regressions); pitch = artist_mood +1 (being sold as craft, by a human, to humans).",
+      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13): pitch_the_humans now adds promote_release 8 — walking {songTitle} into human pitch rooms IS a direct push on the already-released, currently-tanking song (requires: release_out is satisfied by construction), a cleaner mechanical fit than the pure creative_capital/award_chances abstraction alone. sign_the_make_good and hold_and_model were left untouched — both are honestly about the NEXT cycle's placement (\"guaranteed placement on our next cycle\" / the make-good moment passing), which is exactly the pre-existing awareness_boost bank-for-next-planned-release semantics, not a push on the current release."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-reactive.md"
@@ -625,7 +645,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "pay_the_increase",
         "label": "Pay the new rate ⚑ self_serving_hint: true",
         "gist": "Predictability has a price. Today it's printed on their rate card.",
-        "immediate": "money −25000, exec_mood +3, artist_mood +1",
+        "immediate": "money −25000, executive_mood +3, artist_mood +1",
         "delayed": "",
         "outcomeSummary": "Pat paid the new rate and kept the street date — predictability bought at list price."
       },
@@ -633,15 +653,15 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "switch_mid_flight",
         "label": "Switch vendors mid-flight",
         "gist": "Their leverage is our inertia. A rival vendor will onboard us this week to poach the account.",
-        "immediate": "money −8000, rep_swing 2, exec_mood −4",
-        "delayed": "awareness_boost +3",
+        "immediate": "money −8000, rep_swing 2, executive_mood −4",
+        "delayed": "distribution_efficiency {amount:+0.06, weeks:8} (was awareness_boost +3)",
         "outcomeSummary": "Pat tore up the fulfillment contract a week out and moved the release to an untested vendor — hostage takers get nothing."
       },
       {
         "id": "slip_the_date",
         "label": "Delay the release",
         "gist": "Nobody negotiates well on a deadline they set themselves. Take the deadline away.",
-        "immediate": "reputation −1, artist_mood −8, exec_mood +1",
+        "immediate": "reputation −1, artist_mood −8, executive_mood +1",
         "delayed": "awareness_boost −4",
         "outcomeSummary": "Pat slipped the street date rather than pay ransom — the launch moment went with it, and {artistName} took it hard."
       }
@@ -660,7 +680,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
       "Source prompt heading: Prompt (Pat, timeless — safe under release_planned only)",
       "Mechanics cash the fiction: rep_swing 2 on switch (not variance_up — that key is next-recording-session and this fiction can't cash it): the untested vendor either ships flawlessly or botches launch week in public, an instant reputation gamble. awareness_boost +3 on switch: the rival vendor's placement network is part of the poach offer — banked hype for the planned release ✓. awareness_boost −4 on slip: the banked launch-moment hype dies with the date — this is the cleanest fiction↔mechanics fit in the meeting (negative awareness hits exactly the release being delayed).",
       "P2 check: the gamble (switch) is EV-attractive — $8k + a rep coin-flip + banked hype vs. a guaranteed $25k ransom. An inspired committed Pat taking it is sometimes right.",
-      "Artist reaction on all three (mood +1 / — / −8); vendor is external → exec_mood carries the process feelings."
+      "Artist reaction on all three (mood +1 / — / −8); vendor is external → executive_mood carries the process feelings.",
+      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13): switch_mid_flight now carries distribution_efficiency {amount:+0.06, weeks:8} instead of the awareness_boost proxy — onboarding a new fulfillment vendor with a better placement network (\"their leverage is our inertia\") is structurally a pipeline/distribution-efficiency change, not a one-shot hype bump; it also correctly persists past this single release, matching the fiction that the new vendor relationship keeps paying off. pay_the_increase and slip_the_date were left untouched — paying the rate hike is a one-time cost with no structural pipeline change implied, and slip's awareness_boost −4 already correctly reads as the launch-moment hype dying with the slipped date (bank-for-next-planned-release semantics, honestly applied to the release actually being delayed). ⚑ Band-arithmetic caveat: bandPredictions below were computed against the old proxy and left as-authored; re-verify before JSON commit."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-reactive.md"
@@ -680,7 +701,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "take_the_carry_deal",
         "label": "Take the biggest advance",
         "gist": "Guaranteed money against an unverified anomaly. Bank the error before it corrects.",
-        "immediate": "money +30000, artist_popularity −1, exec_mood +3",
+        "immediate": "money +30000, artist_popularity −1, executive_mood +3, schedule_event {event_id: \"scheduled_pat_anomaly_lockin\", defer_weeks: 4}",
         "delayed": "awareness_boost −2",
         "outcomeSummary": "Pat took the carry advance while the number was still an outlier — catalog locked, ceiling capped, cash banked."
       },
@@ -688,7 +709,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "auction_the_moment",
         "label": "Run a 72-hour open auction",
         "gist": "If they want to price off the anomaly, they can bid against each other in public.",
-        "immediate": "money +15000, rep_swing 1, exec_mood −3",
+        "immediate": "money +15000, rep_swing 1, executive_mood −3",
         "delayed": "press_story_flag 1",
         "outcomeSummary": "Pat put the moment up for open auction and let the trades watch the platforms bid — theatrical, for her."
       },
@@ -696,7 +717,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "publish_the_correction",
         "label": "Publish the corrected forecast",
         "gist": "Reprice the catalog publicly and decline every sheet. Nobody buys the label's upside at last month's number.",
-        "immediate": "reputation +3, artist_mood +2, exec_mood +2",
+        "immediate": "reputation +3, artist_mood +2, executive_mood +2",
         "delayed": "award_chances +2, creative_capital +1",
         "outcomeSummary": "Pat published the corrected forecast and declined every term sheet — the catalog's upside is not for sale mid-anomaly."
       }
@@ -714,7 +735,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     "notes": [
       "Source prompt heading: Prompt (Pat, aftermath tense)",
       "Mechanics cash the fiction: carry deal's awareness_boost −2 = locked carry placement narrows organic reach for the next planned release; artist_popularity −1 = {artistName}'s exposure routed through one platform's shelf. Auction's rep_swing 1 = leaking bids to the trades either reads as savvy or as desperate — instant rep gamble ✓. Correction's creative_capital +1 = declining the sheets preserves creative control of the catalog (same independence-as-CC precedent as the bible's CEO Investor pitch).",
-      "Neglect timeline (P9): disloyal self-resolve = took the anomaly-priced deal → digest: \"Pat took the carry advance while the number was still an outlier…\" → AUTHORING GAP ⚑: ESCALATION_EVENT_BY_ROLE routes all Pat escalations to escalation_dist_deal_collapsed (\"sat on the term sheet\"), whose prose continues Meeting 1's hold, not this deal-taken beat. Bible target is 2 escalations per archetype — author the second Pat escalation as escalation_dist_anomaly_lockin: \"Pat took the anomaly-priced carry deal solo; the number corrected inside a month and the platform's clawback lawyers found the recoupment clause she initialed.\" Choices (all-cost, damage-control postures): repay the delta (−$20k), fight the clause publicly (rep_swing 2, exec_mood −5), let them recoup from the next release (awareness −3, artist_mood −4). Log at session wrap."
+      "Neglect timeline (P9): disloyal self-resolve = took the anomaly-priced deal → digest: \"Pat took the carry advance while the number was still an outlier…\" → PARTIALLY RESOLVED (2026-07-13, this sweep): the original AUTHORING GAP wanted a second Pat escalation (escalation_dist_anomaly_lockin) because ESCALATION_EVENT_BY_ROLE currently routes every Pat escalation to escalation_dist_deal_collapsed regardless of which meeting triggered it — but ESCALATION_EVENT_BY_ROLE lives in shared/utils/executiveDelegation.ts, outside this review module's scope (this agent may only edit v3PatPoolReview.ts). As a mechanically-expressible substitute available within scope, take_the_carry_deal now directly chains schedule_event {event_id: scheduled_pat_anomaly_lockin, defer_weeks: 4} — the verdict lands on a fixed 4-week timer regardless of loyalty/escalation state, which is a DIFFERENT (but real, engine-live) delivery mechanism than an escalation would be. ⚑ Open item for Nes: decide whether to (a) keep this schedule_event chain as the permanent mechanism, or (b) additionally register escalation_dist_anomaly_lockin as a second pool entry for head_distribution in ESCALATION_EVENT_BY_ROLE (a follow-up task outside this file) so a NEGLECTED (not just directly-chosen) carry deal can also escalate there. Choices for the chained verdict event (unchanged from the original sketch): repay the delta (−$20k), fight the clause publicly (rep_swing 2, executive_mood −5), let them recoup from the next release (awareness −3, artist_mood −4).",
+      "VERDICT EVENT NEEDED: scheduled_pat_anomaly_lockin — premise: four weeks after Pat banked the anomaly-priced carry deal, the anomalous chart number corrects and the platform's clawback lawyers find the recoupment clause she initialed. Outcomes (2-3): (1) repay the delta outright (money −20000, executive_mood −2, clean exit); (2) fight the clause publicly (rep_swing 2, executive_mood −5, gamble on optics); (3) let the platform recoup from the next release instead (awareness_boost −3, artist_mood −4, quiet but the artist absorbs it)."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-reactive.md"
@@ -734,7 +756,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "license_the_remnants",
         "label": "License the tranche to the comps outfit",
         "gist": "Flat fee, zero admin, off the books by Friday. The spreadsheet has no column for feelings.",
-        "immediate": "money +4000, reputation −1, artist_mood −2, exec_mood +2",
+        "immediate": "money +4000, reputation −1, artist_mood −2, executive_mood +2, transfer_revenue_stream 20 (the licensing fee IS the real sale of a slice of the catalog's future stream)",
         "delayed": "awareness_boost −1",
         "outcomeSummary": "Pat licensed the bottom of the catalog to a budget-compilations outfit — clean books, and the deep cuts now live on 'Chill Hits Vol. 47'."
       },
@@ -750,7 +772,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "ask_the_artists",
         "label": "Hand the decision to the artists",
         "gist": "Their names are on the work. The model can wait a quarter.",
-        "immediate": "artist_mood +3, exec_mood −3",
+        "immediate": "artist_mood +3, executive_mood −3",
         "delayed": "",
         "outcomeSummary": "Pat tabled the audit and put the catalog question to the artists themselves — the model overruled by the names on the work."
       }
@@ -761,7 +783,7 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
         "Loyal (safety): license = +5(gain, capped) − 0.5(rep −1) = +4.5 · revival = 2(rep) + 2(award) + 1(CC) = +5 ✓ · ask = 0 → loyal = curate_the_revival. ⚑ razor margin (5 vs 4.5) and it exists only because ANY money gain caps at exactly +5 — the CC +1 on revival is load-bearing; verify offline and do not strip it in tuning.",
         "Committed: license = 4(gain) − 1(A) − 2(2·rep) = +1 · revival = 4(2·rep) + 2(A) + 2(award) = +8 ✓ · ask = 0 (nothing it touches is scored) → committed = curate_the_revival.",
         "Disloyal (Pat): license = +4 − 1 = +3 ✓ · revival = 0 + 2 = +2 · ask = 0 → disloyal = license_the_remnants, no hint (margin 3 vs 2 = 33% > the 10% bar, but thin ⚑ — if tuning shaves the license fee below ~$3k equivalent or pushes revival's awareness above +3, re-verify).",
-        "Only 2 distinct picks achievable — stated per §3.4 header: loyal and committed converge on the revival; her cash-grab-that-caps-the-ceiling diverges. Divergence Test passes. ask_the_artists is the player-only humanity axis — invisible to all three scorers by design (mood/exec_mood are unscored), which is itself the meeting's quiet point: no version of Pat picks it."
+        "Only 2 distinct picks achievable — stated per §3.4 header: loyal and committed converge on the revival; her cash-grab-that-caps-the-ceiling diverges. Divergence Test passes. ask_the_artists is the player-only humanity axis — invisible to all three scorers by design (mood/executive_mood are unscored), which is itself the meeting's quiet point: no version of Pat picks it."
       ]
     },
     "designNotes": [],
@@ -769,7 +791,8 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
       "Catalog gap filled: back-catalog economics — none of the twelve §3.4 pitches touch what happens to music AFTER its cycle ends; pure Systems Optimizer territory (marginal cost vs. marginal revenue on art), and a routine-tier meeting that trades mostly in non-money channels per P3. Avoids all twelve excluded topics.",
       "Source prompt heading: Prompt (Pat, timeless)",
       "Mechanics cash the fiction: awareness_boost −1 on license = the brand cheapened ahead of the next planned release's moment; awareness_boost +2 + press_momentum +1 on revival = a warmed audience and a slow-build press pool feeding the next release ✓; creative_capital +1 on revival = curation-as-creative-act (the catalog reframed as a body of work). Routine magnitudes throughout (money ±$4k, rep ±1–2, mood ±2–3) — texture tier, non-money channels carry it per P3.",
-      "Artist reaction on all three (−2 / +2 / +3); the comps outfit is external → exec_mood carries her satisfaction/offense."
+      "Artist reaction on all three (−2 / +2 / +3); the comps outfit is external → executive_mood carries her satisfaction/offense.",
+      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13, no prior upgradeSpec — added this sweep since the fit is textbook): license_the_remnants is literally \"a comps outfit will take the whole tranche off our books for a flat licensing fee\" against the label's OWN already-released catalog (requires: release_out) — the exact transfer_revenue_stream fiction, same shape as Territory Arbitrage's take_the_advance. Added transfer_revenue_stream 20 alongside the existing money +4000 licensing fee, matching the brief's worked example (up-front cash + a real fraction of future stream sold). curate_the_revival and ask_the_artists were left untouched — neither involves selling a revenue stream (revival is zero-cost reframing via existing pitch slots; asking the artists has no distribution-deal shape at all). ⚑ Band-arithmetic caveat: bandPredictions below computed against the old awareness-only proxy, left as-authored; Nes should re-verify."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-pat-authored-reactive.md"
@@ -789,7 +812,7 @@ export const V3_PAT_POOL_LEVEL_NOTES: string[] = [
   "Open items for Nes: (a) meeting 1's committed margin (8 vs 7) — retune-sensitive; (b) meeting 4 trimmed the bible's energy −4/mood −3 to −3/−2 for the routine band — confirm; (c) meeting 3 must keep jump_small spend-free or the loyal band flips to the vice.",
   "[v3-pat-authored-major.md] Scorer model used for band arithmetic (stated so verification can check the same math)",
   "- Loyal (safety): any variance_up/rep_swing anywhere = −100. Otherwise sum of per-key contributions, each clamped to ±5: money/1000, reputation, creative_capital, award_chances, quality_bonus, artist_mood, awareness_boost (post-fix scorer values quality/mood/awareness). executive_mood, press_story_flag, press_momentum, artist_popularity assumed NOT scored — every meeting below survives them counting at face value except where noted.",
-  "- Committed: 2Q + 2rep + A + award + gain/1000 − 3V − spend/4000. Mood, CC, exec_mood, press, popularity not in formula. rep_swing assumed NOT counted as V here (verify offline; no committed pick below depends on a rep_swing choice either way).",
+  "- Committed: 2Q + 2rep + A + award + gain/1000 − 3V − spend/4000. Mood, CC, executive_mood, press, popularity not in formula. rep_swing assumed NOT counted as V here (verify offline; no committed pick below depends on a rep_swing choice either way).",
   "- Disloyal Pat: any variance_up or rep_swing = −1000; else netMoney/1000 + awareness_boost. self_serving_hint overrides.",
   "Pat construction rule (bible §3.4 header): her vice ≈ the old safety scorer, so divergence is built deliberately — loyal pick = multi-key guaranteed bundle; her vice = the cash/awareness grab that caps upside; committed gets its own utility home where the arithmetic allows (big positive money dominates the committed formula at 1pt/$1k, so some meetings below are honestly 2-band — each is stated).",
   "---",
@@ -811,5 +834,6 @@ export const V3_PAT_POOL_LEVEL_NOTES: string[] = [
   "2. Band-shape inventory: M1 = 3 distinct (aspire) · M2 = 3 distinct · M3 = 2 distinct (committed+disloyal converge on the windfall — unavoidable, stated) · M4 = 2 distinct (loyal+committed converge on the bundle — stated). Mix satisfies the Divergence Test on all four.",
   "3. ⚑ thin margins to verify offline before JSON commit: M1 committed (4.5 vs 3.5), M2 committed (−5 vs −6), M4 loyal (5 vs 4.5) and M4 disloyal (3 vs 2). All pass the 10% bar on paper but sit close enough that any tuning pass must re-run the scorers.",
   "4. UPGRADE SPEC (new escalation event): author escalation_dist_anomaly_lockin as Pat's second escalation (per-role escalation routing currently sends everything to deal_collapsed, whose prose only continues M1). Sketch in M3's neglect-timeline note. Log as a C-item at session wrap alongside the mechanism wishlist.",
-  "5. Key-discipline note: the bible's §3.4 sketch for Supply Chain Hostage used variance_up on the vendor switch; this authoring replaced it with rep_swing because variance_up cashes only at the next RECORDING session and a fulfillment-vendor fiction can't cash that. Same substitution logic applied to M3's auction. No fiction here promises anything its keys don't deliver."
+  "5. Key-discipline note: the bible's §3.4 sketch for Supply Chain Hostage used variance_up on the vendor switch; this authoring replaced it with rep_swing because variance_up cashes only at the next RECORDING session and a fulfillment-vendor fiction can't cash that. Same substitution logic applied to M3's auction. No fiction here promises anything its keys don't deliver.",
+  "[ENGINE VERBS TIER 1+2 UPGRADE PASS, 2026-07-13] Pool-wide summary: 9 of 14 scenarios upgraded to real verbs (47-Slide Deck → distribution_efficiency ×3; Predict the Quarter → schedule_event + story_flag chain; Physical Media Bet → grant_inventory ×2; Territory Arbitrage → transfer_revenue_stream + distribution_efficiency; Spontaneity Block → promote_release ×2; The Algorithm Change → promote_release; Supply Chain Hostage → distribution_efficiency; The Anomaly Premium → schedule_event chain; The Long Tail Audit → transfer_revenue_stream). 5 scenarios reviewed and left honest/unchanged, each with an explicit disposition note in-scenario (The Guaranteed Placement, Tour Routing Optimization, The Chargeback Discrepancy — deliberately fiction-only by design intent, The Data Broker, The Exclusive Window Auction — all gate on release_planned/ungated states where the target-requiring verbs would no-op). Two verdict events introduced by this sweep need downstream authoring into data/events.json: scheduled_pat_forecast_graded (off Predict the Quarter's publish_the_forecast) and scheduled_pat_anomaly_lockin (off The Anomaly Premium's take_the_carry_deal) — see each scenario's \"VERDICT EVENT NEEDED\" note. Several upgraded scenarios carry a ⚑ band-arithmetic caveat: the designer bandPredictions text above was computed against the OLD proxy keys (awareness_boost, flat money) and was left as-authored rather than hand-recomputed against the new verbs' real mechanics (% duration-weighted modifiers, ledger-based inventory, encumbered revenue fractions) — Nes must re-verify loyal/committed/disloyal ordering for 47-Slide Deck, Territory Arbitrage, Physical Media Bet, Supply Chain Hostage, and Long Tail Audit before JSON commit. The Anomaly Premium's escalation-routing gap (originally wanting a second Pat escalation event) was only PARTIALLY resolved: a schedule_event chain is now live from within this module's scope, but registering a genuine second escalation pool entry requires editing shared/utils/executiveDelegation.ts, which is outside this review module and left as an explicit follow-up for Nes."
 ];

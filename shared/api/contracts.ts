@@ -1104,6 +1104,17 @@ export const EVENTS_POOL_REVIEW_MEETING_IDS = [
   'the_collab_drop',
   'the_old_clip',
   'the_arena_cover',
+  // Scheduled verdict events — new, chained from meeting choices (2026-07-13 sweep).
+  // Order here MUST match the append order in v3EventsPoolReview.ts
+  // (V3_EVENTS_POOL_MEETINGS); the render test asserts exact-order lockstep.
+  'scheduled_mac_3am_demo_verdict',
+  'scheduled_mac_machine_verdict',
+  'scheduled_sam_comeback_verdict',
+  'scheduled_sam_documentary_release',
+  'scheduled_dante_comp_leak_verdict',
+  'scheduled_dante_clearance_lawsuit_verdict',
+  'scheduled_pat_forecast_graded',
+  'scheduled_pat_anomaly_lockin',
 ] as const;
 
 export const ESCALATIONS_POOL_REVIEW_MEETING_IDS = [

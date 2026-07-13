@@ -4,11 +4,26 @@
  * On-screen mirror of the five authoring scratchpad hand-off files
  * (v3-mac-pool-authored.md, v3-mac-authored-routine.md,
  * v3-mac-authored-major.md, v3-mac-authored-reactive.md,
- * v3-mac-authored-new.md). The authored text is carried VERBATIM — it is
- * designer-facing copy under review, so no editorializing, no silent typo
- * fixes, no effect-key conversion. Markdown emphasis markers (** / backticks)
- * from the source are dropped as formatting; the words, numbers, ⚑ flags and
- * effect values are preserved exactly.
+ * v3-mac-authored-new.md). The authored text was ORIGINALLY carried VERBATIM
+ * from those hand-off files. It is no longer a verbatim transcription: on
+ * 2026-07-13 this module was swept against the "Engine Verbs Tier 1+2" arc
+ * (13 new effect keys — schedule_event, story_flag, spawn_prospect,
+ * set_exec_absence, distribution_efficiency, press_scrutiny_flag, grant_song,
+ * spawn_release, promote_release, catalog_damage, cancel_project,
+ * grant_inventory, transfer_revenue_stream — see the verb-capability brief),
+ * which shipped after these scenarios were authored against a hypothetical
+ * engine. Effects and upgradeSpec text were rewritten wherever the fiction
+ * called for a now-real verb (spawn_prospect for discovery-pool finds,
+ * grant_song/spawn_release for literal new recordings, schedule_event for
+ * chained "verdict" beats, story_flag for cross-meeting continuity threads).
+ * Prose/voice is otherwise untouched — this is a mechanics upgrade, not a
+ * rewrite. Key-name note: the canonical exec-mood effect key is
+ * `executive_mood` (the one extra canonical key alongside LIVE_EFFECT_KEYS,
+ * per tests/engine/data-lint-effect-keys.test.ts) — on a role meeting the
+ * exec is implicit, so the bare key is legal without a `target_executive`
+ * sibling (that pairing rule applies on the event/escalation path). Designer-review
+ * of the upgraded content is pending; see
+ * docs/01-planning/v3-mac-pool-review.responses.json for verdicts so far.
  *
  * NOTE ON NUMBERS: this is an ADMIN review surface, not a player surface —
  * the no-engine-numbers house rule guards player-facing copy modules
@@ -139,10 +154,14 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'leak_the_heat',
         label: 'Let the tapes find the press',
         gist: "Mac's ear found them first — let the story build heat for what's next.",
-        immediate: 'money −4000',
-        delayed: 'awareness_boost +3, variance_up +1, press_story_flag 1, artist_mood −1',
+        immediate:
+          "money −4000, grant_song {quality_range:[45,70], artist:'targeted'} (the vault demo becomes a real " +
+          "recorded song), spawn_release {songs:'granted', type:'single', defer_weeks:2} (ships as a real " +
+          '"From the Vault" single ~2 weeks out)',
+        delayed: 'variance_up +1, press_story_flag 1, artist_mood −1',
         outcomeSummary:
-          "Mac let the vault demos slip to the press — his ear, on the record, and heat building for {artistName}'s next move.",
+          'Mac let the vault demos slip to the press and cut a real "From the Vault" single out of them — his ' +
+          "ear, on the record, and a genuine release banking for {artistName}'s catalog.",
       },
     ],
     bandPredictions: {
@@ -156,12 +175,16 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       'Nes decision: artist reacts on ALL choices (axes = primary differentiator, not exclusivity). Fiction changed ' +
         'from "release the demos" to "leak to press" because awareness_boost banks hype for the NEXT planned ' +
         'release — mechanics must cash what prose promises.',
+      '2026-07-13 sweep: replaced the banked awareness_boost stand-in with the literal mechanism the notes above ' +
+        'already named — a real grant_song + spawn_release pair. The single now exists as a chart-eligible, ' +
+        'revenue-generating catalog entry instead of an abstract hype number; the press/mood/variance texture is ' +
+        'unchanged.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism spawns_release / grant_song): flagship use case. Choice 3 becomes a true ' +
-      '"From the Vault" single: creates a real song/release for {artistName} (quality from a banked roll, ' +
-      'chart-eligible, revenue-generating). Log as mechanism C-item at session wrap; meetings gain their first ' +
-      'tangible-catalog outcome.',
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP (grant_song + spawn_release). Choice 3 (leak_the_heat) now creates a ' +
+      'true "From the Vault" single — a real recorded song (quality rolled 45–70) released ~2 weeks later — ' +
+      'instead of banking an abstract awareness number. This was the flagship use case the original hand-off ' +
+      'anticipated; no further upgrade needed.',
     sourceFile: 'v3-mac-pool-authored.md',
   },
   {
@@ -184,26 +207,30 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Not for us. Pass politely.',
         gist: "The catalog has a direction; this isn't it. Mac frames another regret for the wall.",
         immediate: '',
-        delayed: 'exec_mood −3',
+        delayed: 'executive_mood −3',
         outcomeSummary: "Mac passed on the 3 AM find — politely, and he hasn't mentioned it since.",
       },
       {
         id: 'development_deal',
         label: 'Development deal — keep them close',
-        gist: 'A small check, studio hours, no announcement.',
-        immediate: 'money −6000',
-        delayed: 'quality_bonus +2, exec_mood +2',
+        gist: 'A small check, studio hours, no announcement — and a promise to check back in.',
+        immediate:
+          "money −6000, executive_mood +2, spawn_prospect {source:'mac_meeting'}, schedule_event " +
+          "{event_id:'scheduled_mac_3am_demo_verdict', defer_weeks:8}",
+        delayed: '',
         outcomeSummary:
-          'Mac locked the 3 AM find into a quiet development deal — close enough to watch, cheap enough to defend.',
+          'Mac locked the 3 AM find into a quiet development deal — close enough to watch, with a verdict due ' +
+          'down the road.',
       },
       {
         id: 'full_pursuit',
         label: 'Go get them. Full pursuit.',
         gist: 'Fly out, front-row the showcase, out-charm the majors.',
-        immediate: 'money −18000',
+        immediate: "money −18000, spawn_prospect {quality_hint:70, popularity_hint:60, source:'mac_meeting'}",
         delayed: 'rep_swing 2, press_story_flag 1',
         outcomeSummary:
-          'Mac went all-in courting the 3 AM find — the whole industry heard about the chase.',
+          'Mac went all-in courting the 3 AM find and landed a real prospect in the discovery pool — the whole ' +
+          'industry heard about the chase.',
       },
     ],
     bandPredictions: {
@@ -214,11 +241,26 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       flags: '',
     },
     notes: [
-      'Artist mood absent by design (unsigned prospect — exec_mood is the reaction axis); the pass feeds the ' +
+      'Artist mood absent by design (unsigned prospect — executive_mood is the reaction axis); the pass feeds the ' +
         'Wall of Misses fiction.',
+      "Nes verdict (2026-07-12, approve_with_edits): \"the development deal needs work... why would banked " +
+        'quality go up?\" — the original quality_bonus +2 was cut (no in-fiction mechanism justified a studio-hours ' +
+        'stipend raising Mac\'s own session quality). Redesigned per Nes\'s own upgrade spec: development_deal now ' +
+        'spawns a real prospect and schedules a verdict event instead.',
+      'VERDICT EVENT NEEDED: scheduled_mac_3am_demo_verdict (defer_weeks 8, event_id must be authored in ' +
+        "data/events.json as scheduled_only). Premise: the development-deal prospect surfaces again eight weeks " +
+        "later — Mac reports on what the studio time produced. Outcomes (2-3): (1) star turn — the prospect's " +
+        'rolled quality/popularity came in hot; Mac pushes to sign now, possibly at a premium (money −, ' +
+        'executive_mood +, artist/label buzz); (2) fizzle — the money was a wash, the prospect quietly exits the pool ' +
+        '(executive_mood −, maybe a story_flag marking the miss for a future Wall-of-Misses-style callback); (3) ' +
+        'middling — the prospect just sits in the pool as an ordinary discovery, no windfall, no disaster.',
     ],
     upgradeSpec:
-      "UPGRADE SPEC (future mechanism spawns_artist): full pursuit's success delivers a signable artist.",
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP per Nes verdict. development_deal now uses spawn_prospect + ' +
+      'schedule_event (see VERDICT EVENT NEEDED note) instead of a nonsensical banked-quality bump. ' +
+      "full_pursuit's own upgradeSpec (future mechanism spawns_artist) is also resolved — spawn_prospect now " +
+      "delivers the signable prospect its success promised, seeded with high quality/popularity hints to reflect " +
+      '"out-charm the majors."',
     sourceFile: 'pool-review-extension task hand-off (2026-07-12)',
   },
   {
@@ -241,19 +283,23 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'move_the_meeting',
         label: 'Work the calendar',
         gist: 'Charm the manager onto a Wednesday; the superstition stays intact and the story travels well.',
-        immediate: 'reputation +1, exec_mood +4',
+        immediate:
+          "reputation +1, executive_mood +4, spawn_prospect {quality_hint:55, popularity_hint:50, " +
+          "source:'mac_meeting'}",
         delayed: 'awareness_boost +1',
         outcomeSummary:
-          'Mac charmed the meeting onto a Wednesday — the superstition held, and the manager dined out on the story.',
+          'Mac charmed the meeting onto a Wednesday and walked out with a real prospect on the books — the ' +
+          'superstition held, and the manager dined out on the story.',
       },
       {
         id: 'send_fresh_ears',
         label: 'Send a junior scout',
         gist: "Somebody whose Tuesdays aren't cursed takes the room; Mac stays home and stews.",
-        immediate: 'money −2000, exec_mood −2',
+        immediate: "money −2000, executive_mood −2, spawn_prospect {quality_hint:45, source:'mac_meeting'}",
         delayed: 'quality_bonus +2',
         outcomeSummary:
-          'Mac benched himself and sent a junior scout — the kid came back with tape and notes worth folding into the next sessions.',
+          "Mac benched himself and sent a junior scout — the kid came back with a real prospect, tape, and notes " +
+          'worth folding into the next sessions.',
       },
       {
         id: 'walk_in_on_tuesday',
@@ -261,10 +307,11 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         gist:
           'Mac takes the meeting rattled. The read he gives will be legend or cautionary tale — the industry will ' +
           'hear about it either way.',
-        immediate: 'rep_swing 1, exec_mood −2',
+        immediate: "rep_swing 1, executive_mood −2, spawn_prospect {source:'mac_meeting'}",
         delayed: 'awareness_boost +2',
         outcomeSummary:
-          'Mac broke his own Tuesday rule and took the meeting rattled — the read he gave will travel, one way or the other.',
+          "Mac broke his own Tuesday rule and took the meeting rattled — the prospect he came back with will " +
+          'travel, one way or the other.',
       },
     ],
     bandPredictions: {
@@ -272,25 +319,32 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       loyal:
         'work the calendar (only all-guaranteed choice: rep + awareness, zero spend, no gamble) ⚑ verify margin ' +
         'vs. the junior — depends on how heavily the post-fix safety scorer weighs banked quality vs. ' +
-        'exec_mood/awareness.',
+        'executive_mood/awareness.',
       committed:
         'send fresh ears (2Q=4 − 2000/4000 = 3.5 vs. calendar\'s 2rep+A = 3) ⚑ thin margin, verify offline.',
       disloyal:
         "walk in on Tuesday (10·rep_swing = 10 vs. junior's 3Q = 6) — clean, no hint needed (bible guessed ⚑; " +
         'the rep_swing 10× weight settles it).',
-      flags: '⚑ loyal margin vs. junior; ⚑ committed margin thin — both verify offline.',
+      flags: '⚑ loyal margin vs. junior; ⚑ committed margin thin — both verify offline. spawn_prospect is a ' +
+        'non-numeric structured effect and does not enter the safety-scorer math above.',
     },
     notes: [
-      'Fiction-cashes-mechanics notes: no signing can actually occur (no spawns_artist verb), so every choice ' +
-        "trades in what the engine CAN do — Mac's state, label rep, banked label-pool hype, and the junior's " +
-        'session-ready notes. rep_swing is EV-zero, so the vice carries an awareness_boost sweetener per P2 (a ' +
-        "meeting that becomes an industry story banks chatter-hype for the label's next planned release).",
+      'Fiction-cashes-mechanics notes: no DIRECT signing can occur (spawn_prospect adds to the discovery pool, ' +
+        "not the roster — there is still no instant-sign verb), so each choice's Mac-state/rep/quality texture " +
+        'is retained. rep_swing is EV-zero, so the vice carries an awareness_boost sweetener per P2 (a meeting ' +
+        "that becomes an industry story banks chatter-hype for the label's next planned release).",
+      '2026-07-13 sweep: all three choices now spawn a real prospect via spawn_prospect, cashing the meeting\'s ' +
+        'core promise — a genuine discovery-pool entry the player can later sign. Hints vary by fiction: the ' +
+        "calendar-managed read is safe/moderate (quality_hint 55), the junior's read runs lower (45), and " +
+        'breaking the rule rolls unhinted so the engine\'s isolated roll IS the "legend or cautionary tale" gamble.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism spawns_artist / signing-offer): the real version ends with the prospect ' +
-      "joinable — success on the Tuesday read (or the junior's scouting) generates an actual signing offer with " +
-      'quality/popularity rolled off the chosen path, and move_the_meeting becomes the guaranteed-but-pricier ' +
-      'signing lane. Until then this meeting is honestly about Mac, not the prospect.',
+      'UPGRADE SPEC: PARTIALLY IMPLEMENTED THIS SWEEP (spawn_prospect). All three choices now deliver a real ' +
+      'discovery-pool prospect with fiction-appropriate quality/popularity hints. Still deferred: there is no ' +
+      'verb for an instant signing offer — spawn_prospect always lands in the scouting pool, never directly on ' +
+      "the roster, so \"move_the_meeting becomes the guaranteed signing lane\" (the original spec's ask) remains " +
+      'unreachable until a direct-sign verb ships. Until then, the prospect landing in the pool at varying ' +
+      'confidence IS the honest cash of this trilemma.',
     sourceFile: 'v3-mac-authored-routine.md',
   },
   {
@@ -316,7 +370,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Anchor them',
         gist:
           "Remind them who they are and why it worked. The tape goes in a drawer. Mac isn't sure the drawer holds.",
-        immediate: 'artist_mood +3, exec_mood −1',
+        immediate: 'artist_mood +3, executive_mood −1',
         delayed: '',
         outcomeSummary:
           'Mac talked {artistName} back to the sound that signed them — steadier hands, and the new tape stays a secret between them.',
@@ -326,7 +380,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Fund a proper workshop',
         gist:
           'A closed-door writing camp to find out whether the new skin is real before anyone bets the catalog on it.',
-        immediate: 'money −6000',
+        immediate: "money −6000, story_flag 'mac_reinvention_workshop'",
         delayed: 'quality_bonus +3',
         outcomeSummary:
           "Mac booked closed-door writing sessions to pressure-test {artistName}'s new direction before anyone bet the catalog on it.",
@@ -336,7 +390,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Believe the tape',
         gist:
           "Point the next sessions straight at the reinvention. If Mac's ear is right, it's the leap of a career.",
-        immediate: 'artist_mood +2, exec_mood +2',
+        immediate: "artist_mood +2, executive_mood +2, story_flag 'mac_reinvention_bet'",
         delayed: 'quality_bonus +3, variance_up 1',
         outcomeSummary:
           "Mac heard the future in {artistName}'s reinvention tape and pointed the next sessions straight at it.",
@@ -357,18 +411,25 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         'rotating, reposition somebody"). Kept the scene-rotation seed but moved the crisis INSIDE one signee: ' +
         '{artistName} feels the scene leaving them and hands Mac a demo of a different self. The fork is now about ' +
         'identity — anchor them, pressure-test the new skin, or bet on it — not about surfing a trend.',
-      'P2 check: the jump carries everything the workshop banks PLUS artist_mood +2 and exec_mood, for zero cash — ' +
+      'P2 check: the jump carries everything the workshop banks PLUS artist_mood +2 and executive_mood, for zero cash — ' +
         'the gamble is genuinely the best expected-value play; a disloyal Mac taking it is sometimes right, and a ' +
         "loyal Mac's anchor visibly forfeits it.",
       'Artist reacts on two of three (anchor and jump); the workshop is deliberately mood-neutral — being sent to ' +
         'a pressure-test camp is neither an embrace nor a rejection, and keeping it off the mood axis is what ' +
         'holds the loyal/committed split.',
+      '2026-07-13 sweep: pressure_test and back_the_jump now write story_flag (\'mac_reinvention_workshop\' / ' +
+        "'mac_reinvention_bet') per the original upgrade spec. Ambiguity resolved: story_flag keys are static " +
+        "strings, not per-artist templates — the spec's flags.story['reinvention_<artistId>'] idea isn't literally " +
+        'expressible (no per-artist flag namespacing exists), so these use one flag per PATH taken instead of per ' +
+        'artist. Fine for a single-signee campaign; would collide across multiple signees taking the same path in ' +
+        'the same game — flag as a known limitation if a follow-up meeting is authored against it.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism: choice-set story flags): the real arc sets ' +
-      "flags.story['reinvention_<artistId>'] so a later gated meeting exists only if the jump/workshop was taken " +
-      '("the new sound\'s first reviews are in — double down or retreat"). Today the continuity lives only in the ' +
-      'banked quality/variance landing at the next session.',
+      'UPGRADE SPEC: PARTIALLY IMPLEMENTED THIS SWEEP (story_flag). pressure_test and back_the_jump now stamp ' +
+      "story_flag ('mac_reinvention_workshop' / 'mac_reinvention_bet') so a later-authored meeting could gate on " +
+      "which path was taken via requires: [{flag:'mac_reinvention_bet'}] (\"the new sound's first reviews are " +
+      'in — double down or retreat"). No such follow-up meeting exists in this module — the id list is locked — ' +
+      'so the flag is write-only for now, forward-compatible for a future addition to this or another pool.',
     sourceFile: 'v3-mac-authored-routine.md',
   },
   {
@@ -391,7 +452,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'prime_friday',
         label: 'Buy the Friday slot ⚑ self_serving_hint',
         gist: "The room, the ears, the scene watching Mac's pick under the good lights.",
-        immediate: 'money −7000, artist_mood +3, exec_mood +2',
+        immediate: 'money −7000, artist_mood +3, executive_mood +2',
         delayed: 'awareness_boost +3',
         outcomeSummary:
           'Mac bought the prime Friday slot at the Foundry — {artistName} played to every set of ears that ' +
@@ -431,16 +492,17 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
     },
     notes: [
       'Vice defensibility (P2 analog for a spend-vice): prime Friday buys the meeting\'s biggest guaranteed bundle ' +
-        '(awareness +3, artist_mood +3, exec_mood +2) for $7k — an EV-defensible splurge, not authored idiocy; the ' +
+        '(awareness +3, artist_mood +3, executive_mood +2) for $7k — an EV-defensible splurge, not authored idiocy; the ' +
         '"self-serve" is that the scene watching MAC\'S pick is what he\'s really buying.',
       "Fiction cashes: awareness_boost = hype banked for {artistName}'s NEXT PLANNED RELEASE — the showcase buzz " +
         'feeds the next rollout, which is exactly what a showcase is for. quality_bonus = the banked studio week ' +
         'lands at the next recording session.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism: tour/show one-off performance): the real version stages an actual ' +
-      'one-night performance with a city-style outcome roll (attendance, revenue, press) instead of pure banked ' +
-      'hype — the Foundry slot becomes a tiny live event using the tour-performance machinery.',
+      'UPGRADE SPEC: no upgrade available — still not expressible. The Engine Verbs Tier 1+2 brief\'s FORBIDDEN ' +
+      'list confirms no one-off-performance/tour-city verb shipped this arc (that remains a deferred, ' +
+      "unnamed mechanism — closer to the not-yet-built M17/tour space than anything in the 13 live keys). Honest " +
+      'version stands: banked awareness_boost/quality_bonus is still the correct cash for "a slot at a room."',
     sourceFile: 'v3-mac-authored-routine.md',
   },
   {
@@ -466,7 +528,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         gist:
           "The full vintage refit. New ears cut both ways: he'll hear what nobody else does — or things that " +
           "aren't there.",
-        immediate: 'money −8000, exec_mood +5',
+        immediate: 'money −8000, executive_mood +5',
         delayed: 'quality_bonus +2, variance_up 1',
         outcomeSummary:
           'Mac got his vintage Tannoys — the listening room hums again, and he swears the next sessions will prove it.',
@@ -475,7 +537,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'modern_nearfields',
         label: 'Solid modern monitors',
         gist: 'Competent, flat, affordable. Mac calls them "adequate" like it\'s a slur.',
-        immediate: 'money −4000, exec_mood +2',
+        immediate: 'money −4000, executive_mood +2',
         delayed: 'quality_bonus +1',
         outcomeSummary:
           'Mac got competent modern monitors instead of the vintage grail — the room works, and he calls it ' +
@@ -487,7 +549,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         gist:
           'Hold the budget line and say the hard thing. Managers and investors hear the label runs lean; Mac ' +
           'hears something else.',
-        immediate: 'reputation +1, exec_mood −4',
+        immediate: 'reputation +1, executive_mood −4',
         delayed: '',
         outcomeSummary:
           'Mac was told the misses were his ears, not his speakers — nothing was bought, and he went quiet for a day.',
@@ -496,22 +558,22 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
     bandPredictions: {
       heading: 'Bands (predicted)',
       loyal:
-        'modern nearfields (small guaranteed quality + exec_mood, modest spend, no gamble) ⚑ verify margin vs. ' +
-        '"it\'s your ears" — hinges on whether the safety scorer weighs exec_mood and how it nets rep +1 against ' +
+        'modern nearfields (small guaranteed quality + executive_mood, modest spend, no gamble) ⚑ verify margin vs. ' +
+        '"it\'s your ears" — hinges on whether the safety scorer weighs executive_mood and how it nets rep +1 against ' +
         "the nearfields' spend.",
       committed:
         "it's your ears (2rep = 2 vs. nearfields' 2Q−spend = 1 and the refit's 4 − 3V − 2 = −1) — the cold " +
         "professional read: the gear isn't the problem.",
       disloyal: 'buy the Tannoys (10V + 3Q = 16, others ~0) — clean, no hint.',
-      flags: '⚑ loyal margin verify (exec_mood weighting in the safety scorer).',
+      flags: '⚑ loyal margin verify (executive_mood weighting in the safety scorer).',
     },
     notes: [
       'Magnitude note: bible sketch said −$14k; pulled to −$8k to respect the routine cap (±$2–8k) per this ' +
         "session's rules.",
       "P2 check: the refit's variance_up is an honest gamble authored as EV-attractive — quality +2 AND the " +
-        "biggest exec_mood swing for the money, vs. the nearfields' quality +1; the vintage ears really might find " +
+        "biggest executive_mood swing for the money, vs. the nearfields' quality +1; the vintage ears really might find " +
         'the next one, or hear ghosts.',
-      "Reaction-axis note: no natural artist target (it's Mac's own room), so exec_mood carries the reaction on " +
+      "Reaction-axis note: no natural artist target (it's Mac's own room), so executive_mood carries the reaction on " +
         'all three choices — this is the pure exec-texture meeting of the batch, and the trilemma is indulge / ' +
         'manage / confront his self-mythology.',
     ],
@@ -561,10 +623,13 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Bite back',
         gist:
           "Go after the rival's best unsigned lead mid-poach. If it lands, legend; if it slips, everyone saw the lunge.",
-        immediate: 'money −12000, rep_swing 2',
-        delayed: 'exec_mood +4, press_momentum +2, artist_mood +2',
+        immediate:
+          "money −12000, rep_swing 2, spawn_prospect {quality_hint:65, popularity_hint:65, " +
+          "source:'mac_meeting'}, story_flag 'mac_poach_grudge'",
+        delayed: 'executive_mood +4, press_momentum +2, artist_mood +2',
         outcomeSummary:
-          "Mac raided the rival's bench mid-poach — the whole industry is watching to see which label blinks first.",
+          "Mac raided the rival's bench mid-poach and came back with the lead in his own discovery pool — the " +
+          'whole industry is watching to see which label blinks first.',
       },
     ],
     bandPredictions: {
@@ -581,15 +646,23 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
     notes: [
       'Bible pitched the press option as "press flag + rep risk"; authored it CLEAN (guaranteed rep) instead so ' +
         'the committed band has a home — the risk in this meeting lives entirely in the raid, which keeps the ' +
-        'trilemma legible. Raid is EV-attractive per P2: exec_mood +4 + press_momentum +2 + roster morale ride ' +
+        'trilemma legible. Raid is EV-attractive per P2: executive_mood +4 + press_momentum +2 + roster morale ride ' +
         'along with the swing. Roster reacts on all three (mood +6 / −2 wary of a leaky label / +2 "our label ' +
-        'fights"). The raid target is UNSIGNED → exec_mood is the reaction axis there.',
+        'fights"). The raid target is UNSIGNED → executive_mood is the reaction axis there.',
+      '2026-07-13 sweep: raid_them_back now spawns a real prospect (spawn_prospect, mid-high hints matching ' +
+        "\"the rival's best unsigned lead\") and stamps story_flag 'mac_poach_grudge' for future continuity. " +
+        'Ambiguity resolved: the original spec wanted this conditional on "a won rep_swing," but no effect key ' +
+        'reads a rep_swing outcome to gate a sibling effect — spawn_prospect always lands (isolated-seed quality ' +
+        'roll is the only variance). Compromise: the prospect always lands in the discovery pool (not the ' +
+        'roster directly), which honestly reads as "the lunge landed a real lead" regardless of the swing\'s ' +
+        'public-reputation result.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism spawns_artist): raid_them_back becomes a true poach — on a won rep_swing, ' +
-      "the rival's act actually joins the roster (mid popularity, discounted signing cost, arrives with a grudge " +
-      'flag). Until then the fiction is "the lunge itself is the statement" and the mechanics honestly cash ' +
-      'chaos + heat, not a new artist.',
+      'UPGRADE SPEC: PARTIALLY IMPLEMENTED THIS SWEEP (spawn_prospect + story_flag). raid_them_back now delivers ' +
+      "a real discovery-pool prospect instead of pure chaos + heat. Still deferred: no verb conditions an effect " +
+      'on another effect\'s outcome (the "only on a won rep_swing" framing), and no verb places a poached act ' +
+      'directly on the roster (spawn_prospect is discovery-pool only, never an instant sign) — the grudge is ' +
+      'carried forward only as a story_flag, not a mechanical discount.',
     sourceFile: 'v3-mac-authored-major.md',
   },
   {
@@ -614,16 +687,19 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         gist:
           "A development deal nobody will confuse with A&R judgment. Ray's pipeline stays warm; the trades will " +
           'notice what it is.',
-        immediate: 'money −20000, exec_mood +6',
+        immediate:
+          "money −20000, executive_mood +6, spawn_prospect {quality_hint:25, popularity_hint:20, " +
+          "source:'mac_meeting'}, story_flag 'ray_pipeline_perk'",
         delayed: 'reputation −3, artist_mood −3',
         outcomeSummary:
-          "Mac inked the venue owner's kid — bad tape, good politics, and the pipeline that built his wall stays warm.",
+          "Mac inked the venue owner's kid — bad tape, good politics, a real (if weak) act now sitting in the " +
+          "discovery pool, and the pipeline that built his wall stays warm.",
       },
       {
         id: 'pass_politely',
         label: 'Pass, politely',
         gist: 'Clean books, straight answer, cooler handshakes. The roster sees a label with standards.',
-        immediate: 'exec_mood −4',
+        immediate: 'executive_mood −4',
         delayed: 'reputation +1, artist_mood +2',
         outcomeSummary:
           "Mac passed on the venue owner's kid, politely — clean books, and a twenty-year handshake gone cool.",
@@ -633,7 +709,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Fund one single',
         gist:
           'A favor with a receipt: one single, real producer, no roster spot. The industry reads it as class.',
-        immediate: 'money −10000, exec_mood +3',
+        immediate: 'money −10000, executive_mood +3',
         delayed: 'reputation +2, award_chances +3, quality_bonus −1',
         outcomeSummary:
           'Mac funded one single for the kid — a favor with a receipt, and no roster spot attached.',
@@ -646,7 +722,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         '5 = −1. Clear.',
       committed:
         'fund_one_single: 2·2 rep + 3 award − 2 quality − 10000/4000 = +2.5 vs pass = 2·1 = +2.0. ⚑ margin is ' +
-        "0.5 — verify offline; if it flips, bump the single's award to +4 or trim pass's rep to 0 (exec_mood " +
+        "0.5 — verify offline; if it flips, bump the single's award to +4 or trim pass's rep to 0 (executive_mood " +
         "already carries the pass's cost).",
       disloyal: 'sign_the_kid via hint (+∞). All three bands split.',
       flags:
@@ -655,18 +731,21 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         'carries the character beat. ⚑ committed margin 0.5.',
     },
     notes: [
-      "The kid is UNSIGNED → exec_mood is the reaction axis on every choice (Ray's marker runs through Mac); the " +
+      "The kid is UNSIGNED → executive_mood is the reaction axis on every choice (Ray's marker runs through Mac); the " +
         'SIGNED roster reacts as the secondary axis (−3 nepo resentment / +2 respect for standards / ' +
         "neutral-through-quality-drag on the compromise). quality_bonus −1 on the single = the kid's session eats " +
         "your producer bench's next block — the fiction cashes the mechanic. Rep −3 on signing is delayed: the " +
         'trades need a week to clock what the deal is.',
+      "2026-07-13 sweep: sign_the_kid now spawns a real, deliberately weak prospect (quality_hint 25, " +
+        "popularity_hint 20 — \"the tape is... the kid's band\") via spawn_prospect, plus story_flag " +
+        "'ray_pipeline_perk' for a future meeting to gate a discount/first-look flavor on Ray's pipeline.",
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism spawns_artist): sign_the_kid becomes a real signing — a low-quality, ' +
-      'low-popularity artist lands on the roster (ongoing weekly cost, Ray-pipeline perk flag: future Mac ' +
-      'meetings gated on it get a discount/first-look flavor). Until then the deal exists in fiction only and ' +
-      'mechanically cashes as cash out + Mac appeased + reputation/roster damage — which is honestly what a ' +
-      'shelf deal is.',
+      'UPGRADE SPEC: PARTIALLY IMPLEMENTED THIS SWEEP (spawn_prospect + story_flag). sign_the_kid delivers a ' +
+      'real, low-quality/low-popularity discovery-pool entry and stamps ray_pipeline_perk for future gating. ' +
+      "Still deferred: spawn_prospect never lands directly on the roster (no ongoing weekly cost, no instant " +
+      "sign) — the player must still choose to sign the prospect from the discovery pool, which is actually a " +
+      "closer read of \"development deal\" than a forced roster slot would have been.",
     sourceFile: 'v3-mac-authored-major.md',
   },
   {
@@ -692,7 +771,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         gist:
           'Torch it, start clean, trust the gut. Costs real money and the record becomes a bet — but the bet is loaded.',
         immediate: 'money −15000',
-        delayed: 'quality_bonus +6, variance_up +2, artist_mood +6, exec_mood +4',
+        delayed: 'quality_bonus +6, variance_up +2, artist_mood +6, executive_mood +4',
         outcomeSummary:
           "Mac torched the sessions and backed {artistName}'s restart — the gut says the real record is still coming.",
       },
@@ -702,7 +781,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         gist:
           'The record ships as scheduled. The cycle stays hot, the label keeps its word — and the artist swallows it.',
         immediate: 'reputation +2',
-        delayed: 'awareness_boost +2, artist_mood −6, exec_mood −3',
+        delayed: 'awareness_boost +2, artist_mood −6, executive_mood −3',
         outcomeSummary:
           'Mac held {artistName} to the deadline — the record ships on schedule, feelings notwithstanding.',
       },
@@ -711,7 +790,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Bring in a co-writer',
         gist: 'Fresh ears inside the existing sessions: the gut gets heard, the calendar survives.',
         immediate: 'money −10000',
-        delayed: 'quality_bonus +3, artist_mood +2, exec_mood +1',
+        delayed: 'quality_bonus +3, artist_mood +2, executive_mood +1',
         outcomeSummary:
           "Mac brought a co-writer into {artistName}'s sessions — fresh ears, deadline intact, gut half-honored.",
       },
@@ -733,7 +812,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       "Mac's angle vs Dante's territory (designer note applied): Dante's version of this meeting would be about " +
         'HIS sonic truth ("the record isn\'t speaking"); Mac\'s is about the ARTIST\'S instinct — his gut-religion ' +
         "applied to someone else's gut, and the prompt makes the midnight call go to Mac, not the producer. The " +
-        'restart is EV-attractive per P2: quality +6 / mood +6 / exec_mood +4 is ~2× the co-writer\'s guaranteed ' +
+        'restart is EV-attractive per P2: quality +6 / mood +6 / executive_mood +4 is ~2× the co-writer\'s guaranteed ' +
         "bundle, riding variance 2 — an inspired disloyal Mac taking it is sometimes RIGHT, and the loyal band's " +
         'caution has a visible opportunity cost. Mechanics cash the fiction cleanly: restart/co-writer bank into ' +
         "the NEXT recording session (the active project's continuation), deadline's awareness_boost = the planned " +
@@ -741,10 +820,11 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         'overruled / +2 heard-in-half).',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism: project-level restart): back_the_restart ideally rewinds the actual ' +
-      'recording project (weeks-remaining reset, budget re-draw, song slots cleared) instead of banking into the ' +
-      'next session. Needs a project-mutation effect key that doesn\'t exist; the banked quality/variance version ' +
-      'is the closest honest cash today.',
+      'UPGRADE SPEC: no upgrade available — still explicitly deferred. The Engine Verbs Tier 1+2 brief\'s ' +
+      "FORBIDDEN list rules this out directly (M6): cancel_project is a ONE-WAY soft-cancel with no un-cancel " +
+      "or restart, and content must not imply a cancelled project can resume. back_the_restart's \"torch it, " +
+      'start clean" cannot be authored as a real project-level restart. Honest version stands: banking ' +
+      "quality_bonus +6/variance_up +2/mood into the CONTINUING project is still the closest honest cash.",
     sourceFile: 'v3-mac-authored-major.md',
   },
   {
@@ -769,10 +849,12 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         gist:
           'The whale calls once. Wire the advance, announce the reunion while {songTitle} is still on the board, ' +
           'fold them straight into the next sessions.',
-        immediate: 'money −50000',
+        immediate:
+          "money −50000, spawn_prospect {quality_hint:80, popularity_hint:80, source:'mac_meeting'}",
         delayed: 'variance_up +2, quality_bonus +3, awareness_boost +3',
         outcomeSummary:
-          'Mac paid the ask and papered the reunion deal the same night — announcement first, fine print later.',
+          'Mac paid the ask and papered the reunion deal the same night — announcement first, fine print later, ' +
+          'and the returnee is a real name in the discovery pool waiting on ink.',
       },
       {
         id: 'feature_not_forever',
@@ -789,7 +871,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Let Mac finally say no',
         gist:
           "They didn't call when it was hard. Your charting artist is watching who the label answers to this week.",
-        immediate: 'exec_mood +8, artist_mood +3, reputation +1',
+        immediate: 'executive_mood +8, artist_mood +3, reputation +1',
         delayed: '',
         outcomeSummary:
           "Mac took the call, said the no he'd rehearsed for two years, and hung up lighter.",
@@ -799,7 +881,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       heading: 'Bands (target)',
       loyal:
         'let_mac_say_no (spend-free, mood-positive, gamble-free) ⚑ thin margin vs feature_not_forever (quality ' +
-        '+3 / rep +2, also gamble-free — depends on whether exec_mood enters the safety scorer; verify offline).',
+        '+3 / rep +2, also gamble-free — depends on whether executive_mood enters the safety scorer; verify offline).',
       committed:
         'feature_not_forever (2Q6 + 2rep4 − spend3.75 ≈ 6.25 vs say-no ≈ 2 vs pay ≈ −9.5).',
       disloyal:
@@ -811,15 +893,23 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         'disloyal Mac paying it is sometimes right, which is the point.',
       'Neglect linkage: the disloyal summary — "papered the reunion deal the same night… fine print later" — is ' +
         'the memo-with-a-leaving-fee-nobody-read of escalation_ar_botched_signing, verbatim setup.',
-      'HONEST-VERSION note: "pay it" cannot actually put the returning artist on the roster today (no ' +
-        'spawns_artist). The honest fiction: the memo is inked and they\'re in the building — co-writing the next ' +
-        'sessions (variance/quality bank) with the reunion announcement heat banking onto the next planned ' +
-        'release (awareness). The prose promises presence, not a roster slot.',
+      'HONEST-VERSION note (superseded 2026-07-13, see below): originally, "pay it" could not put the returning ' +
+        'artist on the roster (no spawn verb existed). The honest fiction used at the time: the memo is inked ' +
+        "and they're in the building — co-writing the next sessions (variance/quality bank) with the reunion " +
+        'announcement heat banking onto the next planned release (awareness). The prose promised presence, not ' +
+        'a roster slot.',
+      '2026-07-13 sweep: pay_the_price now also spawns a real, high-quality/high-popularity prospect via ' +
+        'spawn_prospect. The co-writing/awareness bank above is KEPT as-is (it still honestly represents them ' +
+        "being \"in the building\" while paperwork completes) — spawn_prospect adds the missing piece: a genuine " +
+        'discovery-pool entry the player can sign, closing the loop the original HONEST-VERSION note flagged as ' +
+        'impossible. Note spawn_prospect still lands in the discovery pool, not directly on the roster — "sign ' +
+        'the memo tonight" is not literally instant; the player completes the sign from the pool.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism spawns_artist): pay_the_price becomes a true signing — the returnee joins ' +
-      'the roster as a real artist (popularity seeded high, price honest at −$50k+). Second flagship use case ' +
-      "after Wall of Misses' spawns_release.",
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP (spawn_prospect). pay_the_price now delivers a real, high-confidence ' +
+      "prospect (quality_hint 80, popularity_hint 80) into the discovery pool — the returnee is a genuine, " +
+      "signable find rather than pure fiction. Second flagship use case after Wall of Misses' grant_song + " +
+      'spawn_release.',
     sourceFile: 'v3-mac-authored-reactive.md',
   },
   {
@@ -853,19 +943,24 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Take the second meeting quietly',
         gist:
           "The label can't be one bad month from silence. Mac covers the future; {artistName} gets a long phone call.",
-        immediate: 'money −5000, exec_mood +4, self_serving_hint: true',
+        immediate:
+          "money −5000, executive_mood +4, spawn_prospect {source:'mac_meeting'}, self_serving_hint: true",
         delayed: 'variance_up +1, awareness_boost +2, artist_mood −4',
         outcomeSummary:
-          "Mac worked the plan-B kid's showcase while {artistName} spiraled — insurance, he's calling it.",
+          "Mac worked the plan-B kid's showcase while {artistName} spiraled — insurance, he's calling it, and a " +
+          'real prospect is now sitting in the pool to prove it.',
       },
       {
         id: 'both_and_pray',
         label: 'Both — and pray nobody talks',
         gist:
           'Fix the artist by day, court the kid by night. If either room finds out about the other, the story writes itself.',
-        immediate: 'money −25000, artist_mood +6, rep_swing 2, exec_mood +2',
+        immediate:
+          "money −25000, artist_mood +6, rep_swing 2, executive_mood +2, spawn_prospect {source:'mac_meeting'}",
         delayed: '',
-        outcomeSummary: 'Mac ran both plays in one city and bet nobody would compare calendars.',
+        outcomeSummary:
+          'Mac ran both plays in one city and bet nobody would compare calendars — and came home with a real ' +
+          'lead in his pocket either way.',
       },
     ],
     bandPredictions: {
@@ -882,17 +977,23 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       flags: 'Hint required on scout_the_hedge; aspire-miss loyal = committed (2 distinct).',
     },
     notes: [
-      'Unsigned-talent rule applied: the plan-B kid can\'t take artist_mood/popularity — exec_mood +4 is Mac\'s ' +
+      'Unsigned-talent rule applied: the plan-B kid can\'t take artist_mood/popularity — executive_mood +4 is Mac\'s ' +
         'reaction axis ("covered"), and the betrayal lands on {artistName} (−4 delayed, word gets around).',
       'HONEST-VERSION note: awareness for the unsigned act is unbuildable; the honest close is label-level — ' +
         '"Mac is shopping" chatter banks hype onto the label\'s next planned release (+2), and the kid\'s demo ' +
         'energy enters the next session as variance.',
       'Neglect linkage: disloyal summary — Mac courting a signing solo mid-crisis — flows directly into ' +
         'escalation_ar_botched_signing: the plan-B courtship IS the wild-card deal he papers alone.',
+      '2026-07-13 sweep: scout_the_hedge and both_and_pray now spawn a real prospect via spawn_prospect (hints ' +
+        'left unspecified so the isolated roll supplies its own quality/popularity — "the hedge" should feel ' +
+        'unproven, not guaranteed good), making "the insurance" and "the kid" real discovery-pool entries rather ' +
+        'than pure atmosphere.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (prospect/spawns_artist mechanism): the hedge produces an actual signable prospect with its ' +
-      'own awareness, making the insurance real instead of atmospheric.',
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP (spawn_prospect). The hedge (scout_the_hedge) and the double-play ' +
+      '(both_and_pray) now produce an actual signable prospect. Note: spawn_prospect has no per-effect ' +
+      '"awareness" field of its own — the prospect carries the standard quality/popularity hints, not a bespoke ' +
+      'awareness stat; that gap in the original spec is resolved by simply not promising one.',
     sourceFile: 'v3-mac-authored-reactive.md',
   },
   {
@@ -917,7 +1018,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Settle it quietly',
         gist:
           'One number, one NDA, and the story stays the one Mac told. {artistName} never has to read about themselves.',
-        immediate: 'money −18000, exec_mood +3, self_serving_hint: true',
+        immediate: 'money −18000, executive_mood +3, self_serving_hint: true',
         delayed: 'artist_mood +3',
         outcomeSummary:
           'Mac settled the co-writer claim quietly and buried the paperwork — the demo, and his ear, stay spotless.',
@@ -937,10 +1038,13 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         label: 'Cut it again, clean',
         gist:
           "Book the room, strip the song to what was always {artistName}'s, and rebuild it bar by bar. Slower, and theirs.",
-        immediate: 'money −8000',
+        immediate:
+          "money −8000, grant_song {quality_range:[55,75], artist:'targeted'} (no title_hint — this meeting " +
+          'has no {songTitle} variable to reuse, so the title rolls from the standard seeded pool)',
         delayed: 'quality_bonus +4, artist_mood +2',
         outcomeSummary:
-          'Mac booked the room and had {artistName} cut the song again — theirs this time, every bar.',
+          'Mac booked the room and had {artistName} cut the song again — a real, clean recording this time, ' +
+          'theirs, every bar.',
       },
     ],
     bandPredictions: {
@@ -960,8 +1064,16 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         "attractive: hush is the only choice where {artistName}'s mood rises and nothing public happens.",
       'Neglect linkage: disloyal summary — "buried the paperwork" — is precisely the unread fine print ' +
         'escalation_ar_botched_signing exhumes: a settlement Mac papered solo around the signing nobody vetted.',
+      '2026-07-13 sweep: re_record now creates a real recorded song via grant_song (quality rolled 55–75) ' +
+        'instead of an abstract quality_bonus alone — "cut it again, clean" was a literal re-recording, and ' +
+        'grant_song is exactly that verb. quality_bonus/artist_mood are kept as the session\'s broader payoff ' +
+        '(the care taken bleeds into the next work too). settle_quietly and credit_publicly are untouched — no ' +
+        'legal-settlement/press-correction verb exists, and none is called for; they were already honest.',
     ],
-    upgradeSpec: null,
+    upgradeSpec:
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP (grant_song), added retroactively — the original hand-off judged no ' +
+      'upgrade needed, but grant_song (which ships in this same arc) is a direct, non-gratuitous fit for "cut it ' +
+      'again, clean": re_record now produces a real recorded song instead of only banking abstract quality.',
     sourceFile: 'v3-mac-authored-reactive.md',
   },
   {
@@ -984,10 +1096,11 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'fund_the_full_run',
         label: 'Fund the full run',
         gist: 'A week in the field, ears first, receipts later.',
-        immediate: 'money −6000, executive_mood +4',
+        immediate: "money −6000, executive_mood +4, spawn_prospect {source:'mac_circuit'}",
         delayed: 'quality_bonus +2, variance_up +1',
         outcomeSummary:
-          "Mac disappeared into the small-room circuit for a week, chasing a scene the algorithms haven't found yet.",
+          "Mac disappeared into the small-room circuit for a week, chasing a scene the algorithms haven't found " +
+          "yet — and came back with a real find, tagged as Mac's own.",
       },
       {
         id: 'two_nights_that_matter',
@@ -1020,17 +1133,19 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
     notes: [
       'P2 check: the vice is EV-attractive — quality +2 banked plus the variance kicker vs. the safe siblings\' ' +
         'rep/award crumbs; a hot roll on the widened session is genuinely the best outcome in the meeting.',
-      'Fiction cashing mechanics: scouting can\'t sign anyone (no engine verb), so the honest version is what the ' +
-        'trip does to Mac and the next session — a week of raw rooms recalibrates his ear (quality_bonus) and ' +
-        'makes his next read wilder (variance_up). Unsigned talent has no mood target; exec_mood is the reaction ' +
-        'axis on the road choices, and the signed artist reacts (+2) only where the fiction touches them (hosting ' +
-        'the night).',
+      'Fiction cashing mechanics: scouting still can\'t sign anyone outright, but the honest version now ALSO ' +
+        'surfaces a real find — a week of raw rooms recalibrates Mac\'s ear (quality_bonus), makes his next read ' +
+        'wilder (variance_up), AND lands a genuine prospect in the pool (spawn_prospect). Unsigned talent has no ' +
+        'mood target; executive_mood is the reaction axis on the road choices, and the signed artist reacts (+2) only ' +
+        'where the fiction touches them (hosting the night).',
+      "2026-07-13 sweep: fund_the_full_run now spawns a real prospect via spawn_prospect, source:'mac_circuit' " +
+        "so it's distinguishable from other Mac sourcing channels — this is exactly the mechanism the original " +
+        'upgrade spec asked for.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism discovered_prospect / signing-pool injection): the natural payoff is a ' +
-      'real act entering the signable-artist pool with a Mac-sourced quality prior. When a prospect-pool ' +
-      'mechanism exists, fund_the_full_run should roll a chance to surface a new signable artist tagged "Mac\'s ' +
-      'find" instead of (or alongside) the quality bank.',
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP (spawn_prospect). fund_the_full_run now rolls a real prospect into ' +
+      'the discovery pool (source \'mac_circuit\'), tagged distinctly from ordinary discoveries — the natural ' +
+      'payoff the original spec described, alongside (not instead of) the quality/variance bank.',
     sourceFile: 'v3-mac-authored-new.md',
   },
   {
@@ -1053,7 +1168,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'hand_them_a_budget',
         label: 'Give the kid a signing budget',
         gist: "Two guts in the field, no leash on either — that's how scenes get caught.",
-        immediate: 'money −15000, executive_mood +5',
+        immediate: "money −15000, executive_mood +5, story_flag 'macs_protege'",
         delayed: 'variance_up +2, quality_bonus +3',
         outcomeSummary:
           'Mac handed his protégé a real discovery budget and told them to trust the itch — two wild ears loose in the field now.',
@@ -1062,7 +1177,7 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'hire_them_properly',
         label: 'Hire them into a real junior role',
         gist: "Contract, process, and Mac's sign-off on every call — build the ear inside the fence.",
-        immediate: 'money −10000, reputation +2, executive_mood +2',
+        immediate: "money −10000, reputation +2, executive_mood +2, story_flag 'macs_protege'",
         delayed: 'award_chances +2',
         outcomeSummary:
           "Mac's protégé joined the label on a proper contract — a second pair of ears, with process wrapped around them.",
@@ -1091,16 +1206,19 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       "P2 check: the vice bundles quality +3 — roughly double the handshake's banked value — so the double-gut " +
         "gamble is a real offer, not poison; a loyal Mac's caution has visible opportunity cost.",
       "Character beat: the kid is Mac's younger self — the wall of misses made flesh. The vice isn't the hire; " +
-        "it's unsupervised replication of his own gut. The find is unsigned, so exec_mood is the reaction axis " +
+        "it's unsupervised replication of his own gut. The find is unsigned, so executive_mood is the reaction axis " +
         'throughout; the handshake option stings him (−2) but keeps the kid in his orbit, hence the CC and ' +
         'quality trickle (rough mixes and reference tracks keep feeding his notes).',
+      "2026-07-13 sweep: hand_them_a_budget and hire_them_properly now write story_flag 'macs_protege' exactly " +
+        'as the original upgrade spec asked. The banked quality/variance/award effects are kept unchanged as the ' +
+        "kid's first-contribution stand-in.",
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism: choice-set story flags): hand_them_a_budget and hire_them_properly both ' +
-      "want to set flags.story['macs_protege'] so a later meeting can exist only in worlds where the kid is " +
-      'inside ("The Protégé\'s First Signing" — the kid\'s gut call lands on your desk and Mac must judge his own ' +
-      "reflection). Closest honest version today: the banked quality/variance stand in for the kid's first " +
-      'contribution.',
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP (story_flag). hand_them_a_budget and hire_them_properly now stamp ' +
+      "story_flag 'macs_protege' so a later meeting (\"The Protégé's First Signing\") could gate on " +
+      "requires: [{flag:'macs_protege'}] — the kid's gut call landing on Mac's desk and Mac judging his own " +
+      'reflection. No such follow-up meeting exists in this module — the id list is locked — so the flag is ' +
+      'write-only for now, forward-compatible for a future addition.',
     sourceFile: 'v3-mac-authored-new.md',
   },
   {
@@ -1133,10 +1251,13 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
         id: 'stake_mac_against_it',
         label: 'Put Mac against the machine',
         gist: "His next call versus the algorithm's, in public, winner keeps the budget line.",
-        immediate: 'money −5000, executive_mood +6, artist_mood +1',
+        immediate:
+          "money −5000, executive_mood +6, artist_mood +1, schedule_event " +
+          "{event_id:'scheduled_mac_machine_verdict', defer_weeks:6}",
         delayed: 'variance_up +2, quality_bonus +2, press_story_flag 1',
         outcomeSummary:
-          "Mac staked his ear against the algorithm on the record — his next call versus the machine's, winner keeps the budget.",
+          "Mac staked his ear against the algorithm on the record — his next call versus the machine's, winner " +
+          'keeps the budget, verdict due in a few weeks.',
       },
       {
         id: 'buy_the_terminal',
@@ -1171,13 +1292,23 @@ const V3_MAC_POOL_MEETINGS_RAW: MacPoolMeetingEntry[] = [
       "Fiction cashing mechanics: the platform's session analytics genuinely sharpen the next recording " +
         "(quality_bonus on the terminal); the bet's stakes land as a widened, loaded next session plus the press " +
         'flag banked for the next release.',
+      '2026-07-13 sweep: stake_mac_against_it now schedules a real verdict via schedule_event ' +
+        '(scheduled_mac_machine_verdict, defer_weeks 6) exactly as the original spec asked. The interim ' +
+        'variance/quality/press bank is kept unchanged — it is the honest "the widened session while we wait" ' +
+        'texture, not a substitute for the resolution beat.',
+      'VERDICT EVENT NEEDED: scheduled_mac_machine_verdict (defer_weeks 6, must be authored in data/events.json ' +
+        'as scheduled_only). Premise: six weeks on, the public bet resolves — the board, the trades, and the ' +
+        "roster all clocked who won. Outcomes (2-3): (1) Mac wins clean — his pick outcharts the algorithm's " +
+        "(executive_mood +, reputation +, press_story_flag, maybe a story_flag like 'mac_beat_the_machine' for future " +
+        'callbacks); (2) the machine wins — executive_mood craters, the board leans toward buy_the_terminal-style ' +
+        'pressure on a future meeting; (3) draw/ambiguous — muted result, rivalry continues as an ongoing thread ' +
+        'rather than a clean verdict.',
     ],
     upgradeSpec:
-      'UPGRADE SPEC (future mechanism: multi-week chained events): the bet demands a resolution beat — a ' +
-      'follow-up event N weeks out that names the winner ("the machine\'s pick stalled; Mac\'s is charting" or the ' +
-      'reverse) and moves exec_mood/rep accordingly. Today the variance bank is the honest stand-in for an ' +
-      'unresolved wager; when chained events generalize from the escalation pipeline, stake_mac_against_it ' +
-      'should schedule the verdict.',
+      'UPGRADE SPEC: IMPLEMENTED THIS SWEEP (schedule_event). stake_mac_against_it now schedules a real ' +
+      'resolution beat (see VERDICT EVENT NEEDED note) instead of leaving the wager permanently unresolved — ' +
+      'this was exactly the "multi-week chained events" mechanism the original spec asked for, now live via ' +
+      'the escalation pipeline\'s scheduling machinery.',
     sourceFile: 'v3-mac-authored-new.md',
   },
 ];

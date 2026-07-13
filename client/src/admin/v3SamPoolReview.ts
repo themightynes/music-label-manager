@@ -16,6 +16,12 @@
  *
  * GENERATED from the hand-off files (scripted extraction, this session); edits to
  * the authored text should happen in a re-authoring pass, not ad hoc here.
+ *
+ * UPGRADED against Engine Verbs Tier 1+2 on 2026-07-13 (content-upgrade sweep):
+ * compromised scenarios re-authored to use the 13 new effect keys (schedule_event,
+ * story_flag, grant_song, spawn_release, promote_release, etc. — see
+ * verb-capability-brief.md) where the fiction called for them. Designer review
+ * (Nes) still pending on both the pre-existing content and this upgrade pass.
  */
 
 import type { PoolReviewEntry } from './poolReviewTypes';
@@ -115,7 +121,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Authoring note: the vice is EV-defensible (P2) — the takeover carries the biggest awareness bank plus momentum and an artist beat; a disloyal Sam buying the corner is not authored as an idiot, just as someone spending your money on her portfolio. Artist reacts on the takeover (they drive past their own face); the other two are pure label-machinery calls, so Sam's exec_mood is deliberately left quiet — this one is about the money's shape, not her feelings.",
+      "Authoring note: the vice is EV-defensible (P2) — the takeover carries the biggest awareness bank plus momentum and an artist beat; a disloyal Sam buying the corner is not authored as an idiot, just as someone spending your money on her portfolio. Artist reacts on the takeover (they drive past their own face); the other two are pure label-machinery calls, so Sam's executive_mood is deliberately left quiet — this one is about the money's shape, not her feelings.",
       "Fiction cashing: release_planned gating means the billboard genuinely promotes the upcoming release — awareness_boost cashes exactly as the prose promises. No upgrade needed."
     ],
     "upgradeSpecs": [],
@@ -136,7 +142,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "grant_first_listen",
         "label": "Open the vault",
         "gist": "Her network is her power — and networks run on paid debts. The right byline hearing it first changes how everyone else hears it. self_serving_hint: true",
-        "immediate": "exec_mood +3, artist_mood −1",
+        "immediate": "executive_mood +3, artist_mood −1",
         "delayed": "press_story_flag 1, awareness_boost +3",
         "outcomeSummary": "Sam opened the vault and gave her critic first listen — the debt is paid and the first word on the record is theirs."
       },
@@ -145,16 +151,16 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Hand them something shiny",
         "gist": "An exclusive that isn't THE exclusive. Decoys work right up until they're noticed.",
         "immediate": "rep_swing 1",
-        "delayed": "press_momentum +1, exec_mood −2",
+        "delayed": "press_momentum +1, executive_mood −2",
         "outcomeSummary": "Sam fed the critic a decoy exclusive — a real story, just not the one they were owed, and decoys get noticed."
       },
       {
         "id": "burn_the_favor",
         "label": "Burn the favor",
         "gist": "The music isn't collateral. Sam makes the call herself, and it costs her something real.",
-        "immediate": "exec_mood −4, reputation +1",
-        "delayed": "artist_mood +2",
-        "outcomeSummary": "Sam called her oldest marker void and kept the vault shut — the critic heard 'no' and the artist never heard about it."
+        "immediate": "executive_mood −4, reputation +1",
+        "delayed": "artist_mood +2, story_flag journalist_favor_burned",
+        "outcomeSummary": "Sam called her oldest marker void and kept the vault shut — the critic heard 'no' and the artist never heard about it. The burned bridge is a debt the industry will remember."
       }
     ],
     "bandPredictions": {
@@ -165,8 +171,8 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Authoring note: Sam's exec_mood is the reaction axis on all three (the critic is an external party, not an artist) — paying the debt feeds her, the decoy embarrasses her craft, burning it genuinely hurts her. The artist reacts where the music is touched: stung by the vault opening, protected by the burn.",
-      "Fiction cashing: the first listen banks a press story + hype toward the held music's eventual planned release — honest as written. UPGRADE SPEC (future mechanism relationship ledger / per-journalist memory): burning the favor should set a story flag a later Sam meeting can require (\"the critic you burned reviews the next record\") — today the cost is compressed into exec_mood + the decoy's leak risk."
+      "Authoring note: Sam's executive_mood is the reaction axis on all three (the critic is an external party, not an artist) — paying the debt feeds her, the decoy embarrasses her craft, burning it genuinely hurts her. The artist reacts where the music is touched: stung by the vault opening, protected by the burn.",
+      "Fiction cashing: the first listen banks a press story + hype toward the held music's eventual planned release — honest as written. RESOLVED (Engine Verbs Tier 1+2): burn_the_favor now writes story_flag journalist_favor_burned so a later Sam meeting can require({flag:'journalist_favor_burned'}) to gate \"the critic you burned reviews the next record\" content — no downstream meeting authored yet in this pool, the flag is a live forward-looking hook."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-sam-authored-routine.md"
@@ -186,7 +192,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "fund_the_retainer",
         "label": "Fund the fire department",
         "gist": "The full firm, on standing call. Nobody plans the emergency; you can plan the response.",
-        "immediate": "money −8000, exec_mood +3, artist_mood +1",
+        "immediate": "money −8000, executive_mood +3, artist_mood +1",
         "delayed": "press_momentum +2",
         "outcomeSummary": "Sam put a crisis firm on full standing retainer — an invisible line item until the night it's the only one that matters."
       },
@@ -202,7 +208,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "she_is_the_retainer",
         "label": "Tell her she IS the retainer",
         "gist": "The label already pays for the best crisis operator in the business. She doesn't take it as a compliment.",
-        "immediate": "exec_mood −3",
+        "immediate": "executive_mood −3",
         "delayed": "",
         "outcomeSummary": "Sam was told she IS the crisis plan — the retainer stayed unfunded and she filed the compliment under 'cheap'."
       }
@@ -210,12 +216,12 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     "bandPredictions": {
       "heading": "Bands (target)",
       "lines": [
-        "loyal = she IS the retainer (both funded lines net negative under the capped money penalty; the free line's exec_mood hit isn't scored by safety), committed = fund half ⚑ (2·rep − spend/4000 ≈ +1 over refuse's 0 — thin, verify), disloyal Sam = full retainer (biggest spend; no hint needed). 3 distinct picks."
+        "loyal = she IS the retainer (both funded lines net negative under the capped money penalty; the free line's executive_mood hit isn't scored by safety), committed = fund half ⚑ (2·rep − spend/4000 ≈ +1 over refuse's 0 — thin, verify), disloyal Sam = full retainer (biggest spend; no hint needed). 3 distinct picks."
       ]
     },
     "designNotes": [],
     "notes": [
-      "Authoring note: this is the purest expression of her vice-as-a-defensible-position — the full retainer is genuinely good practice AND the biggest check with her name on the org chart. Artist reacts only on the full fund (the roster hears there's a safety net); the refuse line's cost is entirely Sam — the external party here is a PR firm, so exec_mood carries the reaction (per rule: external parties are not artists).",
+      "Authoring note: this is the purest expression of her vice-as-a-defensible-position — the full retainer is genuinely good practice AND the biggest check with her name on the org chart. Artist reacts only on the full fund (the roster hears there's a safety net); the refuse line's cost is entirely Sam — the external party here is a PR firm, so executive_mood carries the reaction (per rule: external parties are not artists).",
       "Fiction cashing: a standing press apparatus = press_momentum, the persistent decaying pool — the retainer IS the mechanic, decaying monthly exactly like an unrenewed engagement would. Cleanest mechanical fit in the pool; no upgrade needed."
     ],
     "upgradeSpecs": [],
@@ -237,7 +243,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Make them print the correction",
         "gist": "The label that checks receipts gets quoted carefully forever after. Slow, unglamorous, compounding.",
         "immediate": "reputation +1, artist_mood +1",
-        "delayed": "exec_mood +1",
+        "delayed": "executive_mood +1",
         "outcomeSummary": "Sam made the outlet print the correction — bottom of the page, but every desk in town saw the label check its receipts."
       },
       {
@@ -245,14 +251,14 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Plant the better story",
         "gist": "Don't fight the number, replace the headline. A counter-piece in a bigger outlet that makes the bad math irrelevant.",
         "immediate": "money −4000, reputation +1",
-        "delayed": "awareness_boost +2, press_momentum +1",
-        "outcomeSummary": "Sam planted a bigger counter-story over the bad math — the wrong number died under a better headline, with heat carrying into what's next."
+        "delayed": "promote_release 8, press_momentum +1",
+        "outcomeSummary": "Sam planted a bigger counter-story over the bad math — the wrong number died under a better headline, and the release's own numbers moved to prove it."
       },
       {
         "id": "let_it_die",
         "label": "Let it die in the archive",
         "gist": "Nobody remembers a Tuesday chart piece. Except Sam. And possibly the artist.",
-        "immediate": "exec_mood −2, artist_mood −1",
+        "immediate": "executive_mood −2, artist_mood −1",
         "delayed": "",
         "outcomeSummary": "Sam let the underselling piece die unanswered in the archive — no spend, no fight, and no one on record defending the number."
       }
@@ -265,8 +271,8 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Authoring note: artist reacts on two of three — defended (+) when the label fights, stung (−) when nobody does; the plant deliberately leaves the artist neutral (they never learn the counter-story was bought). The outlet is an external party → Sam's exec_mood carries that edge (quiet satisfaction on the correction, disgust at letting it die).",
-      "Fiction cashing (honest version): awareness_boost cannot promote the release that's already OUT — the counter-story's copy is authored as reframing the narrative so the heat carries into the artist's NEXT planned release (\"with heat carrying into what's next\"), which is exactly what the bank does. UPGRADE SPEC (future mechanism catalog_bump / retroactive stream modifier on an existing release): the plant's truest payoff is a streams bump on the undersold release itself; today's closest honest version banks the heat forward instead. Log as mechanism C-item at session wrap."
+      "Authoring note: artist reacts on two of three — defended (+) when the label fights, stung (−) when nobody does; the plant deliberately leaves the artist neutral (they never learn the counter-story was bought). The outlet is an external party → Sam's executive_mood carries that edge (quiet satisfaction on the correction, disgust at letting it die).",
+      "Fiction cashing (RESOLVED, Engine Verbs Tier 1+2): promote_release now directly bumps the undersold release's own awareness (max_awareness_bump knob, clamped) instead of only banking heat forward — the counter-story's payoff finally lands on the release it was written to defend. demand_the_correction and let_it_die are unchanged (no promotion angle in either — one fights on the record, one does nothing). ⚑ recompute committed/disloyal band math offline: swapping awareness_boost +2 (forward bank) for promote_release 8 (immediate-song bump) changes the comparison basis the math above used."
     ],
     "upgradeSpecs": [],
     "sourceFile": "v3-sam-authored-routine.md"
@@ -287,7 +293,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Let Sam spend the leverage",
         "gist": "The story dies — and everyone on that beat learns what crossing Sam costs. Could cut either way.",
         "immediate": "rep_swing 2, executive_mood +3, self_serving_hint: true",
-        "delayed": "press_momentum +2",
+        "delayed": "press_momentum +2, story_flag journalist_burned",
         "outcomeSummary": "Sam spent her leverage on the journalist — the story died, and everyone on that beat noticed how."
       },
       {
@@ -295,7 +301,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Trade an exclusive instead",
         "gist": "Kill the bad story by handing them a better one — first access to the next release, packaged at label expense.",
         "immediate": "money −10000, reputation +2",
-        "delayed": "press_story_flag 1",
+        "delayed": "press_story_flag 1, story_flag journalist_owed",
         "outcomeSummary": "Sam traded the journalist first access to the next release — the story got shelved for a better one."
       },
       {
@@ -318,10 +324,10 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "P2 check: rep_swing 2 is EV-zero, so the vice carries a press_momentum +2 sweetener — the gamble is a genuinely attractive offer, not poison.",
-      "Artist reaction: on let_it_run only (\"the roster hears the label ate a bad story rather than play dirty\") — no plausible artist axis on the other two; the journalist is external, so Sam's exec_mood is the reaction channel there."
+      "Artist reaction: on let_it_run only (\"the roster hears the label ate a bad story rather than play dirty\") — no plausible artist axis on the other two; the journalist is external, so Sam's executive_mood is the reaction channel there."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism story_flags): the natural version sets flags.story['journalist_burned'] / ['journalist_owed'] so a later Sam meeting can call the favor back or duck the hostile byline. Closest honest version today: press_momentum / press_story_flag stand in for the relationship."
+      "RESOLVED (Engine Verbs Tier 1+2): spend_the_leverage now writes story_flag journalist_burned and trade_the_exclusive now writes story_flag journalist_owed — both forward-looking hooks a later Sam meeting can require() to call the favor back or duck a hostile byline. No downstream meeting authored yet in this pool; the flags are live and available for a future content wave."
     ],
     "sourceFile": "v3-sam-authored-major.md"
   },
@@ -393,9 +399,9 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "take_it_loudly",
         "label": "Take it, label out front",
         "gist": "Full redemption campaign, Sam's name on every beat of it. The label is in every story for a month.",
-        "immediate": "money −20000, rep_swing 3, artist_mood −3",
+        "immediate": "money −20000, artist_mood −3, schedule_event scheduled_sam_comeback_verdict (defer_weeks 5)",
         "delayed": "awareness_boost +4, press_momentum +2",
-        "outcomeSummary": "Sam took the comeback story publicly and put the label's name across the whole redemption arc."
+        "outcomeSummary": "Sam took the comeback story publicly and put the label's name across the whole redemption arc — the verdict lands in five weeks."
       },
       {
         "id": "ghost_run_quietly",
@@ -425,11 +431,13 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "P2 check: the loud play is EV-defensible — awareness +4 + press_momentum +2 + the halo bundle is ~2× the safe siblings' guaranteed value; an inspired disloyal Sam nailing the redemption arc is sometimes RIGHT.",
-      "Artist reaction: loudly = artist_mood −3 (your own signee squirms sharing a label with the redemption project); decline = artist_mood +2 (relief). Ghost-run = no artist axis — they never know (that's the point), so Sam's exec_mood −3 (her best work, uncredited) carries the reaction.",
-      "Honest-fiction note: awareness_boost banks label-side heat for the NEXT PLANNED release (~2-month expiry) — copy says \"the label is in every story for a month; heat that carries into whatever you release next,\" never \"the comeback artist joins the roster.\""
+      "Artist reaction: loudly = artist_mood −3 (your own signee squirms sharing a label with the redemption project); decline = artist_mood +2 (relief). Ghost-run = no artist axis — they never know (that's the point), so Sam's executive_mood −3 (her best work, uncredited) carries the reaction.",
+      "Honest-fiction note: awareness_boost banks label-side heat for the NEXT PLANNED release (~2-month expiry) — copy says \"the label is in every story for a month; heat that carries into whatever you release next,\" never \"the comeback artist joins the roster.\"",
+      "⚑ MATH NEEDS RE-VERIFICATION (Engine Verbs Tier 1+2): take_it_loudly's rep_swing 3 gamble was replaced by schedule_event scheduled_sam_comeback_verdict — the immediate reputation risk is gone from this choice, so the band math above (loyal scoring loudly at −100 via rep_swing) predates the change and must be re-run against the new effect set.",
+      "VERDICT EVENT NEEDED: scheduled_sam_comeback_verdict (defer_weeks 5) — premise: the comeback story breaks wide five weeks after Sam goes all-in publicly; three outcomes — (1) it stuck: clean redemption narrative reads as a career revival, reputation +, press_momentum +, artist_mood small +; (2) tar pit: the old scandal reignites mid-arc, reputation −, executive_mood (Sam) −, artist_mood −; (3) quietly forgotten: the story fizzles without incident, small reputation/press decay, cheapest resolution."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism chained_events / story_flags): the real version is a multi-week arc — take it loudly schedules a \"redemption verdict\" event 4–6 weeks out that pays or detonates based on a roll. Today's rep_swing 3 is the compressed honest version of that verdict."
+      "RESOLVED (Engine Verbs Tier 1+2): take_it_loudly's compressed rep_swing 3 gamble is now schedule_event scheduled_sam_comeback_verdict (defer_weeks 5) — a real multi-week arc that pays off or detonates on its own resolution instead of an instant coin-flip. See VERDICT EVENT NEEDED note."
     ],
     "sourceFile": "v3-sam-authored-major.md"
   },
@@ -480,7 +488,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     "designNotes": [],
     "notes": [
       "v1 flaw fixed by design: v1's choices were all windfalls, so Sam's overspend archetype had zero purchase — every band grabbed money and delegation was invisible. The co-branded announcement rider (per the bible's recommendation) puts a real spend on the reach deal, so her 10·spend scorer finally has something to land on, and the three bands split the meeting three ways.",
-      "Artist reaction on all three (Nes rule): −3 walled off from fans / +2 maximum reach / +1 no games. The platforms are external — Sam's exec_mood +4 on the reach deal is the \"her byline energy\" beat.",
+      "Artist reaction on all three (Nes rule): −3 walled off from fans / +2 maximum reach / +1 no games. The platforms are external — Sam's executive_mood +4 on the reach deal is the \"her byline energy\" beat.",
       "Mechanics cash the fiction cleanly: meeting requires release_planned, and awareness_boost banks hype exactly onto that planned release — including the honest NEGATIVE bank on the check (the wall suppresses launch hype)."
     ],
     "upgradeSpecs": [],
@@ -501,9 +509,9 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "full_access",
         "label": "Sell full access",
         "gist": "The biggest check and the rawest story — cameras on everything, outcome uncontrollable.",
-        "immediate": "money +15000, rep_swing 2, artist_mood −4, self_serving_hint: true",
+        "immediate": "money +15000, artist_mood −4, schedule_event scheduled_sam_documentary_release (defer_weeks 7), self_serving_hint: true",
         "delayed": "press_momentum +2",
-        "outcomeSummary": "Sam sold the streamer full access — cameras on everything, the raw tour story with her framing on it."
+        "outcomeSummary": "Sam sold the streamer full access — cameras on everything, the raw tour story with her framing on it. What actually ships is a verdict seven weeks out."
       },
       {
         "id": "sanitized_cut",
@@ -532,11 +540,13 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Artist reaction on all three (Nes rule): −4 breakdown-on-camera dread / −1 still wary even with approvals / +5 and energy +2 (no cameras = an actual private tour, rest included). The streamer is external — Sam's exec_mood carries the deal-side reaction (−2 bored by furniture, −4 furious at passing the story of the year).",
-      "Honest-fiction note: awareness_boost on the sanitized cut banks toward the NEXT PLANNED release (~2-month expiry) — copy says \"the doc drops into whatever you set up next,\" not \"the doc boosts this tour.\""
+      "Artist reaction on all three (Nes rule): −4 breakdown-on-camera dread / −1 still wary even with approvals / +5 and energy +2 (no cameras = an actual private tour, rest included). The streamer is external — Sam's executive_mood carries the deal-side reaction (−2 bored by furniture, −4 furious at passing the story of the year).",
+      "Honest-fiction note: awareness_boost on the sanitized cut banks toward the NEXT PLANNED release (~2-month expiry) — copy says \"the doc drops into whatever you set up next,\" not \"the doc boosts this tour.\"",
+      "⚑ MATH NEEDS RE-VERIFICATION (Engine Verbs Tier 1+2): full_access's rep_swing 2 gamble was replaced by schedule_event scheduled_sam_documentary_release — the band math above predates this change and must be re-run against the new effect set.",
+      "VERDICT EVENT NEEDED: scheduled_sam_documentary_release (defer_weeks 7) — premise: the streamer ships the raw tour doc and the label finds out what actually made the cut; three outcomes — (1) the rawness reads as authenticity: press_momentum +, awareness_boost +, artist_mood small + (they own their own story); (2) a scene detonates: reputation −, artist_mood −−, executive_mood (Sam) − (a breakdown clip is everywhere); (3) competent but forgettable: small press_momentum, no lasting damage."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism spawns_release / chained_events): the real version makes the doc a tangible asset — a delayed windfall-over-weeks (or a real catalog item) landing when the streamer ships it, with the raw cut rolling quality/variance at delivery. Today's compression: rep_swing 2 at signing = the edit you don't control."
+      "RESOLVED (Engine Verbs Tier 1+2): full_access's compressed rep_swing 2 (\"the edit you don't control\") is now schedule_event scheduled_sam_documentary_release (defer_weeks 7) — the doc's real payoff or detonation happens when it actually ships. See VERDICT EVENT NEEDED note."
     ],
     "sourceFile": "v3-sam-authored-major.md"
   },
@@ -555,17 +565,17 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "full_spectrum_blitz",
         "label": "Spend the moment — everywhere",
         "gist": "Trade press, paid placements, the works. The debut becomes the label's origin myth, and the next record launches from orbit.",
-        "immediate": "money −45000, executive_mood +3, artist_mood −2",
+        "immediate": "money −45000, executive_mood +3, artist_mood −2, promote_release 15",
         "delayed": "awareness_boost +7, press_momentum +2",
-        "outcomeSummary": "Sam bought the debut wall-to-wall — outlets asking for exclusives were told to take the package."
+        "outcomeSummary": "Sam bought the debut wall-to-wall — outlets asking for exclusives were told to take the package, and {songTitle}'s own numbers got a real push while the debut was still hot."
       },
       {
         "id": "prestige_exclusive",
         "label": "One definitive story",
         "gist": "Give the debut to a single prestige outlet. One serious profile that treats it like a career, not a fluke.",
-        "immediate": "money −18000, reputation +3, artist_mood +2",
+        "immediate": "money −18000, reputation +3, artist_mood +2, promote_release 7",
         "delayed": "press_story_flag 1",
-        "outcomeSummary": "Sam gave the debut to one prestige outlet and held the rest back for the next record's runway."
+        "outcomeSummary": "Sam gave the debut to one prestige outlet and held the rest back for the next record's runway — a smaller, targeted push on {songTitle} itself."
       },
       {
         "id": "ride_organic",
@@ -587,13 +597,13 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Fiction-cashes-mechanics note: the blitz does NOT claim to push {songTitle} up the chart — awareness_boost banks hype for the NEXT planned release, so all three choices are authored as what the debut sets up, not chart defense. Sam's \"credential\" framing makes that honest.",
+      "Fiction-cashes-mechanics note (RESOLVED, Engine Verbs Tier 1+2): both spend choices now carry promote_release, directly defending {songTitle}'s chart position (immediate awareness bump on the charting song itself) on top of what they already bank forward for the next record — the blitz fights for the number right now (+15, near the knob's max_awareness_bump cap), the exclusive gives it a smaller, more targeted push (+7). ride_organic stays honest as the zero-intervention pick. ⚑ recompute band math offline — both spend choices are now strictly more valuable than before.",
       "Temptation check (P2): the blitz is EV-defensible — $45k (crisis band) buys the game's largest awareness bank (+7, crisis band) plus the biggest press_momentum grant in the pool; against a $500k treasury with a release coming it is a real offer, not authored poison. No variance keys — the risk is the spend itself.",
       "Artist reaction (per rule): all three choices touch artist_mood — steamrolled by the machine (−2), treated like an artist (+2), trusted to be the story (+4).",
       "Neglect timeline (P9): disloyal Sam self-resolves → blitz → digest line above (outlets told to take the package = beat one of the bridge-torching) → at loyalty < 40, escalation_cmo_narrative_lost continues it: the frozen-out outlets are the \"two outlets gone from neutral to hostile.\" The $45k also lands on the ledger with no loyalty credit — neglect priced in cash and press relationships."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism chart_position_support / current-release marketing key): the fantasy players will reach for — \"defend {songTitle}'s chart position THIS week\" — has no effect key; awareness only banks forward. A current-release promotion key would let a chart_debut reactive actually fight for the charting song. Log as mechanism C-item at session wrap."
+      "RESOLVED (Engine Verbs Tier 1+2): promote_release now lets full_spectrum_blitz (+15) and prestige_exclusive (+7) directly defend {songTitle}'s chart debut instead of only banking hype for the next release — the fantasy players reached for (\"defend the chart position THIS week\") is now the actual mechanism."
     ],
     "sourceFile": "v3-sam-authored-reactive.md"
   },
@@ -620,9 +630,9 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "id": "redemption_arc",
         "label": "Build the growth story",
         "gist": "Full sit-down interview, receipts, who they were and who they've become — timed to land with the next record. Expensive, exposed, and the only response that ends the question forever.",
-        "immediate": "money −30000, creative_capital −1, artist_mood +6, reputation +3",
+        "immediate": "money −30000, creative_capital −1, artist_mood +6, reputation +3, promote_release 6",
         "delayed": "press_story_flag 1, awareness_boost +4",
-        "outcomeSummary": "Sam turned the dig into a growth story — full interview, receipts, and a feature banked for the next record."
+        "outcomeSummary": "Sam turned the dig into a growth story — full interview, receipts, a real bump to the record that's out right now, and a feature banked for the next one."
       },
       {
         "id": "scorched_earth",
@@ -644,13 +654,14 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Fiction-cashes-mechanics note: the redemption feature can't run against the CURRENT release (press_story_flag fires at the next release) — so the fiction is authored as Sam negotiating the piece to drop with the next record (\"the arc ends where the next one begins\"). See UPGRADE SPEC.",
+      "Fiction-cashes-mechanics note (RESOLVED, Engine Verbs Tier 1+2): redemption_arc now carries promote_release, directly lifting the CURRENT release's awareness the week the feature runs — the growth story doesn't just set up the next record, it changes what people are reading about the one that's out right now. containment and scorched_earth stay compressed on purpose: both are about killing/starving the dig, not promoting anything, so there's no honest verb fit for them here.",
+      "⚑ MATH NEEDS RE-VERIFICATION (Engine Verbs Tier 1+2): redemption_arc gained promote_release 6, a numeric input outside the disloyal-Sam auto-scorer's original awareness_boost/spend formula — recompute if/when the scorer is extended to weigh promote_release.",
       "Temptation check (P2): scorched earth is a rep_swing paired with real sweeteners (press_momentum +2, the story genuinely killed, Sam energized +4) — EV-neutral gamble plus guaranteed value, per the rule that rep_swing must be sweetened to tempt. Redemption is the EV-rich play and it costs crisis money — the player's actual dilemma is real.",
-      "Artist reaction (per rule): {artistName} reacts on all three — sheltered (+2), heard and vindicated (+6), or conscripted into a war they never asked for (−4). External parties (the press pool, the rival who commissioned the dig) land on Sam's exec_mood, not fake rep keys.",
+      "Artist reaction (per rule): {artistName} reacts on all three — sheltered (+2), heard and vindicated (+6), or conscripted into a war they never asked for (−4). External parties (the press pool, the rival who commissioned the dig) land on Sam's executive_mood, not fake rep keys.",
       "Neglect timeline (P9): disloyal Sam self-resolves → scorched earth → digest line above (\"two press friendships went with it\") IS beat one of escalation_cmo_narrative_lost: the escalation's \"two outlets gone from neutral to hostile\" names the same two burned relationships. Ignore-chain reads as one continuous story: dig → dossier → hostile press corps consuming a focus slot."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism: mid-cycle press effect on CURRENT release): press_story_flag and awareness_boost both bank to the NEXT release, so no choice can mechanically defend the release that is out right now — the one the dig was timed to hurt. A current_release_sentiment (or streams-decay modifier) key would let crisis PR act on the active cycle. Log as mechanism C-item at session wrap."
+      "RESOLVED (Engine Verbs Tier 1+2): redemption_arc's promote_release closes the \"no choice can defend the current release\" gap flagged pre-upgrade. containment/scorched_earth remain compressed (correctly — they're suppression plays, not promotion plays, so no verb fit belongs there)."
     ],
     "sourceFile": "v3-sam-authored-reactive.md"
   },
@@ -698,11 +709,11 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Axes: paid reach (money→hype) vs. authentic partnership (relationship + modest reach) vs. principle (rep/momentum, free). Artist reacts on the two choices that touch their audience (bought swarm reads fake = mood −; real fan = mood +); the collective is an external party, so Sam's exec_mood carries the reaction on the refusal (her skepticism vindicated, she LIVES for the fight she can win in the open).",
+      "Axes: paid reach (money→hype) vs. authentic partnership (relationship + modest reach) vs. principle (rep/momentum, free). Artist reacts on the two choices that touch their audience (bought swarm reads fake = mood −; real fan = mood +); the collective is an external party, so Sam's executive_mood carries the reaction on the refusal (her skepticism vindicated, she LIVES for the fight she can win in the open).",
       "Temptation check: the swarm is genuinely the biggest hype number in the meeting (+4 banked vs +2) and it sometimes WORKS in the fiction (\"two of them stuck\") — an EV-defensible blitz, not authored-as-idiot spend. No variance keys: variance_up banks into the next recording session and this fiction is all release-cycle, so the mechanics only promise what they can cash."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (future mechanism viral_moment happening / direct-hype injection): the natural fiction is a trend hitting the release that is ALREADY planned this cycle — the engine can only bank awareness for the next planned release at plan time. Upgrade: allow awareness_boost to top up an existing planned release's hype directly, or add a viral_moment happening the swarm purchase can trigger (with a fizzle branch — that's where a release-side variance verb would belong). Log as mechanism C-item at session wrap."
+      "RE-EVALUATED (Engine Verbs Tier 1+2): no matching verb — promote_release only targets an already-RELEASED song (pickTargetReleasedSong requires a released release), and this meeting gates on release_planned (pre-release, nothing released yet to promote). The 'top up an already-planned release's hype directly' ask is still unresolved by the new verb set; the honest awareness_boost-banks-forward version stands unchanged. Real mechanism gap remains open — not manufacturing a false fit just because verbs shipped elsewhere."
     ],
     "sourceFile": "v3-sam-authored-new.md"
   },
@@ -722,8 +733,8 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Make the reunion the story",
         "gist": "Book her old target, put them next to {artistName}, and own the narrative at full volume.",
         "immediate": "money −15000",
-        "delayed": "awareness_boost +3, press_story_flag 1, artist_mood −1",
-        "outcomeSummary": "Sam booked her old target for a headline reunion — the redemption arc ran everywhere, with {artistName} cast in Sam's story."
+        "delayed": "grant_song {title_hint: 'The Reckoning Sessions', quality_range: [45,65], artist: 'targeted'} then spawn_release {songs: 'granted', type: 'single', defer_weeks: 3}, awareness_boost +3, press_story_flag 1, artist_mood −1",
+        "outcomeSummary": "Sam booked her old target for a headline reunion — the redemption arc ran everywhere, with {artistName} cast in Sam's story, and the two of them walked away with a real collab single on the release calendar."
       },
       {
         "id": "own_the_byline",
@@ -738,7 +749,7 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
         "label": "Make it right off the record",
         "gist": "Fund the artist she buried — studio time, no press, no credit taken.",
         "immediate": "money −5000, executive_mood +1",
-        "delayed": "artist_mood +3",
+        "delayed": "artist_mood +3, story_flag sam_amends_made",
         "outcomeSummary": "Sam paid for her old target's studio time, quietly and uncredited — the roster heard about it anyway."
       }
     ],
@@ -750,12 +761,12 @@ export const V3_SAM_POOL_MEETINGS: PoolReviewEntry[] = [
     },
     "designNotes": [],
     "notes": [
-      "Axes: narrative control at any price (money→hype+press flag) vs. reputation via honesty (rep/momentum, free but she bleeds for it) vs. private repair (artist relationship). The podcast host is the external party — exec_mood carries Sam's side of it (−2 on the mea culpa because swallowing pride is the one fight she can't enjoy; +1 on quiet amends, the rare peace she chose). {artistName} reacts where dragged in (cast in the spectacle = mood −) and where the roster learns who she is (amends leak internally = mood +).",
+      "Axes: narrative control at any price (money→hype+press flag) vs. reputation via honesty (rep/momentum, free but she bleeds for it) vs. private repair (artist relationship). The podcast host is the external party — executive_mood carries Sam's side of it (−2 on the mea culpa because swallowing pride is the one fight she can't enjoy; +1 on quiet amends, the rare peace she chose). {artistName} reacts where dragged in (cast in the spectacle = mood −) and where the roster learns who she is (amends leak internally = mood +).",
       "Temptation check: the spectacle is the biggest hype-and-press bundle in the meeting AND the only choice that banks a press_story_flag for the next release — the vice is genuinely the strongest marketing play, not poison. Distinct from catalog #7 (The Comeback Client): there an outsider asks the label to run THEIR redemption for a fee; here the reckoning is Sam's own, and the artist she torched never asked for anything.",
       "Neglect note: regular-pool, so no escalation linkage required — but the disloyal self-resolve digest line (\"booked her old target for a headline reunion…\") reads exactly as a Sam-made-it-about-Sam beat, which is the vice made legible."
     ],
     "upgradeSpecs": [
-      "UPGRADE SPEC (two mechanisms): (1) spawns_release / grant_song — stage_the_spectacle naturally produces a real collab track or live moment between the torched artist and {artistName} (same flagship mechanism as Wall of Misses choice 3). (2) Choice-set story flags — quiet_amends wants to set flags.story['sam_amends_made'] so a later Sam meeting (or the podcast resurfacing as a side event) can require/exclude it; today the episode simply never airs in fiction and the engine keeps no memory. Log both as mechanism C-items at session wrap."
+      "RESOLVED (Engine Verbs Tier 1+2), two mechanisms: (1) stage_the_spectacle now pairs grant_song + spawn_release (song authored BEFORE the release key in the same delayed block, per engine object-key-order requirement) — the reunion produces a REAL collab single that lands on the release calendar, not just a press bump. Author caution: grant_song no-ops without a resolved targetArtistId — confirm this meeting resolves {artistName} via predetermined/user_selected scope in data/actions.json before this ships, since it is authored as artist_signed-gated, not explicitly predetermined-targeted. (2) quiet_amends now writes story_flag sam_amends_made so a later Sam meeting (or the podcast resurfacing as a side event) can require()/exclude on it — no downstream consumer authored yet in this pool, the flag is a live forward-looking hook."
     ],
     "sourceFile": "v3-sam-authored-new.md"
   }
@@ -774,5 +785,6 @@ export const V3_SAM_POOL_LEVEL_NOTES: string[] = [
   "[v3-sam-authored-major.md] Cross-pool notes (Sam major set)",
   "- Hint budget: 2 of 5 hinted (The Dossier, The Documentary Ask) — both are the cases the bible predicted (vice with no spend / vice paid in income), both confirmed by the math above. The other three vices win her scorer numerically. Within the ~1-in-3 P6 budget.",
   "- Divergence: all five meetings produce 3 distinct band picks (aspire-level), pending offline scorer verification of the ⚑ thin margins (Awards committed-vs-refuse; Documentary both margins).",
-  "- Spend spread: vice spends $0 / $25k / $20k / $12k / $0-income — Sam's overspend archetype has real purchase in three meetings and her nerve/story vice carries the two hinted ones, so disloyal-Sam digests won't read as a one-note money hose."
+  "- Spend spread: vice spends $0 / $25k / $20k / $12k / $0-income — Sam's overspend archetype has real purchase in three meetings and her nerve/story vice carries the two hinted ones, so disloyal-Sam digests won't read as a one-note money hose.",
+  "[Engine Verbs Tier 1+2 upgrade sweep, 2026-07-13] 8 of 13 scenarios touched: journalist_favor_called_in, own_the_correction, the_dossier, the_comeback_client, the_documentary_ask, chart_debut_one_hour_window, old_tweets_surface, the_hatchet_piece adopted real verbs (story_flag ×5 scenarios, promote_release ×3 scenarios, schedule_event ×2 (new scheduled_sam_comeback_verdict / scheduled_sam_documentary_release verdict events needed), grant_song+spawn_release ×1). slow_news_week, billboard_money, crisis_retainer, awards_whisper_campaign, platform_exclusive_bidding, the_engagement_farm left unchanged — honest as authored, or (engagement_farm) a genuine remaining mechanism gap re-confirmed rather than blindly copied forward. Designer review (Nes) pending on the whole pool including this pass."
 ];

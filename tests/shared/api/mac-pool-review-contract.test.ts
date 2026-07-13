@@ -152,7 +152,7 @@ describe('PoolReviewResponsesSchema — the generic seven-pool document', () => 
       [DANTE_POOL_REVIEW_FORM_ID]: 15,
       [PAT_POOL_REVIEW_FORM_ID]: 14,
       [CEO_POOL_REVIEW_FORM_ID]: 12,
-      [EVENTS_POOL_REVIEW_FORM_ID]: 20,
+      [EVENTS_POOL_REVIEW_FORM_ID]: 28,
       [ESCALATIONS_POOL_REVIEW_FORM_ID]: 8,
     });
   });
