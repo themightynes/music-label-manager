@@ -52,6 +52,16 @@ import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
 import { seededRandom, seededRandomPick } from '../../utils/seededRandom';
 import { createReleaseWithSongs, type ReleaseCreationOps } from '../releaseCreation';
+import { pickTargetReleasedSong, pickLatestReleasedRelease } from '../releaseTargeting';
+import {
+  readInventoryLedger,
+  readRevenueTransfers,
+  normalizeTransferFraction,
+  PHYSICAL_INVENTORY_DEFAULTS,
+  REVENUE_TRANSFER_DEFAULTS,
+  type InventoryLedgerEntry,
+  type RevenueTransferEntry,
+} from '../flagsLedgers';
 import { scaleReputationGain } from '../../utils/reputationScaling';
 import {
   getMoodModifiers,
@@ -108,7 +118,15 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'grant_song',
   // Engine-verbs M1b (tangible catalog — spawn a real planned release). OBJECT-valued:
   // { songs: 'granted' | 'latest_recorded', type: 'single', defer_weeks? }.
-  'spawn_release'
+  'spawn_release',
+  // Engine-verbs arc Tier 2 (live-economy verbs — the first BACKWARD-acting
+  // channels): value = magnitude/units/fraction (NUMERIC by design; multi-param
+  // shapes live in balance knobs).
+  'promote_release',
+  'catalog_damage',
+  'cancel_project',
+  'grant_inventory',
+  'transfer_revenue_stream'
 ]);
 
 /**
@@ -267,6 +285,27 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
   spawn_release: {
     title: 'Surprise Release',
     text: 'Puts a release on the schedule immediately — the track ships to the airwaves within the week and enters the normal streaming, chart, and revenue cycle, with no marketing spend behind it.',
+  },
+  // --- Engine-verbs arc Tier 2 (live-economy verbs) ---
+  promote_release: {
+    title: 'Catalog Push',
+    text: 'A promotional push behind music you already have out. It lifts the buzz of your hottest released song right away — when this meeting targets an artist, it lifts THAT artist\'s hottest released track — feeding its streams from here on. Does nothing if nothing is out yet.',
+  },
+  catalog_damage: {
+    title: 'Catalog Hit',
+    text: 'Damage to music you already have out. Your hottest released song loses buzz immediately — when this targets an artist, it\'s THAT artist\'s hottest released track — and its streams suffer from here on. Does nothing if nothing is out yet.',
+  },
+  cancel_project: {
+    title: 'Project Shutdown',
+    text: 'Pulls the plug on the targeted artist\'s active recording project, effective now. Money already spent stays spent, and any songs already recorded are kept — but no more will come from that project.',
+  },
+  grant_inventory: {
+    title: 'Physical Pressing',
+    text: 'Presses a physical run tied to the latest release — you pay manufacturing up front, then units sell week by week (faster while the release is buzzing) until they sell out. Stock left on the shelf too long gets written off.',
+  },
+  transfer_revenue_stream: {
+    title: 'Catalog Share Sale',
+    text: 'Sells a slice of a released record\'s future streaming income. Every week for the term of the deal, that share of the release\'s streaming revenue goes to the buyer instead of you.',
   },
 };
 
@@ -2053,6 +2092,286 @@ export class ActionProcessor {
             description: `Surprise release: "${releaseSong.title}" — ${releaseArtist?.name ?? 'your artist'} heads straight to the airwaves`,
           });
           console.log(`[EFFECT PROCESSING] spawn_release: planned "${releaseSong.title}" (release ${newRelease?.id}) for week ${releaseWeek}`);
+          break;
+        }
+
+        case 'promote_release': {
+          // Engine-verbs arc slice 8 (M5) — the economy's first BACKWARD-acting
+          // verb: a clamped awareness bump applied DIRECTLY to the targeted
+          // currently-released song (highest-awareness released song for the
+          // targeted artist, or label-wide — shared rule in releaseTargeting.ts).
+          // SURGICAL by design: only `awareness` (and its peak mirror) moves; the
+          // decay fields (awareness_decay_rate, breakthrough_achieved) are never
+          // touched, so the bump simply rides the existing weekly build/decay
+          // cycle in ReleaseProcessor.processReleasedProjects. Zero RNG.
+          if (!(value > 0)) {
+            console.log(`[EFFECT PROCESSING] promote_release with non-positive value (${value}) ignored`);
+            break;
+          }
+          try {
+            const releasedSongs = (await ctx.gameData.getReleasedSongs?.(ctx.gameState.id)) || [];
+            const target = pickTargetReleasedSong(releasedSongs, artistId);
+            if (!target) {
+              console.warn(`[EFFECT PROCESSING] promote_release: no currently-released song${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const promoCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.release_promotion;
+            const maxBump = promoCfg?.max_awareness_bump ?? 15; // knob: markets.json release_promotion
+            const bump = Math.min(value, maxBump);
+            const currentAwareness = target.awareness ?? 0;
+            const newAwareness = Math.round(Math.max(0, Math.min(100, currentAwareness + bump)));
+            await ctx.gameData.updateSongs?.([
+              {
+                songId: target.id,
+                awareness: newAwareness,
+                peak_awareness: Math.round(Math.max(target.peak_awareness ?? 0, newAwareness)),
+              },
+            ], ctx.dbTransaction);
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `Promo push behind "${target.title ?? 'your release'}" — its buzz is climbing again`,
+              amount: 0,
+              appliedEffects: { promote_release: value },
+            });
+            console.log(`[EFFECT PROCESSING] promote_release: +${bump} awareness (of authored ${value}, cap ${maxBump}) to "${target.title}" (${currentAwareness} -> ${newAwareness})`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] promote_release failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'catalog_damage': {
+          // Engine-verbs arc slice 8 (M12) — severity-scaled awareness LOSS on the
+          // targeted released song (same shared target rule as promote_release).
+          // Awareness is the future-revenue driver (FinancialSystem.calculateDecayRevenue
+          // applies the weeks-5+ awareness modifier), so cutting it here cuts the
+          // song's ongoing streams too. peak_awareness is historical — never reduced.
+          const severity = Math.abs(value); // authored as positive severity; tolerate a signed value
+          if (!(severity > 0)) {
+            console.log(`[EFFECT PROCESSING] catalog_damage with zero severity ignored`);
+            break;
+          }
+          try {
+            const releasedSongs = (await ctx.gameData.getReleasedSongs?.(ctx.gameState.id)) || [];
+            const target = pickTargetReleasedSong(releasedSongs, artistId);
+            if (!target) {
+              console.warn(`[EFFECT PROCESSING] catalog_damage: no currently-released song${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const dmgCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.catalog_damage;
+            const perSeverity = dmgCfg?.awareness_loss_fraction_per_severity ?? 0.1; // knob: markets.json catalog_damage
+            const maxFraction = dmgCfg?.max_total_fraction ?? 0.8;                    // knob: markets.json catalog_damage
+            const lossFraction = Math.min(maxFraction, severity * perSeverity);
+            const currentAwareness = target.awareness ?? 0;
+            const newAwareness = Math.round(Math.max(0, currentAwareness * (1 - lossFraction)));
+            await ctx.gameData.updateSongs?.([
+              { songId: target.id, awareness: newAwareness },
+            ], ctx.dbTransaction);
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `"${target.title ?? 'A released track'}" took a hit — its buzz is fading and the streams will follow`,
+              amount: 0,
+              appliedEffects: { catalog_damage: value },
+            });
+            console.log(`[EFFECT PROCESSING] catalog_damage: severity ${severity} → -${(lossFraction * 100).toFixed(0)}% awareness on "${target.title}" (${currentAwareness} -> ${newAwareness})`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] catalog_damage failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'cancel_project': {
+          // Engine-verbs arc slice 9 (M6) — SOFT-cancel of the targeted artist's
+          // ACTIVE recording project (Single/EP in planning/production). Mirrors
+          // the tour cancel route's soft-cancel shape (server/routes/projects.ts):
+          // completionStatus:'cancelled' + stage:'cancelled' — the stage machine
+          // (ProjectStageProcessor, which also skips cancelled explicitly) and the
+          // song generator (stage !== 'production') both stop naturally.
+          // RULES (MVP): NO refund of any kind (money spent stays spent), and
+          // SONGS ALREADY CREATED BY THE PROJECT STAY — they are recorded rows
+          // and remain releasable; only future song generation stops.
+          // Restart/delay is explicitly deferred (fights the monotonic stage model).
+          if (value === 0) {
+            console.log(`[EFFECT PROCESSING] cancel_project with zero value ignored`);
+            break;
+          }
+          try {
+            const projects = (await ctx.storage?.getProjectsByGame?.(ctx.gameState.id, ctx.dbTransaction)) || [];
+            const active = projects.filter((p: any) =>
+              ['Single', 'EP'].includes(p.type || '') &&
+              ['planning', 'production'].includes(p.stage || '') &&
+              p.completionStatus !== 'cancelled' &&
+              (!artistId || p.artistId === artistId)
+            );
+            if (active.length === 0) {
+              console.warn(`[EFFECT PROCESSING] cancel_project: no active recording project${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            // Deterministic pick: the most recently started active project
+            // (highest startWeek), lexicographic id as the final tie-break.
+            const target = active.reduce((best: any, p: any) => {
+              const bestWeek = best.startWeek ?? 0;
+              const pWeek = p.startWeek ?? 0;
+              if (pWeek !== bestWeek) return pWeek > bestWeek ? p : best;
+              return p.id < best.id ? p : best;
+            });
+
+            await ctx.storage?.updateProject?.(target.id, {
+              stage: 'cancelled',
+              completionStatus: 'cancelled',
+              metadata: {
+                ...(target.metadata || {}),
+                cancelledWeek: ctx.gameState.currentWeek || 0,
+                cancelledBy: meetingName || 'effect',
+              },
+            }, ctx.dbTransaction);
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `"${target.title}" was shut down mid-production — songs already in the can are kept, but no more are coming`,
+              amount: 0,
+              projectId: target.id,
+              artistId: target.artistId ?? undefined,
+              appliedEffects: { cancel_project: value },
+            });
+            console.log(`[EFFECT PROCESSING] cancel_project: soft-cancelled "${target.title}" (${target.id}, stage was ${target.stage}); ${target.songsCreated || 0}/${target.songCount || 0} songs already created are KEPT`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] cancel_project failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'grant_inventory': {
+          // Engine-verbs arc slice 10 (M9 physical_inventory, flags-ledger MVP).
+          // Authored value = unit count. Writes a flags.inventory[] ledger entry
+          // tied to the targeted artist's LATEST released release (label-wide
+          // latest when untargeted). Manufacturing cost (units × unit_cost knob)
+          // is charged NOW through the summary (single [FINAL MONEY] point rule);
+          // the deterministic weekly sell-through lives in the streaming pass
+          // (ReleaseProcessor.processReleasedProjects → flagsLedgers.processInventoryWeek).
+          const requestedUnits = Math.round(value);
+          if (!(requestedUnits > 0)) {
+            console.log(`[EFFECT PROCESSING] grant_inventory with non-positive units (${value}) ignored`);
+            break;
+          }
+          try {
+            const releases = (await ctx.storage?.getReleasesByGame?.(ctx.gameState.id, ctx.dbTransaction)) || [];
+            const release = pickLatestReleasedRelease(releases, artistId);
+            if (!release) {
+              console.warn(`[EFFECT PROCESSING] grant_inventory: no released release${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const invCfg = {
+              ...PHYSICAL_INVENTORY_DEFAULTS,
+              ...(((ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.physical_inventory) || {}),
+            };
+            const units = Math.min(requestedUnits, invCfg.max_units_per_grant);
+            const manufacturingCost = units * invCfg.unit_cost;
+            const currentWeek = ctx.gameState.currentWeek || 0;
+
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+            const ledger = readInventoryLedger(flags);
+            const baseId = `${release.id}-w${currentWeek}`;
+            const entry: InventoryLedgerEntry = {
+              id: ledger.some((e) => e.id === baseId) ? `${baseId}-${ledger.length}` : baseId,
+              releaseId: release.id,
+              releaseTitle: release.title || 'Untitled release',
+              artistId: release.artistId ?? undefined,
+              unitsInitial: units,
+              unitsRemaining: units,
+              unitCost: invCfg.unit_cost,
+              unitPrice: invCfg.unit_price,
+              createdWeek: currentWeek,
+            };
+            flags.inventory = [...ledger, entry];
+            ctx.gameState.flags = flags;
+
+            // Charge manufacturing like a meeting cost (same reconciliation path
+            // as the 'money' case: summary totals + roleMeetingCosts bucket).
+            summary.expenses += manufacturingCost;
+            if (!summary.expenseBreakdown) {
+              summary.expenseBreakdown = {
+                weeklyOperations: 0,
+                artistSalaries: 0,
+                executiveSalaries: 0,
+                signingBonuses: 0,
+                projectCosts: 0,
+                marketingCosts: 0,
+                roleMeetingCosts: 0
+              };
+            }
+            summary.expenseBreakdown.roleMeetingCosts += manufacturingCost;
+
+            summary.changes.push({
+              type: 'expense',
+              description: `Pressed a physical run of "${entry.releaseTitle}" — manufacturing paid up front, units start selling this week`,
+              amount: -manufacturingCost,
+              releaseId: release.id,
+            });
+            summary.changes.push({
+              type: 'meeting',
+              description: `Physical pressing ordered for "${entry.releaseTitle}"`,
+              amount: 0,
+              appliedEffects: { grant_inventory: value },
+            });
+            console.log(`[EFFECT PROCESSING] grant_inventory: ${units} units (authored ${value}, cap ${invCfg.max_units_per_grant}) @ cost ${invCfg.unit_cost}/price ${invCfg.unit_price} against "${entry.releaseTitle}" (${release.id}); manufacturing $${manufacturingCost}`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] grant_inventory failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'transfer_revenue_stream': {
+          // Engine-verbs arc slice 10 (M11 revenue_stream_transfer, flags-ledger
+          // MVP). Authored value = sold fraction of the targeted released
+          // release's weekly streaming revenue (>= 1 read as percent), clamped by
+          // the max_fraction knob; term = default_weeks knob. Writes a
+          // flags.revenue_transfers[] entry; the weekly deduction lives in the
+          // streaming pass (ReleaseProcessor.processReleasedProjects →
+          // flagsLedgers.processRevenueTransfersWeek). The sale PRICE itself is
+          // whatever the authored choice pays via its own 'money' effect — this
+          // key only encumbers the stream.
+          try {
+            const xferCfg = {
+              ...REVENUE_TRANSFER_DEFAULTS,
+              ...(((ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.revenue_transfer) || {}),
+            };
+            const fraction = normalizeTransferFraction(value, xferCfg);
+            if (!(fraction > 0)) {
+              console.log(`[EFFECT PROCESSING] transfer_revenue_stream with non-positive fraction (${value}) ignored`);
+              break;
+            }
+            const releases = (await ctx.storage?.getReleasesByGame?.(ctx.gameState.id, ctx.dbTransaction)) || [];
+            const release = pickLatestReleasedRelease(releases, artistId);
+            if (!release) {
+              console.warn(`[EFFECT PROCESSING] transfer_revenue_stream: no released release${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const currentWeek = ctx.gameState.currentWeek || 0;
+            const entry: RevenueTransferEntry = {
+              releaseId: release.id,
+              releaseTitle: release.title || 'Untitled release',
+              fraction,
+              startWeek: currentWeek,
+              endWeek: currentWeek + xferCfg.default_weeks - 1,
+            };
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+            flags.revenue_transfers = [...readRevenueTransfers(flags), entry];
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `Sold a share of "${entry.releaseTitle}"'s streaming income — the buyer collects their cut weekly for the term of the deal`,
+              amount: 0,
+              releaseId: release.id,
+              appliedEffects: { transfer_revenue_stream: value },
+            });
+            console.log(`[EFFECT PROCESSING] transfer_revenue_stream: fraction ${fraction} (authored ${value}) of "${entry.releaseTitle}" (${release.id}), weeks ${entry.startWeek}-${entry.endWeek}`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] transfer_revenue_stream failed (effect skipped):', error);
+          }
           break;
         }
 
