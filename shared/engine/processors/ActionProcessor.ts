@@ -2824,10 +2824,14 @@ export class ActionProcessor {
 
     // Apply immediate effects using the standard applyEffects method
     // This handles artist_mood, artist_energy, creative_capital, etc.
+    // Engine-verbs arc (post-merge review fix): structured-value keys
+    // (STRUCTURED_EFFECT_KEYS) are admitted alongside numbers — this was the
+    // one entry point the arc's widening missed, silently stripping e.g. a
+    // dialogue-authored story_flag/grant_song before applyEffects ever saw it.
     if (choice.effects_immediate) {
-      const effects: Record<string, number> = {};
+      const effects: Record<string, any> = {};
       for (const [key, value] of Object.entries(choice.effects_immediate)) {
-        if (typeof value === 'number') {
+        if (typeof value === 'number' || STRUCTURED_EFFECT_KEYS.has(key)) {
           effects[key] = value;
         }
       }
