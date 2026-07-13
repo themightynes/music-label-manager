@@ -1,0 +1,68 @@
+{
+  "formId": "v3-mac-pool-review",
+  "savedAt": "2026-07-13T02:25:34.021Z",
+  "meetings": {
+    "wall_of_misses": {
+      "verdict": null,
+      "notes": ""
+    },
+    "the_3am_demo": {
+      "verdict": "approve_with_edits",
+      "notes": "Approve all - the development deal needs work. It doesn't make sense for what we are able to work with. Why would banked quality go up? - UPGRADE SPEC -> this could be a choice that spawns a later meeting where he brings them back (and the spawned artist is even better, or the artist turns out to be not great and it turns out the money was a waste) - but as is the development deal doesn't make sense. "
+    },
+    "tuesday_superstition": {
+      "verdict": null,
+      "notes": ""
+    },
+    "reinvention_tape": {
+      "verdict": null,
+      "notes": ""
+    },
+    "showcase_slot": {
+      "verdict": null,
+      "notes": ""
+    },
+    "vintage_speakers": {
+      "verdict": null,
+      "notes": ""
+    },
+    "poaching_season": {
+      "verdict": null,
+      "notes": ""
+    },
+    "favor_signing": {
+      "verdict": null,
+      "notes": ""
+    },
+    "second_album_syndrome": {
+      "verdict": null,
+      "notes": ""
+    },
+    "one_that_got_away_again": {
+      "verdict": null,
+      "notes": ""
+    },
+    "mood_crater_rescue": {
+      "verdict": null,
+      "notes": ""
+    },
+    "demo_ethics_one": {
+      "verdict": null,
+      "notes": ""
+    },
+    "the_circuit": {
+      "verdict": null,
+      "notes": ""
+    },
+    "second_pair_of_ears": {
+      "verdict": null,
+      "notes": ""
+    },
+    "machine_that_listens": {
+      "verdict": null,
+      "notes": ""
+    }
+  },
+  "overallNotes": "",
+  "voiceConsistency": ""
+}

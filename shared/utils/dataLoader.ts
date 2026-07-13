@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ArtistSchema } from '../schemas/artist';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
 import type {
   GameDataFiles,
   GameArtist,
@@ -14,17 +14,54 @@ import type {
 } from '../types/gameTypes';
 
 // Zod validation schemas
-// Engine-verbs Slice 1 (M4): the ONE structured effect value — authored as
-// `"schedule_event": { "event_id": ..., "defer_weeks": N }`. Every other effect
-// value stays a plain number. The data-lint (tests/engine/data-lint-effect-keys
-// .test.ts) enforces that ONLY the `schedule_event` key carries the object shape
-// (and that the referenced event id exists); zod here validates structure only.
+// Engine-verbs arc (merge-reconciled — mirrors shared/api/contracts.ts
+// ChoiceEffectSchema): three value families are legal per effects record —
+// numbers (classic channels), strings (the two targeting directives +
+// story_flag's shorthand), and objects (the STRUCTURED_EFFECT_KEYS shapes).
+// Deep shapes + WHERE each key is legal are the data-lint test's job; this
+// schema pins the value FAMILY per key.
 export const ScheduleEventEffectSchema = z.object({
   event_id: z.string().min(1),
   defer_weeks: z.number().int().min(0),
 });
-
-const ChoiceEffectSchema = z.record(z.union([z.number(), ScheduleEventEffectSchema])).default({});
+const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
+// Mirrors STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts.
+const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set([
+  'schedule_event', 'story_flag', 'spawn_prospect', 'set_exec_absence',
+  'distribution_efficiency', 'grant_song', 'spawn_release',
+]);
+const ChoiceEffectSchema = z
+  .record(z.union([z.number(), z.string(), z.record(z.any())]))
+  .superRefine((effects, ctx) => {
+    for (const [key, value] of Object.entries(effects)) {
+      if (EFFECT_DIRECTIVE_KEY_SET.has(key)) {
+        if (typeof value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `'${key}' is a targeting directive and must be a string (got ${typeof value})`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'string') {
+        if (key !== 'story_flag') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' may not be a string (only targeting directives and story_flag's shorthand may be strings)`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        if (!STRUCTURED_OBJECT_KEY_SET.has(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' must be a number (only structured engine-verbs keys may carry objects)`,
+            path: [key],
+          });
+        }
+      }
+    }
+  })
+  .default({});
 
 const DialogueChoiceSchema = z.object({
   id: z.string(),
@@ -479,16 +516,19 @@ export class GameDataLoader {
 
     const parsed = schema.parse(data);
 
-    const normalizeEffectKeys = (effects: ChoiceEffect | undefined): ChoiceEffect => {
+    // Engine-verbs arc: the effects record may carry string directives and
+    // structured objects (schema-level); dialogue never legally authors them
+    // (data-lint), but the type must accept the widened record.
+    const normalizeEffectKeys = (effects: Record<string, unknown> | undefined): ChoiceEffect => {
       if (!effects) return {};
       if ('artist_loyalty' in effects && !('artist_energy' in effects)) {
         const { artist_loyalty, ...rest } = effects;
         return {
           ...rest,
           artist_energy: artist_loyalty as unknown as number
-        };
+        } as ChoiceEffect;
       }
-      return effects;
+      return effects as ChoiceEffect;
     };
 
     return {

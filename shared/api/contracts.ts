@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -366,8 +366,8 @@ export function createErrorResponse(error: string, message: string, details?: an
 // Admin Actions Config Schemas
 // ========================================
 
-// Engine-verbs Slice 1 (M4): the one structured effect value — `schedule_event`
-// carries `{ event_id, defer_weeks }` instead of a number. Mirrors
+// Engine-verbs Slice 1 (M4): the schedule_event structured value — carries
+// { event_id, defer_weeks } instead of a number. Mirrors
 // shared/utils/dataLoader.ts ScheduleEventEffectSchema (admin Content Editor
 // round-trips actions.json through this contract, so the shapes must agree).
 export const ScheduleEventEffectSchema = z.object({
@@ -375,9 +375,58 @@ export const ScheduleEventEffectSchema = z.object({
   defer_weeks: z.number().int().min(0),
 });
 
-// Choice effect schema - flexible object with number properties (defaults to empty object);
-// schedule_event is the one structured (object) value allowed.
-export const ChoiceEffectSchema = z.record(z.union([z.number(), ScheduleEventEffectSchema])).default({});
+// Choice effect schema — flexible record (defaults to empty object).
+// Engine-verbs arc (merge-reconciled): three value families are legal —
+//   1. plain numbers (every classic effect channel);
+//   2. strings — the two TARGETING DIRECTIVE keys (target_executive /
+//      target_artist, see EFFECT_TARGETING_DIRECTIVE_KEYS) plus story_flag's
+//      shorthand string form;
+//   3. objects — the STRUCTURED_EFFECT_KEYS shapes (schedule_event, story_flag,
+//      spawn_prospect, set_exec_absence, distribution_efficiency, grant_song,
+//      spawn_release). Deep per-key shape validation is the data-lint test's
+//      job (tests/engine/data-lint-effect-keys.test.ts) + the contentLint
+//      mirror; this contract enforces the value-FAMILY per key so an admin
+//      Content Editor save can never silently strip or corrupt them.
+const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
+// Mirrors STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts
+// (kept local to avoid pulling the engine into every contract consumer; the
+// data-lint suite imports both and will catch drift via authored content).
+const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set([
+  'schedule_event', 'story_flag', 'spawn_prospect', 'set_exec_absence',
+  'distribution_efficiency', 'grant_song', 'spawn_release',
+]);
+export const ChoiceEffectSchema = z
+  .record(z.union([z.number(), z.string(), z.record(z.any())]))
+  .superRefine((effects, ctx) => {
+    for (const [key, value] of Object.entries(effects)) {
+      if (EFFECT_DIRECTIVE_KEY_SET.has(key)) {
+        if (typeof value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `'${key}' is a targeting directive and must be a string (got ${typeof value})`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'string') {
+        if (key !== 'story_flag') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' may not be a string (only targeting directives and story_flag's shorthand may be strings)`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        if (!STRUCTURED_OBJECT_KEY_SET.has(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' must be a number (only structured engine-verbs keys may carry objects)`,
+            path: [key],
+          });
+        }
+      }
+    }
+  })
+  .default({});
 
 // Dialogue choice schema
 export const DialogueChoiceSchema = z.object({

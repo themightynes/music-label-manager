@@ -990,6 +990,16 @@ export class GameEngine {
     // Deferred landing, same shape as a rolled crisis (game-engine.ts
     // checkForEvents mandatory branch): the escalation lands as NEXT week's
     // mandatory crisis card.
+    // TODO(M14 rider): carry the TRIGGERING meeting's resolved artist id in this
+    // payload so a `target_artist: 'predetermined'` choice on the escalation
+    // event hits the artist who caused the wound, not whoever is
+    // highest-popularity at resolution time. Not trivial today: the autonomous
+    // meeting's predetermined artist is resolved INSIDE
+    // ActionProcessor.processRoleMeeting and never returned to
+    // resolveAutonomousExecMeetings, so the candidate is only {roleId, eventId}.
+    // Until then, predetermined directives on escalation events resolve against
+    // the highest-popularity signed artist at resolution time (same resolver as
+    // rolled crises).
     flags.pending_side_event = {
       eventId: event.id,
       week: currentWeek,
@@ -1661,6 +1671,20 @@ export class GameEngine {
       return;
     }
 
+    // Engine-verbs M14 rider: per-CHOICE artist-targeting directive. A choice's
+    // effects block may carry `target_artist: 'predetermined' | 'global'` (a
+    // string DIRECTIVE key, not an effect channel) to override the event-level
+    // `target` field for THAT block: 'predetermined' routes the block's
+    // artist-scoped keys to the event's resolved artist; 'global' forces the
+    // legacy all-signed-artists application. Absent → event-level behavior,
+    // byte-identical for all existing events (no current content authors it).
+    const readTargetArtistDirective = (block: unknown): 'predetermined' | 'global' | undefined => {
+      const v = (block as Record<string, unknown> | undefined)?.target_artist;
+      return v === 'predetermined' || v === 'global' ? v : undefined;
+    };
+    const immediateArtistDirective = readTargetArtistDirective(choice.effects_immediate);
+    const delayedArtistDirective = readTargetArtistDirective(choice.effects_delayed);
+
     // Executive Delegation arc (Tier 1, §8/fork f): predetermined-target support.
     // `event.target === 'predetermined'` resolves artist-scoped effects (artist_mood
     // etc.) against the highest-popularity signed artist, reusing the SAME resolver
@@ -1668,7 +1692,13 @@ export class GameEngine {
     // (undefined) → existing global-application behavior, byte-identical for all 12
     // legacy events. Label-scoped effects (money, reputation, creative_capital, ...)
     // are untouched by targetScope/artistId — they apply the same either way.
-    const isPredetermined = (event as any).target === 'predetermined';
+    // M14: a choice-level 'predetermined' directive also triggers the resolution
+    // (so a globally-targeted event can still route ONE choice's fallout to the
+    // headline artist).
+    const isPredetermined =
+      (event as any).target === 'predetermined' ||
+      immediateArtistDirective === 'predetermined' ||
+      delayedArtistDirective === 'predetermined';
     let targetArtistId: string | undefined;
     if (isPredetermined) {
       // Engine-verbs Slice 1 (M4): a SCHEDULED event may carry a pinned artist
@@ -1703,7 +1733,15 @@ export class GameEngine {
         }
       }
     }
-    const targetScope: string = targetArtistId ? 'predetermined' : 'global';
+    // Event-level default (pre-M14 behavior): predetermined event → resolved
+    // artist; otherwise global. Per-block directives override it.
+    const eventLevelArtistId = (event as any).target === 'predetermined' ? targetArtistId : undefined;
+    const resolveBlockArtistId = (directive: 'predetermined' | 'global' | undefined): string | undefined =>
+      directive === 'global' ? undefined
+        : directive === 'predetermined' ? targetArtistId
+        : eventLevelArtistId;
+    const immediateArtistId = resolveBlockArtistId(immediateArtistDirective);
+    const targetScope: string = immediateArtistId ? 'predetermined' : 'global';
 
     // Apply immediate effects, queued like a weekly action (global scope — side
     // events are label-level, so artist-scoped keys hit every signed artist —
@@ -1728,11 +1766,35 @@ export class GameEngine {
       await new ActionProcessor().applyEffects(
         this.weekContext(summary, dbTransaction),
         immediateToApply,
-        targetArtistId,
+        immediateArtistId,
         targetScope,
         `side_event:${event.id}`,
         choice.id
       );
+    }
+
+    // Engine-verbs SLICE 5 (M13): TARGETED executive_mood from event choices.
+    // applyEffects deliberately drops executive_mood (it has no artist/label
+    // channel), so before this slice the key was DEAD on the whole side/
+    // escalation-event surface. With a target_executive directive sibling the
+    // delta now routes to the named exec(s) — same clamp/persist path as role
+    // meetings (ActionProcessor.applyTargetedExecutiveMood), inside this
+    // advance's transaction. The directive itself is a string, so the numeric
+    // filter above already kept it out of effectsImmediate.
+    {
+      const rawImmediate = (choice.effects_immediate ?? {}) as Record<string, unknown>;
+      if (
+        typeof rawImmediate.executive_mood === 'number' &&
+        typeof rawImmediate.target_executive === 'string'
+      ) {
+        await new ActionProcessor().applyTargetedExecutiveMood(
+          this.weekContext(summary, dbTransaction),
+          rawImmediate.executive_mood,
+          rawImmediate.target_executive,
+          dbTransaction,
+          `side_event:${event.id}/${choice.id}`
+        );
+      }
     }
 
     // Bank delayed effects (deterministic week-based key — never Date.now()).
@@ -1742,6 +1804,10 @@ export class GameEngine {
     }
     if (Object.keys(effectsDelayed).length > 0) {
       const delayedKey = `side-event-${event.id}-${choice.id}-week${currentWeek}`;
+      // M14: the delayed block resolves its OWN artist target (its directive may
+      // differ from the immediate block's). No directive → event-level default,
+      // preserving the pre-M14 shape exactly.
+      const delayedArtistId = resolveBlockArtistId(delayedArtistDirective);
       flags[delayedKey] = {
         triggerWeek: currentWeek + 1,
         effects: effectsDelayed,
@@ -1752,7 +1818,7 @@ export class GameEngine {
         // targeting actually resolved an artist. Legacy/global events omit both keys
         // entirely (rather than writing targetScope: 'global') so their delayed-flag
         // shape stays byte-identical to pre-arc behavior (GM policy, §10.1).
-        ...(targetArtistId ? { artistId: targetArtistId, targetScope } : {}),
+        ...(delayedArtistId ? { artistId: delayedArtistId, targetScope: 'predetermined' } : {}),
       };
     }
 
