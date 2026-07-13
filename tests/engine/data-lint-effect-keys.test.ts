@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
+import { LIVE_EFFECT_KEYS, STRUCTURED_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
 
 /**
  * Exec-meetings-revival PR-8 — THE DATA-LINT GUARD (the forever-guard).
@@ -24,6 +24,47 @@ const CANONICAL_KEYS: ReadonlySet<string> = new Set<string>(
 );
 
 const EFFECT_BLOCK_KEYS = ['effects_immediate', 'effects_delayed'] as const;
+
+/**
+ * Engine-verbs arc — VALUE-SHAPE validation. Canonical keys are no longer all
+ * numeric: STRUCTURED_EFFECT_KEYS carry a string/object value, and each shape is
+ * pinned here so authored content can't ship a value the engine case would
+ * warn-and-drop. Every OTHER canonical key must still be a plain number.
+ */
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === 'object' && !Array.isArray(v);
+
+const STRUCTURED_VALUE_VALIDATORS: Record<string, { shape: string; validate: (v: unknown) => boolean }> = {
+  story_flag: {
+    shape: 'string key, or { key: string, value?: boolean }',
+    validate: (v) =>
+      (typeof v === 'string' && v.trim().length > 0) ||
+      (isPlainObject(v) &&
+        typeof v.key === 'string' && (v.key as string).trim().length > 0 &&
+        (v.value === undefined || typeof v.value === 'boolean')),
+  },
+  spawn_prospect: {
+    shape: '{ name?: string, archetype?: string, quality_hint?: number, popularity_hint?: number, source?: string }',
+    validate: (v) =>
+      isPlainObject(v) &&
+      (['name', 'archetype', 'source'] as const).every((k) => v[k] === undefined || typeof v[k] === 'string') &&
+      (['quality_hint', 'popularity_hint'] as const).every((k) => v[k] === undefined || typeof v[k] === 'number'),
+  },
+  set_exec_absence: {
+    shape: '{ role: string, weeks: number > 0 }',
+    validate: (v) =>
+      isPlainObject(v) &&
+      typeof v.role === 'string' && (v.role as string).trim().length > 0 &&
+      typeof v.weeks === 'number' && (v.weeks as number) > 0,
+  },
+  distribution_efficiency: {
+    shape: '{ amount: number != 0, weeks: number > 0 }',
+    validate: (v) =>
+      isPlainObject(v) &&
+      typeof v.amount === 'number' && (v.amount as number) !== 0 &&
+      typeof v.weeks === 'number' && (v.weeks as number) > 0,
+  },
+};
 
 /** Recursively collect every (filePath, meetingId?, choiceId?, block, key) offender. */
 function collectNonCanonicalKeys(
@@ -50,6 +91,22 @@ function collectNonCanonicalKeys(
           if (!CANONICAL_KEYS.has(key)) {
             offenders.push(
               `${filePath} :: ${crumb.id ?? '?'} :: ${block}.${key} = ${JSON.stringify((eff as any)[key])}`
+            );
+            continue;
+          }
+          // Value-shape check (engine-verbs arc): structured keys must match
+          // their pinned shape; every other canonical key must be a number.
+          const val = (eff as any)[key];
+          const structured = STRUCTURED_VALUE_VALIDATORS[key];
+          if (structured) {
+            if (!structured.validate(val)) {
+              offenders.push(
+                `${filePath} :: ${crumb.id ?? '?'} :: ${block}.${key} = ${JSON.stringify(val)} — INVALID SHAPE (expected ${structured.shape})`
+              );
+            }
+          } else if (typeof val !== 'number') {
+            offenders.push(
+              `${filePath} :: ${crumb.id ?? '?'} :: ${block}.${key} = ${JSON.stringify(val)} — INVALID SHAPE (expected a number)`
             );
           }
         }
@@ -93,5 +150,44 @@ describe('Data lint — every authored effect key is canonical (PR-8 forever-gua
     expect(LIVE_EFFECT_KEYS.has('executive_mood')).toBe(false);
     Array.from(LIVE_EFFECT_KEYS).forEach((k) => expect(CANONICAL_KEYS.has(k)).toBe(true));
     expect(CANONICAL_KEYS.size).toBe(LIVE_EFFECT_KEYS.size + 1);
+  });
+
+  it('every STRUCTURED_EFFECT_KEYS entry is canonical and has a value-shape validator (engine-verbs arc)', () => {
+    // The structured set must stay a subset of the live set (a structured key
+    // that isn't live would be dead), and this lint must know its shape.
+    Array.from(STRUCTURED_EFFECT_KEYS).forEach((k) => {
+      expect(LIVE_EFFECT_KEYS.has(k), `${k} is in STRUCTURED_EFFECT_KEYS but not LIVE_EFFECT_KEYS`).toBe(true);
+      expect(k in STRUCTURED_VALUE_VALIDATORS, `${k} has no value-shape validator in this lint`).toBe(true);
+    });
+    // And the validator map can't describe keys the engine doesn't treat as structured.
+    Object.keys(STRUCTURED_VALUE_VALIDATORS).forEach((k) => {
+      expect(STRUCTURED_EFFECT_KEYS.has(k), `${k} has a validator but is not in STRUCTURED_EFFECT_KEYS`).toBe(true);
+    });
+  });
+
+  it('the structured value validators accept the documented shapes and reject malformed ones', () => {
+    const v = STRUCTURED_VALUE_VALIDATORS;
+    // story_flag
+    expect(v.story_flag.validate('mac_warned_once')).toBe(true);
+    expect(v.story_flag.validate({ key: 'mac_warned_once' })).toBe(true);
+    expect(v.story_flag.validate({ key: 'mac_warned_once', value: false })).toBe(true);
+    expect(v.story_flag.validate('')).toBe(false);
+    expect(v.story_flag.validate(1)).toBe(false);
+    expect(v.story_flag.validate({ value: true })).toBe(false);
+    // spawn_prospect
+    expect(v.spawn_prospect.validate({ source: 'mac_meeting' })).toBe(true);
+    expect(v.spawn_prospect.validate({ archetype: 'Visionary', quality_hint: 70, source: 'event' })).toBe(true);
+    expect(v.spawn_prospect.validate({})).toBe(true); // all fields optional
+    expect(v.spawn_prospect.validate({ quality_hint: 'high' })).toBe(false);
+    expect(v.spawn_prospect.validate('someone')).toBe(false);
+    // set_exec_absence
+    expect(v.set_exec_absence.validate({ role: 'cmo', weeks: 3 })).toBe(true);
+    expect(v.set_exec_absence.validate({ role: 'cmo', weeks: 0 })).toBe(false);
+    expect(v.set_exec_absence.validate({ weeks: 3 })).toBe(false);
+    // distribution_efficiency
+    expect(v.distribution_efficiency.validate({ amount: 0.1, weeks: 6 })).toBe(true);
+    expect(v.distribution_efficiency.validate({ amount: -0.1, weeks: 6 })).toBe(true);
+    expect(v.distribution_efficiency.validate({ amount: 0, weeks: 6 })).toBe(false);
+    expect(v.distribution_efficiency.validate({ amount: 0.1 })).toBe(false);
   });
 });

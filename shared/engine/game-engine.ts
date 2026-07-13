@@ -30,7 +30,7 @@ import { SongGenerationProcessor } from './processors/SongGenerationProcessor';
 import { ProjectStageProcessor } from './processors/ProjectStageProcessor';
 import { ReleaseProcessor } from './processors/ReleaseProcessor';
 import { ArtistStateProcessor } from './processors/ArtistStateProcessor';
-import { ActionProcessor } from './processors/ActionProcessor';
+import { ActionProcessor, STRUCTURED_EFFECT_KEYS } from './processors/ActionProcessor';
 import type { WeekContext } from './processors/types';
 import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meetingSelection';
 import { deriveWeekHappenings } from './weekHappenings';
@@ -1530,9 +1530,12 @@ export class GameEngine {
     // Apply immediate effects, queued like a weekly action (global scope — side
     // events are label-level, so artist-scoped keys hit every signed artist —
     // unless predetermined targeting resolved a single artist above).
-    const effectsImmediate: Record<string, number> = {};
+    // Engine-verbs arc: structured-value keys (STRUCTURED_EFFECT_KEYS) are
+    // admitted alongside numbers — their applyEffects cases handle the
+    // string/object values.
+    const effectsImmediate: Record<string, any> = {};
     for (const [k, v] of Object.entries(choice.effects_immediate || {})) {
-      if (typeof v === 'number') effectsImmediate[k] = v;
+      if (typeof v === 'number' || STRUCTURED_EFFECT_KEYS.has(k)) effectsImmediate[k] = v;
     }
     if (Object.keys(effectsImmediate).length > 0) {
       await new ActionProcessor().applyEffects(
@@ -1546,9 +1549,9 @@ export class GameEngine {
     }
 
     // Bank delayed effects (deterministic week-based key — never Date.now()).
-    const effectsDelayed: Record<string, number> = {};
+    const effectsDelayed: Record<string, any> = {};
     for (const [k, v] of Object.entries(choice.effects_delayed || {})) {
-      if (typeof v === 'number') effectsDelayed[k] = v;
+      if (typeof v === 'number' || STRUCTURED_EFFECT_KEYS.has(k)) effectsDelayed[k] = v;
     }
     if (Object.keys(effectsDelayed).length > 0) {
       const delayedKey = `side-event-${event.id}-${choice.id}-week${currentWeek}`;
