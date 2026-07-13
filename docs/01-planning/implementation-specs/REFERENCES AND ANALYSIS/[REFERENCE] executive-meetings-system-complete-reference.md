@@ -57,7 +57,7 @@ Of the 14, **6 are legacy/base keys** (money, reputation, creative_capital, arti
 
 ## 3. THE COMPLETE MEETING CATALOG (25 meetings, 74 choices)
 
-Script-verified against `data/actions.json` directly (`node` dump of `weekly_actions[]`): **25 meetings, 74 choices** (20 base meetings/59 choices from the revival catalog + Tier 2 PR-2's 5 authored reactive meetings/15 choices). Values below are copied verbatim from the current file — do not hand-edit without re-running the dump. Reactive meetings (marked **[REACTIVE]**) carry a `reactive_trigger` and are event-gated — see §1 — they never appear in the normal weighted rotation, only when their trigger fires.
+Script-verified against `data/actions.json` directly (`node` dump of `weekly_actions[]`): **24 meetings, 72 choices** (19 base meetings/57 choices — the revival catalog minus the `ceo_crisis` → `crisis_fired_dancers` events.json migration (§11.1), plus "Employee Effectiveness"'s new third choice — + Tier 2 PR-2's 5 authored reactive meetings/15 choices; the previous "25 meetings, 74 choices" line predated the ceo_crisis migration). Values below reflect the **v2 stakes-revision content pass (2026-07-12)** — money magnitudes raised so big choices read against a $50–500k treasury, temptations made genuinely EV-attractive, self-serving hints swept (C91), and "Employee Effectiveness" reworked into a trilemma (its CC grants re-capped at +1/+2 per the designer rule, superseding the volatility-economy +5/+9 tuning). Do not hand-edit without re-running the dump. **(hint)** marks a choice carrying `self_serving_hint: true` (the disloyal-band autonomous pick). Reactive meetings (marked **[REACTIVE]**) carry a `reactive_trigger` and are event-gated — see §1 — they never appear in the normal weighted rotation, only when their trigger fires.
 
 Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values are dollars; all others are signed points in their channel's units.
 
@@ -65,18 +65,18 @@ Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values
 
 | Meeting (scope) | Choice | Imm | Del | Strategic identity |
 |---|---|---|---|---|
-| **ceo_priorities** (global) — "We can only push two initiatives next week—what's the focus?" (copy rewritten state-agnostic in meeting-relevance PR-1; `studio_first` label now "Studio-first to polish our next single") | `studio_first` | money −2000 | quality_bonus +5, artist_mood +2 | Buy studio time now, bank quality for the next session |
-| | `content_first` | money −1500, reputation +1 | press_story_flag +1 | Cheapest option; banks a one-shot press angle |
-| | `tour_first` | money −4000 | artist_mood −1, awareness_boost +2 | Priciest; trades mood for market-testing buzz |
-| **ceo_crisis** (predetermined) — "Your biggest artist just fired their last three backup dancers." | `emergency_auditions` | money −8000, reputation +1 | artist_mood +3 | Expensive but clean — no risk, guaranteed mood payoff |
+| **ceo_priorities** (global) — "We can only push two initiatives next week—what's the focus?" (copy rewritten state-agnostic in meeting-relevance PR-1; spends ×3 in the v2 stakes revision, payoffs raised proportionally) | `studio_first` | money −6000 | quality_bonus +6, artist_mood +3 | Buy studio time now, bank quality for the next session |
+| | `content_first` | money −4500, reputation +2 | press_story_flag +1, press_momentum +1 | Cheapest option; banks a press angle plus momentum |
+| | `tour_first` | money −12000 | artist_mood −1, awareness_boost +4 | Priciest; trades mood for market-testing buzz |
+| ~~**ceo_crisis**~~ (MIGRATED to `data/events.json` as `crisis_fired_dancers` — see §11.1; row kept for history) — "Your biggest artist just fired their last three backup dancers." | `emergency_auditions` | money −8000, reputation +1 | artist_mood +3 | Expensive but clean — no risk, guaranteed mood payoff |
 | | `local_talent` | money −3000 | variance_up +1 | Cheap but rolls the dice on the next recording session |
 | | `acoustic_pivot` | creative_capital −1 | artist_mood −2, press_story_flag +1 | Creative-cost pivot; banks a press angle despite the mood hit |
 | **ceo_expansion** (predetermined) — "Three major festivals want your act." | `coachella_prestige` | creative_capital −2, artist_popularity +2, reputation +3 | (none) | All-immediate prestige play, no delayed banking |
-| | `euro_circuit` | money −12000 | reputation +2 | Expensive, slow-burn reputation build |
-| | `profitable_path` | money +25000, reputation −1 | artist_mood −1 | Windfall with a real reputation and mood cost |
-| **ceo_chart_debut_strategy** (global) **[REACTIVE — `chart_debut`]** — "We just put a song on the charts… what does this mean for the label's direction?" (Tier 2 PR-2; register distinct from the CMO's press-blitz framing — this is the label-level read) | `double_down_sound` | money −4000 | reputation +2 | Commits to the sound that just worked |
-| | `reinvest_catalog` | money −5000 | quality_bonus +2 | Funds the next release instead of banking reputation |
-| | `bank_it` | money +2000 | executive_mood −2 | Conservative windfall; costs exec mood |
+| | `euro_circuit` | money −20000 | reputation +3 | Expensive, slow-burn reputation build (raised to CEO scale, v2) |
+| | `profitable_path` | money +25000, reputation −1 | artist_mood −1, reputation −2 | Windfall that now reads as small-time — real delayed reputation cost (v2) |
+| **ceo_chart_debut_strategy** (global) **[REACTIVE — `chart_debut`]** — "We just put a song on the charts… what does this mean for the label's direction?" (Tier 2 PR-2; register distinct from the CMO's press-blitz framing — this is the label-level read) | `double_down_sound` | money −10000 | reputation +3 | Commits to the sound that just worked (CEO-scale spend, v2) |
+| | `reinvest_catalog` | money −12000 | quality_bonus +3 | Funds the next release instead of banking reputation |
+| | `bank_it` | money +4000 | awareness_boost −2, press_momentum −1 | Bigger windfall, but unspent momentum decays — no longer an empty delayed bag (v2) |
 
 ### Head of A&R (role_id `head_ar`)
 
@@ -85,31 +85,32 @@ Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values
 | **ar_single_choice** (user_selected) — "Pick the lead single approach for {artist}." | `lean_commercial` | artist_mood −2 | awareness_boost +4 | Biggest guaranteed awareness payoff, at an artist-mood cost |
 | | `split_test` | money −1000 | quality_bonus +2, variance_up +1 | Small money cost for a modest quality bank plus risk |
 | | `greenlight_weird` | creative_capital −2 | variance_up +1, quality_bonus +4 | Highest quality-bank choice; pairs with variance risk |
-| **ar_discovery** (global) — "I found our next superstar… her parents want creative control." | `accept_terms` | money −15000, creative_capital −3, executive_mood +8 | reputation +2, artist_mood −2 | Priciest, biggest exec-mood payoff, real artist-mood cost |
-| | `negotiate_compromise` | money −8000 | reputation +1, artist_mood +1 | Middle path — cheaper, smaller but positive payoff on both axes |
-| | `pass_on_talent` | reputation −1, executive_mood +2 | (none) | Free of money cost, but a guaranteed reputation hit |
+| **ar_discovery** (global) — "I found our next superstar… her parents want creative control." | `accept_terms` **(hint)** | money −30000, creative_capital −3, executive_mood +8 | reputation +3, artist_popularity +2, variance_up +2 | Mac's pet signing — the superstar is now REAL money and real upside, with variance risk (v2) |
+| | `negotiate_compromise` | money −12000 | reputation +1, artist_mood +1 | Middle path — cheaper, smaller but positive payoff on both axes |
+| | `pass_on_talent` | reputation −1, executive_mood +2 | reputation −2, press_story_flag +1 | Passing now has a delayed cost — the rival announces her (label re-worded, v2) |
 | **ar_genre_shift** (global) — "The charts are moving away from our sound. Push toward what's trending?" | `chase_trends` | artist_mood −3, executive_mood +8 | awareness_boost +2, artist_mood −1 | Biggest awareness gain, biggest cumulative mood cost |
-| | `double_down_rock` | creative_capital −2, money −5000 | award_chances +1 | Only choice banking prestige; costliest immediate spend |
+| | `double_down_rock` **(hint)** | creative_capital −2, money −5000 | award_chances +1 | Only choice banking prestige; hint MOVED here from `chase_trends` (gut-Mac doubles down on his sound; "follow the money" was anti-character — C91, v2) |
 | | `gradual_evolution` | money −2000 | awareness_boost +1, artist_mood +1 | Cheapest, smallest payoff, but net-positive mood |
 | **ar_recent_signing_plan** (global) **[REACTIVE — `recent_signing`]** — "The ink's dry on our newest signing. First week sets the tone." (Tier 2 PR-2) | `studio_immersion` | money −3000 | quality_bonus +3, artist_mood +1 | Immediate studio investment, banks quality |
 | | `relationship_first` | (none) | artist_mood +3 | Free; slow trust-building, biggest mood payoff |
-| | `market_test` | money −1500 | awareness_boost +2, variance_up +1 | Small spend on an early awareness/variance play |
+| | `market_test` **(hint)** | money −1500 | awareness_boost +2, variance_up +1 | Small spend on an early awareness/variance play (C91 hint sweep, v2) |
 
 ### CCO (role_id `cco`)
 
 | Meeting (scope) | Choice | Imm | Del | Strategic identity |
 |---|---|---|---|---|
-| **cco_timeline** (global) — "Timeline is tight—what's the call?" | `rush` | money +1000, executive_mood −2 | quality_bonus **−5** | Trap-fixed: the windfall now costs real quality |
-| | `standard` | (none) | (none) | True no-op baseline |
+| **cco_timeline** (global) — "Timeline is tight—what's the call?" | `rush` | money +1000, executive_mood −2 | quality_bonus **−5**, artist_mood **−2** | Trap-fixed: the windfall costs quality AND crunches the artist (v2) |
+| | `standard` | (none) | quality_bonus +1 | No longer a literal no-op — keeping the schedule has modest real value (v2) |
 | | `add_revision` | money −1500 | quality_bonus +6, variance_up +1 | Biggest quality bank in the catalog, at a real cost |
 | **cco_creative_clash** (user_selected) — "{artist} wants to keep everything raw and unpolished; I want a more produced sound." | `artist_vision` | (none) | variance_up +1, artist_mood +2 | Free immediate cost; banks risk and artist goodwill |
-| | `producer_expertise` | money −3000, artist_mood −2, executive_mood +8 | quality_bonus +5 | Priciest on mood, but a clean quality payoff |
+| | `producer_expertise` **(hint)** | money −3000, artist_mood −2, executive_mood +8 | quality_bonus +5 | Priciest on mood, but a clean quality payoff (hint locks canon: Dante the polished perfectionist — C91, v2) |
 | | `hybrid_approach` | money −1500 | quality_bonus +1, artist_mood +1 | Cheap compromise; smaller payoff on both axes |
 | **cco_budget_crisis** (global) — "We're over budget and the vocals still aren't right." | `demand_more_money` | money −10000, reputation +1 | quality_bonus +4 | Most expensive, but reputation AND quality both gain |
 | | `creative_solution` | creative_capital −1 | quality_bonus +2 | Cheapest, smaller quality payoff |
 | | `release_as_is` | money +2000, executive_mood −2 | quality_bonus **−2**, artist_mood +2 | Trap-fixed: windfall costs quality, though artist mood improves |
-| **action_1760807005433** "Employee Effectiveness" (user_selected, custom-authored) | `quick_one` | artist_mood +10, money −3500 | creative_capital +5 | Cheaper, faster, smaller creative payoff (volatility-economy PR-4 raised the CC bank 3 → 5) |
-| | `take_time` | artist_mood +10, money −10000 | artist_mood +10, creative_capital +9 | Pricier; doubles down on mood AND creative capital (volatility-economy PR-4 raised the CC bank 6 → 9) |
+| **action_1760807005433** "Employee Effectiveness" (user_selected, custom-authored; reworked into a trilemma with CC re-capped at +1/+2 — v2) | `quick_one` | artist_mood +4, money −2000 | creative_capital +1 | Cheap, fast, small creative payoff |
+| | `take_time` | artist_mood +6, money −8000 | creative_capital +2, quality_bonus +2 | Pricier full session; mood, CC and a quality bank |
+| | `method_retreat` **(hint)** | artist_mood −2, money −12000 | creative_capital +2, quality_bonus +3, variance_up +1 | Dante's vice (NEW, v2): indulgent experimental retreat — he's developing his method, not your artist |
 | **cco_mood_crater_intervention** (global) **[REACTIVE — `mood_crater`]** — "They're cratering — burned out, checked out, or both." (Tier 2 PR-2) | `clear_the_schedule` | money −3000 | artist_mood +6 | Biggest guaranteed mood recovery |
 | | `creative_reset` | creative_capital −2, money −1500 | artist_mood +4, quality_bonus +2 | Costlier; pairs mood recovery with a quality bank |
 | | `push_through` | executive_mood −2 | artist_mood −3 | Free of money cost; makes the crisis worse |
@@ -121,18 +122,18 @@ Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values
 | **cmo_pr_angle** (global) — "Choose the story angle for this cycle." | `safe` | money −1000 | press_momentum +1 | Cheapest, smallest guaranteed press buzz |
 | | `spicy` | money −1500 | variance_up +1, rep_swing +1 | Costlier; gambles reputation for a shot at upside |
 | | `community` | money −800 | reputation +1, artist_popularity +1 | Cheapest of all three; small guaranteed dual payoff |
-| **cmo_scandal** (global) — "Paparazzi caught your artist leaving a rival's studio at 3am." | `damage_control` | money −5000, reputation −1 | press_momentum −1 | Costly and still banks negative press momentum |
-| | `spin_collaboration` | creative_capital −1, executive_mood +8 | press_momentum +2, artist_mood −1 | Only choice banking positive press momentum, at an artist-mood cost |
-| | `ignore_let_fade` | reputation −2 | artist_mood +2 | Free of money/CC cost; biggest immediate reputation hit |
+| **cmo_scandal** (global) — "Paparazzi caught your artist leaving a rival's studio at 3am." (scandal given teeth, v2) | `damage_control` | money −18000, reputation −1 | press_momentum −1 | Crisis PR is expensive — protective but a real spend now |
+| | `spin_collaboration` **(hint)** | creative_capital −1, executive_mood +8 | press_momentum +2, artist_mood −1, rep_swing +2 | Press upside kept, but the spin can backfire (delayed rep gamble, v2) |
+| | `ignore_let_fade` | reputation −2 | reputation −4, artist_mood −4, press_story_flag +1 | Ignoring a scandal now genuinely hurts — it becomes the story (v2) |
 | **cmo_awards** (global) — "Award season is coming. Campaign or save money?" | `full_campaign` | money −20000, executive_mood +8 | award_chances +5 | Priciest, biggest prestige bank in the catalog |
 | | `grassroots_push` | money −5000, creative_capital −1 | award_chances +3 | Mid-cost, mid-payoff prestige |
 | | `skip_awards` | money +3000, executive_mood −2 | award_chances **−1**, awareness_boost +1 | Trap-fixed: windfall now costs real prestige, though it banks some buzz |
 | **cmo_viral** (global) — "A fan remix is going viral on TikTok." | `embrace_remix` | money −2000 | awareness_boost +3, artist_popularity +1 | Cheapest, dual positive payoff |
 | | `official_version` | money −8000 | awareness_boost +1, press_story_flag +1 | Priciest; smaller awareness but banks a press flag too |
-| | `copyright_strike` | (none) | awareness_boost **−2**, artist_popularity **−1** | Free immediate cost, but a real double negative payoff |
+| | `copyright_strike` | (none) | awareness_boost **−2**, artist_popularity **−1**, reputation **−2**, artist_mood **−2** | Free at the till, but it now costs what it claims — fans notice, the artist hates it (v2) |
 | **cmo_platform_exclusive** (global) — "Spotify wants an exclusive window; Apple will match." | `spotify_exclusive` | money +15000 | awareness_boost +2 | Windfall AND positive awareness — the milder side of the trilemma |
 | | `apple_exclusive` | money +18000 | awareness_boost **−1** | Trap-fixed: the bigger windfall now costs real reach |
-| | `simultaneous_release` | (none) | awareness_boost +1, reputation +1 | No windfall, but the only choice banking both awareness and reputation |
+| | `simultaneous_release` **(hint)** | money −15000 | awareness_boost +1, reputation +2, press_story_flag +1 | Reworked (v2, C91): decline both and throw a label launch spectacular — Sam's overspend archetype finally has purchase (she throws the party and is the story) |
 | **cmo_chart_debut_press** (global) **[REACTIVE — `chart_debut`]** — "We're on the board — the charting debut is real leverage. How hard do we push the press cycle?" (Tier 2 PR-2; press-blitz register, distinct from the CEO's label-level framing) | `full_blitz` | money −6000 | press_momentum +2, awareness_boost +2 | Priciest, biggest combined press/awareness payoff |
 | | `targeted_placements` | money −2500 | press_momentum +1, reputation +1 | Mid-cost; smaller press gain, adds reputation |
 | | `let_it_breathe` | (none) | press_story_flag +1 | Free; banks a press flag without spend |
@@ -144,21 +145,21 @@ Legend: **Imm** = `effects_immediate`, **Del** = `effects_delayed`. Money values
 | **distribution_pitch** (global) — "Which track and context for editorial pitch?" | `obvious_single` | (none) | awareness_boost +2 | Free, safe, modest guaranteed awareness |
 | | `unexpected_cut` | creative_capital −1 | variance_up +1, press_story_flag +1 | Only choice banking a press flag; pairs with variance risk |
 | | `hold` | (none) | award_chances +1 | Free; re-authored (PR-8) to bank prestige instead of a dead key — a genuine third option distinct from `obvious_single` |
-| **distribution_politics** (global) — "The curator wants a 'favor' before considering our track." | `play_the_game` | money −10000, reputation −1, executive_mood +8 | awareness_boost +4 | Biggest guaranteed awareness gain, at real cost |
+| **distribution_politics** (global) — "The curator wants a 'favor' before considering our track." | `play_the_game` | money −10000, reputation −1, executive_mood +8 | awareness_boost +7 | Payola made genuinely tempting (v2): biggest guaranteed awareness gain in the catalog, at real cost |
 | | `alternative_playlists` | creative_capital −1 | awareness_boost +1 | Cheap, modest, clean payoff |
 | | `report_behavior` | executive_mood +2 | award_chances +2, rep_swing +2 | No money cost; banks prestige and gambles reputation upward |
-| **distribution_algorithm** (global) — "I found a loophole… ethically gray." | `exploit_loophole` | money −5000 | awareness_boost +3, variance_up +2 | Biggest awareness gain, biggest variance risk pairing |
+| **distribution_algorithm** (global) — "I found a loophole… ethically gray." | `exploit_loophole` | money −5000 | awareness_boost +6, variance_up +2, rep_swing +2 | Loophole made genuinely tempting (v2): big awareness with variance AND a reputation gamble |
 | | `modified_approach` | money −2000 | awareness_boost +2 | Cheaper, clean, smaller payoff |
 | | `organic_only` | executive_mood −2 | awareness_boost +2, artist_mood +1 | No money cost; same awareness as modified_approach plus artist mood, but costs exec mood |
 | **distribution_tour_scale** (global) — "Mini-tour scale choice?" | `small_rooms` | money −5000 | money +2000 | Only choice with a delayed money RETURN — smallest, safest bet |
 | | `mid_rooms` | money −8000 | award_chances +1, variance_up +1 | Mid-cost; banks prestige with variance risk |
-| | `big_bet` | money −12000 | award_chances +2, rep_swing +1 | Priciest; biggest prestige bank plus a reputation gamble |
-| **distribution_supply** (global) — "Vinyl shortage; pay 3x for allocation?" | `pay_premium` | money −12000 | awareness_boost +1, reputation +1 | Priciest; only choice with a clean dual positive payoff |
+| | `big_bet` | money −12000 | award_chances +2, artist_popularity +2, rep_swing +1, variance_up +1 | Priciest; big rooms now carry real popularity upside plus money-swing variance (v2) |
+| **distribution_supply** (global) — "Vinyl shortage; pay 3x for allocation?" | `pay_premium` | money −12000 | awareness_boost +3, reputation +2 | The premium is now a real prestige play (v2) — biggest clean dual payoff |
 | | `digital_focus` | money +3000 | artist_popularity **−2** | Trap-fixed: the windfall now costs real artist popularity |
 | | `delayed_vinyl` | (none) | award_chances +1, artist_mood −1 | Free immediate cost; small prestige gain against a mood cost |
 | **distribution_release_out_numbers** (global) **[REACTIVE — `release_out`]** — "First week numbers are in on the release. Do we chase the trend line or hold steady?" (Tier 2 PR-2; `requires: music_exists`, not `release_planned` — a release that just went OUT is no longer `planned`, so the OR-alternative tag in the data-lint mapping is the correct one here) | `push_ad_spend` | money −4000 | awareness_boost +3 | Priciest, biggest awareness chase |
 | | `pitch_follow_up` | money −1500 | awareness_boost +1, press_story_flag +1 | Mid-cost; banks a press flag too |
-| | `hold_steady` | (none) | award_chances +1 | Free; banks prestige instead of chasing awareness |
+| | `hold_steady` **(hint)** | (none) | award_chances +1 | Free; banks prestige instead of chasing awareness (C91 hint sweep, v2 — Pat's upside-capping vice) |
 
 ---
 
@@ -286,7 +287,7 @@ Source of design intent for all of the below: `docs/01-planning/exec_team_contex
 | `cmo` (Sam) | Flashy overspend that makes her the story | `10×moneySpend + awareness_boost` |
 | `head_distribution` (Pat) | Conservative, upside-capping, guaranteed value | `(gambleMagnitude>0 ? -1000 : 0) + netMoney/1000 + awareness_boost` (hard-avoids any gamble) |
 
-`gambleMagnitude` = `variance_up + rep_swing` summed across a choice's immediate+delayed effects. **`self_serving_hint: true`** (additive, optional field on a choice in `data/actions.json`) is an escape hatch that forces a choice as THE self-serving pick regardless of the formula (score = `+Infinity`) — used where the heuristic alone would tie or misfire. **Two choices are tagged today**: `cmo_scandal.spin_collaboration` and `ar_genre_shift.chase_trends`. A data-lint test asserts every non-CEO exec's pool yields exactly one well-defined self-serving argmax under the disloyal band (no undetected ties).
+`gambleMagnitude` = `variance_up + rep_swing` summed across a choice's immediate+delayed effects. **`self_serving_hint: true`** (additive, optional field on a choice in `data/actions.json`) is an escape hatch that forces a choice as THE self-serving pick regardless of the formula (score = `+Infinity`) — used where the heuristic alone would tie or misfire. **Eight choices are tagged as of the v2 stakes revision (2026-07-12, C91 sweep)**: `cmo_scandal.spin_collaboration`, `ar_genre_shift.double_down_rock` (MOVED from `chase_trends` — "follow the money" was anti-character for gut-Mac), `ar_discovery.accept_terms`, `ar_recent_signing_plan.market_test`, `cco_creative_clash.producer_expertise`, `action_1760807005433.method_retreat` (new trilemma third choice), `cmo_platform_exclusive.simultaneous_release` (reworked into Sam's launch-spectacular overspend), and `distribution_release_out_numbers.hold_steady`. A data-lint test asserts every non-CEO exec's pool yields exactly one well-defined self-serving argmax under the disloyal band (no undetected ties).
 
 **§10.4 — AUTO vs. neglect (§4.5 of the plan, the central trade this arc creates):**
 
@@ -308,6 +309,6 @@ Source of design intent for all of the below: `docs/01-planning/exec_team_contex
 
 **Emission — `applyEscalation`** (`shared/engine/game-engine.ts:935+`) runs as a SEPARATE step, later in `advanceWeek`, AFTER `processPendingSideEventResolution` (so a genuinely-resolved prior-week crisis is cleared first) and BEFORE `checkForEvents` (this week's weighted roll). This ordering is load-bearing: escalation runs first, so if it fires it wins any same-week collision by construction — `checkForEvents`'s own "already pending" check then discards that week's roll, matching the existing one-crisis-at-a-time rule. If a crisis is somehow ALREADY pending when `applyEscalation` runs (defensive — shouldn't happen given the ordering), the escalation candidate is silently discarded. No RNG draw — escalation is roll-free, zero engine-stream impact.
 
-**Payload — `ESCALATION_EVENT_BY_ROLE`** (`shared/utils/executiveDelegation.ts`) maps each core-four role to one escalation-only event id in `data/events.json`: `head_ar → escalation_ar_botched_signing`, `cmo → escalation_cmo_narrative_lost`, `cco → escalation_cco_artist_walkout`, `head_distribution → escalation_dist_deal_collapsed`. `ceo` is intentionally absent — the CEO lane genuinely lapses and is never a candidate for autonomous resolution. Every event with an id starting `escalation_` carries `escalation_only: true` (and vice versa — no non-escalation event may carry the flag), enforced by `tests/engine/data-lint-escalation-events.test.ts`. **`escalation_only: true` events are excluded from the weekly weighted side-event roll** (`checkForEvents` filters `getAllEvents()` before handing the pool to `selectSideEvent`) — they can only ever enter play via this injection path, event-gated exactly like Tier 2's reactive meetings. Content authoring of these four events' prose is deferred to a content session (structural spec + stub events only shipped in the build arc — see the plan doc §5.3/§13).
+**Payload — `ESCALATION_EVENT_BY_ROLE`** (`shared/utils/executiveDelegation.ts`) maps each core-four role to one escalation-only event id in `data/events.json`: `head_ar → escalation_ar_botched_signing`, `cmo → escalation_cmo_narrative_lost`, `cco → escalation_cco_artist_walkout`, `head_distribution → escalation_dist_deal_collapsed`. `ceo` is intentionally absent — the CEO lane genuinely lapses and is never a candidate for autonomous resolution. Every event with an id starting `escalation_` carries `escalation_only: true` (and vice versa — no non-escalation event may carry the flag), enforced by `tests/engine/data-lint-escalation-events.test.ts`. **`escalation_only: true` events are excluded from the weekly weighted side-event roll** (`checkForEvents` filters `getAllEvents()` before handing the pool to `selectSideEvent`) — they can only ever enter play via this injection path, event-gated exactly like Tier 2's reactive meetings. Content authoring of these four events' prose landed in the **v2 stakes-revision content pass (2026-07-12)**: each stub prompt was replaced with authored past-tense, exec-voiced fallout prose that names the specific neglected beat (each archetype has exactly one urgent meeting today — `ar_recent_signing_plan`, `cmo_chart_debut_press`, `cco_mood_crater_intervention`, `distribution_release_out_numbers`); choice ids/effects and the `escalation_only: true` flags were kept as-is.
 
 **§11.1 — the `ceo_crisis` migration (Tier 1 structural, fork f → keep predetermined targeting).** Under the three-lane rule, the `ceo_crisis` meeting ("your biggest artist just fired their last three backup dancers") was miscategorized — an *obligation*, not a strategic *opportunity*, so it had no business sitting in the CEO lane's genuinely-lapsing semantics. It migrated OUT of `data/actions.json`'s CEO pool and INTO `data/events.json` as `crisis_fired_dancers` (`category: artist_personal`), carrying its 3 original choices unchanged. **Nes decided (2026-07-12) to preserve its predetermined highest-popularity-artist targeting** rather than let it apply globally like the other 12 legacy events — the side-event resolver gained an optional per-event `target: "predetermined"` mode (absent → existing global behavior, fully backward-compatible) that resolves effects against `selectHighestPopularityArtist`. This event has **no `requires`/precondition gating** (side events don't support that mechanism, §11.2/C90) — it is guarded ad-hoc by the predetermined-target resolver simply having no artist to target when the roster has no signed artists, which the engine treats as a sit-out. A characterization test pins that `crisis_fired_dancers` hits exactly one artist and a legacy (non-predetermined) event still applies globally. Separately, `ceo_chart_debut_strategy`'s `bank_it` choice lost its `executive_mood -2` inaction penalty — CEO has no exec row, so that key was already dead on arrival (`ActionProcessor.ts:330` gates the exec fetch on `roleId !== 'ceo'`); removing it is data-cleanliness, not a mechanical change, and the dominance lint stayed green after the edit.

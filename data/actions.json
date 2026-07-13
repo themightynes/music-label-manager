@@ -19,33 +19,34 @@
           "id": "studio_first",
           "label": "Studio-first to polish our next single",
           "effects_immediate": {
-            "money": -2000
+            "money": -6000
           },
           "effects_delayed": {
-            "quality_bonus": 5,
-            "artist_mood": 2
+            "quality_bonus": 6,
+            "artist_mood": 3
           }
         },
         {
           "id": "content_first",
           "label": "Content-first to grow socials",
           "effects_immediate": {
-            "money": -1500,
-            "reputation": 1
+            "money": -4500,
+            "reputation": 2
           },
           "effects_delayed": {
-            "press_story_flag": 1
+            "press_story_flag": 1,
+            "press_momentum": 1
           }
         },
         {
           "id": "tour_first",
           "label": "Mini-tour to test markets",
           "effects_immediate": {
-            "money": -4000
+            "money": -12000
           },
           "effects_delayed": {
             "artist_mood": -1,
-            "awareness_boost": 2
+            "awareness_boost": 4
           }
         }
       ]
@@ -77,10 +78,10 @@
           "id": "euro_circuit",
           "label": "European circuit - build international",
           "effects_immediate": {
-            "money": -12000
+            "money": -20000
           },
           "effects_delayed": {
-            "reputation": 2
+            "reputation": 3
           }
         },
         {
@@ -91,7 +92,8 @@
             "reputation": -1
           },
           "effects_delayed": {
-            "artist_mood": -1
+            "artist_mood": -1,
+            "reputation": -2
           }
         }
       ]
@@ -159,21 +161,23 @@
         {
           "id": "accept_terms",
           "label": "Accept their terms - worth the risk",
+          "self_serving_hint": true,
           "effects_immediate": {
-            "money": -15000,
+            "money": -30000,
             "creative_capital": -3,
             "executive_mood": 8
           },
           "effects_delayed": {
-            "reputation": 2,
-            "artist_mood": -2
+            "reputation": 3,
+            "artist_popularity": 2,
+            "variance_up": 2
           }
         },
         {
           "id": "negotiate_compromise",
           "label": "Negotiate a compromise deal",
           "effects_immediate": {
-            "money": -8000
+            "money": -12000
           },
           "effects_delayed": {
             "reputation": 1,
@@ -182,12 +186,15 @@
         },
         {
           "id": "pass_on_talent",
-          "label": "Pass - too many red flags",
+          "label": "Pass - and watch a rival announce her next month",
           "effects_immediate": {
             "reputation": -1,
             "executive_mood": 2
           },
-          "effects_delayed": {}
+          "effects_delayed": {
+            "reputation": -2,
+            "press_story_flag": 1
+          }
         }
       ]
     },
@@ -207,7 +214,6 @@
         {
           "id": "chase_trends",
           "label": "Follow the money - chase the trend",
-          "self_serving_hint": true,
           "effects_immediate": {
             "artist_mood": -3,
             "executive_mood": 8
@@ -220,6 +226,7 @@
         {
           "id": "double_down_rock",
           "label": "Double down - our sound will come back",
+          "self_serving_hint": true,
           "effects_immediate": {
             "creative_capital": -2,
             "money": -5000
@@ -262,14 +269,17 @@
             "executive_mood": -2
           },
           "effects_delayed": {
-            "quality_bonus": -5
+            "quality_bonus": -5,
+            "artist_mood": -2
           }
         },
         {
           "id": "standard",
           "label": "Standard schedule",
           "effects_immediate": {},
-          "effects_delayed": {}
+          "effects_delayed": {
+            "quality_bonus": 1
+          }
         },
         {
           "id": "add_revision",
@@ -310,6 +320,7 @@
         {
           "id": "producer_expertise",
           "label": "Insist on a polished, professional sound",
+          "self_serving_hint": true,
           "effects_immediate": {
             "money": -3000,
             "artist_mood": -2,
@@ -443,7 +454,7 @@
           "id": "damage_control",
           "label": "Full damage control - deny everything",
           "effects_immediate": {
-            "money": -5000,
+            "money": -18000,
             "reputation": -1
           },
           "effects_delayed": {
@@ -460,7 +471,8 @@
           },
           "effects_delayed": {
             "press_momentum": 2,
-            "artist_mood": -1
+            "artist_mood": -1,
+            "rep_swing": 2
           }
         },
         {
@@ -470,7 +482,9 @@
             "reputation": -2
           },
           "effects_delayed": {
-            "artist_mood": 2
+            "reputation": -4,
+            "artist_mood": -4,
+            "press_story_flag": 1
           }
         }
       ]
@@ -565,7 +579,9 @@
           "effects_immediate": {},
           "effects_delayed": {
             "awareness_boost": -2,
-            "artist_popularity": -1
+            "artist_popularity": -1,
+            "reputation": -2,
+            "artist_mood": -2
           }
         }
       ]
@@ -605,11 +621,15 @@
         },
         {
           "id": "simultaneous_release",
-          "label": "Decline both - simultaneous release",
-          "effects_immediate": {},
+          "label": "Decline both - drop everywhere and throw our own launch spectacular",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "money": -15000
+          },
           "effects_delayed": {
             "awareness_boost": 1,
-            "reputation": 1
+            "reputation": 2,
+            "press_story_flag": 1
           }
         }
       ]
@@ -678,7 +698,7 @@
             "executive_mood": 8
           },
           "effects_delayed": {
-            "awareness_boost": 4
+            "awareness_boost": 7
           }
         },
         {
@@ -724,8 +744,9 @@
             "money": -5000
           },
           "effects_delayed": {
-            "awareness_boost": 3,
-            "variance_up": 2
+            "awareness_boost": 6,
+            "variance_up": 2,
+            "rep_swing": 2
           }
         },
         {
@@ -793,7 +814,9 @@
           },
           "effects_delayed": {
             "award_chances": 2,
-            "rep_swing": 1
+            "artist_popularity": 2,
+            "rep_swing": 1,
+            "variance_up": 1
           }
         }
       ]
@@ -818,8 +841,8 @@
             "money": -12000
           },
           "effects_delayed": {
-            "awareness_boost": 1,
-            "reputation": 1
+            "awareness_boost": 3,
+            "reputation": 2
           }
         },
         {
@@ -879,6 +902,7 @@
         {
           "id": "market_test",
           "label": "Market test - a small teaser drop to gauge reaction",
+          "self_serving_hint": true,
           "effects_immediate": {
             "money": -1500
           },
@@ -953,29 +977,32 @@
           "id": "double_down_sound",
           "label": "Double down - this is our lane now, build around it",
           "effects_immediate": {
-            "money": -4000
+            "money": -10000
           },
           "effects_delayed": {
-            "reputation": 2
+            "reputation": 3
           }
         },
         {
           "id": "reinvest_catalog",
           "label": "Reinvest in the catalog - fund what comes next",
           "effects_immediate": {
-            "money": -5000
+            "money": -12000
           },
           "effects_delayed": {
-            "quality_bonus": 2
+            "quality_bonus": 3
           }
         },
         {
           "id": "bank_it",
           "label": "Bank it - stay conservative, protect the win",
           "effects_immediate": {
-            "money": 2000
+            "money": 4000
           },
-          "effects_delayed": {}
+          "effects_delayed": {
+            "awareness_boost": -2,
+            "press_momentum": -1
+          }
         }
       ]
     },
@@ -1065,6 +1092,7 @@
         {
           "id": "hold_steady",
           "label": "Hold steady - let organic numbers set the baseline",
+          "self_serving_hint": true,
           "effects_immediate": {},
           "effects_delayed": {
             "award_chances": 1
@@ -1077,7 +1105,7 @@
       "name": "Employee Effectiveness",
       "type": "role_meeting",
       "icon": "fas fa-bullhorn",
-      "description": "",
+      "description": "Dante's team pitches a creative-development session for one of your artists - the only question is how much of their week you hand over.",
       "role_id": "cco",
       "meeting_id": "creative_recording",
       "category": "production",
@@ -1089,23 +1117,37 @@
           "id": "quick_one",
           "label": "They are on a deadline, but catch them quick!",
           "effects_immediate": {
-            "artist_mood": 10,
-            "money": -3500
+            "artist_mood": 4,
+            "money": -2000
           },
           "effects_delayed": {
-            "creative_capital": 5
+            "creative_capital": 1
           }
         },
         {
           "id": "take_time",
-          "label": "They aren't going to the studio for a while. I think they have time for you. Plus - the more time you spend, the more you learn!",
+          "label": "They aren't going to the studio for a while. Give them the full session - the more time you spend, the more you learn.",
           "effects_immediate": {
-            "artist_mood": 10,
-            "money": -10000
+            "artist_mood": 6,
+            "money": -8000
           },
           "effects_delayed": {
-            "artist_mood": 10,
-            "creative_capital": 9
+            "creative_capital": 2,
+            "quality_bonus": 2
+          }
+        },
+        {
+          "id": "method_retreat",
+          "label": "Or clear the whole week for my experimental retreat - I've been refining the method, and {artistName} is the perfect test case.",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "artist_mood": -2,
+            "money": -12000
+          },
+          "effects_delayed": {
+            "creative_capital": 2,
+            "quality_bonus": 3,
+            "variance_up": 1
           }
         }
       ],
