@@ -1696,6 +1696,18 @@ export class GameEngine {
     const hitSingleBonus = typeof reputationSystem.hit_single_bonus === 'number' ? reputationSystem.hit_single_bonus : 5;
     const numberOneBonus = typeof reputationSystem.number_one_bonus === 'number' ? reputationSystem.number_one_bonus : 10;
 
+    // PENDING-DECISIONS #9 (2026-07-12): milestone-sourced Creative Capital.
+    // CC's only positive source was a single cco meeting choice; chart milestones
+    // now grant a small CC trickle, riding the SAME once-per-song flags as the
+    // reputation bonuses above. Knobs: progression.json reputation_system
+    // .creative_capital_milestones { cc_top10_bonus (1), cc_number_one_bonus (2) }.
+    // NO-STACK RULE: when a song's first top-10 entry and first #1 land the same
+    // week (a #1 debut), the grants do NOT stack — the higher of the two applies
+    // (unlike the reputation bonuses, which intentionally stack both).
+    const ccMilestoneConfig = reputationSystem.creative_capital_milestones || {};
+    const ccTop10Bonus = typeof ccMilestoneConfig.cc_top10_bonus === 'number' ? ccMilestoneConfig.cc_top10_bonus : 1;
+    const ccNumberOneBonus = typeof ccMilestoneConfig.cc_number_one_bonus === 'number' ? ccMilestoneConfig.cc_number_one_bonus : 2;
+
     const flags = (this.gameState.flags || {}) as Record<string, any>;
     const milestones = { ...(flags.chartMilestones || {}) } as Record<string, { hitTop10?: boolean; hitNumberOne?: boolean }>;
     let milestonesChanged = false;
@@ -1705,24 +1717,32 @@ export class GameEngine {
 
       const songId = entry.songId;
       const record = milestones[songId] || {};
+      const firstTop10 = entry.position <= 10 && !record.hitTop10;
+      const firstNumberOne = entry.position === 1 && !record.hitNumberOne;
       let bonus = 0;
       const labels: string[] = [];
 
-      if (entry.position <= 10 && !record.hitTop10) {
+      if (firstTop10) {
         bonus += hitSingleBonus;
         labels.push(`Top 10 debut (+${hitSingleBonus} reputation)`);
         record.hitTop10 = true;
       }
-      if (entry.position === 1 && !record.hitNumberOne) {
+      if (firstNumberOne) {
         bonus += numberOneBonus;
         labels.push(`No. 1 (+${numberOneBonus} reputation)`);
         record.hitNumberOne = true;
       }
 
-      if (bonus > 0) {
+      if (firstTop10 || firstNumberOne) {
+        // Persist the once-fired flags whenever a milestone fires — moved out of
+        // the `bonus > 0` gate so a zeroed reputation knob can't let the CC grant
+        // below re-fire weekly (default config behavior is identical: bonus > 0
+        // exactly when a milestone first fires).
         milestones[songId] = record;
         milestonesChanged = true;
+      }
 
+      if (bonus > 0) {
         // Volatility-economy slice 3: throttle chart-milestone reputation (a
         // "release success" gain) through the shared global gain-scaling helper.
         const scaledBonus = scaleReputationGain(bonus, reputationSystem);
@@ -1736,6 +1756,30 @@ export class GameEngine {
           amount: scaledBonus
         });
         console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${scaledBonus} reputation (raw ${bonus}) (${labels.join(', ')})`);
+      }
+
+      // Milestone-sourced Creative Capital (PENDING-DECISIONS #9). No-stack:
+      // a same-week top-10 + #1 (a #1 debut) grants the HIGHER of the two knobs,
+      // never the sum. Clamped ≥ 0 mirroring ActionProcessor's creative_capital
+      // handling (there is no upper CC cap anywhere in the engine — audited
+      // 2026-07-12: ActionProcessor.applyEffects only floors at 0).
+      let ccGrant = 0;
+      if (firstTop10 && firstNumberOne) {
+        ccGrant = Math.max(ccTop10Bonus, ccNumberOneBonus);
+      } else if (firstNumberOne) {
+        ccGrant = ccNumberOneBonus;
+      } else if (firstTop10) {
+        ccGrant = ccTop10Bonus;
+      }
+
+      if (ccGrant > 0) {
+        this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + ccGrant);
+        summary.changes.push({
+          type: 'creative_capital',
+          description: `Creative spark: ${entry.songTitle}'s chart run inspires the label (+${ccGrant} creative capital)`,
+          amount: ccGrant
+        });
+        console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${ccGrant} creative capital`);
       }
     }
 
