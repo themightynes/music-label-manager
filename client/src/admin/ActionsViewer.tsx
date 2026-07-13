@@ -45,7 +45,7 @@ import {
   type DialogueChoiceContract,
 } from '@shared/api/contracts';
 import { EFFECT_CHANNEL_DESCRIPTIONS } from '@shared/engine/processors/ActionProcessor';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, type RelevanceTag, type HappeningType } from '@shared/types/gameTypes';
+import { RELEVANCE_TAGS, HAPPENING_TYPES, type RelevanceTag, type RequiresEntry, type HappeningType } from '@shared/types/gameTypes';
 import { CANONICAL_EFFECT_KEYS, lintMeetings, type LintIssue } from '@/admin/contentLint';
 import { slugifyId, isIdAvailable, orderWithNewestFirst } from '@/admin/utils';
 
@@ -65,7 +65,27 @@ const RELEVANCE_TAG_LABELS: Record<RelevanceTag, string> = {
   release_out: 'A release went out this week',
   recording_project_active: 'A recording project is active',
   tour_active: 'A tour is currently active',
+  // M16 per-artist-state tags (thresholds: data/balance/progression.json
+  // weekly_meeting_selection.artist_state_thresholds).
+  any_artist_low_mood: 'An artist has low mood',
+  any_artist_high_popularity: 'An artist is highly popular',
+  any_artist_low_energy: 'An artist is running on low energy',
 };
+
+/**
+ * M16: human-readable label for a non-tag `requires` entry (threshold/flag
+ * object). These entries are authored in JSON (no checkbox UI yet) — the
+ * editor PRESERVES them verbatim and the view mode renders them via this.
+ */
+export function describeRequiresObject(entry: Exclude<RequiresEntry, RelevanceTag>): string {
+  if ('stat' in entry) {
+    const bounds: string[] = [];
+    if (entry.gte !== undefined) bounds.push(`≥ ${entry.gte}`);
+    if (entry.lte !== undefined) bounds.push(`≤ ${entry.lte}`);
+    return `${entry.stat} ${bounds.join(' and ')}`;
+  }
+  return `story flag '${entry.flag}' ${entry.is === false ? 'NOT set' : 'set'}`;
+}
 
 // Plain-language labels + "why now" explainer copy for the reactive_trigger selector.
 const HAPPENING_TYPE_LABELS: Record<HappeningType, string> = {
@@ -78,16 +98,24 @@ const HAPPENING_TYPE_LABELS: Record<HappeningType, string> = {
 /**
  * Pure helper: given the current set of checked relevance tags, returns the
  * `requires` value to store on the action — `undefined` (field omitted) when
- * nothing is checked, since the schema requires nonempty-or-absent and the
- * engine treats "no requires field" as always-eligible (NOT the same as an
- * empty array, which the schema rejects outright).
+ * nothing is checked AND nothing is preserved, since the schema requires
+ * nonempty-or-absent and the engine treats "no requires field" as
+ * always-eligible (NOT the same as an empty array, which the schema rejects
+ * outright).
+ *
+ * M16: `preserved` carries the non-tag entries (threshold/flag objects, which
+ * have no checkbox UI) so toggling a tag checkbox can never silently DROP an
+ * authored threshold/flag gate — they are re-appended verbatim after the tags.
  */
-export function computeRequiresFromChecked(checked: ReadonlySet<RelevanceTag>): RelevanceTag[] | undefined {
-  if (checked.size === 0) return undefined;
+export function computeRequiresFromChecked(
+  checked: ReadonlySet<RelevanceTag>,
+  preserved: readonly Exclude<RequiresEntry, RelevanceTag>[] = []
+): RequiresEntry[] | undefined {
   // Keep a stable, canonical ordering (RELEVANCE_TAGS order) regardless of
   // check/uncheck order, so diffs stay predictable.
   const ordered = RELEVANCE_TAGS.filter((tag) => checked.has(tag));
-  return ordered.length > 0 ? ordered : undefined;
+  const combined: RequiresEntry[] = [...ordered, ...preserved];
+  return combined.length > 0 ? combined : undefined;
 }
 
 const prefixMap: Record<string, IconPrefix> = {
@@ -1566,20 +1594,29 @@ export default function ActionsViewer() {
                             </label>
                             <div className="space-y-1.5 p-2 bg-black/20 rounded border border-white/10">
                               {RELEVANCE_TAGS.map(tag => {
-                                const currentRequires = (action.requires ?? []) as string[];
-                                const checked = currentRequires.includes(tag);
+                                // M16: requires may mix plain tags with threshold/flag
+                                // objects — the checkboxes edit ONLY the tags; object
+                                // entries are preserved verbatim (see below).
+                                const currentRequires = (action.requires ?? []) as RequiresEntry[];
+                                const currentTags = currentRequires.filter(
+                                  (e): e is RelevanceTag => typeof e === 'string'
+                                );
+                                const objectEntries = currentRequires.filter(
+                                  (e): e is Exclude<RequiresEntry, RelevanceTag> => typeof e !== 'string'
+                                );
+                                const checked = currentTags.includes(tag);
                                 return (
                                   <label key={tag} className="flex items-center gap-2 text-xs text-white/80 cursor-pointer">
                                     <Checkbox
                                       checked={checked}
                                       onCheckedChange={(value) => {
-                                        const current = new Set<RelevanceTag>(currentRequires as RelevanceTag[]);
+                                        const current = new Set<RelevanceTag>(currentTags);
                                         if (value) {
                                           current.add(tag);
                                         } else {
                                           current.delete(tag);
                                         }
-                                        const nextRequires = computeRequiresFromChecked(current);
+                                        const nextRequires = computeRequiresFromChecked(current, objectEntries);
                                         updateAction(action.id, {
                                           requires: nextRequires as Action['requires'],
                                         });
@@ -1629,11 +1666,18 @@ export default function ActionsViewer() {
                     {/* requires / reactive_trigger badges (view mode) */}
                     {!editMode && ((action.requires && action.requires.length > 0) || action.reactive_trigger) && (
                       <div className="flex flex-wrap gap-2">
-                        {(action.requires ?? []).map(tag => (
-                          <Badge key={tag} variant="outline" className="text-xs bg-purple-500/10 text-purple-300 border-purple-500/30">
-                            {RELEVANCE_TAG_LABELS[tag as RelevanceTag] ?? tag}
-                          </Badge>
-                        ))}
+                        {((action.requires ?? []) as RequiresEntry[]).map((entry, idx) =>
+                          typeof entry === 'string' ? (
+                            <Badge key={entry} variant="outline" className="text-xs bg-purple-500/10 text-purple-300 border-purple-500/30">
+                              {RELEVANCE_TAG_LABELS[entry as RelevanceTag] ?? entry}
+                            </Badge>
+                          ) : (
+                            // M16 threshold/flag gates (authored in JSON; no checkbox UI).
+                            <Badge key={`obj-${idx}`} variant="outline" className="text-xs bg-cyan-500/10 text-cyan-300 border-cyan-500/30">
+                              {describeRequiresObject(entry)}
+                            </Badge>
+                          )
+                        )}
                         {action.reactive_trigger && (
                           <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-300 border-amber-500/30">
                             Reactive: {HAPPENING_TYPE_LABELS[action.reactive_trigger as HappeningType] ?? action.reactive_trigger}

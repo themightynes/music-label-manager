@@ -70,9 +70,59 @@ export const RELEVANCE_TAGS = [
   'release_out',
   'recording_project_active',
   'tour_active',
+  // Engine-verbs M16 (requires-gates): per-artist-state tags. Thresholds are
+  // config knobs in data/balance/progression.json weekly_meeting_selection
+  // .artist_state_thresholds (comparator encoded in the knob name); predicates
+  // in shared/engine/meetingSelection.ts deriveRelevanceState.
+  'any_artist_low_mood',
+  'any_artist_high_popularity',
+  'any_artist_low_energy',
 ] as const;
 
 export type RelevanceTag = (typeof RELEVANCE_TAGS)[number];
+
+/**
+ * Engine-verbs M16 (requires-gates) — the extended `requires` grammar.
+ *
+ * A `requires` array keeps AND semantics; each entry is ONE of:
+ *  - a plain RelevanceTag string (the original Tier 0 grammar, unchanged);
+ *  - a stat threshold object `{ stat, gte?, lte? }` — at least one bound
+ *    required; both together form an inclusive range. `stat` names come from
+ *    REQUIRES_STAT_NAMES ('week' = current game week, 'cash' = label money,
+ *    'reputation' = label reputation). An UNKNOWN stat value at selection
+ *    time (e.g. cash not threaded by a caller) fails CLOSED — the meeting is
+ *    ineligible, never spuriously offered.
+ *  - a story-flag object `{ flag, is? }` — reads `gameState.flags.story[flag]`
+ *    (M3's write key; read defensively: an absent flag counts as false).
+ *    `is` defaults to true ("flag must be set"); `is: false` means "flag must
+ *    NOT be set" (exclusion gate).
+ *
+ * SINGLE SOURCE OF TRUTH: both Zod surfaces (shared/api/contracts.ts
+ * RequiresEntrySchema, reused by shared/utils/dataLoader.ts) and the data-lint
+ * suite (tests/engine/data-lint-relevance-tags.test.ts) validate against this
+ * shape. Predicates live in shared/engine/meetingSelection.ts
+ * (isRequirementSatisfied).
+ */
+export const REQUIRES_STAT_NAMES = ['week', 'cash', 'reputation'] as const;
+
+export type RequiresStatName = (typeof REQUIRES_STAT_NAMES)[number];
+
+export interface StatRequirement {
+  stat: RequiresStatName;
+  /** Inclusive lower bound: satisfied when value >= gte. */
+  gte?: number;
+  /** Inclusive upper bound: satisfied when value <= lte. */
+  lte?: number;
+}
+
+export interface FlagRequirement {
+  /** Key into gameState.flags.story (snake_case; absent = false). */
+  flag: string;
+  /** Required flag value; defaults to true. `is: false` = exclusion gate. */
+  is?: boolean;
+}
+
+export type RequiresEntry = RelevanceTag | StatRequirement | FlagRequirement;
 
 /**
  * Tier 2 (PR-1) — the canonical "week happening" vocabulary.
@@ -137,9 +187,11 @@ export interface RoleMeeting {
   target_scope: TargetScope; // Determines how mood effects are targeted (Task 3.2)
   /**
    * Meeting-relevance Tier 0 (PR-1): relevance tags with AND semantics.
-   * Absent = always eligible. See shared/engine/meetingSelection.ts.
+   * Absent = always eligible. M16 (requires-gates): entries may also be
+   * `{stat, gte?, lte?}` / `{flag, is?}` objects — see RequiresEntry above and
+   * shared/engine/meetingSelection.ts isRequirementSatisfied.
    */
-  requires?: RelevanceTag[];
+  requires?: RequiresEntry[];
   /**
    * Meeting-relevance Tier 1 (PR-2): weighting axis. Existing field on every
    * actions.json entry (business/talent/production/marketing/distribution/live);

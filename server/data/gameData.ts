@@ -758,9 +758,17 @@ export class ServerGameData {
     // HARDCODED: fallback tuning if data/balance/progression.json's
     // weekly_meeting_selection block is absent (matches the balance file's
     // authored defaults so behavior is identical either way).
+    // M16 (requires-gates): artist_state_thresholds drive the per-artist-state
+    // requires tags (any_artist_low_mood / any_artist_high_popularity /
+    // any_artist_low_energy) — comparator encoded in the knob name.
     const defaults = {
       relevance_weight: 2.0,
-      recency_window_weeks: 4
+      recency_window_weeks: 4,
+      artist_state_thresholds: {
+        low_mood_lt: 40,
+        high_popularity_gte: 70,
+        low_energy_lt: 30
+      }
     };
     if (!this.balanceData) {
       return defaults;
@@ -768,7 +776,12 @@ export class ServerGameData {
     const cfg = (this.balanceData.weekly_meeting_selection || {}) as Record<string, any>;
     return {
       relevance_weight: cfg.relevance_weight ?? defaults.relevance_weight,
-      recency_window_weeks: cfg.recency_window_weeks ?? defaults.recency_window_weeks
+      recency_window_weeks: cfg.recency_window_weeks ?? defaults.recency_window_weeks,
+      artist_state_thresholds: {
+        low_mood_lt: cfg.artist_state_thresholds?.low_mood_lt ?? defaults.artist_state_thresholds.low_mood_lt,
+        high_popularity_gte: cfg.artist_state_thresholds?.high_popularity_gte ?? defaults.artist_state_thresholds.high_popularity_gte,
+        low_energy_lt: cfg.artist_state_thresholds?.low_energy_lt ?? defaults.artist_state_thresholds.low_energy_lt
+      }
     };
   }
 

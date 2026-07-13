@@ -32,7 +32,7 @@ import { ReleaseProcessor } from './processors/ReleaseProcessor';
 import { ArtistStateProcessor } from './processors/ArtistStateProcessor';
 import { ActionProcessor } from './processors/ActionProcessor';
 import type { WeekContext } from './processors/types';
-import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meetingSelection';
+import { buildRelevanceInput, deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meetingSelection';
 import { deriveWeekHappenings } from './weekHappenings';
 import { generateMeetingSeed } from '../utils/seededRandom';
 import { pickAutonomousChoice } from './executiveAutonomy';
@@ -765,14 +765,30 @@ export class GameEngine {
       storage.getReleasesByGame(gameId, dbTransaction),
       storage.getSongsByGame(gameId, dbTransaction),
     ]);
-    const relevanceState = deriveRelevanceState({
+    // M16 (requires-gates): cash/reputation/flags threaded through the SAME
+    // buildRelevanceInput lockstep helper as the /api/roles route, so the
+    // threshold/flag/artist-state grammar evaluates identically at both sites
+    // for identical state (parity test:
+    // tests/engine/meeting-selection-two-site-parity.test.ts). NOTE on cash
+    // gates: this re-derivation reads this.gameState.money as of PHASE 1 of
+    // the advance (after the player's own meeting spends), while the route
+    // read the persisted money at fetch time — the same in-week drift window
+    // that already exists for artists/projects rows. With no authored
+    // threshold content this is behavior-identical to the pre-M16 pipeline.
+    const relevanceState = deriveRelevanceState(buildRelevanceInput({
       artists,
       projects,
       releases,
       songs,
       currentWeek: offeredWeek,
+      gameState: {
+        money: this.gameState.money,
+        reputation: this.gameState.reputation,
+        flags: this.gameState.flags,
+      },
       recencyWindowWeeks: tuning.recency_window_weeks,
-    });
+      artistStateThresholds: tuning.artist_state_thresholds,
+    }));
 
     // Reactive-meeting happenings at the offered week (same mapping as the route).
     let happenings: any[] = [];

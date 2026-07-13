@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, REQUIRES_STAT_NAMES, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -406,6 +406,48 @@ export const TargetScopeSchema = z.enum(['global', 'predetermined', 'user_select
 // RELEVANCE_TAGS array in shared/types/gameTypes.ts (single source of truth).
 export const RelevanceTagSchema = z.enum(RELEVANCE_TAGS);
 
+// ---------------------------------------------------------------------------
+// Engine-verbs M16 (requires-gates): the extended `requires` grammar. THE ONE
+// Zod definition — shared/utils/dataLoader.ts imports these schemas instead of
+// re-deriving, so the two validation surfaces cannot drift. Canonical grammar
+// doc: RequiresEntry in shared/types/gameTypes.ts; runtime predicate:
+// shared/engine/meetingSelection.ts isRequirementSatisfied.
+// ---------------------------------------------------------------------------
+
+// `{stat, gte?, lte?}` — inclusive threshold(s); at least one bound required.
+// .strict() so a typo'd key ("gt", "min", …) is a validation error, not a
+// silently-ignored always-true gate.
+export const StatRequirementSchema = z
+  .object({
+    stat: z.enum(REQUIRES_STAT_NAMES),
+    gte: z.number().optional(),
+    lte: z.number().optional(),
+  })
+  .strict()
+  .refine((r) => r.gte !== undefined || r.lte !== undefined, {
+    message: 'A stat requirement needs at least one bound (gte and/or lte)',
+  });
+
+// `{flag, is?}` — story-flag gate on gameState.flags.story[flag]; `is`
+// defaults to true. Flag keys are snake_case identifiers (written by the
+// story_flag effect key — sibling M3 slice).
+export const FlagRequirementSchema = z
+  .object({
+    flag: z.string().regex(/^[a-z][a-z0-9_]*$/, {
+      message: 'Story-flag keys must be snake_case identifiers (e.g. "dante_deal_taken")',
+    }),
+    is: z.boolean().optional(),
+  })
+  .strict();
+
+// One `requires` entry: plain tag string OR threshold object OR flag object.
+export const RequiresEntrySchema = z.union([
+  RelevanceTagSchema,
+  StatRequirementSchema,
+  FlagRequirementSchema,
+]);
+export type RequiresEntryContract = z.infer<typeof RequiresEntrySchema>;
+
 // Tier 2 (PR-1): week-happening-type enum, derived from the canonical
 // HAPPENING_TYPES array in shared/types/gameTypes.ts (single source of truth).
 export const HappeningTypeSchema = z.enum(HAPPENING_TYPES);
@@ -440,7 +482,8 @@ export const WeeklyActionSchema = z.object({
   prompt_before_selection: z.string().optional(),
   target_scope: TargetScopeSchema.default('global'),
   // Meeting-relevance Tier 0 (PR-1): AND semantics, absent = always eligible.
-  requires: z.array(RelevanceTagSchema).nonempty().optional(),
+  // M16: entries may also be `{stat, gte?, lte?}` / `{flag, is?}` objects.
+  requires: z.array(RequiresEntrySchema).nonempty().optional(),
   // Tier 2 (PR-1): optional reactive-meeting trigger. Dark launch: no
   // data/actions.json entry sets this yet (PR-2 authors the first ones).
   reactive_trigger: HappeningTypeSchema.optional(),
