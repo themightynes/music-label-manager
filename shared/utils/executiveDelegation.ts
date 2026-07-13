@@ -15,6 +15,8 @@
  * fails CI.
  */
 
+import { seededRandomPick } from './seededRandom';
+
 /** Loyalty-band names (§3.1). */
 export type LoyaltyBand = 'loyal' | 'committed' | 'disloyal';
 
@@ -81,18 +83,53 @@ export interface ExecDelegationConfig {
 }
 
 /**
- * Role → escalation-event-id mapping (spec §5.6). A shared constant rather than
- * scattered literals — the engine reads it to resolve WHICH escalation event to
- * inject for a given exec's role. One event per core-four archetype; `ceo` has
- * no exec row and is never a candidate for autonomous resolution (the CEO lane
- * genuinely lapses, §2), so it is intentionally absent here.
+ * Role → escalation-event-id POOL mapping (spec §5.6, v3 array routing). A
+ * shared constant rather than scattered literals — the engine reads it to
+ * resolve WHICH escalation event to inject for a given exec's role, via
+ * `pickEscalationEventId` (isolated seeded pick, never the engine's in-stream
+ * RNG). The v3 content set authors TWO escalation events per archetype so a
+ * repeat offender doesn't see the same crisis twice; the arrays ship as
+ * SINGLETONS (behavior byte-identical to the previous single-id map) until the
+ * second events land after designer review. `ceo` has no exec row and is never
+ * a candidate for autonomous resolution (the CEO lane genuinely lapses, §2),
+ * so it is intentionally absent here.
+ *
+ * TODO: a "don't repeat the last-seen escalation" rule needs persisted
+ * last-seen state per role — deliberately out of scope; the seeded pick from
+ * the pool is the approved v3 mechanism.
  */
-export const ESCALATION_EVENT_BY_ROLE: Readonly<Record<string, string>> = {
-  head_ar: 'escalation_ar_botched_signing',
-  cmo: 'escalation_cmo_narrative_lost',
-  cco: 'escalation_cco_artist_walkout',
-  head_distribution: 'escalation_dist_deal_collapsed',
+export const ESCALATION_EVENT_BY_ROLE: Readonly<Record<string, readonly string[]>> = {
+  head_ar: ['escalation_ar_botched_signing'],
+  cmo: ['escalation_cmo_narrative_lost'],
+  cco: ['escalation_cco_artist_walkout'],
+  head_distribution: ['escalation_dist_deal_collapsed'],
 };
+
+/**
+ * Pick the escalation event id for a role from its pool (v3 array routing).
+ * Deterministic — pure function of (roleId, seed, pool): a singleton pool
+ * always returns its only element (seededRandomPick short-circuits before any
+ * hash draw), and a multi-event pool resolves via the SAME isolated
+ * seeded-pick primitive the autonomous tie-break uses (Ground Rule 4 /
+ * isolated-seed rule, §10.3) — NEVER the engine's pinned ctx.getRandom stream.
+ * The engine derives the seed from the already-in-scope meeting seed
+ * (`${gameId}-week${week}-${roleId}`) plus an `-escalation-event` suffix so
+ * the draw is namespaced away from the `-autonomous-choice` tie-break.
+ *
+ * @param roleId - Executive role id (core four; `ceo` never escalates)
+ * @param seed - Isolated seed string (gameId/week/role-derived)
+ * @param pools - Injectable for tests; defaults to ESCALATION_EVENT_BY_ROLE
+ * @returns The picked event id, or undefined for an unknown role / empty pool
+ */
+export function pickEscalationEventId(
+  roleId: string,
+  seed: string,
+  pools: Readonly<Record<string, readonly string[]>> = ESCALATION_EVENT_BY_ROLE,
+): string | undefined {
+  const pool = pools[roleId];
+  if (!pool || pool.length === 0) return undefined;
+  return seededRandomPick(pool as string[], seed);
+}
 
 /**
  * Default knobs — mirror data/balance/progression.json
