@@ -51,9 +51,11 @@ describe('LIVE_EFFECT_KEYS / STRUCTURED_EFFECT_KEYS wiring (engine-verbs arc)', 
   it('marks exactly the non-numeric keys as structured (merge-reconciled: + schedule_event from the chained-events slice)', () => {
     expect(Array.from(STRUCTURED_EFFECT_KEYS).sort()).toEqual([
       'distribution_efficiency',
+      'grant_song',
       'schedule_event',
       'set_exec_absence',
       'spawn_prospect',
+      'spawn_release',
       'story_flag',
     ]);
   });

@@ -81,6 +81,26 @@ const STRUCTURED_VALUE_VALIDATORS: Record<string, { shape: string; validate: (v:
       typeof v.amount === 'number' && (v.amount as number) !== 0 &&
       typeof v.weeks === 'number' && (v.weeks as number) > 0,
   },
+  grant_song: {
+    shape: "{ title_hint?: string, quality?: number, quality_range?: [min, max], artist: 'targeted' }",
+    validate: (v) =>
+      isPlainObject(v) &&
+      v.artist === 'targeted' &&
+      (v.title_hint === undefined || typeof v.title_hint === 'string') &&
+      (v.quality === undefined || typeof v.quality === 'number') &&
+      (v.quality_range === undefined ||
+        (Array.isArray(v.quality_range) && (v.quality_range as unknown[]).length === 2 &&
+          (v.quality_range as unknown[]).every((n) => typeof n === 'number'))),
+  },
+  spawn_release: {
+    shape: "{ songs: 'granted'|'latest_recorded', type: 'single', defer_weeks?: int >= 0 }",
+    validate: (v) =>
+      isPlainObject(v) &&
+      (v.songs === 'granted' || v.songs === 'latest_recorded') &&
+      v.type === 'single' &&
+      (v.defer_weeks === undefined ||
+        (typeof v.defer_weeks === 'number' && Number.isInteger(v.defer_weeks) && (v.defer_weeks as number) >= 0)),
+  },
 };
 
 /** Recursively collect every (filePath, meetingId?, choiceId?, block, key) offender. */
