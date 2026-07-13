@@ -45,6 +45,7 @@ import { ArtistChangeHelpers, isScheduleEventEffect } from '../../types/gameType
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
 import { seededRandom, seededRandomPick } from '../../utils/seededRandom';
+import { createReleaseWithSongs, type ReleaseCreationOps } from '../releaseCreation';
 import { scaleReputationGain } from '../../utils/reputationScaling';
 import {
   getMoodModifiers,
@@ -95,7 +96,13 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   // Slice 12 (M10): persistent label streaming-revenue modifier.
   'distribution_efficiency',
   // Slice 13 (M15): negative sibling of press_story_flag (next-release liability).
-  'press_scrutiny_flag'
+  'press_scrutiny_flag',
+  // Engine-verbs M1a (tangible catalog — grant a real recorded song). OBJECT-valued:
+  // { title_hint?, quality?, quality_range?, artist: 'targeted' }.
+  'grant_song',
+  // Engine-verbs M1b (tangible catalog — spawn a real planned release). OBJECT-valued:
+  // { songs: 'granted' | 'latest_recorded', type: 'single', defer_weeks? }.
+  'spawn_release'
 ]);
 
 /**
@@ -109,6 +116,8 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
  *   - spawn_prospect:          { name?, archetype?, quality_hint?, popularity_hint?, source? }
  *   - set_exec_absence:        { role: string, weeks: number > 0 }
  *   - distribution_efficiency: { amount: number, weeks: number > 0 }
+ *   - grant_song:              { title_hint?, quality?, quality_range?, artist: 'targeted' }
+ *   - spawn_release:           { songs: 'granted'|'latest_recorded', type: 'single', defer_weeks? }
  * (press_scrutiny_flag is numeric, like press_story_flag — not listed here.)
  */
 export const STRUCTURED_EFFECT_KEYS: ReadonlySet<string> = new Set([
@@ -116,7 +125,9 @@ export const STRUCTURED_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'story_flag',
   'spawn_prospect',
   'set_exec_absence',
-  'distribution_efficiency'
+  'distribution_efficiency',
+  'grant_song',
+  'spawn_release'
 ]);
 
 /**
@@ -241,6 +252,15 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
   press_scrutiny_flag: {
     title: 'Press Scrutiny',
     text: 'The press is watching for a stumble. Your next release faces a harder crowd — coverage and the standing it brings are dulled. Fires once, then the heat moves on; fades if you lie low long enough.',
+  },
+  // --- Engine-verbs tangible-catalog channels (M1a / M1b) ---
+  grant_song: {
+    title: 'New Recording',
+    text: 'A finished recording lands in the targeted artist\'s vault this week — real, recorded, and ready to plan a release with. No studio time or recording budget spent.',
+  },
+  spawn_release: {
+    title: 'Surprise Release',
+    text: 'Puts a release on the schedule immediately — the track ships to the airwaves within the week and enters the normal streaming, chart, and revenue cycle, with no marketing spend behind it.',
   },
 };
 
@@ -440,10 +460,14 @@ export class ActionProcessor {
           appliedEffects[key] = immediateToApply[key];
         }
       }
-      // Engine-verbs arc: structured-value effects (incl. schedule_event) ride
-      // along un-scaled — collected into structuredEffects above, re-attached
-      // AFTER mood scaling so the exec-mood multiplier never touches their
-      // payloads, and kept out of appliedEffects so badge records stay numeric.
+      // Engine-verbs arc: structured-value effects (schedule_event, story_flag,
+      // grant_song, spawn_release, …) ride along un-scaled — collected into
+      // structuredEffects above (via STRUCTURED_EFFECT_KEYS), re-attached AFTER
+      // mood scaling so the exec-mood multiplier never touches their payloads,
+      // and kept out of appliedEffects so badge records stay numeric. Authored
+      // order is preserved (author grant_song BEFORE spawn_release when pairing
+      // — the spawn's 'granted' mode consumes the song granted earlier in the
+      // same effects block).
       await this.applyEffects(ctx, { ...immediateToApply, ...structuredEffects }, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
 
       // Volatility-economy slice 3: applyEffects throttles POSITIVE reputation
@@ -773,6 +797,11 @@ export class ActionProcessor {
    * @param targetScope - Optional scope for validation ('global' | 'predetermined' | 'user_selected' | 'dialogue')
    * @param meetingName - Optional meeting name for logging
    * @param choiceId - Optional choice ID for logging
+   *
+   * Engine-verbs M1a/M1b: `effects` is typed `Record<string, any>` (was
+   * `Record<string, number>`) because 'grant_song' and 'spawn_release' carry
+   * OBJECT values; every pre-existing key is still numeric and every numeric
+   * case below still treats `value` as a number.
    */
   // Engine-verbs arc: `effects` is Record<string, any> (was Record<string, number>)
   // because STRUCTURED_EFFECT_KEYS carry string/object values. Every numeric case
@@ -780,6 +809,10 @@ export class ActionProcessor {
   // values for the structured keys.
   async applyEffects(ctx: WeekContext, effects: Record<string, any>, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
     const { summary } = ctx;
+    // Engine-verbs M1a→M1b handoff: the song row created by a 'grant_song' key in
+    // THIS effects block, so a sibling 'spawn_release' with songs:'granted' can
+    // release it. Scoped per applyEffects call — never persisted.
+    let grantedSong: any = null;
     for (const [key, rawValue] of Object.entries(effects)) {
       // Engine-verbs Slice 1 (M4): `schedule_event` is the ONE structured
       // (non-numeric) effect — handled before the numeric switch. Banks an entry
@@ -1630,6 +1663,238 @@ export class ActionProcessor {
           } else {
             console.log(`[EFFECT PROCESSING] press_scrutiny_flag effect with non-positive value (${value}) ignored`);
           }
+          break;
+        }
+
+        case 'grant_song': {
+          // Engine-verbs M1a (tangible catalog) — grants a REAL recorded song row
+          // via the engine-threaded ctx.gameData.createSong (the exact persistence
+          // seam SongGenerationProcessor uses). Value shape:
+          //   { title_hint?: string, quality?: number,
+          //     quality_range?: [min, max], artist: 'targeted' }
+          // DETERMINISM: every rolled field (quality from a range, fallback title,
+          // mood) uses an ISOLATED seeded roll keyed off gameId/week/meeting/choice
+          // — NEVER ctx.getRandom, so the engine's pinned RNG stream and its draw
+          // count are completely undisturbed (rep_swing precedent above).
+          const grantValue = (value && typeof value === 'object') ? value as Record<string, any> : {};
+          if (typeof (ctx.gameData as any)?.createSong !== 'function') {
+            console.warn(`[EFFECT PROCESSING] grant_song skipped — gameData.createSong unavailable (client-side context)`);
+            break;
+          }
+          if (!artistId) {
+            console.warn(
+              `[EFFECT PROCESSING] grant_song requires a targeted artist (value.artist: 'targeted') but no artistId was resolved — skipped` +
+              `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}`
+            );
+            break;
+          }
+          const grantArtist = await ctx.gameData.getArtistById(artistId);
+          if (!grantArtist) {
+            console.warn(`[EFFECT PROCESSING] grant_song skipped — artist ${artistId} not found`);
+            break;
+          }
+
+          const gameId = ctx.gameState.id || 'unknown-game';
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const seed = `${gameId}-week${currentWeek}-grantsong-${meetingName || 'unknown-meeting'}-${choiceId || 'unknown-choice'}`;
+          const balance = ctx.gameData.getBalanceConfigSync?.() as any;
+
+          // Quality: explicit `quality` wins; else roll the authored quality_range;
+          // else roll the balance-knobbed default range (content.json
+          // song_generation.granted_song.default_quality_range).
+          const cfgRange = balance?.song_generation?.granted_song?.default_quality_range;
+          // HARDCODED: fallback default quality range if content.json's
+          // song_generation.granted_song block is missing.
+          const defaultRange: [number, number] =
+            Array.isArray(cfgRange) && cfgRange.length === 2 ? [cfgRange[0], cfgRange[1]] : [40, 60];
+          let quality: number;
+          if (typeof grantValue.quality === 'number') {
+            quality = Math.round(grantValue.quality);
+          } else {
+            const authored = grantValue.quality_range;
+            const [min, max] = Array.isArray(authored) && authored.length === 2
+              && typeof authored[0] === 'number' && typeof authored[1] === 'number'
+              ? [authored[0], authored[1]]
+              : defaultRange;
+            quality = Math.round(min + seededRandom(`${seed}-quality`) * (max - min));
+          }
+          quality = Math.max(20, Math.min(100, quality)); // songs.quality is 20-100
+
+          // Title: title_hint verbatim, else a deterministic seeded pick from the
+          // artist-genre name pool (falling back to the default pool).
+          let title: string;
+          if (typeof grantValue.title_hint === 'string' && grantValue.title_hint.trim().length > 0) {
+            title = grantValue.title_hint.trim();
+          } else {
+            const namePools = balance?.song_generation?.name_pools;
+            const pool: string[] = (grantArtist.genre && namePools?.genre_specific?.[grantArtist.genre])
+              || namePools?.default
+              || ['Untitled Session']; // HARDCODED: last-resort title if name pools unavailable
+            title = seededRandomPick(pool, `${seed}-title`) ?? 'Untitled Session';
+          }
+
+          const moodPool: string[] = balance?.song_generation?.mood_types
+            || ['upbeat', 'melancholic', 'aggressive', 'chill']; // mirrors generateSongMood's fallback
+          const songMood = seededRandomPick(moodPool, `${seed}-mood`) ?? 'upbeat';
+
+          // Row shape mirrors SongGenerationProcessor.generateSong (no 'id' — DB
+          // generates it). Born recorded/unreleased with no project attached, so it
+          // flows into the normal release-planning song picker.
+          const grantedSongRow = {
+            title,
+            artistId,
+            gameId,
+            quality,
+            genre: grantArtist.genre || 'pop',
+            mood: songMood,
+            createdWeek: currentWeek,
+            producerTier: 'local',
+            timeInvestment: 'standard',
+            isRecorded: true,
+            // Wall-clock metadata, same as project-born songs — the golden-master
+            // normalizer strips recordedAt (see SongGenerationProcessor).
+            recordedAt: new Date(),
+            isReleased: false,
+            releaseId: null,
+            projectId: null,
+            productionBudget: 0,
+            marketingAllocation: 0,
+            metadata: {
+              grantedBy: {
+                meetingName: meetingName ?? null,
+                choiceId: choiceId ?? null,
+                week: currentWeek,
+              },
+            },
+          };
+
+          const savedSong = await ctx.gameData.createSong(grantedSongRow, ctx.dbTransaction);
+          grantedSong = savedSong ?? grantedSongRow;
+
+          // Qualitative surfacing (no numbers — house regex rule); routed to the
+          // rendered catalog bucket, never the swallowed `other` bucket.
+          summary.changes.push({
+            type: 'song_granted',
+            description: `New recording in the vault: "${title}" — ${grantArtist.name}`,
+          });
+          console.log(`[EFFECT PROCESSING] grant_song: created "${title}" (quality ${quality}) for artist ${grantArtist.name} (seed: ${seed})`);
+          break;
+        }
+
+        case 'spawn_release': {
+          // Engine-verbs M1b (tangible catalog) — creates a REAL planned release
+          // that enters the normal processPlannedReleases → processReleasedProjects
+          // lifecycle (revenue, charts, awareness). Value shape (MVP: single only):
+          //   { songs: 'granted' | 'latest_recorded', type: 'single', defer_weeks? }
+          // Release week = currentWeek + release_offset_weeks (knob, default 1 =
+          // immediate-drop next week) + defer_weeks. Marketing budget = knob
+          // default 0 (markets.json market_formulas.spawned_release).
+          const spawnValue = (value && typeof value === 'object') ? value as Record<string, any> : {};
+          if (typeof (ctx.gameData as any)?.createRelease !== 'function') {
+            console.warn(`[EFFECT PROCESSING] spawn_release skipped — gameData.createRelease unavailable (client-side context)`);
+            break;
+          }
+          const gameId = ctx.gameState.id || 'unknown-game';
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const balance = ctx.gameData.getBalanceConfigSync?.() as any;
+          const spawnCfg = balance?.market_formulas?.spawned_release;
+          // HARDCODED: fallbacks if markets.json market_formulas.spawned_release is missing.
+          const defaultBudget = typeof spawnCfg?.default_marketing_budget === 'number' ? spawnCfg.default_marketing_budget : 0;
+          const offsetWeeks = typeof spawnCfg?.release_offset_weeks === 'number' ? spawnCfg.release_offset_weeks : 1;
+          const deferWeeks = typeof spawnValue.defer_weeks === 'number' && spawnValue.defer_weeks > 0
+            ? Math.floor(spawnValue.defer_weeks)
+            : 0;
+
+          // Resolve the song. 'granted' consumes the song a sibling grant_song key
+          // created earlier in this SAME effects block; 'latest_recorded' picks the
+          // targeted artist's newest recorded-but-unreleased song (deterministic
+          // tie-break, no RNG).
+          const songsMode = spawnValue.songs === 'latest_recorded' ? 'latest_recorded' : 'granted';
+          let releaseSong: any = null;
+          if (songsMode === 'granted') {
+            if (!grantedSong || !grantedSong.id) {
+              console.warn(
+                `[EFFECT PROCESSING] spawn_release (songs: 'granted') skipped — no grant_song landed earlier in this effects block` +
+                `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}`
+              );
+              break;
+            }
+            releaseSong = grantedSong;
+          } else {
+            if (!artistId) {
+              console.warn(`[EFFECT PROCESSING] spawn_release (songs: 'latest_recorded') requires a targeted artist but no artistId was resolved — skipped`);
+              break;
+            }
+            const artistSongs = await ctx.gameData.getSongsByArtist(artistId, gameId, ctx.dbTransaction);
+            const candidates = (artistSongs || []).filter((s: any) => s.isRecorded && !s.isReleased && !s.releaseId);
+            if (candidates.length === 0) {
+              console.warn(`[EFFECT PROCESSING] spawn_release skipped — artist ${artistId} has no recorded, unreleased songs`);
+              break;
+            }
+            // Deterministic: newest createdWeek first, stable id tie-break (no RNG).
+            candidates.sort((a: any, b: any) =>
+              (b.createdWeek || 0) - (a.createdWeek || 0) || String(a.id).localeCompare(String(b.id))
+            );
+            releaseSong = candidates[0];
+          }
+
+          const releaseArtistId = releaseSong.artistId;
+          const releaseArtist = await ctx.gameData.getArtistById(releaseArtistId);
+          const releaseWeek = currentWeek + offsetWeeks + deferWeeks;
+
+          // Engine-side ops over the shared creation core (same three steps, same
+          // order, as releasePlanningService — see shared/engine/releaseCreation.ts).
+          const ops: ReleaseCreationOps = {
+            insertRelease: (row) => ctx.gameData.createRelease(row, ctx.dbTransaction),
+            reserveSongsForRelease: async (songIds, releaseId) => {
+              for (const songId of songIds) {
+                await ctx.gameData.updateSong(songId, { releaseId }, ctx.dbTransaction);
+              }
+            },
+            insertReleaseSongs: async (rows) => {
+              for (const row of rows) {
+                await ctx.gameData.createReleaseSong(row, ctx.dbTransaction);
+              }
+            },
+          };
+          const newRelease = await createReleaseWithSongs(
+            ops,
+            {
+              gameId,
+              artistId: releaseArtistId,
+              title: releaseSong.title,
+              // MVP narrow: single-type only, regardless of authored value.type.
+              type: 'single',
+              releaseWeek,
+              status: 'planned',
+              // HARDCODED assumption: the knobbed budget is NOT deducted from cash
+              // (default 0). If this knob is ever tuned above 0, add a money
+              // deduction here or the marketing push is a free lunch.
+              marketingBudget: defaultBudget,
+              metadata: {
+                spawnedBy: {
+                  meetingName: meetingName ?? null,
+                  choiceId: choiceId ?? null,
+                  week: currentWeek,
+                },
+                scheduledReleaseWeek: releaseWeek,
+                marketingChannels: [],
+                marketingBudgetBreakdown: {},
+                // attachedHype 0 routes ReleaseProcessor to the attached-hype path
+                // — a surprise drop must NEVER drain the label's banked hype pool
+                // via the legacy pendingAwarenessBoost fallback.
+                attachedHype: 0,
+                leadSingleStrategy: null,
+              },
+            },
+            [releaseSong.id]
+          );
+
+          summary.changes.push({
+            type: 'release_spawned',
+            description: `Surprise release: "${releaseSong.title}" — ${releaseArtist?.name ?? 'your artist'} heads straight to the airwaves`,
+          });
+          console.log(`[EFFECT PROCESSING] spawn_release: planned "${releaseSong.title}" (release ${newRelease?.id}) for week ${releaseWeek}`);
           break;
         }
 

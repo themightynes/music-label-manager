@@ -48,6 +48,8 @@ const ALL_CHANGE_TYPES: GameChange['type'][] = [
   'hype_expired',
   'pre_campaign',
   'creative_capital',
+  'song_granted',
+  'release_spawned',
 ];
 
 function change(type: GameChange['type'], over: Partial<GameChange> = {}): GameChange {
@@ -78,7 +80,7 @@ describe('classifyChange', () => {
   it('covers the full union (guards against a new type slipping in untested)', () => {
     // The classifier switch is exhaustive at compile time; this asserts the test
     // list itself matches the real union size so new members force a test update.
-    expect(new Set(ALL_CHANGE_TYPES).size).toBe(25);
+    expect(new Set(ALL_CHANGE_TYPES).size).toBe(27);
   });
 
   // --- HERO -----------------------------------------------------------------
@@ -107,6 +109,11 @@ describe('classifyChange', () => {
   it('classifies a chart-milestone creative-capital grant as notable (PENDING-DECISIONS #9)', () => {
     expect(classifyChange(change('creative_capital', { amount: 1 }))).toBe('notable');
     expect(classifyChange(change('creative_capital', { amount: 2 }))).toBe('notable');
+  });
+
+  it('classifies tangible-catalog grants as notable (engine-verbs M1a/M1b)', () => {
+    expect(classifyChange(change('song_granted'))).toBe('notable');
+    expect(classifyChange(change('release_spawned'))).toBe('notable');
   });
 
   it('classifies release / song_release / project_complete as notable', () => {

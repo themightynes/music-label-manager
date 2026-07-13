@@ -11,7 +11,7 @@ import type {
   RoleMeeting,
   ChoiceEffect
 } from '../../shared/types/gameTypes';
-import { projects, songs } from '../../shared/schema';
+import { projects, songs, releases, releaseSongs } from '../../shared/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import { storage } from '../storage';
@@ -1205,10 +1205,13 @@ export class ServerGameData {
     return storage.getSongsByGame(gameId);
   }
 
-  async getSongsByArtist(artistId: string, gameId: string) {
-    console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId });
+  async getSongsByArtist(artistId: string, gameId: string, dbTransaction?: any) {
+    console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId, transaction: !!dbTransaction });
     try {
-      const songs = await storage.getSongsByArtist(artistId, gameId);
+      // Engine-verbs M1b: optional tx pass-through so spawn_release's
+      // 'latest_recorded' read sees songs created earlier in the same week
+      // transaction (storage.getSongsByArtist was already tx-aware).
+      const songs = await storage.getSongsByArtist(artistId, gameId, dbTransaction);
       console.log('[ServerGameData] getSongsByArtist returned:', songs?.length || 0, 'songs');
       return songs;
     } catch (error) {
@@ -1217,7 +1220,15 @@ export class ServerGameData {
     }
   }
 
-  async createRelease(release: any) {
+  async createRelease(release: any, dbConnection: any = null) {
+    // Engine-verbs M1b: transaction-aware, mirroring createSong above — inside the
+    // one-transaction week (D6) the insert MUST ride the week transaction (the
+    // game row is locked FOR UPDATE; an out-of-tx insert with an FK to it would
+    // block until commit).
+    if (dbConnection) {
+      const [createdRelease] = await dbConnection.insert(releases).values(release).returning();
+      return createdRelease;
+    }
     return storage.createRelease(release);
   }
 
@@ -1361,7 +1372,12 @@ export class ServerGameData {
     }
   }
 
-  async createReleaseSong(releaseSong: any) {
+  async createReleaseSong(releaseSong: any, dbConnection: any = null) {
+    // Engine-verbs M1b: transaction-aware, mirroring createSong/createRelease.
+    if (dbConnection) {
+      const [createdReleaseSong] = await dbConnection.insert(releaseSongs).values(releaseSong).returning();
+      return createdReleaseSong;
+    }
     return storage.createReleaseSong(releaseSong);
   }
 
