@@ -18,9 +18,11 @@ import { ESCALATION_EVENT_BY_ROLE } from '@shared/utils/executiveDelegation';
  *  2. No event WITHOUT an `escalation_` id carries `escalation_only: true` (the
  *     flag is exclusive to the escalation roster — no accidental exclusion of a
  *     legacy/rollable event).
- *  3. Every role in ESCALATION_EVENT_BY_ROLE (the shared engine constant —
- *     imported, not re-literaled) maps to an event that actually exists in
+ *  3. Every event id in every role's ESCALATION_EVENT_BY_ROLE pool (the shared
+ *     engine constant — imported, not re-literaled; v3 array routing) exists in
  *     data/events.json, with escalation_only: true and a canonical category.
+ *  4. Every escalation_only event appears in EXACTLY ONE role's pool (no
+ *     orphans, no cross-role dupes).
  */
 
 function loadJson(rel: string): any {
@@ -53,15 +55,21 @@ describe('Data lint — escalation-only side events (Tier 2, §5.3)', () => {
     ).toEqual([]);
   });
 
-  it('every ESCALATION_EVENT_BY_ROLE mapping resolves to a real, escalation-only event', () => {
+  it('every event id in every ESCALATION_EVENT_BY_ROLE pool resolves to a real, escalation-only event', () => {
     const byId = new Map(events.map((e) => [e.id, e]));
     const offenders: string[] = [];
-    for (const [role, eventId] of Object.entries(ESCALATION_EVENT_BY_ROLE)) {
-      const event = byId.get(eventId);
-      if (!event) {
-        offenders.push(`${role} -> "${eventId}" :: no such event in data/events.json`);
-      } else if (event.escalation_only !== true) {
-        offenders.push(`${role} -> "${eventId}" :: exists but is missing escalation_only: true`);
+    for (const [role, pool] of Object.entries(ESCALATION_EVENT_BY_ROLE)) {
+      if (pool.length === 0) {
+        offenders.push(`${role} :: empty escalation-event pool`);
+        continue;
+      }
+      for (const eventId of pool) {
+        const event = byId.get(eventId);
+        if (!event) {
+          offenders.push(`${role} -> "${eventId}" :: no such event in data/events.json`);
+        } else if (event.escalation_only !== true) {
+          offenders.push(`${role} -> "${eventId}" :: exists but is missing escalation_only: true`);
+        }
       }
     }
     expect(
@@ -70,9 +78,12 @@ describe('Data lint — escalation-only side events (Tier 2, §5.3)', () => {
     ).toEqual([]);
   });
 
-  it('the escalation roster has exactly one event per ESCALATION_EVENT_BY_ROLE entry (no orphans, no dupes)', () => {
+  it('every escalation_only event appears in exactly one role pool (no orphans, no cross-role dupes)', () => {
     const escalationIds = events.filter((e) => e.escalation_only === true).map((e) => e.id).sort();
-    const mappedIds = Object.values(ESCALATION_EVENT_BY_ROLE).slice().sort();
-    expect(escalationIds).toEqual(mappedIds);
+    const mappedIds = Object.values(ESCALATION_EVENT_BY_ROLE).flat().sort();
+    // Sorted-array equality enforces both directions AND uniqueness in one shot:
+    // an escalation_only event missing from every pool, a pooled id with no
+    // escalation_only event, or an id in two pools all produce a mismatch.
+    expect(mappedIds).toEqual(escalationIds);
   });
 });

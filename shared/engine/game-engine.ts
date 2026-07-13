@@ -36,7 +36,7 @@ import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meeti
 import { deriveWeekHappenings } from './weekHappenings';
 import { generateMeetingSeed } from '../utils/seededRandom';
 import { pickAutonomousChoice } from './executiveAutonomy';
-import { DEFAULT_EXEC_DELEGATION_CONFIG, ESCALATION_EVENT_BY_ROLE } from '../utils/executiveDelegation';
+import { DEFAULT_EXEC_DELEGATION_CONFIG, pickEscalationEventId } from '../utils/executiveDelegation';
 
 // Re-export WeekSummary for backward compatibility
 export type { WeekSummary } from '../types/gameTypes';
@@ -859,7 +859,12 @@ export class GameEngine {
         reactiveHappening &&
         preUpdateLoyalty < loyaltyCeiling
       ) {
-        const escalationEventId = ESCALATION_EVENT_BY_ROLE[roleId];
+        // v3 array routing: pick from the role's escalation-event pool via an
+        // ISOLATED seeded draw (never ctx.getRandom — Ground Rule 4). Seed is
+        // namespaced off the in-scope meeting seed; with today's singleton
+        // pools seededRandomPick short-circuits to the only element, so the
+        // pick is byte-identical to the old single-id map.
+        const escalationEventId = pickEscalationEventId(roleId, `${seed}-escalation-event`);
         if (escalationEventId) {
           escalationCandidate = { roleId, eventId: escalationEventId };
         }

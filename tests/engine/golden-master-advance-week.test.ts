@@ -117,13 +117,15 @@ const MOOD_RISK_POOL: any[] = ['head_ar', 'cmo'].map((role) => ({
 }));
 
 // Escalation arc (Tier 2, §10.2/§10.4): the real events.json escalation event
-// for head_ar (ESCALATION_EVENT_BY_ROLE is the shared role→eventId constant the
-// engine itself reads — imported, not re-literaled, so the test stays coupled
-// to the real mapping). A minimal single-choice stand-in mirroring the real
+// for head_ar (ESCALATION_EVENT_BY_ROLE is the shared role→event-pool constant
+// the engine itself reads — imported, not re-literaled, so the test stays
+// coupled to the real mapping; head_ar's pool is currently a singleton, so [0]
+// is exactly what the engine's seeded pick resolves to).
+// A minimal single-choice stand-in mirroring the real
 // event's shape (id/prompt/category/choices) is enough to pin the payload; the
 // authored content itself is covered by data-lint + JSON validation, not here.
 const ESCALATION_TEST_EVENT = {
-  id: ESCALATION_EVENT_BY_ROLE.head_ar,
+  id: ESCALATION_EVENT_BY_ROLE.head_ar[0],
   role_hint: 'Mac (Head of A&R)',
   category: 'industry_drama' as const,
   escalation_only: true,
