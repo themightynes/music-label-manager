@@ -3582,6 +3582,11 @@ Immediate attention recommended.
     },
     "flags": {
       "after": {
+        "escalationHistory": {
+          "head_ar": [
+            "escalation_ar_botched_signing",
+          ],
+        },
         "pending_side_event": {
           "category": "industry_drama",
           "choices": [
