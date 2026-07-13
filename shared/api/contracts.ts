@@ -846,3 +846,110 @@ export type AnyPlaytestFeedbackResponses = z.infer<typeof AnyPlaytestFeedbackRes
 export type SavePlaytestFeedbackRequest = z.infer<typeof SavePlaytestFeedbackRequestSchema>;
 export type SavePlaytestFeedbackResponse = z.infer<typeof SavePlaytestFeedbackResponseSchema>;
 export type GetPlaytestFeedbackResponse = z.infer<typeof GetPlaytestFeedbackResponseSchema>;
+
+// ========================================
+// Admin Content Review Schemas — v3 Mac Pool Review (2026-07-12)
+// ========================================
+// Content-review surface for the authored "v3 Mac pool" meetings (working
+// session 2026-07-12): the designer reads each authored meeting and records a
+// verdict + freeform notes per meeting, plus two overall fields. This is NOT
+// a playtest round — the round-shaped PLAYTEST_FORM_REGISTRY (sections/knobs,
+// round picker, feel scale) stays untouched. The SAME
+// /api/admin/playtest-feedback endpoint pair serves this form: the server's
+// formId allowlist is widened by exactly this one id (AdminFeedbackFormId
+// below), and the review saves to its OWN responses file
+// (docs/01-planning/v3-mac-pool-review.responses.json) — structurally
+// unreachable from any round's save and vice versa.
+
+export const MAC_POOL_REVIEW_FORM_ID = 'v3-mac-pool-review' as const;
+
+// Canonical meeting ids, in the review form's reading order (source scratchpad
+// file order: pool-authored, routine, major, reactive, new). The client-side
+// content module (client/src/admin/v3MacPoolReview.ts) must use exactly these
+// ids; the server writes `meetings` keys in this order for a stable JSON file.
+export const MAC_POOL_REVIEW_MEETING_IDS = [
+  'wall_of_misses',
+  'the_3am_demo',
+  'tuesday_superstition',
+  'reinvention_tape',
+  'showcase_slot',
+  'vintage_speakers',
+  'poaching_season',
+  'favor_signing',
+  'second_album_syndrome',
+  'one_that_got_away_again',
+  'mood_crater_rescue',
+  'demo_ethics_one',
+  'the_circuit',
+  'second_pair_of_ears',
+  'machine_that_listens',
+] as const;
+
+// Per-meeting verdict scale: approve / approve with edits / rework / kill.
+export const MacPoolReviewVerdictSchema = z.enum([
+  'approve',
+  'approve_with_edits',
+  'rework',
+  'kill',
+]);
+
+export const MacPoolMeetingReviewSchema = z.object({
+  verdict: MacPoolReviewVerdictSchema.nullable().default(null),
+  notes: z.string().default(''),
+});
+
+// Full review document. `savedAt` is stamped server-side on save.
+export const MacPoolReviewResponsesSchema = z.object({
+  formId: z.literal(MAC_POOL_REVIEW_FORM_ID).default(MAC_POOL_REVIEW_FORM_ID),
+  savedAt: z.string().nullable().default(null),
+  meetings: z.record(z.string(), MacPoolMeetingReviewSchema).default({}),
+  overallNotes: z.string().default(''),
+  voiceConsistency: z.string().default(''),
+});
+
+// The full allowlist the endpoint pair validates against: every playtest
+// round plus the Mac pool review. Union order matters — the playtest union
+// goes first so a document with no explicit formId still defaults to the
+// ACTIVE playtest form (unchanged behavior); an explicit
+// 'v3-mac-pool-review' formId fails every round's literal and lands here.
+export const AnyAdminFeedbackResponsesSchema = z.union([
+  AnyPlaytestFeedbackResponsesSchema,
+  MacPoolReviewResponsesSchema,
+]);
+
+export type AdminFeedbackFormId = PlaytestFormId | typeof MAC_POOL_REVIEW_FORM_ID;
+
+export function isAdminFeedbackFormId(value: string): value is AdminFeedbackFormId {
+  return isPlaytestFormId(value) || value === MAC_POOL_REVIEW_FORM_ID;
+}
+
+// Empty review default (GET returns this when the responses file does not
+// exist yet), with every canonical meeting key present in reading order.
+export function buildEmptyMacPoolReviewResponses(): MacPoolReviewResponses {
+  const meetings: Record<string, MacPoolMeetingReview> = {};
+  for (const id of MAC_POOL_REVIEW_MEETING_IDS) {
+    meetings[id] = { verdict: null, notes: '' };
+  }
+  return {
+    formId: MAC_POOL_REVIEW_FORM_ID,
+    savedAt: null,
+    meetings,
+    overallNotes: '',
+    voiceConsistency: '',
+  };
+}
+
+// Allowlist-wide empty-default builder (server GET path).
+export function buildEmptyAdminFeedbackResponsesFor(
+  formId: AdminFeedbackFormId
+): AnyAdminFeedbackResponses {
+  if (formId === MAC_POOL_REVIEW_FORM_ID) {
+    return buildEmptyMacPoolReviewResponses();
+  }
+  return buildEmptyPlaytestFeedbackResponsesFor(formId);
+}
+
+export type MacPoolReviewVerdict = z.infer<typeof MacPoolReviewVerdictSchema>;
+export type MacPoolMeetingReview = z.infer<typeof MacPoolMeetingReviewSchema>;
+export type MacPoolReviewResponses = z.infer<typeof MacPoolReviewResponsesSchema>;
+export type AnyAdminFeedbackResponses = z.infer<typeof AnyAdminFeedbackResponsesSchema>;

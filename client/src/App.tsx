@@ -35,6 +35,7 @@ import AdminHome from "@/admin/AdminLayout";
 import ContentEditorPage from "@/admin/ContentEditorPage";
 import SystemsMapPage from "@/admin/SystemsMapPage";
 import PlaytestFeedbackPage from "@/admin/PlaytestFeedbackPage";
+import MacPoolReviewPage from "@/admin/MacPoolReviewPage";
 import { withAdmin } from "@/admin/withAdmin";
 
 function Router() {
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/admin/database-health" component={withAdmin(AdminDatabaseHealthPage)} />
       <Route path="/admin/systems-map" component={withAdmin(SystemsMapPage)} />
       <Route path="/admin/playtest-feedback" component={withAdmin(PlaytestFeedbackPage)} />
+      <Route path="/admin/mac-pool-review" component={withAdmin(MacPoolReviewPage)} />
 
       {/* Prototype routes */}
       <Route path="/prototypes" component={withAdmin(UXPrototypesPage)} />

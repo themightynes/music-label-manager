@@ -5,16 +5,20 @@ import { z } from 'zod';
 import {
   ActionsConfigSchema,
   EventsConfigSchema,
-  AnyPlaytestFeedbackResponsesSchema,
+  AnyAdminFeedbackResponsesSchema,
   PLAYTEST_FEEDBACK_FORM_ID,
   PLAYTEST_FEEDBACK_FORM_ID_V2,
   PLAYTEST_FEEDBACK_FORM_ID_V3,
+  MAC_POOL_REVIEW_FORM_ID,
+  MAC_POOL_REVIEW_MEETING_IDS,
   PLAYTEST_FORM_REGISTRY,
   ACTIVE_PLAYTEST_FORM_ID,
-  isPlaytestFormId,
-  buildEmptyPlaytestFeedbackResponsesFor,
+  isAdminFeedbackFormId,
+  buildEmptyAdminFeedbackResponsesFor,
+  type AnyAdminFeedbackResponses,
   type AnyPlaytestFeedbackResponses,
-  type PlaytestFormId,
+  type MacPoolReviewResponses,
+  type AdminFeedbackFormId,
 } from '@shared/api/contracts';
 import { gameStates } from '@shared/schema';
 import { db } from '../db';
@@ -208,13 +212,19 @@ router.post('/api/admin/events-config', requireClerkUser, requireAdmin, async (r
 // calendar date). The markdown forms stay untouched as the printable sources.
 // No dataLoader cache clear or content changelog here — this is not game content.
 
-const PLAYTEST_RESPONSES_FILENAMES: Record<PlaytestFormId, string> = {
+// The allowlist ALSO carries the v3-mac-pool-review CONTENT-REVIEW form (not
+// a playtest round; not in the round picker) — same endpoint pair, its own
+// document shape (per-meeting verdict/notes) and its own responses file,
+// structurally unreachable from any round's save (the validated formId is the
+// only path to a filename).
+const PLAYTEST_RESPONSES_FILENAMES: Record<AdminFeedbackFormId, string> = {
   [PLAYTEST_FEEDBACK_FORM_ID_V3]: 'playtest-feedback-2026-07-12-r3.responses.json',
   [PLAYTEST_FEEDBACK_FORM_ID_V2]: 'playtest-feedback-2026-07-12.responses.json',
   [PLAYTEST_FEEDBACK_FORM_ID]: 'playtest-feedback-2026-07-11.responses.json',
+  [MAC_POOL_REVIEW_FORM_ID]: 'v3-mac-pool-review.responses.json',
 };
 
-function playtestResponsesPath(formId: PlaytestFormId): string {
+function playtestResponsesPath(formId: AdminFeedbackFormId): string {
   return path.join(process.cwd(), 'docs', '01-planning', PLAYTEST_RESPONSES_FILENAMES[formId]);
 }
 
@@ -251,13 +261,32 @@ function stablePlaytestResponses(
   } as AnyPlaytestFeedbackResponses;
 }
 
+// Mac-pool-review sibling of stablePlaytestResponses: meetings in canonical
+// reading order (extras appended), stable top-level key order.
+function stableMacPoolReviewResponses(parsed: MacPoolReviewResponses): MacPoolReviewResponses {
+  const meetings: MacPoolReviewResponses['meetings'] = {};
+  for (const id of MAC_POOL_REVIEW_MEETING_IDS) {
+    if (parsed.meetings[id]) meetings[id] = parsed.meetings[id];
+  }
+  for (const id of Object.keys(parsed.meetings)) {
+    if (!(id in meetings)) meetings[id] = parsed.meetings[id];
+  }
+  return {
+    formId: parsed.formId,
+    savedAt: parsed.savedAt,
+    meetings,
+    overallNotes: parsed.overallNotes,
+    voiceConsistency: parsed.voiceConsistency,
+  };
+}
+
 router.get('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, async (req, res) => {
   try {
     // Optional ?formId=… selects which round to load; defaults to the active
     // form. Anything outside the fixed allowlist is rejected.
     const requestedFormId =
       typeof req.query.formId === 'string' ? req.query.formId : ACTIVE_PLAYTEST_FORM_ID;
-    if (!isPlaytestFormId(requestedFormId)) {
+    if (!isAdminFeedbackFormId(requestedFormId)) {
       return res.status(400).json({ error: `Unknown playtest form id: ${requestedFormId}` });
     }
     const responsesPath = playtestResponsesPath(requestedFormId);
@@ -268,11 +297,11 @@ router.get('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, async
       if (readError?.code === 'ENOENT') {
         // No responses saved yet — return the empty default so the page can
         // prefill every field.
-        return res.json(buildEmptyPlaytestFeedbackResponsesFor(requestedFormId));
+        return res.json(buildEmptyAdminFeedbackResponsesFor(requestedFormId));
       }
       throw readError;
     }
-    const responses = AnyPlaytestFeedbackResponsesSchema.parse(JSON.parse(raw));
+    const responses = AnyAdminFeedbackResponsesSchema.parse(JSON.parse(raw));
     res.json(responses);
   } catch (error) {
     console.error('Failed to load playtest feedback responses:', error);
@@ -289,11 +318,11 @@ router.post('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, asyn
     }
 
     // Validate using shared schema from contracts. The validated formId (a
-    // closed two-literal union) keys the target file — a v2 save can never
-    // reach the round-1 historical file and vice versa.
-    let parsed: AnyPlaytestFeedbackResponses;
+    // closed literal union) keys the target file — a save against one form
+    // can never reach any other form's file (rounds AND the mac-pool review).
+    let parsed: AnyAdminFeedbackResponses;
     try {
-      parsed = AnyPlaytestFeedbackResponsesSchema.parse(responses);
+      parsed = AnyAdminFeedbackResponsesSchema.parse(responses);
     } catch (validationError) {
       if (validationError instanceof z.ZodError) {
         return res.status(400).json({
@@ -323,7 +352,10 @@ router.post('/api/admin/playtest-feedback', requireClerkUser, requireAdmin, asyn
 
     // Stamp savedAt server-side and write pretty-printed, stable key order.
     const savedAt = new Date().toISOString();
-    const stable = stablePlaytestResponses({ ...parsed, savedAt });
+    const stable =
+      parsed.formId === MAC_POOL_REVIEW_FORM_ID
+        ? stableMacPoolReviewResponses({ ...parsed, savedAt })
+        : stablePlaytestResponses({ ...parsed, savedAt });
     await fs.writeFile(responsesPath, JSON.stringify(stable, null, 2), 'utf8');
 
     res.json({
