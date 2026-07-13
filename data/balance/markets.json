@@ -248,6 +248,34 @@
       "diminishing_after_weeks": 4,
       "diminishing_factor": 0.5,
       "lead_single_conduit_factor": 0.5
+    },
+
+    "release_promotion": {
+      "_note": "Engine-verbs arc slice 8 (M5 promote_release). The authored effect value is an awareness-point bump applied to the targeted currently-released song (highest-awareness released song for the targeted artist, or label-wide). Clamped per application by max_awareness_bump, and the song's awareness stays within 0-100. Decay fields are never touched — the bump rides the existing weekly build/decay cycle.",
+      "max_awareness_bump": 15
+    },
+
+    "catalog_damage": {
+      "_note": "Engine-verbs arc slice 8 (M12 catalog_damage). The authored effect value is a severity (positive number); the targeted released song loses awareness * min(max_total_fraction, severity * awareness_loss_fraction_per_severity). Lower awareness directly reduces the song's future streaming revenue (weeks 5+ awareness modifier in FinancialSystem.calculateDecayRevenue). peak_awareness is historical and never reduced.",
+      "awareness_loss_fraction_per_severity": 0.1,
+      "max_total_fraction": 0.8
+    },
+
+    "physical_inventory": {
+      "_note": "Engine-verbs arc slice 10 (M9 physical_inventory flags-ledger MVP). grant_inventory's authored value is a unit count (clamped to max_units_per_grant); unit economics come from these knobs. Manufacturing cost (units * unit_cost) is charged at grant time. Each week a DETERMINISTIC sell-through converts units to revenue at unit_price: sold = round(unitsInitial * base_weekly_sell_rate * (1 + awareness/100 * awareness_sell_rate_bonus_max)), floored at min_weekly_units while stock remains, capped at unitsRemaining. Awareness = the tied release's highest song awareness that week. Unsold units expire as a one-time write-off line after shelf_life_weeks.",
+      "unit_cost": 4,
+      "unit_price": 12,
+      "base_weekly_sell_rate": 0.12,
+      "awareness_sell_rate_bonus_max": 1.0,
+      "min_weekly_units": 1,
+      "shelf_life_weeks": 12,
+      "max_units_per_grant": 20000
+    },
+
+    "revenue_transfer": {
+      "_note": "Engine-verbs arc slice 10 (M11 revenue_stream_transfer flags-ledger MVP). transfer_revenue_stream's authored value is the sold fraction of the targeted released release's weekly streaming revenue (values >= 1 are read as percent). Clamped to max_fraction. The deduction runs for default_weeks weeks from the grant week, then the ledger entry retires.",
+      "max_fraction": 0.5,
+      "default_weeks": 26
     }
   },
 

@@ -61,6 +61,12 @@ import { ArtistChangeHelpers } from '../../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../../utils/seasonalCalculations';
 import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
 import { scaleReputationGain } from '../../utils/reputationScaling';
+import {
+  readInventoryLedger,
+  readRevenueTransfers,
+  processInventoryWeek,
+  processRevenueTransfersWeek,
+} from '../flagsLedgers';
 
 // Patch type for song updates applied during weekly processing. Mirrors the
 // module-level SongUpdatePatch in game-engine.ts: `processReleasedProjects`'s
@@ -725,9 +731,23 @@ export class ReleaseProcessor {
         }
       }
 
+      // Engine-verbs arc slice 10 (M9/M11 flags-ledger MVPs): read both ledgers
+      // ONCE up front. When neither exists (every game that never ran the verbs,
+      // including all golden-master scenarios) `ledgersActive` is false and the
+      // per-song map fills + the post-loop pass below are completely skipped —
+      // byte-identical behavior, zero extra work.
+      const flagsForLedgers = (ctx.gameState.flags || {}) as Record<string, any>;
+      const inventoryLedger = readInventoryLedger(flagsForLedgers);
+      const transferLedger = readRevenueTransfers(flagsForLedgers);
+      const ledgersActive = inventoryLedger.length > 0 || transferLedger.length > 0;
+      /** This week's streaming revenue per releaseId (revenue-transfer input). */
+      const perReleaseRevenue: Record<string, number> = {};
+      /** This week's best song awareness per releaseId (inventory sell-through input). */
+      const releaseAwareness: Record<string, number> = {};
+
       let totalOngoingRevenue = 0;
       const songUpdates = [];
-      
+
       for (const song of releasedSongs) {
         const ongoingRevenue = await this.calculateOngoingSongRevenue(ctx, song);
 
@@ -893,6 +913,17 @@ export class ReleaseProcessor {
           console.warn(`[AWARENESS] Error processing awareness for song ${song.id}:`, error);
         }
 
+        // Engine-verbs slice 10: feed the ledger inputs (guarded — zero work when
+        // no ledger exists). Awareness uses THIS week's post-update value when the
+        // song moved this pass, else the stored value.
+        if (ledgersActive && song.releaseId) {
+          if (ongoingRevenue > 0) {
+            perReleaseRevenue[song.releaseId] = (perReleaseRevenue[song.releaseId] || 0) + ongoingRevenue;
+          }
+          const effectiveAwareness = awarenessUpdate?.awareness ?? (song.awareness || 0);
+          releaseAwareness[song.releaseId] = Math.max(releaseAwareness[song.releaseId] || 0, effectiveAwareness);
+        }
+
         if (ongoingRevenue > 0) {
           totalOngoingRevenue += ongoingRevenue;
           
@@ -989,6 +1020,79 @@ export class ReleaseProcessor {
       // Update songs in batch if available
       if (songUpdates.length > 0 && ctx.gameData.updateSongs) {
         await ctx.gameData.updateSongs(songUpdates, dbTransaction);
+      }
+
+      // ── Engine-verbs arc slice 10: flags-ledger weekly pass ──────────────
+      // The natural financial site for both ledgers: this pass already owns the
+      // week's streaming revenue and awareness, and money still flows ONLY
+      // through summary.revenue/expenses (single [FINAL MONEY] point preserved).
+      // Both steps are pure + deterministic (flagsLedgers.ts — zero RNG draws,
+      // the engine's seeded stream is untouched). Entirely skipped when no
+      // ledger exists (guard above) — golden-master scenarios are byte-identical.
+      if (ledgersActive) {
+        const marketFormulas = (ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas;
+
+        if (inventoryLedger.length > 0) {
+          const invResult = processInventoryWeek(
+            inventoryLedger,
+            currentWeek,
+            releaseAwareness,
+            marketFormulas?.physical_inventory
+          );
+          for (const ev of invResult.events) {
+            if (ev.kind === 'sale') {
+              summary.revenue += ev.revenue;
+              summary.changes.push({
+                type: 'revenue',
+                description: ev.soldOut
+                  ? `💿 The physical run of "${ev.entry.releaseTitle}" sold out — last copies gone`
+                  : `💿 Physical copies of "${ev.entry.releaseTitle}" moved this week`,
+                amount: ev.revenue,
+                releaseId: ev.entry.releaseId,
+              });
+            } else {
+              // One-time write-off: no money moves (manufacturing was paid at
+              // grant time) — surfaced as a rendered notice line (achievements
+              // card via 'unlock'), never the invisible `other` bucket.
+              summary.changes.push({
+                type: 'unlock',
+                description: `📦 Unsold copies of "${ev.entry.releaseTitle}" were written off — their shelf life ran out`,
+                amount: 0,
+                releaseId: ev.entry.releaseId,
+              });
+            }
+          }
+          flagsForLedgers.inventory = invResult.nextLedger;
+        }
+
+        if (transferLedger.length > 0) {
+          const xferResult = processRevenueTransfersWeek(
+            transferLedger,
+            currentWeek,
+            perReleaseRevenue,
+            marketFormulas?.revenue_transfer
+          );
+          for (const d of xferResult.deductions) {
+            summary.expenses += d.amount;
+            summary.changes.push({
+              type: 'expense',
+              description: `Sold catalog share — the buyer collected their cut of "${d.entry.releaseTitle}"'s streams`,
+              amount: -d.amount,
+              releaseId: d.entry.releaseId,
+            });
+          }
+          for (const concluded of xferResult.concluded) {
+            summary.changes.push({
+              type: 'unlock',
+              description: `The catalog-share deal on "${concluded.releaseTitle}" has run its course — the full stream is yours again`,
+              amount: 0,
+              releaseId: concluded.releaseId,
+            });
+          }
+          flagsForLedgers.revenue_transfers = xferResult.nextLedger;
+        }
+
+        ctx.gameState.flags = flagsForLedgers;
       }
 
       // Add total ongoing revenue and streams to summary
