@@ -176,6 +176,36 @@ export class ReleaseProcessor {
       console.log('[PRESS] pressStoryFlag consumed by this release\'s press roll — cleared');
     }
 
+    // Engine-verbs slice 13 (M15 press_scrutiny_flag) — the FIRE site of the
+    // banked next-release liability (written by ActionProcessor.applyEffects,
+    // expired unconsumed in processDelayedEffects). A live scrutiny flag scales
+    // this release's press pickups AND the press reputation gain down by
+    // press_scrutiny_penalty_factor (data/balance/markets.json press_coverage),
+    // POST-HOC — the underlying rolls are untouched, so the engine's seeded RNG
+    // draw count is byte-identical (GM-safe: no scenario banks the flag).
+    // One-shot like the story flag: fires once, win or lose, then clears.
+    const hasScrutinyFlag = flags.pressScrutinyFlag === true;
+    if (hasScrutinyFlag) {
+      const scrutinyFactor = (ctx.gameData.getPressConfigSync() as any).press_scrutiny_penalty_factor ?? 0.5;
+      const dampenedPickups = Math.max(0, Math.floor(outcome.pickups * (1 - scrutinyFactor)));
+      const dampenedReputationGain = Math.max(0, Math.round(outcome.reputationGain * (1 - scrutinyFactor)));
+      console.log(`[PRESS SCRUTINY] pressScrutinyFlag consumed by this release's press roll — pickups ${outcome.pickups} -> ${dampenedPickups}, reputationGain ${outcome.reputationGain} -> ${dampenedReputationGain} (factor ${scrutinyFactor})`);
+
+      flags.pressScrutinyFlag = false;
+      delete flags.pressScrutinyFlagWeek; // drop the expiry stamp with it
+      ctx.gameState.flags = flags;
+
+      if (ctx.summary && Array.isArray(ctx.summary.changes)) {
+        ctx.summary.changes.push({
+          type: 'meeting',
+          description: '🗞️ Press scrutiny dulled the coverage of this release',
+          amount: 0,
+        });
+      }
+
+      return { pickups: dampenedPickups, reputationGain: dampenedReputationGain };
+    }
+
     return outcome;
   }
 
@@ -184,13 +214,41 @@ export class ReleaseProcessor {
    * Each song has its own decay pattern based on individual quality and release timing
    */
   // DELEGATED TO FinancialSystem (originally lines 1714-1782)
+  // Engine-verbs slice 12 (M10 distribution_efficiency): THE streaming-revenue
+  // read site for the persistent label modifier. While an active
+  // flags.distributionEfficiency bank ({ amount, untilWeek }, written by
+  // ActionProcessor.applyEffects, expired in processDelayedEffects) exists, the
+  // ongoing revenue of EVERY released song is multiplied by (1 + amount), with
+  // the applied amount clamped to ±efficiency_amount_cap
+  // (data/balance/markets.json market_formulas.distribution). No flag → the
+  // base value returns untouched (golden-master byte-identical). No RNG.
+  // TODO: release-WEEK initial revenue (calculateStreamingOutcome) deliberately
+  // NOT modified in this slice — the modifier reads at the weekly catalog site.
   async calculateOngoingSongRevenue(ctx: WeekContext, song: any): Promise<number> {
-    return await ctx.financialSystem.calculateOngoingSongRevenue(
+    const baseRevenue = await ctx.financialSystem.calculateOngoingSongRevenue(
       song,
       ctx.gameState.currentWeek || 1,
       ctx.gameState.reputation || 0,
       ctx.gameState.playlistAccess || 'none'
     );
+
+    const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+    const dist = flags.distributionEfficiency as { amount?: number; untilWeek?: number } | undefined;
+    const currentWeek = ctx.gameState.currentWeek || 1;
+    if (
+      dist && typeof dist === 'object' &&
+      typeof dist.amount === 'number' && dist.amount !== 0 &&
+      typeof dist.untilWeek === 'number' && currentWeek < dist.untilWeek
+    ) {
+      const cap = (ctx.gameData as any).getDistributionConfigSync?.().efficiency_amount_cap ?? 0.25;
+      const appliedAmount = Math.max(-cap, Math.min(cap, dist.amount));
+      const modified = baseRevenue * (1 + appliedAmount);
+      if (baseRevenue > 0) {
+        console.log(`[DISTRIBUTION] distribution_efficiency ${appliedAmount > 0 ? '+' : ''}${appliedAmount} applied to ongoing revenue for "${song.title}": ${baseRevenue} -> ${modified}`);
+      }
+      return modified;
+    }
+    return baseRevenue;
   }
 
   /**

@@ -44,7 +44,7 @@ import type { WeekSummary, ScheduleEventEffect, ScheduledEventEntry } from '../.
 import { ArtistChangeHelpers, isScheduleEventEffect } from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
-import { seededRandom } from '../../utils/seededRandom';
+import { seededRandom, seededRandomPick } from '../../utils/seededRandom';
 import { scaleReputationGain } from '../../utils/reputationScaling';
 import {
   getMoodModifiers,
@@ -80,11 +80,43 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'rep_swing',
   // Exec-meetings-revival PR-7 (C5 — prestige/award track):
   'award_chances',
-  // Engine-verbs Slice 1 (M4 — chained/scheduled events): the ONE structured
-  // (non-numeric) effect. Value shape { event_id, defer_weeks } — banks an
-  // entry into flags.scheduled_events[]; GameEngine.promoteScheduledEvents
-  // lands it as a mandatory crisis once due AND the crisis slot is free.
-  'schedule_event'
+  // Engine-verbs Slice 1 (M4 — chained/scheduled events): value shape
+  // { event_id, defer_weeks } — banks an entry into flags.scheduled_events[];
+  // GameEngine.promoteScheduledEvents lands it as a mandatory crisis once due
+  // AND the crisis slot is free.
+  'schedule_event',
+  // Engine-verbs arc (2026-07-12) — Tier 1/2 mechanism keys (feat/ev-flags-keys):
+  // Slice 3-WRITE (M3): namespaced narrative memory — flags.story[key] = true.
+  'story_flag',
+  // Slice 2 (M2): inject a prospect into the A&R discovered pool.
+  'spawn_prospect',
+  // Slice 11-WRITE (M7): bench an executive — flags.execAbsence[role] = untilWeek.
+  'set_exec_absence',
+  // Slice 12 (M10): persistent label streaming-revenue modifier.
+  'distribution_efficiency',
+  // Slice 13 (M15): negative sibling of press_story_flag (next-release liability).
+  'press_scrutiny_flag'
+]);
+
+/**
+ * Engine-verbs arc — effect keys whose authored VALUE is structured (a string or
+ * an object), not a plain number. Every effects pipeline entry point filters
+ * authored values with `typeof value === 'number'` (a PR-1-era guard against
+ * garbage); these keys are the sanctioned exceptions, so those filters admit
+ * them too. Value shapes (enforced by tests/engine/data-lint-effect-keys.test.ts):
+ *   - schedule_event:          { event_id: string, defer_weeks: int >= 0 }
+ *   - story_flag:              string key, or { key: string, value?: boolean }
+ *   - spawn_prospect:          { name?, archetype?, quality_hint?, popularity_hint?, source? }
+ *   - set_exec_absence:        { role: string, weeks: number > 0 }
+ *   - distribution_efficiency: { amount: number, weeks: number > 0 }
+ * (press_scrutiny_flag is numeric, like press_story_flag — not listed here.)
+ */
+export const STRUCTURED_EFFECT_KEYS: ReadonlySet<string> = new Set([
+  'schedule_event',
+  'story_flag',
+  'spawn_prospect',
+  'set_exec_absence',
+  'distribution_efficiency'
 ]);
 
 /**
@@ -188,6 +220,27 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
   schedule_event: {
     title: 'Consequence',
     text: 'Sets something in motion behind the scenes. A few weeks from now this decision comes back around as an event on your desk — you\'ll deal with it when it lands.',
+  },
+  // --- Engine-verbs arc channels (feat/ev-flags-keys) ---
+  story_flag: {
+    title: 'Story',
+    text: 'The label remembers this decision. It changes nothing today, but future meetings and events can hinge on it.',
+  },
+  spawn_prospect: {
+    title: 'New Prospect',
+    text: 'Puts a new artist on your radar, applied instantly. They land in your A&R office\'s discovered pool, ready to sign whenever you are.',
+  },
+  set_exec_absence: {
+    title: 'Exec Away',
+    text: 'Sends this executive away from the label for a stretch. While they\'re out, they won\'t be around for meetings.',
+  },
+  distribution_efficiency: {
+    title: 'Distribution',
+    text: 'Shifts how efficiently your catalog reaches listeners for a while — streaming payouts run higher (or lower) every week until the arrangement runs its course.',
+  },
+  press_scrutiny_flag: {
+    title: 'Press Scrutiny',
+    text: 'The press is watching for a stumble. Your next release faces a harder crowd — coverage and the standing it brings are dulled. Fires once, then the heat moves on; fades if you lie low long enough.',
   },
 };
 
@@ -361,21 +414,20 @@ export class ActionProcessor {
     // entry below can carry the actual numeric effects passed to applyEffects, even
     // when effects_immediate is empty (appliedEffects then stays {}).
     const appliedEffects: Record<string, number> = {};
+    // Engine-verbs arc: structured-value keys (story_flag, spawn_prospect, ...)
+    // are collected SEPARATELY — they flow to applyEffects but stay out of the
+    // numeric appliedEffects badge record (their cases push their own qualitative
+    // summary lines) and out of the mood-modifier transform (numbers only).
+    const structuredEffects: Record<string, any> = {};
     if (choice.effects_immediate) {
       // Convert to Record<string, number> for applyEffects
       for (const [key, value] of Object.entries(choice.effects_immediate)) {
         if (typeof value === 'number') {
           appliedEffects[key] = value;
+        } else if (STRUCTURED_EFFECT_KEYS.has(key)) {
+          structuredEffects[key] = value;
         }
       }
-      // Engine-verbs Slice 1 (M4): schedule_event is the one structured
-      // (non-numeric) effect value — the numeric filter above drops it, so
-      // capture it separately and re-attach AFTER mood scaling (the exec-mood
-      // multiplier must never touch its payload; it is a scheduling verb, not a
-      // magnitude). Kept out of appliedEffects too — badge records are numeric.
-      const scheduleEventEffect = isScheduleEventEffect((choice.effects_immediate as any).schedule_event)
-        ? ((choice.effects_immediate as any).schedule_event as ScheduleEventEffect)
-        : undefined;
       // PR-9: transform through the shared mood util BEFORE applyEffects so the
       // scaled numbers are what actually land (and match the client Impact Preview,
       // which routes the same util). Neutral/no-exec → identity transform.
@@ -388,10 +440,11 @@ export class ActionProcessor {
           appliedEffects[key] = immediateToApply[key];
         }
       }
-      const toApply: Record<string, number | ScheduleEventEffect> = scheduleEventEffect
-        ? { ...immediateToApply, schedule_event: scheduleEventEffect }
-        : immediateToApply;
-      await this.applyEffects(ctx, toApply, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+      // Engine-verbs arc: structured-value effects (incl. schedule_event) ride
+      // along un-scaled — collected into structuredEffects above, re-attached
+      // AFTER mood scaling so the exec-mood multiplier never touches their
+      // payloads, and kept out of appliedEffects so badge records stay numeric.
+      await this.applyEffects(ctx, { ...immediateToApply, ...structuredEffects }, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
 
       // Volatility-economy slice 3: applyEffects throttles POSITIVE reputation
       // gains through the global scaling helper. Reflect the SAME scaled value back
@@ -721,7 +774,11 @@ export class ActionProcessor {
    * @param meetingName - Optional meeting name for logging
    * @param choiceId - Optional choice ID for logging
    */
-  async applyEffects(ctx: WeekContext, effects: Record<string, number | ScheduleEventEffect>, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
+  // Engine-verbs arc: `effects` is Record<string, any> (was Record<string, number>)
+  // because STRUCTURED_EFFECT_KEYS carry string/object values. Every numeric case
+  // below still receives numbers — the entry-point filters only admit non-number
+  // values for the structured keys.
+  async applyEffects(ctx: WeekContext, effects: Record<string, any>, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
     const { summary } = ctx;
     for (const [key, rawValue] of Object.entries(effects)) {
       // Engine-verbs Slice 1 (M4): `schedule_event` is the ONE structured
@@ -1295,6 +1352,287 @@ export class ActionProcessor {
           break;
         }
 
+        case 'story_flag': {
+          // Engine-verbs slice 3-WRITE (M3) — namespaced narrative memory. Value is
+          // a string key (or { key, value? }) → flags.story[key] = true (or the
+          // explicit boolean, so content can also CLEAR a flag). WRITE ONLY: the
+          // `requires` read gate ships in a sibling slice (M16 shares the plumbing).
+          // Additive flags key — no SNAPSHOT_VERSION bump.
+          const raw = value as any;
+          const storyKey: string | null =
+            typeof raw === 'string' && raw.trim().length > 0
+              ? raw.trim()
+              : raw && typeof raw === 'object' && typeof raw.key === 'string' && raw.key.trim().length > 0
+                ? raw.key.trim()
+                : null;
+          if (!storyKey) {
+            console.warn(`[EFFECT VALIDATION] story_flag effect with invalid value (${JSON.stringify(raw)}) ignored${meetingName ? ` — meeting: ${meetingName}` : ''}`);
+            break;
+          }
+          const storyValue: boolean =
+            raw && typeof raw === 'object' && 'value' in raw ? raw.value !== false : true;
+
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const story = (flags.story && typeof flags.story === 'object' && !Array.isArray(flags.story))
+            ? flags.story as Record<string, boolean>
+            : {};
+          story[storyKey] = storyValue;
+          flags.story = story;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: 'The label will remember this decision',
+            amount: 0,
+            appliedEffects: { story_flag: 1 }
+          });
+          console.log(`[EFFECT PROCESSING] story_flag effect: flags.story['${storyKey}'] = ${storyValue}`);
+          break;
+        }
+
+        case 'spawn_prospect': {
+          // Engine-verbs slice 2 (M2) — prospect-pool MVP. Value is a descriptor
+          // { name?, archetype?, quality_hint?, popularity_hint?, source? }. Picks a
+          // REAL unsigned/undiscovered artist from the game-data catalog (so the
+          // existing sign-from-discovery flow — id-keyed enrichment in
+          // GET /ar-office/artists + server-derived signingCost in artistService —
+          // just works) and pushes a record in EXACTLY the shape
+          // AROfficeProcessor.processAROfficeWeekly writes (~204–220). Any rolled
+          // targeting uses an ISOLATED seed (seededRandom) — never ctx.getRandom,
+          // so the engine's pinned RNG stream is undisturbed.
+          const desc = (value && typeof value === 'object' && !Array.isArray(value)) ? value as any : {};
+          try {
+            const allArtists = await ctx.gameData.getAllArtists();
+            if (!allArtists || allArtists.length === 0) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: no artists available in game data — effect skipped');
+              break;
+            }
+
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+
+            // Mirror AROfficeProcessor's exclusion set: signed (by name) + already discovered (by name).
+            const excludedNames = new Set<string>();
+            try {
+              if (ctx.storage?.getArtistsByGame) {
+                const signed = await ctx.storage.getArtistsByGame(ctx.gameState.id, ctx.dbTransaction);
+                (signed || []).forEach((a: any) => excludedNames.add(String(a.name || '').toLowerCase()));
+              }
+            } catch (storageErr) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: failed to load signed artists, continuing without that filter:', storageErr);
+            }
+            if (Array.isArray(flags.ar_office_discovered_artists)) {
+              flags.ar_office_discovered_artists.forEach((d: any) => {
+                if (d?.name) excludedNames.add(String(d.name).toLowerCase());
+              });
+            }
+
+            let candidates = allArtists.filter((a: any) => !excludedNames.has(String(a?.name || '').toLowerCase()));
+            if (candidates.length === 0) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: every catalog artist is already signed or discovered — effect skipped');
+              break;
+            }
+
+            const gameId = ctx.gameState.id || 'unknown-game';
+            const currentWeek = ctx.gameState.currentWeek || 0;
+            const seedBase = `${gameId}-week${currentWeek}-spawnprospect-${meetingName || 'unknown-meeting'}-${choiceId || 'unknown-choice'}`;
+
+            let picked: any | undefined;
+            // 1) Exact name request wins when that artist is still available.
+            if (typeof desc.name === 'string' && desc.name.trim()) {
+              const wantedLc = desc.name.trim().toLowerCase();
+              picked = candidates.find((a: any) => String(a?.name || '').toLowerCase() === wantedLc);
+              if (!picked) {
+                console.warn(`[EFFECT PROCESSING] spawn_prospect: requested artist "${desc.name}" unavailable — falling back to hint targeting`);
+              }
+            }
+            if (!picked) {
+              // 2) Archetype filter (soft — falls back to the full pool when empty).
+              if (typeof desc.archetype === 'string' && desc.archetype.trim()) {
+                const archLc = desc.archetype.trim().toLowerCase();
+                const archMatches = candidates.filter((a: any) => String(a?.archetype || '').toLowerCase() === archLc);
+                if (archMatches.length > 0) candidates = archMatches;
+              }
+              // 3) Nearest match to the talent/popularity targets. Missing hints roll
+              //    a target inside the config ranges (isolated seed, one draw each).
+              //    CONFIG: data/balance/artists.json artist_stats.prospect_spawn.
+              const spawnCfg = (ctx.gameData as any).getProspectSpawnConfigSync?.() ?? {
+                default_talent_range: [40, 85],
+                default_popularity_range: [5, 40]
+              };
+              const rollInRange = (range: [number, number], seed: string) => {
+                const [lo, hi] = Array.isArray(range) && range.length === 2 ? range : [40, 85];
+                return lo + seededRandom(seed) * (hi - lo);
+              };
+              const talentTarget = typeof desc.quality_hint === 'number'
+                ? desc.quality_hint
+                : rollInRange(spawnCfg.default_talent_range, `${seedBase}-talent`);
+              const popularityTarget = typeof desc.popularity_hint === 'number'
+                ? desc.popularity_hint
+                : rollInRange(spawnCfg.default_popularity_range, `${seedBase}-popularity`);
+
+              let bestDistance = Number.POSITIVE_INFINITY;
+              let bestMatches: any[] = [];
+              for (const artist of candidates) {
+                const distance =
+                  Math.abs((artist?.talent ?? 0) - talentTarget) +
+                  Math.abs((artist?.popularity ?? 0) - popularityTarget);
+                if (distance < bestDistance) {
+                  bestDistance = distance;
+                  bestMatches = [artist];
+                } else if (distance === bestDistance) {
+                  bestMatches.push(artist);
+                }
+              }
+              picked = bestMatches.length > 1
+                ? seededRandomPick(bestMatches, `${seedBase}-tiebreak`)
+                : bestMatches[0];
+            }
+            if (!picked) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: no candidate selected — effect skipped');
+              break;
+            }
+
+            // Push in EXACTLY the AROfficeProcessor descriptor shape (~204–220).
+            if (!flags.ar_office_discovered_artists) {
+              flags.ar_office_discovered_artists = [];
+            }
+            flags.ar_office_discovered_artists.push({
+              id: picked.id,
+              name: picked.name,
+              archetype: picked.archetype,
+              talent: picked.talent || 0,
+              popularity: picked.popularity || 0,
+              genre: picked.genre || null,
+              discoveryTime: currentWeek, // sim-time week (save-restore reproducibility)
+              sourcingType: typeof desc.source === 'string' && desc.source.trim() ? desc.source.trim() : 'story',
+              genreUsed: null
+            });
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `🔍 A new artist surfaced on your radar — ${picked.name} is waiting in your A&R office`,
+              amount: 0,
+              appliedEffects: { spawn_prospect: 1 }
+            });
+            console.log(`[EFFECT PROCESSING] spawn_prospect effect: added ${picked.name} (${picked.id}) to discovered pool (source: ${desc.source ?? 'story'}, seed: ${seedBase})`);
+          } catch (spawnErr) {
+            console.warn('[EFFECT PROCESSING] spawn_prospect failed (effect skipped, never fatal):', spawnErr);
+          }
+          break;
+        }
+
+        case 'set_exec_absence': {
+          // Engine-verbs slice 11-WRITE (M7) — bench an executive. Value is
+          // { role, weeks } → flags.execAbsence[role] = currentWeek + weeks (the
+          // first week the exec is BACK; absent while currentWeek < untilWeek).
+          // WRITE ONLY: the meeting-candidate read filters (route candidate list +
+          // resolveAutonomousExecMeetings) ship in a sibling slice.
+          const raw = value as any;
+          if (
+            !raw || typeof raw !== 'object' ||
+            typeof raw.role !== 'string' || !raw.role.trim() ||
+            typeof raw.weeks !== 'number' || !(raw.weeks > 0)
+          ) {
+            console.warn(`[EFFECT VALIDATION] set_exec_absence effect with invalid value (${JSON.stringify(raw)}) ignored${meetingName ? ` — meeting: ${meetingName}` : ''}`);
+            break;
+          }
+          const role = raw.role.trim();
+          const weeks = Math.max(1, Math.floor(raw.weeks));
+          const currentWeek = ctx.gameState.currentWeek || 0;
+
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const execAbsence = (flags.execAbsence && typeof flags.execAbsence === 'object' && !Array.isArray(flags.execAbsence))
+            ? flags.execAbsence as Record<string, number>
+            : {};
+          // Longest bench wins if something re-benches an already-absent exec.
+          execAbsence[role] = Math.max(execAbsence[role] || 0, currentWeek + weeks);
+          flags.execAbsence = execAbsence;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `An executive is stepping away from the label for a stretch`,
+            amount: 0,
+            appliedEffects: { set_exec_absence: weeks }
+          });
+          console.log(`[EFFECT PROCESSING] set_exec_absence effect: flags.execAbsence['${role}'] = ${execAbsence[role]} (back week ${execAbsence[role]}, ${weeks} week(s) from week ${currentWeek})`);
+          break;
+        }
+
+        case 'distribution_efficiency': {
+          // Engine-verbs slice 12 (M10) — persistent label modifier. Value is
+          // { amount, weeks } banked into flags.distributionEfficiency
+          // { amount, untilWeek } (mirrors the pressMomentum/pendingAwarenessBoost
+          // flags-bank pattern). READ as a ×(1 + amount) multiplier — clamped to
+          // ±efficiency_amount_cap (data/balance/markets.json market_formulas.
+          // distribution) — on weekly ongoing streaming revenue in
+          // ReleaseProcessor.calculateOngoingSongRevenue while
+          // currentWeek < untilWeek; expired in processDelayedEffects.
+          const raw = value as any;
+          if (
+            !raw || typeof raw !== 'object' ||
+            typeof raw.amount !== 'number' || raw.amount === 0 ||
+            typeof raw.weeks !== 'number' || !(raw.weeks > 0)
+          ) {
+            console.warn(`[EFFECT VALIDATION] distribution_efficiency effect with invalid value (${JSON.stringify(raw)}) ignored${meetingName ? ` — meeting: ${meetingName}` : ''}`);
+            break;
+          }
+          const weeks = Math.max(1, Math.floor(raw.weeks));
+          const currentWeek = ctx.gameState.currentWeek || 0;
+
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = (flags.distributionEfficiency && typeof flags.distributionEfficiency === 'object')
+            ? flags.distributionEfficiency as { amount?: number; untilWeek?: number }
+            : null;
+          // Stack amounts while a modifier is live; the longest expiry wins.
+          const previousAmount = previous && typeof previous.amount === 'number' && (previous.untilWeek ?? 0) > currentWeek
+            ? previous.amount
+            : 0;
+          flags.distributionEfficiency = {
+            amount: previousAmount + raw.amount,
+            untilWeek: Math.max(previous?.untilWeek ?? 0, currentWeek + weeks)
+          };
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: raw.amount > 0
+              ? 'Distribution pipeline running hotter — streaming payouts lifted while it lasts'
+              : 'Distribution pipeline snarled — streaming payouts squeezed while it lasts',
+            amount: 0,
+            appliedEffects: { distribution_efficiency: raw.amount }
+          });
+          console.log(`[EFFECT PROCESSING] distribution_efficiency effect: ${raw.amount > 0 ? '+' : ''}${raw.amount} for ${weeks} week(s) (pool now ${flags.distributionEfficiency.amount}, until week ${flags.distributionEfficiency.untilWeek})`);
+          break;
+        }
+
+        case 'press_scrutiny_flag': {
+          // Engine-verbs slice 13 (M15) — negative sibling of press_story_flag.
+          // Any positive authored value banks a next-release LIABILITY: the next
+          // release's press roll (ReleaseProcessor.calculatePressOutcome) has its
+          // pickups + press reputation gain scaled down by
+          // press_scrutiny_penalty_factor, fires ONCE, then clears. Same stamp +
+          // expiry discipline as pressStoryFlag (press_scrutiny_flag_expiry_weeks).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          if (value > 0) {
+            flags.pressScrutinyFlag = true;
+            flags.pressScrutinyFlagWeek = ctx.gameState.currentWeek || 0;
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: 'Press scrutiny mounting — your next release will face a harder crowd',
+              amount: 0,
+              appliedEffects: { press_scrutiny_flag: 1 }
+            });
+            console.log('[EFFECT PROCESSING] press_scrutiny_flag set (flags.pressScrutinyFlag = true)');
+          } else {
+            console.log(`[EFFECT PROCESSING] press_scrutiny_flag effect with non-positive value (${value}) ignored`);
+          }
+          break;
+        }
+
         default:
           // MISSING: unknown/unimplemented effect key encountered by applyEffects (PR-1 truth
           // infrastructure). 'executive_mood' is deliberately silent here — it's consumed
@@ -1364,9 +1702,12 @@ export class ActionProcessor {
               console.log(`[DELAYED EFFECTS] Processing artist-targeted delayed effects for artist ${artistId}:`, effects);
 
               // Use applyEffects() with artist targeting for delayed effects (Task 2.5)
-              const delayedEffectsRecord: Record<string, number> = {};
+              // Engine-verbs arc: structured-value keys (STRUCTURED_EFFECT_KEYS)
+              // are admitted alongside numbers — their applyEffects cases handle
+              // the string/object values.
+              const delayedEffectsRecord: Record<string, any> = {};
               for (const [effectKey, effectValue] of Object.entries(effects)) {
-                if (typeof effectValue === 'number') {
+                if (typeof effectValue === 'number' || STRUCTURED_EFFECT_KEYS.has(effectKey)) {
                   delayedEffectsRecord[effectKey] = effectValue;
                 }
               }
@@ -1432,6 +1773,29 @@ export class ActionProcessor {
           console.log(`[PRESS STORY] Expired unconsumed story flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pressStoryFlag = false;
           delete flags.pressStoryFlagWeek;
+        }
+      }
+
+      // Engine-verbs slice 13 (M15) — pressScrutinyFlag expiry. The scrutiny flag
+      // is only consumed by a release press roll with marketing budget > 0
+      // (ReleaseProcessor.calculatePressOutcome), so an unconsumed flag ages out —
+      // the press finds a new target. Exact mirror of the pressStoryFlag expiry
+      // above; knob press_scrutiny_flag_expiry_weeks lives with the press config.
+      if (flags.pressScrutinyFlag === true) {
+        const stampedWeek = typeof flags.pressScrutinyFlagWeek === 'number' ? flags.pressScrutinyFlagWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getPressConfigSync().press_scrutiny_flag_expiry_weeks ?? 8;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[PRESS SCRUTINY] Expired unconsumed scrutiny flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pressScrutinyFlag = false;
+          delete flags.pressScrutinyFlagWeek;
+          if (summary && Array.isArray(summary.changes)) {
+            summary.changes.push({
+              type: 'meeting',
+              description: 'The press scrutiny died down — the spotlight moved on before you released anything',
+              amount: 0,
+            });
+          }
         }
       }
 
@@ -1533,6 +1897,31 @@ export class ActionProcessor {
           console.log(`[VARIANCE] Expired unconsumed variance pool (${flags.pendingVariance}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingVariance = 0;
           delete flags.pendingVarianceWeek;
+        }
+      }
+
+      // Engine-verbs slice 12 (M10) — distributionEfficiency expiry. Unlike the
+      // banks above (stamped at write, expiry knob), this modifier carries its own
+      // untilWeek (from the authored { amount, weeks } value): the read site
+      // (ReleaseProcessor.calculateOngoingSongRevenue) applies it only while
+      // currentWeek < untilWeek, and this sweep deletes the lapsed entry so no-op
+      // games stay byte-stable. One qualitative line when it lapses.
+      if (flags.distributionEfficiency && typeof flags.distributionEfficiency === 'object') {
+        const dist = flags.distributionEfficiency as { amount?: number; untilWeek?: number };
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (typeof dist.untilWeek !== 'number' || currentWeek >= dist.untilWeek) {
+          const lapsedAmount = typeof dist.amount === 'number' ? dist.amount : 0;
+          console.log(`[DISTRIBUTION] Distribution-efficiency modifier (${lapsedAmount}) lapsed at week ${currentWeek} (untilWeek ${dist.untilWeek})`);
+          delete flags.distributionEfficiency;
+          if (summary && Array.isArray(summary.changes)) {
+            summary.changes.push({
+              type: 'meeting',
+              description: lapsedAmount >= 0
+                ? 'Your distribution arrangement ran its course — streaming payouts return to normal'
+                : 'The distribution snarl cleared — streaming payouts return to normal',
+              amount: 0,
+            });
+          }
         }
       }
 

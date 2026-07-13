@@ -38,7 +38,15 @@
       "reputation_modifier": 0.008,
       "max_pickups_per_release": 8,
       "press_momentum_chance_per_point": 0.02,
-      "press_story_flag_expiry_weeks": 8
+      "press_story_flag_expiry_weeks": 8,
+      "press_scrutiny_penalty_factor": 0.5,
+      "press_scrutiny_flag_expiry_weeks": 8,
+      "_scrutiny_note": "Engine-verbs slice 13 (M15 press_scrutiny_flag): the negative sibling of press_story_flag. A banked scrutiny flag fires ONCE at the next release's press roll (ReleaseProcessor.calculatePressOutcome), scaling that release's press pickups and press reputation gain down by press_scrutiny_penalty_factor, then clears. Unconsumed flags expire after press_scrutiny_flag_expiry_weeks (same discipline as press_story_flag_expiry_weeks)."
+    },
+
+    "distribution": {
+      "efficiency_amount_cap": 0.25,
+      "_note": "Engine-verbs slice 12 (M10 distribution_efficiency): a banked flags.distributionEfficiency pool multiplies weekly ongoing streaming revenue by (1 + amount) while active (ReleaseProcessor.calculateOngoingSongRevenue). The applied amount is clamped to ±efficiency_amount_cap regardless of how much content banks."
     },
     
     "tour_revenue": {
