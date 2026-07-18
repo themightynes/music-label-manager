@@ -1,0 +1,109 @@
+{
+  "formId": "playtest-feedback-2026-07-12",
+  "savedAt": "2026-07-12T22:31:53.865Z",
+  "sections": {
+    "mandatory_crisis_events": {
+      "exposure": [
+        "crisis_card",
+        "advance_blocked",
+        "handled_beat"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "energy_lifecycle": {
+      "exposure": [
+        "recording_dip",
+        "tour_dip",
+        "idle_recovery"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": [
+        "",
+        "It didn't. Maybe tours can decay more energy than others. Maybe recovery is a little slower."
+      ]
+    },
+    "mood_outcomes": {
+      "exposure": [
+        "still_flat"
+      ],
+      "feel": "works",
+      "anythingOff": "Things work as intended, but I don't think the swings are big enough. ",
+      "designerAnswers": []
+    },
+    "mood_recording_variance_retest": {
+      "exposure": [
+        "never"
+      ],
+      "feel": null,
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "flop_drama": {
+      "exposure": [
+        "never"
+      ],
+      "feel": null,
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "reputation_pacing": {
+      "exposure": [],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "creative_capital_income": {
+      "exposure": [],
+      "feel": null,
+      "anythingOff": "I need to go back and test CC - not clear where CC now builds.",
+      "designerAnswers": []
+    },
+    "meeting_relevance_whynow": {
+      "exposure": [
+        "never"
+      ],
+      "feel": null,
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "hype_attach_ux": {
+      "exposure": [
+        "attach_preview",
+        "anticipation_line",
+        "named_pools"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "board_waiting_brief": {
+      "exposure": [
+        "used_to_triage"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    }
+  },
+  "knobStrength": {
+    "energy_drain_rate": "too_weak",
+    "idle_recovery_rate": "too_strong",
+    "mood_swing_size": "too_weak",
+    "flop_sting": "too_weak",
+    "reputation_pacing": null,
+    "creative_capital_income": null,
+    "crisis_frequency": "about_right",
+    "crisis_slot_cost": "about_right"
+  },
+  "oneKnobChange": "",
+  "topPriorities": [
+    "",
+    "",
+    ""
+  ],
+  "pullBack": "",
+  "gutCheck": ""
+}

@@ -1,0 +1,100 @@
+{
+  "formId": "playtest-feedback-2026-07-12-delegation",
+  "savedAt": "2026-07-12T22:10:27.258Z",
+  "sections": {
+    "autonomous_spend_feel": {
+      "exposure": [
+        "saw_money_spent",
+        "saw_while_you_were_out"
+      ],
+      "feel": "flat",
+      "anythingOff": "",
+      "designerAnswers": [
+        "Yes it reads correctly.",
+        ""
+      ]
+    },
+    "auto_vs_neglect_legibility": {
+      "exposure": [
+        "couldnt_tell"
+      ],
+      "feel": "flat",
+      "anythingOff": "",
+      "designerAnswers": [
+        "As we know - we need to rework the meetings and choices. The system is all wired correctly but A lot of the situations still feel random. ",
+        "Not random but definitely not high stakes"
+      ]
+    },
+    "disloyal_in_character": {
+      "exposure": [
+        "pat_distribution"
+      ],
+      "feel": "flat",
+      "anythingOff": "",
+      "designerAnswers": [
+        "This will land better when we rework the meetings.",
+        "This will land better when we rework the meetings."
+      ]
+    },
+    "week_summary_digest_readability": {
+      "exposure": [
+        "read_it_every_week"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "escalation_crisis_legibility": {
+      "exposure": [
+        "crisis_after_ignore"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": [
+        "Felt connected.",
+        "Not based on current meetings and outcomes."
+      ]
+    },
+    "three_lane_clarity": {
+      "exposure": [
+        "ceo_and_exec_blurred"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": [
+        "No",
+        "Yes"
+      ]
+    },
+    "post_never_lapse_economy": {
+      "exposure": [
+        "didnt_track"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "freeform_priorities": {
+      "exposure": [],
+      "feel": null,
+      "anythingOff": "",
+      "designerAnswers": []
+    }
+  },
+  "knobStrength": {
+    "loyalty_band_thresholds": "about_right",
+    "autonomous_spend_magnitude": null,
+    "escalation_loyalty_ceiling": null,
+    "escalation_frequency": null,
+    "digest_grouping": "about_right",
+    "auto_endorse_vs_neglect_gap": "about_right"
+  },
+  "oneKnobChange": "",
+  "topPriorities": [
+    "",
+    "",
+    ""
+  ],
+  "pullBack": "",
+  "gutCheck": ""
+}

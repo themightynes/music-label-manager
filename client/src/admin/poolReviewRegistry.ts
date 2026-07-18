@@ -13,6 +13,19 @@
  * The lockstep test (tests/client/mac-pool-review-form.test.tsx) asserts each
  * pool module's meeting ids match POOL_REVIEW_MEETING_IDS[formId] exactly,
  * in order.
+ *
+ * EFFECTS CATALOG (read this before reviewing/re-authoring any pool): the
+ * complete authoring palette — every canonical effect key with its banking
+ * location, consumer, timing, expiry, and balance knobs, plus the
+ * target_executive/target_artist directives — lives in §2 of
+ * docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/
+ * [REFERENCE] executive-meetings-system-complete-reference.md.
+ * The pool modules' sourceFile references (v3-*-authored-*.md) and the
+ * "bible P1–P4" principle citations point at working-session scratchpad
+ * hand-offs that were NEVER committed to the repo — the reference doc §2 is
+ * the durable effects source; the principles are reconstructable from the
+ * modules' own notes (P1 divergence test, P2 EV-attractive temptation,
+ * P3 magnitude tier table, P4 distinct resource axes / irreversibility).
  */
 
 import {
