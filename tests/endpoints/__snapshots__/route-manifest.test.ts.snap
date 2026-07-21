@@ -606,11 +606,25 @@ exports[`registerRoutes route manifest > registers the exact set of routes and n
     "path": "/api/saves/:saveId",
   },
   {
+    "method": "PATCH",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/saves/:saveId",
+  },
+  {
     "method": "POST",
     "middleware": [
       "requireClerkUser",
     ],
     "path": "/api/saves/:saveId/restore",
+  },
+  {
+    "method": "DELETE",
+    "middleware": [
+      "requireClerkUser",
+    ],
+    "path": "/api/saves/by-game/:gameId",
   },
   {
     "method": "PATCH",
